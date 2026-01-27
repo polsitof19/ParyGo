@@ -307,32 +307,9 @@ input[type="checkbox"] { width: auto; margin-right: 8px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
-/* ========== MENÚ HAMBURGER MÓVIL ========== */
-.hamburger-btn {
+/* ========== RESPONSIVE MÓVIL ========== */
+.mobile-header {
     display: none;
-    position: fixed;
-    top: 16px;
-    left: 16px;
-    z-index: 1001;
-    width: 44px;
-    height: 44px;
-    border: none;
-    border-radius: 12px;
-    background: var(--bg-card);
-    color: var(--text);
-    font-size: 20px;
-    cursor: pointer;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    transition: all 0.3s;
-}
-
-.hamburger-btn:hover {
-    background: var(--primary);
-    color: white;
-}
-
-.hamburger-btn.active i::before {
-    content: "\f00d"; /* Cambia a X */
 }
 
 .sidebar-overlay {
@@ -343,38 +320,94 @@ input[type="checkbox"] { width: auto; margin-right: 8px; }
     width: 100%;
     height: 100%;
     background: rgba(0,0,0,0.6);
-    z-index: 998;
-    backdrop-filter: blur(4px);
+    z-index: 999;
 }
 
 .sidebar-overlay.active {
     display: block;
 }
 
-/* Móvil: mostrar hamburger y ocultar sidebar */
 @media (max-width: 768px) {
-    .hamburger-btn {
+    .mobile-header {
         display: flex;
         align-items: center;
-        justify-content: center;
+        gap: 15px;
+        padding: 15px 20px;
+        background: #0d0d0d;
+        border-bottom: 1px solid #2a2a2a;
+        position: sticky;
+        top: 0;
+        z-index: 100;
     }
-    
+
+    .mobile-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #fff;
+    }
+
+    .btn-hamburger {
+        background: none;
+        border: none;
+        color: #fff;
+        font-size: 22px;
+        cursor: pointer;
+        padding: 5px;
+    }
+
     .sidebar {
         position: fixed;
         left: -280px;
         top: 0;
         height: 100%;
-        z-index: 999;
+        width: 260px;
+        z-index: 1000;
         transition: left 0.3s ease;
     }
-    
-    .sidebar.open {
+
+    .sidebar.active {
         left: 0;
     }
-    
+
     .main-content {
         margin-left: 0 !important;
         width: 100% !important;
+        padding: 15px;
+    }
+
+    .top-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .view-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    #eventsGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .card {
+        min-width: 100%;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    table {
+        min-width: 600px;
+    }
+
+    .modal-content {
+        width: 95%;
+        max-width: none;
+        margin: 10px;
+        max-height: 90vh;
     }
 }
 /* ========== BOTÓN EXPORTAR EXCEL ========== */

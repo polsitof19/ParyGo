@@ -274,13 +274,15 @@
 
     <!-- APP LAYOUT -->
     <div id="appLayout" class="app-layout hidden">
-        <!-- Botón Hamburger para móvil -->
-<button id="btnHamburger" class="hamburger-btn">
-    <i class="fa-solid fa-bars"></i>
-</button>
-
-<!-- Overlay para cerrar sidebar -->
-<div id="sidebarOverlay" class="sidebar-overlay"></div>
+        <!-- Overlay para cerrar sidebar -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+        <!-- Header móvil -->
+        <div class="mobile-header">
+            <button class="btn-hamburger" onclick="toggleSidebar()">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <span class="mobile-title">ParyGo</span>
+        </div>
         
         <!-- SIDEBAR -->
         <aside class="sidebar" id="sidebar">
