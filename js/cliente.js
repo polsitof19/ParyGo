@@ -411,39 +411,31 @@ async function linkAccountToProfile() {
     if (!phone || phone.length !== 9 || !phone.startsWith('9')) return toast("Teléfono: 9 dígitos, empieza con 9");
     
     try {
-        // Crear perfil para esta marca
-        const profileId = `${currentUser.uid}_${currentBrandId}`;
-        await setDoc(doc(db, "user_profiles", profileId), {
-            user_id: currentUser.uid,
+        // Crear perfil en clientes para esta marca
+        await setDoc(doc(db, "clientes", currentUser.uid), {
+            uid: currentUser.uid,
             brand_id: currentBrandId,
-            brand_slug: currentBrandSlug,
-            name: `${nombres} ${apellidos}`.trim(),
-            nombres,
-            apellidos,
-            email: currentUser.email,
-            phone,
             doc_type: selectedDocType,
             doc_number: docNumber,
-            created_at: new Date().toISOString()
-        });
-        
-        // También actualizar/crear usuario global si no existe
-        await setDoc(doc(db, "users", currentUser.uid), {
+            name: nombres,
+            lastname: apellidos,
             email: currentUser.email,
-            created_at: new Date().toISOString()
-        }, { merge: true });
-        
+            phone,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        });
+
         toast("✅ ¡Cuenta vinculada!");
-        
+
         // Recargar
         await loadUserProfile(currentUser.uid);
         showView('eventsView');
         loadEvents();
         loadMyTickets();
-        
+
         // Remover prompt
         document.getElementById("link_prompt")?.remove();
-        
+
     } catch (e) {
         console.error(e);
         toast("Error al vincular cuenta");
@@ -502,51 +494,38 @@ async function searchDocument() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     
     try {
-        // 1. Buscar si existe perfil en ESTA marca con este documento
+        // 1. Buscar si existe en ESTA marca con este documento
         const qProfile = query(
-            collection(db, "user_profiles"), 
+            collection(db, "clientes"),
             where("brand_id", "==", currentBrandId),
             where("doc_number", "==", docNumber)
         );
         const snapProfile = await getDocs(qProfile);
-        
+
         if (!snapProfile.empty) {
-            // Existe perfil → obtener datos para login
+            // Existe → obtener datos para login
             const profile = snapProfile.docs[0].data();
-            foundUserData = { 
-                ...profile, 
-                id: profile.user_id 
+            foundUserData = {
+                ...profile,
+                id: profile.uid
             };
-            
-            // Obtener email del usuario global
-            const userSnap = await getDoc(doc(db, "users", profile.user_id));
-            if (userSnap.exists()) {
-                foundUserData.email = userSnap.data().email;
-            }
-            
-            document.getElementById("login_user_name").textContent = foundUserData.name || 'Usuario';
+
+            document.getElementById("login_user_name").textContent = `${foundUserData.name} ${foundUserData.lastname}` || 'Usuario';
             showAuthStep(3);
         } else {
-            // No existe perfil → verificar si tiene cuenta global
-            // Buscar por documento en otras marcas
+            // No existe → verificar si tiene cuenta en otra marca
             const qGlobal = query(
-                collection(db, "user_profiles"), 
+                collection(db, "clientes"),
                 where("doc_number", "==", docNumber)
             );
             const snapGlobal = await getDocs(qGlobal);
-            
+
             if (!snapGlobal.empty) {
                 // Tiene cuenta en otra marca → pedir vincular
                 const existingProfile = snapGlobal.docs[0].data();
                 foundUserData = { ...existingProfile };
-                
-                const userSnap = await getDoc(doc(db, "users", existingProfile.user_id));
-                if (userSnap.exists()) {
-                    foundUserData.email = userSnap.data().email;
-                }
-                
-                // Mostrar que ya tiene cuenta
-                document.getElementById("login_user_name").textContent = `${foundUserData.name} (cuenta existente)`;
+
+                document.getElementById("login_user_name").textContent = `${foundUserData.name} ${foundUserData.lastname} (cuenta existente)`;
                 existingUserNeedsProfile = true;
                 showAuthStep(3);
             } else {
@@ -563,7 +542,7 @@ async function searchDocument() {
         console.error(e);
         toast("Error de conexión");
     }
-    
+
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-arrow-right"></i>';
 }
@@ -628,13 +607,45 @@ function showRegisterScreen() {
 }
 
 // ==========================================
+// SELECTOR DE TIPO DE DOCUMENTO EN REGISTRO
+// ==========================================
+function selectRegDocType(type) {
+    selectedDocType = type;
+    document.querySelectorAll('#reg_step1 .doc-type-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll(`#reg_step1 [data-type="${type}"]`).forEach(b => b.classList.add('active'));
+
+    const label = document.getElementById("reg_doc_label");
+    const input = document.getElementById("reg_dni");
+
+    if (label && input) {
+        if (type === 'DNI') {
+            label.textContent = "Número de DNI *";
+            input.placeholder = "12345678";
+            input.maxLength = 8;
+        } else if (type === 'CE') {
+            label.textContent = "Carnet de Extranjería *";
+            input.placeholder = "CE123456789";
+            input.maxLength = 12;
+        } else {
+            label.textContent = "Número de Pasaporte *";
+            input.placeholder = "AB1234567";
+            input.maxLength = 12;
+        }
+    }
+}
+
+// ==========================================
 // PASO 1: VERIFICAR DNI
 // ==========================================
 async function handleCheckDNI() {
     const dni = document.getElementById("reg_dni").value.trim();
 
-    if (!validateDNI(dni)) {
+    if (selectedDocType === 'DNI' && !validateDNI(dni)) {
         return toast("El DNI debe tener exactamente 8 dígitos");
+    }
+
+    if (!dni) {
+        return toast("Ingresa tu documento");
     }
 
     const btn = document.getElementById("btnCheckDNI");
@@ -645,7 +656,7 @@ async function handleCheckDNI() {
         // 1. Verificar si el DNI ya existe en esta marca
         const qDNI = query(
             collection(db, "clientes"),
-            where("dni", "==", dni),
+            where("doc_number", "==", dni),
             where("brand_id", "==", currentBrandId)
         );
         const snapDNI = await getDocs(qDNI);
@@ -658,15 +669,21 @@ async function handleCheckDNI() {
             return;
         }
 
-        // 2. Consultar RENIEC para autocompletar nombres
-        await searchRENIECForRegistration(dni);
+        // 2. Consultar RENIEC para autocompletar nombres (solo si es DNI)
+        if (selectedDocType === 'DNI') {
+            await searchRENIECForRegistration(dni);
+        } else {
+            // Para CE o Pasaporte, limpiar campos
+            document.getElementById("reg_nombres").value = "";
+            document.getElementById("reg_apellidos").value = "";
+        }
 
         // 3. Mostrar paso 2
         showRegStep(2);
 
     } catch (e) {
-        console.error("Error verificando DNI:", e);
-        toast("Error al verificar DNI");
+        console.error("Error verificando documento:", e);
+        toast("Error al verificar documento");
         btn.disabled = false;
         btn.innerHTML = 'SIGUIENTE <i class="fa-solid fa-arrow-right"></i>';
     }
@@ -731,6 +748,7 @@ async function handleRegister() {
     const email = document.getElementById("reg_email").value.trim().toLowerCase();
     const phone = document.getElementById("reg_phone").value.trim();
     const password = document.getElementById("reg_password").value;
+    const confirmPassword = document.getElementById("reg_confirm_password")?.value || password;
 
     // Validaciones
     if (!dni) return toast("El DNI es obligatorio");
@@ -743,6 +761,7 @@ async function handleRegister() {
     if (!validatePhone(phone)) return toast("El teléfono debe empezar con 9 y tener 9 dígitos");
     if (!password) return toast("La contraseña es obligatoria");
     if (password.length < 6) return toast("La contraseña debe tener mínimo 6 caracteres");
+    if (password !== confirmPassword) return toast("Las contraseñas no coinciden");
 
     const btn = document.getElementById("btnRegister");
     btn.disabled = true;
@@ -755,15 +774,15 @@ async function handleRegister() {
         // 2. DESPUÉS crear documento en colección "clientes" usando el UID del usuario como ID
         await setDoc(doc(db, "clientes", cred.user.uid), {
             uid: cred.user.uid,
-            dni,
-            nombres,
-            apellidos,
+            brand_id: currentBrandId,
+            doc_type: selectedDocType,
+            doc_number: dni,
+            name: nombres,
+            lastname: apellidos,
             email,
             phone,
-            brand_id: currentBrandId,
-            brand_slug: currentBrandSlug,
-            brand_name: currentBrand?.name || '',
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
         });
 
         toast("✅ ¡Cuenta creada exitosamente!");
@@ -837,7 +856,7 @@ async function handleLogin() {
 function updateUserUI() {
     if (!currentUserProfile) return;
 
-    const fullName = `${currentUserProfile.nombres || ''} ${currentUserProfile.apellidos || ''}`.trim();
+    const fullName = `${currentUserProfile.name || ''} ${currentUserProfile.lastname || ''}`.trim();
     const initials = getInitials(fullName || 'CL');
 
     ['header_avatar', 'profile_avatar'].forEach(id => {
@@ -849,7 +868,11 @@ function updateUserUI() {
     if (profileNameEl) profileNameEl.textContent = fullName || 'Cliente';
 
     const profileDocEl = document.getElementById("profile_doc");
-    if (profileDocEl) profileDocEl.textContent = `DNI: ${currentUserProfile.dni || '---'}`;
+    if (profileDocEl) {
+        const docType = currentUserProfile.doc_type || 'DNI';
+        const docNumber = currentUserProfile.doc_number || '---';
+        profileDocEl.textContent = `${docType}: ${docNumber}`;
+    }
 
     const profileEmailEl = document.getElementById("profile_email");
     if (profileEmailEl) profileEmailEl.textContent = currentUserProfile.email || '---';
@@ -998,12 +1021,12 @@ async function redeemCode() {
         }
         
         // Canjear código
-        const fullName = `${currentUserProfile.nombres || ''} ${currentUserProfile.apellidos || ''}`.trim();
+        const fullName = `${currentUserProfile.name || ''} ${currentUserProfile.lastname || ''}`.trim();
         await updateDoc(doc(db, "codes", codeDoc.id), {
             status: "CLAIMED",
             claimed_by: currentUser.uid,
             claimed_name: fullName,
-            claimed_dni: currentUserProfile.dni,
+            claimed_dni: currentUserProfile.doc_number,
             claimed_phone: currentUserProfile.phone,
             claimed_at: new Date().toISOString()
         });
@@ -1013,7 +1036,7 @@ async function redeemCode() {
         await addDoc(collection(db, "tickets"), {
             user_id: currentUser.uid,
             user_name: fullName,
-            user_doc: currentUserProfile.dni,
+            user_doc: currentUserProfile.doc_number,
             user_phone: currentUserProfile.phone,
             user_email: currentUserProfile.email,
             event_id: currentEvent.id,
@@ -1197,12 +1220,12 @@ async function sendPaymentProof() {
     
     try {
         const imageBase64 = await fileToBase64(imageInput.files[0]);
-        const fullName = `${currentUserProfile.nombres || ''} ${currentUserProfile.apellidos || ''}`.trim();
+        const fullName = `${currentUserProfile.name || ''} ${currentUserProfile.lastname || ''}`.trim();
 
         await addDoc(collection(db, "purchases"), {
             user_id: currentUser.uid,
             user_name: fullName,
-            user_doc: currentUserProfile.dni,
+            user_doc: currentUserProfile.doc_number,
             user_email: currentUserProfile.email,
             user_phone: currentUserProfile.phone,
             event_id: currentEvent.id,
@@ -1476,11 +1499,15 @@ function toast(msg) {
 // ==========================================
 // TOGGLE PASSWORD VISIBILITY
 // ==========================================
-function togglePasswordVisibility(inputId, iconId) {
+function togglePassword(inputId) {
     const input = document.getElementById(inputId);
-    const icon = document.getElementById(iconId);
+    if (!input) return;
 
-    if (!input || !icon) return;
+    const wrapper = input.closest('.password-wrapper');
+    if (!wrapper) return;
+
+    const icon = wrapper.querySelector('.password-toggle i');
+    if (!icon) return;
 
     if (input.type === "password") {
         input.type = "text";
@@ -1491,6 +1518,189 @@ function togglePasswordVisibility(inputId, iconId) {
         icon.classList.remove("fa-eye-slash");
         icon.classList.add("fa-eye");
     }
+}
+
+// ==========================================
+// PASSWORD STRENGTH CHECKER
+// ==========================================
+function checkPasswordStrength() {
+    const password = document.getElementById("reg_password")?.value || '';
+    const strengthBar = document.getElementById("password_strength");
+    const hint = document.getElementById("password_hint");
+
+    if (!strengthBar || !hint) return;
+
+    if (password.length === 0) {
+        strengthBar.className = 'password-strength';
+        hint.textContent = '';
+        return;
+    }
+
+    let strength = 'weak';
+    let message = 'Contraseña débil (mínimo 6 caracteres)';
+    let hintClass = 'field-hint error';
+
+    if (password.length >= 8 && /[0-9]/.test(password)) {
+        strength = 'strong';
+        message = 'Contraseña fuerte';
+        hintClass = 'field-hint success';
+    } else if (password.length >= 6) {
+        strength = 'medium';
+        message = 'Contraseña media (agrega números para mejorar)';
+        hintClass = 'field-hint warning';
+    }
+
+    strengthBar.className = `password-strength ${strength}`;
+    hint.textContent = message;
+    hint.className = hintClass;
+}
+
+function checkPasswordMatch() {
+    const password = document.getElementById("reg_password")?.value || '';
+    const confirmPassword = document.getElementById("reg_confirm_password")?.value || '';
+    const hint = document.getElementById("password_match");
+
+    if (!hint) return;
+
+    if (confirmPassword.length === 0) {
+        hint.textContent = '';
+        return;
+    }
+
+    if (password === confirmPassword) {
+        hint.textContent = '✓ Las contraseñas coinciden';
+        hint.className = 'field-hint success';
+    } else {
+        hint.textContent = '✗ Las contraseñas no coinciden';
+        hint.className = 'field-hint error';
+    }
+}
+
+// ==========================================
+// CHANGE PASSWORD MODAL
+// ==========================================
+function openChangePasswordModal() {
+    closeProfile();
+
+    // Limpiar campos
+    document.getElementById("change_current_password").value = '';
+    document.getElementById("change_new_password").value = '';
+    document.getElementById("change_confirm_password").value = '';
+    document.getElementById("change_password_strength").className = 'password-strength';
+    document.getElementById("change_password_hint").textContent = '';
+    document.getElementById("change_password_match").textContent = '';
+
+    openModal('modalChangePassword');
+}
+
+function checkNewPasswordStrength() {
+    const password = document.getElementById("change_new_password")?.value || '';
+    const strengthBar = document.getElementById("change_password_strength");
+    const hint = document.getElementById("change_password_hint");
+
+    if (!strengthBar || !hint) return;
+
+    if (password.length === 0) {
+        strengthBar.className = 'password-strength';
+        hint.textContent = '';
+        return;
+    }
+
+    let strength = 'weak';
+    let message = 'Contraseña débil (mínimo 6 caracteres)';
+    let hintClass = 'field-hint error';
+
+    if (password.length >= 8 && /[0-9]/.test(password)) {
+        strength = 'strong';
+        message = 'Contraseña fuerte';
+        hintClass = 'field-hint success';
+    } else if (password.length >= 6) {
+        strength = 'medium';
+        message = 'Contraseña media (agrega números para mejorar)';
+        hintClass = 'field-hint warning';
+    }
+
+    strengthBar.className = `password-strength ${strength}`;
+    hint.textContent = message;
+    hint.className = hintClass;
+}
+
+function checkNewPasswordMatch() {
+    const password = document.getElementById("change_new_password")?.value || '';
+    const confirmPassword = document.getElementById("change_confirm_password")?.value || '';
+    const hint = document.getElementById("change_password_match");
+
+    if (!hint) return;
+
+    if (confirmPassword.length === 0) {
+        hint.textContent = '';
+        return;
+    }
+
+    if (password === confirmPassword) {
+        hint.textContent = '✓ Las contraseñas coinciden';
+        hint.className = 'field-hint success';
+    } else {
+        hint.textContent = '✗ Las contraseñas no coinciden';
+        hint.className = 'field-hint error';
+    }
+}
+
+async function handleChangePassword() {
+    const currentPassword = document.getElementById("change_current_password").value;
+    const newPassword = document.getElementById("change_new_password").value;
+    const confirmPassword = document.getElementById("change_confirm_password").value;
+
+    // Validaciones
+    if (!currentPassword) return toast("Ingresa tu contraseña actual");
+    if (!newPassword) return toast("Ingresa la nueva contraseña");
+    if (newPassword.length < 6) return toast("La nueva contraseña debe tener mínimo 6 caracteres");
+    if (newPassword !== confirmPassword) return toast("Las contraseñas no coinciden");
+    if (currentPassword === newPassword) return toast("La nueva contraseña debe ser diferente");
+
+    const btn = document.getElementById("btnChangePassword");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> CAMBIANDO...';
+
+    try {
+        const user = auth.currentUser;
+        if (!user) throw new Error("No hay usuario autenticado");
+
+        // Importar las funciones necesarias de Firebase Auth
+        const { EmailAuthProvider, reauthenticateWithCredential, updatePassword } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
+
+        // Re-autenticar primero
+        const credential = EmailAuthProvider.credential(user.email, currentPassword);
+        await reauthenticateWithCredential(user, credential);
+
+        // Cambiar contraseña
+        await updatePassword(user, newPassword);
+
+        // Actualizar timestamp en Firestore
+        await updateDoc(doc(db, "clientes", user.uid), {
+            updated_at: new Date().toISOString()
+        });
+
+        toast("✅ Contraseña cambiada exitosamente");
+        closeModal('modalChangePassword');
+
+    } catch (e) {
+        console.error("Error cambiando contraseña:", e);
+
+        let errorMsg = "Error al cambiar contraseña";
+        if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
+            errorMsg = "La contraseña actual es incorrecta";
+        } else if (e.code === 'auth/weak-password') {
+            errorMsg = "La contraseña es muy débil";
+        } else if (e.code === 'auth/requires-recent-login') {
+            errorMsg = "Por seguridad, cierra sesión y vuelve a iniciar sesión antes de cambiar la contraseña";
+        }
+
+        toast(errorMsg);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-lock"></i> CAMBIAR CONTRASEÑA';
 }
 
 // ==========================================
@@ -1536,7 +1746,14 @@ window.handleLogin = handleLogin;
 window.handleCheckDNI = handleCheckDNI;
 window.handleRegister = handleRegister;
 window.backToRegStep1 = backToRegStep1;
-window.togglePasswordVisibility = togglePasswordVisibility;
+window.selectRegDocType = selectRegDocType;
+window.togglePassword = togglePassword;
+window.checkPasswordStrength = checkPasswordStrength;
+window.checkPasswordMatch = checkPasswordMatch;
+window.openChangePasswordModal = openChangePasswordModal;
+window.checkNewPasswordStrength = checkNewPasswordStrength;
+window.checkNewPasswordMatch = checkNewPasswordMatch;
+window.handleChangePassword = handleChangePassword;
 
 // Navegación
 window.showEvents = showEvents;
@@ -1570,6 +1787,9 @@ console.log('✅ Funciones expuestas en window:', {
     handleCheckDNI: typeof window.handleCheckDNI,
     handleRegister: typeof window.handleRegister,
     handleLogin: typeof window.handleLogin,
+    togglePassword: typeof window.togglePassword,
+    checkPasswordStrength: typeof window.checkPasswordStrength,
+    handleChangePassword: typeof window.handleChangePassword,
     previewProofImage: typeof window.previewProofImage
 });
 

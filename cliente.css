@@ -285,6 +285,71 @@ html, body {
     margin-top: 4px;
 }
 
+/* Password Wrapper */
+.password-wrapper {
+    position: relative;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.password-toggle:hover {
+    color: var(--text);
+}
+
+.password-wrapper input {
+    padding-right: 45px;
+}
+
+/* Password Strength */
+.password-strength {
+    height: 4px;
+    border-radius: 2px;
+    margin-top: 8px;
+    transition: all 0.3s;
+    background: var(--border);
+}
+
+.password-strength.weak {
+    background: var(--error, #ef4444);
+    width: 33%;
+}
+
+.password-strength.medium {
+    background: var(--yellow, #f59e0b);
+    width: 66%;
+}
+
+.password-strength.strong {
+    background: var(--green, #10b981);
+    width: 100%;
+}
+
+.field-hint.error {
+    color: var(--error, #ef4444);
+}
+
+.field-hint.success {
+    color: var(--green, #10b981);
+}
+
+.field-hint.warning {
+    color: var(--yellow, #f59e0b);
+}
+
 /* ==========================================
    HEADER
    ========================================== */

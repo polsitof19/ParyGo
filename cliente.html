@@ -45,7 +45,12 @@
 
                 <div class="form-group">
                     <label>Contraseña</label>
-                    <input type="password" id="login_password" placeholder="Tu contraseña" autocomplete="current-password">
+                    <div class="password-wrapper">
+                        <input type="password" id="login_password" placeholder="Tu contraseña" autocomplete="current-password">
+                        <button type="button" class="password-toggle" onclick="togglePassword('login_password')">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <button class="btn-primary" id="btnLogin" onclick="handleLogin()">
@@ -61,12 +66,30 @@
             <div id="registerScreen" class="auth-screen hidden">
                 <h2 class="auth-title">Crear cuenta</h2>
 
-                <!-- Paso 1: Solo DNI -->
+                <!-- Paso 1: Tipo de documento y número -->
                 <div id="reg_step1">
                     <div class="form-group">
-                        <label>Número de DNI *</label>
+                        <label>Tipo de documento</label>
+                        <div class="doc-type-selector">
+                            <button type="button" class="doc-type-btn active" data-type="DNI" onclick="selectRegDocType('DNI')">
+                                <i class="fa-solid fa-id-card"></i>
+                                <span>DNI</span>
+                            </button>
+                            <button type="button" class="doc-type-btn" data-type="CE" onclick="selectRegDocType('CE')">
+                                <i class="fa-solid fa-passport"></i>
+                                <span>CE</span>
+                            </button>
+                            <button type="button" class="doc-type-btn" data-type="PASAPORTE" onclick="selectRegDocType('PASAPORTE')">
+                                <i class="fa-solid fa-globe"></i>
+                                <span>Pasaporte</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label id="reg_doc_label">Número de DNI *</label>
                         <input type="tel" id="reg_dni" placeholder="12345678" maxlength="8" pattern="[0-9]{8}">
-                        <small class="field-hint">Ingresa tu DNI para continuar</small>
+                        <small class="field-hint">Ingresa tu documento para continuar</small>
                     </div>
 
                     <button class="btn-primary" id="btnCheckDNI" onclick="handleCheckDNI()">
@@ -108,12 +131,25 @@
 
                     <div class="form-group">
                         <label>Contraseña *</label>
-                        <div style="position: relative;">
-                            <input type="password" id="reg_password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" style="padding-right: 45px;">
-                            <button type="button" onclick="togglePasswordVisibility('reg_password', 'togglePassIcon')" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px;">
-                                <i id="togglePassIcon" class="fa-regular fa-eye"></i>
+                        <div class="password-wrapper">
+                            <input type="password" id="reg_password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" oninput="checkPasswordStrength()">
+                            <button type="button" class="password-toggle" onclick="togglePassword('reg_password')">
+                                <i class="fa-solid fa-eye"></i>
                             </button>
                         </div>
+                        <div id="password_strength" class="password-strength"></div>
+                        <small id="password_hint" class="field-hint"></small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Confirmar contraseña *</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="reg_confirm_password" placeholder="Repite tu contraseña" autocomplete="new-password" oninput="checkPasswordMatch()">
+                            <button type="button" class="password-toggle" onclick="togglePassword('reg_confirm_password')">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                        <small id="password_match" class="field-hint"></small>
                     </div>
 
                     <button class="btn-primary" id="btnRegister" onclick="handleRegister()">
@@ -510,9 +546,59 @@
                 </div>
                 <h3>¡Código canjeado!</h3>
                 <p>Tu entrada ha sido generada exitosamente.</p>
-                
+
                 <button class="btn-primary" onclick="closeModal('modalCodeSuccess'); openMyTickets();">
                     VER MI ENTRADA
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL: CAMBIAR CONTRASEÑA ============ -->
+    <div id="modalChangePassword" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-lock"></i> Cambiar Contraseña</h2>
+                <button class="modal-close" onclick="closeModal('modalChangePassword')">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Contraseña actual *</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="change_current_password" placeholder="Tu contraseña actual" autocomplete="current-password">
+                        <button type="button" class="password-toggle" onclick="togglePassword('change_current_password')">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Nueva contraseña *</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="change_new_password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" oninput="checkNewPasswordStrength()">
+                        <button type="button" class="password-toggle" onclick="togglePassword('change_new_password')">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                    <div id="change_password_strength" class="password-strength"></div>
+                    <small id="change_password_hint" class="field-hint"></small>
+                </div>
+
+                <div class="form-group">
+                    <label>Confirmar nueva contraseña *</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="change_confirm_password" placeholder="Repite tu nueva contraseña" autocomplete="new-password" oninput="checkNewPasswordMatch()">
+                        <button type="button" class="password-toggle" onclick="togglePassword('change_confirm_password')">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                    <small id="change_password_match" class="field-hint"></small>
+                </div>
+
+                <button class="btn-primary full" id="btnChangePassword" onclick="handleChangePassword()">
+                    <i class="fa-solid fa-lock"></i> CAMBIAR CONTRASEÑA
                 </button>
             </div>
         </div>
@@ -539,6 +625,13 @@
                 <div>
                     <label>Teléfono</label>
                     <span id="profile_phone">---</span>
+                </div>
+            </div>
+            <div class="profile-item" onclick="openChangePasswordModal()" style="cursor: pointer;">
+                <i class="fa-solid fa-lock"></i>
+                <div>
+                    <label>CONTRASEÑA</label>
+                    <span>Cambiar contraseña</span>
                 </div>
             </div>
         </div>
