@@ -588,23 +588,166 @@ document.getElementById('btnConfirmApprove')?.addEventListener('click', () => {
     confirmApproveSale();
 });
 
-// ========== MENÚ HAMBURGER MÓVIL ==========
-function toggleSidebar() {
-    document.querySelector('.sidebar').classList.toggle('active');
-    document.getElementById('sidebarOverlay').classList.toggle('active');
+// ========================================
+// MOBILE NAVIGATION
+// ========================================
+
+function mobileGoTo(section) {
+    // Update active nav item
+    document.querySelectorAll('.mobile-nav .nav-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    const activeItem = document.querySelector(`.mobile-nav .nav-item[data-section="${section}"]`);
+    if (activeItem) activeItem.classList.add('active');
+
+    // Transition effect
+    const mainContent = document.querySelector('.main-content');
+    mainContent.classList.add('transitioning');
+
+    setTimeout(() => {
+        // Navigate to section
+        switch(section) {
+            case 'eventos':
+                if (typeof showGlobalEvents === 'function') showGlobalEvents();
+                else switchView('view_events');
+                break;
+            case 'marca':
+                if (typeof openMyBrand === 'function') openMyBrand();
+                else if (typeof loadBrandsWithLogos === 'function') loadBrandsWithLogos();
+                else switchView('view_brands');
+                break;
+            case 'promo':
+                if (typeof loadPromotersView === 'function') loadPromotersView();
+                else switchView('view_promoters');
+                break;
+            case 'seguridad':
+                if (typeof loadScannersView === 'function') loadScannersView();
+                else switchView('view_scanners');
+                break;
+            case 'premios':
+                if (typeof loadRewardsView === 'function') loadRewardsView();
+                else switchView('view_rewards');
+                break;
+            case 'config':
+                break;
+        }
+
+        mainContent.classList.remove('transitioning');
+    }, 150);
 }
 
-// Cerrar sidebar al hacer click en un item del menú (móvil)
-document.querySelectorAll('.sidebar .nav-item').forEach(item => {
-    item.addEventListener('click', () => {
-        if (window.innerWidth <= 768) {
-            document.querySelector('.sidebar').classList.remove('active');
-            document.getElementById('sidebarOverlay').classList.remove('active');
-        }
+function openNewEventModal() {
+    if (typeof openEventModal === 'function') openEventModal();
+}
+
+function openExtrasPanel() {
+    document.getElementById('extrasPanel').classList.add('active');
+    document.getElementById('extrasOverlay').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeExtrasPanel() {
+    document.getElementById('extrasPanel').classList.remove('active');
+    document.getElementById('extrasOverlay').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+function handleLogout() {
+    closeExtrasPanel();
+    if (typeof doLogout === 'function') doLogout();
+}
+
+// ========================================
+// MOBILE SEARCH
+// ========================================
+
+document.getElementById('mobileSearchBtn')?.addEventListener('click', () => {
+    document.getElementById('mobileSearchBar').classList.add('active');
+    document.getElementById('mobileSearchInput').focus();
+});
+
+document.getElementById('mobileSearchClose')?.addEventListener('click', () => {
+    document.getElementById('mobileSearchBar').classList.remove('active');
+    document.getElementById('mobileSearchInput').value = '';
+    // Reset filter
+    const cards = document.querySelectorAll('#eventsGrid .card');
+    cards.forEach(card => { card.style.display = ''; });
+});
+
+document.getElementById('mobileSearchInput')?.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase();
+    const cards = document.querySelectorAll('#eventsGrid .card');
+    cards.forEach(card => {
+        const title = card.querySelector('.card-title')?.textContent.toLowerCase() || '';
+        card.style.display = title.includes(query) ? '' : 'none';
     });
 });
 
-window.toggleSidebar = toggleSidebar;
+// ========================================
+// PULL TO REFRESH
+// ========================================
+
+let touchStartY = 0;
+let isPulling = false;
+
+document.addEventListener('touchstart', (e) => {
+    if (window.scrollY === 0) {
+        touchStartY = e.touches[0].clientY;
+    }
+}, { passive: true });
+
+document.addEventListener('touchmove', (e) => {
+    if (touchStartY && window.scrollY === 0) {
+        const touchY = e.touches[0].clientY;
+        const diff = touchY - touchStartY;
+
+        if (diff > 80 && !isPulling) {
+            isPulling = true;
+            document.getElementById('pullRefresh').classList.add('active');
+        }
+    }
+}, { passive: true });
+
+document.addEventListener('touchend', () => {
+    if (isPulling) {
+        if (typeof loadEvents === 'function') {
+            loadEvents().then(() => {
+                setTimeout(() => {
+                    document.getElementById('pullRefresh').classList.remove('active');
+                    isPulling = false;
+                }, 500);
+            });
+        } else {
+            setTimeout(() => {
+                document.getElementById('pullRefresh').classList.remove('active');
+                isPulling = false;
+            }, 1000);
+        }
+    }
+    touchStartY = 0;
+});
+
+// ========================================
+// INIT MOBILE
+// ========================================
+
+function initMobile() {
+    const userName = document.getElementById('mobileUserName');
+    if (userName && state?.currentUser?.name) {
+        userName.textContent = state.currentUser.name;
+    }
+}
+
+if (window.innerWidth <= 768) {
+    document.addEventListener('DOMContentLoaded', initMobile);
+}
+
+// Expose functions globally
+window.mobileGoTo = mobileGoTo;
+window.openNewEventModal = openNewEventModal;
+window.openExtrasPanel = openExtrasPanel;
+window.closeExtrasPanel = closeExtrasPanel;
+window.handleLogout = handleLogout;
 // ========== EXPORTAR A EXCEL ==========
 // ========== EXPORTAR REPORTE COMPLETO DE MÉTRICAS ==========
 function exportMetricsReport() {
