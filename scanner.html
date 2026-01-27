@@ -21,6 +21,30 @@
 </head>
 <body>
     <!-- ==================== LOGIN SCREEN ==================== -->
+<div class="login-screen" id="loginScreen">
+    <div class="login-box">
+        <div class="login-header">
+            <i class="fa-solid fa-qrcode"></i>
+            <h1>ParyGo Scanner</h1>
+            <p>Ingresa tus credenciales</p>
+        </div>
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="loginEmail" placeholder="tu@email.com" required>
+            </div>
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" id="loginPassword" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn-login" id="btnLogin">
+                <i class="fa-solid fa-right-to-bracket"></i> Ingresar
+            </button>
+        </form>
+        <div class="login-error" id="loginError" style="display:none;"></div>
+    </div>
+</div>
+    <!-- ==================== LOGIN SCREEN ==================== -->
 <div class="login-screen active" id="loginScreen">
     <div class="login-container">
         <div class="login-logo">
@@ -45,10 +69,14 @@
     </div>
 </div>
     <!-- ==================== HEADER ==================== -->
-    <header class="header" id="mainHeader" style="display:none;">
+    <header class="header">
         <div class="header-left">
             <h1><i class="fa-solid fa-qrcode"></i> Scanner</h1>
+            <span class="user-name" id="userName"></span>
         </div>
+        <button class="btn-logout" id="btnLogout" title="Cerrar sesión">
+            <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
         <select id="eventSelector" class="event-selector">
             <option value="">Selecciona evento</option>
         </select>

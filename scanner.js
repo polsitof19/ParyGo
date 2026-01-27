@@ -9,13 +9,15 @@ import {
     query, 
     where, 
     getDocs,
+    getDoc,
     doc,
     updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { 
     getAuth, 
     signInWithEmailAndPassword,
-    onAuthStateChanged
+    onAuthStateChanged,
+    signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 
@@ -36,11 +38,11 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 // ==========================================
-// STATE
+// STATE    
 // ==========================================
 let state = {
     currentUser: null,
-    currentBrandId: null,
+    allowedBrands: [],
     currentEventId: null,
     currentEventName: '',
     stats: {
@@ -51,7 +53,7 @@ let state = {
     history: [],
     isScanning: false,
     html5QrCode: null,
-    currentCamera: 'environment' // 'environment' = trasera, 'user' = frontal
+    currentCamera: 'environment'
 };
 
 // ==========================================
@@ -60,11 +62,128 @@ let state = {
 // ==========================================
 // INITIALIZATION
 // ==========================================
-document.addEventListener('DOMContentLoaded', async () => {
-    await loadEvents();
-    setupEventListeners();
-    initScanner();
+document.addEventListener('DOMContentLoaded', () => {
+    setupLoginListeners();
+    checkAuth();
 });
+
+// ==========================================
+// AUTHENTICATION
+// ==========================================
+function checkAuth() {
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            await validateScannerRole(user);
+        } else {
+            showLoginScreen();
+        }
+    });
+}
+
+async function validateScannerRole(user) {
+    try {
+        const staffDoc = await getDoc(doc(db, "staff", user.uid));
+        
+        if (!staffDoc.exists()) {
+            showLoginError("Usuario no autorizado");
+            await signOut(auth);
+            return;
+        }
+        
+        const staffData = staffDoc.data();
+        
+        if (staffData.role !== 'scanner') {
+            showLoginError("No tienes permisos de scanner");
+            await signOut(auth);
+            return;
+        }
+        
+        if (staffData.status !== 'ACTIVE') {
+            showLoginError("Tu cuenta está inactiva");
+            await signOut(auth);
+            return;
+        }
+        
+        // Login exitoso
+        state.currentUser = { id: user.uid, ...staffData };
+        state.allowedBrands = staffData.allowed_brands || [];
+        
+        hideLoginScreen();
+        document.getElementById('userName').textContent = staffData.name || user.email;
+        
+        await loadEvents();
+        setupEventListeners();
+        initScanner();
+        
+    } catch (error) {
+        console.error("Error validando rol:", error);
+        showLoginError("Error de autenticación");
+        await signOut(auth);
+    }
+}
+
+function setupLoginListeners() {
+    document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
+    document.getElementById('btnLogout')?.addEventListener('click', handleLogout);
+}
+
+async function handleLogin(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const btn = document.getElementById('btnLogin');
+    
+    hideLoginError();
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ingresando...';
+    
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+        console.error("Error login:", error);
+        let msg = "Error al iniciar sesión";
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+            msg = "Email o contraseña incorrectos";
+        } else if (error.code === 'auth/invalid-email') {
+            msg = "Email inválido";
+        }
+        showLoginError(msg);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Ingresar';
+    }
+}
+
+async function handleLogout() {
+    if (confirm("¿Cerrar sesión?")) {
+        await stopScanner();
+        await signOut(auth);
+        state.currentUser = null;
+        state.allowedBrands = [];
+        showLoginScreen();
+    }
+}
+
+function showLoginScreen() {
+    document.getElementById('loginScreen')?.classList.remove('hidden');
+}
+
+function hideLoginScreen() {
+    document.getElementById('loginScreen')?.classList.add('hidden');
+}
+
+function showLoginError(msg) {
+    const el = document.getElementById('loginError');
+    if (el) {
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+}
+
+function hideLoginError() {
+    const el = document.getElementById('loginError');
+    if (el) el.style.display = 'none';
+}
 // ==========================================
 // LOAD EVENTS
 // ==========================================
@@ -75,25 +194,36 @@ async function loadEvents() {
         
         const activeEvents = [];
         
-        snapshot.docs.forEach(doc => {
-            const event = doc.data();
+        snapshot.docs.forEach(docSnap => {
+            const event = docSnap.data();
             if (event.status === 'ACTIVE') {
-                activeEvents.push({
-                    id: doc.id,
-                    name: event.name,
-                    date: event.date
-                });
+                // Filtrar por marca permitida
+                const eventBrand = event.brand_id || event.company_id;
+                const hasAccess = state.allowedBrands.length === 0 || 
+                                  state.allowedBrands.includes(eventBrand) ||
+                                  state.allowedBrands.includes(event.company_id);
+                
+                if (hasAccess) {
+                    activeEvents.push({
+                        id: docSnap.id,
+                        name: event.name,
+                        date: event.date
+                    });
+                }
             }
         });
         
-        // Ordenar por fecha (más reciente primero)
+        // Ordenar por fecha
         activeEvents.sort((a, b) => {
             if (!a.date) return 1;
             if (!b.date) return -1;
             return new Date(b.date) - new Date(a.date);
         });
         
-        // Agregar opciones al selector
+        // Limpiar selector
+        selector.innerHTML = '<option value="">Selecciona evento</option>';
+        
+        // Agregar opciones
         activeEvents.forEach(event => {
             const option = document.createElement('option');
             option.value = event.id;
@@ -101,11 +231,15 @@ async function loadEvents() {
             selector.appendChild(option);
         });
         
-        // Auto-seleccionar si solo hay un evento
+        // Auto-seleccionar si solo hay uno
         if (activeEvents.length === 1) {
             selector.value = activeEvents[0].id;
             state.currentEventId = activeEvents[0].id;
             state.currentEventName = activeEvents[0].name;
+        }
+        
+        if (activeEvents.length === 0) {
+            showToast('No hay eventos disponibles para tu marca', 'warning');
         }
         
     } catch (error) {

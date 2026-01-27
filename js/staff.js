@@ -854,7 +854,8 @@ export async function saveScanner() {
             email,
             role: APP_CONFIG.ROLES.SCANNER,
             status: APP_CONFIG.STATUS.ACTIVE,
-            brand_id: state.activeBrandId || '',
+            company_id: state.currentUser?.companyId || null,
+            allowed_brands: state.currentUser?.allowed_brands || [],
             created_at: new Date().toISOString()
         };
         
