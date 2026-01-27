@@ -171,6 +171,79 @@ service cloud.firestore {
     }
 
     // ==========================================
+    // USER PROFILES (perfiles por marca)
+    // ==========================================
+
+    match /user_profiles/{profileId} {
+      // Leer: público (necesario para flujo de login por documento)
+      allow read: if true;
+
+      // Crear: cualquier usuario autenticado
+      allow create: if isAuthenticated();
+
+      // Actualizar: el propio usuario o admins
+      allow update: if isAuthenticated() &&
+                       (resource.data.user_id == request.auth.uid || isAdminOrSuper());
+
+      // Eliminar: solo admins
+      allow delete: if isAdminOrSuper();
+    }
+
+    // ==========================================
+    // USERS (usuarios globales)
+    // ==========================================
+
+    match /users/{userId} {
+      // Leer: el propio usuario o admins
+      allow read: if isAuthenticated() &&
+                     (request.auth.uid == userId || isAdminOrSuper());
+
+      // Crear/actualizar: el propio usuario
+      allow create, update: if isAuthenticated() && request.auth.uid == userId;
+
+      // Eliminar: solo admins
+      allow delete: if isAdminOrSuper();
+    }
+
+    // ==========================================
+    // CODES (códigos de promotores)
+    // ==========================================
+
+    match /codes/{codeId} {
+      // Leer: público (para validar códigos al reclamar)
+      allow read: if true;
+
+      // Crear: solo admins
+      allow create: if isAdminOrSuper();
+
+      // Actualizar: autenticados (al canjear código)
+      allow update: if isAuthenticated();
+
+      // Eliminar: solo admins
+      allow delete: if isAdminOrSuper();
+    }
+
+    // ==========================================
+    // PURCHASES (compras/reservas)
+    // ==========================================
+
+    match /purchases/{purchaseId} {
+      // Leer: el propio usuario o admins
+      allow read: if isAuthenticated() &&
+                     (resource.data.user_id == request.auth.uid || isAdminOrSuper());
+
+      // Crear: cualquier usuario autenticado
+      allow create: if isAuthenticated();
+
+      // Actualizar: el propio usuario o admins
+      allow update: if isAuthenticated() &&
+                       (resource.data.user_id == request.auth.uid || isAdminOrSuper());
+
+      // Eliminar: solo admins
+      allow delete: if isAdminOrSuper();
+    }
+
+    // ==========================================
     // POR DEFECTO: denegar todo
     // ==========================================
 
