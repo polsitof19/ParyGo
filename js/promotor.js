@@ -129,8 +129,11 @@ async function handleLogin() {
     const pass = document.getElementById("login_pass").value;
     const btn = document.getElementById("btnLogin");
     
+    const errorDiv = document.getElementById('loginError');
+    if (errorDiv) errorDiv.style.display = 'none';
+
     if (!email || !pass) return toast("Ingresa tus datos");
-    
+
     btn.disabled = true;
     btn.innerHTML = '<span>Verificando...</span>';
     
@@ -154,6 +157,12 @@ async function handleLogin() {
                 break;
         }
         toast(errorMsg);
+
+        if (errorDiv) {
+            errorDiv.textContent = errorMsg;
+            errorDiv.style.display = 'block';
+        }
+
         btn.disabled = false;
         btn.innerHTML = '<span>INGRESAR</span><i class="fa-solid fa-arrow-right"></i>';
     }

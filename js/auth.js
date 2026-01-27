@@ -43,6 +43,10 @@ export async function doLogin() {
     const pass = passInput.value.trim();
     const originalText = btn ? btn.textContent : "INICIAR SESIÓN";
 
+    // Ocultar error anterior
+    const errorDiv = document.getElementById('loginError');
+    if (errorDiv) errorDiv.style.display = 'none';
+
     if (!email || !pass) {
         toast("Completa todos los campos", "error");
         return;
@@ -95,7 +99,12 @@ export async function doLogin() {
         }
         
         toast(errorMsg, "error");
-        
+
+        if (errorDiv) {
+            errorDiv.textContent = errorMsg;
+            errorDiv.style.display = 'block';
+        }
+
         if (btn) {
             btn.textContent = originalText;
             btn.disabled = false;
