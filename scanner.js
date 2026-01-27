@@ -165,11 +165,15 @@ async function handleLogout() {
 }
 
 function showLoginScreen() {
-    document.getElementById('loginScreen')?.classList.remove('hidden');
+    document.getElementById('loginScreen')?.classList.add('active');
+    document.querySelector('.header')?.classList.add('hidden');
+    document.getElementById('mainContent')?.classList.add('hidden');
 }
 
 function hideLoginScreen() {
-    document.getElementById('loginScreen')?.classList.add('hidden');
+    document.getElementById('loginScreen')?.classList.remove('active');
+    document.querySelector('.header')?.classList.remove('hidden');
+    document.getElementById('mainContent')?.classList.remove('hidden');
 }
 
 function showLoginError(msg) {
