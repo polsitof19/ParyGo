@@ -245,6 +245,18 @@
 
 </head>
 <body>
+    <!-- Redirigir subdominios de marca a cliente.html -->
+    <script>
+    (function() {
+        var hostname = window.location.hostname;
+        var mainDomains = ['localhost', 'parygo.com', 'www.parygo.com'];
+        var isMain = mainDomains.indexOf(hostname) !== -1 || hostname.endsWith('.pages.dev');
+        if (!isMain && hostname.includes('.parygo.com')) {
+            window.location.href = '/cliente.html' + window.location.search;
+        }
+    })();
+    </script>
+
     <!-- TOAST CONTAINER -->
     <div id="toast-container"></div>
 
