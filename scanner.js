@@ -3,24 +3,22 @@
 // ==========================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { 
-    getFirestore, 
-    collection, 
-    query, 
-    where, 
+import {
+    getFirestore,
+    collection,
+    query,
+    where,
     getDocs,
     getDoc,
     doc,
     updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { 
-    getAuth, 
+import {
+    getAuth,
     signInWithEmailAndPassword,
     onAuthStateChanged,
     signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-
 
 // ==========================================
 // FIREBASE CONFIG
@@ -37,8 +35,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+
 // ==========================================
-// STATE    
+// STATE
 // ==========================================
 let state = {
     currentUser: null,
@@ -56,9 +55,6 @@ let state = {
     currentCamera: 'environment'
 };
 
-// ==========================================
-// INITIALIZATION
-// ==========================================
 // ==========================================
 // INITIALIZATION
 // ==========================================
@@ -83,35 +79,40 @@ function checkAuth() {
 async function validateScannerRole(user) {
     try {
         const staffDoc = await getDoc(doc(db, "staff", user.uid));
-        
+
         if (!staffDoc.exists()) {
             showLoginError("Usuario no autorizado");
             await signOut(auth);
             return;
         }
-        
+
         const staffData = staffDoc.data();
-        
+
         if (staffData.role !== 'scanner') {
             showLoginError("No tienes permisos de scanner");
             await signOut(auth);
             return;
         }
-        
+
         if (staffData.status !== 'ACTIVE') {
             showLoginError("Tu cuenta está inactiva");
             await signOut(auth);
             return;
         }
-        
+
         // Login exitoso
         state.currentUser = { id: user.uid, ...staffData };
         state.allowedBrands = staffData.allowed_brands || [];
 
+        // Mostrar saludo con nombre
+        const userName = staffData.name || user.email;
+        const greetingEl = document.getElementById('greetingUser');
+        if (greetingEl) greetingEl.textContent = `Hola, ${userName}`;
+
         showEventSelection();
         await loadEvents();
         setupEventListeners();
-        
+
     } catch (error) {
         console.error("Error validando rol:", error);
         showLoginError("Error de autenticación");
@@ -126,15 +127,15 @@ function setupLoginListeners() {
 
 async function handleLogin(e) {
     e.preventDefault();
-    
+
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
     const btn = document.getElementById('btnLogin');
-    
+
     hideLoginError();
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ingresando...';
-    
+
     try {
         await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
@@ -187,11 +188,6 @@ function showScannerScreen() {
     document.getElementById('mainContent')?.classList.remove('hidden');
 }
 
-// Keep for backwards compat
-function hideLoginScreen() {
-    showEventSelection();
-}
-
 function showLoginError(msg) {
     const el = document.getElementById('loginError');
     if (el) {
@@ -204,6 +200,7 @@ function hideLoginError() {
     const el = document.getElementById('loginError');
     if (el) el.style.display = 'none';
 }
+
 // ==========================================
 // LOAD EVENTS
 // ==========================================
@@ -236,7 +233,7 @@ async function loadEvents() {
                         name: event.name,
                         date: event.date,
                         location: event.location || '',
-                        brand_name: event.brand_name || ''
+                        image: event.image || event.flyer || event.cover || ''
                     });
                 }
             }
@@ -263,16 +260,19 @@ async function loadEvents() {
             const dateStr = event.date
                 ? new Date(event.date + 'T00:00:00').toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short' })
                 : 'Sin fecha';
+
+            const thumbHtml = event.image
+                ? `<img class="event-card-thumb" src="${escapeHtml(event.image)}" alt="" loading="lazy">`
+                : `<div class="event-card-thumb-placeholder"><i class="fa-solid fa-calendar-day"></i></div>`;
+
             return `
                 <button class="event-card" data-event-id="${event.id}" data-event-name="${escapeHtml(event.name)}">
-                    <div class="event-card-icon">
-                        <i class="fa-solid fa-calendar-day"></i>
-                    </div>
+                    ${thumbHtml}
                     <div class="event-card-info">
                         <span class="event-card-name">${escapeHtml(event.name)}</span>
                         <span class="event-card-meta">
                             <i class="fa-regular fa-calendar"></i> ${dateStr}
-                            ${event.location ? `<span class="event-card-sep">·</span> <i class="fa-solid fa-location-dot"></i> ${escapeHtml(event.location)}` : ''}
+                            ${event.location ? `<span class="event-card-sep">&middot;</span> <i class="fa-solid fa-location-dot"></i> ${escapeHtml(event.location)}` : ''}
                         </span>
                     </div>
                     <i class="fa-solid fa-chevron-right event-card-arrow"></i>
@@ -305,8 +305,13 @@ function selectEvent(eventId, eventName) {
 
     document.getElementById('eventNameHeader').textContent = eventName;
 
+    // Reset scanner/search sections
+    document.getElementById('scannerBox')?.classList.add('hidden');
+    document.getElementById('searchBox')?.classList.add('hidden');
+    document.getElementById('actionButtons')?.classList.remove('hidden');
+
     showScannerScreen();
-    initScanner();
+    // NO iniciar cámara automáticamente
 }
 
 async function goBackToEvents() {
@@ -314,6 +319,12 @@ async function goBackToEvents() {
     state.currentEventId = null;
     state.currentEventName = '';
     resetStats();
+
+    // Reset sections
+    document.getElementById('scannerBox')?.classList.add('hidden');
+    document.getElementById('searchBox')?.classList.add('hidden');
+    document.getElementById('actionButtons')?.classList.remove('hidden');
+
     showEventSelection();
 }
 
@@ -327,6 +338,18 @@ function setupEventListeners() {
     // Botón logout desde pantalla de eventos
     document.getElementById('btnLogoutEvents')?.addEventListener('click', handleLogout);
 
+    // Botón abrir scanner QR
+    document.getElementById('btnOpenScanner')?.addEventListener('click', openScanner);
+
+    // Botón abrir búsqueda
+    document.getElementById('btnOpenSearch')?.addEventListener('click', openSearch);
+
+    // Botón cerrar scanner
+    document.getElementById('btnCloseScanner')?.addEventListener('click', closeScanner);
+
+    // Botón cerrar búsqueda
+    document.getElementById('btnCloseSearch')?.addEventListener('click', closeSearch);
+
     // Input manual - Enter key
     document.getElementById('manualCode')?.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
@@ -337,9 +360,6 @@ function setupEventListeners() {
 
     // Botón buscar manual
     document.getElementById('btnSearch')?.addEventListener('click', validateManual);
-
-    // Botón continuar en modal
-    document.getElementById('btnContinue')?.addEventListener('click', closeResult);
 
     // Botón limpiar historial
     document.getElementById('btnClearHistory')?.addEventListener('click', clearHistory);
@@ -356,26 +376,56 @@ function setupEventListeners() {
 }
 
 // ==========================================
+// OPEN / CLOSE SCANNER & SEARCH
+// ==========================================
+function openScanner() {
+    document.getElementById('actionButtons')?.classList.add('hidden');
+    document.getElementById('searchBox')?.classList.add('hidden');
+    document.getElementById('scannerBox')?.classList.remove('hidden');
+    initScanner();
+}
+
+async function closeScanner() {
+    await stopScanner();
+    document.getElementById('scannerBox')?.classList.add('hidden');
+    document.getElementById('actionButtons')?.classList.remove('hidden');
+}
+
+function openSearch() {
+    document.getElementById('actionButtons')?.classList.add('hidden');
+    document.getElementById('scannerBox')?.classList.add('hidden');
+    document.getElementById('searchBox')?.classList.remove('hidden');
+    document.getElementById('manualCode')?.focus();
+}
+
+function closeSearch() {
+    document.getElementById('searchBox')?.classList.add('hidden');
+    document.getElementById('actionButtons')?.classList.remove('hidden');
+}
+
+// ==========================================
 // QR SCANNER
 // ==========================================
 function initScanner() {
     const readerElement = document.getElementById('reader');
     if (!readerElement) return;
-    
-    state.html5QrCode = new Html5Qrcode("reader");
-    
+
+    if (!state.html5QrCode) {
+        state.html5QrCode = new Html5Qrcode("reader");
+    }
+
     startScanner();
 }
 
 async function startScanner() {
     if (!state.html5QrCode) return;
-    
+
     const config = {
         fps: 10,
         qrbox: { width: 250, height: 250 },
         aspectRatio: 1.0
     };
-    
+
     try {
         await state.html5QrCode.start(
             { facingMode: state.currentCamera },
@@ -383,7 +433,6 @@ async function startScanner() {
             onScanSuccess,
             onScanFailure
         );
-        console.log('Scanner iniciado');
     } catch (err) {
         console.error("Error iniciando cámara:", err);
         showToast('Error al acceder a la cámara', 'error');
@@ -413,25 +462,24 @@ async function switchCamera() {
 async function onScanSuccess(decodedText) {
     if (state.isScanning) return;
     state.isScanning = true;
-    
-    // Vibrar si está disponible
+
+    // Vibrar
     if (navigator.vibrate) {
         navigator.vibrate(100);
     }
-    
-    // Sonido de beep (opcional)
-    playBeep();
-    
+
+    playBeep('success');
+
     await validateCode(decodedText);
-    
-    // Cooldown para evitar escaneos múltiples
+
+    // Cooldown
     setTimeout(() => {
         state.isScanning = false;
     }, 2000);
 }
 
 function onScanFailure(error) {
-    // Ignorar errores de escaneo (son normales cuando no hay QR)
+    // Normal cuando no hay QR
 }
 
 // ==========================================
@@ -442,22 +490,20 @@ async function validateCode(code) {
         showResult('error', 'Sin Evento', 'Selecciona un evento primero', {});
         return;
     }
-    
+
     if (!code || code.trim() === '') {
         showResult('error', 'Código Vacío', 'Ingresa un código válido', {});
         return;
     }
-    
+
     showLoading(true);
-    
+
     try {
-        let ticketDoc = null;
-        let ticketData = null;
         let snapshot;
-        
+
         const codeUpper = code.trim().toUpperCase();
         const codeOriginal = code.trim();
-        
+
         // 1. Buscar por código
         let q = query(
             collection(db, "tickets"),
@@ -465,8 +511,8 @@ async function validateCode(code) {
             where("code", "==", codeUpper)
         );
         snapshot = await getDocs(q);
-        
-        // 2. Si no encuentra, buscar por qr_token
+
+        // 2. Buscar por qr_token
         if (snapshot.empty) {
             q = query(
                 collection(db, "tickets"),
@@ -475,8 +521,8 @@ async function validateCode(code) {
             );
             snapshot = await getDocs(q);
         }
-        
-        // 3. Si no encuentra, buscar por client_dni
+
+        // 3. Buscar por client_dni
         if (snapshot.empty) {
             q = query(
                 collection(db, "tickets"),
@@ -485,8 +531,8 @@ async function validateCode(code) {
             );
             snapshot = await getDocs(q);
         }
-        
-        // 4. Si no encuentra, buscar por claimed_by.dni
+
+        // 4. Buscar por claimed_by.dni
         if (snapshot.empty) {
             q = query(
                 collection(db, "tickets"),
@@ -495,9 +541,10 @@ async function validateCode(code) {
             );
             snapshot = await getDocs(q);
         }
-        
-        // Si no se encontró nada
+
+        // No encontrado
         if (snapshot.empty) {
+            playBeep('error');
             showResult('error', 'No Encontrado', 'Código o DNI no válido para este evento', {});
             addToHistory(codeOriginal, 'error', 'No encontrado');
             state.stats.total++;
@@ -505,33 +552,30 @@ async function validateCode(code) {
             showLoading(false);
             return;
         }
-        
-        ticketDoc = snapshot.docs[0];
-        ticketData = ticketDoc.data();
-        
-        // Obtener datos del cliente
+
+        const ticketDoc = snapshot.docs[0];
+        const ticketData = ticketDoc.data();
+
+        // Datos del cliente
         const clientName = ticketData.client_name || ticketData.claimed_by?.name || 'Invitado';
         const clientDni = ticketData.client_dni || ticketData.claimed_by?.dni || '-';
-        const clientPhone = ticketData.client_phone || ticketData.claimed_by?.phone || '-';
-        const clientEmail = ticketData.client_email || ticketData.claimed_by?.email || '-';
         const ticketType = ticketData.ticket_name || 'General';
         const promoterName = ticketData.promoter_name || '-';
-        
+
         const clientData = {
             name: clientName,
             dni: clientDni,
-            phone: clientPhone,
-            email: clientEmail,
             type: ticketType,
             promoter: promoterName
         };
-        
-        // Verificar si ya fue escaneado
+
+        // Ya escaneado
         if (ticketData.status?.includes('SCANNED')) {
-            const scannedAt = ticketData.scanned_at 
-                ? new Date(ticketData.scanned_at).toLocaleString('es-PE') 
+            const scannedAt = ticketData.scanned_at
+                ? new Date(ticketData.scanned_at).toLocaleString('es-PE')
                 : 'Desconocido';
-            
+
+            playBeep('error');
             showResult('warning', 'Ya Escaneado', `Ingresó: ${scannedAt}`, clientData);
             addToHistory(clientName, 'warning', 'Duplicado');
             state.stats.duplicate++;
@@ -540,9 +584,10 @@ async function validateCode(code) {
             showLoading(false);
             return;
         }
-        
-        // Verificar si está cancelado
+
+        // Cancelado
         if (ticketData.status === 'CANCELLED') {
+            playBeep('error');
             showResult('error', 'Entrada Anulada', 'Esta entrada fue cancelada', clientData);
             addToHistory(clientName, 'error', 'Anulada');
             state.stats.total++;
@@ -550,14 +595,15 @@ async function validateCode(code) {
             showLoading(false);
             return;
         }
-        
-        // Verificar si está expirada
+
+        // Expirada
         if (ticketData.expires_at) {
             const expiryDate = new Date(ticketData.expires_at);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            
+
             if (expiryDate < today && ticketData.status !== 'CLAIMED') {
+                playBeep('error');
                 showResult('error', 'Entrada Expirada', 'Esta entrada ha vencido', clientData);
                 addToHistory(clientName, 'error', 'Expirada');
                 state.stats.total++;
@@ -566,9 +612,10 @@ async function validateCode(code) {
                 return;
             }
         }
-        
-        // Verificar si no ha sido reclamada
+
+        // No reclamada
         if (!ticketData.client_name && !ticketData.claimed_by?.name && ticketData.status !== 'CLAIMED') {
+            playBeep('error');
             showResult('warning', 'No Reclamada', 'Esta entrada no ha sido reclamada aún', clientData);
             addToHistory(codeOriginal, 'warning', 'Sin reclamar');
             state.stats.total++;
@@ -576,17 +623,16 @@ async function validateCode(code) {
             showLoading(false);
             return;
         }
-        
-        // ¡ÉXITO! - Marcar como escaneado
-        // ¡ÉXITO! - Mostrar para aprobar/rechazar (NO marcar automáticamente)
+
+        // ÉXITO - Mostrar para aprobar/rechazar
         showResult('success', 'Entrada Válida', 'Esperando aprobación', clientData, ticketDoc.id);
         addToHistory(clientName, 'success', ticketType);
-        
+
     } catch (error) {
         console.error('Error validando código:', error);
         showResult('error', 'Error', 'Error al validar el código', {});
     }
-    
+
     showLoading(false);
 }
 
@@ -596,18 +642,17 @@ async function validateCode(code) {
 async function validateManual() {
     const input = document.getElementById('manualCode');
     const code = input.value.trim();
-    
+
     if (!code) {
         showToast('Ingresa un código o DNI', 'error');
         return;
     }
-    
+
     await validateCode(code);
     input.value = '';
     input.focus();
 }
 
-// Exponer para onclick
 window.validateManual = validateManual;
 
 // ==========================================
@@ -620,10 +665,10 @@ function showResult(type, title, subtitle, data, ticketId = null) {
     const header = document.getElementById('resultHeader');
     const icon = document.getElementById('resultIcon');
     const actions = document.getElementById('resultActions');
-    
+
     header.classList.remove('success', 'error', 'warning');
     header.classList.add(type);
-    
+
     switch (type) {
         case 'success':
             icon.className = 'fa-solid fa-check';
@@ -635,15 +680,15 @@ function showResult(type, title, subtitle, data, ticketId = null) {
             icon.className = 'fa-solid fa-times';
             break;
     }
-    
+
     document.getElementById('resultTitle').textContent = title;
     document.getElementById('resultSubtitle').textContent = subtitle;
-    
+
     document.getElementById('resultName').textContent = data.name || '-';
     document.getElementById('resultDni').textContent = data.dni || '-';
     document.getElementById('resultType').textContent = data.type || '-';
     document.getElementById('resultPromoter').textContent = data.promoter || '-';
-    
+
     // Botones según el tipo
     if (type === 'success' && ticketId) {
         pendingTicketId = ticketId;
@@ -665,30 +710,31 @@ function showResult(type, title, subtitle, data, ticketId = null) {
             </button>
         `;
     }
-    
+
     overlay.classList.add('active');
 }
 
 async function approveEntry() {
     if (!pendingTicketId) return;
-    
+
     try {
         await updateDoc(doc(db, "tickets", pendingTicketId), {
             status: 'SCANNED',
             scanned_at: new Date().toISOString(),
             scanned_by: state.currentUser?.email || 'scanner_app'
         });
-        
+
         state.stats.success++;
         state.stats.total++;
         updateStats();
-        
+
+        playBeep('success');
         showToast('Entrada aprobada', 'success');
     } catch (error) {
         console.error('Error aprobando entrada:', error);
         showToast('Error al aprobar', 'error');
     }
-    
+
     pendingTicketId = null;
     closeResult();
 }
@@ -714,26 +760,20 @@ window.closeResult = closeResult;
 function addToHistory(name, type, detail) {
     const now = new Date();
     const time = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-    
-    state.history.unshift({
-        name: name,
-        type: type,
-        detail: detail,
-        time: time
-    });
-    
-    // Mantener máximo 50 registros
+
+    state.history.unshift({ name, type, detail, time });
+
     if (state.history.length > 50) {
         state.history.pop();
     }
-    
+
     renderHistory();
 }
 
 function renderHistory() {
     const list = document.getElementById('historyList');
     if (!list) return;
-    
+
     if (state.history.length === 0) {
         list.innerHTML = `
             <div class="empty-state">
@@ -743,7 +783,7 @@ function renderHistory() {
         `;
         return;
     }
-    
+
     list.innerHTML = state.history.map(h => `
         <div class="history-item">
             <div class="icon ${h.type}">
@@ -797,16 +837,16 @@ function showLoading(show) {
 function showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
-    
+
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.innerHTML = `
         <i class="fa-solid fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'times-circle' : 'info-circle'}"></i>
         ${escapeHtml(message)}
     `;
-    
+
     container.appendChild(toast);
-    
+
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translateY(-20px)';
@@ -823,23 +863,28 @@ function escapeHtml(text) {
 // ==========================================
 // SOUND
 // ==========================================
-function playBeep() {
+function playBeep(type = 'success') {
     try {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
-        
+
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.value = 1000;
-        oscillator.type = 'sine';
-        
+
+        if (type === 'success') {
+            oscillator.frequency.value = 1200;
+            oscillator.type = 'sine';
+        } else {
+            oscillator.frequency.value = 400;
+            oscillator.type = 'square';
+        }
+
         gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-        
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+
         oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.1);
+        oscillator.stop(audioContext.currentTime + 0.15);
     } catch (e) {
         // Ignorar error de audio
     }

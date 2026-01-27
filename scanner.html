@@ -4,18 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Scanner - ParyGo</title>
-    
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
+
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- QR Scanner Library -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    
+
     <!-- Styles -->
     <link rel="stylesheet" href="scanner.css">
 </head>
@@ -40,6 +40,27 @@
             </div>
         </div>
     </div>
+
+    <!-- ==================== EVENT SELECTION ==================== -->
+    <section class="event-selection hidden" id="eventSelection">
+        <div class="event-selection-container">
+            <div class="event-selection-header">
+                <div class="brand-logo-text">ParyGo<span class="dot">.</span></div>
+                <p class="greeting" id="greetingUser">Hola, Scanner</p>
+                <h2>Selecciona un evento</h2>
+            </div>
+            <div class="event-list" id="eventList">
+                <div class="event-list-loading">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    <p>Cargando eventos...</p>
+                </div>
+            </div>
+            <button class="btn-logout-secondary" id="btnLogoutEvents">
+                <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
+            </button>
+        </div>
+    </section>
+
     <!-- ==================== HEADER ==================== -->
     <header class="header hidden">
         <div class="header-left">
@@ -56,60 +77,67 @@
         </button>
     </header>
 
-    <!-- ==================== EVENT SELECTION ==================== -->
-    <section class="event-selection hidden" id="eventSelection">
-        <div class="event-selection-container">
-            <div class="event-selection-header">
-                <div class="event-selection-icon">
-                    <i class="fa-solid fa-calendar-check"></i>
-                </div>
-                <h2>Selecciona un evento</h2>
-                <p>Elige el evento para comenzar a escanear</p>
-            </div>
-            <div class="event-list" id="eventList">
-                <div class="event-list-loading">
-                    <i class="fa-solid fa-spinner fa-spin"></i>
-                    <p>Cargando eventos...</p>
-                </div>
-            </div>
-            <button class="btn-logout-secondary" id="btnLogoutEvents">
-                <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
-            </button>
-        </div>
-    </section>
-    
     <!-- ==================== MAIN CONTENT ==================== -->
     <main class="scanner-container hidden" id="mainContent">
-        
-        <!-- Scanner Box -->
-        <div class="scanner-box">
+
+        <!-- Action Buttons -->
+        <div class="action-buttons" id="actionButtons">
+            <button class="btn-action-primary" id="btnOpenScanner">
+                <div class="btn-action-icon">
+                    <i class="fa-solid fa-qrcode"></i>
+                </div>
+                <span>Escanear QR</span>
+            </button>
+            <button class="btn-action-secondary" id="btnOpenSearch">
+                <div class="btn-action-icon-secondary">
+                    <i class="fa-solid fa-search"></i>
+                </div>
+                <span>Buscar por DNI/Código</span>
+            </button>
+        </div>
+
+        <!-- Scanner Box (hidden by default) -->
+        <div class="scanner-box hidden" id="scannerBox">
+            <div class="scanner-box-header">
+                <span>Cámara activa</span>
+                <button class="btn-close-section" id="btnCloseScanner">
+                    <i class="fa-solid fa-times"></i> Cerrar
+                </button>
+            </div>
             <div class="scanner-wrapper">
                 <div id="reader"></div>
-                
+
                 <!-- Scanner Frame Overlay -->
                 <div class="scanner-frame">
                     <div class="scanner-frame-bottom"></div>
                     <div class="scanner-line"></div>
                 </div>
-                
+
                 <!-- Camera Switch Button -->
                 <button class="btn-camera-switch" id="btnSwitchCamera" title="Cambiar cámara">
                     <i class="fa-solid fa-camera-rotate"></i>
                 </button>
             </div>
         </div>
-        
-        <!-- Manual Input -->
-        <div class="manual-input">
-            <h3><i class="fa-solid fa-keyboard"></i> Ingresar código manual</h3>
-            <div class="input-row">
-                <input type="text" id="manualCode" placeholder="Código o DNI" autocomplete="off">
-                <button class="btn-search" id="btnSearch">
-                    <i class="fa-solid fa-search"></i>
+
+        <!-- Search Box (hidden by default) -->
+        <div class="search-box hidden" id="searchBox">
+            <div class="scanner-box-header">
+                <span>Buscar entrada</span>
+                <button class="btn-close-section" id="btnCloseSearch">
+                    <i class="fa-solid fa-times"></i> Cerrar
                 </button>
             </div>
+            <div class="search-input-area">
+                <div class="input-row">
+                    <input type="text" id="manualCode" placeholder="Código o DNI" autocomplete="off">
+                    <button class="btn-search" id="btnSearch">
+                        <i class="fa-solid fa-search"></i>
+                    </button>
+                </div>
+            </div>
         </div>
-        
+
         <!-- Stats -->
         <div class="stats">
             <div class="stat-card success">
@@ -125,7 +153,7 @@
                 <div class="label">Total</div>
             </div>
         </div>
-        
+
         <!-- History -->
         <div class="history">
             <div class="history-header">
@@ -139,9 +167,9 @@
                 </div>
             </div>
         </div>
-        
+
     </main>
-    
+
     <!-- ==================== RESULT MODAL ==================== -->
     <div class="result-overlay" id="resultOverlay">
         <div class="result-card">
@@ -153,7 +181,7 @@
                 <h2 id="resultTitle">Acceso Permitido</h2>
                 <p id="resultSubtitle">Entrada válida</p>
             </div>
-            
+
             <!-- Body -->
             <div class="result-body">
                 <div class="result-info">
@@ -175,26 +203,25 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Actions -->
-            <!-- Actions -->
-<div class="result-actions" id="resultActions">
-    <!-- Se llena dinámicamente -->
-</div>
+            <div class="result-actions" id="resultActions">
+                <!-- Se llena dinámicamente -->
+            </div>
         </div>
     </div>
-    
+
     <!-- ==================== LOADING OVERLAY ==================== -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="spinner"></div>
         <p>Validando...</p>
     </div>
-    
+
     <!-- ==================== TOAST CONTAINER ==================== -->
     <div class="toast-container" id="toastContainer"></div>
-    
+
     <!-- ==================== SCRIPTS ==================== -->
     <script type="module" src="scanner.js"></script>
-    
+
 </body>
 </html>
