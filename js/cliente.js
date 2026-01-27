@@ -260,16 +260,29 @@ function hideSplash() {
 // ==========================================
 async function loadUserProfile(uid) {
     try {
-        const snap = await getDoc(doc(db, "clientes", uid));
+        // Intentar con ID compuesto primero (más eficiente)
+        const clienteId = `${uid}_${currentBrandId}`;
+        const docSnap = await getDoc(doc(db, "clientes", clienteId));
 
-        if (snap.exists()) {
-            const data = snap.data();
-            // Verificar que el cliente pertenece a esta marca
-            if (data.brand_id === currentBrandId) {
-                currentUserProfile = { id: snap.id, ...data };
-                updateUserUI();
-                return true;
-            }
+        if (docSnap.exists()) {
+            currentUserProfile = { id: docSnap.id, ...docSnap.data() };
+            updateUserUI();
+            return true;
+        }
+
+        // Fallback: buscar por query
+        const q = query(
+            collection(db, "clientes"),
+            where("uid", "==", uid),
+            where("brand_id", "==", currentBrandId)
+        );
+        const snap = await getDocs(q);
+
+        if (!snap.empty) {
+            const data = snap.docs[0].data();
+            currentUserProfile = { id: snap.docs[0].id, ...data };
+            updateUserUI();
+            return true;
         }
         return false;
     } catch (e) {
@@ -654,9 +667,9 @@ function validatePhone(phone) {
 }
 
 // ==========================================
-// REGISTRO
+// REGISTRO (FUNCIÓN GLOBAL)
 // ==========================================
-async function handleRegister() {
+window.handleRegister = async function() {
     const dni = document.getElementById("reg_dni").value.trim();
     const nombres = document.getElementById("reg_nombres").value.trim();
     const apellidos = document.getElementById("reg_apellidos").value.trim();
@@ -684,11 +697,27 @@ async function handleRegister() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> CREANDO CUENTA...';
 
     try {
-        // 1. Crear usuario en Firebase Auth
+        // 1. Verificar que el DNI no esté ya registrado en esta marca
+        const qDNI = query(
+            collection(db, "clientes"),
+            where("dni", "==", dni),
+            where("brand_id", "==", currentBrandId)
+        );
+        const snapDNI = await getDocs(qDNI);
+
+        if (!snapDNI.empty) {
+            toast("Este DNI ya está registrado en esta marca");
+            btn.disabled = false;
+            btn.innerHTML = 'CREAR CUENTA';
+            return;
+        }
+
+        // 2. Crear usuario en Firebase Auth
         const cred = await createUserWithEmailAndPassword(auth, email, password);
 
-        // 2. Guardar datos en colección "clientes"
-        await setDoc(doc(db, "clientes", cred.user.uid), {
+        // 3. Crear documento en colección "clientes" con ID compuesto
+        const clienteId = `${cred.user.uid}_${currentBrandId}`;
+        await setDoc(doc(db, "clientes", clienteId), {
             uid: cred.user.uid,
             dni,
             nombres,
@@ -697,6 +726,7 @@ async function handleRegister() {
             phone,
             brand_id: currentBrandId,
             brand_slug: currentBrandSlug,
+            brand_name: currentBrand?.name || '',
             created_at: new Date().toISOString()
         });
 
@@ -720,12 +750,12 @@ async function handleRegister() {
         btn.disabled = false;
         btn.innerHTML = 'CREAR CUENTA';
     }
-}
+};
 
 // ==========================================
-// LOGIN
+// LOGIN (FUNCIÓN GLOBAL)
 // ==========================================
-async function handleLogin() {
+window.handleLogin = async function() {
     const email = document.getElementById("login_email").value.trim().toLowerCase();
     const password = document.getElementById("login_password").value;
 
@@ -747,8 +777,8 @@ async function handleLogin() {
         console.error("Error en login:", e);
 
         let errorMsg = "Error al iniciar sesión";
-        if (e.code === 'auth/user-not-found') {
-            errorMsg = "No existe una cuenta con este correo";
+        if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+            errorMsg = "Correo o contraseña incorrectos";
         } else if (e.code === 'auth/wrong-password') {
             errorMsg = "Contraseña incorrecta";
         } else if (e.code === 'auth/invalid-email') {
@@ -761,7 +791,7 @@ async function handleLogin() {
         btn.disabled = false;
         btn.innerHTML = 'INICIAR SESIÓN';
     }
-}
+};
 
 // ==========================================
 // ACTUALIZAR UI DEL USUARIO
@@ -770,7 +800,7 @@ function updateUserUI() {
     if (!currentUserProfile) return;
 
     const fullName = `${currentUserProfile.nombres || ''} ${currentUserProfile.apellidos || ''}`.trim();
-    const initials = getInitials(fullName || 'US');
+    const initials = getInitials(fullName || 'CL');
 
     ['header_avatar', 'profile_avatar'].forEach(id => {
         const el = document.getElementById(id);
@@ -778,7 +808,7 @@ function updateUserUI() {
     });
 
     const profileNameEl = document.getElementById("profile_name");
-    if (profileNameEl) profileNameEl.textContent = fullName || '---';
+    if (profileNameEl) profileNameEl.textContent = fullName || 'Cliente';
 
     const profileDocEl = document.getElementById("profile_doc");
     if (profileDocEl) profileDocEl.textContent = `DNI: ${currentUserProfile.dni || '---'}`;
@@ -930,21 +960,22 @@ window.redeemCode = async () => {
         }
         
         // Canjear código
+        const fullName = `${currentUserProfile.nombres || ''} ${currentUserProfile.apellidos || ''}`.trim();
         await updateDoc(doc(db, "codes", codeDoc.id), {
             status: "CLAIMED",
             claimed_by: currentUser.uid,
-            claimed_name: currentUserProfile.name,
-            claimed_dni: currentUserProfile.doc_number,
+            claimed_name: fullName,
+            claimed_dni: currentUserProfile.dni,
             claimed_phone: currentUserProfile.phone,
             claimed_at: new Date().toISOString()
         });
-        
+
         // Crear ticket
         const qrData = generateQRData(code);
         await addDoc(collection(db, "tickets"), {
             user_id: currentUser.uid,
-            user_name: currentUserProfile.name,
-            user_doc: currentUserProfile.doc_number,
+            user_name: fullName,
+            user_doc: currentUserProfile.dni,
             user_phone: currentUserProfile.phone,
             user_email: currentUserProfile.email,
             event_id: currentEvent.id,
@@ -1121,11 +1152,12 @@ window.sendPaymentProof = async () => {
     
     try {
         const imageBase64 = await fileToBase64(imageInput.files[0]);
-        
+        const fullName = `${currentUserProfile.nombres || ''} ${currentUserProfile.apellidos || ''}`.trim();
+
         await addDoc(collection(db, "purchases"), {
             user_id: currentUser.uid,
-            user_name: currentUserProfile.name,
-            user_doc: currentUserProfile.doc_number,
+            user_name: fullName,
+            user_doc: currentUserProfile.dni,
             user_email: currentUserProfile.email,
             user_phone: currentUserProfile.phone,
             event_id: currentEvent.id,
