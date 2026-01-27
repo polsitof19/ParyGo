@@ -397,7 +397,7 @@ async function searchRENIECForLink(dni) {
     }
 }
 
-window.linkAccountToProfile = async () => {
+async function linkAccountToProfile() {
     const docNumber = document.getElementById("link_doc_number").value.trim();
     const nombres = document.getElementById("link_nombres").value.trim();
     const apellidos = document.getElementById("link_apellidos").value.trim();
@@ -447,23 +447,23 @@ window.linkAccountToProfile = async () => {
     }
 };
 
-window.logoutAndRestart = async () => {
+async function logoutAndRestart() {
     await signOut(auth);
     location.reload();
-};
+}
 
 // ==========================================
 // AUTENTICACIÓN - BUSCAR DOCUMENTO
 // ==========================================
-window.selectDocType = (type) => {
+function selectDocType(type) {
     selectedDocType = type;
     document.querySelectorAll('.doc-type-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll(`[data-type="${type}"]`).forEach(b => b.classList.add('active'));
-    
+
     // Actualizar labels
     const labels = ['doc_label', 'link_doc_label'];
     const inputs = ['auth_doc_number', 'link_doc_number'];
-    
+
     labels.forEach(id => {
         const label = document.getElementById(id);
         if (label) {
@@ -476,7 +476,7 @@ window.selectDocType = (type) => {
             }
         }
     });
-    
+
     inputs.forEach(id => {
         const input = document.getElementById(id);
         if (input) {
@@ -484,7 +484,7 @@ window.selectDocType = (type) => {
             input.placeholder = type === 'DNI' ? "12345678" : (type === 'CE' ? "CE123456789" : "AB1234567");
         }
     });
-};
+}
 
 async function searchDocument() {
     const docNumber = document.getElementById("auth_doc_number").value.trim();
@@ -602,11 +602,11 @@ function showAuthStep(step) {
     document.getElementById(`auth_step${step}`)?.classList.remove("hidden");
 }
 
-window.backToStep1 = () => {
+function backToStep1() {
     foundUserData = null;
     existingUserNeedsProfile = false;
     showAuthStep(1);
-};
+}
 
 // ==========================================
 // REGISTRO - USUARIO NUEVO
@@ -614,12 +614,12 @@ window.backToStep1 = () => {
 // ==========================================
 // ALTERNAR ENTRE LOGIN Y REGISTRO
 // ==========================================
-window.showLoginScreen = function() {
+function showLoginScreen() {
     document.getElementById("loginScreen").classList.remove("hidden");
     document.getElementById("registerScreen").classList.add("hidden");
 }
 
-window.showRegisterScreen = function() {
+function showRegisterScreen() {
     document.getElementById("loginScreen").classList.add("hidden");
     document.getElementById("registerScreen").classList.remove("hidden");
 }
@@ -669,7 +669,7 @@ function validatePhone(phone) {
 // ==========================================
 // REGISTRO (FUNCIÓN GLOBAL)
 // ==========================================
-window.handleRegister = async function() {
+async function handleRegister() {
     const dni = document.getElementById("reg_dni").value.trim();
     const nombres = document.getElementById("reg_nombres").value.trim();
     const apellidos = document.getElementById("reg_apellidos").value.trim();
@@ -755,7 +755,7 @@ window.handleRegister = async function() {
 // ==========================================
 // LOGIN (FUNCIÓN GLOBAL)
 // ==========================================
-window.handleLogin = async function() {
+async function handleLogin() {
     const email = document.getElementById("login_email").value.trim().toLowerCase();
     const password = document.getElementById("login_password").value;
 
@@ -874,20 +874,20 @@ async function loadEvents() {
     }
 }
 
-window.openEventDetail = (index) => {
+function openEventDetail(index) {
     currentEvent = allEvents[index];
     if (!currentEvent) return;
-    
+
     showView('eventDetailView');
-    
+
     document.getElementById("detail_image").src = currentEvent.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600';
     document.getElementById("detail_name").textContent = currentEvent.name;
     document.getElementById("detail_date").textContent = formatDate(currentEvent.date);
     document.getElementById("detail_time").textContent = currentEvent.time || 'Por confirmar';
     document.getElementById("detail_venue").textContent = currentEvent.venue || 'Por confirmar';
-    
+
     renderTicketsForSale();
-};
+}
 
 function renderTicketsForSale() {
     const container = document.getElementById("tickets_for_sale");
@@ -912,15 +912,15 @@ function renderTicketsForSale() {
     `).join('');
 }
 
-window.backToEvents = () => {
+function backToEvents() {
     currentEvent = null;
     showView('eventsView');
-};
+}
 
-window.showEvents = () => {
+function showEvents() {
     showView('eventsView');
     updateNavActive(0);
-};
+}
 
 function updateNavActive(index) {
     document.querySelectorAll('.nav-item').forEach((n, i) => {
@@ -931,7 +931,7 @@ function updateNavActive(index) {
 // ==========================================
 // CANJEAR CÓDIGO
 // ==========================================
-window.redeemCode = async () => {
+async function redeemCode() {
     const codeInput = document.getElementById("promo_code");
     const code = codeInput.value.trim().toUpperCase();
     
@@ -1017,7 +1017,7 @@ function generateQRData(code) {
 // ==========================================
 // COMPRAR ENTRADA
 // ==========================================
-window.openBuyModal = (ticketIndex) => {
+function openBuyModal(ticketIndex) {
     const ticket = currentEvent?.tickets?.[ticketIndex];
     if (!ticket) return;
     
@@ -1036,11 +1036,11 @@ window.openBuyModal = (ticketIndex) => {
     openModal('modalBuy');
 };
 
-window.changeQty = (delta) => {
+function changeQty(delta) {
     buyState.quantity = Math.max(1, Math.min(5, buyState.quantity + delta));
     document.getElementById("buy_qty").textContent = buyState.quantity;
     updateBuyTotal();
-};
+}
 
 function updateBuyTotal() {
     const subtotal = buyState.quantity * buyState.unitPrice;
@@ -1052,13 +1052,18 @@ function updateBuyTotal() {
     document.getElementById("buy_total").textContent = `S/. ${buyState.total.toFixed(2)}`;
 }
 
-window.goToPayment = () => {
+function goToPayment() {
     showBuyStep(2);
     loadPaymentInfo();
-};
+}
 
-window.backToBuyStep1 = () => showBuyStep(1);
-window.backToBuyStep2 = () => showBuyStep(2);
+function backToBuyStep1() {
+    showBuyStep(1);
+}
+
+function backToBuyStep2() {
+    showBuyStep(2);
+}
 
 function showBuyStep(step) {
     for (let i = 1; i <= 4; i++) {
@@ -1067,16 +1072,16 @@ function showBuyStep(step) {
     document.getElementById(`buy_step${step}`)?.classList.remove('hidden');
 }
 
-window.selectPaymentMethod = (method) => {
+function selectPaymentMethod(method) {
     buyState.paymentMethod = method;
     document.querySelectorAll('.payment-method-btn').forEach(b => b.classList.remove('active'));
     document.querySelector(`[data-method="${method}"]`)?.classList.add('active');
-    
+
     document.getElementById("payment_yape_plin")?.classList.toggle('hidden', method === 'bank');
     document.getElementById("payment_bank")?.classList.toggle('hidden', method !== 'bank');
-    
+
     loadPaymentInfo();
-};
+}
 
 function loadPaymentInfo() {
     const config = currentEvent?.payment_config || {};
@@ -1101,18 +1106,18 @@ function loadPaymentInfo() {
     }
 }
 
-window.showPaymentQR = () => {
+function showPaymentQR() {
     const config = currentEvent?.payment_config?.yape || currentEvent?.payment_config || {};
     if (config.qr_image) {
         document.getElementById("payment_qr_image").src = config.qr_image;
         openModal('modalPaymentQR');
     }
-};
+}
 
-window.copyToClipboard = async (elementId) => {
+async function copyToClipboard(elementId) {
     const el = document.getElementById(elementId);
     if (!el) return;
-    
+
     const text = el.textContent.replace('S/. ', '');
     try {
         await navigator.clipboard.writeText(text);
@@ -1120,14 +1125,16 @@ window.copyToClipboard = async (elementId) => {
     } catch (e) {
         toast("Error al copiar");
     }
-};
+}
 
-window.goToUploadProof = () => showBuyStep(3);
+function goToUploadProof() {
+    showBuyStep(3);
+}
 
-window.previewProofImage = (event) => {
+function previewProofImage(event) {
     const file = event.target.files[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = (e) => {
         document.getElementById("upload_preview").src = e.target.result;
@@ -1135,9 +1142,9 @@ window.previewProofImage = (event) => {
         document.getElementById("upload_placeholder").classList.add('hidden');
     };
     reader.readAsDataURL(file);
-};
+}
 
-window.sendPaymentProof = async () => {
+async function sendPaymentProof() {
     const payerName = document.getElementById("proof_payer_name").value.trim();
     const operation = document.getElementById("proof_operation").value.trim();
     const imageInput = document.getElementById("proof_image");
@@ -1236,18 +1243,18 @@ async function loadMyTickets() {
     }
 }
 
-window.openMyTickets = () => {
+function openMyTickets() {
     showView('myTicketsView');
     updateNavActive(1);
     renderMyTickets();
-};
+}
 
-window.switchTicketTab = (tab) => {
+function switchTicketTab(tab) {
     currentTicketTab = tab;
     document.querySelectorAll('.tickets-tabs .tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelector(`.tickets-tabs .tab-btn[onclick*="${tab}"]`)?.classList.add('active');
     renderMyTickets();
-};
+}
 
 function renderMyTickets() {
     const container = document.getElementById("my_tickets_list");
@@ -1305,7 +1312,7 @@ function renderMyTickets() {
     }
 }
 
-window.viewTicketQR = (index, tab) => {
+function viewTicketQR(index, tab) {
     const list = tab === 'active' ? myTickets.filter(t => t.status === 'ACTIVE') : myTickets.filter(t => t.status !== 'ACTIVE');
     viewingTicket = list[index];
     if (!viewingTicket) return;
@@ -1338,25 +1345,25 @@ window.viewTicketQR = (index, tab) => {
     }
 };
 
-window.backToMyTickets = () => {
+function backToMyTickets() {
     viewingTicket = null;
     showView('myTicketsView');
-};
+}
 
-window.downloadTicket = () => {
+function downloadTicket() {
     const canvas = document.getElementById("qr_canvas");
     if (!canvas) return;
-    
+
     const link = document.createElement('a');
     link.download = `entrada-${viewingTicket?.code || 'ticket'}.png`;
     link.href = canvas.toDataURL();
     link.click();
     toast("✅ Entrada descargada");
-};
+}
 
-window.shareTicket = async () => {
+async function shareTicket() {
     const text = `🎫 Mi entrada para ${viewingTicket?.event_name}\nCódigo: ${viewingTicket?.code}`;
-    
+
     if (navigator.share) {
         try {
             await navigator.share({ text });
@@ -1367,28 +1374,28 @@ window.shareTicket = async () => {
             toast("✅ Copiado al portapapeles");
         } catch (e) {}
     }
-};
+}
 
 // ==========================================
 // PERFIL
 // ==========================================
-window.openProfile = () => {
+function openProfile() {
     document.getElementById("profileOverlay").classList.remove("hidden");
     setTimeout(() => document.getElementById("profileDrawer").classList.add("open"), 50);
-};
+}
 
-window.closeProfile = () => {
+function closeProfile() {
     document.getElementById("profileDrawer").classList.remove("open");
     setTimeout(() => document.getElementById("profileOverlay").classList.add("hidden"), 300);
-};
+}
 
-window.doLogout = async () => {
+async function doLogout() {
     if (!confirm("¿Cerrar sesión?")) return;
     await signOut(auth);
     currentUser = null;
     currentUserProfile = null;
     location.reload();
-};
+}
 
 // ==========================================
 // UTILIDADES
@@ -1402,9 +1409,9 @@ function openModal(id) {
     document.getElementById(id)?.classList.remove('hidden');
 }
 
-window.closeModal = (id) => {
+function closeModal(id) {
     document.getElementById(id)?.classList.add('hidden');
-};
+}
 
 function escapeHtml(text) {
     const div = document.createElement('div');
@@ -1429,6 +1436,59 @@ function toast(msg) {
 }
 
 // ==========================================
+// EXPONER FUNCIONES GLOBALMENTE (para onclick)
+// ==========================================
+// Asegurar que todas las funciones estén disponibles globalmente
+if (typeof window !== 'undefined') {
+    // Autenticación
+    window.showLoginScreen = showLoginScreen;
+    window.showRegisterScreen = showRegisterScreen;
+    window.handleLogin = handleLogin;
+    window.handleRegister = handleRegister;
+
+    // Navegación
+    window.showEvents = showEvents;
+    window.backToEvents = backToEvents;
+    window.openEventDetail = openEventDetail;
+    window.backToMyTickets = backToMyTickets;
+
+    // Tickets
+    window.openMyTickets = openMyTickets;
+    window.switchTicketTab = switchTicketTab;
+    window.viewTicketQR = viewTicketQR;
+    window.downloadTicket = downloadTicket;
+    window.shareTicket = shareTicket;
+    window.redeemCode = redeemCode;
+
+    // Compra
+    window.openBuyModal = openBuyModal;
+    window.changeQty = changeQty;
+    window.goToPayment = goToPayment;
+    window.backToBuyStep1 = backToBuyStep1;
+    window.backToBuyStep2 = backToBuyStep2;
+    window.selectPaymentMethod = selectPaymentMethod;
+    window.showPaymentQR = showPaymentQR;
+    window.copyToClipboard = copyToClipboard;
+    window.goToUploadProof = goToUploadProof;
+    window.previewProofImage = previewProofImage;
+    window.sendPaymentProof = sendPaymentProof;
+
+    // Perfil
+    window.openProfile = openProfile;
+    window.closeProfile = closeProfile;
+    window.doLogout = doLogout;
+
+    // Modales
+    window.closeModal = closeModal;
+
+    // Otras
+    window.selectDocType = selectDocType;
+    window.linkAccountToProfile = linkAccountToProfile;
+    window.logoutAndRestart = logoutAndRestart;
+    window.backToStep1 = backToStep1;
+}
+
+// ==========================================
 // EVENT LISTENERS
 // ==========================================
 function setupEventListeners() {
@@ -1448,12 +1508,12 @@ function setupEventListeners() {
         if (e.key === "Enter") document.getElementById("login_password")?.focus();
     });
     document.getElementById("login_password")?.addEventListener("keypress", e => {
-        if (e.key === "Enter") handleLogin();
+        if (e.key === "Enter") window.handleLogin();
     });
 
     // Enter en inputs de registro
     document.getElementById("reg_confirm_password")?.addEventListener("keypress", e => {
-        if (e.key === "Enter") handleRegister();
+        if (e.key === "Enter") window.handleRegister();
     });
 
     // Modales
