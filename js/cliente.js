@@ -91,26 +91,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 3. Escuchar estado de autenticación
     onAuthStateChanged(auth, async (user) => {
         setTimeout(hideSplash, 800);
-        
+
         if (user) {
             currentUser = user;
             // Verificar si tiene perfil en ESTA marca
             const hasProfile = await loadUserProfile(user.uid);
-            
+
             if (hasProfile) {
                 // Tiene perfil → Entrar
                 showView('eventsView');
                 loadEvents();
                 loadMyTickets();
             } else {
-                // Tiene cuenta pero NO perfil en esta marca
-                existingUserNeedsProfile = true;
-                showLinkAccountPrompt(user);
+                // No tiene perfil en esta marca → volver a auth
+                await signOut(auth);
+                toast("No tienes acceso a esta marca");
+                showView('authView');
+                showLoginScreen();
             }
         } else {
             currentUser = null;
             currentUserProfile = null;
             showView('authView');
+            showLoginScreen();
         }
     });
     
@@ -220,9 +223,13 @@ function updateBrandUI() {
     // Nombre
     const headerName = document.getElementById("header_brand_name");
     if (headerName) headerName.textContent = currentBrand.name || 'Eventos';
-    
+
+    // Nombre en auth
+    const authBrandName = document.getElementById("auth_brand_name");
+    if (authBrandName) authBrandName.textContent = currentBrand.name || 'Marca';
+
     document.title = `${currentBrand.name || 'ParyGo'} | Eventos`;
-    
+
     // Color de tema (opcional)
     if (currentBrand.color) {
         document.documentElement.style.setProperty('--primary', currentBrand.color);
@@ -253,13 +260,16 @@ function hideSplash() {
 // ==========================================
 async function loadUserProfile(uid) {
     try {
-        const profileId = `${uid}_${currentBrandId}`;
-        const snap = await getDoc(doc(db, "user_profiles", profileId));
-        
+        const snap = await getDoc(doc(db, "clientes", uid));
+
         if (snap.exists()) {
-            currentUserProfile = { id: snap.id, ...snap.data() };
-            updateUserUI();
-            return true;
+            const data = snap.data();
+            // Verificar que el cliente pertenece a esta marca
+            if (data.brand_id === currentBrandId) {
+                currentUserProfile = { id: snap.id, ...data };
+                updateUserUI();
+                return true;
+            }
         }
         return false;
     } catch (e) {
@@ -588,56 +598,127 @@ window.backToStep1 = () => {
 // ==========================================
 // REGISTRO - USUARIO NUEVO
 // ==========================================
+// ==========================================
+// ALTERNAR ENTRE LOGIN Y REGISTRO
+// ==========================================
+window.showLoginScreen = function() {
+    document.getElementById("loginScreen").classList.remove("hidden");
+    document.getElementById("registerScreen").classList.add("hidden");
+}
+
+window.showRegisterScreen = function() {
+    document.getElementById("loginScreen").classList.add("hidden");
+    document.getElementById("registerScreen").classList.remove("hidden");
+}
+
+// ==========================================
+// BUSCAR RENIEC AUTOMÁTICAMENTE AL ESCRIBIR DNI
+// ==========================================
+async function autoSearchRENIEC(dni) {
+    if (dni.length !== 8) return;
+
+    try {
+        const TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InBhdWxzZWJhc3RpYW40MzlAZ21haWwuY29tIn0.6OW3nuSrcpVbUbhakLiTa7K4IAcWEJz4LJ1pALTNlSI";
+        const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`https://dniruc.apisperu.com/api/v1/dni/${dni}?token=${TOKEN}`));
+        const data = await res.json();
+
+        if (data?.nombres) {
+            document.getElementById("reg_nombres").value = data.nombres;
+            document.getElementById("reg_apellidos").value = `${data.apellidoPaterno || ''} ${data.apellidoMaterno || ''}`.trim();
+            document.getElementById("reg_nombres").setAttribute("readonly", "true");
+            document.getElementById("reg_apellidos").setAttribute("readonly", "true");
+            toast("✅ Datos encontrados en RENIEC");
+        } else {
+            document.getElementById("reg_nombres").removeAttribute("readonly");
+            document.getElementById("reg_apellidos").removeAttribute("readonly");
+        }
+    } catch (e) {
+        console.error("Error RENIEC:", e);
+    }
+}
+
+// ==========================================
+// VALIDACIONES
+// ==========================================
+function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+}
+
+function validateDNI(dni) {
+    return /^[0-9]{8}$/.test(dni);
+}
+
+function validatePhone(phone) {
+    return /^9[0-9]{8}$/.test(phone);
+}
+
+// ==========================================
+// REGISTRO
+// ==========================================
 async function handleRegister() {
+    const dni = document.getElementById("reg_dni").value.trim();
     const nombres = document.getElementById("reg_nombres").value.trim();
     const apellidos = document.getElementById("reg_apellidos").value.trim();
     const email = document.getElementById("reg_email").value.trim().toLowerCase();
     const phone = document.getElementById("reg_phone").value.trim();
     const password = document.getElementById("reg_password").value;
-    const docNumber = document.getElementById("auth_doc_number").value.trim();
-    
-    if (!nombres || !apellidos) return toast("Ingresa tu nombre completo");
-    if (!email || !email.includes('@')) return toast("Ingresa un correo válido");
-    if (!phone || phone.length !== 9 || !phone.startsWith('9')) return toast("Teléfono: 9 dígitos, empieza con 9");
-    if (!password || password.length < 6) return toast("Contraseña mínimo 6 caracteres");
-    
-    const btn = document.getElementById("btnContinue");
+    const confirmPassword = document.getElementById("reg_confirm_password").value;
+
+    // Validaciones
+    if (!dni) return toast("El DNI es obligatorio");
+    if (!validateDNI(dni)) return toast("El DNI debe tener exactamente 8 dígitos");
+    if (!nombres) return toast("Los nombres son obligatorios");
+    if (!apellidos) return toast("Los apellidos son obligatorios");
+    if (!email) return toast("El correo electrónico es obligatorio");
+    if (!validateEmail(email)) return toast("Ingresa un correo electrónico válido");
+    if (!phone) return toast("El celular es obligatorio");
+    if (!validatePhone(phone)) return toast("El celular debe empezar con 9 y tener 9 dígitos");
+    if (!password) return toast("La contraseña es obligatoria");
+    if (password.length < 6) return toast("La contraseña debe tener mínimo 6 caracteres");
+    if (!confirmPassword) return toast("Confirma tu contraseña");
+    if (password !== confirmPassword) return toast("Las contraseñas no coinciden");
+
+    const btn = document.getElementById("btnRegister");
     btn.disabled = true;
-    btn.innerHTML = '<span>Creando cuenta...</span>';
-    
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> CREANDO CUENTA...';
+
     try {
         // 1. Crear usuario en Firebase Auth
         const cred = await createUserWithEmailAndPassword(auth, email, password);
-        
-        // 2. Crear usuario global
-        await setDoc(doc(db, "users", cred.user.uid), {
-            email,
-            created_at: new Date().toISOString()
-        });
-        
-        // 3. Crear perfil específico para esta marca
-        const profileId = `${cred.user.uid}_${currentBrandId}`;
-        await setDoc(doc(db, "user_profiles", profileId), {
-            user_id: cred.user.uid,
-            brand_id: currentBrandId,
-            brand_slug: currentBrandSlug,
-            name: `${nombres} ${apellidos}`.trim(),
+
+        // 2. Guardar datos en colección "clientes"
+        await setDoc(doc(db, "clientes", cred.user.uid), {
+            uid: cred.user.uid,
+            dni,
             nombres,
             apellidos,
             email,
             phone,
-            doc_type: selectedDocType,
-            doc_number: docNumber,
+            brand_id: currentBrandId,
+            brand_slug: currentBrandSlug,
             created_at: new Date().toISOString()
         });
-        
-        toast("🎉 ¡Cuenta creada!");
-        
+
+        toast("✅ ¡Cuenta creada exitosamente!");
+
+        // El onAuthStateChanged manejará la redirección
+
     } catch (e) {
-        console.error(e);
-        toast(e.code === 'auth/email-already-in-use' ? "Este correo ya está registrado" : "Error al crear cuenta");
+        console.error("Error en registro:", e);
+
+        let errorMsg = "Error al crear cuenta";
+        if (e.code === 'auth/email-already-in-use') {
+            errorMsg = "Este correo ya está registrado";
+        } else if (e.code === 'auth/weak-password') {
+            errorMsg = "La contraseña es muy débil";
+        } else if (e.code === 'auth/invalid-email') {
+            errorMsg = "Correo electrónico inválido";
+        }
+
+        toast(errorMsg);
         btn.disabled = false;
-        btn.innerHTML = '<span>CONTINUAR</span><i class="fa-solid fa-arrow-right"></i>';
+        btn.innerHTML = 'CREAR CUENTA';
     }
 }
 
@@ -645,23 +726,40 @@ async function handleRegister() {
 // LOGIN
 // ==========================================
 async function handleLogin() {
+    const email = document.getElementById("login_email").value.trim().toLowerCase();
     const password = document.getElementById("login_password").value;
-    
+
+    // Validaciones
+    if (!email) return toast("Ingresa tu correo electrónico");
+    if (!validateEmail(email)) return toast("Ingresa un correo electrónico válido");
     if (!password) return toast("Ingresa tu contraseña");
-    if (!foundUserData?.email) return toast("Error: no se encontró el email");
-    
+
     const btn = document.getElementById("btnLogin");
     btn.disabled = true;
-    btn.innerHTML = '<span>Ingresando...</span>';
-    
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> INGRESANDO...';
+
     try {
-        await signInWithEmailAndPassword(auth, foundUserData.email, password);
+        await signInWithEmailAndPassword(auth, email, password);
         // El onAuthStateChanged se encargará del resto
+        toast("✅ ¡Bienvenido!");
+
     } catch (e) {
-        console.error(e);
-        toast("Contraseña incorrecta");
+        console.error("Error en login:", e);
+
+        let errorMsg = "Error al iniciar sesión";
+        if (e.code === 'auth/user-not-found') {
+            errorMsg = "No existe una cuenta con este correo";
+        } else if (e.code === 'auth/wrong-password') {
+            errorMsg = "Contraseña incorrecta";
+        } else if (e.code === 'auth/invalid-email') {
+            errorMsg = "Correo electrónico inválido";
+        } else if (e.code === 'auth/too-many-requests') {
+            errorMsg = "Demasiados intentos. Intenta más tarde";
+        }
+
+        toast(errorMsg);
         btn.disabled = false;
-        btn.innerHTML = '<span>INGRESAR</span><i class="fa-solid fa-arrow-right"></i>';
+        btn.innerHTML = 'INICIAR SESIÓN';
     }
 }
 
@@ -670,18 +768,26 @@ async function handleLogin() {
 // ==========================================
 function updateUserUI() {
     if (!currentUserProfile) return;
-    
-    const initials = getInitials(currentUserProfile.name || 'US');
-    
+
+    const fullName = `${currentUserProfile.nombres || ''} ${currentUserProfile.apellidos || ''}`.trim();
+    const initials = getInitials(fullName || 'US');
+
     ['header_avatar', 'profile_avatar'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.textContent = initials;
     });
-    
-    document.getElementById("profile_name").textContent = currentUserProfile.name || '---';
-    document.getElementById("profile_doc").textContent = `${currentUserProfile.doc_type || 'DNI'}: ${currentUserProfile.doc_number || '---'}`;
-    document.getElementById("profile_email").textContent = currentUserProfile.email || '---';
-    document.getElementById("profile_phone").textContent = currentUserProfile.phone || '---';
+
+    const profileNameEl = document.getElementById("profile_name");
+    if (profileNameEl) profileNameEl.textContent = fullName || '---';
+
+    const profileDocEl = document.getElementById("profile_doc");
+    if (profileDocEl) profileDocEl.textContent = `DNI: ${currentUserProfile.dni || '---'}`;
+
+    const profileEmailEl = document.getElementById("profile_email");
+    if (profileEmailEl) profileEmailEl.textContent = currentUserProfile.email || '---';
+
+    const profilePhoneEl = document.getElementById("profile_phone");
+    if (profilePhoneEl) profilePhoneEl.textContent = currentUserProfile.phone || '---';
 }
 
 function getInitials(name) {
@@ -1294,12 +1400,31 @@ function toast(msg) {
 // EVENT LISTENERS
 // ==========================================
 function setupEventListeners() {
-    document.getElementById("btnSearchDoc")?.addEventListener("click", searchDocument);
-    document.getElementById("auth_doc_number")?.addEventListener("keypress", e => e.key === "Enter" && searchDocument());
-    document.getElementById("btnContinue")?.addEventListener("click", handleRegister);
-    document.getElementById("btnLogin")?.addEventListener("click", handleLogin);
-    document.getElementById("login_password")?.addEventListener("keypress", e => e.key === "Enter" && handleLogin());
-    
+    // Auto-buscar RENIEC al escribir DNI en registro
+    const dniInput = document.getElementById("reg_dni");
+    if (dniInput) {
+        dniInput.addEventListener("input", (e) => {
+            const dni = e.target.value.trim();
+            if (dni.length === 8) {
+                autoSearchRENIEC(dni);
+            }
+        });
+    }
+
+    // Enter en inputs de login
+    document.getElementById("login_email")?.addEventListener("keypress", e => {
+        if (e.key === "Enter") document.getElementById("login_password")?.focus();
+    });
+    document.getElementById("login_password")?.addEventListener("keypress", e => {
+        if (e.key === "Enter") handleLogin();
+    });
+
+    // Enter en inputs de registro
+    document.getElementById("reg_confirm_password")?.addEventListener("keypress", e => {
+        if (e.key === "Enter") handleRegister();
+    });
+
+    // Modales
     document.querySelectorAll('.modal').forEach(m => {
         m.addEventListener('click', e => {
             if (e.target === m) m.classList.add('hidden');

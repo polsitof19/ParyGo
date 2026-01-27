@@ -233,6 +233,59 @@ html, body {
 }
 
 /* ==========================================
+   AUTH - NUEVOS ESTILOS LOGIN/REGISTRO
+   ========================================== */
+.auth-parygo-logo {
+    font-size: 36px;
+    font-weight: 800;
+    margin-bottom: 32px;
+}
+
+.auth-brand-name {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 32px;
+    text-align: center;
+}
+
+.auth-screen {
+    width: 100%;
+    max-width: 400px;
+}
+
+.auth-screen h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.auth-link {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.auth-link a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auth-link a:hover {
+    text-decoration: underline;
+}
+
+.field-hint {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* ==========================================
    HEADER
    ========================================== */
 .app-header {

@@ -244,6 +244,26 @@ service cloud.firestore {
     }
 
     // ==========================================
+    // CLIENTES (usuarios finales del portal cliente)
+    // ==========================================
+
+    match /clientes/{clienteId} {
+      // Leer: el propio cliente o admins
+      allow read: if isAuthenticated() &&
+                     (request.auth.uid == clienteId || isAdminOrSuper());
+
+      // Crear: cualquier autenticado (al registrarse)
+      allow create: if isAuthenticated() && request.auth.uid == clienteId;
+
+      // Actualizar: el propio cliente o admins
+      allow update: if isAuthenticated() &&
+                       (request.auth.uid == clienteId || isAdminOrSuper());
+
+      // Eliminar: solo admins
+      allow delete: if isAdminOrSuper();
+    }
+
+    // ==========================================
     // POR DEFECTO: denegar todo
     // ==========================================
 

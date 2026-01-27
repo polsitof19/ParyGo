@@ -23,106 +23,88 @@
     <!-- ============ LOGIN / REGISTRO ============ -->
     <div id="authView" class="view">
         <div class="auth-container">
+            <!-- Logo de ParyGo -->
+            <div class="auth-parygo-logo">
+                <span class="logo-pary">Pary</span><span class="logo-go">Go</span><span class="logo-dot">.</span>
+            </div>
+
+            <!-- Logo y nombre de la marca -->
             <div class="auth-logo">
                 <div class="brand-logo" id="auth_brand_logo"></div>
             </div>
-            <h1 class="auth-title">Bienvenido</h1>
-            <p class="auth-subtitle">Ingresa para ver los eventos</p>
+            <h1 class="auth-brand-name" id="auth_brand_name">Marca</h1>
 
-            <!-- Paso 1: Tipo de documento -->
-            <div id="auth_step1" class="auth-step">
-                <div class="form-group">
-                    <label>Tipo de documento</label>
-                    <div class="doc-type-selector">
-                        <button class="doc-type-btn active" data-type="DNI" onclick="selectDocType('DNI')">
-                            <i class="fa-solid fa-id-card"></i> DNI
-                        </button>
-                        <button class="doc-type-btn" data-type="CE" onclick="selectDocType('CE')">
-                            <i class="fa-solid fa-passport"></i> CE
-                        </button>
-                        <button class="doc-type-btn" data-type="PASAPORTE" onclick="selectDocType('PASAPORTE')">
-                            <i class="fa-solid fa-globe"></i> Pasaporte
-                        </button>
-                    </div>
-                </div>
+            <!-- PANTALLA DE LOGIN -->
+            <div id="loginScreen" class="auth-screen">
+                <h2 class="auth-title">Iniciar sesión</h2>
 
                 <div class="form-group">
-                    <label id="doc_label">Número de DNI</label>
-                    <div class="input-with-btn">
-                        <input type="tel" id="auth_doc_number" placeholder="Ingresa tu documento" maxlength="12">
-                        <button class="btn-search" id="btnSearchDoc">
-                            <i class="fa-solid fa-arrow-right"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Paso 2: Registro (si no existe) -->
-            <div id="auth_step2" class="auth-step hidden">
-                <div class="user-found-card hidden" id="user_found_card">
-                    <i class="fa-solid fa-circle-check"></i>
-                    <div>
-                        <span>Usuario encontrado</span>
-                        <strong id="found_user_name">Nombre</strong>
-                    </div>
-                </div>
-
-                <div id="register_fields">
-                    <div class="form-group">
-                        <label>Nombres</label>
-                        <input type="text" id="reg_nombres" placeholder="Tus nombres">
-                    </div>
-                    <div class="form-group">
-                        <label>Apellidos</label>
-                        <input type="text" id="reg_apellidos" placeholder="Tus apellidos">
-                    </div>
-                    <div class="form-group">
-                        <label>Correo electrónico</label>
-                        <input type="email" id="reg_email" placeholder="correo@ejemplo.com">
-                    </div>
-                    <div class="form-group">
-                        <label>Teléfono (WhatsApp)</label>
-                        <input type="tel" id="reg_phone" placeholder="987654321" maxlength="9">
-                    </div>
-                    <div class="form-group">
-                        <label>Contraseña</label>
-                        <input type="password" id="reg_password" placeholder="Mínimo 6 caracteres">
-                    </div>
-                </div>
-
-                <button class="btn-primary" id="btnContinue">
-                    <span>CONTINUAR</span>
-                    <i class="fa-solid fa-arrow-right"></i>
-                </button>
-
-                <button class="btn-back-link" onclick="backToStep1()">
-                    <i class="fa-solid fa-arrow-left"></i> Cambiar documento
-                </button>
-            </div>
-
-            <!-- Paso 3: Login (si existe) -->
-            <div id="auth_step3" class="auth-step hidden">
-                <div class="user-found-card">
-                    <i class="fa-solid fa-circle-user"></i>
-                    <div>
-                        <span>Bienvenido de vuelta</span>
-                        <strong id="login_user_name">Nombre</strong>
-                    </div>
+                    <label>Correo electrónico</label>
+                    <input type="email" id="login_email" placeholder="correo@ejemplo.com" autocomplete="email">
                 </div>
 
                 <div class="form-group">
                     <label>Contraseña</label>
-                    <input type="password" id="login_password" placeholder="Tu contraseña">
+                    <input type="password" id="login_password" placeholder="Tu contraseña" autocomplete="current-password">
                 </div>
 
-                <button class="btn-primary" id="btnLogin">
-                    <span>INGRESAR</span>
-                    <i class="fa-solid fa-arrow-right"></i>
+                <button class="btn-primary" id="btnLogin" onclick="handleLogin()">
+                    INICIAR SESIÓN
                 </button>
 
-                <button class="btn-back-link" onclick="backToStep1()">
-                    <i class="fa-solid fa-arrow-left"></i> Usar otro documento
+                <div class="auth-link">
+                    ¿No tienes cuenta? <a href="#" onclick="showRegisterScreen(); return false;">Regístrate</a>
+                </div>
+            </div>
+
+            <!-- PANTALLA DE REGISTRO -->
+            <div id="registerScreen" class="auth-screen hidden">
+                <h2 class="auth-title">Crear cuenta</h2>
+
+                <div class="form-group">
+                    <label>DNI *</label>
+                    <input type="tel" id="reg_dni" placeholder="12345678" maxlength="8" pattern="[0-9]{8}">
+                    <small class="field-hint">Se buscará automáticamente en RENIEC</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Nombres *</label>
+                    <input type="text" id="reg_nombres" placeholder="Tus nombres">
+                </div>
+
+                <div class="form-group">
+                    <label>Apellidos *</label>
+                    <input type="text" id="reg_apellidos" placeholder="Tus apellidos">
+                </div>
+
+                <div class="form-group">
+                    <label>Correo electrónico *</label>
+                    <input type="email" id="reg_email" placeholder="correo@ejemplo.com" autocomplete="email">
+                </div>
+
+                <div class="form-group">
+                    <label>Celular *</label>
+                    <input type="tel" id="reg_phone" placeholder="987654321" maxlength="9" pattern="9[0-9]{8}">
+                    <small class="field-hint">Debe empezar con 9</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Contraseña *</label>
+                    <input type="password" id="reg_password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+                </div>
+
+                <div class="form-group">
+                    <label>Confirmar contraseña *</label>
+                    <input type="password" id="reg_confirm_password" placeholder="Confirma tu contraseña" autocomplete="new-password">
+                </div>
+
+                <button class="btn-primary" id="btnRegister" onclick="handleRegister()">
+                    CREAR CUENTA
                 </button>
+
+                <div class="auth-link">
+                    ¿Ya tienes cuenta? <a href="#" onclick="showLoginScreen(); return false;">Inicia sesión</a>
+                </div>
             </div>
         </div>
     </div>
