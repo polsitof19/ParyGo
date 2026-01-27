@@ -1436,6 +1436,42 @@ function toast(msg) {
 }
 
 // ==========================================
+// EVENT LISTENERS
+// ==========================================
+function setupEventListeners() {
+    // Auto-buscar RENIEC al escribir DNI en registro
+    const dniInput = document.getElementById("reg_dni");
+    if (dniInput) {
+        dniInput.addEventListener("input", (e) => {
+            const dni = e.target.value.trim();
+            if (dni.length === 8) {
+                autoSearchRENIEC(dni);
+            }
+        });
+    }
+
+    // Enter en inputs de login
+    document.getElementById("login_email")?.addEventListener("keypress", e => {
+        if (e.key === "Enter") document.getElementById("login_password")?.focus();
+    });
+    document.getElementById("login_password")?.addEventListener("keypress", e => {
+        if (e.key === "Enter") window.handleLogin();
+    });
+
+    // Enter en inputs de registro
+    document.getElementById("reg_confirm_password")?.addEventListener("keypress", e => {
+        if (e.key === "Enter") window.handleRegister();
+    });
+
+    // Modales
+    document.querySelectorAll('.modal').forEach(m => {
+        m.addEventListener('click', e => {
+            if (e.target === m) m.classList.add('hidden');
+        });
+    });
+}
+
+// ==========================================
 // EXPONER FUNCIONES GLOBALMENTE (para onclick en HTML)
 // ==========================================
 // Las funciones deben estar en window para que onclick pueda accederlas
@@ -1487,40 +1523,4 @@ window.selectDocType = selectDocType;
 window.linkAccountToProfile = linkAccountToProfile;
 window.logoutAndRestart = logoutAndRestart;
 window.backToStep1 = backToStep1;
-
-// ==========================================
-// EVENT LISTENERS
-// ==========================================
-function setupEventListeners() {
-    // Auto-buscar RENIEC al escribir DNI en registro
-    const dniInput = document.getElementById("reg_dni");
-    if (dniInput) {
-        dniInput.addEventListener("input", (e) => {
-            const dni = e.target.value.trim();
-            if (dni.length === 8) {
-                autoSearchRENIEC(dni);
-            }
-        });
-    }
-
-    // Enter en inputs de login
-    document.getElementById("login_email")?.addEventListener("keypress", e => {
-        if (e.key === "Enter") document.getElementById("login_password")?.focus();
-    });
-    document.getElementById("login_password")?.addEventListener("keypress", e => {
-        if (e.key === "Enter") window.handleLogin();
-    });
-
-    // Enter en inputs de registro
-    document.getElementById("reg_confirm_password")?.addEventListener("keypress", e => {
-        if (e.key === "Enter") window.handleRegister();
-    });
-
-    // Modales
-    document.querySelectorAll('.modal').forEach(m => {
-        m.addEventListener('click', e => {
-            if (e.target === m) m.classList.add('hidden');
-        });
-    });
-}
 
