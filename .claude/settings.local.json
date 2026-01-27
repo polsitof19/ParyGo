@@ -6,7 +6,8 @@
       "Bash(git add:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nSistema de login/registro para clientes\n\nImplementado sistema de autenticación tradicional con email y contraseña:\n\n- PANTALLA DE LOGIN:\n  * Login directo con correo electrónico y contraseña\n  * Validación de formato de email\n  * Mensajes de error específicos \\(cuenta no existe, contraseña incorrecta, etc.\\)\n  * Link para ir a registro\n\n- PANTALLA DE REGISTRO:\n  * Campos: DNI, nombres, apellidos, email, celular, contraseña, confirmar contraseña\n  * Búsqueda automática en RENIEC al escribir 8 dígitos de DNI\n  * Autocompletado de nombres y apellidos desde RENIEC\n  * Validaciones:\n    - DNI: exactamente 8 dígitos\n    - Email: formato válido\n    - Celular: 9 dígitos, empieza con 9\n    - Contraseña: mínimo 6 caracteres\n    - Confirmar contraseña: debe coincidir\n  * Todos los campos obligatorios\n  * Link para volver a login\n\n- FIREBASE:\n  * Datos guardados en colección \"clientes\" con estructura:\n    uid, dni, nombres, apellidos, email, phone, brand_id, brand_slug, created_at\n  * Verificación de marca al cargar perfil\n\n- FIRESTORE RULES:\n  * Agregada colección \"clientes\" con permisos:\n    - Leer: el propio cliente o admins\n    - Crear: cualquier autenticado \\(registro\\)\n    - Actualizar: el propio cliente o admins\n    - Eliminar: solo admins\n\n- ESTILOS:\n  * Diseño mobile-first optimizado para iPhone\n  * Logo de ParyGo y nombre de marca en auth\n  * Campos con hints \\(ayuda\\)\n  * Colores: fondo #0d0d0d, botones rosa #ff4757\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(claude mcp:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
