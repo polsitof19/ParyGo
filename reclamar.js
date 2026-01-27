@@ -393,17 +393,17 @@ async function claimTicket() {
         const codeRef = doc(db, "tickets", state.codeData.id);
         
         if (codeType === "UNIQUE") {
-    // Código único: marcar como reclamado
-    await updateDoc(codeRef, {
-        status: 'CLAIMED',
-        current_uses: 1,
-        claimed_at: new Date().toISOString(),
-        client_name: `${name} ${lastname}`,
-        client_dni: state.userData.dni,
-        client_email: email,
-        client_phone: phone,
-        id_type: state.userData.idType,
-        claimed_by: {
+            await updateDoc(codeRef, {
+                status: 'CLAIMED',
+                current_uses: 1,
+                claimed_at: new Date().toISOString(),
+                client_name: `${name} ${lastname}`,
+                client_dni: state.userData.dni,
+                client_email: email,
+                client_phone: phone,
+                id_type: state.userData.idType,
+                qr_token: qrToken,
+                claimed_by: {
             name: `${name} ${lastname}`,
             dni: state.userData.dni,
             email: email,
@@ -424,7 +424,9 @@ async function claimTicket() {
         client_dni: state.userData.dni,
         client_email: email,
         client_phone: phone,
-        id_type: state.userData.idType
+        id_type: state.userData.idType,
+        qr_token: qrToken
+        
     });
 }
         
