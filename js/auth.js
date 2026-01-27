@@ -77,21 +77,21 @@ export async function doLogin() {
     } catch (error) {
         console.error("Error Login:", error);
         
-        let errorMsg = "Error de acceso";
+        let errorMsg = "Error al iniciar sesión";
         switch (error.code) {
             case 'auth/invalid-credential':
             case 'auth/wrong-password':
+                errorMsg = "Correo o contraseña incorrectos";
+                break;
             case 'auth/user-not-found':
-                errorMsg = "Usuario o contraseña incorrectos";
+                errorMsg = "Usuario no encontrado";
                 break;
             case 'auth/too-many-requests':
-                errorMsg = "Demasiados intentos. Intenta más tarde";
+                errorMsg = "Demasiados intentos. Espera unos minutos";
                 break;
             case 'auth/invalid-email':
                 errorMsg = "Email inválido";
                 break;
-            default:
-                errorMsg = error.message || "Error de acceso";
         }
         
         toast(errorMsg, "error");

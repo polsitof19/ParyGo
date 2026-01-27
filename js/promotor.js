@@ -137,7 +137,23 @@ async function handleLogin() {
     try {
         await signInWithEmailAndPassword(auth, email, pass);
     } catch (e) {
-        toast(e.code === "auth/invalid-credential" ? "Datos incorrectos" : "Error de conexión");
+        let errorMsg = "Error al iniciar sesión";
+        switch (e.code) {
+            case 'auth/invalid-credential':
+            case 'auth/wrong-password':
+                errorMsg = "Correo o contraseña incorrectos";
+                break;
+            case 'auth/user-not-found':
+                errorMsg = "Usuario no encontrado";
+                break;
+            case 'auth/too-many-requests':
+                errorMsg = "Demasiados intentos. Espera unos minutos";
+                break;
+            case 'auth/invalid-email':
+                errorMsg = "Email inválido";
+                break;
+        }
+        toast(errorMsg);
         btn.disabled = false;
         btn.innerHTML = '<span>INGRESAR</span><i class="fa-solid fa-arrow-right"></i>';
     }
