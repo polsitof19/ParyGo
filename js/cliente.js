@@ -890,8 +890,12 @@ function getInitials(name) {
 // ==========================================
 async function loadEvents() {
     const container = document.getElementById("events_list");
-    container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i></div>';
-    
+    container.innerHTML = `
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+    `;
+
     try {
         // Buscar eventos de esta marca
         const q1 = query(collection(db, "events"), where("brand_id", "==", currentBrandId));
