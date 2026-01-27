@@ -848,13 +848,20 @@ body {
 /* ==========================================
    LOGIN SCREEN
    ========================================== */
-   .login-screen {
+.login-screen {
     display: none;
     min-height: 100vh;
+    min-height: 100dvh;
     align-items: center;
     justify-content: center;
-    padding: 20px;
-    background: var(--bg);
+    padding: 24px 20px;
+    background: #0d0d0d;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 500;
 }
 
 .login-screen.active {
@@ -863,81 +870,116 @@ body {
 
 .login-container {
     width: 100%;
-    max-width: 360px;
+    max-width: 380px;
     text-align: center;
 }
 
+.login-card {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 16px;
+    padding: 40px 28px 32px;
+}
+
 .login-logo {
-    width: 80px;
-    height: 80px;
-    border-radius: 20px;
-    background: var(--primary);
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #ff4757, #e8364a);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 24px;
-    font-size: 36px;
+    margin: 0 auto 20px;
+    font-size: 32px;
     color: #fff;
+    box-shadow: 0 8px 24px rgba(255, 71, 87, 0.25);
 }
 
 .login-container h1 {
-    font-size: 28px;
+    font-size: 24px;
     font-weight: 700;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
+    color: #fff;
 }
 
-.login-container > p {
-    color: var(--text-muted);
+.login-container > p,
+.login-card > p {
+    color: #888;
     font-size: 14px;
-    margin-bottom: 32px;
+    margin-bottom: 28px;
 }
 
 .login-form {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
 }
 
 .login-form input {
     width: 100%;
-    padding: 16px;
-    background: var(--bg-input);
-    border: 1px solid var(--border-light);
-    border-radius: 12px;
-    color: var(--text);
-    font-size: 16px;
+    padding: 14px 16px;
+    background: #0d0d0d;
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 15px;
     font-family: inherit;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.login-form input::placeholder {
+    color: #555;
 }
 
 .login-form input:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: #ff4757;
+    box-shadow: 0 0 0 3px rgba(255, 71, 87, 0.1);
 }
 
 .btn-login {
     width: 100%;
-    padding: 16px;
-    background: var(--primary);
+    padding: 14px;
+    background: linear-gradient(135deg, #ff4757, #e8364a);
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     color: #fff;
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
     font-family: inherit;
-    margin-top: 8px;
+    margin-top: 6px;
+    transition: opacity 0.2s, transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn-login:hover {
+    opacity: 0.9;
+}
+
+.btn-login:active {
+    transform: scale(0.98);
 }
 
 .btn-login:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
 }
 
 .login-error {
-    color: var(--danger);
-    font-size: 14px;
-    margin-top: 16px;
+    color: #ff4757;
+    font-size: 13px;
+    margin-top: 14px;
     min-height: 20px;
+}
+
+.user-name {
+    font-size: 13px;
+    color: #888;
+    font-weight: 400;
 }
 /* ==========================================
    BOTONES APROBAR/RECHAZAR
