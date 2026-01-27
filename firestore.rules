@@ -1,0 +1,181 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // FUNCIONES AUXILIARES
+    // ==========================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/empresa/$(request.auth.uid));
+    }
+
+    function isBrandAdmin() {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isStaff() {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/staff/$(request.auth.uid));
+    }
+
+    function isAdminOrSuper() {
+      return isSuperAdmin() || isBrandAdmin();
+    }
+
+    // ==========================================
+    // PÚBLICO (sin autenticación)
+    // ==========================================
+
+    // Eventos: lectura pública, escritura solo admins
+    match /events/{eventId} {
+      allow read: if true; // Público
+      allow create, update, delete: if isAdminOrSuper();
+    }
+
+    // Marcas: lectura pública, escritura solo admins
+    match /brands/{brandId} {
+      allow read: if true; // Público
+      allow create, update, delete: if isAdminOrSuper();
+    }
+
+    // Companies: lectura pública (para compatibilidad), escritura solo super admin
+    match /companies/{companyId} {
+      allow read: if true; // Público
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    // ==========================================
+    // TICKETS (requiere autenticación)
+    // ==========================================
+
+    match /tickets/{ticketId} {
+      // Leer: cualquier usuario autenticado
+      allow read: if isAuthenticated();
+
+      // Crear: cualquier usuario autenticado (compra de entrada)
+      allow create: if isAuthenticated();
+
+      // Actualizar: solo admins o staff (scanner)
+      allow update: if isAdminOrSuper() || isStaff();
+
+      // Eliminar: solo admins
+      allow delete: if isAdminOrSuper();
+    }
+
+    // ==========================================
+    // QUOTAS (cuotas de promotores)
+    // ==========================================
+
+    match /quotas/{quotaId} {
+      // Leer: autenticados (promotores ven sus cuotas)
+      allow read: if isAuthenticated();
+
+      // Crear/editar: solo admins
+      allow create, update: if isAdminOrSuper();
+
+      // Actualizar cuota usada: admins o promotor propietario
+      allow update: if isAuthenticated() &&
+                       (isAdminOrSuper() ||
+                        resource.data.promoter_id == request.auth.uid);
+
+      // Eliminar: solo admins
+      allow delete: if isAdminOrSuper();
+    }
+
+    // ==========================================
+    // VENTAS
+    // ==========================================
+
+    match /sales/{saleId} {
+      // Leer: solo admins
+      allow read: if isAdminOrSuper();
+
+      // Crear: autenticados (al generar venta)
+      allow create: if isAuthenticated();
+
+      // Actualizar/eliminar: solo admins
+      allow update, delete: if isAdminOrSuper();
+    }
+
+    // ==========================================
+    // REWARDS (premios)
+    // ==========================================
+
+    match /rewards/{rewardId} {
+      // Leer: público o autenticados (según necesidad)
+      allow read: if true;
+
+      // Crear/editar/eliminar: solo admins
+      allow create, update, delete: if isAdminOrSuper();
+    }
+
+    // ==========================================
+    // STAFF (promotores, scanners)
+    // ==========================================
+
+    match /staff/{staffId} {
+      // Leer: el propio staff o admins
+      allow read: if isAuthenticated() &&
+                     (request.auth.uid == staffId || isAdminOrSuper());
+
+      // Crear/editar/eliminar: solo admins
+      allow create, update, delete: if isAdminOrSuper();
+    }
+
+    // ==========================================
+    // ADMINS (brand admins)
+    // ==========================================
+
+    match /admins/{adminId} {
+      // Leer: el propio admin o super admin
+      allow read: if isAuthenticated() &&
+                     (request.auth.uid == adminId || isSuperAdmin());
+
+      // Crear/editar/eliminar: solo super admin
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    // ==========================================
+    // EMPRESA (super admin)
+    // ==========================================
+
+    match /empresa/{empresaId} {
+      // Leer: solo el propio super admin
+      allow read: if isAuthenticated() && request.auth.uid == empresaId;
+
+      // No se puede crear/editar/eliminar desde cliente
+      allow write: if false;
+    }
+
+    // ==========================================
+    // ACCESOS (control de acceso a eventos)
+    // ==========================================
+
+    match /accesos/{accesoId} {
+      // Leer: solo admins y staff
+      allow read: if isAdminOrSuper() || isStaff();
+
+      // Crear: staff (al escanear entrada)
+      allow create: if isAuthenticated();
+
+      // Actualizar/eliminar: solo admins
+      allow update, delete: if isAdminOrSuper();
+    }
+
+    // ==========================================
+    // POR DEFECTO: denegar todo
+    // ==========================================
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
