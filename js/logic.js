@@ -589,36 +589,22 @@ document.getElementById('btnConfirmApprove')?.addEventListener('click', () => {
 });
 
 // ========== MENÚ HAMBURGER MÓVIL ==========
-const btnHamburger = document.getElementById('btnHamburger');
-const sidebar = document.getElementById('sidebar');
-const sidebarOverlay = document.getElementById('sidebarOverlay');
-
-if (btnHamburger && sidebar && sidebarOverlay) {
-    // Abrir/cerrar sidebar
-    btnHamburger.addEventListener('click', () => {
-        sidebar.classList.toggle('open');
-        sidebarOverlay.classList.toggle('active');
-        btnHamburger.classList.toggle('active');
-    });
-
-    // Cerrar al tocar overlay
-    sidebarOverlay.addEventListener('click', () => {
-        sidebar.classList.remove('open');
-        sidebarOverlay.classList.remove('active');
-        btnHamburger.classList.remove('active');
-    });
-
-    // Cerrar al seleccionar una opción del menú
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', () => {
-            if (window.innerWidth <= 768) {
-                sidebar.classList.remove('open');
-                sidebarOverlay.classList.remove('active');
-                btnHamburger.classList.remove('active');
-            }
-        });
-    });
+function toggleSidebar() {
+    document.querySelector('.sidebar').classList.toggle('active');
+    document.getElementById('sidebarOverlay').classList.toggle('active');
 }
+
+// Cerrar sidebar al hacer click en un item del menú (móvil)
+document.querySelectorAll('.sidebar .nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+            document.querySelector('.sidebar').classList.remove('active');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+        }
+    });
+});
+
+window.toggleSidebar = toggleSidebar;
 // ========== EXPORTAR A EXCEL ==========
 // ========== EXPORTAR REPORTE COMPLETO DE MÉTRICAS ==========
 function exportMetricsReport() {
