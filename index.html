@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ParyGo Admin</title>
     <link rel="icon" type="image/png" href="assets/logo.png">
     <link rel="apple-touch-icon" href="assets/logo.png">
@@ -1582,6 +1582,7 @@
         <span>Extras</span>
     </div>
     <div class="extras-content">
+        <!-- Opciones para TODOS -->
         <button class="extras-item" onclick="mobileGoTo('seguridad'); closeExtrasPanel();">
             <i class="fa-solid fa-shield"></i>
             <span>Seguridad</span>
@@ -1592,11 +1593,22 @@
             <span>Premios</span>
             <i class="fa-solid fa-chevron-right"></i>
         </button>
-        <button class="extras-item" onclick="mobileGoTo('config'); closeExtrasPanel();">
-            <i class="fa-solid fa-gear"></i>
-            <span>Configuración</span>
-            <i class="fa-solid fa-chevron-right"></i>
-        </button>
+
+        <!-- Opciones SOLO SUPER ADMIN -->
+        <div id="superAdminExtras" style="display:none;">
+            <div class="extras-divider">Super Admin</div>
+            <button class="extras-item" onclick="mobileGoTo('admins'); closeExtrasPanel();">
+                <i class="fa-solid fa-user-shield"></i>
+                <span>Administradores</span>
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+            <button class="extras-item" onclick="mobileGoTo('todas-marcas'); closeExtrasPanel();">
+                <i class="fa-solid fa-building"></i>
+                <span>Todas las Marcas</span>
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        </div>
+
         <button class="extras-item logout" onclick="handleLogout()">
             <i class="fa-solid fa-right-from-bracket"></i>
             <span>Cerrar sesión</span>
