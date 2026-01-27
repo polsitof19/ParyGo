@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParyGo Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css?v=2">
+    <style>
+        /* ESTILOS FILTROS ACCESOS */
+        .filter-select {
+            padding: 10px 36px 10px 14px;
+            font-size: 14px;
+            font-family: inherit;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--bg-card);
+            color: var(--text);
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            min-width: 150px;
+        }
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .access-filters {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        /* Botones de acción en tabla */
+        .action-btns {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        .btn-cancel {
+            padding: 8px 16px;
+            border: 1px solid #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-cancel:hover {
+            background: #ef4444;
+            color: #fff;
+        }
+        .btn-favorite {
+            padding: 8px 16px;
+            border: 1px solid #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .btn-favorite:hover {
+            background: #22c55e;
+            color: #fff;
+        }
+        
+        /* Avatar en tabla */
+        .table-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .table-name-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        /* Estados */
+        .status-active { color: var(--success); }
+        .status-claimed { color: var(--info); }
+        .status-expired { color: var(--warning); }
+        .status-cancelled { color: var(--danger); text-decoration: line-through; }
+        
+        /* ESTILOS MODAL MARCA */
+        .brand-link-box {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(168, 85, 247, 0.1));
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .brand-link-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .brand-link-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .brand-link-url {
+            flex: 1;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            word-break: break-all;
+        }
+        .brand-link-url:hover {
+            text-decoration: underline;
+        }
+        .collapsible-header:hover {
+            background: var(--bg-hover) !important;
+        }
+        .collapsible-body.hidden {
+            display: none;
+        }
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 13px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        /* HEADER ACTIONS */
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .brand-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .brand-actions.hidden {
+            display: none;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn-outline:hover {
+            background: var(--bg-hover);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .btn-outline i {
+            font-size: 12px;
+        }
+        
+        /* ========== SIDEBAR MARCAS - FORZAR TAMAÑO PEQUEÑO ========== */
+        #brandsContainer .brand-item {
+            padding: 10px 15px !important;
+            min-height: auto !important;
+            height: auto !important;
+        }
+        #brandsContainer .brand-logo-sidebar-container {
+            width: 32px !important;
+            height: 32px !important;
+            min-width: 32px !important;
+            flex-shrink: 0;
+        }
+        #brandsContainer .brand-logo-sidebar {
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 8px !important;
+            object-fit: cover !important;
+        }
+        #brandsContainer .brand-dot {
+            width: 10px !important;
+            height: 10px !important;
+            min-width: 10px !important;
+            border-radius: 50% !important;
+            flex-shrink: 0;
+        }
+        #brandsContainer .brand-item span {
+            font-size: 13px !important;
+            font-weight: 600 !important;
+        }
+        
+        @media (max-width: 768px) {
+            .header-actions {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .brand-actions {
+                width: 100%;
+                order: 2;
+            }
+            .btn-outline {
+                flex: 1;
+                justify-content: center;
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            .btn-outline span {
+                display: none;
+            }
+        }
+    </style>
+
+</head>
+<body>
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container"></div>
+
+    <!-- LOGIN OVERLAY -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-card">
+            <div class="login-header">
+                <h1 class="logo-text" style="font-size:42px;">Pary<span style="color:var(--text);">Go</span><span class="logo-dot">.</span></h1>
+                <p>Panel de Administración</p>
+            </div>
+            <div class="login-form">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="adm_email" placeholder="tu@email.com" autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="adm_pass" placeholder="••••••••" autocomplete="current-password">
+                </div>
+                <button class="btn btn-primary btn-block" id="btnLogin">
+                    <i class="fa-solid fa-right-to-bracket"></i> INICIAR SESIÓN
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APP LAYOUT -->
+    <div id="appLayout" class="app-layout hidden">
+        <!-- Botón Hamburger para móvil -->
+<button id="btnHamburger" class="hamburger-btn">
+    <i class="fa-solid fa-bars"></i>
+</button>
+
+<!-- Overlay para cerrar sidebar -->
+<div id="sidebarOverlay" class="sidebar-overlay"></div>
+        
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+            <div class="logo">
+                <img src="https://ibb.co/WQcspwm alt="ParyGo" style="height:140px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                <span style="display:none; font-size:24px; font-weight:800;"><span style="color:#f43f5e;">Pary</span><span style="color:#fff;">Go</span><span style="color:#f43f5e;">.</span></span>
+            </div>
+            
+            <nav class="nav-menu">
+                <div class="nav-item active" id="nav_events">
+                    <i class="fa-solid fa-calendar-days"></i>
+                    <span>Eventos</span>
+                </div>
+                <div class="nav-item" id="nav_promoters">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Promotores</span>
+                </div>
+                <div class="nav-item" id="nav_scanners">
+                    <i class="fa-solid fa-qrcode"></i>
+                    <span>Seguridad</span>
+                </div>
+                <div class="nav-item" id="nav_admins" style="display:none;">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Administradores</span>
+                </div>
+                <div class="nav-item" id="nav_rewards">
+                    <i class="fa-solid fa-gift"></i>
+                    <span>Premios</span>
+                </div>
+            </nav>
+            
+            <div class="sidebar-section">
+                <div class="section-title">
+                    <span>Tus Marcas</span>
+                    <button class="btn-icon" id="btnCreateBrand" title="Nueva Marca" style="display:none;">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+                <div id="brandsContainer"></div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="user-profile-btn" id="btnMyAccount">
+                    <div class="user-avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="user-info">
+                        <span class="user-name" id="currentUserName">Mi Cuenta</span>
+                        <span class="user-role" id="currentUserRole">Admin</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            
+            <!-- VISTA: EVENTOS -->
+            <div id="view_events" class="view-section">
+                <div class="view-header">
+                    <div class="page-title">
+                        <h1 id="viewTitle">Todos tus eventos</h1>
+                        <p id="viewSub">Panel de control principal</p>
+                    </div>
+                    <div class="header-actions">
+                        <!-- Botones de marca (solo visibles cuando hay marca seleccionada) -->
+                        <div id="brandActions" class="brand-actions hidden">
+                            <button class="btn btn-outline" onclick="copyCurrentBrandLink()">
+                                <i class="fa-solid fa-link"></i> <span id="brandLinkText">Copiar Link</span>
+                            </button>
+                            <button class="btn btn-outline" onclick="editCurrentBrand()">
+                                <i class="fa-solid fa-pen"></i> Editar Marca
+                            </button>
+                        </div>
+                        <button class="btn btn-primary" id="btnCreateEvent">
+                            <i class="fa-solid fa-plus"></i> NUEVO EVENTO
+                        </button>
+                    </div>
+                </div>
+                <div class="events-grid" id="eventsGrid"></div>
+            </div>
+
+            <!-- VISTA: DETALLE DE EVENTO -->
+            <div id="view_event_detail" class="view-section hidden">
+                <div class="event-hero" id="heroBg">
+                    <div class="hero-overlay">
+                        <button class="btn btn-ghost" id="btnBackEvents">
+                            <i class="fa-solid fa-arrow-left"></i> Volver
+                        </button>
+                        <div class="hero-content">
+                            <img id="dEvImg" class="event-poster" src="" alt="">
+                            <div class="event-info">
+                                <span class="brand-tag" id="dEvBrand">MARCA</span>
+                                <h1 id="dEvName">Nombre del Evento</h1>
+                                <div class="event-meta">
+                                    <span><i class="fa-regular fa-calendar"></i> <span id="dEvDate">Fecha</span></span>
+                                    <span><i class="fa-solid fa-location-dot"></i> <span id="dEvVenue">Lugar</span></span>
+                                </div>
+                                <div class="hero-actions">
+                                    <button class="btn btn-primary" id="btnEditEvent">
+                                        <i class="fa-solid fa-pen"></i> Editar
+                                    </button>
+                                    <button class="btn btn-ghost" id="btnDeleteEvent">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- TABS DEL EVENTO -->
+                <div class="event-tabs">
+                    <div class="tabs-nav">
+                        <button class="sub-tab active" data-tab="tab_metrics">
+                            <i class="fa-solid fa-chart-simple"></i> Métricas
+                        </button>
+                        <button class="sub-tab" data-tab="tab_tickets">
+                            <i class="fa-solid fa-ticket"></i> Entradas
+                        </button>
+                        <button class="sub-tab" data-tab="tab_codegen">
+                            <i class="fa-solid fa-qrcode"></i> Generar
+                        </button>
+                        <button class="sub-tab" data-tab="tab_accesses">
+                            <i class="fa-solid fa-users"></i> Accesos
+                        </button>
+                        <button class="sub-tab" data-tab="tab_sales">
+                            <i class="fa-solid fa-money-bill"></i> Ventas
+                        </button>
+                        <button class="sub-tab" data-tab="tab_stock">
+                            <i class="fa-solid fa-boxes-stacked"></i> Stock
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- CONTENIDO DE TABS -->
+                <div class="tab-content">
+                    
+                    <!-- TAB: MÉTRICAS -->
+                    <div id="tab_metrics" class="sub-content">
+                        <div class="metrics-header">
+                            <div class="metrics-tabs">
+                                <button class="met-tab active" id="mt_gen">General</button>
+                                <button class="met-tab" id="mt_pro">Promotores</button>
+                                <button class="met-tab" id="mt_can">Canales</button>
+                            </div>
+                            <button class="btn btn-outline btn-export-metrics" id="btnExportMetrics">
+                                <i class="fa-solid fa-file-excel"></i> <span>Exportar Reporte</span>
+                            </button>
+                        </div>
+                        
+                        <div id="view_met_gen" class="metric-view">
+                            <table id="tblMetGeneral" class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Tipo de Entrada</th>
+                                        <th>Generados</th>
+                                        <th>Reclamados</th>
+                                        <th>Disponibles</th>
+                                        <th>Escaneados</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        
+                        <div id="view_met_pro" class="metric-view hidden">
+                            <table id="tblMetPromoters" class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Promotor</th>
+                                        <th>Generados</th>
+                                        <th>Escaneados</th>
+                                        <th>Pendientes</th>
+                                        <th>Stock Restante</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        
+                        <div id="view_met_can" class="metric-view hidden">
+                            <table id="tblMetChannels" class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Canal</th>
+                                        <th>Cantidad</th>
+                                        <th>Porcentaje</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- TAB: TICKETS -->
+                    <div id="tab_tickets" class="sub-content hidden">
+                        <div class="section-header">
+                            <h3>Tipos de Entrada</h3>
+                            <button class="btn btn-primary" id="btnNewTicket">
+                                <i class="fa-solid fa-plus"></i> Nueva Entrada
+                            </button>
+                        </div>
+                        <table id="tblTickets" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Precio</th>
+                                    <th>Reclamo hasta</th>
+                                    <th>Válido hasta</th>
+                                    <th>Color</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- TAB: GENERADOR DE CÓDIGOS -->
+                   <!-- TAB: GENERADOR DE CÓDIGOS -->
+<div id="tab_codegen" class="sub-content hidden">
+    <div class="codegen-card">
+        <h3><i class="fa-solid fa-wand-magic-sparkles"></i> Generar Códigos QR</h3>
+        <div class="codegen-form">
+            <div class="form-group">
+                <label>Tipo de Entrada</label>
+                <select id="gen_tk_sel">
+                    <option value="">Selecciona un tipo</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>¿Para quién?</label>
+                <select id="gen_target" onchange="togglePromoterField()">
+                    <option value="SELF">Para mí (descarga directa)</option>
+                    <option value="PROMOTER">Para un promotor</option>
+                    <option value="ALL">Para todos los promotores</option>
+                </select>
+            </div>
+            
+            <div class="form-group" id="gen_promoter_group" style="display:none;">
+                <label>Promotor</label>
+                <div class="dropdown-wrapper">
+                    <input type="text" id="gen_search" placeholder="Buscar promotor..." autocomplete="off">
+                    <div id="promoters_dropdown" class="custom-dropdown"></div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Cantidad</label>
+                <input type="number" id="gen_qty" placeholder="10" min="1" max="1000" value="10">
+            </div>
+            
+            <div class="form-group" id="gen_delivery_options">
+                <label>Opciones de entrega</label>
+                <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+                    <label class="checkbox-label" style="cursor:pointer;">
+                        <input type="checkbox" id="gen_download" checked>
+                        <span>Descargar Excel + TXT</span>
+                    </label>
+                    <label class="checkbox-label" style="cursor:pointer;">
+                        <input type="checkbox" id="gen_email">
+                        <span>Enviar por correo</span>
+                    </label>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-block" id="btnGenCodes">
+                <i class="fa-solid fa-bolt"></i> GENERAR CÓDIGOS
+            </button>
+        </div>
+    </div>
+</div>
+                    
+                    <!-- TAB: ACCESOS -->
+                    <div id="tab_accesses" class="sub-content hidden">
+                        <div class="section-header" style="flex-wrap: wrap; gap: 12px;">
+                            <div class="access-filters" style="display: flex; gap: 12px; flex-wrap: wrap;">
+                                <div class="filter-group">
+                                    <label style="font-size: 12px; color: var(--muted); margin-bottom: 4px; display: block;">Tipo de acceso</label>
+                                    <select id="filterAccessType" class="filter-select" onchange="window.applyAccessFilters()">
+                                        <option value="ALL">Todos</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label style="font-size: 12px; color: var(--muted); margin-bottom: 4px; display: block;">Estado</label>
+                                    <select id="filterAccessStatus" class="filter-select" onchange="window.applyAccessFilters()">
+                                        <option value="ALL">Todos</option>
+                                        <option value="ACTIVE">Sin utilizar</option>
+                                        <option value="CLAIMED">Utilizada</option>
+                                        <option value="EXPIRED">Expirada</option>
+                                        <option value="CANCELLED">Anulado</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <input type="text" id="searchAccess" placeholder="Buscar por nombre o identificación..." class="search-input" style="flex: 1; min-width: 200px;">
+                            <button class="btn btn-outline" id="btnExportAccess" title="Exportar a Excel">
+                                <i class="fa-solid fa-file-excel"></i> <span>Exportar</span>
+                            </button>
+                        </div>
+                        
+                        <table id="tblAccesses" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Identificación</th>
+                                    <th>Tipo</th>
+                                    <th style="text-align: center;">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                        <div class="table-footer">
+                            <span id="txtPagination">0 registros</span>
+                        </div>
+                    </div>
+                    
+                    <!-- TAB: VENTAS -->
+                    <!-- TAB: VENTAS -->
+<div id="tab_sales" class="sub-content hidden">
+    <div class="section-header">
+        <h3>Historial de Ventas</h3>
+        <button class="btn btn-outline" id="btnExportSales" title="Exportar a Excel">
+            <i class="fa-solid fa-file-excel"></i> <span>Exportar</span>
+        </button>
+    </div>
+    
+    <!-- Filtros de estado -->
+    <div class="sales-filters">
+        <button class="sales-filter active" data-status="PENDING">
+            <i class="fa-solid fa-clock"></i> Pendientes <span class="badge" id="badgePending">0</span>
+        </button>
+        <button class="sales-filter" data-status="APPROVED">
+            <i class="fa-solid fa-check"></i> Aprobadas <span class="badge" id="badgeApproved">0</span>
+        </button>
+        <button class="sales-filter" data-status="REJECTED">
+            <i class="fa-solid fa-times"></i> Rechazadas <span class="badge" id="badgeRejected">0</span>
+        </button>
+        <button class="sales-filter" data-status="ALL">
+            <i class="fa-solid fa-list"></i> Todas <span class="badge" id="badgeAllSales">0</span>
+        </button>
+    </div>
+    
+    <!-- Resumen de ventas -->
+    <div class="sales-summary">
+        <div class="summary-card">
+            <span class="summary-label">Total Recaudado</span>
+            <span class="summary-value" id="totalRecaudado">S/. 0.00</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-label">Ventas Aprobadas</span>
+            <span class="summary-value" id="totalVentas">0</span>
+        </div>
+    </div>
+    
+    <table id="tblEventSales" class="data-table">
+        <thead>
+            <tr>
+                <th>Promotor</th>
+                <th>Cliente</th>
+                <th>Entrada</th>
+                <th>Total</th>
+                <th>N° Operación</th>
+                <th>Comprobante</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- TAB: STOCK -->
+                    <div id="tab_stock" class="sub-content hidden">
+                        <div class="section-header">
+                            <h3>Stock Asignado a Promotores</h3>
+                            <button class="btn btn-primary" id="btnAddStock">
+                                <i class="fa-solid fa-plus"></i> Asignar Stock
+                            </button>
+                        </div>
+                        <table id="tblStock" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Promotor</th>
+                                    <th>Tipo de Entrada</th>
+                                    <th>Asignado</th>
+                                    <th>Usado</th>
+                                    <th>Disponible</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA: PROMOTORES -->
+            <div id="view_promoters" class="view-section hidden">
+                <div class="view-header">
+                    <div class="page-title">
+                        <h1>Promotores</h1>
+                        <p>Tu equipo de ventas</p>
+                    </div>
+                    <button class="btn btn-primary" id="btnNewPromoter">
+                        <i class="fa-solid fa-plus"></i> NUEVO PROMOTOR
+                    </button>
+                </div>
+                <table id="tblPromoters" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Email</th>
+                            <th>DNI</th>
+                            <th>Marcas</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <!-- VISTA: SCANNERS -->
+            <div id="view_scanners" class="view-section hidden">
+                <div class="view-header">
+                    <div class="page-title">
+                        <h1>Seguridad</h1>
+                        <p>Control de accesos</p>
+                    </div>
+                    <button class="btn btn-primary" id="btnNewScanner">
+                        <i class="fa-solid fa-plus"></i> NUEVO SCANNER
+                    </button>
+                </div>
+                <table id="tblScanners" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Email</th>
+                            <th>Eventos Asignados</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <!-- VISTA: ADMINISTRADORES -->
+            <div id="view_admins" class="view-section hidden">
+                <div class="view-header">
+                    <div class="page-title">
+                        <h1>Administradores</h1>
+                        <p>Gerentes de marca</p>
+                    </div>
+                    <button class="btn btn-primary" id="btnNewAdmin">
+                        <i class="fa-solid fa-plus"></i> NUEVO ADMIN
+                    </button>
+                </div>
+                <table id="tblAdmins" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>DNI</th>
+                            <th>Email</th>
+                            <th>Teléfono</th>
+                            <th>Marcas</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <!-- VISTA: PREMIOS -->
+            <div id="view_rewards" class="view-section hidden">
+                <div class="view-header">
+                    <div class="page-title">
+                        <h1>Premios</h1>
+                        <p>Recompensas para promotores</p>
+                    </div>
+                </div>
+                <table id="tblRewards" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Promotor</th>
+                            <th>Premio</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- DRAWER DE ACCESO -->
+    <div id="drawerOverlay" class="drawer-overlay"></div>
+    <div id="accessDrawer" class="drawer">
+        <div class="drawer-header">
+            <h3>Detalle del Acceso</h3>
+            <button class="btn-icon" id="btnCloseDrawer">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+        <div class="drawer-body">
+            <div class="drawer-avatar" id="dr_avatar">I</div>
+            <h2 id="dr_name">Invitado</h2>
+            <p id="dr_dni" class="text-muted">DNI -</p>
+            <div class="drawer-status">
+                <span class="badge badge-blue" id="dr_status">ACTIVO</span>
+            </div>
+            <div class="drawer-details">
+                <div class="detail-row">
+                    <span class="label">Teléfono</span>
+                    <span class="value" id="dr_phone">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Email</span>
+                    <span class="value" id="dr_email">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Código QR</span>
+                    <span class="value" id="dr_code" style="font-family:monospace;">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Tipo de Entrada</span>
+                    <span class="value" id="dr_type">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Promotor</span>
+                    <span class="value" id="dr_promoter">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Marca</span>
+                    <span class="value" id="dr_brand">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALES -->
+    
+    <!-- Modal: Confirmar -->
+    <div id="modalConfirm" class="modal hidden">
+        <div class="modal-content modal-sm">
+            <h2><i class="fa-solid fa-circle-question"></i> Confirmar</h2>
+            <p id="confMsg">¿Estás seguro?</p>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" id="confNo">Cancelar</button>
+                <button class="btn btn-primary" id="confYes">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Evento -->
+    <div id="modalEvent" class="modal hidden">
+        <div class="modal-content modal-lg">
+            <button class="modal-close" onclick="closeModals()"><i class="fa-solid fa-times"></i></button>
+            <h2><i class="fa-solid fa-calendar-plus"></i> Evento</h2>
+            <input type="hidden" id="ev_id">
+            
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label>Flyer del Evento</label>
+                    <div id="uploadZone" class="upload-zone" onclick="document.getElementById('ev_file').click()">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>Click para subir imagen</span>
+                    </div>
+                    <div id="ev_prev_container" class="preview-container" style="display:none;">
+                        <img id="ev_prev" class="preview-img" src="">
+                        <div class="preview-actions">
+                            <button type="button" class="btn btn-ghost btn-sm" onclick="clearEventImage()">
+                                <i class="fa-solid fa-trash"></i> Cambiar imagen
+                            </button>
+                        </div>
+                    </div>
+                    <input type="file" id="ev_file" accept="image/*" style="display:none;">
+                </div>
+                
+                <div class="form-group">
+                    <label>Nombre del Evento *</label>
+                    <input type="text" id="ev_name" placeholder="Nombre del evento">
+                </div>
+                
+                <div class="form-group">
+                    <label>Marca</label>
+                    <select id="ev_brand_sel"></select>
+                </div>
+                <div class="form-group">
+                    <label>Estado del Evento</label>
+                    <select id="ev_status">
+                        <option value="ACTIVE">🟢 Activo</option>
+                        <option value="PAUSED">🟡 Pausado</option>
+                        <option value="FINISHED">🔴 Finalizado</option>
+                        <option value="DRAFT">⚪ Borrador</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Fecha</label>
+                    <input type="date" id="ev_date">
+                </div>
+                
+                <div class="form-group">
+                    <label>Hora</label>
+                    <div class="time-picker">
+                        <select id="ev_hour">
+                            <option value="">--</option>
+                            <option value="01">01</option>
+                            <option value="02">02</option>
+                            <option value="03">03</option>
+                            <option value="04">04</option>
+                            <option value="05">05</option>
+                            <option value="06">06</option>
+                            <option value="07">07</option>
+                            <option value="08">08</option>
+                            <option value="09">09</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                        </select>
+                        <span>:</span>
+                        <select id="ev_minute">
+                            <option value="00">00</option>
+                            <option value="15">15</option>
+                            <option value="30">30</option>
+                            <option value="45">45</option>
+                        </select>
+                        <select id="ev_ampm">
+                            <option value="PM">PM</option>
+                            <option value="AM">AM</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group full-width">
+                    <label>Lugar</label>
+                    <input type="text" id="ev_venue" placeholder="Dirección o nombre del lugar">
+                </div>
+                
+                <div class="form-group full-width">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="ev_has_payment">
+                        <span>Habilitar pagos (Yape/Plin)</span>
+                    </label>
+                </div>
+                
+                <div id="payment_fields" class="form-group full-width hidden">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Titular de cuenta</label>
+                            <input type="text" id="ev_pay_name" placeholder="Nombre del titular">
+                        </div>
+                        <div class="form-group">
+                            <label>Número de teléfono</label>
+                            <input type="tel" id="ev_pay_phone" placeholder="999 999 999">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Comisión por Free (S/.)</label>
+                    <input type="number" id="ev_comm_free" placeholder="0.00" step="0.01">
+                </div>
+                
+                <div class="form-group">
+                    <label>Comisión por Venta (%)</label>
+                    <input type="number" id="ev_comm_sale" placeholder="10" step="0.1">
+                </div>
+                
+                <div class="form-group full-width">
+                    <label>Metas e Incentivos</label>
+                    <div id="goals_container"></div>
+                    <button type="button" class="btn btn-ghost" id="btnAddGoal">
+                        <i class="fa-solid fa-plus"></i> Agregar Meta
+                    </button>
+                </div>
+                
+                <div class="form-group full-width">
+                    <label>Términos y condiciones</label>
+                    <textarea id="ev_terms" rows="3" placeholder="Términos legales del evento..."></textarea>
+                </div>
+                
+                <div class="form-group full-width">
+                    <label>Mensaje de WhatsApp (plantilla)</label>
+                    <textarea id="ev_wsp_msg" rows="2" placeholder="Mensaje que se enviará al cliente..."></textarea>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeModals()">Cancelar</button>
+                <button class="btn btn-primary" id="btnSaveEvent">GUARDAR EVENTO</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Marca (ACTUALIZADO) -->
+    <div id="modalBrand" class="modal hidden">
+        <div class="modal-content modal-lg">
+            <button class="modal-close" onclick="closeModals()"><i class="fa-solid fa-times"></i></button>
+            <h2 id="brandModalTitle"><i class="fa-solid fa-store"></i> Nueva Marca</h2>
+            <input type="hidden" id="br_editing_id">
+            
+            <!-- LINK PARA CLIENTES (Solo visible al editar) -->
+            <div id="br_link_section" class="brand-link-box hidden">
+                <div class="brand-link-label">
+                    <i class="fa-solid fa-link"></i> Link para tus clientes:
+                </div>
+                <div class="brand-link-row">
+                    <a id="br_link_url" href="#" target="_blank" class="brand-link-url">xxx.parygo.com</a>
+                    <button type="button" class="btn btn-sm" onclick="copyBrandLink()" style="background:var(--primary); color:white;">
+                        <i class="fa-regular fa-copy"></i> Copiar
+                    </button>
+                </div>
+            </div>
+            
+            <div class="form-grid">
+                <!-- Logo -->
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Logo de la marca</label>
+                    <div style="display:flex; align-items:center; gap:20px;">
+                        <div id="br_upload_zone" class="avatar-upload" onclick="document.getElementById('br_logo_input').click()" style="width:100px; height:100px; border-radius:16px;">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                        </div>
+                        <div id="br_logo_preview" style="display:none; position:relative;">
+                            <img src="" alt="Logo" style="width:100px; height:100px; border-radius:16px; object-fit:cover; border:2px solid var(--border);">
+                            <button type="button" onclick="clearBrandLogo()" style="position:absolute; top:-8px; right:-8px; width:24px; height:24px; background:#ef4444; border:none; border-radius:50%; color:white; cursor:pointer; font-size:12px;">
+                                <i class="fa-solid fa-times"></i>
+                            </button>
+                        </div>
+                        <input type="file" id="br_logo_input" accept="image/*" style="display:none;">
+                    </div>
+                </div>
+                
+                <!-- Nombre -->
+                <div class="form-group">
+                    <label>Nombre de la marca *</label>
+                    <input type="text" id="br_name" placeholder="Ej: CODE" oninput="onBrandNameChange()">
+                </div>
+                
+                <!-- Slug -->
+                <div class="form-group">
+                    <label>Slug (subdominio) *</label>
+                    <input type="text" id="br_slug" placeholder="ej: code" 
+                           oninput="this.value = this.value.toLowerCase().replace(/[^a-z0-9-]/g, ''); document.getElementById('br_preview_url').textContent = this.value + '.parygo.com';">
+                    <small style="color:var(--text-muted); font-size:11px; display:flex; align-items:center; gap:4px; margin-top:4px;">
+                        <i class="fa-solid fa-globe" style="color:var(--primary);"></i> 
+                        Tu link será: <strong id="br_preview_url" style="color:var(--primary);">xxx.parygo.com</strong>
+                    </small>
+                </div>
+                
+                <!-- Color Principal -->
+<<!-- Color Principal -->
+<div class="form-group">
+    <label>Color principal (botones)</label>
+    <div style="display:flex; align-items:center; gap:10px;">
+        <input type="color" id="br_color" value="#f43f5e" style="width:50px; height:40px; border:none; border-radius:8px; cursor:pointer;">
+        <span style="font-size:12px; color:var(--text-muted);">Botones y acentos</span>
+    </div>
+</div>
+
+<!-- Color Secundario (ESTE DEBE EXISTIR) -->
+<div class="form-group">
+    <label>Color secundario</label>
+    <div style="display:flex; align-items:center; gap:10px;">
+        <input type="color" id="br_color_secondary" value="#a855f7" style="width:50px; height:40px; border:none; border-radius:8px; cursor:pointer;">
+        <span style="font-size:12px; color:var(--text-muted);">Acentos secundarios</span>
+    </div>
+</div>
+
+<!-- Color de Fondo -->
+<div class="form-group">
+    <label>Color de fondo</label>
+    <div style="display:flex; align-items:center; gap:10px;">
+        <input type="color" id="br_bg_color" value="#0a0a0a" style="width:50px; height:40px; border:none; border-radius:8px; cursor:pointer;">
+        <span style="font-size:12px; color:var(--text-muted);">Fondo del portal</span>
+    </div>
+</div>
+
+<!-- Color de Texto -->
+<div class="form-group">
+    <label>Color de texto</label>
+    <div style="display:flex; align-items:center; gap:10px;">
+        <input type="color" id="br_text_color" value="#ffffff" style="width:50px; height:40px; border:none; border-radius:8px; cursor:pointer;">
+        <span style="font-size:12px; color:var(--text-muted);">Texto principal</span>
+    </div>
+</div>
+
+<!-- Color de Tarjetas -->
+<div class="form-group">
+    <label>Color de tarjetas</label>
+    <div style="display:flex; align-items:center; gap:10px;">
+        <input type="color" id="br_card_color" value="#1a1a1a" style="width:50px; height:40px; border:none; border-radius:8px; cursor:pointer;">
+        <span style="font-size:12px; color:var(--text-muted);">Fondo de formularios</span>
+    </div>
+</div>
+                
+                <!-- Descripción -->
+                <div class="form-group full-width">
+                    <label>Descripción</label>
+                    <textarea id="br_description" placeholder="Breve descripción de tu marca..." rows="2"></textarea>
+                </div>
+            </div>
+            
+            <!-- SECCIÓN COLAPSABLE: CONTACTO Y REDES -->
+            <div class="collapsible-section" style="margin-top:20px; border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+                <div class="collapsible-header" onclick="toggleContactSection()" style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px; cursor:pointer; background:var(--bg-card);">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <i class="fa-solid fa-address-book" style="color:var(--primary);"></i>
+                        <span style="font-weight:600; font-size:14px;">Contacto y Redes Sociales</span>
+                        <span style="font-size:10px; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:10px; color:var(--text-muted);">Opcional</span>
+                    </div>
+                    <i id="br_contact_icon" class="fa-solid fa-chevron-down" style="color:var(--text-muted); transition:transform 0.3s;"></i>
+                </div>
+                <div id="br_contact_fields" class="collapsible-body hidden" style="padding:16px; border-top:1px solid var(--border);">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label><i class="fa-brands fa-whatsapp" style="color:#25d366;"></i> WhatsApp</label>
+                            <input type="tel" id="br_phone" placeholder="987654321">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-envelope" style="color:#ea4335;"></i> Email</label>
+                            <input type="email" id="br_email" placeholder="contacto@marca.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo de Código</label>
+                            <select id="nt_type" onchange="toggleUsesField()">
+                                <option value="UNIQUE">Único (1 código = 1 persona)</option>
+                                <option value="SHARED">Compartido (1 código = muchas personas)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fa-brands fa-instagram" style="color:#e4405f;"></i> Instagram</label>
+                            <input type="text" id="br_instagram" placeholder="@usuario">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fa-brands fa-tiktok"></i> TikTok</label>
+                            <input type="text" id="br_tiktok" placeholder="@usuario">
+                        </div>
+                        <div class="form-group full-width">
+                            <label><i class="fa-brands fa-facebook" style="color:#1877f2;"></i> Facebook</label>
+                            <input type="text" id="br_facebook" placeholder="URL o nombre de página">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeModals()">Cancelar</button>
+                <button class="btn btn-primary" id="btnSaveBrand">
+                    <i class="fa-solid fa-save"></i> GUARDAR MARCA
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Ticket -->
+    <div id="modalTicket" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModals()"><i class="fa-solid fa-times"></i></button>
+            <h2><i class="fa-solid fa-ticket"></i> Tipo de Entrada</h2>
+            <input type="hidden" id="nt_editing_index">
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" id="nt_name" placeholder="Ej: General, VIP, Free Pass">
+                </div>
+            
+                <div class="form-group">
+                    <label>Precio (S/.)</label>
+                    <input type="number" id="nt_price" placeholder="0.00" step="0.01" value="0">
+                </div>
+                
+                <div class="form-group">
+                    <label>Color</label>
+                    <input type="color" id="nt_color" value="#f43f5e">
+                </div>
+                <div class="form-group">
+                    <label>Tipo de Código</label>
+                    <select id="nt_type" onchange="toggleUsesField()">
+                        <option value="UNIQUE">Único (1 código = 1 persona)</option>
+                        <option value="SHARED">Compartido (1 código = muchas personas)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Stock disponible</label>
+                    <input type="number" id="nt_stock" placeholder="Ilimitado">
+                </div>
+                
+                <div class="form-group">
+                    <label>Usos máximos</label>
+                    <input type="number" id="nt_uses" value="1" min="1">
+                </div>
+                
+                <div class="form-group">
+                    <label>Escaneos máximos</label>
+                    <input type="number" id="nt_scans" value="1" min="1">
+                </div>
+                
+                <div class="form-group">
+                    <label>Reclamar hasta</label>
+                    <input type="datetime-local" id="nt_claim">
+                </div>
+                
+                <div class="form-group">
+                    <label>Válido hasta</label>
+                    <input type="datetime-local" id="nt_valid_until">
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeModals()">Cancelar</button>
+                <button class="btn btn-primary" id="btnSaveTicket">GUARDAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Promotor -->
+    <div id="modalPromoter" class="modal hidden">
+        <div class="modal-content modal-lg">
+            <button class="modal-close" onclick="closeModals()"><i class="fa-solid fa-times"></i></button>
+            <h2 id="modalPromoterTitle"><i class="fa-solid fa-user-plus"></i> Nuevo Promotor</h2>
+            <input type="hidden" id="p_editing_id">
+            
+            <div class="form-grid">
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Foto</label>
+                    <div style="display:flex; align-items:center; gap:20px;">
+                        <div id="p_upload_placeholder" class="avatar-upload" onclick="document.getElementById('p_photo').click()">
+                            <i class="fa-solid fa-camera"></i>
+                        </div>
+                        <img id="p_preview_img" style="width:80px; height:80px; border-radius:50%; object-fit:cover; display:none;">
+                        <input type="file" id="p_photo" accept="image/*" style="display:none;">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>DNI *</label>
+                    <input type="text" id="p_dni" placeholder="12345678" maxlength="8">
+                </div>
+                
+                <div class="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" id="p_name" placeholder="Nombres">
+                </div>
+                
+                <div class="form-group">
+                    <label>Apellidos</label>
+                    <input type="text" id="p_last" placeholder="Apellidos">
+                </div>
+                
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" id="p_email" placeholder="correo@email.com">
+                </div>
+                
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="tel" id="p_phone" placeholder="999 999 999">
+                </div>
+                
+                <div class="form-group">
+                    <label>Contraseña *</label>
+                    <input type="password" id="p_pass" placeholder="Mínimo 6 caracteres">
+                </div>
+                
+                <div class="form-group full-width">
+                    <label>Marcas Asignadas</label>
+                    <div class="multi-select">
+                        <div class="multi-select-display" onclick="toggleBrandDropdown()">
+                            <span id="ms_placeholder">Seleccionar marcas...</span>
+                            <div id="ms_chips_area"></div>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </div>
+                        <div id="ms_dropdown" class="multi-select-dropdown"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeModals()">Cancelar</button>
+                <button class="btn btn-primary" id="btnSavePromoter">GUARDAR PROMOTOR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Admin -->
+    <div id="modalAdmin" class="modal hidden">
+        <div class="modal-content modal-lg">
+            <button class="modal-close" onclick="closeModals()"><i class="fa-solid fa-times"></i></button>
+            <h2 id="adminModalTitle"><i class="fa-solid fa-shield-halved"></i> Nuevo Administrador</h2>
+            <input type="hidden" id="adm_editing_id">
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" id="adm_name" placeholder="Nombres">
+                </div>
+                
+                <div class="form-group">
+                    <label>Apellidos</label>
+                    <input type="text" id="adm_lastname" placeholder="Apellidos">
+                </div>
+                
+                <div class="form-group">
+                    <label>DNI</label>
+                    <input type="text" id="adm_dni" placeholder="12345678" maxlength="8">
+                </div>
+                
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" id="adm_email" placeholder="admin@email.com">
+                </div>
+                
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="tel" id="adm_phone" placeholder="999 999 999">
+                </div>
+                
+                <div class="form-group" id="adm_password_field">
+                    <label>Contraseña *</label>
+                    <input type="password" id="adm_password" placeholder="Mínimo 6 caracteres">
+                </div>
+                
+                <div class="form-group full-width">
+                    <label>Marcas Asignadas *</label>
+                    <div class="multi-select">
+                        <div class="multi-select-display" onclick="toggleAdminBrandDropdown()">
+                            <div id="selectedAdminBrands"><span style="color:#999;">Sin marcas seleccionadas</span></div>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </div>
+                        <div id="adminBrandDropdown" class="multi-select-dropdown" style="display:none;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeModals()">Cancelar</button>
+                <button class="btn btn-primary" id="btnSaveAdminModal">GUARDAR ADMIN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Scanner -->
+    <div id="modalScanner" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModals()"><i class="fa-solid fa-times"></i></button>
+            <h2><i class="fa-solid fa-qrcode"></i> Nuevo Scanner</h2>
+            
+            <div class="form-group">
+                <label>Nombre *</label>
+                <input type="text" id="s_name" placeholder="Nombre del personal">
+            </div>
+            
+            <div class="form-group">
+                <label>Email *</label>
+                <input type="email" id="s_email" placeholder="scanner@email.com">
+            </div>
+            
+            <div class="form-group">
+                <label>Contraseña *</label>
+                <input type="password" id="s_pass" placeholder="Mínimo 6 caracteres">
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeModals()">Cancelar</button>
+                <button class="btn btn-primary" id="btnSaveScanner">GUARDAR SCANNER</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Stock -->
+    <div id="modalStock" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModals()"><i class="fa-solid fa-times"></i></button>
+            <h2><i class="fa-solid fa-boxes-stacked"></i> Asignar Stock</h2>
+            
+            <div class="form-group">
+                <label>Promotor</label>
+                <select id="stk_promoter"></select>
+            </div>
+            
+            <div class="form-group">
+                <label>Tipo de Entrada</label>
+                <select id="stk_ticket"></select>
+            </div>
+            
+            <div class="form-group">
+                <label>Cantidad a Asignar</label>
+                <input type="number" id="stk_qty" placeholder="50" min="1">
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeModals()">Cancelar</button>
+                <button class="btn btn-primary" id="btnSaveStock">ASIGNAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Ver Comprobante -->
+    <div id="modalProof" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModals()"><i class="fa-solid fa-times"></i></button>
+            <h2><i class="fa-solid fa-receipt"></i> Comprobante de Pago</h2>
+            <div style="text-align:center; padding:20px;">
+                <img id="proofImg" style="max-width:100%; max-height:400px; border-radius:12px;">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeModals()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalProfile" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModals()"><i class="fa-solid fa-times"></i></button>
+            <h2><i class="fa-solid fa-user-circle"></i> Mi Cuenta</h2>
+            
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                <div class="profile-info">
+                    <h3 id="profileName">Nombre Usuario</h3>
+                    <p id="profileEmail"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3f5a525e56537f5a555a524f5350115c5052">[email&#160;protected]</a></p>
+                </div>
+            </div>
+            
+            <div class="profile-section">
+                <h4><i class="fa-solid fa-key"></i> Cambiar Contraseña</h4>
+                <div class="form-group">
+                    <label>Contraseña Actual</label>
+                    <input type="password" id="currentPassword" placeholder="Tu contraseña actual">
+                </div>
+                <div class="form-group">
+                    <label>Nueva Contraseña</label>
+                    <input type="password" id="newPassword" placeholder="Mínimo 6 caracteres">
+                </div>
+                <div class="form-group">
+                    <label>Confirmar Contraseña</label>
+                    <input type="password" id="confirmPassword" placeholder="Repetir contraseña">
+                </div>
+                <button class="btn btn-primary btn-block" id="btnChangePassword">
+                    <i class="fa-solid fa-save"></i> Cambiar Contraseña
+                </button>
+            </div>
+            
+            <div class="profile-actions">
+                <button class="btn btn-danger btn-block" id="btnLogout">
+                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
+    </html>
+    <!-- Modal: Crear Código Manual -->
+<div id="modalManualCode" class="modal hidden">
+    <div class="modal-content" style="max-width:450px;">
+        <button class="modal-close" onclick="closeModals()"><i class="fa-solid fa-times"></i></button>
+        <h2><i class="fa-solid fa-ticket"></i> Crear Código Manual</h2>
+        
+        <div class="form-group">
+            <label>Tipo de Código</label>
+            <select id="mc_type" onchange="toggleCodeTypeFields()">
+                <option value="UNIQUE">Único (1 solo uso)</option>
+                <option value="SHARED">Compartido (múltiples usos)</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Código Personalizado</label>
+            <input type="text" id="mc_code" placeholder="Ej: HOESKY2026" maxlength="20" style="text-transform:uppercase;">
+            <small style="color:var(--text-muted); font-size:11px;">Deja vacío para generar automáticamente</small>
+        </div>
+        
+        <div class="form-group" id="mc_max_uses_group" style="display:none;">
+            <label>Cantidad de Usos Permitidos</label>
+            <input type="number" id="mc_max_uses" placeholder="Ej: 100" min="1" max="10000" value="100">
+            <small style="color:var(--text-muted); font-size:11px;">Cuántas personas pueden usar este código</small>
+        </div>
+        
+        <div class="form-group">
+            <label>Tipo de Entrada</label>
+            <select id="mc_ticket"></select>
+        </div>
+        
+        <div class="form-group">
+            <label>Promotor (opcional)</label>
+            <select id="mc_promoter">
+                <option value="">Sin promotor asignado</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Fecha de Vencimiento (opcional)</label>
+            <input type="date" id="mc_expires">
+            <small style="color:var(--text-muted); font-size:11px;">Deja vacío para que venza con el evento</small>
+        </div>
+        
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="closeModals()">Cancelar</button>
+            <button class="btn btn-primary" id="btnSaveManualCode">
+                <i class="fa-solid fa-plus"></i> Crear Código
+            </button>
+        </div>
+    </div>
+</div>
+    
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+   
+   <!-- Modal: Aprobar Venta -->
+<div id="modalApproveSale" class="modal hidden">
+    <div class="modal-content" style="max-width:400px;">
+        <button class="modal-close" onclick="closeModals()"><i class="fa-solid fa-times"></i></button>
+        <h2><i class="fa-solid fa-check-circle" style="color:var(--success);"></i> Aprobar Venta</h2>
+        
+        <div class="sale-summary" style="background:rgba(34,197,94,0.1); border-radius:12px; padding:16px; margin-bottom:20px;">
+            <p style="margin:0; color:var(--text-muted); font-size:13px;">Total a recibir:</p>
+            <p style="margin:4px 0 0; font-size:24px; font-weight:700; color:var(--success);" id="approveSaleTotal">S/. 0.00</p>
+        </div>
+        
+        <input type="hidden" id="approveSaleId">
+        
+        <div class="form-group">
+            <label>Número de Operación *</label>
+            <input type="text" id="operationNumber" placeholder="Ej: 123456789" maxlength="20">
+            <small style="color:var(--text-muted); font-size:11px;">Código de transacción Yape/Plin</small>
+        </div>
+        
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="closeModals()">Cancelar</button>
+            <button class="btn btn-primary" id="btnConfirmApprove" style="background:var(--success);">
+                <i class="fa-solid fa-check"></i> Confirmar Aprobación
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+</div>
+
+<!-- Toast Container -->
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- Scripts -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script type="module" src="js/logic.js"></script>
+</body>
+</html>

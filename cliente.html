@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ParyGo | Eventos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="cliente.css">
+</head>
+<body>
+
+    <!-- ============ SPLASH SCREEN ============ -->
+    <div id="splashScreen" class="splash-screen">
+        <div class="splash-logo">
+            <span class="logo-pary">Pary</span><span class="logo-go">Go</span><span class="logo-dot">.</span>
+        </div>
+        <div class="splash-loader"></div>
+    </div>
+
+    <!-- ============ LOGIN / REGISTRO ============ -->
+    <div id="authView" class="view">
+        <div class="auth-container">
+            <div class="auth-logo">
+                <div class="brand-logo" id="auth_brand_logo"></div>
+            </div>
+            <h1 class="auth-title">Bienvenido</h1>
+            <p class="auth-subtitle">Ingresa para ver los eventos</p>
+
+            <!-- Paso 1: Tipo de documento -->
+            <div id="auth_step1" class="auth-step">
+                <div class="form-group">
+                    <label>Tipo de documento</label>
+                    <div class="doc-type-selector">
+                        <button class="doc-type-btn active" data-type="DNI" onclick="selectDocType('DNI')">
+                            <i class="fa-solid fa-id-card"></i> DNI
+                        </button>
+                        <button class="doc-type-btn" data-type="CE" onclick="selectDocType('CE')">
+                            <i class="fa-solid fa-passport"></i> CE
+                        </button>
+                        <button class="doc-type-btn" data-type="PASAPORTE" onclick="selectDocType('PASAPORTE')">
+                            <i class="fa-solid fa-globe"></i> Pasaporte
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label id="doc_label">Número de DNI</label>
+                    <div class="input-with-btn">
+                        <input type="tel" id="auth_doc_number" placeholder="Ingresa tu documento" maxlength="12">
+                        <button class="btn-search" id="btnSearchDoc">
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paso 2: Registro (si no existe) -->
+            <div id="auth_step2" class="auth-step hidden">
+                <div class="user-found-card hidden" id="user_found_card">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <div>
+                        <span>Usuario encontrado</span>
+                        <strong id="found_user_name">Nombre</strong>
+                    </div>
+                </div>
+
+                <div id="register_fields">
+                    <div class="form-group">
+                        <label>Nombres</label>
+                        <input type="text" id="reg_nombres" placeholder="Tus nombres">
+                    </div>
+                    <div class="form-group">
+                        <label>Apellidos</label>
+                        <input type="text" id="reg_apellidos" placeholder="Tus apellidos">
+                    </div>
+                    <div class="form-group">
+                        <label>Correo electrónico</label>
+                        <input type="email" id="reg_email" placeholder="correo@ejemplo.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono (WhatsApp)</label>
+                        <input type="tel" id="reg_phone" placeholder="987654321" maxlength="9">
+                    </div>
+                    <div class="form-group">
+                        <label>Contraseña</label>
+                        <input type="password" id="reg_password" placeholder="Mínimo 6 caracteres">
+                    </div>
+                </div>
+
+                <button class="btn-primary" id="btnContinue">
+                    <span>CONTINUAR</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+
+                <button class="btn-back-link" onclick="backToStep1()">
+                    <i class="fa-solid fa-arrow-left"></i> Cambiar documento
+                </button>
+            </div>
+
+            <!-- Paso 3: Login (si existe) -->
+            <div id="auth_step3" class="auth-step hidden">
+                <div class="user-found-card">
+                    <i class="fa-solid fa-circle-user"></i>
+                    <div>
+                        <span>Bienvenido de vuelta</span>
+                        <strong id="login_user_name">Nombre</strong>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="login_password" placeholder="Tu contraseña">
+                </div>
+
+                <button class="btn-primary" id="btnLogin">
+                    <span>INGRESAR</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+
+                <button class="btn-back-link" onclick="backToStep1()">
+                    <i class="fa-solid fa-arrow-left"></i> Usar otro documento
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ LISTA DE EVENTOS ============ -->
+    <div id="eventsView" class="view hidden">
+        <header class="app-header">
+            <div class="header-brand">
+                <div class="brand-logo-small" id="header_brand_logo"></div>
+                <span class="header-brand-name" id="header_brand_name">Marca</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn-icon-header" onclick="openMyTickets()">
+                    <i class="fa-solid fa-ticket"></i>
+                    <span class="badge-count hidden" id="tickets_count">0</span>
+                </button>
+                <div class="avatar-btn" onclick="openProfile()" id="header_avatar">US</div>
+            </div>
+        </header>
+
+        <main class="events-main">
+            <h2 class="section-title">Próximos Eventos</h2>
+            <div id="events_list" class="events-list">
+                <!-- Se llena dinámicamente -->
+            </div>
+        </main>
+
+        <!-- Bottom Nav -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" onclick="showEvents()">
+                <i class="fa-solid fa-calendar"></i>
+                <span>Eventos</span>
+            </button>
+            <button class="nav-item" onclick="openMyTickets()">
+                <i class="fa-solid fa-ticket"></i>
+                <span>Mis Entradas</span>
+            </button>
+            <button class="nav-item" onclick="openProfile()">
+                <i class="fa-solid fa-user"></i>
+                <span>Perfil</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- ============ DETALLE DEL EVENTO ============ -->
+    <div id="eventDetailView" class="view hidden">
+        <header class="detail-header">
+            <button class="btn-back" onclick="backToEvents()">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <span>Detalle del evento</span>
+            <div style="width:36px;"></div>
+        </header>
+
+        <div class="event-detail-content">
+            <div class="event-cover">
+                <img id="detail_image" src="" alt="Evento">
+            </div>
+
+            <div class="event-info-card">
+                <h1 id="detail_name">Nombre del Evento</h1>
+                
+                <div class="event-meta">
+                    <div class="meta-item">
+                        <i class="fa-regular fa-calendar"></i>
+                        <span id="detail_date">Fecha</span>
+                    </div>
+                    <div class="meta-item">
+                        <i class="fa-regular fa-clock"></i>
+                        <span id="detail_time">Hora</span>
+                    </div>
+                    <div class="meta-item">
+                        <i class="fa-solid fa-location-dot"></i>
+                        <span id="detail_venue">Lugar</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección: Tengo un código -->
+            <div class="action-section">
+                <h3><i class="fa-solid fa-gift"></i> ¿Tienes un código?</h3>
+                <p>Si un promotor te dio un código, ingrésalo aquí</p>
+                <div class="code-input-row">
+                    <input type="text" id="promo_code" placeholder="Ej: JP4X7KM2" maxlength="8" style="text-transform:uppercase;">
+                    <button class="btn-primary" onclick="redeemCode()">CANJEAR</button>
+                </div>
+            </div>
+
+            <!-- Sección: Comprar entradas -->
+            <div class="action-section">
+                <h3><i class="fa-solid fa-shopping-cart"></i> Comprar Entradas</h3>
+                <div id="tickets_for_sale" class="tickets-list">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MIS ENTRADAS ============ -->
+    <div id="myTicketsView" class="view hidden">
+        <header class="detail-header">
+            <button class="btn-back" onclick="backToEvents()">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <span>Mis Entradas</span>
+            <div style="width:36px;"></div>
+        </header>
+
+        <main class="tickets-main">
+            <!-- Tabs -->
+            <div class="tickets-tabs">
+                <button class="tab-btn active" onclick="switchTicketTab('active')">Activas</button>
+                <button class="tab-btn" onclick="switchTicketTab('pending')">Pendientes</button>
+                <button class="tab-btn" onclick="switchTicketTab('used')">Usadas</button>
+            </div>
+
+            <div id="my_tickets_list" class="my-tickets-list">
+                <!-- Se llena dinámicamente -->
+            </div>
+        </main>
+    </div>
+
+    <!-- ============ VER ENTRADA (QR) ============ -->
+    <div id="ticketQRView" class="view hidden">
+        <header class="detail-header">
+            <button class="btn-back" onclick="backToMyTickets()">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <span>Mi Entrada</span>
+            <button class="btn-icon-header" onclick="downloadTicket()">
+                <i class="fa-solid fa-download"></i>
+            </button>
+        </header>
+
+        <div class="ticket-qr-content">
+            <div class="ticket-card-full">
+                <div class="ticket-event-info">
+                    <h2 id="qr_event_name">Nombre del Evento</h2>
+                    <p id="qr_event_date">Fecha y hora</p>
+                </div>
+
+                <div class="qr-container">
+                    <canvas id="qr_canvas"></canvas>
+                </div>
+
+                <div class="ticket-code">
+                    <span id="qr_code">JP4X7KM2</span>
+                </div>
+
+                <div class="ticket-details">
+                    <div class="ticket-detail-row">
+                        <span>Tipo</span>
+                        <strong id="qr_ticket_type">VIP</strong>
+                    </div>
+                    <div class="ticket-detail-row">
+                        <span>Titular</span>
+                        <strong id="qr_holder_name">Juan Pérez</strong>
+                    </div>
+                    <div class="ticket-detail-row">
+                        <span>Estado</span>
+                        <strong id="qr_status" class="status-active">VÁLIDA</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ticket-actions">
+                <button class="btn-secondary" onclick="shareTicket()">
+                    <i class="fa-solid fa-share"></i> Compartir
+                </button>
+                <button class="btn-primary" onclick="downloadTicket()">
+                    <i class="fa-solid fa-download"></i> Descargar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL: COMPRAR ENTRADA ============ -->
+    <div id="modalBuy" class="modal hidden">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-shopping-cart"></i> Comprar Entrada</h2>
+                <button class="modal-close" onclick="closeModal('modalBuy')">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Paso 1: Seleccionar cantidad -->
+            <div id="buy_step1" class="modal-body">
+                <div class="ticket-selected">
+                    <div class="ticket-selected-info">
+                        <span class="ticket-type-name" id="buy_ticket_name">VIP</span>
+                        <span class="ticket-type-price" id="buy_ticket_price">S/. 50.00</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>¿Cuántas entradas?</label>
+                    <div class="qty-selector">
+                        <button class="qty-btn" onclick="changeQty(-1)">−</button>
+                        <span id="buy_qty">1</span>
+                        <button class="qty-btn" onclick="changeQty(1)">+</button>
+                    </div>
+                </div>
+
+                <div class="order-summary">
+                    <div class="summary-row">
+                        <span>Subtotal</span>
+                        <span id="buy_subtotal">S/. 50.00</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>Total a pagar</span>
+                        <span id="buy_total">S/. 50.37</span>
+                    </div>
+                    <small class="text-muted">*El monto incluye céntimos de verificación</small>
+                </div>
+
+                <button class="btn-primary full" onclick="goToPayment()">
+                    CONTINUAR AL PAGO
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Paso 2: Método de pago -->
+            <div id="buy_step2" class="modal-body hidden">
+                <button class="btn-back-inline" onclick="backToBuyStep1()">
+                    <i class="fa-solid fa-arrow-left"></i> Volver
+                </button>
+
+                <h3 class="step-title">Selecciona método de pago</h3>
+
+                <div class="payment-methods">
+                    <button class="payment-method-btn active" data-method="yape" onclick="selectPaymentMethod('yape')">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/7/7e/Yape_logo.png" alt="Yape">
+                        <span>Yape</span>
+                    </button>
+                    <button class="payment-method-btn" data-method="plin" onclick="selectPaymentMethod('plin')">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Plin_logo.png/600px-Plin_logo.png" alt="Plin">
+                        <span>Plin</span>
+                    </button>
+                    <button class="payment-method-btn" data-method="bank" onclick="selectPaymentMethod('bank')">
+                        <i class="fa-solid fa-building-columns"></i>
+                        <span>Transferencia</span>
+                    </button>
+                </div>
+
+                <!-- Datos de Yape/Plin -->
+                <div id="payment_yape_plin" class="payment-details">
+                    <div class="payment-info-card">
+                        <div class="payment-info-row">
+                            <span>A nombre de:</span>
+                            <strong id="pay_name">Juan Pérez</strong>
+                        </div>
+                        <div class="payment-info-row copyable" onclick="copyToClipboard('pay_phone')">
+                            <span>Número:</span>
+                            <strong id="pay_phone">987654321</strong>
+                            <i class="fa-regular fa-copy"></i>
+                        </div>
+                        <div class="payment-info-row copyable" onclick="copyToClipboard('pay_amount')">
+                            <span>Monto exacto:</span>
+                            <strong id="pay_amount">S/. 50.37</strong>
+                            <i class="fa-regular fa-copy"></i>
+                        </div>
+                    </div>
+
+                    <button class="btn-secondary full" id="btnShowQR" onclick="showPaymentQR()">
+                        <i class="fa-solid fa-qrcode"></i> Ver QR para escanear
+                    </button>
+                </div>
+
+                <!-- Datos de Transferencia -->
+                <div id="payment_bank" class="payment-details hidden">
+                    <div class="payment-info-card">
+                        <div class="payment-info-row">
+                            <span>Banco:</span>
+                            <strong id="bank_name">BCP</strong>
+                        </div>
+                        <div class="payment-info-row">
+                            <span>Tipo:</span>
+                            <strong id="bank_type">Cuenta de Ahorros</strong>
+                        </div>
+                        <div class="payment-info-row copyable" onclick="copyToClipboard('bank_account')">
+                            <span>N° Cuenta:</span>
+                            <strong id="bank_account">123-456789-0-12</strong>
+                            <i class="fa-regular fa-copy"></i>
+                        </div>
+                        <div class="payment-info-row copyable" onclick="copyToClipboard('bank_cci')">
+                            <span>CCI:</span>
+                            <strong id="bank_cci">00212345678901234567</strong>
+                            <i class="fa-regular fa-copy"></i>
+                        </div>
+                        <div class="payment-info-row">
+                            <span>Titular:</span>
+                            <strong id="bank_holder">Juan Pérez García</strong>
+                        </div>
+                        <div class="payment-info-row copyable" onclick="copyToClipboard('bank_amount')">
+                            <span>Monto exacto:</span>
+                            <strong id="bank_amount">S/. 50.37</strong>
+                            <i class="fa-regular fa-copy"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-primary full" onclick="goToUploadProof()">
+                    YA PAGUÉ, SUBIR COMPROBANTE
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Paso 3: Subir comprobante -->
+            <div id="buy_step3" class="modal-body hidden">
+                <button class="btn-back-inline" onclick="backToBuyStep2()">
+                    <i class="fa-solid fa-arrow-left"></i> Volver
+                </button>
+
+                <h3 class="step-title">Subir comprobante de pago</h3>
+
+                <div class="form-group">
+                    <label>Nombres y apellidos de quien pagó *</label>
+                    <input type="text" id="proof_payer_name" placeholder="Ej: Juan Pérez García">
+                </div>
+
+                <div class="form-group">
+                    <label>Número de operación *</label>
+                    <input type="text" id="proof_operation" placeholder="Ej: 12345678">
+                </div>
+
+                <div class="form-group">
+                    <label>Captura del pago *</label>
+                    <div class="upload-area" id="upload_area" onclick="document.getElementById('proof_image').click()">
+                        <input type="file" id="proof_image" accept="image/*" hidden onchange="previewProofImage(event)">
+                        <div id="upload_placeholder">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <span>Toca para subir imagen</span>
+                        </div>
+                        <img id="upload_preview" class="hidden" alt="Preview">
+                    </div>
+                </div>
+
+                <button class="btn-primary full" id="btnSendProof" onclick="sendPaymentProof()">
+                    <i class="fa-solid fa-paper-plane"></i> ENVIAR COMPROBANTE
+                </button>
+            </div>
+
+            <!-- Paso 4: Confirmación -->
+            <div id="buy_step4" class="modal-body hidden">
+                <div class="success-state">
+                    <div class="success-icon">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                    <h3>¡Comprobante enviado!</h3>
+                    <p>Tu pago está siendo verificado. Te notificaremos cuando tus entradas estén listas.</p>
+                    <p class="text-muted">Tiempo estimado: 5-15 minutos</p>
+                    
+                    <button class="btn-primary" onclick="closeModal('modalBuy'); openMyTickets();">
+                        VER MIS ENTRADAS
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL: QR DE PAGO ============ -->
+    <div id="modalPaymentQR" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>QR de Yape</h2>
+                <button class="modal-close" onclick="closeModal('modalPaymentQR')">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <img id="payment_qr_image" src="" alt="QR Yape" style="max-width:100%; border-radius:12px;">
+                <p class="text-muted" style="margin-top:12px;">Escanea con tu app de Yape</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL: CÓDIGO CANJEADO ============ -->
+    <div id="modalCodeSuccess" class="modal hidden">
+        <div class="modal-content">
+            <div class="success-state">
+                <div class="success-icon green">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <h3>¡Código canjeado!</h3>
+                <p>Tu entrada ha sido generada exitosamente.</p>
+                
+                <button class="btn-primary" onclick="closeModal('modalCodeSuccess'); openMyTickets();">
+                    VER MI ENTRADA
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ DRAWER: PERFIL ============ -->
+    <div id="profileOverlay" class="overlay hidden" onclick="closeProfile()"></div>
+    <div id="profileDrawer" class="drawer">
+        <div class="drawer-header">
+            <div class="profile-avatar" id="profile_avatar">US</div>
+            <h2 id="profile_name">Nombre</h2>
+            <span class="profile-doc" id="profile_doc">DNI: 12345678</span>
+        </div>
+        <div class="drawer-body">
+            <div class="profile-item">
+                <i class="fa-solid fa-envelope"></i>
+                <div>
+                    <label>Email</label>
+                    <span id="profile_email">---</span>
+                </div>
+            </div>
+            <div class="profile-item">
+                <i class="fa-solid fa-phone"></i>
+                <div>
+                    <label>Teléfono</label>
+                    <span id="profile_phone">---</span>
+                </div>
+            </div>
+        </div>
+        <div class="drawer-footer">
+            <button class="btn-logout" onclick="doLogout()">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                Cerrar Sesión
+            </button>
+        </div>
+    </div>
+
+    <!-- ============ TOAST ============ -->
+    <div id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script type="module" src="js/cliente.js"></script>
+</body>
+</html>

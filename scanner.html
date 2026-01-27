@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scanner - ParyGo</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- QR Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="scanner.css">
+</head>
+<body>
+    
+    <!-- ==================== HEADER ==================== -->
+    <header class="header">
+        <div class="header-left">
+            <h1><i class="fa-solid fa-qrcode"></i> Scanner</h1>
+        </div>
+        <select id="eventSelector" class="event-selector">
+            <option value="">Selecciona evento</option>
+        </select>
+    </header>
+    
+    <!-- ==================== MAIN CONTENT ==================== -->
+    <main class="scanner-container">
+        
+        <!-- Scanner Box -->
+        <div class="scanner-box">
+            <div class="scanner-wrapper">
+                <div id="reader"></div>
+                
+                <!-- Scanner Frame Overlay -->
+                <div class="scanner-frame">
+                    <div class="scanner-frame-bottom"></div>
+                    <div class="scanner-line"></div>
+                </div>
+                
+                <!-- Camera Switch Button -->
+                <button class="btn-camera-switch" id="btnSwitchCamera" title="Cambiar cámara">
+                    <i class="fa-solid fa-camera-rotate"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Manual Input -->
+        <div class="manual-input">
+            <h3><i class="fa-solid fa-keyboard"></i> Ingresar código manual</h3>
+            <div class="input-row">
+                <input type="text" id="manualCode" placeholder="Código o DNI" autocomplete="off">
+                <button class="btn-search" id="btnSearch">
+                    <i class="fa-solid fa-search"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat-card success">
+                <div class="number" id="statSuccess">0</div>
+                <div class="label">Ingresados</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="number" id="statDuplicate">0</div>
+                <div class="label">Duplicados</div>
+            </div>
+            <div class="stat-card info">
+                <div class="number" id="statTotal">0</div>
+                <div class="label">Total</div>
+            </div>
+        </div>
+        
+        <!-- History -->
+        <div class="history">
+            <div class="history-header">
+                <h3><i class="fa-solid fa-clock-rotate-left"></i> Últimos escaneos</h3>
+                <button class="btn-clear" id="btnClearHistory">Limpiar</button>
+            </div>
+            <div class="history-list" id="historyList">
+                <div class="empty-state">
+                    <i class="fa-solid fa-qrcode"></i>
+                    <p>No hay escaneos aún</p>
+                </div>
+            </div>
+        </div>
+        
+    </main>
+    
+    <!-- ==================== RESULT MODAL ==================== -->
+    <div class="result-overlay" id="resultOverlay">
+        <div class="result-card">
+            <!-- Header -->
+            <div class="result-header success" id="resultHeader">
+                <div class="icon-circle">
+                    <i class="fa-solid fa-check" id="resultIcon"></i>
+                </div>
+                <h2 id="resultTitle">Acceso Permitido</h2>
+                <p id="resultSubtitle">Entrada válida</p>
+            </div>
+            
+            <!-- Body -->
+            <div class="result-body">
+                <div class="result-info">
+                    <div class="info-row">
+                        <span class="label"><i class="fa-solid fa-user"></i> Nombre</span>
+                        <span class="value" id="resultName">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label"><i class="fa-solid fa-id-card"></i> DNI</span>
+                        <span class="value" id="resultDni">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label"><i class="fa-solid fa-ticket"></i> Tipo</span>
+                        <span class="value" id="resultType">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label"><i class="fa-solid fa-user-tie"></i> Promotor</span>
+                        <span class="value" id="resultPromoter">-</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="result-actions">
+                <button class="btn-continue" id="btnContinue">
+                    <i class="fa-solid fa-qrcode"></i>
+                    Continuar Escaneando
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ==================== LOADING OVERLAY ==================== -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p>Validando...</p>
+    </div>
+    
+    <!-- ==================== TOAST CONTAINER ==================== -->
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <!-- ==================== SCRIPTS ==================== -->
+    <script type="module" src="scanner.js"></script>
+    
+</body>
+</html>

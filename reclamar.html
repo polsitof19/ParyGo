@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Reclamar Entrada</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="reclamar.css">
+</head>
+<body>
+    <!-- PANTALLA 1: Ingresar Código -->
+    <div id="step1" class="screen active">
+        <div class="container">
+            <div class="logo-container">
+                <img id="brandLogo" src="" alt="Logo" class="brand-logo">
+            </div>
+            
+            <div class="form-card">
+                <div class="input-group">
+                    <input type="text" id="inputCode" placeholder="Ingrese código" maxlength="20" autocomplete="off">
+                </div>
+                <button class="btn-primary" id="btnValidateCode">Enviar</button>
+            </div>
+            
+            <div class="terms">
+                <i class="fa-solid fa-circle-check"></i>
+                <span>Al continuar, aceptas los <a href="#">términos y condiciones</a> y <a href="#">política de privacidad</a></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA 2: Buscar por DNI -->
+    <div id="step2" class="screen">
+        <div class="container">
+            <div class="logo-container">
+                <img id="brandLogo2" src="" alt="Logo" class="brand-logo-small">
+            </div>
+            
+            <div class="form-card">
+                <div class="input-group">
+                    <label>Elige tu identificación</label>
+                    <select id="idType">
+                        <option value="DNI">DNI</option>
+                        <option value="CE">Carnet de Extranjería</option>
+                        <option value="PASAPORTE">Pasaporte</option>
+                    </select>
+                </div>
+                
+                <div class="input-group">
+                    <label>Ingrese su identificación</label>
+                    <input type="text" id="inputDNI" placeholder="Identificación" maxlength="12">
+                </div>
+                
+                <div class="form-buttons">
+                    <button class="btn-back" onclick="goToStep(1)">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <button class="btn-primary" id="btnSearchDNI">Buscar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA 3: Completar Datos -->
+    <div id="step3" class="screen">
+        <div class="container">
+            <div class="logo-container">
+                <img id="brandLogo3" src="" alt="Logo" class="brand-logo-small">
+            </div>
+            
+            <div class="form-card">
+                <div class="input-group">
+                    <label>Tipo de Identificación</label>
+                    <input type="text" id="showIdType" readonly>
+                </div>
+                
+                <div class="input-group">
+                    <label>Identificación</label>
+                    <input type="text" id="showDNI" readonly>
+                </div>
+                
+                <div class="input-group">
+                    <label>Nombre</label>
+                    <input type="text" id="inputName" placeholder="Nombre">
+                </div>
+                
+                <div class="input-group">
+                    <label>Apellido</label>
+                    <input type="text" id="inputLastname" placeholder="Apellido">
+                </div>
+                
+                <div class="input-group">
+                    <label>Ingrese su correo</label>
+                    <input type="email" id="inputEmail" placeholder="correo@ejemplo.com">
+                </div>
+                
+                <div class="input-group">
+                    <label>Ingrese su celular</label>
+                    <input type="tel" id="inputPhone" placeholder="999 999 999" maxlength="9">
+                </div>
+                
+                <div class="form-buttons">
+                    <button class="btn-back" onclick="goToStep(2)">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <button class="btn-primary" id="btnGetQR">Obtener QR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA 4: Ticket con QR -->
+    <div id="step4" class="screen">
+        <div class="container">
+            <div class="logo-container">
+                <img id="brandLogo4" src="" alt="Logo" class="brand-logo-small">
+            </div>
+            
+            <div class="ticket-card" id="ticketCard">
+                <div class="ticket-top">
+                    <div class="qr-container" id="qrContainer">
+                        <div id="qrCanvas"></div>
+                    </div>
+                    <p class="ticket-note">Sujeto a capacidad de aforo</p>
+                </div>
+                
+                <div class="ticket-divider">
+                    <div class="circle left"></div>
+                    <div class="dashed-line"></div>
+                    <div class="circle right"></div>
+                </div>
+                
+                <div class="ticket-bottom">
+                    <!-- Evento -->
+                    <h2 id="ticketEvent">NOMBRE DEL EVENTO</h2>
+                    <p class="ticket-info" id="ticketVenue">📍 Lugar del evento</p>
+                    <p class="ticket-info" id="ticketDate">📅 Fecha y hora</p>
+                    
+                    <div class="ticket-divider-small"></div>
+                    
+                    <!-- Cliente -->
+                    <p class="ticket-client" id="ticketName">NOMBRE COMPLETO</p>
+                    <p class="ticket-dni">DNI: <strong id="ticketDNI">00000000</strong></p>
+                    
+                    <div class="ticket-divider-small"></div>
+                    
+                    <!-- Tipo de entrada grande -->
+                    <p class="ticket-type-big" id="ticketType">GENERAL</p>
+                    
+                    <!-- Productora -->
+                    <p class="ticket-brand" id="ticketBrand">Productora: Nombre</p>
+                </div>
+            </div>
+            
+            <button class="btn-download" id="btnDownloadTicket">
+                <i class="fa-solid fa-download"></i> Descargar Entrada
+            </button>
+            
+            <p class="success-msg">
+                <i class="fa-solid fa-circle-check"></i>
+                La entrada ha sido enviada a tu correo electrónico.
+            </p>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Librerías -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script type="module" src="reclamar.js"></script>
+</body>
+</html>

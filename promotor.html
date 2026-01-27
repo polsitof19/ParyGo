@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ParyGo | Promotor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="promotor.css">
+</head>
+<body>
+
+    <!-- ============ SPLASH SCREEN ============ -->
+    <div id="splashScreen" class="splash-screen">
+        <div class="splash-logo">
+            <span class="logo-pary">Pary</span><span class="logo-go">Go</span><span class="logo-dot">.</span>
+        </div>
+        <div class="splash-loader"></div>
+    </div>
+
+    <!-- ============ LOGIN ============ -->
+    <div id="loginView" class="view">
+        <div class="login-container">
+            <div class="login-logo">
+                <span class="logo-pary">Pary</span><span class="logo-go">Go</span><span class="logo-dot">.</span>
+            </div>
+            <p class="login-subtitle">Portal de Promotores</p>
+            
+            <div class="login-form">
+                <div class="input-group">
+                    <i class="fa-solid fa-envelope"></i>
+                    <input type="email" id="login_email" placeholder="Correo electrónico">
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="login_pass" placeholder="Contraseña">
+                </div>
+                
+                <button class="btn-primary" id="btnLogin">
+                    <span>INGRESAR</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+            
+            <div class="login-footer">
+                <p>¿No tienes cuenta? <span onclick="showRegister()">Regístrate aquí</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ REGISTRO ============ -->
+    <div id="registerView" class="view hidden">
+        <div class="login-container">
+            <button class="btn-back" onclick="showLogin()">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            
+            <h2 class="register-title">Únete al Equipo</h2>
+            <p class="register-subtitle">Empieza a ganar comisiones hoy</p>
+
+            <div id="reg_step1" class="register-step">
+                <label class="input-label">Tu DNI</label>
+                <div class="dni-input-row">
+                    <div class="input-group flex-1">
+                        <i class="fa-solid fa-id-card"></i>
+                        <input id="reg_dni" type="tel" maxlength="8" placeholder="8 dígitos">
+                    </div>
+                    <button class="btn-icon" id="btnCheckDni">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="reg_step2" class="register-step hidden">
+                <div class="input-group">
+                    <i class="fa-solid fa-user"></i>
+                    <input id="reg_name" placeholder="Nombre completo" readonly>
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-envelope"></i>
+                    <input id="reg_email" type="email" placeholder="Correo electrónico">
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-phone"></i>
+                    <input id="reg_phone" type="tel" maxlength="9" placeholder="Celular (WhatsApp)">
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input id="reg_pass" type="password" placeholder="Crea una contraseña">
+                </div>
+                
+                <button class="btn-primary" id="btnRegister">
+                    <span>CREAR CUENTA</span>
+                    <i class="fa-solid fa-check"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ SELECTOR DE MARCA ============ -->
+    <div id="brandView" class="view hidden">
+        <div class="brand-selector">
+            <div class="brand-header">
+                <h1>¡Hola, <span id="brand_user_name">Promotor</span>!</h1>
+                <p>¿Con qué marca trabajarás hoy?</p>
+            </div>
+            <div id="brands_grid" class="brands-grid"></div>
+            <button class="btn-logout-small" onclick="doLogout()">
+                <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
+            </button>
+        </div>
+    </div>
+
+    <!-- ============ LISTA DE EVENTOS ============ -->
+    <div id="eventsView" class="view hidden">
+        <header class="app-header">
+            <div class="header-brand">
+                <div class="brand-logo-small" id="header_brand_logo"></div>
+                <div class="header-titles">
+                    <span class="header-brand-name" id="header_brand_name">Marca</span>
+                    <span class="header-subtitle">Selecciona un evento</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn-icon-sm" onclick="changeBrand()" title="Cambiar marca">
+                    <i class="fa-solid fa-shuffle"></i>
+                </button>
+                <div class="avatar-btn" onclick="openProfile()" id="header_avatar">PR</div>
+            </div>
+        </header>
+
+        <main class="events-content">
+            <div id="events_grid" class="events-grid"></div>
+        </main>
+    </div>
+
+    <!-- ============ DASHBOARD PRINCIPAL ============ -->
+    <div id="dashboardView" class="view hidden">
+        
+        <!-- Header del evento -->
+        <header class="event-header">
+            <button class="btn-back-header" id="btnBackEvents">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <div class="event-header-info">
+                <h1 id="dash_event_name">Nombre del Evento</h1>
+                <p id="dash_event_date">Fecha</p>
+            </div>
+            <div class="avatar-btn" onclick="openProfile()">
+                <span id="dash_avatar">PR</span>
+            </div>
+        </header>
+
+        <!-- Panel de Estadísticas -->
+        <div class="stats-panel">
+            <div class="stat-item">
+                <span class="stat-number" id="stat_assigned">0</span>
+                <span class="stat-label">Asignados</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+                <span class="stat-number" id="stat_generated">0</span>
+                <span class="stat-label">Generados</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item highlight-green">
+                <span class="stat-number" id="stat_available">0</span>
+                <span class="stat-label">Libres</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item highlight-blue">
+                <span class="stat-number" id="stat_claimed">0</span>
+                <span class="stat-label">Canjeados</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item highlight-purple">
+                <span class="stat-number" id="stat_scanned">0</span>
+                <span class="stat-label">Escaneados</span>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs-container">
+            <button class="tab-btn active" data-tab="codes" onclick="switchTab('codes')">
+                <i class="fa-solid fa-ticket"></i> Mis Códigos
+            </button>
+            <button class="tab-btn" data-tab="claimed" onclick="switchTab('claimed')">
+                <i class="fa-solid fa-user-check"></i> Canjeados
+            </button>
+        </div>
+
+        <!-- Contenido de Tabs -->
+        <main class="tab-content">
+            
+            <!-- TAB: Mis Códigos -->
+            <div id="tab_codes" class="tab-panel active">
+                <div id="codes_list" class="codes-list">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </div>
+
+            <!-- TAB: Canjeados -->
+            <div id="tab_claimed" class="tab-panel">
+                <div id="claimed_list" class="claimed-list">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Botón Flotante Generar -->
+        <button class="fab" id="btnGenerateCode" onclick="openGenerateModal()">
+            <i class="fa-solid fa-plus"></i>
+            <span>GENERAR</span>
+        </button>
+
+    </div>
+
+    <!-- ============ MODAL: GENERAR CÓDIGO ============ -->
+    <div id="modalGenerate" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-ticket"></i> Generar Código</h2>
+                <button class="modal-close" onclick="closeModal('modalGenerate')">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-desc">Selecciona el tipo de entrada para generar un código único.</p>
+                
+                <div class="form-group">
+                    <label>Tipo de entrada</label>
+                    <select id="gen_ticket_type">
+                        <option value="">Selecciona...</option>
+                    </select>
+                </div>
+
+                <div class="available-info" id="gen_available_info">
+                    <i class="fa-solid fa-info-circle"></i>
+                    <span>Tienes <strong id="gen_available_count">0</strong> códigos disponibles</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary full" id="btnConfirmGenerate">
+                    <i class="fa-solid fa-bolt"></i> GENERAR CÓDIGO
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL: CÓDIGO GENERADO ============ -->
+    <div id="modalCodeResult" class="modal hidden">
+        <div class="modal-content code-result">
+            <div class="success-icon">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <h2>¡Código Generado!</h2>
+            
+            <div class="code-display">
+                <span id="generated_code">JP4X7KM2</span>
+                <button class="btn-copy" onclick="copyGeneratedCode()">
+                    <i class="fa-solid fa-copy"></i>
+                </button>
+            </div>
+            
+            <p class="code-hint">Comparte este código con tu invitado</p>
+            
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeModal('modalCodeResult')">CERRAR</button>
+                <button class="btn-primary" onclick="shareCode()">
+                    <i class="fa-solid fa-share"></i> COMPARTIR
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ DRAWER: PERFIL ============ -->
+    <div id="profileOverlay" class="overlay hidden" onclick="closeProfile()"></div>
+    <div id="profileDrawer" class="drawer">
+        <div class="drawer-header">
+            <div class="profile-avatar" id="profile_avatar">PR</div>
+            <h2 id="profile_name">Nombre</h2>
+            <span class="profile-badge">PROMOTOR</span>
+        </div>
+        <div class="drawer-body">
+            <div class="profile-item">
+                <i class="fa-solid fa-id-card"></i>
+                <div>
+                    <label>DNI</label>
+                    <span id="profile_dni">---</span>
+                </div>
+            </div>
+            <div class="profile-item">
+                <i class="fa-solid fa-envelope"></i>
+                <div>
+                    <label>Email</label>
+                    <span id="profile_email">---</span>
+                </div>
+            </div>
+            <div class="profile-item">
+                <i class="fa-solid fa-phone"></i>
+                <div>
+                    <label>Teléfono</label>
+                    <span id="profile_phone">---</span>
+                </div>
+            </div>
+        </div>
+        <div class="drawer-footer">
+            <button class="btn-logout" onclick="doLogout()">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                Cerrar Sesión
+            </button>
+        </div>
+    </div>
+
+    <!-- ============ TOAST ============ -->
+    <div id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script type="module" src="js/promotor.js"></script>
+</body>
+</html>

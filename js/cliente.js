@@ -1,0 +1,1313 @@
+// ==========================================
+// PARYGO CLIENTE - PORTAL MULTI-MARCA
+// Sistema de subdominios: code.parygo.com
+// ==========================================
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { 
+    getAuth, 
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { 
+    getFirestore, 
+    collection, 
+    addDoc, 
+    getDocs, 
+    query, 
+    where, 
+    doc, 
+    getDoc, 
+    setDoc,
+    updateDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// ==========================================
+// FIREBASE CONFIG
+// ==========================================
+const firebaseConfig = {
+    apiKey: "AIzaSyANnihyrgd02ViR_GeKn6Mdf85nLwUjQg0",
+    authDomain: "parygo-da36a.firebaseapp.com",
+    projectId: "parygo-da36a",
+    storageBucket: "parygo-da36a.firebasestorage.app",
+    messagingSenderId: "58655250311",
+    appId: "1:58655250311:web:9b8f46dd35d0a44ce2e522"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ==========================================
+// VARIABLES GLOBALES
+// ==========================================
+let currentUser = null;         // Usuario de Firebase Auth
+let currentUserProfile = null;  // Perfil específico de esta marca
+let currentBrandSlug = null;    // Slug del subdominio (ej: "code")
+let currentBrandId = null;      // ID de la marca en Firestore
+let currentBrand = null;        // Datos completos de la marca
+let allEvents = [];
+let currentEvent = null;
+let myTickets = [];
+let myPurchases = [];
+let currentTicketTab = 'active';
+let viewingTicket = null;
+
+// Estado de compra
+let buyState = {
+    ticketType: null,
+    quantity: 1,
+    unitPrice: 0,
+    total: 0,
+    paymentMethod: 'yape'
+};
+
+// Tipo de documento
+let selectedDocType = 'DNI';
+let foundUserData = null;
+let existingUserNeedsProfile = false;
+
+// ==========================================
+// INICIALIZACIÓN
+// ==========================================
+document.addEventListener("DOMContentLoaded", async () => {
+    console.log("🚀 ParyGo Cliente - Multi-Marca");
+    
+    // 1. Detectar marca por subdominio
+    currentBrandSlug = detectBrandSlug();
+    console.log("📍 Slug detectado:", currentBrandSlug);
+    
+    if (!currentBrandSlug) {
+        showError("No se pudo determinar la marca. Verifica la URL.");
+        return;
+    }
+    
+    // 2. Cargar datos de la marca
+    const brandLoaded = await loadBrandBySlug();
+    if (!brandLoaded) {
+        showError(`La marca "${currentBrandSlug}" no existe.`);
+        return;
+    }
+    
+    // 3. Escuchar estado de autenticación
+    onAuthStateChanged(auth, async (user) => {
+        setTimeout(hideSplash, 800);
+        
+        if (user) {
+            currentUser = user;
+            // Verificar si tiene perfil en ESTA marca
+            const hasProfile = await loadUserProfile(user.uid);
+            
+            if (hasProfile) {
+                // Tiene perfil → Entrar
+                showView('eventsView');
+                loadEvents();
+                loadMyTickets();
+            } else {
+                // Tiene cuenta pero NO perfil en esta marca
+                existingUserNeedsProfile = true;
+                showLinkAccountPrompt(user);
+            }
+        } else {
+            currentUser = null;
+            currentUserProfile = null;
+            showView('authView');
+        }
+    });
+    
+    setupEventListeners();
+});
+
+/**
+ * DETECTAR SLUG DE LA MARCA DESDE EL SUBDOMINIO
+ * code.parygo.com → "code"
+ * localhost:5500 → usa parámetro ?brand=code
+ */
+function detectBrandSlug() {
+    const hostname = window.location.hostname;
+    
+    // Producción: subdominio.parygo.com
+    if (hostname.includes('.parygo.com') || hostname.includes('.parygo.')) {
+        const parts = hostname.split('.');
+        if (parts.length >= 3) {
+            return parts[0].toLowerCase();
+        }
+    }
+    
+    // Desarrollo local: usar parámetro ?brand=xxx
+    const params = new URLSearchParams(window.location.search);
+    const brandParam = params.get('brand') || params.get('marca');
+    if (brandParam) {
+        return brandParam.toLowerCase();
+    }
+    
+    // Fallback: primer segmento del path
+    const pathSlug = window.location.pathname.split('/').filter(p => p)[0];
+    if (pathSlug && pathSlug !== 'cliente.html') {
+        return pathSlug.toLowerCase();
+    }
+    
+    return null;
+}
+
+/**
+ * CARGAR MARCA POR SLUG
+ */
+async function loadBrandBySlug() {
+    try {
+        // Buscar marca por slug
+        const q = query(collection(db, "brands"), where("slug", "==", currentBrandSlug));
+        let snap = await getDocs(q);
+        
+        // Si no encuentra en brands, buscar en companies
+        if (snap.empty) {
+            const q2 = query(collection(db, "companies"), where("slug", "==", currentBrandSlug));
+            snap = await getDocs(q2);
+        }
+        
+        // También buscar por ID directo (compatibilidad)
+        if (snap.empty) {
+            let docSnap = await getDoc(doc(db, "brands", currentBrandSlug));
+            if (!docSnap.exists()) {
+                docSnap = await getDoc(doc(db, "companies", currentBrandSlug));
+            }
+            if (docSnap.exists()) {
+                currentBrand = { id: docSnap.id, ...docSnap.data() };
+                currentBrandId = docSnap.id;
+                updateBrandUI();
+                return true;
+            }
+        }
+        
+        if (!snap.empty) {
+            currentBrand = { id: snap.docs[0].id, ...snap.docs[0].data() };
+            currentBrandId = snap.docs[0].id;
+            updateBrandUI();
+            return true;
+        }
+        
+        return false;
+    } catch (e) {
+        console.error("Error cargando marca:", e);
+        return false;
+    }
+}
+
+function updateBrandUI() {
+    if (!currentBrand) return;
+    
+    // Logo en auth
+    const authLogo = document.getElementById("auth_brand_logo");
+    if (authLogo) {
+        if (currentBrand.logo) {
+            authLogo.innerHTML = `<img src="${currentBrand.logo}" alt="${currentBrand.name}">`;
+        } else {
+            authLogo.innerHTML = `<i class="fa-solid fa-star"></i>`;
+            authLogo.style.background = currentBrand.color || '#f43f5e';
+        }
+    }
+    
+    // Logo en header
+    const headerLogo = document.getElementById("header_brand_logo");
+    if (headerLogo) {
+        if (currentBrand.logo) {
+            headerLogo.innerHTML = `<img src="${currentBrand.logo}" alt="${currentBrand.name}">`;
+        } else {
+            headerLogo.innerHTML = `<i class="fa-solid fa-star"></i>`;
+            headerLogo.style.background = currentBrand.color || '#f43f5e';
+        }
+    }
+    
+    // Nombre
+    const headerName = document.getElementById("header_brand_name");
+    if (headerName) headerName.textContent = currentBrand.name || 'Eventos';
+    
+    document.title = `${currentBrand.name || 'ParyGo'} | Eventos`;
+    
+    // Color de tema (opcional)
+    if (currentBrand.color) {
+        document.documentElement.style.setProperty('--primary', currentBrand.color);
+    }
+}
+
+function showError(message) {
+    hideSplash();
+    document.body.innerHTML = `
+        <div style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center; background:#0a0a0f; color:white; font-family:'Outfit',sans-serif;">
+            <i class="fa-solid fa-circle-exclamation" style="font-size:48px; color:#f43f5e; margin-bottom:16px;"></i>
+            <h1 style="font-size:20px; margin-bottom:8px;">Error</h1>
+            <p style="color:#888; font-size:14px;">${message}</p>
+        </div>
+    `;
+}
+
+function hideSplash() {
+    const splash = document.getElementById("splashScreen");
+    if (splash) {
+        splash.style.opacity = "0";
+        setTimeout(() => splash.classList.add("hidden"), 300);
+    }
+}
+
+// ==========================================
+// CARGAR PERFIL DEL USUARIO EN ESTA MARCA
+// ==========================================
+async function loadUserProfile(uid) {
+    try {
+        const profileId = `${uid}_${currentBrandId}`;
+        const snap = await getDoc(doc(db, "user_profiles", profileId));
+        
+        if (snap.exists()) {
+            currentUserProfile = { id: snap.id, ...snap.data() };
+            updateUserUI();
+            return true;
+        }
+        return false;
+    } catch (e) {
+        console.error("Error cargando perfil:", e);
+        return false;
+    }
+}
+
+/**
+ * MOSTRAR PROMPT PARA VINCULAR CUENTA EXISTENTE
+ */
+function showLinkAccountPrompt(user) {
+    showView('authView');
+    
+    // Ocultar pasos normales
+    document.getElementById("auth_step1").classList.add("hidden");
+    document.getElementById("auth_step2").classList.add("hidden");
+    document.getElementById("auth_step3").classList.add("hidden");
+    
+    // Crear prompt especial
+    const container = document.querySelector('.auth-container');
+    
+    // Remover prompt anterior si existe
+    document.getElementById("link_prompt")?.remove();
+    
+    const prompt = document.createElement('div');
+    prompt.id = "link_prompt";
+    prompt.className = "auth-step";
+    prompt.innerHTML = `
+        <div class="user-found-card" style="background:rgba(59,130,246,0.1); border-color:rgba(59,130,246,0.3);">
+            <i class="fa-solid fa-link" style="color:#3b82f6;"></i>
+            <div>
+                <span>Ya tienes una cuenta ParyGo</span>
+                <strong>${user.email}</strong>
+            </div>
+        </div>
+        
+        <p style="color:var(--text-muted); font-size:14px; margin-bottom:20px; text-align:center;">
+            Para acceder a los eventos de <strong>${currentBrand?.name || 'esta marca'}</strong>, 
+            necesitamos algunos datos adicionales.
+        </p>
+        
+        <div class="form-group">
+            <label>Tipo de documento</label>
+            <div class="doc-type-selector">
+                <button class="doc-type-btn active" data-type="DNI" onclick="selectDocType('DNI')">
+                    <i class="fa-solid fa-id-card"></i> DNI
+                </button>
+                <button class="doc-type-btn" data-type="CE" onclick="selectDocType('CE')">
+                    <i class="fa-solid fa-passport"></i> CE
+                </button>
+                <button class="doc-type-btn" data-type="PASAPORTE" onclick="selectDocType('PASAPORTE')">
+                    <i class="fa-solid fa-globe"></i> Pasaporte
+                </button>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label id="link_doc_label">Número de DNI</label>
+            <input type="tel" id="link_doc_number" placeholder="12345678" maxlength="8">
+        </div>
+        
+        <div class="form-group">
+            <label>Nombres</label>
+            <input type="text" id="link_nombres" placeholder="Tus nombres">
+        </div>
+        
+        <div class="form-group">
+            <label>Apellidos</label>
+            <input type="text" id="link_apellidos" placeholder="Tus apellidos">
+        </div>
+        
+        <div class="form-group">
+            <label>Teléfono (WhatsApp)</label>
+            <input type="tel" id="link_phone" placeholder="987654321" maxlength="9">
+        </div>
+        
+        <button class="btn-primary" onclick="linkAccountToProfile()">
+            <span>CONTINUAR</span>
+            <i class="fa-solid fa-arrow-right"></i>
+        </button>
+        
+        <button class="btn-back-link" onclick="logoutAndRestart()">
+            <i class="fa-solid fa-arrow-left"></i> Usar otra cuenta
+        </button>
+    `;
+    
+    container.appendChild(prompt);
+    
+    // Agregar listener para buscar DNI
+    document.getElementById("link_doc_number")?.addEventListener("blur", async (e) => {
+        const dni = e.target.value.trim();
+        if (selectedDocType === 'DNI' && dni.length === 8) {
+            await searchRENIECForLink(dni);
+        }
+    });
+}
+
+async function searchRENIECForLink(dni) {
+    try {
+        const TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InBhdWxzZWJhc3RpYW40MzlAZ21haWwuY29tIn0.6OW3nuSrcpVbUbhakLiTa7K4IAcWEJz4LJ1pALTNlSI";
+        const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`https://dniruc.apisperu.com/api/v1/dni/${dni}?token=${TOKEN}`));
+        const data = await res.json();
+        
+        if (data?.nombres) {
+            document.getElementById("link_nombres").value = data.nombres;
+            document.getElementById("link_apellidos").value = `${data.apellidoPaterno || ''} ${data.apellidoMaterno || ''}`.trim();
+            toast("✅ Datos encontrados");
+        }
+    } catch (e) {
+        console.log("RENIEC no disponible");
+    }
+}
+
+window.linkAccountToProfile = async () => {
+    const docNumber = document.getElementById("link_doc_number").value.trim();
+    const nombres = document.getElementById("link_nombres").value.trim();
+    const apellidos = document.getElementById("link_apellidos").value.trim();
+    const phone = document.getElementById("link_phone").value.trim();
+    
+    if (!docNumber) return toast("Ingresa tu documento");
+    if (!nombres || !apellidos) return toast("Ingresa tu nombre completo");
+    if (!phone || phone.length !== 9 || !phone.startsWith('9')) return toast("Teléfono: 9 dígitos, empieza con 9");
+    
+    try {
+        // Crear perfil para esta marca
+        const profileId = `${currentUser.uid}_${currentBrandId}`;
+        await setDoc(doc(db, "user_profiles", profileId), {
+            user_id: currentUser.uid,
+            brand_id: currentBrandId,
+            brand_slug: currentBrandSlug,
+            name: `${nombres} ${apellidos}`.trim(),
+            nombres,
+            apellidos,
+            email: currentUser.email,
+            phone,
+            doc_type: selectedDocType,
+            doc_number: docNumber,
+            created_at: new Date().toISOString()
+        });
+        
+        // También actualizar/crear usuario global si no existe
+        await setDoc(doc(db, "users", currentUser.uid), {
+            email: currentUser.email,
+            created_at: new Date().toISOString()
+        }, { merge: true });
+        
+        toast("✅ ¡Cuenta vinculada!");
+        
+        // Recargar
+        await loadUserProfile(currentUser.uid);
+        showView('eventsView');
+        loadEvents();
+        loadMyTickets();
+        
+        // Remover prompt
+        document.getElementById("link_prompt")?.remove();
+        
+    } catch (e) {
+        console.error(e);
+        toast("Error al vincular cuenta");
+    }
+};
+
+window.logoutAndRestart = async () => {
+    await signOut(auth);
+    location.reload();
+};
+
+// ==========================================
+// AUTENTICACIÓN - BUSCAR DOCUMENTO
+// ==========================================
+window.selectDocType = (type) => {
+    selectedDocType = type;
+    document.querySelectorAll('.doc-type-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll(`[data-type="${type}"]`).forEach(b => b.classList.add('active'));
+    
+    // Actualizar labels
+    const labels = ['doc_label', 'link_doc_label'];
+    const inputs = ['auth_doc_number', 'link_doc_number'];
+    
+    labels.forEach(id => {
+        const label = document.getElementById(id);
+        if (label) {
+            if (type === 'DNI') {
+                label.textContent = "Número de DNI";
+            } else if (type === 'CE') {
+                label.textContent = "Carnet de Extranjería";
+            } else {
+                label.textContent = "Número de Pasaporte";
+            }
+        }
+    });
+    
+    inputs.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.maxLength = type === 'DNI' ? 8 : 12;
+            input.placeholder = type === 'DNI' ? "12345678" : (type === 'CE' ? "CE123456789" : "AB1234567");
+        }
+    });
+};
+
+async function searchDocument() {
+    const docNumber = document.getElementById("auth_doc_number").value.trim();
+    const btn = document.getElementById("btnSearchDoc");
+    
+    if (selectedDocType === 'DNI' && docNumber.length !== 8) {
+        return toast("El DNI debe tener 8 dígitos");
+    }
+    if (!docNumber) return toast("Ingresa tu documento");
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    
+    try {
+        // 1. Buscar si existe perfil en ESTA marca con este documento
+        const qProfile = query(
+            collection(db, "user_profiles"), 
+            where("brand_id", "==", currentBrandId),
+            where("doc_number", "==", docNumber)
+        );
+        const snapProfile = await getDocs(qProfile);
+        
+        if (!snapProfile.empty) {
+            // Existe perfil → obtener datos para login
+            const profile = snapProfile.docs[0].data();
+            foundUserData = { 
+                ...profile, 
+                id: profile.user_id 
+            };
+            
+            // Obtener email del usuario global
+            const userSnap = await getDoc(doc(db, "users", profile.user_id));
+            if (userSnap.exists()) {
+                foundUserData.email = userSnap.data().email;
+            }
+            
+            document.getElementById("login_user_name").textContent = foundUserData.name || 'Usuario';
+            showAuthStep(3);
+        } else {
+            // No existe perfil → verificar si tiene cuenta global
+            // Buscar por documento en otras marcas
+            const qGlobal = query(
+                collection(db, "user_profiles"), 
+                where("doc_number", "==", docNumber)
+            );
+            const snapGlobal = await getDocs(qGlobal);
+            
+            if (!snapGlobal.empty) {
+                // Tiene cuenta en otra marca → pedir vincular
+                const existingProfile = snapGlobal.docs[0].data();
+                foundUserData = { ...existingProfile };
+                
+                const userSnap = await getDoc(doc(db, "users", existingProfile.user_id));
+                if (userSnap.exists()) {
+                    foundUserData.email = userSnap.data().email;
+                }
+                
+                // Mostrar que ya tiene cuenta
+                document.getElementById("login_user_name").textContent = `${foundUserData.name} (cuenta existente)`;
+                existingUserNeedsProfile = true;
+                showAuthStep(3);
+            } else {
+                // Usuario completamente nuevo → Registro
+                if (selectedDocType === 'DNI') {
+                    await searchRENIEC(docNumber);
+                } else {
+                    clearRegisterFields();
+                    showAuthStep(2);
+                }
+            }
+        }
+    } catch (e) {
+        console.error(e);
+        toast("Error de conexión");
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-arrow-right"></i>';
+}
+
+async function searchRENIEC(dni) {
+    try {
+        const TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InBhdWxzZWJhc3RpYW40MzlAZ21haWwuY29tIn0.6OW3nuSrcpVbUbhakLiTa7K4IAcWEJz4LJ1pALTNlSI";
+        const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`https://dniruc.apisperu.com/api/v1/dni/${dni}?token=${TOKEN}`));
+        const data = await res.json();
+        
+        if (data?.nombres) {
+            document.getElementById("reg_nombres").value = data.nombres;
+            document.getElementById("reg_apellidos").value = `${data.apellidoPaterno || ''} ${data.apellidoMaterno || ''}`.trim();
+            document.getElementById("reg_nombres").setAttribute("readonly", "true");
+            document.getElementById("reg_apellidos").setAttribute("readonly", "true");
+            toast("✅ Datos encontrados");
+        } else {
+            clearRegisterFields();
+            toast("No encontrado, ingresa manualmente");
+        }
+    } catch (e) {
+        clearRegisterFields();
+    }
+    showAuthStep(2);
+}
+
+function clearRegisterFields() {
+    document.getElementById("reg_nombres").value = "";
+    document.getElementById("reg_apellidos").value = "";
+    document.getElementById("reg_nombres").removeAttribute("readonly");
+    document.getElementById("reg_apellidos").removeAttribute("readonly");
+}
+
+function showAuthStep(step) {
+    document.getElementById("auth_step1")?.classList.add("hidden");
+    document.getElementById("auth_step2")?.classList.add("hidden");
+    document.getElementById("auth_step3")?.classList.add("hidden");
+    document.getElementById("link_prompt")?.classList.add("hidden");
+    document.getElementById(`auth_step${step}`)?.classList.remove("hidden");
+}
+
+window.backToStep1 = () => {
+    foundUserData = null;
+    existingUserNeedsProfile = false;
+    showAuthStep(1);
+};
+
+// ==========================================
+// REGISTRO - USUARIO NUEVO
+// ==========================================
+async function handleRegister() {
+    const nombres = document.getElementById("reg_nombres").value.trim();
+    const apellidos = document.getElementById("reg_apellidos").value.trim();
+    const email = document.getElementById("reg_email").value.trim().toLowerCase();
+    const phone = document.getElementById("reg_phone").value.trim();
+    const password = document.getElementById("reg_password").value;
+    const docNumber = document.getElementById("auth_doc_number").value.trim();
+    
+    if (!nombres || !apellidos) return toast("Ingresa tu nombre completo");
+    if (!email || !email.includes('@')) return toast("Ingresa un correo válido");
+    if (!phone || phone.length !== 9 || !phone.startsWith('9')) return toast("Teléfono: 9 dígitos, empieza con 9");
+    if (!password || password.length < 6) return toast("Contraseña mínimo 6 caracteres");
+    
+    const btn = document.getElementById("btnContinue");
+    btn.disabled = true;
+    btn.innerHTML = '<span>Creando cuenta...</span>';
+    
+    try {
+        // 1. Crear usuario en Firebase Auth
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        
+        // 2. Crear usuario global
+        await setDoc(doc(db, "users", cred.user.uid), {
+            email,
+            created_at: new Date().toISOString()
+        });
+        
+        // 3. Crear perfil específico para esta marca
+        const profileId = `${cred.user.uid}_${currentBrandId}`;
+        await setDoc(doc(db, "user_profiles", profileId), {
+            user_id: cred.user.uid,
+            brand_id: currentBrandId,
+            brand_slug: currentBrandSlug,
+            name: `${nombres} ${apellidos}`.trim(),
+            nombres,
+            apellidos,
+            email,
+            phone,
+            doc_type: selectedDocType,
+            doc_number: docNumber,
+            created_at: new Date().toISOString()
+        });
+        
+        toast("🎉 ¡Cuenta creada!");
+        
+    } catch (e) {
+        console.error(e);
+        toast(e.code === 'auth/email-already-in-use' ? "Este correo ya está registrado" : "Error al crear cuenta");
+        btn.disabled = false;
+        btn.innerHTML = '<span>CONTINUAR</span><i class="fa-solid fa-arrow-right"></i>';
+    }
+}
+
+// ==========================================
+// LOGIN
+// ==========================================
+async function handleLogin() {
+    const password = document.getElementById("login_password").value;
+    
+    if (!password) return toast("Ingresa tu contraseña");
+    if (!foundUserData?.email) return toast("Error: no se encontró el email");
+    
+    const btn = document.getElementById("btnLogin");
+    btn.disabled = true;
+    btn.innerHTML = '<span>Ingresando...</span>';
+    
+    try {
+        await signInWithEmailAndPassword(auth, foundUserData.email, password);
+        // El onAuthStateChanged se encargará del resto
+    } catch (e) {
+        console.error(e);
+        toast("Contraseña incorrecta");
+        btn.disabled = false;
+        btn.innerHTML = '<span>INGRESAR</span><i class="fa-solid fa-arrow-right"></i>';
+    }
+}
+
+// ==========================================
+// ACTUALIZAR UI DEL USUARIO
+// ==========================================
+function updateUserUI() {
+    if (!currentUserProfile) return;
+    
+    const initials = getInitials(currentUserProfile.name || 'US');
+    
+    ['header_avatar', 'profile_avatar'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = initials;
+    });
+    
+    document.getElementById("profile_name").textContent = currentUserProfile.name || '---';
+    document.getElementById("profile_doc").textContent = `${currentUserProfile.doc_type || 'DNI'}: ${currentUserProfile.doc_number || '---'}`;
+    document.getElementById("profile_email").textContent = currentUserProfile.email || '---';
+    document.getElementById("profile_phone").textContent = currentUserProfile.phone || '---';
+}
+
+function getInitials(name) {
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+}
+
+// ==========================================
+// EVENTOS
+// ==========================================
+async function loadEvents() {
+    const container = document.getElementById("events_list");
+    container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i></div>';
+    
+    try {
+        // Buscar eventos de esta marca
+        const q1 = query(collection(db, "events"), where("brand_id", "==", currentBrandId));
+        const q2 = query(collection(db, "events"), where("company_id", "==", currentBrandId));
+        
+        const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+        
+        const map = new Map();
+        snap1.docs.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
+        snap2.docs.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
+        
+        // Filtrar solo eventos futuros
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        allEvents = Array.from(map.values())
+            .filter(e => new Date(e.date) >= today)
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        if (!allEvents.length) {
+            container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i><p>No hay eventos próximos</p></div>';
+            return;
+        }
+        
+        container.innerHTML = allEvents.map((e, i) => `
+            <div class="event-card" onclick="openEventDetail(${i})">
+                <img class="event-card-image" src="${e.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600'}" alt="${escapeHtml(e.name)}">
+                <div class="event-card-body">
+                    <div class="event-card-title">${escapeHtml(e.name)}</div>
+                    <div class="event-card-meta">
+                        <span><i class="fa-regular fa-calendar"></i> ${formatDate(e.date)}</span>
+                        <span><i class="fa-regular fa-clock"></i> ${e.time || '---'}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<div class="empty-state"><p>Error al cargar eventos</p></div>';
+    }
+}
+
+window.openEventDetail = (index) => {
+    currentEvent = allEvents[index];
+    if (!currentEvent) return;
+    
+    showView('eventDetailView');
+    
+    document.getElementById("detail_image").src = currentEvent.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600';
+    document.getElementById("detail_name").textContent = currentEvent.name;
+    document.getElementById("detail_date").textContent = formatDate(currentEvent.date);
+    document.getElementById("detail_time").textContent = currentEvent.time || 'Por confirmar';
+    document.getElementById("detail_venue").textContent = currentEvent.venue || 'Por confirmar';
+    
+    renderTicketsForSale();
+};
+
+function renderTicketsForSale() {
+    const container = document.getElementById("tickets_for_sale");
+    const tickets = currentEvent?.tickets || [];
+    
+    if (!tickets.length) {
+        container.innerHTML = '<p class="text-muted">No hay entradas disponibles</p>';
+        return;
+    }
+    
+    container.innerHTML = tickets.map((t, i) => `
+        <div class="ticket-item">
+            <div class="ticket-item-info">
+                <h4>${escapeHtml(t.name)}</h4>
+                <span>${t.isFree || t.price === 0 ? 'Entrada gratuita' : ''}</span>
+            </div>
+            ${t.price > 0 
+                ? `<button class="ticket-item-btn" onclick="openBuyModal(${i})">S/. ${Number(t.price).toFixed(2)}</button>`
+                : `<span class="ticket-item-price">GRATIS</span>`
+            }
+        </div>
+    `).join('');
+}
+
+window.backToEvents = () => {
+    currentEvent = null;
+    showView('eventsView');
+};
+
+window.showEvents = () => {
+    showView('eventsView');
+    updateNavActive(0);
+};
+
+function updateNavActive(index) {
+    document.querySelectorAll('.nav-item').forEach((n, i) => {
+        n.classList.toggle('active', i === index);
+    });
+}
+
+// ==========================================
+// CANJEAR CÓDIGO
+// ==========================================
+window.redeemCode = async () => {
+    const codeInput = document.getElementById("promo_code");
+    const code = codeInput.value.trim().toUpperCase();
+    
+    if (!code || code.length < 6) return toast("Ingresa un código válido");
+    if (!currentEvent) return toast("Error: evento no seleccionado");
+    if (!currentUserProfile) return toast("Error: perfil no cargado");
+    
+    try {
+        // Buscar código
+        const q = query(
+            collection(db, "codes"),
+            where("code", "==", code),
+            where("event_id", "==", currentEvent.id)
+        );
+        const snap = await getDocs(q);
+        
+        if (snap.empty) {
+            return toast("Código no válido");
+        }
+        
+        const codeDoc = snap.docs[0];
+        const codeData = codeDoc.data();
+        
+        if (codeData.status !== 'FREE') {
+            return toast("Este código ya fue usado");
+        }
+        
+        // Canjear código
+        await updateDoc(doc(db, "codes", codeDoc.id), {
+            status: "CLAIMED",
+            claimed_by: currentUser.uid,
+            claimed_name: currentUserProfile.name,
+            claimed_dni: currentUserProfile.doc_number,
+            claimed_phone: currentUserProfile.phone,
+            claimed_at: new Date().toISOString()
+        });
+        
+        // Crear ticket
+        const qrData = generateQRData(code);
+        await addDoc(collection(db, "tickets"), {
+            user_id: currentUser.uid,
+            user_name: currentUserProfile.name,
+            user_doc: currentUserProfile.doc_number,
+            user_phone: currentUserProfile.phone,
+            user_email: currentUserProfile.email,
+            event_id: currentEvent.id,
+            event_name: currentEvent.name,
+            event_date: currentEvent.date,
+            brand_id: currentBrandId,
+            ticket_type: codeData.ticket_name || 'General',
+            code: code,
+            qr_data: qrData,
+            type: 'FREE',
+            status: 'ACTIVE',
+            created_at: new Date().toISOString()
+        });
+        
+        codeInput.value = '';
+        openModal('modalCodeSuccess');
+        loadMyTickets();
+        
+    } catch (e) {
+        console.error(e);
+        toast("Error al canjear código");
+    }
+};
+
+function generateQRData(code) {
+    const data = {
+        c: code,
+        e: currentEvent?.id || '',
+        u: currentUser?.uid || '',
+        b: currentBrandId,
+        t: Date.now()
+    };
+    // Crear firma simple (en producción usar algo más robusto)
+    const signature = btoa(`${data.c}-${data.e}-${data.u}-${data.t}`).substring(0, 16);
+    data.s = signature;
+    return btoa(JSON.stringify(data));
+}
+
+// ==========================================
+// COMPRAR ENTRADA
+// ==========================================
+window.openBuyModal = (ticketIndex) => {
+    const ticket = currentEvent?.tickets?.[ticketIndex];
+    if (!ticket) return;
+    
+    buyState.ticketType = ticket;
+    buyState.quantity = 1;
+    buyState.unitPrice = ticket.price || 0;
+    buyState.paymentMethod = 'yape';
+    
+    updateBuyTotal();
+    
+    document.getElementById("buy_ticket_name").textContent = ticket.name;
+    document.getElementById("buy_ticket_price").textContent = `S/. ${Number(ticket.price).toFixed(2)}`;
+    document.getElementById("buy_qty").textContent = '1';
+    
+    showBuyStep(1);
+    openModal('modalBuy');
+};
+
+window.changeQty = (delta) => {
+    buyState.quantity = Math.max(1, Math.min(5, buyState.quantity + delta));
+    document.getElementById("buy_qty").textContent = buyState.quantity;
+    updateBuyTotal();
+};
+
+function updateBuyTotal() {
+    const subtotal = buyState.quantity * buyState.unitPrice;
+    // Céntimos aleatorios para verificación
+    const cents = Math.floor(Math.random() * 99) + 1;
+    buyState.total = subtotal + (cents / 100);
+    
+    document.getElementById("buy_subtotal").textContent = `S/. ${subtotal.toFixed(2)}`;
+    document.getElementById("buy_total").textContent = `S/. ${buyState.total.toFixed(2)}`;
+}
+
+window.goToPayment = () => {
+    showBuyStep(2);
+    loadPaymentInfo();
+};
+
+window.backToBuyStep1 = () => showBuyStep(1);
+window.backToBuyStep2 = () => showBuyStep(2);
+
+function showBuyStep(step) {
+    for (let i = 1; i <= 4; i++) {
+        document.getElementById(`buy_step${i}`)?.classList.add('hidden');
+    }
+    document.getElementById(`buy_step${step}`)?.classList.remove('hidden');
+}
+
+window.selectPaymentMethod = (method) => {
+    buyState.paymentMethod = method;
+    document.querySelectorAll('.payment-method-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`[data-method="${method}"]`)?.classList.add('active');
+    
+    document.getElementById("payment_yape_plin")?.classList.toggle('hidden', method === 'bank');
+    document.getElementById("payment_bank")?.classList.toggle('hidden', method !== 'bank');
+    
+    loadPaymentInfo();
+};
+
+function loadPaymentInfo() {
+    const config = currentEvent?.payment_config || {};
+    const method = buyState.paymentMethod;
+    
+    if (method === 'yape' || method === 'plin') {
+        const data = config[method] || config.yape || config;
+        document.getElementById("pay_name").textContent = data.name || '---';
+        document.getElementById("pay_phone").textContent = data.phone || '---';
+        document.getElementById("pay_amount").textContent = `S/. ${buyState.total.toFixed(2)}`;
+        
+        const btnQR = document.getElementById("btnShowQR");
+        if (btnQR) btnQR.classList.toggle('hidden', !data.qr_image);
+    } else {
+        const bank = config.bank || {};
+        document.getElementById("bank_name").textContent = bank.bank_name || '---';
+        document.getElementById("bank_type").textContent = bank.account_type || 'Cuenta de Ahorros';
+        document.getElementById("bank_account").textContent = bank.account_number || '---';
+        document.getElementById("bank_cci").textContent = bank.cci || '---';
+        document.getElementById("bank_holder").textContent = bank.holder_name || '---';
+        document.getElementById("bank_amount").textContent = `S/. ${buyState.total.toFixed(2)}`;
+    }
+}
+
+window.showPaymentQR = () => {
+    const config = currentEvent?.payment_config?.yape || currentEvent?.payment_config || {};
+    if (config.qr_image) {
+        document.getElementById("payment_qr_image").src = config.qr_image;
+        openModal('modalPaymentQR');
+    }
+};
+
+window.copyToClipboard = async (elementId) => {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    
+    const text = el.textContent.replace('S/. ', '');
+    try {
+        await navigator.clipboard.writeText(text);
+        toast("✅ Copiado");
+    } catch (e) {
+        toast("Error al copiar");
+    }
+};
+
+window.goToUploadProof = () => showBuyStep(3);
+
+window.previewProofImage = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        document.getElementById("upload_preview").src = e.target.result;
+        document.getElementById("upload_preview").classList.remove('hidden');
+        document.getElementById("upload_placeholder").classList.add('hidden');
+    };
+    reader.readAsDataURL(file);
+};
+
+window.sendPaymentProof = async () => {
+    const payerName = document.getElementById("proof_payer_name").value.trim();
+    const operation = document.getElementById("proof_operation").value.trim();
+    const imageInput = document.getElementById("proof_image");
+    
+    if (!payerName) return toast("Ingresa nombres y apellidos de quien pagó");
+    if (!operation) return toast("Ingresa el número de operación");
+    if (!imageInput.files[0]) return toast("Sube la captura del pago");
+    
+    const btn = document.getElementById("btnSendProof");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+    
+    try {
+        const imageBase64 = await fileToBase64(imageInput.files[0]);
+        
+        await addDoc(collection(db, "purchases"), {
+            user_id: currentUser.uid,
+            user_name: currentUserProfile.name,
+            user_doc: currentUserProfile.doc_number,
+            user_email: currentUserProfile.email,
+            user_phone: currentUserProfile.phone,
+            event_id: currentEvent.id,
+            event_name: currentEvent.name,
+            brand_id: currentBrandId,
+            ticket_type: buyState.ticketType.name,
+            ticket_id: buyState.ticketType.id,
+            quantity: buyState.quantity,
+            unit_price: buyState.unitPrice,
+            total: buyState.total,
+            payment_method: buyState.paymentMethod,
+            payer_name: payerName,
+            operation_number: operation,
+            proof_image: imageBase64,
+            status: "PENDING",
+            created_at: new Date().toISOString()
+        });
+        
+        showBuyStep(4);
+        loadMyTickets();
+        
+    } catch (e) {
+        console.error(e);
+        toast("Error al enviar comprobante");
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> ENVIAR COMPROBANTE';
+};
+
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+// ==========================================
+// MIS ENTRADAS
+// ==========================================
+async function loadMyTickets() {
+    if (!currentUser || !currentBrandId) return;
+    
+    try {
+        // Cargar tickets de ESTA marca
+        const qTickets = query(
+            collection(db, "tickets"), 
+            where("user_id", "==", currentUser.uid),
+            where("brand_id", "==", currentBrandId)
+        );
+        const snapTickets = await getDocs(qTickets);
+        myTickets = snapTickets.docs.map(d => ({ id: d.id, ...d.data() }));
+        
+        // Cargar compras pendientes de ESTA marca
+        const qPurchases = query(
+            collection(db, "purchases"), 
+            where("user_id", "==", currentUser.uid),
+            where("brand_id", "==", currentBrandId),
+            where("status", "==", "PENDING")
+        );
+        const snapPurchases = await getDocs(qPurchases);
+        myPurchases = snapPurchases.docs.map(d => ({ id: d.id, ...d.data() }));
+        
+        // Actualizar badge
+        const activeCount = myTickets.filter(t => t.status === 'ACTIVE').length;
+        const badge = document.getElementById("tickets_count");
+        if (badge) {
+            badge.textContent = activeCount;
+            badge.classList.toggle('hidden', activeCount === 0);
+        }
+        
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+window.openMyTickets = () => {
+    showView('myTicketsView');
+    updateNavActive(1);
+    renderMyTickets();
+};
+
+window.switchTicketTab = (tab) => {
+    currentTicketTab = tab;
+    document.querySelectorAll('.tickets-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.tickets-tabs .tab-btn[onclick*="${tab}"]`)?.classList.add('active');
+    renderMyTickets();
+};
+
+function renderMyTickets() {
+    const container = document.getElementById("my_tickets_list");
+    let filtered = [];
+    
+    if (currentTicketTab === 'active') {
+        filtered = myTickets.filter(t => t.status === 'ACTIVE');
+    } else if (currentTicketTab === 'pending') {
+        filtered = myPurchases;
+    } else {
+        filtered = myTickets.filter(t => t.status === 'SCANNED' || t.status === 'USED');
+    }
+    
+    if (!filtered.length) {
+        const emptyMsg = currentTicketTab === 'pending' ? 'No tienes compras pendientes' : 'No tienes entradas aquí';
+        container.innerHTML = `<div class="empty-state"><i class="fa-solid fa-ticket"></i><p>${emptyMsg}</p></div>`;
+        return;
+    }
+    
+    if (currentTicketTab === 'pending') {
+        container.innerHTML = filtered.map(p => `
+            <div class="my-ticket-card">
+                <div class="my-ticket-header">
+                    <span class="my-ticket-event">${escapeHtml(p.event_name)}</span>
+                    <span class="my-ticket-type">${escapeHtml(p.ticket_type)}</span>
+                </div>
+                <div class="my-ticket-details">
+                    <span><i class="fa-solid fa-ticket"></i> ${p.quantity}x</span>
+                    <span><i class="fa-solid fa-dollar-sign"></i> S/. ${p.total?.toFixed(2)}</span>
+                </div>
+                <div class="my-ticket-status">
+                    <span class="status-badge pending">🕐 Verificando pago</span>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        container.innerHTML = filtered.map((t, i) => `
+            <div class="my-ticket-card" onclick="viewTicketQR(${i}, '${currentTicketTab}')">
+                <div class="my-ticket-header">
+                    <span class="my-ticket-event">${escapeHtml(t.event_name)}</span>
+                    <span class="my-ticket-type">${escapeHtml(t.ticket_type)}</span>
+                </div>
+                <div class="my-ticket-details">
+                    <span><i class="fa-regular fa-calendar"></i> ${formatDate(t.event_date)}</span>
+                    <span><i class="fa-solid fa-qrcode"></i> ${t.code}</span>
+                </div>
+                <div class="my-ticket-status">
+                    <span class="status-badge ${t.status === 'ACTIVE' ? 'active' : 'used'}">
+                        ${t.status === 'ACTIVE' ? '✅ Válida' : '✓ Usada'}
+                    </span>
+                    <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i>
+                </div>
+            </div>
+        `).join('');
+    }
+}
+
+window.viewTicketQR = (index, tab) => {
+    const list = tab === 'active' ? myTickets.filter(t => t.status === 'ACTIVE') : myTickets.filter(t => t.status !== 'ACTIVE');
+    viewingTicket = list[index];
+    if (!viewingTicket) return;
+    
+    showView('ticketQRView');
+    
+    document.getElementById("qr_event_name").textContent = viewingTicket.event_name;
+    document.getElementById("qr_event_date").textContent = formatDate(viewingTicket.event_date);
+    document.getElementById("qr_code").textContent = viewingTicket.code;
+    document.getElementById("qr_ticket_type").textContent = viewingTicket.ticket_type;
+    document.getElementById("qr_holder_name").textContent = viewingTicket.user_name;
+    
+    const statusEl = document.getElementById("qr_status");
+    if (viewingTicket.status === 'ACTIVE') {
+        statusEl.textContent = 'VÁLIDA';
+        statusEl.className = 'status-active';
+    } else {
+        statusEl.textContent = 'USADA';
+        statusEl.className = 'status-used';
+    }
+    
+    // Generar QR
+    const canvas = document.getElementById("qr_canvas");
+    if (window.QRCode && canvas) {
+        QRCode.toCanvas(canvas, viewingTicket.qr_data || viewingTicket.code, {
+            width: 200,
+            margin: 2,
+            color: { dark: '#000000', light: '#ffffff' }
+        });
+    }
+};
+
+window.backToMyTickets = () => {
+    viewingTicket = null;
+    showView('myTicketsView');
+};
+
+window.downloadTicket = () => {
+    const canvas = document.getElementById("qr_canvas");
+    if (!canvas) return;
+    
+    const link = document.createElement('a');
+    link.download = `entrada-${viewingTicket?.code || 'ticket'}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
+    toast("✅ Entrada descargada");
+};
+
+window.shareTicket = async () => {
+    const text = `🎫 Mi entrada para ${viewingTicket?.event_name}\nCódigo: ${viewingTicket?.code}`;
+    
+    if (navigator.share) {
+        try {
+            await navigator.share({ text });
+        } catch (e) {}
+    } else {
+        try {
+            await navigator.clipboard.writeText(text);
+            toast("✅ Copiado al portapapeles");
+        } catch (e) {}
+    }
+};
+
+// ==========================================
+// PERFIL
+// ==========================================
+window.openProfile = () => {
+    document.getElementById("profileOverlay").classList.remove("hidden");
+    setTimeout(() => document.getElementById("profileDrawer").classList.add("open"), 50);
+};
+
+window.closeProfile = () => {
+    document.getElementById("profileDrawer").classList.remove("open");
+    setTimeout(() => document.getElementById("profileOverlay").classList.add("hidden"), 300);
+};
+
+window.doLogout = async () => {
+    if (!confirm("¿Cerrar sesión?")) return;
+    await signOut(auth);
+    currentUser = null;
+    currentUserProfile = null;
+    location.reload();
+};
+
+// ==========================================
+// UTILIDADES
+// ==========================================
+function showView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+    document.getElementById(id)?.classList.remove('hidden');
+}
+
+function openModal(id) {
+    document.getElementById(id)?.classList.remove('hidden');
+}
+
+window.closeModal = (id) => {
+    document.getElementById(id)?.classList.add('hidden');
+};
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '---';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function toast(msg) {
+    const c = document.getElementById("toast-container");
+    if (!c) return;
+    const t = document.createElement("div");
+    t.className = "toast";
+    t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+}
+
+// ==========================================
+// EVENT LISTENERS
+// ==========================================
+function setupEventListeners() {
+    document.getElementById("btnSearchDoc")?.addEventListener("click", searchDocument);
+    document.getElementById("auth_doc_number")?.addEventListener("keypress", e => e.key === "Enter" && searchDocument());
+    document.getElementById("btnContinue")?.addEventListener("click", handleRegister);
+    document.getElementById("btnLogin")?.addEventListener("click", handleLogin);
+    document.getElementById("login_password")?.addEventListener("keypress", e => e.key === "Enter" && handleLogin());
+    
+    document.querySelectorAll('.modal').forEach(m => {
+        m.addEventListener('click', e => {
+            if (e.target === m) m.classList.add('hidden');
+        });
+    });
+}
+
+console.log("✅ ParyGo Cliente Multi-Marca cargado");

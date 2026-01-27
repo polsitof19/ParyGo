@@ -1,0 +1,859 @@
+// logic.js - ORQUESTADOR PRINCIPAL DE PARYGO ADMIN
+// Este archivo importa todos los módulos y expone las funciones necesarias al objeto window
+
+// ==========================================
+// 1. IMPORTAR MÓDULOS
+// ==========================================
+
+import { db, auth, APP_CONFIG } from './config.js';
+import { state, resetTemps, getActiveEvent, debugState } from './state.js';
+import { 
+    Validator, 
+    toast, 
+    openModal, 
+    closeModals, 
+    closeModal,
+    customConfirm, 
+    switchView,
+    formatDate,
+    formatDateTime,
+    formatCurrency,
+    debounce
+} from './utils.js';
+
+import {
+    doLogin,
+    doLogout,
+    checkAuth,
+    getCurrentUser,
+    registerUser,
+    changePassword
+} from './auth.js';
+
+import { 
+    loadEvents, 
+    renderEvents, 
+    filterEvents, 
+    showGlobalEvents, 
+    backToEvents,
+    openEventDetail,
+    openEventModal,
+    editCurrentEvent,
+    handleFileSelect,
+    saveEvent,
+    deleteEvent
+} from './events.js';
+
+import { 
+    loadBrandsWithLogos, 
+    deleteBrand, 
+    saveBrand, 
+    clearBrandLogo,
+    handleBrandLogoSelect,
+    editBrand,
+    copyBrandLink,
+    toggleContactSection,
+    onBrandNameChange,
+    openNewBrandModal,
+    openMyBrand,
+    generateSlug,
+    updateBrandHeaderActions,
+    editCurrentBrand,
+    copyCurrentBrandLink
+} from './brands.js';
+
+import {
+    renderTicketTable,
+    openTicketModal,
+    editTicket,
+    saveNewTicket,
+    deleteTicket,
+    toggleUsesField
+} from './tickets.js';
+
+import {
+    loadPromotersCache,
+    selectPromoter,
+    fillCodeGen, 
+    generateCodes,
+    openStockModal,
+    loadStockTable,
+    saveStockAssignment,
+    togglePromoterField,
+    downloadCodesAsExcel,
+    downloadCodesAsTxt
+} from './codes.js';
+import { 
+    loadEventMetrics, 
+    switchMetricTab,
+    loadEventSales,
+    viewProof,
+    approveSale,
+    rejectSale,
+    confirmApproveSale,
+    loadAccesses,
+    applyAccessFilters,
+    cancelAccess,
+    filterAccessTable,
+    openDrawer,
+    closeDrawer
+} from './metrics.js';
+
+import { 
+    loadPromotersView,
+    openNewPromoterModal,
+    editPromoter,
+    savePromoter,
+    deletePromoter,
+    renderPromoterBrandSelector,
+    toggleBrandDropdown,
+    selectBrand,
+    removeBrandChip,
+    loadAdminsView,
+    openAdminModal,
+    editAdmin,
+    saveAdmin,
+    deleteAdmin,
+    renderAdminBrandSelector,
+    toggleAdminBrandDropdown,
+    selectAdminBrand,
+    removeAdminBrandChip,
+    loadScannersView,
+    openScannerModal,
+    saveScanner,
+    deleteScanner,
+    handlePromoterImage
+} from './staff.js';
+
+import { 
+    loadRewardsView, 
+    renderRewards, 
+    deliverReward 
+} from './rewards.js';
+
+import { consultarDNI, autocompletarDNI } from './dni-api.js';
+
+// ==========================================
+// 2. EXPONER FUNCIONES AL WINDOW
+// ==========================================
+
+// Utilidades
+window.toast = toast;
+window.openModal = openModal;
+window.closeModals = closeModals;
+window.closeModal = closeModal;
+window.customConfirm = customConfirm;
+window.switchView = switchView;
+window.confirmApproveSale = confirmApproveSale;
+
+// Autenticación
+window.doLogin = doLogin;
+window.doLogout = doLogout;
+
+// Eventos
+window.loadEvents = loadEvents;
+window.filterByBrand = filterEvents;
+window.showGlobalEvents = showGlobalEvents;
+window.backToEvents = backToEvents;
+window.openEventDetail = openEventDetail;
+window.openEventModal = openEventModal;
+window.editCurrentEvent = editCurrentEvent;
+window.handleFileSelect = handleFileSelect;
+window.saveEvent = saveEvent;
+window.deleteEvent = deleteEvent;
+
+// Marcas
+window.loadBrandsWithLogos = loadBrandsWithLogos;
+window.deleteBrand = deleteBrand;
+window.editBrand = editBrand;
+window.openNewBrandModal = openNewBrandModal;
+window.openBrandModal = openNewBrandModal; // Alias para compatibilidad
+window.saveBrand = saveBrand;
+window.clearBrandLogo = clearBrandLogo;
+window.handleBrandLogoSelect = handleBrandLogoSelect;
+window.copyBrandLink = copyBrandLink;
+window.toggleContactSection = toggleContactSection;
+window.onBrandNameChange = onBrandNameChange;
+window.openMyBrand = openMyBrand;
+window.generateSlug = generateSlug;
+window.updateBrandHeaderActions = updateBrandHeaderActions;
+window.editCurrentBrand = editCurrentBrand;
+window.copyCurrentBrandLink = copyCurrentBrandLink;
+
+// Tickets
+window.renderTicketTable = renderTicketTable;
+window.openTicketModal = openTicketModal;
+window.editTicket = editTicket;
+window.saveNewTicket = saveNewTicket;
+window.deleteTicket = deleteTicket;
+window.toggleUsesField = toggleUsesField;
+
+// Códigos y Stock
+window.loadPromotersCache = loadPromotersCache;
+window.selectPromoter = selectPromoter;
+window.fillCodeGen = fillCodeGen;
+window.generateCodes = generateCodes;
+window.openStockModal = openStockModal;
+window.loadStockTable = loadStockTable;
+window.saveStockAssignment = saveStockAssignment;
+window.togglePromoterField = togglePromoterField;
+
+// Métricas y Ventas
+window.loadEventMetrics = loadEventMetrics;
+window.switchMetricTab = switchMetricTab;
+window.loadEventSales = loadEventSales;
+window.viewProof = viewProof;
+window.approveSale = approveSale;
+window.rejectSale = rejectSale;
+window.loadAccesses = loadAccesses;
+window.filterAccessTable = filterAccessTable;
+window.openDrawer = openDrawer;
+window.closeDrawer = closeDrawer;
+window.applyAccessFilters = applyAccessFilters;
+window.cancelAccess = cancelAccess;
+
+// Staff - Promotores
+window.loadPromotersView = loadPromotersView;
+window.openNewPromoterModal = openNewPromoterModal;
+window.editPromoter = editPromoter;
+window.savePromoter = savePromoter;
+window.deletePromoter = deletePromoter;
+window.renderPromoterBrandSelector = renderPromoterBrandSelector;
+window.toggleBrandDropdown = toggleBrandDropdown;
+window.selectBrand = selectBrand;
+window.removeBrandChip = removeBrandChip;
+window.handlePromoterImage = handlePromoterImage;
+
+// Staff - Admins
+window.loadAdminsView = loadAdminsView;
+window.openAdminModal = openAdminModal;
+window.editAdmin = editAdmin;
+window.saveAdmin = saveAdmin;
+window.deleteAdmin = deleteAdmin;
+window.renderAdminBrandSelector = renderAdminBrandSelector;
+window.toggleAdminBrandDropdown = toggleAdminBrandDropdown;
+window.selectAdminBrand = selectAdminBrand;
+window.removeAdminBrandChip = removeAdminBrandChip;
+
+// Staff - Scanners
+window.loadScannersView = loadScannersView;
+window.openScannerModal = openScannerModal;
+window.saveScanner = saveScanner;
+window.deleteScanner = deleteScanner;
+
+// Rewards
+window.loadRewardsView = loadRewardsView;
+window.renderRewards = renderRewards;
+window.deliverReward = deliverReward;
+
+// DNI API
+window.consultarDNI = consultarDNI;
+window.autocompletarDNI = autocompletarDNI;
+
+// Debug
+window.debugState = debugState;
+
+// ==========================================
+// 3. INICIALIZACIÓN DE LA APLICACIÓN
+// ==========================================
+
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log(`🚀 ${APP_CONFIG.APP_NAME} v${APP_CONFIG.VERSION} iniciando...`);
+    
+    // Verificar autenticación
+    const user = await checkAuth();
+    
+    if (user) {
+        console.log("✅ Usuario autenticado:", user.name);
+        
+        // Cargar datos iniciales
+        await Promise.all([
+            loadBrandsWithLogos(),
+            loadEvents(),
+            loadPromotersCache()
+        ]);
+        
+        console.log("✅ Datos iniciales cargados");
+    } else {
+        console.log("⏳ Esperando inicio de sesión...");
+    }
+    
+    // Configurar event listeners globales
+    setupGlobalEventListeners();
+});
+
+// ==========================================
+// 4. EVENT LISTENERS GLOBALES
+// ==========================================
+
+function setupGlobalEventListeners() {
+    
+    // LOGIN - Botón y Enter
+    const btnLogin = document.getElementById('btnLogin');
+    if (btnLogin) {
+        btnLogin.addEventListener('click', doLogin);
+    }
+    
+    const loginInputs = document.querySelectorAll('#adm_email, #adm_pass');
+    loginInputs.forEach(input => {
+        input?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') doLogin();
+        });
+    });
+    
+    // LOGOUT
+    document.getElementById('btnLogout')?.addEventListener('click', doLogout);
+    
+    // NAVEGACIÓN SIDEBAR
+    document.getElementById('nav_events')?.addEventListener('click', showGlobalEvents);
+    document.getElementById('nav_promoters')?.addEventListener('click', loadPromotersView);
+    document.getElementById('nav_scanners')?.addEventListener('click', loadScannersView);
+    document.getElementById('nav_admins')?.addEventListener('click', loadAdminsView);
+    document.getElementById('nav_rewards')?.addEventListener('click', loadRewardsView);
+    
+    // CREAR EVENTO
+    document.getElementById('btnCreateEvent')?.addEventListener('click', openEventModal);
+    
+    // CREAR MARCA
+    document.getElementById('btnCreateBrand')?.addEventListener('click', openBrandModal);
+    
+    // STAFF - BOTONES DE CREAR
+    document.getElementById('btnNewPromoter')?.addEventListener('click', openNewPromoterModal);
+    document.getElementById('btnNewAdmin')?.addEventListener('click', openAdminModal);
+    document.getElementById('btnNewScanner')?.addEventListener('click', openScannerModal);
+    
+    // GUARDAR PROMOTOR
+    document.getElementById('btnSavePromoter')?.addEventListener('click', savePromoter);
+    
+    // GUARDAR ADMIN
+    document.getElementById('btnSaveAdminModal')?.addEventListener('click', saveAdmin);
+    
+    // GUARDAR SCANNER
+    document.getElementById('btnSaveScanner')?.addEventListener('click', saveScanner);
+    
+    // GUARDAR EVENTO
+    document.getElementById('btnSaveEvent')?.addEventListener('click', saveEvent);
+    
+    // GUARDAR MARCA
+    document.getElementById('btnSaveBrand')?.addEventListener('click', saveBrand);
+    
+    // GUARDAR TICKET
+    document.getElementById('btnSaveTicket')?.addEventListener('click', saveNewTicket);
+    
+    // GENERAR CÓDIGOS
+    document.getElementById('btnGenCodes')?.addEventListener('click', generateCodes);   
+    
+    // CREAR TICKET
+    document.getElementById('btnNewTicket')?.addEventListener('click', openTicketModal);
+    
+    // ASIGNAR STOCK
+    document.getElementById('btnAddStock')?.addEventListener('click', openStockModal);
+    document.getElementById('btnSaveStock')?.addEventListener('click', saveStockAssignment);
+    
+    // EDITAR EVENTO ACTUAL
+    document.getElementById('btnEditEvent')?.addEventListener('click', editCurrentEvent);
+    
+    // ELIMINAR EVENTO
+    document.getElementById('btnDeleteEvent')?.addEventListener('click', deleteEvent);
+    
+    // VOLVER A EVENTOS
+    document.getElementById('btnBackEvents')?.addEventListener('click', backToEvents);
+    
+    // CERRAR MODALES - Clicks en overlay
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModals();
+        });
+    });
+    
+    // CERRAR MODALES - Botones X
+    document.querySelectorAll('.modal-close, [data-close-modal]').forEach(btn => {
+        btn.addEventListener('click', closeModals);
+    });
+    
+    // TABS DE EVENTO
+    document.querySelectorAll('.sub-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            const tabId = this.getAttribute('data-tab');
+            if (!tabId) return;
+            
+            document.querySelectorAll('.sub-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(tabId)?.classList.remove('hidden');
+            
+            document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Cargar datos según tab
+            if (tabId === 'tab_accesses' && state.activeEventId) {
+                loadAccesses(state.activeEventId);
+            }
+            if (tabId === 'tab_sales' && state.activeEventId) {
+                loadEventSales(state.activeEventId);
+            }
+            if (tabId === 'tab_stock' && state.activeEventId) {
+                loadStockTable();
+            }
+            if (tabId === 'tab_tickets' && state.activeEventId) {
+                const event = state.allEvents.find(e => e.id === state.activeEventId);
+                if (event) renderTicketTable(event);
+                if (tabId === 'tab_codegen' && state.activeEventId) {
+                    const event = state.allEvents.find(e => e.id === state.activeEventId);
+                    if (event) fillCodeGen(event);
+                    if (tabId === 'tab_metrics' && state.activeEventId) {
+                        if (window.loadEventMetrics) window.loadEventMetrics(state.activeEventId);
+                    }
+                }
+            }
+        });
+    });
+    
+    // TABS DE MÉTRICAS
+    document.querySelectorAll('.met-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            const type = this.id.replace('mt_', '');
+            switchMetricTab(type);
+        });
+    });
+    
+    // FILTROS DE ACCESOS
+    document.querySelectorAll('.filter-tabs .f-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            const filter = this.getAttribute('data-filter');
+            filterAccessStatus(filter, this);
+        });
+    });
+    
+    // BÚSQUEDA DE ACCESOS
+    const searchAccess = document.getElementById('searchAccess');
+    if (searchAccess) {
+        searchAccess.addEventListener('input', debounce(filterAccessTable, 300));
+    }
+    
+    // CERRAR DRAWER
+    document.getElementById('drawerOverlay')?.addEventListener('click', closeDrawer);
+    document.getElementById('btnCloseDrawer')?.addEventListener('click', closeDrawer);
+    
+    // DROPDOWN DE PROMOTORES (para generación de códigos)
+    const genSearch = document.getElementById('gen_search');
+    const promotersDropdown = document.getElementById('promoters_dropdown');
+    
+    if (genSearch && promotersDropdown) {
+        genSearch.addEventListener('focus', () => promotersDropdown.classList.add('active'));
+        // filterPromotersList fue removido - el filtrado se hace directo en codes.js si es necesario
+        
+        // Cerrar al hacer click fuera
+        document.addEventListener('click', (e) => {
+            if (!genSearch.contains(e.target) && !promotersDropdown.contains(e.target)) {
+                promotersDropdown.classList.remove('active');
+            }
+        });
+    }
+    
+    // TOGGLE PAYMENT FIELDS
+    const hasPaymentChk = document.getElementById('ev_has_payment');
+    if (hasPaymentChk) {
+        hasPaymentChk.addEventListener('change', function() {
+            document.getElementById('payment_fields')?.classList.toggle('hidden', !this.checked);
+        });
+    }
+    
+    // UPLOAD DE IMAGEN DE EVENTO
+    const evFileInput = document.getElementById('ev_file');
+    if (evFileInput) {
+        evFileInput.addEventListener('change', function() {
+            handleFileSelect(this);
+        });
+    }
+    
+    const uploadZone = document.getElementById('uploadZone');
+    if (uploadZone) {
+        uploadZone.addEventListener('click', () => {
+            document.getElementById('ev_file')?.click();
+        });
+    }
+    
+    // UPLOAD DE FOTO DE PROMOTOR
+    const pPhotoInput = document.getElementById('p_photo');
+    if (pPhotoInput) {
+        pPhotoInput.addEventListener('change', function() {
+            handlePromoterImage(this);
+        });
+    }
+    
+    // UPLOAD DE LOGO DE MARCA (ACTUALIZADO)
+    const brLogoInput = document.getElementById('br_logo_input');
+    if (brLogoInput) {
+        brLogoInput.addEventListener('change', function() {
+            handleBrandLogoSelect(this);
+        });
+    }
+    
+    // AGREGAR META (Goals)
+    document.getElementById('btnAddGoal')?.addEventListener('click', () => {
+        addGoalRow();
+    });
+    
+    console.log("✅ Event listeners configurados");
+}
+
+// ==========================================
+// 5. FUNCIONES AUXILIARES
+// ==========================================
+
+/**
+ * Agregar fila de meta
+ */
+window.addGoalRow = function(target = '', reward = '') {
+    const container = document.getElementById('goals_container');
+    if (!container) return;
+    
+    const row = document.createElement('div');
+    row.className = 'goal-row';
+    row.style.cssText = 'display:flex; gap:10px; align-items:center; margin-bottom:10px;';
+    row.innerHTML = `
+        <input type="number" class="goal-target" placeholder="Cantidad" value="${target}" 
+               style="flex:1; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text);">
+        <input type="text" class="goal-reward" placeholder="Premio" value="${Validator.sanitizeHTML(reward)}" 
+               style="flex:2; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text);">
+        <button type="button" class="btn-icon" style="background:rgba(239,68,68,0.15); color:#ef4444;" 
+                onclick="this.parentElement.remove()">
+            <i class="fa-solid fa-trash"></i>
+        </button>
+    `;
+    container.appendChild(row);
+};
+
+/**
+ * Limpiar preview de imagen de evento
+ */
+window.clearEventImage = function() {
+    state.tempImgBase64 = null;
+    const prev = document.getElementById('ev_prev');
+    if (prev) {
+        prev.src = '';
+        prev.style.display = 'none';
+    }
+    const prevCont = document.getElementById('ev_prev_container');
+    if (prevCont) prevCont.style.display = 'none';
+    const zone = document.getElementById('uploadZone');
+    if (zone) zone.style.display = 'flex';
+};
+
+// ========== MI CUENTA / PERFIL ==========
+document.getElementById('btnMyAccount')?.addEventListener('click', () => {
+    const user = getCurrentUser();
+    if (!user) return;
+    
+    document.getElementById('profileName').textContent = user.name || user.email;
+    document.getElementById('profileEmail').textContent = user.email;
+    document.getElementById('currentUserName').textContent = user.name || user.email;
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+    
+    document.getElementById('modalProfile')?.classList.remove('hidden');
+});
+
+document.getElementById('btnChangePassword')?.addEventListener('click', async () => {
+    const currentPass = document.getElementById('currentPassword').value;
+    const newPass = document.getElementById('newPassword').value;
+    const confirmPass = document.getElementById('confirmPassword').value;
+    
+    if (!currentPass || !newPass || !confirmPass) {
+        toast('Completa todos los campos', 'error');
+        return;
+    }
+    
+    if (newPass.length < 6) {
+        toast('Mínimo 6 caracteres', 'error');
+        return;
+    }
+    
+    if (newPass !== confirmPass) {
+        toast('Las contraseñas no coinciden', 'error');
+        return;
+    }
+    
+    const result = await changePassword(currentPass, newPass);
+    
+    if (result.success) {
+        toast('Contraseña actualizada', 'success');
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+    } else {
+        toast('Contraseña actual incorrecta', 'error');
+    }
+});
+
+document.getElementById('btnLogout')?.addEventListener('click', async () => {
+    const confirmed = await customConfirm('¿Estás seguro que deseas cerrar sesión?');
+    if (confirmed) {
+        doLogout();
+    }
+});
+// Botón confirmar aprobación de venta
+document.getElementById('btnConfirmApprove')?.addEventListener('click', () => {
+    confirmApproveSale();
+});
+
+console.log("📦 logic.js cargado correctamente");
+// ========== MENÚ HAMBURGER MÓVIL ==========
+const btnHamburger = document.getElementById('btnHamburger');
+const sidebar = document.getElementById('sidebar');
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+if (btnHamburger && sidebar && sidebarOverlay) {
+    // Abrir/cerrar sidebar
+    btnHamburger.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        sidebarOverlay.classList.toggle('active');
+        btnHamburger.classList.toggle('active');
+    });
+
+    // Cerrar al tocar overlay
+    sidebarOverlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        sidebarOverlay.classList.remove('active');
+        btnHamburger.classList.remove('active');
+    });
+
+    // Cerrar al seleccionar una opción del menú
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            if (window.innerWidth <= 768) {
+                sidebar.classList.remove('open');
+                sidebarOverlay.classList.remove('active');
+                btnHamburger.classList.remove('active');
+            }
+        });
+    });
+}
+// ========== EXPORTAR A EXCEL ==========
+// ========== EXPORTAR REPORTE COMPLETO DE MÉTRICAS ==========
+function exportMetricsReport() {
+    const wb = XLSX.utils.book_new();
+    const fecha = new Date().toISOString().slice(0,10);
+    
+    // HOJA 1: Resumen General
+    const tblGeneral = document.getElementById('tblMetGeneral');
+    if (tblGeneral) {
+        const wsGeneral = tableToSheet(tblGeneral);
+        XLSX.utils.book_append_sheet(wb, wsGeneral, 'Resumen General');
+    }
+    
+    // HOJA 2: Por Promotores
+    const tblPromoters = document.getElementById('tblMetPromoters');
+    if (tblPromoters) {
+        const wsPromoters = tableToSheet(tblPromoters);
+        XLSX.utils.book_append_sheet(wb, wsPromoters, 'Por Promotor');
+    }
+    
+    // HOJA 3: Por Canales
+    const tblChannels = document.getElementById('tblMetChannels');
+    if (tblChannels) {
+        const wsChannels = tableToSheet(tblChannels);
+        XLSX.utils.book_append_sheet(wb, wsChannels, 'Por Canal');
+    }
+    
+    // HOJA 4: Lista de Accesos
+    const tblAccesses = document.getElementById('tblAccesses');
+    if (tblAccesses) {
+        const wsAccesses = tableToSheet(tblAccesses);
+        XLSX.utils.book_append_sheet(wb, wsAccesses, 'Accesos');
+    }
+    
+    // HOJA 5: Ventas
+    const tblSales = document.getElementById('tblEventSales');
+    if (tblSales) {
+        const wsSales = tableToSheet(tblSales);
+        XLSX.utils.book_append_sheet(wb, wsSales, 'Ventas');
+    }
+    
+    // HOJA 6: Stock
+    const tblStock = document.getElementById('tblStock');
+    if (tblStock) {
+        const wsStock = tableToSheet(tblStock);
+        XLSX.utils.book_append_sheet(wb, wsStock, 'Stock');
+    }
+    
+    // Descargar
+    const eventName = document.querySelector('.event-header h2')?.textContent || 'Evento';
+    const fileName = `Reporte_${eventName.replace(/[^a-zA-Z0-9]/g, '_')}_${fecha}`;
+    XLSX.writeFile(wb, `${fileName}.xlsx`);
+    
+    showToast('Reporte completo descargado', 'success');
+}
+
+// Función auxiliar para convertir tabla a hoja
+function tableToSheet(table) {
+    const rows = [];
+    const headers = [];
+    
+    // Headers
+    table.querySelectorAll('thead th').forEach(th => {
+        const text = th.textContent.trim();
+        if (text) headers.push(text);
+    });
+    rows.push(headers);
+    
+    // Data
+    table.querySelectorAll('tbody tr').forEach(tr => {
+        const row = [];
+        tr.querySelectorAll('td').forEach((td, i) => {
+            if (i < headers.length) {
+                row.push(td.textContent.trim());
+            }
+        });
+        if (row.length > 0 && row.some(cell => cell !== '')) {
+            rows.push(row);
+        }
+    });
+    
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    
+    // Ajustar ancho
+    ws['!cols'] = headers.map((h, i) => {
+        let max = h.length;
+        rows.forEach(row => {
+            if (row[i] && row[i].length > max) max = row[i].length;
+        });
+        return { wch: Math.min(max + 2, 50) };
+    });
+    
+    return ws;
+}
+
+// Botón exportar métricas
+const btnExportMetrics = document.getElementById('btnExportMetrics');
+if (btnExportMetrics) {
+    btnExportMetrics.addEventListener('click', exportMetricsReport);
+}
+// ========== HISTORIAL DE VENTAS CON FILTROS ==========
+let allSalesData = []; // Almacena todas las ventas
+let currentSalesFilter = 'PENDING';
+
+// Función para cargar todas las ventas del evento
+async function loadAllSales(eventId) {
+    if (!eventId) return;
+    
+    try {
+        const salesRef = collection(db, 'sales');
+        const q = query(salesRef, where('eventId', '==', eventId));
+        const snapshot = await getDocs(q);
+        
+        allSalesData = [];
+        let totalApproved = 0;
+        let totalAmount = 0;
+        let counts = { PENDING: 0, APPROVED: 0, REJECTED: 0, ALL: 0 };
+        
+        snapshot.forEach(doc => {
+            const sale = { id: doc.id, ...doc.data() };
+            allSalesData.push(sale);
+            counts.ALL++;
+            
+            if (sale.status === 'PENDING' || !sale.status) {
+                counts.PENDING++;
+            } else if (sale.status === 'APPROVED') {
+                counts.APPROVED++;
+                totalApproved++;
+                totalAmount += parseFloat(sale.total || sale.amount || 0);
+            } else if (sale.status === 'REJECTED') {
+                counts.REJECTED++;
+            }
+        });
+        
+        // Actualizar badges
+        document.getElementById('badgePending').textContent = counts.PENDING;
+        document.getElementById('badgeApproved').textContent = counts.APPROVED;
+        document.getElementById('badgeRejected').textContent = counts.REJECTED;
+        document.getElementById('badgeAllSales').textContent = counts.ALL;
+        
+        // Actualizar resumen
+        document.getElementById('totalRecaudado').textContent = `S/. ${totalAmount.toFixed(2)}`;
+        document.getElementById('totalVentas').textContent = totalApproved;
+        
+        // Mostrar según filtro actual
+        filterSales(currentSalesFilter);
+        
+    } catch (error) {
+        console.error('Error cargando ventas:', error);
+    }
+}
+
+// Función para filtrar y mostrar ventas
+function filterSales(status) {
+    currentSalesFilter = status;
+    const tbody = document.querySelector('#tblEventSales tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    let filtered = allSalesData;
+    if (status !== 'ALL') {
+        filtered = allSalesData.filter(sale => {
+            if (status === 'PENDING') return sale.status === 'PENDING' || !sale.status;
+            return sale.status === status;
+        });
+    }
+    
+    if (filtered.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align:center; padding:40px; color:var(--text-muted);">
+                    <i class="fa-solid fa-inbox" style="font-size:32px; margin-bottom:10px; display:block;"></i>
+                    No hay ventas ${status === 'PENDING' ? 'pendientes' : status === 'APPROVED' ? 'aprobadas' : status === 'REJECTED' ? 'rechazadas' : ''}
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    filtered.forEach(sale => {
+        const statusBadge = getStatusBadge(sale.status);
+        const showActions = (!sale.status || sale.status === 'PENDING');
+        
+        tbody.innerHTML += `
+            <tr>
+                <td>${sale.promoterName || 'Directo'}</td>
+                <td>${sale.clientName || '-'}</td>
+                <td>${sale.ticketName || '-'}</td>
+                <td><strong>S/. ${parseFloat(sale.total || sale.amount || 0).toFixed(2)}</strong></td>
+                <td>${statusBadge}</td>
+                <td>
+                    ${sale.proofUrl ? `<button class="btn-icon" onclick="viewProof('${sale.proofUrl}')" title="Ver comprobante"><i class="fa-solid fa-receipt"></i></button>` : '-'}
+                </td>
+                <td>
+                    ${showActions ? `
+                        <button class="btn-icon btn-success" onclick="approveSale('${sale.id}')" title="Aprobar">
+                            <i class="fa-solid fa-check"></i>
+                        </button>
+                        <button class="btn-icon btn-danger" onclick="rejectSale('${sale.id}')" title="Rechazar">
+                            <i class="fa-solid fa-times"></i>
+                        </button>
+                    ` : `<span style="color:var(--text-muted); font-size:12px;">${sale.approvedAt ? new Date(sale.approvedAt.toDate?.() || sale.approvedAt).toLocaleDateString() : ''}</span>`}
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// Badge de estado
+function getStatusBadge(status) {
+    switch(status) {
+        case 'APPROVED':
+            return '<span class="status-badge status-approved"><i class="fa-solid fa-check"></i> Aprobada</span>';
+        case 'REJECTED':
+            return '<span class="status-badge status-rejected"><i class="fa-solid fa-times"></i> Rechazada</span>';
+        default:
+            return '<span class="status-badge status-pending"><i class="fa-solid fa-clock"></i> Pendiente</span>';
+    }
+}
+
+// Event listeners para filtros
+document.querySelectorAll('.sales-filter').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.sales-filter').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        filterSales(btn.dataset.status);
+    });
+});
