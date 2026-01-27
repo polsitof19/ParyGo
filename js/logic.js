@@ -258,14 +258,10 @@ window.debugState = debugState;
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log(`🚀 ${APP_CONFIG.APP_NAME} v${APP_CONFIG.VERSION} iniciando...`);
-    
     // Verificar autenticación
     const user = await checkAuth();
     
     if (user) {
-        console.log("✅ Usuario autenticado:", user.name);
-        
         // Cargar datos iniciales
         await Promise.all([
             loadBrandsWithLogos(),
@@ -273,9 +269,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadPromotersCache()
         ]);
         
-        console.log("✅ Datos iniciales cargados");
-    } else {
-        console.log("⏳ Esperando inicio de sesión...");
     }
     
     // Configurar event listeners globales
@@ -493,7 +486,6 @@ function setupGlobalEventListeners() {
         addGoalRow();
     });
     
-    console.log("✅ Event listeners configurados");
 }
 
 // ==========================================
@@ -596,7 +588,6 @@ document.getElementById('btnConfirmApprove')?.addEventListener('click', () => {
     confirmApproveSale();
 });
 
-console.log("📦 logic.js cargado correctamente");
 // ========== MENÚ HAMBURGER MÓVIL ==========
 const btnHamburger = document.getElementById('btnHamburger');
 const sidebar = document.getElementById('sidebar');
@@ -728,132 +719,3 @@ const btnExportMetrics = document.getElementById('btnExportMetrics');
 if (btnExportMetrics) {
     btnExportMetrics.addEventListener('click', exportMetricsReport);
 }
-// ========== HISTORIAL DE VENTAS CON FILTROS ==========
-let allSalesData = []; // Almacena todas las ventas
-let currentSalesFilter = 'PENDING';
-
-// Función para cargar todas las ventas del evento
-async function loadAllSales(eventId) {
-    if (!eventId) return;
-    
-    try {
-        const salesRef = collection(db, 'sales');
-        const q = query(salesRef, where('eventId', '==', eventId));
-        const snapshot = await getDocs(q);
-        
-        allSalesData = [];
-        let totalApproved = 0;
-        let totalAmount = 0;
-        let counts = { PENDING: 0, APPROVED: 0, REJECTED: 0, ALL: 0 };
-        
-        snapshot.forEach(doc => {
-            const sale = { id: doc.id, ...doc.data() };
-            allSalesData.push(sale);
-            counts.ALL++;
-            
-            if (sale.status === 'PENDING' || !sale.status) {
-                counts.PENDING++;
-            } else if (sale.status === 'APPROVED') {
-                counts.APPROVED++;
-                totalApproved++;
-                totalAmount += parseFloat(sale.total || sale.amount || 0);
-            } else if (sale.status === 'REJECTED') {
-                counts.REJECTED++;
-            }
-        });
-        
-        // Actualizar badges
-        document.getElementById('badgePending').textContent = counts.PENDING;
-        document.getElementById('badgeApproved').textContent = counts.APPROVED;
-        document.getElementById('badgeRejected').textContent = counts.REJECTED;
-        document.getElementById('badgeAllSales').textContent = counts.ALL;
-        
-        // Actualizar resumen
-        document.getElementById('totalRecaudado').textContent = `S/. ${totalAmount.toFixed(2)}`;
-        document.getElementById('totalVentas').textContent = totalApproved;
-        
-        // Mostrar según filtro actual
-        filterSales(currentSalesFilter);
-        
-    } catch (error) {
-        console.error('Error cargando ventas:', error);
-    }
-}
-
-// Función para filtrar y mostrar ventas
-function filterSales(status) {
-    currentSalesFilter = status;
-    const tbody = document.querySelector('#tblEventSales tbody');
-    if (!tbody) return;
-    
-    tbody.innerHTML = '';
-    
-    let filtered = allSalesData;
-    if (status !== 'ALL') {
-        filtered = allSalesData.filter(sale => {
-            if (status === 'PENDING') return sale.status === 'PENDING' || !sale.status;
-            return sale.status === status;
-        });
-    }
-    
-    if (filtered.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="7" style="text-align:center; padding:40px; color:var(--text-muted);">
-                    <i class="fa-solid fa-inbox" style="font-size:32px; margin-bottom:10px; display:block;"></i>
-                    No hay ventas ${status === 'PENDING' ? 'pendientes' : status === 'APPROVED' ? 'aprobadas' : status === 'REJECTED' ? 'rechazadas' : ''}
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    filtered.forEach(sale => {
-        const statusBadge = getStatusBadge(sale.status);
-        const showActions = (!sale.status || sale.status === 'PENDING');
-        
-        tbody.innerHTML += `
-            <tr>
-                <td>${sale.promoterName || 'Directo'}</td>
-                <td>${sale.clientName || '-'}</td>
-                <td>${sale.ticketName || '-'}</td>
-                <td><strong>S/. ${parseFloat(sale.total || sale.amount || 0).toFixed(2)}</strong></td>
-                <td>${statusBadge}</td>
-                <td>
-                    ${sale.proofUrl ? `<button class="btn-icon" onclick="viewProof('${sale.proofUrl}')" title="Ver comprobante"><i class="fa-solid fa-receipt"></i></button>` : '-'}
-                </td>
-                <td>
-                    ${showActions ? `
-                        <button class="btn-icon btn-success" onclick="approveSale('${sale.id}')" title="Aprobar">
-                            <i class="fa-solid fa-check"></i>
-                        </button>
-                        <button class="btn-icon btn-danger" onclick="rejectSale('${sale.id}')" title="Rechazar">
-                            <i class="fa-solid fa-times"></i>
-                        </button>
-                    ` : `<span style="color:var(--text-muted); font-size:12px;">${sale.approvedAt ? new Date(sale.approvedAt.toDate?.() || sale.approvedAt).toLocaleDateString() : ''}</span>`}
-                </td>
-            </tr>
-        `;
-    });
-}
-
-// Badge de estado
-function getStatusBadge(status) {
-    switch(status) {
-        case 'APPROVED':
-            return '<span class="status-badge status-approved"><i class="fa-solid fa-check"></i> Aprobada</span>';
-        case 'REJECTED':
-            return '<span class="status-badge status-rejected"><i class="fa-solid fa-times"></i> Rechazada</span>';
-        default:
-            return '<span class="status-badge status-pending"><i class="fa-solid fa-clock"></i> Pendiente</span>';
-    }
-}
-
-// Event listeners para filtros
-document.querySelectorAll('.sales-filter').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.sales-filter').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        filterSales(btn.dataset.status);
-    });
-});

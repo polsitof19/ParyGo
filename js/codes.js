@@ -53,8 +53,6 @@ export async function loadPromotersCache() {
             };
         });
         
-        console.log(`📋 ${state.allPromotersData.length} promotores cargados`);
-        
         updatePromotersDropdown();
         
     } catch (error) {

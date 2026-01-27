@@ -134,7 +134,6 @@ export function openModal(id) {
     // Prevenir scroll del body
     document.body.style.overflow = 'hidden';
     
-    console.log(`✅ Modal abierto: ${id}`);
 }
 
 /**
@@ -167,7 +166,6 @@ export function closeModals() {
     const zone = document.getElementById('uploadZone');
     if (zone) zone.style.display = 'flex';
     
-    console.log('✅ Modales cerrados');
 }
 
 /**
@@ -279,7 +277,6 @@ export function switchView(viewId) {
         // Scroll al inicio
         window.scrollTo({ top: 0, behavior: 'smooth' });
         
-        console.log(`📍 Vista activa: ${viewId}`);
     } else {
         console.error(`Vista no encontrada: ${viewId}`);
     }
@@ -443,6 +440,16 @@ export function throttle(func, limit = 300) {
 // 10. EXPORT ALL
 // ==========================================
 
+/**
+ * Escapar HTML para prevenir XSS
+ */
+export function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 export default {
     Validator,
     toast,
@@ -458,5 +465,6 @@ export default {
     generateCode,
     generateUID,
     debounce,
-    throttle
+    throttle,
+    escapeHtml
 };

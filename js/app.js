@@ -26,7 +26,6 @@ const App = {
         // Dashboard
         this.updateDashboard();
         
-        console.log('ParyGo Admin inicializado');
     },
     
     initNavigation() {

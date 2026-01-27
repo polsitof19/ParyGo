@@ -58,8 +58,6 @@ export async function doLogin() {
         const userCredential = await signInWithEmailAndPassword(auth, email, pass);
         const firebaseUser = userCredential.user;
         
-        console.log("✅ Autenticado con Firebase Auth:", firebaseUser.uid);
-
         // Buscar datos del usuario en Firestore
         const userData = await getUserData(firebaseUser.uid, email);
         
@@ -126,11 +124,10 @@ async function getUserData(uid, email) {
             if (docSnap.exists()) {
                 userData = { id: docSnap.id, ...docSnap.data() };
                 collectionName = col;
-                console.log(`✅ Usuario encontrado en '${col}' por UID`);
                 break;
             }
         } catch (error) {
-            console.log(`No encontrado en ${col} por UID`);
+            // Not found in this collection
         }
     }
 
@@ -148,16 +145,14 @@ async function getUserData(uid, email) {
                     
                     // Migrar: actualizar documento con UID correcto
                     if (docRef.id !== uid) {
-                        console.log(`🔄 Migrando usuario de ${col}/${docRef.id} a ${col}/${uid}`);
                         await setDoc(doc(db, col, uid), { ...userData, uid }, { merge: true });
                         userData.id = uid;
                     }
                     
-                    console.log(`✅ Usuario encontrado en '${col}' por email`);
                     break;
                 }
             } catch (error) {
-                console.log(`Error buscando en ${col}:`, error);
+                // Error searching in this collection
             }
         }
     }
@@ -173,8 +168,6 @@ async function getUserData(uid, email) {
     // Detectar tipo de admin
     const isSuperAdmin = isSuperAdminRole(userData) || collectionName === COLLECTIONS.EMPRESA;
 
-    console.log(isSuperAdmin ? "👑 Super Admin detectado" : "👤 Company Admin detectado");
-
     // Obtener datos de empresa si aplica
     let companyData = null;
     const companyId = userData.id_empresa || userData.company_id || userData.created_by;
@@ -186,7 +179,7 @@ async function getUserData(uid, email) {
                 companyData = { id: companyId, ...companySnap.data() };
             }
         } catch (e) {
-            console.log("No se pudo cargar datos de empresa");
+            // Could not load company data
         }
     }
 
@@ -234,7 +227,6 @@ async function createSession(userData, uid) {
         timestamp: Date.now()
     }));
 
-    console.log("📦 Sesión creada:", userData.name);
 }
 
 // ==========================================
@@ -274,8 +266,6 @@ export function checkAuth() {
             unsubscribe(); // Solo necesitamos el primer resultado
             
             if (firebaseUser) {
-                console.log("🔐 Usuario autenticado:", firebaseUser.email);
-                
                 try {
                     const userData = await getUserData(firebaseUser.uid, firebaseUser.email);
                     
@@ -297,14 +287,12 @@ export function checkAuth() {
                         resolve(null);
                     }
                 } catch (error) {
-                    console.log("⚠️ Usuario no autorizado:", error.message);
                     await signOut(auth);
                     localStorage.removeItem("PARYGO_ADM_SESSION");
                     showLoginScreen();
                     resolve(null);
                 }
             } else {
-                console.log("❌ No hay sesión activa");
                 showLoginScreen();
                 resolve(null);
             }
@@ -355,7 +343,6 @@ function applyAdminUI() {
         const logo = document.querySelector('.logo');   
     }
     
-    console.log(isGod ? "👑 UI de Super Admin aplicada" : "👤 UI de Admin aplicada");
 }
 
 // ==========================================
@@ -381,8 +368,6 @@ export async function registerUser(email, password, userData, targetCollection =
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const uid = userCredential.user.uid;
         
-        console.log("✅ Usuario creado en Firebase Auth:", uid);
-
         // Preparar datos para Firestore (SIN contraseña)
         const firestoreData = {
             ...userData,
@@ -399,9 +384,7 @@ export async function registerUser(email, password, userData, targetCollection =
 
         // Guardar en Firestore
         await setDoc(doc(db, targetCollection, uid), firestoreData);
-        
-        console.log(`✅ Datos guardados en ${targetCollection}/${uid}`);
-        
+
         return { success: true, uid };
         
     } catch (error) {

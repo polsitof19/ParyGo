@@ -2,9 +2,9 @@
 // SCANNER QR - JAVASCRIPT
 // ==========================================
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { db, auth } from './js/config.js';
+import { escapeHtml } from './js/utils.js';
 import {
-    getFirestore,
     collection,
     query,
     where,
@@ -14,27 +14,10 @@ import {
     updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
-    getAuth,
     signInWithEmailAndPassword,
     onAuthStateChanged,
     signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-// ==========================================
-// FIREBASE CONFIG
-// ==========================================
-const firebaseConfig = {
-    apiKey: "AIzaSyANnihyrgd02ViR_GeKn6Mdf85nLwUjQg0",
-    authDomain: "parygo-da36a.firebaseapp.com",
-    projectId: "parygo-da36a",
-    storageBucket: "parygo-da36a.firebasestorage.app",
-    messagingSenderId: "58655250311",
-    appId: "1:58655250311:web:9b8f46dd35d0a44ce2e522"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
 
 // ==========================================
 // STATE
@@ -852,12 +835,6 @@ function showToast(message, type = 'info') {
         toast.style.transform = 'translateY(-20px)';
         setTimeout(() => toast.remove(), 300);
     }, 3000);
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
 }
 
 // ==========================================

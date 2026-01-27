@@ -30,7 +30,7 @@ const DniAPI = {
                 }
             }
         } catch (error) {
-            console.log('API principal falló, intentando alternativa...');
+            // API principal falló, intentar alternativa
         }
         
         try {
@@ -48,7 +48,7 @@ const DniAPI = {
                 }
             }
         } catch (error) {
-            console.log('API alternativa falló');
+            // API alternativa también falló
         }
         
         // Si todas las APIs fallan, retornar solo el DNI

@@ -73,8 +73,6 @@ function generateUniqueCode(eventPrefix) {
 // INICIALIZACIÓN
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
-    console.log("🚀 ParyGo Promotor V3");
-    
     onAuthStateChanged(auth, async (user) => {
         setTimeout(hideSplash, 500);
         if (user) {
@@ -697,4 +695,3 @@ function setupEventListeners() {
     });
 }
 
-console.log("✅ ParyGo Promotor V3 cargado");

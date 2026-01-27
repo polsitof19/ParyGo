@@ -96,8 +96,7 @@ export function openTicketModal() {
     if (document.getElementById("nt_scans")) document.getElementById("nt_scans").value = "1";
     if (document.getElementById("nt_claim")) document.getElementById("nt_claim").value = "";
     if (document.getElementById("nt_valid_until")) document.getElementById("nt_valid_until").value = "";
-    if (document.getElementById("nt_type")) document.getElementById("nt_type").value = tk.type || "UNIQUE";
-    
+
     // Ocultar configuración avanzada
     document.getElementById("adv_settings")?.classList.add("hidden");
 }

@@ -142,14 +142,14 @@ export function setLoading(isLoading) {
  * Debug: Imprimir estado actual
  */
 export function debugState() {
-    console.group('🔍 Estado Actual');
-    console.log('Usuario:', state.currentUser?.name || 'No logueado');
-    console.log('Super Admin:', state.isSuperAdmin);
-    console.log('Eventos:', state.allEvents.length);
-    console.log('Marcas:', state.allBrands.length);
-    console.log('Promotores:', state.allPromotersData.length);
-    console.log('Evento Activo:', state.activeEventId);
-    console.log('Filtro:', state.currentFilter);
+    console.group('Estado Actual');
+    console.info('Usuario:', state.currentUser?.name || 'No logueado');
+    console.info('Super Admin:', state.isSuperAdmin);
+    console.info('Eventos:', state.allEvents.length);
+    console.info('Marcas:', state.allBrands.length);
+    console.info('Promotores:', state.allPromotersData.length);
+    console.info('Evento Activo:', state.activeEventId);
+    console.info('Filtro:', state.currentFilter);
     console.groupEnd();
 }
 

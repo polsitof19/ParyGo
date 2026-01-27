@@ -136,7 +136,6 @@ function applyBrandTheme() {
     const inputBg = isColorLight(bgColor) ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)';
     document.documentElement.style.setProperty('--input-bg', inputBg);
     
-    console.log('🎨 Tema aplicado:', { primaryColor, bgColor, textColor, cardColor });
 }
 
 function isColorLight(color) {
@@ -268,7 +267,7 @@ async function validateCode() {
                     }
                 }
             } catch (e) {
-                console.log('No se pudo verificar evento:', e);
+                // No se pudo verificar evento
             }
         }
         
@@ -310,21 +309,15 @@ async function searchDNI() {
     try {
         if (idType === 'DNI') {
             try {
-                console.log('Consultando DNI:', dni);
-                
                 const response = await fetch(`https://dniruc.apisperu.com/api/v1/dni/${dni}?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InBhdWxzZWJhc3RpYW40MzlAZ21haWwuY29tIn0.6OW3nuSrcpVbUbhakLiTa7K4IAcWEJz4LJ1pALTNlSI`);
                 
                 if (response.ok) {
                     const result = await response.json();
-                    console.log('API Result:', result);
-                    
+
                     if (result.success !== false && result.nombres) {
                         state.userData.name = result.nombres || '';
                         state.userData.lastname = `${result.apellidoPaterno || ''} ${result.apellidoMaterno || ''}`.trim();
-                        console.log('Datos encontrados:', state.userData.name, state.userData.lastname);
                     }
-                } else {
-                    console.log('API Response error:', response.status);
                 }
             } catch (apiError) {
                 console.error('Error API DNI:', apiError);
@@ -479,14 +472,13 @@ async function showTicket(qrToken) {
             const eventDoc = await getDoc(doc(db, "events", state.codeData.event_id));
             if (eventDoc.exists()) {
                 const event = eventDoc.data();
-                console.log('Datos del evento:', event); // Para ver qué campos tiene
                 eventName = event.name || 'Evento';
                 eventVenue = event.venue || event.location || event.address || '';
                 eventDate = event.date || '';
                 eventTime = event.time || event.hour || event.hora || event.start_time || '';
             }
         } catch (e) {
-            console.log('No se pudo cargar evento');
+            // No se pudo cargar evento
         }
     }
     

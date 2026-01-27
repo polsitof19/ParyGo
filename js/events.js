@@ -24,27 +24,20 @@ export async function loadEvents() {
                              user.role === 'super_admin' || 
                              user.collection === 'empresa';
 
-        console.log(state.isSuperAdmin ? "🔱 SUPER ADMIN" : "👤 Company Admin");
-
-        // ✅ FILTRADO POR PERMISOS
+        // FILTRADO POR PERMISOS
         if (state.isSuperAdmin) {
-            console.log("🔱 Mostrando TODOS los eventos");
             state.allEvents = fetchedEvents;
         } else {
-            console.log("👤 Filtrando por company_id:", user.companyId);
-            
             state.allEvents = fetchedEvents.filter(event => {
                 // Filtrar por company_id (sistema nuevo)
                 if (event.company_id === user.companyId) return true;
-                
+
                 // Fallback: brand_id (sistema antiguo)
                 const myPermissions = user.allowed_brands || [];
                 if (myPermissions.includes(event.brand_id)) return true;
-                
+
                 return false;
             });
-            
-            console.log(`📊 Mostrando ${state.allEvents.length} eventos de tu marca`);
         }
         
         renderEvents();

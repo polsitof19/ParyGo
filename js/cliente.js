@@ -73,11 +73,8 @@ let existingUserNeedsProfile = false;
 // INICIALIZACIÓN
 // ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
-    console.log("🚀 ParyGo Cliente - Multi-Marca");
-    
     // 1. Detectar marca por subdominio
     currentBrandSlug = detectBrandSlug();
-    console.log("📍 Slug detectado:", currentBrandSlug);
     
     if (!currentBrandSlug) {
         showError("No se pudo determinar la marca. Verifica la URL.");
@@ -373,7 +370,7 @@ async function searchRENIECForLink(dni) {
             toast("✅ Datos encontrados");
         }
     } catch (e) {
-        console.log("RENIEC no disponible");
+        // RENIEC not available
     }
 }
 
@@ -1310,4 +1307,3 @@ function setupEventListeners() {
     });
 }
 
-console.log("✅ ParyGo Cliente Multi-Marca cargado");

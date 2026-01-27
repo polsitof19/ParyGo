@@ -14,8 +14,6 @@ import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-
  */
 export async function registerNewUser(userData, password, targetCollection = 'staff') {
     try {
-        console.log(`🔐 Registrando usuario en ${targetCollection}...`);
-
         // Validaciones básicas
         if (!userData.email || !password) {
             throw new Error("Email y contraseña son obligatorios");
@@ -31,8 +29,6 @@ export async function registerNewUser(userData, password, targetCollection = 'st
         }
 
         // 1. CREAR USUARIO EN FIREBASE AUTH
-        console.log(`📧 Creando cuenta de autenticación para: ${userData.email}`);
-        
         let userCredential;
         try {
             userCredential = await createUserWithEmailAndPassword(auth, userData.email, password);
@@ -51,11 +47,8 @@ export async function registerNewUser(userData, password, targetCollection = 'st
         }
 
         const uid = userCredential.user.uid;
-        console.log(`✅ Usuario creado en Firebase Auth con UID: ${uid}`);
 
         // 2. GUARDAR DATOS EN FIRESTORE
-        console.log(`💾 Guardando datos en Firestore (${targetCollection}/${uid})...`);
-        
         const firestoreData = {
             ...userData,
             uid,
@@ -70,7 +63,6 @@ export async function registerNewUser(userData, password, targetCollection = 'st
         delete firestoreData.pass;
 
         await setDoc(doc(db, targetCollection, uid), firestoreData);
-        console.log(`✅ Datos guardados en ${targetCollection}/${uid}`);
 
         return { 
             success: true, 

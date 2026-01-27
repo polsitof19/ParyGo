@@ -111,4 +111,3 @@ export function hasPermissionForBrand(user, brandId) {
     return allowedBrands.includes(brandId);
 }
 
-console.log(`🚀 ${APP_CONFIG.APP_NAME} v${APP_CONFIG.VERSION} - Config loaded`);

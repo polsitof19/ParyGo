@@ -37,7 +37,6 @@ let tempPromoterPhoto = null; // Foto del promotor
  * Cargar vista de promotores
  */
 export function loadPromotersView() {
-    console.log("📋 Cargando vista de promotores");
     switchView('view_promoters');
     loadPromotersTable();
 }
@@ -123,8 +122,6 @@ async function loadPromotersTable() {
  * Abrir modal para crear nuevo promotor
  */
 export function openNewPromoterModal() {
-    console.log("🚀 Abriendo modal de nuevo promotor");
-    
     // Limpiar formulario
     const fields = ['p_editing_id', 'p_dni', 'p_name', 'p_last', 'p_email', 'p_phone', 'p_pass'];
     fields.forEach(id => {
@@ -165,8 +162,6 @@ export function openNewPromoterModal() {
  * Editar promotor existente
  */
 export async function editPromoter(promoterId) {
-    console.log("✏️ Editando promotor:", promoterId);
-    
     try {
         const docSnap = await getDoc(doc(db, APP_CONFIG.COLLECTIONS.STAFF, promoterId));
         if (!docSnap.exists()) {
@@ -416,7 +411,6 @@ export function removeBrandChip(id) {
  * Cargar vista de administradores
  */
 export function loadAdminsView() {
-    console.log("📋 Cargando vista de admins");
     switchView('view_admins');
     loadAdminsTable();
 }
@@ -490,8 +484,6 @@ async function loadAdminsTable() {
  * Abrir modal para crear nuevo admin
  */
 export function openAdminModal() {
-    console.log("🚀 Abriendo modal de nuevo admin");
-    
     // Limpiar formulario
     const fields = ['adm_editing_id', 'adm_name', 'adm_lastname', 'adm_dni', 'adm_email', 'adm_phone', 'adm_password'];
     fields.forEach(id => {
@@ -519,8 +511,6 @@ export function openAdminModal() {
  * Editar admin existente
  */
 export async function editAdmin(adminId) {
-    console.log("✏️ Editando admin:", adminId);
-    
     try {
         const docSnap = await getDoc(doc(db, APP_CONFIG.COLLECTIONS.ADMINS, adminId));
         if (!docSnap.exists()) {
@@ -747,7 +737,6 @@ export function removeAdminBrandChip(id) {
  * Cargar vista de scanners
  */
 export function loadScannersView() {
-    console.log("📋 Cargando vista de scanners");
     switchView('view_scanners');
     loadScannersTable();
 }
@@ -804,8 +793,6 @@ async function loadScannersTable() {
  * Abrir modal para crear scanner
  */
 export function openScannerModal() {
-    console.log("🚀 Abriendo modal de nuevo scanner");
-    
     // Limpiar campos
     const fields = ['s_name', 's_email', 's_pass'];
     fields.forEach(id => {

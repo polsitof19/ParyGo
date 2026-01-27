@@ -17,8 +17,6 @@ export async function consultarDNI(dni) {
     }
 
     try {
-        console.log(`🔍 Consultando DNI: ${dni}`);
-
         const response = await fetch(`https://api.apis.net.pe/v2/reniec/dni?numero=${dni}`, {
             method: 'GET',
             headers: {
@@ -44,7 +42,6 @@ export async function consultarDNI(dni) {
         }
 
         const data = await response.json();
-        console.log("✅ Respuesta de API:", data);
 
         if (data && data.nombres) {
             return {
