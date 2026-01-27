@@ -274,17 +274,8 @@
 
     <!-- APP LAYOUT -->
     <div id="appLayout" class="app-layout hidden">
-        <!-- Overlay para cerrar sidebar -->
-        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
-        <!-- Header móvil -->
-        <div class="mobile-header">
-            <button class="btn-hamburger" onclick="toggleSidebar()">
-                <i class="fa-solid fa-bars"></i>
-            </button>
-            <span class="mobile-title">ParyGo</span>
-        </div>
-        
-        <!-- SIDEBAR -->
+
+        <!-- SIDEBAR (desktop) -->
         <aside class="sidebar" id="sidebar">
             <div class="logo">
                 <img src="https://ibb.co/WQcspwm alt="ParyGo" style="height:140px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
@@ -1531,6 +1522,88 @@
 
 <!-- Toast Container -->
 <div id="toastContainer" class="toast-container"></div>
+
+<!-- ========== MOBILE ELEMENTS ========== -->
+
+<!-- Mobile Header -->
+<header class="mobile-header" id="mobileHeader">
+    <div class="mobile-logo">ParyGo<span style="color:#ff4757">.</span></div>
+    <div class="mobile-search" id="mobileSearchBtn">
+        <i class="fa-solid fa-search"></i>
+    </div>
+    <div class="mobile-profile">
+        <span id="mobileUserName"></span>
+        <i class="fa-solid fa-user-circle"></i>
+    </div>
+</header>
+
+<!-- Search Bar (hidden by default) -->
+<div class="mobile-search-bar" id="mobileSearchBar">
+    <input type="text" id="mobileSearchInput" placeholder="Buscar eventos...">
+    <button id="mobileSearchClose"><i class="fa-solid fa-times"></i></button>
+</div>
+
+<!-- Pull to Refresh Indicator -->
+<div class="pull-refresh" id="pullRefresh">
+    <i class="fa-solid fa-spinner fa-spin"></i> Actualizando...
+</div>
+
+<!-- FAB Button -->
+<button class="fab-button" id="fabNewEvent" onclick="openNewEventModal()">
+    <i class="fa-solid fa-plus"></i>
+</button>
+
+<!-- Mobile Bottom Navigation -->
+<nav class="mobile-nav" id="mobileNav">
+    <button class="nav-item active" data-section="eventos" onclick="mobileGoTo('eventos')">
+        <i class="fa-solid fa-calendar"></i>
+        <span>Eventos</span>
+    </button>
+    <button class="nav-item" data-section="marca" onclick="mobileGoTo('marca')">
+        <i class="fa-solid fa-tag"></i>
+        <span>Marca</span>
+    </button>
+    <button class="nav-item" data-section="promo" onclick="mobileGoTo('promo')">
+        <i class="fa-solid fa-users"></i>
+        <span>Promo</span>
+    </button>
+    <button class="nav-item" data-section="extras" onclick="openExtrasPanel()">
+        <i class="fa-solid fa-ellipsis"></i>
+        <span>Extras</span>
+    </button>
+</nav>
+
+<!-- Extras Panel (fullscreen slide from right) -->
+<div class="extras-panel" id="extrasPanel">
+    <div class="extras-header">
+        <button class="extras-back" onclick="closeExtrasPanel()">
+            <i class="fa-solid fa-arrow-left"></i> Volver
+        </button>
+        <span>Extras</span>
+    </div>
+    <div class="extras-content">
+        <button class="extras-item" onclick="mobileGoTo('seguridad'); closeExtrasPanel();">
+            <i class="fa-solid fa-shield"></i>
+            <span>Seguridad</span>
+            <i class="fa-solid fa-chevron-right"></i>
+        </button>
+        <button class="extras-item" onclick="mobileGoTo('premios'); closeExtrasPanel();">
+            <i class="fa-solid fa-gift"></i>
+            <span>Premios</span>
+            <i class="fa-solid fa-chevron-right"></i>
+        </button>
+        <button class="extras-item" onclick="mobileGoTo('config'); closeExtrasPanel();">
+            <i class="fa-solid fa-gear"></i>
+            <span>Configuración</span>
+            <i class="fa-solid fa-chevron-right"></i>
+        </button>
+        <button class="extras-item logout" onclick="handleLogout()">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Cerrar sesión</span>
+        </button>
+    </div>
+</div>
+<div class="extras-overlay" id="extrasOverlay" onclick="closeExtrasPanel()"></div>
 
 <!-- Scripts -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
