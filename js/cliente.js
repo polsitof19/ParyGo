@@ -1565,6 +1565,14 @@ window.goToUploadProof = goToUploadProof;
 window.previewProofImage = previewProofImage;
 window.sendPaymentProof = sendPaymentProof;
 
+// Debugging - verificar que todas las funciones están expuestas
+console.log('✅ Funciones expuestas en window:', {
+    handleCheckDNI: typeof window.handleCheckDNI,
+    handleRegister: typeof window.handleRegister,
+    handleLogin: typeof window.handleLogin,
+    previewProofImage: typeof window.previewProofImage
+});
+
 // Perfil
 window.openProfile = openProfile;
 window.closeProfile = closeProfile;
