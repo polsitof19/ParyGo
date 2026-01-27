@@ -2,49 +2,33 @@
 // PARYGO PROMOTOR V3 - SISTEMA DE CÓDIGOS
 // ==========================================
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { 
-    getAuth, 
+import { db, auth } from './config.js';
+import { detectBrandSlug, loadBrandBySlug } from '../utils/brand-detector.js';
+import {
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
     signOut,
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { 
-    getFirestore, 
-    collection, 
-    addDoc, 
-    getDocs, 
-    query, 
-    where, 
-    doc, 
-    getDoc, 
+import {
+    collection,
+    addDoc,
+    getDocs,
+    query,
+    where,
+    doc,
+    getDoc,
     setDoc,
     updateDoc,
     runTransaction
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================
-// FIREBASE CONFIG
-// ==========================================
-const firebaseConfig = {
-    apiKey: "AIzaSyANnihyrgd02ViR_GeKn6Mdf85nLwUjQg0",
-    authDomain: "parygo-da36a.firebaseapp.com",
-    projectId: "parygo-da36a",
-    storageBucket: "parygo-da36a.firebasestorage.app",
-    messagingSenderId: "58655250311",
-    appId: "1:58655250311:web:9b8f46dd35d0a44ce2e522"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-// ==========================================
 // VARIABLES GLOBALES
 // ==========================================
 let currentUser = null;
 let selectedBrandId = null;
+let subdomainBrandId = null;
 let currentEvent = null;
 let myQuotas = [];
 let myCodes = [];
@@ -72,7 +56,17 @@ function generateUniqueCode(eventPrefix) {
 // ==========================================
 // INICIALIZACIÓN
 // ==========================================
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    // Detectar marca desde subdominio
+    const brandSlug = detectBrandSlug();
+    if (brandSlug) {
+        const brand = await loadBrandBySlug(brandSlug);
+        if (brand) {
+            subdomainBrandId = brand.id;
+            document.title = `${brand.name} - Promotores`;
+        }
+    }
+
     onAuthStateChanged(auth, async (user) => {
         setTimeout(hideSplash, 500);
         if (user) {
@@ -81,7 +75,7 @@ document.addEventListener("DOMContentLoaded", () => {
             showView('loginView');
         }
     });
-    
+
     setupEventListeners();
 });
 
@@ -107,13 +101,20 @@ async function loadUserData(uid) {
         
         currentUser = { id: uid, ...snap.data() };
         const brands = currentUser.allowed_brands || currentUser.companies || [];
-        
+
         if (!brands.length) {
             toast("No tienes marcas asignadas");
             return;
         }
-        
-        brands.length === 1 ? await selectBrand(brands[0]) : await showBrandSelector();
+
+        // Si hay marca desde subdominio y el promotor tiene acceso, auto-seleccionar
+        if (subdomainBrandId && brands.includes(subdomainBrandId)) {
+            await selectBrand(subdomainBrandId);
+        } else if (brands.length === 1) {
+            await selectBrand(brands[0]);
+        } else {
+            await showBrandSelector();
+        }
     } catch (e) {
         console.error(e);
         toast("Error al cargar");
