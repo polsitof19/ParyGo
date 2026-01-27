@@ -2,31 +2,18 @@
 // RECLAMAR ENTRADA - JAVASCRIPT
 // ==========================================
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { 
-    getFirestore, 
-    collection, 
+import { db } from './js/config.js';
+import { detectBrandSlug, loadBrandBySlug } from './utils/brand-detector.js';
+import {
+    collection,
     doc,
     getDoc,
     getDocs,
-    query, 
+    query,
     where,
     updateDoc,
     addDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-// Firebase Config
-const firebaseConfig = {
-    apiKey: "AIzaSyANnihyrgd02ViR_GeKn6Mdf85nLwUjQg0",
-    authDomain: "parygo-da36a.firebaseapp.com",
-    projectId: "parygo-da36a",
-    storageBucket: "parygo-da36a.firebasestorage.app",
-    messagingSenderId: "58655250311",
-    appId: "1:58655250311:web:9b8f46dd35d0a44ce2e522"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 
 // ==========================================
 // ESTADO GLOBAL
@@ -58,42 +45,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ==========================================
 async function loadBrand() {
     showLoading(true);
-    
+
     try {
-        const params = new URLSearchParams(window.location.search);
-        const brandSlug = params.get('brand') || params.get('marca');
-        
+        // Detectar marca: subdominio > query param
+        const brandSlug = detectBrandSlug();
+
         if (!brandSlug) {
             showToast('No se especificó una marca', 'error');
             showLoading(false);
             return;
         }
-        
-        const q = query(collection(db, "brands"), where("slug", "==", brandSlug));
-        const snapshot = await getDocs(q);
-        
-        if (snapshot.empty) {
-            const q2 = query(collection(db, "companies"), where("slug", "==", brandSlug));
-            const snapshot2 = await getDocs(q2);
-            
-            if (snapshot2.empty) {
-                showToast('Marca no encontrada', 'error');
-                showLoading(false);
-                return;
-            }
-            
-            state.brand = { id: snapshot2.docs[0].id, ...snapshot2.docs[0].data() };
-        } else {
-            state.brand = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+
+        const brand = await loadBrandBySlug(brandSlug);
+
+        if (!brand) {
+            showToast('Marca no encontrada', 'error');
+            showLoading(false);
+            return;
         }
-        
+
+        state.brand = brand;
         applyBrandTheme();
-        
+
     } catch (error) {
         console.error('Error cargando marca:', error);
         showToast('Error al cargar la marca', 'error');
     }
-    
+
     showLoading(false);
 }
 
