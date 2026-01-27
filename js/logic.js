@@ -592,7 +592,14 @@ document.getElementById('btnConfirmApprove')?.addEventListener('click', () => {
 // MOBILE NAVIGATION
 // ========================================
 
+let navigationHistory = ['eventos'];
+
 function mobileGoTo(section) {
+    // Guardar en historial
+    if (navigationHistory[navigationHistory.length - 1] !== section) {
+        navigationHistory.push(section);
+    }
+
     // Update active nav item
     document.querySelectorAll('.mobile-nav .nav-item').forEach(item => {
         item.classList.remove('active');
@@ -605,16 +612,20 @@ function mobileGoTo(section) {
     mainContent.classList.add('transitioning');
 
     setTimeout(() => {
-        // Navigate to section
         switch(section) {
             case 'eventos':
                 if (typeof showGlobalEvents === 'function') showGlobalEvents();
                 else switchView('view_events');
                 break;
             case 'marca':
-                if (typeof openMyBrand === 'function') openMyBrand();
-                else if (typeof loadBrandsWithLogos === 'function') loadBrandsWithLogos();
-                else switchView('view_brands');
+                if (state.isSuperAdmin) {
+                    if (typeof loadBrandsWithLogos === 'function') loadBrandsWithLogos();
+                    else switchView('view_brands');
+                } else {
+                    if (typeof openMyBrand === 'function') openMyBrand();
+                    else if (typeof loadBrandsWithLogos === 'function') loadBrandsWithLogos();
+                    else switchView('view_brands');
+                }
                 break;
             case 'promo':
                 if (typeof loadPromotersView === 'function') loadPromotersView();
@@ -628,12 +639,30 @@ function mobileGoTo(section) {
                 if (typeof loadRewardsView === 'function') loadRewardsView();
                 else switchView('view_rewards');
                 break;
+            case 'admins':
+                if (typeof loadAdminsView === 'function') loadAdminsView();
+                else switchView('view_admins');
+                break;
+            case 'todas-marcas':
+                if (typeof loadBrandsWithLogos === 'function') loadBrandsWithLogos();
+                else switchView('view_brands');
+                break;
             case 'config':
                 break;
         }
 
         mainContent.classList.remove('transitioning');
     }, 150);
+}
+
+function goBack() {
+    if (navigationHistory.length > 1) {
+        navigationHistory.pop();
+        const previousSection = navigationHistory[navigationHistory.length - 1];
+        const temp = navigationHistory.slice();
+        mobileGoTo(previousSection);
+        navigationHistory = temp;
+    }
 }
 
 function openNewEventModal() {
@@ -669,7 +698,6 @@ document.getElementById('mobileSearchBtn')?.addEventListener('click', () => {
 document.getElementById('mobileSearchClose')?.addEventListener('click', () => {
     document.getElementById('mobileSearchBar').classList.remove('active');
     document.getElementById('mobileSearchInput').value = '';
-    // Reset filter
     const cards = document.querySelectorAll('#eventsGrid .card');
     cards.forEach(card => { card.style.display = ''; });
 });
@@ -687,23 +715,21 @@ document.getElementById('mobileSearchInput')?.addEventListener('input', (e) => {
 // PULL TO REFRESH
 // ========================================
 
-let touchStartY = 0;
+let pullTouchStartY = 0;
 let isPulling = false;
 
 document.addEventListener('touchstart', (e) => {
-    if (window.scrollY === 0) {
-        touchStartY = e.touches[0].clientY;
+    if (window.scrollY === 0 && e.touches[0].clientX >= 30) {
+        pullTouchStartY = e.touches[0].clientY;
     }
 }, { passive: true });
 
 document.addEventListener('touchmove', (e) => {
-    if (touchStartY && window.scrollY === 0) {
-        const touchY = e.touches[0].clientY;
-        const diff = touchY - touchStartY;
-
+    if (pullTouchStartY && window.scrollY === 0) {
+        const diff = e.touches[0].clientY - pullTouchStartY;
         if (diff > 80 && !isPulling) {
             isPulling = true;
-            document.getElementById('pullRefresh').classList.add('active');
+            document.getElementById('pullRefresh')?.classList.add('active');
         }
     }
 }, { passive: true });
@@ -713,18 +739,65 @@ document.addEventListener('touchend', () => {
         if (typeof loadEvents === 'function') {
             loadEvents().then(() => {
                 setTimeout(() => {
-                    document.getElementById('pullRefresh').classList.remove('active');
+                    document.getElementById('pullRefresh')?.classList.remove('active');
                     isPulling = false;
                 }, 500);
             });
         } else {
             setTimeout(() => {
-                document.getElementById('pullRefresh').classList.remove('active');
+                document.getElementById('pullRefresh')?.classList.remove('active');
                 isPulling = false;
             }, 1000);
         }
     }
-    touchStartY = 0;
+    pullTouchStartY = 0;
+});
+
+// ========================================
+// SWIPE BACK (iOS style)
+// ========================================
+
+let swipeStartX = 0;
+let swipeStartY = 0;
+let isSwipingBack = false;
+
+document.addEventListener('touchstart', (e) => {
+    if (e.touches[0].clientX < 30 && window.innerWidth <= 768) {
+        swipeStartX = e.touches[0].clientX;
+        swipeStartY = e.touches[0].clientY;
+        isSwipingBack = true;
+    }
+}, { passive: true });
+
+document.addEventListener('touchmove', (e) => {
+    if (!isSwipingBack) return;
+    const diffX = e.touches[0].clientX - swipeStartX;
+    const diffY = Math.abs(e.touches[0].clientY - swipeStartY);
+
+    if (diffX > 50 && diffX > diffY) {
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) {
+            mainContent.style.transform = `translateX(${Math.min(diffX, 100)}px)`;
+            mainContent.style.opacity = 1 - (diffX / 300);
+        }
+    }
+}, { passive: true });
+
+document.addEventListener('touchend', () => {
+    if (!isSwipingBack) return;
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+        const transform = mainContent.style.transform;
+        const translateX = parseInt(transform.replace('translateX(', '').replace('px)', '')) || 0;
+        if (translateX > 80) {
+            goBack();
+        }
+        mainContent.style.transform = '';
+        mainContent.style.opacity = '';
+    }
+    isSwipingBack = false;
+    swipeStartX = 0;
+    swipeStartY = 0;
 });
 
 // ========================================
@@ -736,6 +809,12 @@ function initMobile() {
     if (userName && state?.currentUser?.name) {
         userName.textContent = state.currentUser.name;
     }
+
+    // Mostrar opciones de super admin
+    if (state.isSuperAdmin) {
+        const superExtras = document.getElementById('superAdminExtras');
+        if (superExtras) superExtras.style.display = 'block';
+    }
 }
 
 if (window.innerWidth <= 768) {
@@ -744,10 +823,12 @@ if (window.innerWidth <= 768) {
 
 // Expose functions globally
 window.mobileGoTo = mobileGoTo;
+window.goBack = goBack;
 window.openNewEventModal = openNewEventModal;
 window.openExtrasPanel = openExtrasPanel;
 window.closeExtrasPanel = closeExtrasPanel;
 window.handleLogout = handleLogout;
+window.initMobile = initMobile;
 // ========== EXPORTAR A EXCEL ==========
 // ========== EXPORTAR REPORTE COMPLETO DE MÉTRICAS ==========
 function exportMetricsReport() {
