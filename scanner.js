@@ -12,6 +12,13 @@ import {
     doc,
     updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { 
+    getAuth, 
+    signInWithEmailAndPassword,
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+const auth = getAuth(app);
 
 // ==========================================
 // FIREBASE CONFIG
@@ -32,6 +39,8 @@ const db = getFirestore(app);
 // STATE
 // ==========================================
 let state = {
+    currentUser: null,
+    currentBrandId: null,
     currentEventId: null,
     currentEventName: '',
     stats: {
@@ -48,12 +57,14 @@ let state = {
 // ==========================================
 // INITIALIZATION
 // ==========================================
+// ==========================================
+// INITIALIZATION
+// ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
     await loadEvents();
     setupEventListeners();
     initScanner();
 });
-
 // ==========================================
 // LOAD EVENTS
 // ==========================================
@@ -369,17 +380,9 @@ async function validateCode(code) {
         }
         
         // ¡ÉXITO! - Marcar como escaneado
-        await updateDoc(doc(db, "tickets", ticketDoc.id), {
-            status: 'SCANNED',
-            scanned_at: new Date().toISOString(),
-            scanned_by: 'scanner_app'
-        });
-        
-        showResult('success', 'Acceso Permitido', '¡Bienvenido al evento!', clientData);
+        // ¡ÉXITO! - Mostrar para aprobar/rechazar (NO marcar automáticamente)
+        showResult('success', 'Entrada Válida', 'Esperando aprobación', clientData, ticketDoc.id);
         addToHistory(clientName, 'success', ticketType);
-        state.stats.success++;
-        state.stats.total++;
-        updateStats();
         
     } catch (error) {
         console.error('Error validando código:', error);
@@ -412,16 +415,17 @@ window.validateManual = validateManual;
 // ==========================================
 // RESULT MODAL
 // ==========================================
-function showResult(type, title, subtitle, data) {
+let pendingTicketId = null;
+
+function showResult(type, title, subtitle, data, ticketId = null) {
     const overlay = document.getElementById('resultOverlay');
     const header = document.getElementById('resultHeader');
     const icon = document.getElementById('resultIcon');
+    const actions = document.getElementById('resultActions');
     
-    // Limpiar clases anteriores
     header.classList.remove('success', 'error', 'warning');
     header.classList.add(type);
     
-    // Icono según tipo
     switch (type) {
         case 'success':
             icon.className = 'fa-solid fa-check';
@@ -434,31 +438,76 @@ function showResult(type, title, subtitle, data) {
             break;
     }
     
-    // Textos
     document.getElementById('resultTitle').textContent = title;
     document.getElementById('resultSubtitle').textContent = subtitle;
     
-    // Datos del cliente
     document.getElementById('resultName').textContent = data.name || '-';
     document.getElementById('resultDni').textContent = data.dni || '-';
     document.getElementById('resultType').textContent = data.type || '-';
     document.getElementById('resultPromoter').textContent = data.promoter || '-';
     
-    // Mostrar modal
-    overlay.classList.add('active');
-    
-    // Auto-cerrar éxito después de 3 segundos
-    if (type === 'success') {
-        setTimeout(() => {
-            closeResult();
-        }, 3000);
+    // Botones según el tipo
+    if (type === 'success' && ticketId) {
+        pendingTicketId = ticketId;
+        actions.innerHTML = `
+            <button class="btn-reject" onclick="rejectEntry()">
+                <i class="fa-solid fa-times"></i>
+                Rechazar
+            </button>
+            <button class="btn-approve" onclick="approveEntry()">
+                <i class="fa-solid fa-check"></i>
+                Aprobar
+            </button>
+        `;
+    } else {
+        pendingTicketId = null;
+        actions.innerHTML = `
+            <button class="btn-close" onclick="closeResult()">
+                Cerrar
+            </button>
+        `;
     }
+    
+    overlay.classList.add('active');
+}
+
+async function approveEntry() {
+    if (!pendingTicketId) return;
+    
+    try {
+        await updateDoc(doc(db, "tickets", pendingTicketId), {
+            status: 'SCANNED',
+            scanned_at: new Date().toISOString(),
+            scanned_by: state.currentUser?.email || 'scanner_app'
+        });
+        
+        state.stats.success++;
+        state.stats.total++;
+        updateStats();
+        
+        showToast('Entrada aprobada', 'success');
+    } catch (error) {
+        console.error('Error aprobando entrada:', error);
+        showToast('Error al aprobar', 'error');
+    }
+    
+    pendingTicketId = null;
+    closeResult();
+}
+
+function rejectEntry() {
+    pendingTicketId = null;
+    showToast('Entrada rechazada', 'warning');
+    closeResult();
 }
 
 function closeResult() {
     document.getElementById('resultOverlay')?.classList.remove('active');
+    pendingTicketId = null;
 }
 
+window.approveEntry = approveEntry;
+window.rejectEntry = rejectEntry;
 window.closeResult = closeResult;
 
 // ==========================================
