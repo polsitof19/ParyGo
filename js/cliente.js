@@ -1436,57 +1436,57 @@ function toast(msg) {
 }
 
 // ==========================================
-// EXPONER FUNCIONES GLOBALMENTE (para onclick)
+// EXPONER FUNCIONES GLOBALMENTE (para onclick en HTML)
 // ==========================================
-// Asegurar que todas las funciones estén disponibles globalmente
-if (typeof window !== 'undefined') {
-    // Autenticación
-    window.showLoginScreen = showLoginScreen;
-    window.showRegisterScreen = showRegisterScreen;
-    window.handleLogin = handleLogin;
-    window.handleRegister = handleRegister;
+// Las funciones deben estar en window para que onclick pueda accederlas
+// ya que estamos usando módulos ES6 (type="module")
 
-    // Navegación
-    window.showEvents = showEvents;
-    window.backToEvents = backToEvents;
-    window.openEventDetail = openEventDetail;
-    window.backToMyTickets = backToMyTickets;
+// Autenticación
+window.showLoginScreen = showLoginScreen;
+window.showRegisterScreen = showRegisterScreen;
+window.handleLogin = handleLogin;
+window.handleRegister = handleRegister;
 
-    // Tickets
-    window.openMyTickets = openMyTickets;
-    window.switchTicketTab = switchTicketTab;
-    window.viewTicketQR = viewTicketQR;
-    window.downloadTicket = downloadTicket;
-    window.shareTicket = shareTicket;
-    window.redeemCode = redeemCode;
+// Navegación
+window.showEvents = showEvents;
+window.backToEvents = backToEvents;
+window.openEventDetail = openEventDetail;
+window.backToMyTickets = backToMyTickets;
 
-    // Compra
-    window.openBuyModal = openBuyModal;
-    window.changeQty = changeQty;
-    window.goToPayment = goToPayment;
-    window.backToBuyStep1 = backToBuyStep1;
-    window.backToBuyStep2 = backToBuyStep2;
-    window.selectPaymentMethod = selectPaymentMethod;
-    window.showPaymentQR = showPaymentQR;
-    window.copyToClipboard = copyToClipboard;
-    window.goToUploadProof = goToUploadProof;
-    window.previewProofImage = previewProofImage;
-    window.sendPaymentProof = sendPaymentProof;
+// Tickets
+window.openMyTickets = openMyTickets;
+window.switchTicketTab = switchTicketTab;
+window.viewTicketQR = viewTicketQR;
+window.downloadTicket = downloadTicket;
+window.shareTicket = shareTicket;
+window.redeemCode = redeemCode;
 
-    // Perfil
-    window.openProfile = openProfile;
-    window.closeProfile = closeProfile;
-    window.doLogout = doLogout;
+// Compra
+window.openBuyModal = openBuyModal;
+window.changeQty = changeQty;
+window.goToPayment = goToPayment;
+window.backToBuyStep1 = backToBuyStep1;
+window.backToBuyStep2 = backToBuyStep2;
+window.selectPaymentMethod = selectPaymentMethod;
+window.showPaymentQR = showPaymentQR;
+window.copyToClipboard = copyToClipboard;
+window.goToUploadProof = goToUploadProof;
+window.previewProofImage = previewProofImage;
+window.sendPaymentProof = sendPaymentProof;
 
-    // Modales
-    window.closeModal = closeModal;
+// Perfil
+window.openProfile = openProfile;
+window.closeProfile = closeProfile;
+window.doLogout = doLogout;
 
-    // Otras
-    window.selectDocType = selectDocType;
-    window.linkAccountToProfile = linkAccountToProfile;
-    window.logoutAndRestart = logoutAndRestart;
-    window.backToStep1 = backToStep1;
-}
+// Modales
+window.closeModal = closeModal;
+
+// Otras
+window.selectDocType = selectDocType;
+window.linkAccountToProfile = linkAccountToProfile;
+window.logoutAndRestart = logoutAndRestart;
+window.backToStep1 = backToStep1;
 
 // ==========================================
 // EVENT LISTENERS
