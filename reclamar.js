@@ -387,7 +387,7 @@ async function claimTicket() {
     state.userData.phone = phone;
     
     try {
-        const qrToken = `TKT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+        const qrToken = `TKT${crypto.randomUUID().replace(/-/g, '').toUpperCase()}`;
         
         const codeType = state.codeData.type || state.codeData.ticket_type || "UNIQUE";
         const codeRef = doc(db, "tickets", state.codeData.id);
