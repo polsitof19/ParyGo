@@ -250,14 +250,21 @@ service cloud.firestore {
     match /clientes/{clienteId} {
       // Leer: el propio cliente o admins
       allow read: if isAuthenticated() &&
-                     (request.auth.uid == clienteId || isAdminOrSuper());
+                     (request.auth.uid == clienteId ||
+                      request.resource.data.uid == request.auth.uid ||
+                      isAdminOrSuper());
 
       // Crear: cualquier autenticado (al registrarse)
-      allow create: if isAuthenticated() && request.auth.uid == clienteId;
+      // El clienteId debe coincidir con el UID del usuario autenticado
+      allow create: if isAuthenticated() &&
+                       request.auth.uid == clienteId &&
+                       request.resource.data.uid == request.auth.uid;
 
       // Actualizar: el propio cliente o admins
       allow update: if isAuthenticated() &&
-                       (request.auth.uid == clienteId || isAdminOrSuper());
+                       (request.auth.uid == clienteId ||
+                        resource.data.uid == request.auth.uid ||
+                        isAdminOrSuper());
 
       // Eliminar: solo admins
       allow delete: if isAdminOrSuper();

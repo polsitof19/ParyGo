@@ -260,17 +260,20 @@ function hideSplash() {
 // ==========================================
 async function loadUserProfile(uid) {
     try {
-        // Intentar con ID compuesto primero (más eficiente)
-        const clienteId = `${uid}_${currentBrandId}`;
-        const docSnap = await getDoc(doc(db, "clientes", clienteId));
+        // Buscar por UID del usuario autenticado
+        const docSnap = await getDoc(doc(db, "clientes", uid));
 
         if (docSnap.exists()) {
-            currentUserProfile = { id: docSnap.id, ...docSnap.data() };
-            updateUserUI();
-            return true;
+            const data = docSnap.data();
+            // Verificar que pertenece a la marca actual
+            if (data.brand_id === currentBrandId) {
+                currentUserProfile = { id: docSnap.id, ...data };
+                updateUserUI();
+                return true;
+            }
         }
 
-        // Fallback: buscar por query
+        // Fallback: buscar por query (para datos antiguos con ID compuesto)
         const q = query(
             collection(db, "clientes"),
             where("uid", "==", uid),
@@ -625,11 +628,51 @@ function showRegisterScreen() {
 }
 
 // ==========================================
-// BUSCAR RENIEC AUTOMÁTICAMENTE AL ESCRIBIR DNI
+// PASO 1: VERIFICAR DNI
 // ==========================================
-async function autoSearchRENIEC(dni) {
-    if (dni.length !== 8) return;
+async function handleCheckDNI() {
+    const dni = document.getElementById("reg_dni").value.trim();
 
+    if (!validateDNI(dni)) {
+        return toast("El DNI debe tener exactamente 8 dígitos");
+    }
+
+    const btn = document.getElementById("btnCheckDNI");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando...';
+
+    try {
+        // 1. Verificar si el DNI ya existe en esta marca
+        const qDNI = query(
+            collection(db, "clientes"),
+            where("dni", "==", dni),
+            where("brand_id", "==", currentBrandId)
+        );
+        const snapDNI = await getDocs(qDNI);
+
+        if (!snapDNI.empty) {
+            toast("Este DNI ya está registrado. Por favor, inicia sesión.");
+            btn.disabled = false;
+            btn.innerHTML = 'SIGUIENTE <i class="fa-solid fa-arrow-right"></i>';
+            setTimeout(() => showLoginScreen(), 2000);
+            return;
+        }
+
+        // 2. Consultar RENIEC para autocompletar nombres
+        await searchRENIECForRegistration(dni);
+
+        // 3. Mostrar paso 2
+        showRegStep(2);
+
+    } catch (e) {
+        console.error("Error verificando DNI:", e);
+        toast("Error al verificar DNI");
+        btn.disabled = false;
+        btn.innerHTML = 'SIGUIENTE <i class="fa-solid fa-arrow-right"></i>';
+    }
+}
+
+async function searchRENIECForRegistration(dni) {
     try {
         const TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InBhdWxzZWJhc3RpYW40MzlAZ21haWwuY29tIn0.6OW3nuSrcpVbUbhakLiTa7K4IAcWEJz4LJ1pALTNlSI";
         const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`https://dniruc.apisperu.com/api/v1/dni/${dni}?token=${TOKEN}`));
@@ -638,16 +681,28 @@ async function autoSearchRENIEC(dni) {
         if (data?.nombres) {
             document.getElementById("reg_nombres").value = data.nombres;
             document.getElementById("reg_apellidos").value = `${data.apellidoPaterno || ''} ${data.apellidoMaterno || ''}`.trim();
-            document.getElementById("reg_nombres").setAttribute("readonly", "true");
-            document.getElementById("reg_apellidos").setAttribute("readonly", "true");
             toast("✅ Datos encontrados en RENIEC");
         } else {
-            document.getElementById("reg_nombres").removeAttribute("readonly");
-            document.getElementById("reg_apellidos").removeAttribute("readonly");
+            // No se encontró, pero igual puede continuar
+            document.getElementById("reg_nombres").value = "";
+            document.getElementById("reg_apellidos").value = "";
         }
     } catch (e) {
         console.error("Error RENIEC:", e);
+        // No importa si falla RENIEC, el usuario puede ingresar manualmente
     }
+}
+
+function showRegStep(step) {
+    document.getElementById("reg_step1").classList.toggle("hidden", step !== 1);
+    document.getElementById("reg_step2").classList.toggle("hidden", step !== 2);
+}
+
+function backToRegStep1() {
+    showRegStep(1);
+    const btn = document.getElementById("btnCheckDNI");
+    btn.disabled = false;
+    btn.innerHTML = 'SIGUIENTE <i class="fa-solid fa-arrow-right"></i>';
 }
 
 // ==========================================
@@ -667,7 +722,7 @@ function validatePhone(phone) {
 }
 
 // ==========================================
-// REGISTRO (FUNCIÓN GLOBAL)
+// PASO 2: COMPLETAR REGISTRO
 // ==========================================
 async function handleRegister() {
     const dni = document.getElementById("reg_dni").value.trim();
@@ -676,7 +731,6 @@ async function handleRegister() {
     const email = document.getElementById("reg_email").value.trim().toLowerCase();
     const phone = document.getElementById("reg_phone").value.trim();
     const password = document.getElementById("reg_password").value;
-    const confirmPassword = document.getElementById("reg_confirm_password").value;
 
     // Validaciones
     if (!dni) return toast("El DNI es obligatorio");
@@ -685,39 +739,21 @@ async function handleRegister() {
     if (!apellidos) return toast("Los apellidos son obligatorios");
     if (!email) return toast("El correo electrónico es obligatorio");
     if (!validateEmail(email)) return toast("Ingresa un correo electrónico válido");
-    if (!phone) return toast("El celular es obligatorio");
-    if (!validatePhone(phone)) return toast("El celular debe empezar con 9 y tener 9 dígitos");
+    if (!phone) return toast("El teléfono es obligatorio");
+    if (!validatePhone(phone)) return toast("El teléfono debe empezar con 9 y tener 9 dígitos");
     if (!password) return toast("La contraseña es obligatoria");
     if (password.length < 6) return toast("La contraseña debe tener mínimo 6 caracteres");
-    if (!confirmPassword) return toast("Confirma tu contraseña");
-    if (password !== confirmPassword) return toast("Las contraseñas no coinciden");
 
     const btn = document.getElementById("btnRegister");
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> CREANDO CUENTA...';
 
     try {
-        // 1. Verificar que el DNI no esté ya registrado en esta marca
-        const qDNI = query(
-            collection(db, "clientes"),
-            where("dni", "==", dni),
-            where("brand_id", "==", currentBrandId)
-        );
-        const snapDNI = await getDocs(qDNI);
-
-        if (!snapDNI.empty) {
-            toast("Este DNI ya está registrado en esta marca");
-            btn.disabled = false;
-            btn.innerHTML = 'CREAR CUENTA';
-            return;
-        }
-
-        // 2. Crear usuario en Firebase Auth
+        // 1. Crear usuario en Firebase Auth PRIMERO
         const cred = await createUserWithEmailAndPassword(auth, email, password);
 
-        // 3. Crear documento en colección "clientes" con ID compuesto
-        const clienteId = `${cred.user.uid}_${currentBrandId}`;
-        await setDoc(doc(db, "clientes", clienteId), {
+        // 2. DESPUÉS crear documento en colección "clientes" usando el UID del usuario como ID
+        await setDoc(doc(db, "clientes", cred.user.uid), {
             uid: cred.user.uid,
             dni,
             nombres,
@@ -744,13 +780,15 @@ async function handleRegister() {
             errorMsg = "La contraseña es muy débil";
         } else if (e.code === 'auth/invalid-email') {
             errorMsg = "Correo electrónico inválido";
+        } else if (e.code === 'permission-denied') {
+            errorMsg = "Error de permisos. Contacta al administrador.";
         }
 
         toast(errorMsg);
         btn.disabled = false;
-        btn.innerHTML = 'CREAR CUENTA';
+        btn.innerHTML = 'REGISTRARME';
     }
-};
+}
 
 // ==========================================
 // LOGIN (FUNCIÓN GLOBAL)
@@ -1436,20 +1474,29 @@ function toast(msg) {
 }
 
 // ==========================================
+// TOGGLE PASSWORD VISIBILITY
+// ==========================================
+function togglePasswordVisibility(inputId, iconId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+
+    if (!input || !icon) return;
+
+    if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+    } else {
+        input.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+    }
+}
+
+// ==========================================
 // EVENT LISTENERS
 // ==========================================
 function setupEventListeners() {
-    // Auto-buscar RENIEC al escribir DNI en registro
-    const dniInput = document.getElementById("reg_dni");
-    if (dniInput) {
-        dniInput.addEventListener("input", (e) => {
-            const dni = e.target.value.trim();
-            if (dni.length === 8) {
-                autoSearchRENIEC(dni);
-            }
-        });
-    }
-
     // Enter en inputs de login
     document.getElementById("login_email")?.addEventListener("keypress", e => {
         if (e.key === "Enter") document.getElementById("login_password")?.focus();
@@ -1458,8 +1505,13 @@ function setupEventListeners() {
         if (e.key === "Enter") window.handleLogin();
     });
 
-    // Enter en inputs de registro
-    document.getElementById("reg_confirm_password")?.addEventListener("keypress", e => {
+    // Enter en paso 1 de registro (DNI)
+    document.getElementById("reg_dni")?.addEventListener("keypress", e => {
+        if (e.key === "Enter") window.handleCheckDNI();
+    });
+
+    // Enter en inputs de registro paso 2
+    document.getElementById("reg_password")?.addEventListener("keypress", e => {
         if (e.key === "Enter") window.handleRegister();
     });
 
@@ -1481,7 +1533,10 @@ function setupEventListeners() {
 window.showLoginScreen = showLoginScreen;
 window.showRegisterScreen = showRegisterScreen;
 window.handleLogin = handleLogin;
+window.handleCheckDNI = handleCheckDNI;
 window.handleRegister = handleRegister;
+window.backToRegStep1 = backToRegStep1;
+window.togglePasswordVisibility = togglePasswordVisibility;
 
 // Navegación
 window.showEvents = showEvents;

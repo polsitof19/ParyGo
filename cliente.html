@@ -57,53 +57,72 @@
                 </div>
             </div>
 
-            <!-- PANTALLA DE REGISTRO -->
+            <!-- PANTALLA DE REGISTRO: PASO 1 (Solo DNI) -->
             <div id="registerScreen" class="auth-screen hidden">
                 <h2 class="auth-title">Crear cuenta</h2>
 
-                <div class="form-group">
-                    <label>DNI *</label>
-                    <input type="tel" id="reg_dni" placeholder="12345678" maxlength="8" pattern="[0-9]{8}">
-                    <small class="field-hint">Se buscará automáticamente en RENIEC</small>
+                <!-- Paso 1: Solo DNI -->
+                <div id="reg_step1">
+                    <div class="form-group">
+                        <label>Número de DNI *</label>
+                        <input type="tel" id="reg_dni" placeholder="12345678" maxlength="8" pattern="[0-9]{8}">
+                        <small class="field-hint">Ingresa tu DNI para continuar</small>
+                    </div>
+
+                    <button class="btn-primary" id="btnCheckDNI" onclick="handleCheckDNI()">
+                        SIGUIENTE
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+
+                    <div class="auth-link">
+                        ¿Ya tienes cuenta? <a href="#" onclick="showLoginScreen(); return false;">Inicia sesión</a>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Nombres *</label>
-                    <input type="text" id="reg_nombres" placeholder="Tus nombres">
-                </div>
+                <!-- Paso 2: Completar datos -->
+                <div id="reg_step2" class="hidden">
+                    <button class="btn-back-link" onclick="backToRegStep1()">
+                        <i class="fa-solid fa-arrow-left"></i> Cambiar DNI
+                    </button>
 
-                <div class="form-group">
-                    <label>Apellidos *</label>
-                    <input type="text" id="reg_apellidos" placeholder="Tus apellidos">
-                </div>
+                    <div class="form-group">
+                        <label>Nombres *</label>
+                        <input type="text" id="reg_nombres" placeholder="Tus nombres">
+                    </div>
 
-                <div class="form-group">
-                    <label>Correo electrónico *</label>
-                    <input type="email" id="reg_email" placeholder="correo@ejemplo.com" autocomplete="email">
-                </div>
+                    <div class="form-group">
+                        <label>Apellidos *</label>
+                        <input type="text" id="reg_apellidos" placeholder="Tus apellidos">
+                    </div>
 
-                <div class="form-group">
-                    <label>Celular *</label>
-                    <input type="tel" id="reg_phone" placeholder="987654321" maxlength="9" pattern="9[0-9]{8}">
-                    <small class="field-hint">Debe empezar con 9</small>
-                </div>
+                    <div class="form-group">
+                        <label>Correo electrónico *</label>
+                        <input type="email" id="reg_email" placeholder="correo@ejemplo.com" autocomplete="email">
+                    </div>
 
-                <div class="form-group">
-                    <label>Contraseña *</label>
-                    <input type="password" id="reg_password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
-                </div>
+                    <div class="form-group">
+                        <label>Teléfono (WhatsApp) *</label>
+                        <input type="tel" id="reg_phone" placeholder="987654321" maxlength="9" pattern="9[0-9]{8}">
+                        <small class="field-hint">Debe empezar con 9</small>
+                    </div>
 
-                <div class="form-group">
-                    <label>Confirmar contraseña *</label>
-                    <input type="password" id="reg_confirm_password" placeholder="Confirma tu contraseña" autocomplete="new-password">
-                </div>
+                    <div class="form-group">
+                        <label>Contraseña *</label>
+                        <div style="position: relative;">
+                            <input type="password" id="reg_password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" style="padding-right: 45px;">
+                            <button type="button" onclick="togglePasswordVisibility('reg_password', 'togglePassIcon')" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px;">
+                                <i id="togglePassIcon" class="fa-regular fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
 
-                <button class="btn-primary" id="btnRegister" onclick="handleRegister()">
-                    CREAR CUENTA
-                </button>
+                    <button class="btn-primary" id="btnRegister" onclick="handleRegister()">
+                        REGISTRARME
+                    </button>
 
-                <div class="auth-link">
-                    ¿Ya tienes cuenta? <a href="#" onclick="showLoginScreen(); return false;">Inicia sesión</a>
+                    <div class="auth-link">
+                        ¿Ya tienes cuenta? <a href="#" onclick="showLoginScreen(); return false;">Inicia sesión</a>
+                    </div>
                 </div>
             </div>
         </div>
