@@ -107,13 +107,10 @@ async function validateScannerRole(user) {
         // Login exitoso
         state.currentUser = { id: user.uid, ...staffData };
         state.allowedBrands = staffData.allowed_brands || [];
-        
-        hideLoginScreen();
-        document.getElementById('userName').textContent = staffData.name || user.email;
-        
+
+        showEventSelection();
         await loadEvents();
         setupEventListeners();
-        initScanner();
         
     } catch (error) {
         console.error("Error validando rol:", error);
@@ -160,20 +157,39 @@ async function handleLogout() {
         await signOut(auth);
         state.currentUser = null;
         state.allowedBrands = [];
+        state.currentEventId = null;
+        state.currentEventName = '';
         showLoginScreen();
     }
 }
 
+// ==========================================
+// NAVIGATION - 3 SCREENS
+// ==========================================
 function showLoginScreen() {
     document.getElementById('loginScreen')?.classList.add('active');
+    document.getElementById('eventSelection')?.classList.add('hidden');
     document.querySelector('.header')?.classList.add('hidden');
     document.getElementById('mainContent')?.classList.add('hidden');
 }
 
-function hideLoginScreen() {
+function showEventSelection() {
     document.getElementById('loginScreen')?.classList.remove('active');
+    document.getElementById('eventSelection')?.classList.remove('hidden');
+    document.querySelector('.header')?.classList.add('hidden');
+    document.getElementById('mainContent')?.classList.add('hidden');
+}
+
+function showScannerScreen() {
+    document.getElementById('loginScreen')?.classList.remove('active');
+    document.getElementById('eventSelection')?.classList.add('hidden');
     document.querySelector('.header')?.classList.remove('hidden');
     document.getElementById('mainContent')?.classList.remove('hidden');
+}
+
+// Keep for backwards compat
+function hideLoginScreen() {
+    showEventSelection();
 }
 
 function showLoginError(msg) {
@@ -192,81 +208,125 @@ function hideLoginError() {
 // LOAD EVENTS
 // ==========================================
 async function loadEvents() {
+    const eventList = document.getElementById('eventList');
+    if (!eventList) return;
+
+    eventList.innerHTML = `
+        <div class="event-list-loading">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <p>Cargando eventos...</p>
+        </div>
+    `;
+
     try {
         const snapshot = await getDocs(collection(db, "events"));
-        const selector = document.getElementById('eventSelector');
-        
         const activeEvents = [];
-        
+
         snapshot.docs.forEach(docSnap => {
             const event = docSnap.data();
             if (event.status === 'ACTIVE') {
-                // Filtrar por marca permitida
                 const eventBrand = event.brand_id || event.company_id;
-                const hasAccess = state.allowedBrands.length === 0 || 
+                const hasAccess = state.allowedBrands.length === 0 ||
                                   state.allowedBrands.includes(eventBrand) ||
                                   state.allowedBrands.includes(event.company_id);
-                
+
                 if (hasAccess) {
                     activeEvents.push({
                         id: docSnap.id,
                         name: event.name,
-                        date: event.date
+                        date: event.date,
+                        location: event.location || '',
+                        brand_name: event.brand_name || ''
                     });
                 }
             }
         });
-        
+
         // Ordenar por fecha
         activeEvents.sort((a, b) => {
             if (!a.date) return 1;
             if (!b.date) return -1;
             return new Date(b.date) - new Date(a.date);
         });
-        
-        // Limpiar selector
-        selector.innerHTML = '<option value="">Selecciona evento</option>';
-        
-        // Agregar opciones
-        activeEvents.forEach(event => {
-            const option = document.createElement('option');
-            option.value = event.id;
-            option.textContent = event.name;
-            selector.appendChild(option);
-        });
-        
-        // Auto-seleccionar si solo hay uno
-        if (activeEvents.length === 1) {
-            selector.value = activeEvents[0].id;
-            state.currentEventId = activeEvents[0].id;
-            state.currentEventName = activeEvents[0].name;
-        }
-        
+
         if (activeEvents.length === 0) {
-            showToast('No hay eventos disponibles para tu marca', 'warning');
+            eventList.innerHTML = `
+                <div class="event-list-empty">
+                    <i class="fa-solid fa-calendar-xmark"></i>
+                    <p>No hay eventos disponibles</p>
+                </div>
+            `;
+            return;
         }
-        
+
+        eventList.innerHTML = activeEvents.map(event => {
+            const dateStr = event.date
+                ? new Date(event.date + 'T00:00:00').toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short' })
+                : 'Sin fecha';
+            return `
+                <button class="event-card" data-event-id="${event.id}" data-event-name="${escapeHtml(event.name)}">
+                    <div class="event-card-icon">
+                        <i class="fa-solid fa-calendar-day"></i>
+                    </div>
+                    <div class="event-card-info">
+                        <span class="event-card-name">${escapeHtml(event.name)}</span>
+                        <span class="event-card-meta">
+                            <i class="fa-regular fa-calendar"></i> ${dateStr}
+                            ${event.location ? `<span class="event-card-sep">·</span> <i class="fa-solid fa-location-dot"></i> ${escapeHtml(event.location)}` : ''}
+                        </span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right event-card-arrow"></i>
+                </button>
+            `;
+        }).join('');
+
+        // Click listeners para las cards
+        eventList.querySelectorAll('.event-card').forEach(card => {
+            card.addEventListener('click', () => {
+                selectEvent(card.dataset.eventId, card.dataset.eventName);
+            });
+        });
+
     } catch (error) {
         console.error('Error cargando eventos:', error);
-        showToast('Error al cargar eventos', 'error');
+        eventList.innerHTML = `
+            <div class="event-list-empty">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <p>Error al cargar eventos</p>
+            </div>
+        `;
     }
+}
+
+function selectEvent(eventId, eventName) {
+    state.currentEventId = eventId;
+    state.currentEventName = eventName;
+    resetStats();
+
+    document.getElementById('eventNameHeader').textContent = eventName;
+
+    showScannerScreen();
+    initScanner();
+}
+
+async function goBackToEvents() {
+    await stopScanner();
+    state.currentEventId = null;
+    state.currentEventName = '';
+    resetStats();
+    showEventSelection();
 }
 
 // ==========================================
 // EVENT LISTENERS
 // ==========================================
 function setupEventListeners() {
-    // Selector de evento
-    document.getElementById('eventSelector')?.addEventListener('change', (e) => {
-        state.currentEventId = e.target.value;
-        state.currentEventName = e.target.options[e.target.selectedIndex].text;
-        resetStats();
-        
-        if (state.currentEventId) {
-            showToast(`Evento: ${state.currentEventName}`, 'success');
-        }
-    });
-    
+    // Botón volver a eventos
+    document.getElementById('btnBackToEvents')?.addEventListener('click', goBackToEvents);
+
+    // Botón logout desde pantalla de eventos
+    document.getElementById('btnLogoutEvents')?.addEventListener('click', handleLogout);
+
     // Input manual - Enter key
     document.getElementById('manualCode')?.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
@@ -274,19 +334,19 @@ function setupEventListeners() {
             validateManual();
         }
     });
-    
+
     // Botón buscar manual
     document.getElementById('btnSearch')?.addEventListener('click', validateManual);
-    
+
     // Botón continuar en modal
     document.getElementById('btnContinue')?.addEventListener('click', closeResult);
-    
+
     // Botón limpiar historial
     document.getElementById('btnClearHistory')?.addEventListener('click', clearHistory);
-    
+
     // Botón cambiar cámara
     document.getElementById('btnSwitchCamera')?.addEventListener('click', switchCamera);
-    
+
     // Click en overlay para cerrar
     document.getElementById('resultOverlay')?.addEventListener('click', (e) => {
         if (e.target.id === 'resultOverlay') {

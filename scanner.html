@@ -43,16 +43,40 @@
     <!-- ==================== HEADER ==================== -->
     <header class="header hidden">
         <div class="header-left">
-            <h1><i class="fa-solid fa-qrcode"></i> Scanner</h1>
-            <span class="user-name" id="userName"></span>
+            <button class="btn-back" id="btnBackToEvents" title="Cambiar evento">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <div class="header-info">
+                <h1><i class="fa-solid fa-qrcode"></i> Scanner</h1>
+                <span class="event-name-header" id="eventNameHeader"></span>
+            </div>
         </div>
         <button class="btn-logout" id="btnLogout" title="Cerrar sesión">
             <i class="fa-solid fa-right-from-bracket"></i>
         </button>
-        <select id="eventSelector" class="event-selector">
-            <option value="">Selecciona evento</option>
-        </select>
     </header>
+
+    <!-- ==================== EVENT SELECTION ==================== -->
+    <section class="event-selection hidden" id="eventSelection">
+        <div class="event-selection-container">
+            <div class="event-selection-header">
+                <div class="event-selection-icon">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </div>
+                <h2>Selecciona un evento</h2>
+                <p>Elige el evento para comenzar a escanear</p>
+            </div>
+            <div class="event-list" id="eventList">
+                <div class="event-list-loading">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    <p>Cargando eventos...</p>
+                </div>
+            </div>
+            <button class="btn-logout-secondary" id="btnLogoutEvents">
+                <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
+            </button>
+        </div>
+    </section>
     
     <!-- ==================== MAIN CONTENT ==================== -->
     <main class="scanner-container hidden" id="mainContent">
