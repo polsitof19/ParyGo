@@ -145,61 +145,57 @@ export function switchMetricTab(type) {
 }
 
 // ==========================================
-// 2. VENTAS PENDIENTES
+// 2. VENTAS - SISTEMA COMPLETO CON CARDS
 // ==========================================
 
+let allSalesData = [];
+let currentSalesFilter = 'PENDING';
+
 /**
- * Cargar ventas pendientes del evento
+ * Cargar TODAS las ventas del evento (todos los estados)
  */
-export async function loadEventSales(eid) {
+export async function loadAllSales(eid) {
+    if (!eid) return;
+    window._activeEventId = eid;
+
     try {
         const snapshot = await getDocs(
             query(
                 collection(db, APP_CONFIG.COLLECTIONS.SALES),
-                where("event_id", "==", eid),
-                where("status", "==", APP_CONFIG.STATUS.PENDING)
+                where("event_id", "==", eid)
             )
         );
 
-        const tbody = document.querySelector("#tblEventSales tbody");
-        if (!tbody) return;
+        allSalesData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        if (snapshot.empty) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:40px; color:var(--muted);">No hay ventas pendientes de aprobación</td></tr>';
-            return;
-        }
+        // Actualizar contadores
+        const pending = allSalesData.filter(s => s.status === APP_CONFIG.STATUS.PENDING).length;
+        const approved = allSalesData.filter(s => s.status === APP_CONFIG.STATUS.APPROVED).length;
+        const rejected = allSalesData.filter(s => s.status === APP_CONFIG.STATUS.REJECTED).length;
 
-        tbody.innerHTML = snapshot.docs.map(d => {
-            const sale = d.data();
-            return `
-                <tr id="sale_${d.id}">
-                    <td>${Validator.sanitizeHTML(sale.promoter_name || '-')}</td>
-                    <td>
-                        <strong>${Validator.sanitizeHTML(sale.full_name || sale.client_name || '-')}</strong>
-                        <br><small style="color:var(--muted);">DNI: ${Validator.sanitizeHTML(sale.client_dni || '-')}</small>
-                    </td>
-                    <td>${Validator.sanitizeHTML(sale.ticket_name || '-')}</td>
-                    <td style="font-weight:700; color:var(--success);">S/ ${Number(sale.total_price || 0).toFixed(2)}</td>
-                    <td>
-                        ${sale.proof_image 
-                            ? `<button class="btn-icon" onclick="window.viewProof('${sale.proof_image}')" title="Ver comprobante"><i class="fa-solid fa-image"></i></button>` 
-                            : '<span style="color:var(--muted);">-</span>'
-                        }
-                    </td>
-                    <td>
-                        <div style="display:flex; gap:8px;">
-                            <button class="btn" style="background:var(--success); color:#fff; padding:8px 12px; height:auto; font-size:11px;" onclick="window.approveSale('${d.id}')">
-                                <i class="fa-solid fa-check"></i> APROBAR
-                            </button>
-                            <button class="btn" style="background:var(--danger); color:#fff; padding:8px 12px; height:auto; font-size:11px;" onclick="window.rejectSale('${d.id}')">
-                                <i class="fa-solid fa-times"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }).join("");
-        
+        const bp = document.getElementById("badgePending");
+        const ba = document.getElementById("badgeApproved");
+        const br = document.getElementById("badgeRejected");
+        const bt = document.getElementById("badgeAllSales");
+        if (bp) bp.textContent = pending;
+        if (ba) ba.textContent = approved;
+        if (br) br.textContent = rejected;
+        if (bt) bt.textContent = allSalesData.length;
+
+        // Actualizar resumen
+        const approvedSales = allSalesData.filter(s => s.status === APP_CONFIG.STATUS.APPROVED);
+        const totalRecaudado = approvedSales.reduce((sum, s) => sum + Number(s.total_price || s.total || 0), 0);
+        const trEl = document.getElementById("totalRecaudado");
+        const tvEl = document.getElementById("totalVentas");
+        if (trEl) trEl.textContent = `S/. ${totalRecaudado.toFixed(2)}`;
+        if (tvEl) tvEl.textContent = approvedSales.length;
+
+        // Actualizar tabla oculta para exportación
+        updateSalesExportTable();
+
+        // Renderizar cards
+        renderSalesCards();
+
     } catch (error) {
         console.error("Error cargando ventas:", error);
         toast("Error cargando ventas", "error");
@@ -207,9 +203,173 @@ export async function loadEventSales(eid) {
 }
 
 /**
- * Ver comprobante de pago
+ * Alias de retrocompatibilidad
  */
-export function viewProof(imageUrl) {
+export async function loadEventSales(eid) {
+    return loadAllSales(eid);
+}
+
+/**
+ * Filtrar ventas por estado (local)
+ */
+export function filterSalesByStatus(status) {
+    currentSalesFilter = status;
+
+    // Actualizar botones activos
+    document.querySelectorAll('.sales-filter').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-status') === status);
+    });
+
+    renderSalesCards();
+}
+
+/**
+ * Renderizar cards de ventas
+ */
+function renderSalesCards() {
+    const container = document.getElementById("salesCardsContainer");
+    if (!container) return;
+
+    // Filtrar
+    let filtered = allSalesData;
+    if (currentSalesFilter !== 'ALL') {
+        filtered = allSalesData.filter(s => s.status === currentSalesFilter);
+    }
+
+    // Ordenar: pendientes primero, luego por fecha
+    filtered.sort((a, b) => {
+        if (a.status === APP_CONFIG.STATUS.PENDING && b.status !== APP_CONFIG.STATUS.PENDING) return -1;
+        if (b.status === APP_CONFIG.STATUS.PENDING && a.status !== APP_CONFIG.STATUS.PENDING) return 1;
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
+
+    if (!filtered.length) {
+        const msg = currentSalesFilter === 'PENDING' ? 'No hay ventas pendientes' :
+                    currentSalesFilter === 'APPROVED' ? 'No hay ventas aprobadas' :
+                    currentSalesFilter === 'REJECTED' ? 'No hay ventas rechazadas' :
+                    'No hay ventas registradas';
+        container.innerHTML = `
+            <div class="sales-empty-state" style="grid-column: 1 / -1;">
+                <i class="fa-solid fa-money-bill"></i>
+                <p>${msg}</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = filtered.map(sale => {
+        const clientName = sale.full_name || sale.client_name || 'Sin nombre';
+        const initials = clientName.split(' ').map(n => n.charAt(0).toUpperCase()).slice(0, 2).join('');
+        const statusClass = sale.status === APP_CONFIG.STATUS.PENDING ? 'pending' :
+                           sale.status === APP_CONFIG.STATUS.APPROVED ? 'approved' : 'rejected';
+        const statusText = sale.status === APP_CONFIG.STATUS.PENDING ? 'Pendiente' :
+                          sale.status === APP_CONFIG.STATUS.APPROVED ? 'Aprobada' : 'Rechazada';
+
+        const proofHtml = sale.proof_image ? `
+            <div class="sale-card-proof" onclick="window.viewProof('${sale.id}')">
+                <img src="${sale.proof_image}" alt="Comprobante" loading="lazy">
+                <div class="sale-card-proof-overlay">
+                    <i class="fa-solid fa-expand"></i>
+                </div>
+            </div>
+        ` : '';
+
+        const actionsHtml = sale.status === APP_CONFIG.STATUS.PENDING ? `
+            <div class="sale-card-actions">
+                <button class="btn-approve" onclick="window.approveSale('${sale.id}')">
+                    <i class="fa-solid fa-check"></i> APROBAR
+                </button>
+                <button class="btn-reject" onclick="window.rejectSale('${sale.id}')">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+        ` : '';
+
+        const createdAt = sale.created_at ? new Date(sale.created_at).toLocaleString('es-PE', {
+            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+        }) : '';
+
+        return `
+            <div class="sale-card" id="sale_${sale.id}">
+                <div class="sale-card-header">
+                    <div class="sale-card-client">
+                        <div class="sale-card-avatar">${initials}</div>
+                        <div>
+                            <div class="sale-card-name">${Validator.sanitizeHTML(clientName)}</div>
+                            <div class="sale-card-dni">DNI: ${Validator.sanitizeHTML(sale.client_dni || '-')}</div>
+                        </div>
+                    </div>
+                    <span class="sale-card-status ${statusClass}">${statusText}</span>
+                </div>
+                <div class="sale-card-body">
+                    <div class="sale-card-info-grid">
+                        <div class="sale-card-info-item">
+                            <span class="sale-card-info-label">Entrada</span>
+                            <span class="sale-card-info-value">${Validator.sanitizeHTML(sale.ticket_name || '-')}</span>
+                        </div>
+                        <div class="sale-card-info-item">
+                            <span class="sale-card-info-label">Total</span>
+                            <span class="sale-card-info-value price">S/ ${Number(sale.total_price || sale.total || 0).toFixed(2)}</span>
+                        </div>
+                        <div class="sale-card-info-item">
+                            <span class="sale-card-info-label">Método</span>
+                            <span class="sale-card-info-value">${Validator.sanitizeHTML(sale.payment_method || '-')}</span>
+                        </div>
+                        <div class="sale-card-info-item">
+                            <span class="sale-card-info-label">N° Operación</span>
+                            <span class="sale-card-info-value">${Validator.sanitizeHTML(sale.operation_number || '-')}</span>
+                        </div>
+                    </div>
+                    ${proofHtml}
+                </div>
+                ${createdAt ? `<div class="sale-card-date"><i class="fa-regular fa-clock"></i> ${createdAt}</div>` : ''}
+                ${actionsHtml}
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Actualizar tabla oculta para exportación Excel
+ */
+function updateSalesExportTable() {
+    const tbody = document.querySelector("#tblEventSales tbody");
+    if (!tbody) return;
+
+    tbody.innerHTML = allSalesData.map(sale => {
+        const statusText = sale.status === APP_CONFIG.STATUS.PENDING ? 'Pendiente' :
+                          sale.status === APP_CONFIG.STATUS.APPROVED ? 'Aprobada' : 'Rechazada';
+        return `
+            <tr>
+                <td>${Validator.sanitizeHTML(sale.full_name || sale.client_name || '-')}</td>
+                <td>${Validator.sanitizeHTML(sale.ticket_name || '-')}</td>
+                <td>S/ ${Number(sale.total_price || sale.total || 0).toFixed(2)}</td>
+                <td>${statusText}</td>
+                <td>${sale.created_at ? new Date(sale.created_at).toLocaleString('es-PE') : '-'}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+/**
+ * Ver comprobante de pago (acepta ID de sale o URL directa)
+ */
+export function viewProof(saleIdOrUrl) {
+    let imageUrl = saleIdOrUrl;
+
+    // Si es un ID, buscar en allSalesData
+    if (saleIdOrUrl && !saleIdOrUrl.startsWith('data:') && !saleIdOrUrl.startsWith('http')) {
+        const sale = allSalesData.find(s => s.id === saleIdOrUrl);
+        if (sale) {
+            imageUrl = sale.proof_image || sale.payment_proof;
+        }
+    }
+
+    if (!imageUrl) {
+        toast("No hay comprobante disponible", "error");
+        return;
+    }
+
     const img = document.getElementById("proofImg");
     if (img) img.src = imageUrl;
     openModal('modalProof');
@@ -296,12 +456,11 @@ export async function confirmApproveSale() {
         
         // Cerrar modal y actualizar
         document.getElementById('modalApproveSale').classList.add('hidden');
-        document.getElementById(`sale_${id}`)?.remove();
-        
+
         toast("✅ Venta aprobada y ticket generado");
-        
+
         if (window.loadEventMetrics) window.loadEventMetrics(state.activeEventId);
-        if (window.loadAllSales) window.loadAllSales(state.activeEventId);
+        loadAllSales(state.activeEventId);
         
     } catch (error) {
         console.error("Error aprobando venta:", error);
@@ -323,8 +482,8 @@ export async function rejectSale(id) {
             rejected_by: state.currentUser?.id
         });
         
-        document.getElementById(`sale_${id}`)?.remove();
         toast("Venta rechazada");
+        loadAllSales(state.activeEventId);
         
     } catch (error) {
         console.error("Error rechazando venta:", error);

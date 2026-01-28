@@ -994,16 +994,18 @@ function updateNavActive(index) {
 }
 
 // ==========================================
-// CANJEAR CÓDIGO
+// CANJEAR CÓDIGO (con modal de confirmación)
 // ==========================================
+let pendingRedeemData = null;
+
 async function redeemCode() {
     const codeInput = document.getElementById("promo_code");
     const code = codeInput.value.trim().toUpperCase();
-    
+
     if (!code || code.length < 6) return toast("Ingresa un código válido");
     if (!currentEvent) return toast("Error: evento no seleccionado");
     if (!currentUserProfile) return toast("Error: perfil no cargado");
-    
+
     try {
         // Buscar código
         const q = query(
@@ -1012,21 +1014,53 @@ async function redeemCode() {
             where("event_id", "==", currentEvent.id)
         );
         const snap = await getDocs(q);
-        
+
         if (snap.empty) {
             return toast("Código no válido");
         }
-        
+
         const codeDoc = snap.docs[0];
         const codeData = codeDoc.data();
-        
+
         if (codeData.status !== 'FREE') {
             return toast("Este código ya fue usado");
         }
-        
+
+        // Guardar datos para confirmar después
+        pendingRedeemData = {
+            code,
+            codeDocId: codeDoc.id,
+            codeData,
+            event: currentEvent
+        };
+
+        // Mostrar modal de confirmación
+        document.getElementById("redeem_event_image").src = currentEvent.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600';
+        document.getElementById("redeem_event_name").textContent = currentEvent.name;
+        document.getElementById("redeem_event_date").textContent = formatDate(currentEvent.date);
+        document.getElementById("redeem_event_time").textContent = currentEvent.time || 'Por confirmar';
+        document.getElementById("redeem_event_venue").textContent = currentEvent.venue || 'Por confirmar';
+        document.getElementById("redeem_ticket_type").textContent = codeData.ticket_name || 'General';
+
+        openModal('modalConfirmRedeem');
+
+    } catch (e) {
+        console.error(e);
+        toast("Error al validar código");
+    }
+}
+
+async function confirmRedeem() {
+    if (!pendingRedeemData) return toast("No hay código pendiente");
+
+    const { code, codeDocId, codeData } = pendingRedeemData;
+
+    try {
+        closeModal('modalConfirmRedeem');
+
         // Canjear código
         const fullName = `${currentUserProfile.name || ''} ${currentUserProfile.lastname || ''}`.trim();
-        await updateDoc(doc(db, "codes", codeDoc.id), {
+        await updateDoc(doc(db, "codes", codeDocId), {
             status: "CLAIMED",
             claimed_by: currentUser.uid,
             claimed_name: fullName,
@@ -1054,16 +1088,19 @@ async function redeemCode() {
             status: 'ACTIVE',
             created_at: new Date().toISOString()
         });
-        
-        codeInput.value = '';
+
+        const codeInput = document.getElementById("promo_code");
+        if (codeInput) codeInput.value = '';
+        pendingRedeemData = null;
+
         openModal('modalCodeSuccess');
         loadMyTickets();
-        
+
     } catch (e) {
         console.error(e);
         toast("Error al canjear código");
     }
-};
+}
 
 function generateQRData(code) {
     const data = {
@@ -1226,24 +1263,31 @@ async function sendPaymentProof() {
         const imageBase64 = await fileToBase64(imageInput.files[0]);
         const fullName = `${currentUserProfile.name || ''} ${currentUserProfile.lastname || ''}`.trim();
 
-        await addDoc(collection(db, "purchases"), {
-            user_id: currentUser.uid,
-            user_name: fullName,
-            user_doc: currentUserProfile.doc_number,
-            user_email: currentUserProfile.email,
-            user_phone: currentUserProfile.phone,
+        await addDoc(collection(db, "sales"), {
+            // Campos para admin
+            full_name: fullName,
+            client_name: fullName,
+            client_dni: currentUserProfile.doc_number,
+            client_id: currentUser.uid,
+            client_email: currentUserProfile.email,
+            client_phone: currentUserProfile.phone,
+            total_price: buyState.total,
+            proof_image: imageBase64,
+            ticket_name: buyState.ticketType.name,
+            ticket_id: buyState.ticketType.id || '',
+            company_id: currentBrand?.owner_id || '',
+            channel: 'web',
+            // Campos compartidos
             event_id: currentEvent.id,
             event_name: currentEvent.name,
             brand_id: currentBrandId,
-            ticket_type: buyState.ticketType.name,
-            ticket_id: buyState.ticketType.id,
             quantity: buyState.quantity,
             unit_price: buyState.unitPrice,
             total: buyState.total,
             payment_method: buyState.paymentMethod,
             payer_name: payerName,
             operation_number: operation,
-            proof_image: imageBase64,
+            payment_proof: imageBase64,
             status: "PENDING",
             created_at: new Date().toISOString()
         });
@@ -1285,10 +1329,10 @@ async function loadMyTickets() {
         const snapTickets = await getDocs(qTickets);
         myTickets = snapTickets.docs.map(d => ({ id: d.id, ...d.data() }));
         
-        // Cargar compras pendientes de ESTA marca
+        // Cargar compras pendientes de ESTA marca (ahora en colección sales)
         const qPurchases = query(
-            collection(db, "purchases"), 
-            where("user_id", "==", currentUser.uid),
+            collection(db, "sales"),
+            where("client_id", "==", currentUser.uid),
             where("brand_id", "==", currentBrandId),
             where("status", "==", "PENDING")
         );
@@ -1772,6 +1816,7 @@ window.viewTicketQR = viewTicketQR;
 window.downloadTicket = downloadTicket;
 window.shareTicket = shareTicket;
 window.redeemCode = redeemCode;
+window.confirmRedeem = confirmRedeem;
 
 // Compra
 window.openBuyModal = openBuyModal;

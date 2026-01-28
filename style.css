@@ -1744,3 +1744,345 @@ select option:hover {
     background: #3b82f6 !important;
     color: #ffffff !important;
 }
+
+/* ==========================================
+   SALES CARDS GRID
+   ========================================== */
+.sales-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+    .sales-cards-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}
+
+.sale-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: var(--transition-fast);
+}
+
+.sale-card:hover {
+    border-color: rgba(255,255,255,0.15);
+}
+
+.sale-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.sale-card-client {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sale-card-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+}
+
+.sale-card-name {
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
+.sale-card-dni {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.sale-card-status {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sale-card-status.pending {
+    background: rgba(234, 179, 8, 0.15);
+    color: #eab308;
+}
+
+.sale-card-status.approved {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
+
+.sale-card-status.rejected {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+.sale-card-body {
+    padding: 14px 16px;
+}
+
+.sale-card-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.sale-card-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sale-card-info-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sale-card-info-value {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.sale-card-info-value.price {
+    color: var(--success);
+    font-size: 15px;
+}
+
+.sale-card-proof {
+    margin-top: 12px;
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.sale-card-proof img {
+    width: 100%;
+    max-height: 180px;
+    object-fit: cover;
+    display: block;
+    border-radius: var(--radius);
+}
+
+.sale-card-proof-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.sale-card-proof:hover .sale-card-proof-overlay {
+    opacity: 1;
+}
+
+.sale-card-proof-overlay i {
+    font-size: 24px;
+    color: white;
+}
+
+.sale-card-actions {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+}
+
+.btn-approve {
+    flex: 1;
+    padding: 10px 16px;
+    background: var(--success);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 12px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: var(--transition-fast);
+}
+
+.btn-approve:hover {
+    background: #16a34a;
+}
+
+.btn-reject {
+    padding: 10px 16px;
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--danger);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: var(--radius);
+    font-size: 12px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: var(--transition-fast);
+}
+
+.btn-reject:hover {
+    background: rgba(239, 68, 68, 0.25);
+}
+
+.sale-card-date {
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 0 16px 12px;
+}
+
+.sales-empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+
+.sales-empty-state i {
+    font-size: 48px;
+    opacity: 0.2;
+    margin-bottom: 16px;
+    display: block;
+}
+
+.sales-empty-state p {
+    font-size: 14px;
+}
+
+.new-sales-notification {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: rgba(234, 179, 8, 0.1);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: #eab308;
+}
+
+.new-sales-notification i {
+    font-size: 16px;
+}
+
+.new-sales-notification .btn-sm {
+    margin-left: auto;
+    padding: 6px 12px;
+    font-size: 11px;
+    background: #eab308;
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* Sales Filters */
+.sales-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.sales-filter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.sales-filter:hover {
+    border-color: rgba(255,255,255,0.15);
+    color: var(--text);
+}
+
+.sales-filter.active {
+    background: var(--primary-glow);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.sales-filter .badge {
+    font-size: 10px;
+    font-weight: 700;
+    background: rgba(255,255,255,0.1);
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.sales-filter.active .badge {
+    background: var(--primary);
+    color: white;
+}
+
+/* Sales Summary */
+.sales-summary {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.sales-summary .summary-card {
+    flex: 1;
+    padding: 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sales-summary .summary-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sales-summary .summary-value {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--success);
+}

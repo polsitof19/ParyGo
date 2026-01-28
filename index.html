@@ -612,23 +612,30 @@
             <i class="fa-solid fa-file-excel"></i> <span>Exportar</span>
         </button>
     </div>
-    
+
+    <!-- Notificación de nuevas ventas -->
+    <div id="newSalesNotification" class="new-sales-notification hidden">
+        <i class="fa-solid fa-bell"></i>
+        <span>Nuevas ventas pendientes</span>
+        <button class="btn btn-sm" onclick="window.loadAllSales(window._activeEventId)">Actualizar</button>
+    </div>
+
     <!-- Filtros de estado -->
     <div class="sales-filters">
-        <button class="sales-filter active" data-status="PENDING">
+        <button class="sales-filter active" data-status="PENDING" onclick="window.filterSalesByStatus('PENDING')">
             <i class="fa-solid fa-clock"></i> Pendientes <span class="badge" id="badgePending">0</span>
         </button>
-        <button class="sales-filter" data-status="APPROVED">
+        <button class="sales-filter" data-status="APPROVED" onclick="window.filterSalesByStatus('APPROVED')">
             <i class="fa-solid fa-check"></i> Aprobadas <span class="badge" id="badgeApproved">0</span>
         </button>
-        <button class="sales-filter" data-status="REJECTED">
+        <button class="sales-filter" data-status="REJECTED" onclick="window.filterSalesByStatus('REJECTED')">
             <i class="fa-solid fa-times"></i> Rechazadas <span class="badge" id="badgeRejected">0</span>
         </button>
-        <button class="sales-filter" data-status="ALL">
+        <button class="sales-filter" data-status="ALL" onclick="window.filterSalesByStatus('ALL')">
             <i class="fa-solid fa-list"></i> Todas <span class="badge" id="badgeAllSales">0</span>
         </button>
     </div>
-    
+
     <!-- Resumen de ventas -->
     <div class="sales-summary">
         <div class="summary-card">
@@ -640,21 +647,25 @@
             <span class="summary-value" id="totalVentas">0</span>
         </div>
     </div>
-    
-    <table id="tblEventSales" class="data-table">
+
+    <!-- Cards Grid en vez de tabla -->
+    <div id="salesCardsContainer" class="sales-cards-grid">
+        <!-- Se llena dinámicamente -->
+    </div>
+
+    <!-- Tabla oculta para exportación a Excel -->
+    <table id="tblEventSales" class="data-table" style="display:none;">
         <thead>
             <tr>
-                <th>Promotor</th>
                 <th>Cliente</th>
                 <th>Entrada</th>
                 <th>Total</th>
-                <th>N° Operación</th>
-                <th>Comprobante</th>
-                <th>Acciones</th>
+                <th>Estado</th>
+                <th>Fecha</th>
             </tr>
         </thead>
-                            <tbody></tbody>
-                        </table>
+        <tbody></tbody>
+    </table>
                     </div>
                     
                     <!-- TAB: STOCK -->

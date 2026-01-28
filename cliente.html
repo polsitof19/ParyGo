@@ -537,6 +537,48 @@
         </div>
     </div>
 
+    <!-- ============ MODAL: CONFIRMAR CANJE ============ -->
+    <div id="modalConfirmRedeem" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-gift"></i> Confirmar Canje</h2>
+                <button class="modal-close" onclick="closeModal('modalConfirmRedeem')">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="redeem-preview">
+                    <img id="redeem_event_image" class="redeem-preview-img" src="" alt="Evento">
+                    <div class="redeem-meta">
+                        <h3 id="redeem_event_name">Nombre del Evento</h3>
+                        <div class="redeem-meta-row">
+                            <i class="fa-regular fa-calendar"></i>
+                            <span id="redeem_event_date">Fecha</span>
+                        </div>
+                        <div class="redeem-meta-row">
+                            <i class="fa-regular fa-clock"></i>
+                            <span id="redeem_event_time">Hora</span>
+                        </div>
+                        <div class="redeem-meta-row">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <span id="redeem_event_venue">Lugar</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="redeem-ticket-info">
+                    <span class="redeem-ticket-badge" id="redeem_ticket_type">General</span>
+                    <span class="redeem-ticket-label">Entrada gratuita con code</span>
+                </div>
+                <div class="redeem-actions">
+                    <button class="btn-secondary" onclick="closeModal('modalConfirmRedeem')">Cancelar</button>
+                    <button class="btn-primary" onclick="confirmRedeem()">
+                        <i class="fa-solid fa-check"></i> Canjear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ============ MODAL: CÓDIGO CANJEADO ============ -->
     <div id="modalCodeSuccess" class="modal hidden">
         <div class="modal-content">

@@ -1691,3 +1691,82 @@ input, select, textarea {
         margin: 0 auto;
     }
 }
+
+/* ==========================================
+   SECCIÓN 16: MODAL CONFIRMAR CANJE
+   ========================================== */
+.redeem-preview {
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+}
+
+.redeem-preview-img {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    display: block;
+}
+
+.redeem-meta {
+    padding: 14px 16px;
+}
+
+.redeem-meta h3 {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.redeem-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.redeem-meta-row i {
+    color: var(--primary);
+    width: 16px;
+    text-align: center;
+}
+
+.redeem-ticket-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+}
+
+.redeem-ticket-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: var(--primary);
+    color: white;
+    text-transform: uppercase;
+}
+
+.redeem-ticket-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.redeem-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.redeem-actions .btn-secondary,
+.redeem-actions .btn-primary {
+    flex: 1;
+}

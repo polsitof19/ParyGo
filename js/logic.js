@@ -83,10 +83,12 @@ import {
     downloadCodesAsExcel,
     downloadCodesAsTxt
 } from './codes.js';
-import { 
-    loadEventMetrics, 
+import {
+    loadEventMetrics,
     switchMetricTab,
     loadEventSales,
+    loadAllSales,
+    filterSalesByStatus,
     viewProof,
     approveSale,
     rejectSale,
@@ -202,6 +204,8 @@ window.togglePromoterField = togglePromoterField;
 window.loadEventMetrics = loadEventMetrics;
 window.switchMetricTab = switchMetricTab;
 window.loadEventSales = loadEventSales;
+window.loadAllSales = loadAllSales;
+window.filterSalesByStatus = filterSalesByStatus;
 window.viewProof = viewProof;
 window.approveSale = approveSale;
 window.rejectSale = rejectSale;
@@ -381,7 +385,7 @@ function setupGlobalEventListeners() {
                 loadAccesses(state.activeEventId);
             }
             if (tabId === 'tab_sales' && state.activeEventId) {
-                loadEventSales(state.activeEventId);
+                loadAllSales(state.activeEventId);
             }
             if (tabId === 'tab_stock' && state.activeEventId) {
                 loadStockTable();
