@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="assets/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="cliente.css?v=3.0.0">
+    <link rel="stylesheet" href="cliente.css?v=4.0.0">
 </head>
 <body>
 
@@ -186,6 +186,9 @@
             <span>Actualizando...</span>
         </div>
 
+        <!-- Next Event Widget -->
+        <div id="nextEventWidget" class="next-event-widget hidden"></div>
+
         <main class="events-main">
             <h2 class="section-title">Proximos Eventos</h2>
 
@@ -202,10 +205,15 @@
                 <button class="date-filter-btn" onclick="filterByDate('month')">Este mes</button>
             </div>
 
-            <div id="events_list" class="events-list">
+            <div id="events_list" class="events-scroll">
                 <!-- Se llena dinamicamente -->
             </div>
         </main>
+
+        <!-- FAB for next event -->
+        <button id="fabNextEvent" class="fab-btn hidden" onclick="goToNextEventTicket()">
+            <i class="fa-solid fa-ticket"></i>
+        </button>
 
         <!-- Bottom Nav -->
         <nav class="bottom-nav">
@@ -239,9 +247,12 @@
                 <img id="detail_image" src="" alt="Evento">
             </div>
 
+            <!-- Countdown timer -->
+            <div id="detail_countdown" class="detail-countdown hidden"></div>
+
             <div class="event-info-card">
                 <h1 id="detail_name">Nombre del Evento</h1>
-                
+
                 <div class="event-meta">
                     <div class="meta-item">
                         <i class="fa-regular fa-calendar"></i>
@@ -258,6 +269,14 @@
                 </div>
             </div>
 
+            <!-- Sección: Comprar entradas (MOVED BEFORE CODE SECTION) -->
+            <div class="action-section">
+                <h3><i class="fa-solid fa-shopping-cart"></i> Comprar Entradas</h3>
+                <div id="tickets_for_sale" class="tickets-list">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </div>
+
             <!-- Sección: Tengo un código -->
             <div class="action-section">
                 <h3><i class="fa-solid fa-gift"></i> ¿Tienes un código?</h3>
@@ -268,12 +287,10 @@
                 </div>
             </div>
 
-            <!-- Sección: Comprar entradas -->
-            <div class="action-section">
-                <h3><i class="fa-solid fa-shopping-cart"></i> Comprar Entradas</h3>
-                <div id="tickets_for_sale" class="tickets-list">
-                    <!-- Se llena dinámicamente -->
-                </div>
+            <!-- Sección: Mis entradas de este evento -->
+            <div id="myEventTickets" class="action-section hidden">
+                <h3><i class="fa-solid fa-ticket"></i> Mis Entradas</h3>
+                <div id="my_event_tickets_list" class="my-tickets-list"></div>
             </div>
         </div>
     </div>
@@ -291,9 +308,9 @@
         <main class="tickets-main">
             <!-- Tabs -->
             <div class="tickets-tabs">
-                <button class="tab-btn active" onclick="switchTicketTab('active')">Activas</button>
+                <button class="tab-btn active" onclick="switchTicketTab('upcoming')">Próximos</button>
+                <button class="tab-btn" onclick="switchTicketTab('past')">Pasados</button>
                 <button class="tab-btn" onclick="switchTicketTab('pending')">Pendientes</button>
-                <button class="tab-btn" onclick="switchTicketTab('used')">Usadas</button>
             </div>
 
             <div id="my_tickets_list" class="my-tickets-list">
@@ -593,7 +610,7 @@
                     <h3>¡Comprobante enviado!</h3>
                     <p>Tu pago está siendo verificado. Te notificaremos cuando tus entradas estén listas.</p>
                     <p class="text-muted">Tiempo estimado: 5-15 minutos</p>
-                    
+
                     <button class="btn-primary" onclick="closeModal('modalBuy'); openMyTickets();">
                         VER MIS ENTRADAS
                     </button>
@@ -727,6 +744,36 @@
         </div>
     </div>
 
+    <!-- ============ MODAL: CAMBIAR EMAIL ============ -->
+    <div id="modalChangeEmail" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-envelope"></i> Cambiar Email</h2>
+                <button class="modal-close" onclick="closeModal('modalChangeEmail')">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Contraseña actual *</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="change_email_password" placeholder="Tu contraseña actual" autocomplete="current-password">
+                        <button type="button" class="password-toggle" onclick="togglePassword('change_email_password')">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Nuevo email *</label>
+                    <input type="email" id="change_new_email" placeholder="nuevo@correo.com" autocomplete="email">
+                </div>
+                <button class="btn-primary full" id="btnChangeEmail" onclick="handleChangeEmail()">
+                    <i class="fa-solid fa-envelope"></i> CAMBIAR EMAIL
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ============ DRAWER: PERFIL ============ -->
     <div id="profileOverlay" class="overlay hidden" onclick="closeProfile()"></div>
     <div id="profileDrawer" class="drawer">
@@ -742,12 +789,13 @@
             <span class="profile-doc" id="profile_doc">DNI: 12345678</span>
         </div>
         <div class="drawer-body">
-            <div class="profile-item">
+            <div class="profile-item clickable" onclick="openChangeEmailModal()">
                 <i class="fa-solid fa-envelope"></i>
                 <div>
                     <label>Email</label>
                     <span id="profile_email">---</span>
                 </div>
+                <i class="fa-solid fa-chevron-right profile-item-arrow"></i>
             </div>
             <div class="profile-item">
                 <i class="fa-solid fa-phone"></i>
@@ -755,6 +803,7 @@
                     <label>Telefono</label>
                     <span id="profile_phone">---</span>
                 </div>
+                <i class="fa-solid fa-lock profile-item-lock"></i>
             </div>
             <div class="profile-item clickable" onclick="openChangePasswordModal()">
                 <i class="fa-solid fa-lock"></i>
@@ -823,6 +872,6 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-    <script type="module" src="js/cliente.js?v=3.0.0"></script>
+    <script type="module" src="js/cliente.js?v=4.0.0"></script>
 </body>
 </html>

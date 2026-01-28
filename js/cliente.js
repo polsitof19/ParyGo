@@ -1,25 +1,25 @@
 // ==========================================
-// PARYGO CLIENTE - PORTAL MULTI-MARCA
+// PARYGO CLIENTE - PORTAL MULTI-MARCA v4.0.0
 // Sistema de subdominios: code.parygo.com
 // ==========================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { 
-    getAuth, 
+import {
+    getAuth,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
     signOut,
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { 
-    getFirestore, 
-    collection, 
-    addDoc, 
-    getDocs, 
-    query, 
-    where, 
-    doc, 
-    getDoc, 
+import {
+    getFirestore,
+    collection,
+    addDoc,
+    getDocs,
+    query,
+    where,
+    doc,
+    getDoc,
     setDoc,
     updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -52,8 +52,9 @@ let allEvents = [];
 let currentEvent = null;
 let myTickets = [];
 let myPurchases = [];
-let currentTicketTab = 'active';
+let currentTicketTab = 'upcoming'; // v4.0.0 - Changed from 'active'
 let viewingTicket = null;
+let favorites = JSON.parse(localStorage.getItem('parygo_favorites') || '[]');
 
 // Estado de compra
 let buyState = {
@@ -75,19 +76,19 @@ let existingUserNeedsProfile = false;
 document.addEventListener("DOMContentLoaded", async () => {
     // 1. Detectar marca por subdominio
     currentBrandSlug = detectBrandSlug();
-    
+
     if (!currentBrandSlug) {
         showError("No se pudo determinar la marca. Verifica la URL.");
         return;
     }
-    
+
     // 2. Cargar datos de la marca
     const brandLoaded = await loadBrandBySlug();
     if (!brandLoaded) {
         showError(`La marca "${currentBrandSlug}" no existe.`);
         return;
     }
-    
+
     // 3. Escuchar estado de autenticación
     onAuthStateChanged(auth, async (user) => {
         setTimeout(hideSplash, 800);
@@ -116,7 +117,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             showLoginScreen();
         }
     });
-    
+
     setupEventListeners();
 });
 
@@ -127,7 +128,7 @@ document.addEventListener("DOMContentLoaded", async () => {
  */
 function detectBrandSlug() {
     const hostname = window.location.hostname;
-    
+
     // Producción: subdominio.parygo.com
     if (hostname.includes('.parygo.com') || hostname.includes('.parygo.')) {
         const parts = hostname.split('.');
@@ -135,20 +136,20 @@ function detectBrandSlug() {
             return parts[0].toLowerCase();
         }
     }
-    
+
     // Desarrollo local: usar parámetro ?brand=xxx
     const params = new URLSearchParams(window.location.search);
     const brandParam = params.get('brand') || params.get('marca');
     if (brandParam) {
         return brandParam.toLowerCase();
     }
-    
+
     // Fallback: primer segmento del path
     const pathSlug = window.location.pathname.split('/').filter(p => p)[0];
     if (pathSlug && pathSlug !== 'cliente.html') {
         return pathSlug.toLowerCase();
     }
-    
+
     return null;
 }
 
@@ -160,13 +161,13 @@ async function loadBrandBySlug() {
         // Buscar marca por slug
         const q = query(collection(db, "brands"), where("slug", "==", currentBrandSlug));
         let snap = await getDocs(q);
-        
+
         // Si no encuentra en brands, buscar en companies
         if (snap.empty) {
             const q2 = query(collection(db, "companies"), where("slug", "==", currentBrandSlug));
             snap = await getDocs(q2);
         }
-        
+
         // También buscar por ID directo (compatibilidad)
         if (snap.empty) {
             let docSnap = await getDoc(doc(db, "brands", currentBrandSlug));
@@ -180,14 +181,14 @@ async function loadBrandBySlug() {
                 return true;
             }
         }
-        
+
         if (!snap.empty) {
             currentBrand = { id: snap.docs[0].id, ...snap.docs[0].data() };
             currentBrandId = snap.docs[0].id;
             updateBrandUI();
             return true;
         }
-        
+
         return false;
     } catch (e) {
         console.error("Error cargando marca:", e);
@@ -197,7 +198,7 @@ async function loadBrandBySlug() {
 
 function updateBrandUI() {
     if (!currentBrand) return;
-    
+
     // Logo en auth
     const authLogo = document.getElementById("auth_brand_logo");
     if (authLogo) {
@@ -208,7 +209,7 @@ function updateBrandUI() {
             authLogo.style.background = currentBrand.color || '#f43f5e';
         }
     }
-    
+
     // Logo en header
     const headerLogo = document.getElementById("header_brand_logo");
     if (headerLogo) {
@@ -219,7 +220,7 @@ function updateBrandUI() {
             headerLogo.style.background = currentBrand.color || '#f43f5e';
         }
     }
-    
+
     // Nombre
     const headerName = document.getElementById("header_brand_name");
     if (headerName) headerName.textContent = currentBrand.name || 'Eventos';
@@ -299,18 +300,18 @@ async function loadUserProfile(uid) {
  */
 function showLinkAccountPrompt(user) {
     showView('authView');
-    
+
     // Ocultar pasos normales
     document.getElementById("auth_step1").classList.add("hidden");
     document.getElementById("auth_step2").classList.add("hidden");
     document.getElementById("auth_step3").classList.add("hidden");
-    
+
     // Crear prompt especial
     const container = document.querySelector('.auth-container');
-    
+
     // Remover prompt anterior si existe
     document.getElementById("link_prompt")?.remove();
-    
+
     const prompt = document.createElement('div');
     prompt.id = "link_prompt";
     prompt.className = "auth-step";
@@ -322,12 +323,12 @@ function showLinkAccountPrompt(user) {
                 <strong>${user.email}</strong>
             </div>
         </div>
-        
+
         <p style="color:var(--text-muted); font-size:14px; margin-bottom:20px; text-align:center;">
-            Para acceder a los eventos de <strong>${currentBrand?.name || 'esta marca'}</strong>, 
+            Para acceder a los eventos de <strong>${currentBrand?.name || 'esta marca'}</strong>,
             necesitamos algunos datos adicionales.
         </p>
-        
+
         <div class="form-group">
             <label>Tipo de documento</label>
             <div class="doc-type-selector">
@@ -342,39 +343,39 @@ function showLinkAccountPrompt(user) {
                 </button>
             </div>
         </div>
-        
+
         <div class="form-group">
             <label id="link_doc_label">Número de DNI</label>
             <input type="tel" id="link_doc_number" placeholder="12345678" maxlength="8">
         </div>
-        
+
         <div class="form-group">
             <label>Nombres</label>
             <input type="text" id="link_nombres" placeholder="Tus nombres">
         </div>
-        
+
         <div class="form-group">
             <label>Apellidos</label>
             <input type="text" id="link_apellidos" placeholder="Tus apellidos">
         </div>
-        
+
         <div class="form-group">
             <label>Teléfono (WhatsApp)</label>
             <input type="tel" id="link_phone" placeholder="987654321" maxlength="9">
         </div>
-        
+
         <button class="btn-primary" onclick="linkAccountToProfile()">
             <span>CONTINUAR</span>
             <i class="fa-solid fa-arrow-right"></i>
         </button>
-        
+
         <button class="btn-back-link" onclick="logoutAndRestart()">
             <i class="fa-solid fa-arrow-left"></i> Usar otra cuenta
         </button>
     `;
-    
+
     container.appendChild(prompt);
-    
+
     // Agregar listener para buscar DNI
     document.getElementById("link_doc_number")?.addEventListener("blur", async (e) => {
         const dni = e.target.value.trim();
@@ -389,11 +390,11 @@ async function searchRENIECForLink(dni) {
         const TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InBhdWxzZWJhc3RpYW40MzlAZ21haWwuY29tIn0.6OW3nuSrcpVbUbhakLiTa7K4IAcWEJz4LJ1pALTNlSI";
         const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`https://dniruc.apisperu.com/api/v1/dni/${dni}?token=${TOKEN}`));
         const data = await res.json();
-        
+
         if (data?.nombres) {
             document.getElementById("link_nombres").value = data.nombres;
             document.getElementById("link_apellidos").value = `${data.apellidoPaterno || ''} ${data.apellidoMaterno || ''}`.trim();
-            toast("✅ Datos encontrados");
+            toast("Datos encontrados");
         }
     } catch (e) {
         // RENIEC not available
@@ -405,11 +406,11 @@ async function linkAccountToProfile() {
     const nombres = document.getElementById("link_nombres").value.trim();
     const apellidos = document.getElementById("link_apellidos").value.trim();
     const phone = document.getElementById("link_phone").value.trim();
-    
+
     if (!docNumber) return toast("Ingresa tu documento");
     if (!nombres || !apellidos) return toast("Ingresa tu nombre completo");
     if (!phone || phone.length !== 9 || !phone.startsWith('9')) return toast("Teléfono: 9 dígitos, empieza con 9");
-    
+
     try {
         // Crear perfil en clientes para esta marca
         await setDoc(doc(db, "clientes", currentUser.uid), {
@@ -425,7 +426,7 @@ async function linkAccountToProfile() {
             updated_at: new Date().toISOString()
         });
 
-        toast("✅ ¡Cuenta vinculada!");
+        toast("Cuenta vinculada");
 
         // Recargar
         await loadUserProfile(currentUser.uid);
@@ -484,15 +485,15 @@ function selectDocType(type) {
 async function searchDocument() {
     const docNumber = document.getElementById("auth_doc_number").value.trim();
     const btn = document.getElementById("btnSearchDoc");
-    
+
     if (selectedDocType === 'DNI' && docNumber.length !== 8) {
         return toast("El DNI debe tener 8 dígitos");
     }
     if (!docNumber) return toast("Ingresa tu documento");
-    
+
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-    
+
     try {
         // 1. Buscar si existe en ESTA marca con este documento
         const qProfile = query(
@@ -552,13 +553,13 @@ async function searchRENIEC(dni) {
         const TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InBhdWxzZWJhc3RpYW40MzlAZ21haWwuY29tIn0.6OW3nuSrcpVbUbhakLiTa7K4IAcWEJz4LJ1pALTNlSI";
         const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`https://dniruc.apisperu.com/api/v1/dni/${dni}?token=${TOKEN}`));
         const data = await res.json();
-        
+
         if (data?.nombres) {
             document.getElementById("reg_nombres").value = data.nombres;
             document.getElementById("reg_apellidos").value = `${data.apellidoPaterno || ''} ${data.apellidoMaterno || ''}`.trim();
             document.getElementById("reg_nombres").setAttribute("readonly", "true");
             document.getElementById("reg_apellidos").setAttribute("readonly", "true");
-            toast("✅ Datos encontrados");
+            toast("Datos encontrados");
         } else {
             clearRegisterFields();
             toast("No encontrado, ingresa manualmente");
@@ -698,7 +699,7 @@ async function searchRENIECForRegistration(dni) {
         if (data?.nombres) {
             document.getElementById("reg_nombres").value = data.nombres;
             document.getElementById("reg_apellidos").value = `${data.apellidoPaterno || ''} ${data.apellidoMaterno || ''}`.trim();
-            toast("✅ Datos encontrados en RENIEC");
+            toast("Datos encontrados en RENIEC");
         } else {
             // No se encontró, pero igual puede continuar
             document.getElementById("reg_nombres").value = "";
@@ -785,7 +786,7 @@ async function handleRegister() {
             updated_at: new Date().toISOString()
         });
 
-        toast("Cuenta creada exitosamente!");
+        toast("Cuenta creada exitosamente");
         launchConfetti();
 
         // El onAuthStateChanged manejara la redireccion
@@ -829,7 +830,7 @@ async function handleLogin() {
     try {
         await signInWithEmailAndPassword(auth, email, password);
         // El onAuthStateChanged se encargará del resto
-        toast("✅ ¡Bienvenido!");
+        toast("Bienvenido");
 
     } catch (e) {
         console.error("Error en login:", e);
@@ -907,21 +908,21 @@ async function loadEvents() {
         // Buscar eventos de esta marca
         const q1 = query(collection(db, "events"), where("brand_id", "==", currentBrandId));
         const q2 = query(collection(db, "events"), where("company_id", "==", currentBrandId));
-        
+
         const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-        
+
         const map = new Map();
         snap1.docs.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
         snap2.docs.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
-        
+
         // Filtrar solo eventos futuros
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         allEvents = Array.from(map.values())
             .filter(e => new Date(e.date) >= today)
             .sort((a, b) => new Date(a.date) - new Date(b.date));
-        
+
         if (!allEvents.length) {
             container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i><h3>Sin eventos</h3><p>No hay eventos proximos</p></div>';
             return;
@@ -929,7 +930,8 @@ async function loadEvents() {
 
         // Use the filter renderer for consistent display
         renderFilteredEvents('', 'all');
-        
+        renderNextEventWidget();
+
     } catch (e) {
         console.error(e);
         container.innerHTML = '<div class="empty-state"><p>Error al cargar eventos</p></div>';
@@ -949,6 +951,27 @@ function filterByDate(filter) {
     document.querySelector(`.date-filter-btn[onclick*="${filter}"]`)?.classList.add('active');
     const searchTerm = (document.getElementById("search_events")?.value || '').toLowerCase().trim();
     renderFilteredEvents(searchTerm, filter);
+}
+
+// ==========================================
+// FAVORITOS (localStorage)
+// ==========================================
+function isFavorite(eventId) {
+    return favorites.includes(eventId);
+}
+
+function toggleFavorite(eventId, event) {
+    if (event) event.stopPropagation();
+    const idx = favorites.indexOf(eventId);
+    if (idx >= 0) {
+        favorites.splice(idx, 1);
+    } else {
+        favorites.push(eventId);
+    }
+    localStorage.setItem('parygo_favorites', JSON.stringify(favorites));
+    // Re-render
+    const searchTerm = (document.getElementById("search_events")?.value || '').toLowerCase().trim();
+    renderFilteredEvents(searchTerm, currentDateFilter);
 }
 
 function renderFilteredEvents(searchTerm, dateFilter) {
@@ -989,9 +1012,17 @@ function renderFilteredEvents(searchTerm, dateFilter) {
     container.innerHTML = filtered.map((e, i) => {
         const origIndex = allEvents.indexOf(e);
         const countdown = getCountdown(e.date, e.time);
+        const fav = isFavorite(e.id);
+        const hasTicket = myTickets.some(t => t.event_id === e.id && t.status === 'ACTIVE');
         return `
             <div class="event-card" onclick="openEventDetail(${origIndex})">
-                <img class="event-card-image" src="${e.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600'}" alt="${escapeHtml(e.name)}" loading="lazy">
+                <div class="event-card-image-wrapper">
+                    <img class="event-card-image" src="${e.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600'}" alt="${escapeHtml(e.name)}" loading="lazy">
+                    <button class="event-card-fav ${fav ? 'active' : ''}" onclick="toggleFavorite('${e.id}', event)">
+                        <i class="fa-${fav ? 'solid' : 'regular'} fa-star"></i>
+                    </button>
+                    ${hasTicket ? '<div class="event-card-badge"><i class="fa-solid fa-ticket"></i> Tienes entrada</div>' : ''}
+                </div>
                 <div class="event-card-body">
                     <div class="event-card-title">${escapeHtml(e.name)}</div>
                     <div class="event-card-meta">
@@ -1022,6 +1053,100 @@ function getCountdown(dateStr, timeStr) {
     return '';
 }
 
+// ==========================================
+// WIDGET PRÓXIMO EVENTO
+// ==========================================
+function renderNextEventWidget() {
+    const widget = document.getElementById("nextEventWidget");
+    if (!widget) return;
+
+    // Find the next event the user has a ticket for
+    const now = new Date();
+    const upcomingTickets = myTickets
+        .filter(t => t.status === 'ACTIVE' && t.event_date && new Date(t.event_date) >= now)
+        .sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
+
+    if (!upcomingTickets.length) {
+        widget.classList.add('hidden');
+        return;
+    }
+
+    const ticket = upcomingTickets[0];
+    const eventData = allEvents.find(e => e.id === ticket.event_id);
+    const countdown = getCountdown(ticket.event_date, eventData?.time);
+
+    widget.classList.remove('hidden');
+    widget.onclick = () => {
+        const idx = allEvents.findIndex(e => e.id === ticket.event_id);
+        if (idx >= 0) openEventDetail(idx);
+    };
+    widget.innerHTML = `
+        <div class="next-event-widget-header">
+            <i class="fa-solid fa-ticket"></i> Tu próximo evento
+        </div>
+        <div class="next-event-widget-body">
+            <img class="next-event-widget-img" src="${eventData?.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600'}" alt="">
+            <div class="next-event-widget-info">
+                <h4>${escapeHtml(ticket.event_name)}</h4>
+                <p><i class="fa-regular fa-calendar"></i> ${formatDate(ticket.event_date)} ${eventData?.time ? '· ' + eventData.time : ''}</p>
+                ${countdown ? `<div class="next-event-widget-countdown"><i class="fa-solid fa-fire"></i> ${countdown}</div>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+// ==========================================
+// FAB BUTTON
+// ==========================================
+function updateFAB() {
+    const fab = document.getElementById("fabNextEvent");
+    if (!fab) return;
+
+    const now = new Date();
+    const sevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const nextTicket = myTickets
+        .filter(t => t.status === 'ACTIVE' && t.event_date)
+        .find(t => {
+            const d = new Date(t.event_date);
+            return d >= now && d <= sevenDays;
+        });
+
+    if (nextTicket) {
+        fab.classList.remove('hidden');
+    } else {
+        fab.classList.add('hidden');
+    }
+}
+
+function goToNextEventTicket() {
+    const now = new Date();
+    const nextTicket = myTickets
+        .filter(t => t.status === 'ACTIVE' && t.event_date)
+        .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+        .find(t => new Date(t.event_date) >= now);
+
+    if (nextTicket) {
+        viewingTicket = nextTicket;
+        showView('ticketQRView');
+        // Set QR view data
+        document.getElementById("qr_event_name").textContent = nextTicket.event_name;
+        document.getElementById("qr_event_date").textContent = formatDate(nextTicket.event_date);
+        document.getElementById("qr_code").textContent = nextTicket.code;
+        document.getElementById("qr_ticket_type").textContent = nextTicket.ticket_type;
+        document.getElementById("qr_holder_name").textContent = nextTicket.user_name;
+        const statusEl = document.getElementById("qr_status");
+        statusEl.textContent = 'VÁLIDA';
+        statusEl.className = 'status-active';
+        const canvas = document.getElementById("qr_canvas");
+        if (window.QRCode && canvas) {
+            QRCode.toCanvas(canvas, nextTicket.qr_data || nextTicket.code, {
+                width: 200, margin: 2, color: { dark: '#000000', light: '#ffffff' }
+            });
+        }
+    }
+}
+
 function openEventDetail(index) {
     currentEvent = allEvents[index];
     if (!currentEvent) return;
@@ -1035,29 +1160,136 @@ function openEventDetail(index) {
     document.getElementById("detail_venue").textContent = currentEvent.venue || 'Por confirmar';
 
     renderTicketsForSale();
+    updateDetailCountdown();
+    renderMyEventTickets();
+}
+
+function updateDetailCountdown() {
+    const el = document.getElementById("detail_countdown");
+    if (!el || !currentEvent) return;
+
+    const countdown = getCountdown(currentEvent.date, currentEvent.time);
+    if (countdown) {
+        el.classList.remove('hidden');
+        el.innerHTML = `
+            <div class="detail-countdown-label">Cuenta regresiva</div>
+            <div class="detail-countdown-value">${countdown}</div>
+        `;
+    } else {
+        el.classList.add('hidden');
+    }
+}
+
+function renderMyEventTickets() {
+    const container = document.getElementById("my_event_tickets_list");
+    const section = document.getElementById("myEventTickets");
+    if (!container || !section || !currentEvent) return;
+
+    const eventTickets = myTickets.filter(t => t.event_id === currentEvent.id);
+
+    if (!eventTickets.length) {
+        section.classList.add('hidden');
+        return;
+    }
+
+    section.classList.remove('hidden');
+    container.innerHTML = eventTickets.map((t, i) => {
+        const globalIdx = myTickets.indexOf(t);
+        return `
+            <div class="ticket-group-item" onclick="viewTicketFromDetail(${globalIdx})">
+                <div class="ticket-group-item-info">
+                    <span class="ticket-type">${escapeHtml(t.ticket_type)}</span>
+                    <span class="ticket-code">${t.code}</span>
+                </div>
+                <span class="status-badge ${t.status === 'ACTIVE' ? 'active' : 'used'}">
+                    ${t.status === 'ACTIVE' ? 'Válida' : 'Usada'}
+                </span>
+                <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);margin-left:8px;font-size:12px;"></i>
+            </div>
+        `;
+    }).join('');
+}
+
+function viewTicketFromDetail(globalIdx) {
+    viewingTicket = myTickets[globalIdx];
+    if (!viewingTicket) return;
+    showView('ticketQRView');
+
+    document.getElementById("qr_event_name").textContent = viewingTicket.event_name;
+    document.getElementById("qr_event_date").textContent = formatDate(viewingTicket.event_date);
+    document.getElementById("qr_code").textContent = viewingTicket.code;
+    document.getElementById("qr_ticket_type").textContent = viewingTicket.ticket_type;
+    document.getElementById("qr_holder_name").textContent = viewingTicket.user_name;
+
+    const statusEl = document.getElementById("qr_status");
+    if (viewingTicket.status === 'ACTIVE') {
+        statusEl.textContent = 'VÁLIDA';
+        statusEl.className = 'status-active';
+    } else {
+        statusEl.textContent = 'USADA';
+        statusEl.className = 'status-used';
+    }
+
+    const canvas = document.getElementById("qr_canvas");
+    if (window.QRCode && canvas) {
+        QRCode.toCanvas(canvas, viewingTicket.qr_data || viewingTicket.code, {
+            width: 200, margin: 2, color: { dark: '#000000', light: '#ffffff' }
+        });
+    }
 }
 
 function renderTicketsForSale() {
     const container = document.getElementById("tickets_for_sale");
     const tickets = currentEvent?.tickets || [];
-    
+
     if (!tickets.length) {
         container.innerHTML = '<p class="text-muted">No hay entradas disponibles</p>';
         return;
     }
-    
-    container.innerHTML = tickets.map((t, i) => `
-        <div class="ticket-item">
-            <div class="ticket-item-info">
-                <h4>${escapeHtml(t.name)}</h4>
-                <span>${t.isFree || t.price === 0 ? 'Entrada gratuita' : ''}</span>
+
+    const now = new Date();
+
+    container.innerHTML = tickets.map((t, i) => {
+        // Preventa logic
+        let status = 'disponible';
+        let statusLabel = 'Disponible';
+        let disabled = false;
+
+        if (t.start_date && new Date(t.start_date) > now) {
+            status = 'proximamente';
+            statusLabel = 'Próximamente';
+            disabled = true;
+        } else if (t.end_date && new Date(t.end_date) < now) {
+            status = 'finalizado';
+            statusLabel = 'Finalizado';
+            disabled = true;
+        } else if (t.stock !== undefined && t.sold !== undefined && t.sold >= t.stock) {
+            status = 'agotado';
+            statusLabel = 'Agotado';
+            disabled = true;
+        }
+
+        const stockInfo = (t.stock !== undefined && t.sold !== undefined && status === 'disponible')
+            ? `<span class="stock">${t.stock - t.sold} disponibles</span>`
+            : '';
+
+        const isFree = t.isFree || t.price === 0;
+        const onclick = disabled ? '' : (isFree ? `onclick="openFreeTicketModal(${i})"` : `onclick="openBuyModal(${i})"`);
+
+        return `
+            <div class="ticket-item-row ${disabled ? 'disabled' : ''}" ${onclick}>
+                <div class="ticket-item-info">
+                    <h4>${escapeHtml(t.name)}</h4>
+                    <span class="ticket-status-tag ${status}">${statusLabel}</span>
+                </div>
+                <div class="ticket-item-price-info">
+                    <span class="price ${isFree ? 'free' : ''}">${isFree ? 'GRATIS' : `S/. ${Number(t.price).toFixed(2)}`}</span>
+                    ${stockInfo}
+                </div>
+                ${!disabled ? '<i class="fa-solid fa-chevron-right ticket-item-arrow"></i>' : ''}
             </div>
-            ${t.price > 0
-                ? `<button class="ticket-item-btn" onclick="openBuyModal(${i})">S/. ${Number(t.price).toFixed(2)}</button>`
-                : `<button class="ticket-item-btn free" onclick="openFreeTicketModal(${i})">GRATIS</button>`
-            }
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function backToEvents() {
@@ -1223,7 +1455,7 @@ function openFreeTicketModal(ticketIndex) {
 }
 
 function changeFreeQty(delta) {
-    freeTicketState.quantity = Math.max(1, Math.min(5, freeTicketState.quantity + delta));
+    freeTicketState.quantity = Math.max(1, Math.min(10, freeTicketState.quantity + delta));
     document.getElementById("free_qty").textContent = freeTicketState.quantity;
 }
 
@@ -1292,24 +1524,24 @@ async function claimFreeTickets() {
 function openBuyModal(ticketIndex) {
     const ticket = currentEvent?.tickets?.[ticketIndex];
     if (!ticket) return;
-    
+
     buyState.ticketType = ticket;
     buyState.quantity = 1;
     buyState.unitPrice = ticket.price || 0;
     buyState.paymentMethod = 'yape';
-    
+
     updateBuyTotal();
-    
+
     document.getElementById("buy_ticket_name").textContent = ticket.name;
     document.getElementById("buy_ticket_price").textContent = `S/. ${Number(ticket.price).toFixed(2)}`;
     document.getElementById("buy_qty").textContent = '1';
-    
+
     showBuyStep(1);
     openModal('modalBuy');
 };
 
 function changeQty(delta) {
-    buyState.quantity = Math.max(1, Math.min(5, buyState.quantity + delta));
+    buyState.quantity = Math.max(1, Math.min(10, buyState.quantity + delta));
     document.getElementById("buy_qty").textContent = buyState.quantity;
     updateBuyTotal();
 }
@@ -1319,7 +1551,7 @@ function updateBuyTotal() {
     // Céntimos aleatorios para verificación
     const cents = Math.floor(Math.random() * 99) + 1;
     buyState.total = subtotal + (cents / 100);
-    
+
     document.getElementById("buy_subtotal").textContent = `S/. ${subtotal.toFixed(2)}`;
     document.getElementById("buy_total").textContent = `S/. ${buyState.total.toFixed(2)}`;
 }
@@ -1358,13 +1590,13 @@ function selectPaymentMethod(method) {
 function loadPaymentInfo() {
     const config = currentEvent?.payment_config || {};
     const method = buyState.paymentMethod;
-    
+
     if (method === 'yape' || method === 'plin') {
         const data = config[method] || config.yape || config;
         document.getElementById("pay_name").textContent = data.name || '---';
         document.getElementById("pay_phone").textContent = data.phone || '---';
         document.getElementById("pay_amount").textContent = `S/. ${buyState.total.toFixed(2)}`;
-        
+
         const btnQR = document.getElementById("btnShowQR");
         if (btnQR) btnQR.classList.toggle('hidden', !data.qr_image);
     } else {
@@ -1393,7 +1625,7 @@ async function copyToClipboard(elementId) {
     const text = el.textContent.replace('S/. ', '');
     try {
         await navigator.clipboard.writeText(text);
-        toast("✅ Copiado");
+        toast("Copiado");
     } catch (e) {
         toast("Error al copiar");
     }
@@ -1420,15 +1652,15 @@ async function sendPaymentProof() {
     const payerName = document.getElementById("proof_payer_name").value.trim();
     const operation = document.getElementById("proof_operation").value.trim();
     const imageInput = document.getElementById("proof_image");
-    
+
     if (!payerName) return toast("Ingresa nombres y apellidos de quien pagó");
     if (!operation) return toast("Ingresa el número de operación");
     if (!imageInput.files[0]) return toast("Sube la captura del pago");
-    
+
     const btn = document.getElementById("btnSendProof");
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
-    
+
     try {
         const imageBase64 = await fileToBase64(imageInput.files[0]);
         const fullName = `${currentUserProfile.name || ''} ${currentUserProfile.lastname || ''}`.trim();
@@ -1461,15 +1693,15 @@ async function sendPaymentProof() {
             status: "PENDING",
             created_at: new Date().toISOString()
         });
-        
+
         showBuyStep(4);
         loadMyTickets();
-        
+
     } catch (e) {
         console.error(e);
         toast("Error al enviar comprobante");
     }
-    
+
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> ENVIAR COMPROBANTE';
 };
@@ -1488,17 +1720,17 @@ function fileToBase64(file) {
 // ==========================================
 async function loadMyTickets() {
     if (!currentUser || !currentBrandId) return;
-    
+
     try {
         // Cargar tickets de ESTA marca
         const qTickets = query(
-            collection(db, "tickets"), 
+            collection(db, "tickets"),
             where("user_id", "==", currentUser.uid),
             where("brand_id", "==", currentBrandId)
         );
         const snapTickets = await getDocs(qTickets);
         myTickets = snapTickets.docs.map(d => ({ id: d.id, ...d.data() }));
-        
+
         // Cargar compras pendientes de ESTA marca (ahora en colección sales)
         const qPurchases = query(
             collection(db, "sales"),
@@ -1508,7 +1740,7 @@ async function loadMyTickets() {
         );
         const snapPurchases = await getDocs(qPurchases);
         myPurchases = snapPurchases.docs.map(d => ({ id: d.id, ...d.data() }));
-        
+
         // Actualizar badge
         const activeCount = myTickets.filter(t => t.status === 'ACTIVE').length;
         const badge = document.getElementById("tickets_count");
@@ -1516,7 +1748,10 @@ async function loadMyTickets() {
             badge.textContent = activeCount;
             badge.classList.toggle('hidden', activeCount === 0);
         }
-        
+
+        renderNextEventWidget();
+        updateFAB();
+
     } catch (e) {
         console.error(e);
     }
@@ -1530,14 +1765,16 @@ function openMyTickets() {
 }
 
 function updateTicketTabCounters() {
-    const activeCount = myTickets.filter(t => t.status === 'ACTIVE').length;
+    const now = new Date();
+    const upcomingCount = myTickets.filter(t => t.status === 'ACTIVE' && t.event_date && new Date(t.event_date) >= now).length;
+    const pastCount = myTickets.filter(t => t.status === 'ACTIVE' && t.event_date && new Date(t.event_date) < now).length
+        + myTickets.filter(t => t.status === 'SCANNED' || t.status === 'USED').length;
     const pendingCount = myPurchases.length;
-    const usedCount = myTickets.filter(t => t.status === 'SCANNED' || t.status === 'USED').length;
 
     const tabs = document.querySelectorAll('.tickets-tabs .tab-btn');
-    if (tabs[0]) tabs[0].innerHTML = `Activas <span class="tab-badge">${activeCount}</span>`;
-    if (tabs[1]) tabs[1].innerHTML = `Pendientes <span class="tab-badge">${pendingCount}</span>`;
-    if (tabs[2]) tabs[2].innerHTML = `Usadas <span class="tab-badge">${usedCount}</span>`;
+    if (tabs[0]) tabs[0].innerHTML = `Próximos <span class="tab-badge">${upcomingCount}</span>`;
+    if (tabs[1]) tabs[1].innerHTML = `Pasados <span class="tab-badge">${pastCount}</span>`;
+    if (tabs[2]) tabs[2].innerHTML = `Pendientes <span class="tab-badge">${pendingCount}</span>`;
 }
 
 function switchTicketTab(tab) {
@@ -1549,73 +1786,130 @@ function switchTicketTab(tab) {
 
 function renderMyTickets() {
     const container = document.getElementById("my_tickets_list");
-    let filtered = [];
-    
-    if (currentTicketTab === 'active') {
-        filtered = myTickets.filter(t => t.status === 'ACTIVE');
-    } else if (currentTicketTab === 'pending') {
-        filtered = myPurchases;
-    } else {
-        filtered = myTickets.filter(t => t.status === 'SCANNED' || t.status === 'USED');
-    }
-    
-    if (!filtered.length) {
-        const emptyMsg = currentTicketTab === 'pending' ? 'No tienes compras pendientes' : 'No tienes entradas aquí';
-        container.innerHTML = `<div class="empty-state"><i class="fa-solid fa-ticket"></i><p>${emptyMsg}</p></div>`;
-        return;
-    }
-    
+    const now = new Date();
+
     if (currentTicketTab === 'pending') {
-        container.innerHTML = filtered.map(p => `
+        // Pending purchases
+        if (!myPurchases.length) {
+            container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-clock"></i><p>No tienes compras pendientes</p></div>';
+            return;
+        }
+        container.innerHTML = myPurchases.map(p => `
             <div class="my-ticket-card">
                 <div class="my-ticket-header">
                     <span class="my-ticket-event">${escapeHtml(p.event_name)}</span>
-                    <span class="my-ticket-type">${escapeHtml(p.ticket_type)}</span>
+                    <span class="my-ticket-type">${escapeHtml(p.ticket_name || p.ticket_type || '')}</span>
                 </div>
                 <div class="my-ticket-details">
                     <span><i class="fa-solid fa-ticket"></i> ${p.quantity}x</span>
-                    <span><i class="fa-solid fa-dollar-sign"></i> S/. ${p.total?.toFixed(2)}</span>
+                    <span><i class="fa-solid fa-dollar-sign"></i> S/. ${(p.total || 0).toFixed(2)}</span>
                 </div>
                 <div class="my-ticket-status">
-                    <span class="status-badge pending">🕐 Verificando pago</span>
+                    <span class="status-badge pending">Verificando pago</span>
                 </div>
             </div>
         `).join('');
+        return;
+    }
+
+    // Group tickets by event
+    let filtered = [];
+    if (currentTicketTab === 'upcoming') {
+        filtered = myTickets.filter(t => t.status === 'ACTIVE' && t.event_date && new Date(t.event_date) >= now);
     } else {
-        container.innerHTML = filtered.map((t, i) => `
-            <div class="my-ticket-card" onclick="viewTicketQR(${i}, '${currentTicketTab}')">
-                <div class="my-ticket-header">
-                    <span class="my-ticket-event">${escapeHtml(t.event_name)}</span>
-                    <span class="my-ticket-type">${escapeHtml(t.ticket_type)}</span>
+        // past - includes used/scanned and active with past dates
+        filtered = myTickets.filter(t => {
+            if (t.status === 'SCANNED' || t.status === 'USED') return true;
+            if (t.status === 'ACTIVE' && t.event_date && new Date(t.event_date) < now) return true;
+            return false;
+        });
+    }
+
+    if (!filtered.length) {
+        const msg = currentTicketTab === 'upcoming' ? 'No tienes entradas próximas' : 'No tienes entradas pasadas';
+        container.innerHTML = `<div class="empty-state"><i class="fa-solid fa-ticket"></i><p>${msg}</p></div>`;
+        return;
+    }
+
+    // Group by event
+    const groups = {};
+    filtered.forEach(t => {
+        const key = t.event_id || t.event_name;
+        if (!groups[key]) {
+            groups[key] = {
+                event_name: t.event_name,
+                event_date: t.event_date,
+                tickets: []
+            };
+        }
+        groups[key].tickets.push(t);
+    });
+
+    container.innerHTML = Object.entries(groups).map(([key, group]) => {
+        const tickets = group.tickets;
+        return `
+            <div class="ticket-group">
+                <div class="ticket-group-header" onclick="toggleTicketGroup('${key}')">
+                    <div class="ticket-group-header-info">
+                        <h4>${escapeHtml(group.event_name)}</h4>
+                        <span><i class="fa-regular fa-calendar"></i> ${formatDate(group.event_date)}</span>
+                    </div>
+                    <span class="ticket-group-count">${tickets.length}</span>
+                    <i class="fa-solid fa-chevron-right ticket-group-chevron" id="chevron_${key}"></i>
                 </div>
-                <div class="my-ticket-details">
-                    <span><i class="fa-regular fa-calendar"></i> ${formatDate(t.event_date)}</span>
-                    <span><i class="fa-solid fa-qrcode"></i> ${t.code}</span>
-                </div>
-                <div class="my-ticket-status">
-                    <span class="status-badge ${t.status === 'ACTIVE' ? 'active' : 'used'}">
-                        ${t.status === 'ACTIVE' ? '✅ Válida' : '✓ Usada'}
-                    </span>
-                    <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i>
+                <div class="ticket-group-body" id="group_${key}">
+                    ${tickets.map(t => {
+                        const globalIdx = myTickets.indexOf(t);
+                        return `
+                            <div class="ticket-group-item" onclick="viewTicketFromGroup(${globalIdx})">
+                                <div class="ticket-group-item-info">
+                                    <span class="ticket-type">${escapeHtml(t.ticket_type)}</span>
+                                    <span class="ticket-code">${t.code}</span>
+                                </div>
+                                <span class="status-badge ${t.status === 'ACTIVE' ? 'active' : 'used'}">
+                                    ${t.status === 'ACTIVE' ? 'Válida' : 'Usada'}
+                                </span>
+                                <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);margin-left:8px;font-size:12px;"></i>
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
             </div>
-        `).join('');
+        `;
+    }).join('');
+
+    // Auto-expand first group
+    const firstKey = Object.keys(groups)[0];
+    if (firstKey) toggleTicketGroup(firstKey);
+}
+
+function toggleTicketGroup(key) {
+    const body = document.getElementById(`group_${key}`);
+    const chevron = document.getElementById(`chevron_${key}`);
+    if (!body) return;
+
+    const isOpen = body.classList.contains('open');
+    // Close all groups first
+    document.querySelectorAll('.ticket-group-body').forEach(b => b.classList.remove('open'));
+    document.querySelectorAll('.ticket-group-chevron').forEach(c => c.classList.remove('open'));
+
+    if (!isOpen) {
+        body.classList.add('open');
+        if (chevron) chevron.classList.add('open');
     }
 }
 
-function viewTicketQR(index, tab) {
-    const list = tab === 'active' ? myTickets.filter(t => t.status === 'ACTIVE') : myTickets.filter(t => t.status !== 'ACTIVE');
-    viewingTicket = list[index];
+function viewTicketFromGroup(globalIdx) {
+    viewingTicket = myTickets[globalIdx];
     if (!viewingTicket) return;
-    
     showView('ticketQRView');
-    
+
     document.getElementById("qr_event_name").textContent = viewingTicket.event_name;
     document.getElementById("qr_event_date").textContent = formatDate(viewingTicket.event_date);
     document.getElementById("qr_code").textContent = viewingTicket.code;
     document.getElementById("qr_ticket_type").textContent = viewingTicket.ticket_type;
     document.getElementById("qr_holder_name").textContent = viewingTicket.user_name;
-    
+
     const statusEl = document.getElementById("qr_status");
     if (viewingTicket.status === 'ACTIVE') {
         statusEl.textContent = 'VÁLIDA';
@@ -1624,7 +1918,37 @@ function viewTicketQR(index, tab) {
         statusEl.textContent = 'USADA';
         statusEl.className = 'status-used';
     }
-    
+
+    const canvas = document.getElementById("qr_canvas");
+    if (window.QRCode && canvas) {
+        QRCode.toCanvas(canvas, viewingTicket.qr_data || viewingTicket.code, {
+            width: 200, margin: 2, color: { dark: '#000000', light: '#ffffff' }
+        });
+    }
+}
+
+function viewTicketQR(index, tab) {
+    const list = tab === 'active' ? myTickets.filter(t => t.status === 'ACTIVE') : myTickets.filter(t => t.status !== 'ACTIVE');
+    viewingTicket = list[index];
+    if (!viewingTicket) return;
+
+    showView('ticketQRView');
+
+    document.getElementById("qr_event_name").textContent = viewingTicket.event_name;
+    document.getElementById("qr_event_date").textContent = formatDate(viewingTicket.event_date);
+    document.getElementById("qr_code").textContent = viewingTicket.code;
+    document.getElementById("qr_ticket_type").textContent = viewingTicket.ticket_type;
+    document.getElementById("qr_holder_name").textContent = viewingTicket.user_name;
+
+    const statusEl = document.getElementById("qr_status");
+    if (viewingTicket.status === 'ACTIVE') {
+        statusEl.textContent = 'VÁLIDA';
+        statusEl.className = 'status-active';
+    } else {
+        statusEl.textContent = 'USADA';
+        statusEl.className = 'status-used';
+    }
+
     // Generar QR
     const canvas = document.getElementById("qr_canvas");
     if (window.QRCode && canvas) {
@@ -1700,7 +2024,7 @@ async function shareTicket() {
     } else {
         try {
             await navigator.clipboard.writeText(text);
-            toast("✅ Copiado al portapapeles");
+            toast("Copiado al portapapeles");
         } catch (e) {}
     }
 }
@@ -1921,7 +2245,7 @@ function toast(msg, type = 'info') {
     c.appendChild(t);
     setTimeout(() => {
         t.style.opacity = '0';
-        t.style.transform = 'translateY(20px)';
+        t.style.transform = 'translateY(-20px)';
         t.style.transition = 'all 0.3s ease';
         setTimeout(() => t.remove(), 300);
     }, 3000);
@@ -2112,7 +2436,7 @@ async function handleChangePassword() {
             updated_at: new Date().toISOString()
         });
 
-        toast("✅ Contraseña cambiada exitosamente");
+        toast("Contraseña cambiada exitosamente");
         closeModal('modalChangePassword');
 
     } catch (e) {
@@ -2132,6 +2456,66 @@ async function handleChangePassword() {
 
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-lock"></i> CAMBIAR CONTRASEÑA';
+}
+
+// ==========================================
+// CHANGE EMAIL
+// ==========================================
+function openChangeEmailModal() {
+    closeProfile();
+    document.getElementById("change_email_password").value = '';
+    document.getElementById("change_new_email").value = '';
+    openModal('modalChangeEmail');
+}
+
+async function handleChangeEmail() {
+    const password = document.getElementById("change_email_password").value;
+    const newEmail = document.getElementById("change_new_email").value.trim().toLowerCase();
+
+    if (!password) return toast("Ingresa tu contraseña actual");
+    if (!newEmail) return toast("Ingresa el nuevo email");
+    if (!validateEmail(newEmail)) return toast("Ingresa un email válido");
+
+    const btn = document.getElementById("btnChangeEmail");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> CAMBIANDO...';
+
+    try {
+        const user = auth.currentUser;
+        if (!user) throw new Error("No hay usuario autenticado");
+
+        const { EmailAuthProvider, reauthenticateWithCredential, updateEmail } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
+
+        const credential = EmailAuthProvider.credential(user.email, password);
+        await reauthenticateWithCredential(user, credential);
+        await updateEmail(user, newEmail);
+
+        // Update Firestore
+        await updateDoc(doc(db, "clientes", user.uid), {
+            email: newEmail,
+            updated_at: new Date().toISOString()
+        });
+
+        currentUserProfile.email = newEmail;
+        updateUserUI();
+        toast("Email cambiado exitosamente");
+        closeModal('modalChangeEmail');
+
+    } catch (e) {
+        console.error("Error cambiando email:", e);
+        let errorMsg = "Error al cambiar email";
+        if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
+            errorMsg = "La contraseña es incorrecta";
+        } else if (e.code === 'auth/email-already-in-use') {
+            errorMsg = "Este email ya está en uso";
+        } else if (e.code === 'auth/requires-recent-login') {
+            errorMsg = "Por seguridad, cierra sesión y vuelve a iniciar";
+        }
+        toast(errorMsg);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-envelope"></i> CAMBIAR EMAIL';
 }
 
 // ==========================================
@@ -2258,3 +2642,11 @@ window.linkAccountToProfile = linkAccountToProfile;
 window.logoutAndRestart = logoutAndRestart;
 window.backToStep1 = backToStep1;
 
+// v4.0.0 - Nuevas funciones
+window.toggleFavorite = toggleFavorite;
+window.goToNextEventTicket = goToNextEventTicket;
+window.toggleTicketGroup = toggleTicketGroup;
+window.viewTicketFromGroup = viewTicketFromGroup;
+window.viewTicketFromDetail = viewTicketFromDetail;
+window.openChangeEmailModal = openChangeEmailModal;
+window.handleChangeEmail = handleChangeEmail;
