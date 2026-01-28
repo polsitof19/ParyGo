@@ -1807,3 +1807,362 @@ input, select, textarea {
     font-size: 13px;
     color: var(--success);
 }
+
+/* ==========================================
+   SECCION 18: BUSCADOR DE EVENTOS
+   ========================================== */
+.search-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0 14px;
+    margin-bottom: 12px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-bar:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(255, 71, 87, 0.1);
+}
+
+.search-bar i {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.search-bar input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text);
+    padding: 13px 0;
+    font-family: inherit;
+    outline: none;
+}
+
+.search-bar input::placeholder {
+    color: var(--text-muted);
+}
+
+/* ==========================================
+   SECCION 19: FILTROS POR FECHA
+   ========================================== */
+.date-filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.date-filters::-webkit-scrollbar { display: none; }
+
+.date-filter-btn {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.date-filter-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+/* ==========================================
+   SECCION 20: COUNTDOWN EN EVENT CARDS
+   ========================================== */
+.event-card-countdown {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--primary);
+    margin-top: 8px;
+    padding: 4px 10px;
+    background: rgba(255, 71, 87, 0.1);
+    border-radius: 20px;
+}
+
+.event-card-countdown i {
+    font-size: 10px;
+}
+
+/* ==========================================
+   SECCION 21: MODO BRILLO PARA QR
+   ========================================== */
+.brightness-mode {
+    background: white !important;
+}
+
+.brightness-mode .ticket-card-full {
+    border-color: #ddd;
+}
+
+.brightness-mode .ticket-details {
+    background: white;
+}
+
+.brightness-mode .ticket-detail-row {
+    border-color: #eee;
+}
+
+.brightness-mode .ticket-detail-row span {
+    color: #666;
+}
+
+.brightness-mode .ticket-detail-row strong {
+    color: #111;
+}
+
+.brightness-mode .ticket-code {
+    background: #f5f5f5;
+}
+
+.brightness-mode .ticket-actions {
+    display: none;
+}
+
+.header-actions-qr {
+    display: flex;
+    gap: 6px;
+}
+
+/* ==========================================
+   SECCION 22: TOAST MEJORADO CON TIPOS
+   ========================================== */
+.toast {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 14px 18px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    animation: toastIn 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.toast-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.toast.toast-success {
+    border-left: 3px solid var(--green);
+}
+
+.toast.toast-success .toast-icon { color: var(--green); }
+
+.toast.toast-error {
+    border-left: 3px solid #ef4444;
+}
+
+.toast.toast-error .toast-icon { color: #ef4444; }
+
+.toast.toast-warning {
+    border-left: 3px solid var(--yellow);
+}
+
+.toast.toast-warning .toast-icon { color: var(--yellow); }
+
+.toast.toast-info {
+    border-left: 3px solid var(--blue);
+}
+
+.toast.toast-info .toast-icon { color: var(--blue); }
+
+/* ==========================================
+   SECCION 23: PULL TO REFRESH
+   ========================================== */
+.pull-to-refresh {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* ==========================================
+   SECCION 24: PERFIL MEJORADO
+   ========================================== */
+.profile-avatar-wrapper {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 12px;
+}
+
+.profile-avatar-edit {
+    position: absolute;
+    bottom: 0;
+    right: -4px;
+    width: 28px;
+    height: 28px;
+    background: var(--primary);
+    border: 2px solid var(--bg);
+    border-radius: 50%;
+    color: white;
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-avatar-wrapper .profile-avatar {
+    margin: 0;
+}
+
+.profile-item.clickable {
+    cursor: pointer;
+    transition: background 0.2s;
+    border-radius: var(--radius-sm);
+    padding: 14px 8px;
+    margin: 0 -8px;
+}
+
+.profile-item.clickable:active {
+    background: var(--bg-hover);
+}
+
+.profile-item-arrow {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-left: auto;
+}
+
+/* ==========================================
+   SECCION 25: HISTORIAL DE COMPRAS
+   ========================================== */
+.purchase-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.purchase-history-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+}
+
+.purchase-history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.purchase-history-event {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.purchase-history-status {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+}
+
+.purchase-history-status.approved {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--green);
+}
+
+.purchase-history-status.pending {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--yellow);
+}
+
+.purchase-history-status.rejected {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+.purchase-history-details {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.purchase-history-details span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ==========================================
+   SECCION 26: LOGOUT MODAL
+   ========================================== */
+.logout-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(239, 68, 68, 0.15);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 24px;
+    color: #ef4444;
+}
+
+/* ==========================================
+   SECCION 27: ANIMACIONES MEJORADAS
+   ========================================== */
+@keyframes fadeInScale {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.stagger-in {
+    animation: fadeInUp 0.4s ease-out forwards;
+}
+
+/* Ticket tabs counter badge */
+.tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-left: 4px;
+    padding: 0 5px;
+}
+
+.tab-btn.active .tab-badge {
+    background: rgba(255,255,255,0.3);
+}

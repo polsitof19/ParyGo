@@ -785,9 +785,10 @@ async function handleRegister() {
             updated_at: new Date().toISOString()
         });
 
-        toast("✅ ¡Cuenta creada exitosamente!");
+        toast("Cuenta creada exitosamente!");
+        launchConfetti();
 
-        // El onAuthStateChanged manejará la redirección
+        // El onAuthStateChanged manejara la redireccion
 
     } catch (e) {
         console.error("Error en registro:", e);
@@ -861,7 +862,13 @@ function updateUserUI() {
 
     ['header_avatar', 'profile_avatar'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.textContent = initials;
+        if (el) {
+            if (currentUserProfile.photo) {
+                el.innerHTML = `<img src="${currentUserProfile.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`;
+            } else {
+                el.textContent = initials;
+            }
+        }
     });
 
     const profileNameEl = document.getElementById("profile_name");
@@ -916,27 +923,103 @@ async function loadEvents() {
             .sort((a, b) => new Date(a.date) - new Date(b.date));
         
         if (!allEvents.length) {
-            container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i><p>No hay eventos próximos</p></div>';
+            container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i><h3>Sin eventos</h3><p>No hay eventos proximos</p></div>';
             return;
         }
-        
-        container.innerHTML = allEvents.map((e, i) => `
-            <div class="event-card" onclick="openEventDetail(${i})">
-                <img class="event-card-image" src="${e.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600'}" alt="${escapeHtml(e.name)}">
-                <div class="event-card-body">
-                    <div class="event-card-title">${escapeHtml(e.name)}</div>
-                    <div class="event-card-meta">
-                        <span><i class="fa-regular fa-calendar"></i> ${formatDate(e.date)}</span>
-                        <span><i class="fa-regular fa-clock"></i> ${e.time || '---'}</span>
-                    </div>
-                </div>
-            </div>
-        `).join('');
+
+        // Use the filter renderer for consistent display
+        renderFilteredEvents('', 'all');
         
     } catch (e) {
         console.error(e);
         container.innerHTML = '<div class="empty-state"><p>Error al cargar eventos</p></div>';
     }
+}
+
+let currentDateFilter = 'all';
+
+function filterEvents() {
+    const searchTerm = (document.getElementById("search_events")?.value || '').toLowerCase().trim();
+    renderFilteredEvents(searchTerm, currentDateFilter);
+}
+
+function filterByDate(filter) {
+    currentDateFilter = filter;
+    document.querySelectorAll('.date-filter-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.date-filter-btn[onclick*="${filter}"]`)?.classList.add('active');
+    const searchTerm = (document.getElementById("search_events")?.value || '').toLowerCase().trim();
+    renderFilteredEvents(searchTerm, filter);
+}
+
+function renderFilteredEvents(searchTerm, dateFilter) {
+    const container = document.getElementById("events_list");
+    let filtered = [...allEvents];
+
+    // Filter by search
+    if (searchTerm) {
+        filtered = filtered.filter(e =>
+            (e.name || '').toLowerCase().includes(searchTerm) ||
+            (e.venue || '').toLowerCase().includes(searchTerm) ||
+            (e.location || '').toLowerCase().includes(searchTerm)
+        );
+    }
+
+    // Filter by date
+    const now = new Date();
+    if (dateFilter === 'week') {
+        const endOfWeek = new Date(now);
+        endOfWeek.setDate(endOfWeek.getDate() + 7);
+        filtered = filtered.filter(e => {
+            const d = new Date(e.date);
+            return d >= now && d <= endOfWeek;
+        });
+    } else if (dateFilter === 'month') {
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        filtered = filtered.filter(e => {
+            const d = new Date(e.date);
+            return d >= now && d <= endOfMonth;
+        });
+    }
+
+    if (!filtered.length) {
+        container.innerHTML = `<div class="empty-state"><i class="fa-solid fa-search"></i><h3>Sin resultados</h3><p>${searchTerm ? 'No se encontraron eventos' : 'No hay eventos en este periodo'}</p></div>`;
+        return;
+    }
+
+    container.innerHTML = filtered.map((e, i) => {
+        const origIndex = allEvents.indexOf(e);
+        const countdown = getCountdown(e.date, e.time);
+        return `
+            <div class="event-card" onclick="openEventDetail(${origIndex})">
+                <img class="event-card-image" src="${e.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600'}" alt="${escapeHtml(e.name)}" loading="lazy">
+                <div class="event-card-body">
+                    <div class="event-card-title">${escapeHtml(e.name)}</div>
+                    <div class="event-card-meta">
+                        <span><i class="fa-regular fa-calendar"></i> ${formatDate(e.date)}</span>
+                        <span><i class="fa-regular fa-clock"></i> ${e.time || '---'}</span>
+                        ${e.venue ? `<span><i class="fa-solid fa-location-dot"></i> ${escapeHtml(e.venue)}</span>` : ''}
+                    </div>
+                    ${countdown ? `<div class="event-card-countdown"><i class="fa-solid fa-fire"></i> ${countdown}</div>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function getCountdown(dateStr, timeStr) {
+    if (!dateStr) return '';
+    const eventDate = new Date(dateStr + (timeStr ? `T${timeStr}` : ''));
+    const now = new Date();
+    const diff = eventDate - now;
+    if (diff <= 0) return '';
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+    if (days === 0) return `En ${hours}h`;
+    if (days === 1) return 'Manana';
+    if (days <= 7) return `En ${days} dias`;
+    return '';
 }
 
 function openEventDetail(index) {
@@ -1074,9 +1157,9 @@ async function confirmRedeem() {
         await addDoc(collection(db, "tickets"), {
             user_id: currentUser.uid,
             user_name: fullName,
-            user_doc: currentUserProfile.doc_number,
-            user_phone: currentUserProfile.phone,
-            user_email: currentUserProfile.email,
+            user_doc: currentUserProfile?.doc_number || currentUserProfile?.dni || '',
+            user_phone: currentUserProfile?.phone || '',
+            user_email: currentUserProfile?.email || '',
             event_id: currentEvent.id,
             event_name: currentEvent.name,
             event_date: currentEvent.date,
@@ -1094,6 +1177,7 @@ async function confirmRedeem() {
         pendingRedeemData = null;
 
         openModal('modalCodeSuccess');
+        launchConfetti();
         loadMyTickets();
 
     } catch (e) {
@@ -1166,9 +1250,9 @@ async function claimFreeTickets() {
             await addDoc(collection(db, "tickets"), {
                 user_id: currentUser.uid,
                 user_name: fullName,
-                user_doc: currentUserProfile.doc_number,
-                user_phone: currentUserProfile.phone,
-                user_email: currentUserProfile.email,
+                user_doc: currentUserProfile?.doc_number || currentUserProfile?.dni || '',
+                user_phone: currentUserProfile?.phone || '',
+                user_email: currentUserProfile?.email || '',
                 event_id: currentEvent.id,
                 event_name: currentEvent.name,
                 event_date: currentEvent.date,
@@ -1187,8 +1271,9 @@ async function claimFreeTickets() {
         toast(`${qty} entrada${qty > 1 ? 's' : ''} generada${qty > 1 ? 's' : ''}`);
         loadMyTickets();
 
-        // Mostrar éxito
+        // Mostrar exito con confetti
         openModal('modalFreeSuccess');
+        launchConfetti();
 
     } catch (e) {
         console.error(e);
@@ -1440,7 +1525,19 @@ async function loadMyTickets() {
 function openMyTickets() {
     showView('myTicketsView');
     updateNavActive(1);
+    updateTicketTabCounters();
     renderMyTickets();
+}
+
+function updateTicketTabCounters() {
+    const activeCount = myTickets.filter(t => t.status === 'ACTIVE').length;
+    const pendingCount = myPurchases.length;
+    const usedCount = myTickets.filter(t => t.status === 'SCANNED' || t.status === 'USED').length;
+
+    const tabs = document.querySelectorAll('.tickets-tabs .tab-btn');
+    if (tabs[0]) tabs[0].innerHTML = `Activas <span class="tab-badge">${activeCount}</span>`;
+    if (tabs[1]) tabs[1].innerHTML = `Pendientes <span class="tab-badge">${pendingCount}</span>`;
+    if (tabs[2]) tabs[2].innerHTML = `Usadas <span class="tab-badge">${usedCount}</span>`;
 }
 
 function switchTicketTab(tab) {
@@ -1544,15 +1641,53 @@ function backToMyTickets() {
     showView('myTicketsView');
 }
 
-function downloadTicket() {
-    const canvas = document.getElementById("qr_canvas");
-    if (!canvas) return;
+let brightnessMode = false;
 
+function toggleBrightness() {
+    brightnessMode = !brightnessMode;
+    const content = document.querySelector('.ticket-qr-content');
+    if (content) {
+        content.classList.toggle('brightness-mode', brightnessMode);
+    }
+    // Increase screen brightness hint
+    if (brightnessMode) {
+        toast('Modo brillo activado para escaneo', 'info');
+    }
+}
+
+async function downloadTicket() {
+    const captureEl = document.getElementById("ticketCardCapture");
+    if (!captureEl) return;
+
+    // Try html2canvas for full ticket image
+    if (window.html2canvas) {
+        try {
+            toast('Generando imagen...', 'info');
+            const canvas = await html2canvas(captureEl.querySelector('.ticket-card-full'), {
+                backgroundColor: '#1a1a1a',
+                scale: 2,
+                useCORS: true,
+                logging: false
+            });
+            const link = document.createElement('a');
+            link.download = `entrada-${viewingTicket?.code || 'ticket'}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            toast('Entrada descargada exitosamente');
+            return;
+        } catch (e) {
+            console.error('html2canvas error:', e);
+        }
+    }
+
+    // Fallback: download QR only
+    const qrCanvas = document.getElementById("qr_canvas");
+    if (!qrCanvas) return;
     const link = document.createElement('a');
     link.download = `entrada-${viewingTicket?.code || 'ticket'}.png`;
-    link.href = canvas.toDataURL();
+    link.href = qrCanvas.toDataURL();
     link.click();
-    toast("✅ Entrada descargada");
+    toast('Entrada descargada exitosamente');
 }
 
 async function shareTicket() {
@@ -1583,12 +1718,157 @@ function closeProfile() {
     setTimeout(() => document.getElementById("profileOverlay").classList.add("hidden"), 300);
 }
 
-async function doLogout() {
-    if (!confirm("¿Cerrar sesión?")) return;
+function doLogout() {
+    openModal('modalLogout');
+}
+
+async function confirmLogout() {
+    closeModal('modalLogout');
     await signOut(auth);
     currentUser = null;
     currentUserProfile = null;
     location.reload();
+}
+
+// ==========================================
+// PROFILE PHOTO
+// ==========================================
+function uploadProfilePhoto() {
+    document.getElementById("profile_photo_input")?.click();
+}
+
+async function handleProfilePhoto(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+        const base64 = await fileToBase64(file);
+
+        // Update Firestore
+        await updateDoc(doc(db, "clientes", currentUser.uid), {
+            photo: base64,
+            updated_at: new Date().toISOString()
+        });
+
+        currentUserProfile.photo = base64;
+        updateUserUI();
+        toast('Foto actualizada exitosamente');
+    } catch (e) {
+        console.error(e);
+        toast('Error al subir foto');
+    }
+}
+
+// ==========================================
+// PURCHASE HISTORY
+// ==========================================
+async function openPurchaseHistory() {
+    closeProfile();
+    openModal('modalPurchaseHistory');
+
+    const container = document.getElementById("purchase_history_content");
+    container.innerHTML = `
+        <div class="skeleton skeleton-card" style="height:80px;"></div>
+        <div class="skeleton skeleton-card" style="height:80px;"></div>
+    `;
+
+    try {
+        // Load all sales for this user and brand
+        const q = query(
+            collection(db, "sales"),
+            where("client_id", "==", currentUser.uid),
+            where("brand_id", "==", currentBrandId)
+        );
+        const snap = await getDocs(q);
+        const sales = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        if (!sales.length) {
+            container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-receipt"></i><h3>Sin compras</h3><p>No tienes compras registradas</p></div>';
+            return;
+        }
+
+        // Sort by date desc
+        sales.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        container.innerHTML = `<div class="purchase-history-list">${sales.map(s => {
+            const statusMap = {
+                'PENDING': { label: 'Pendiente', cls: 'pending' },
+                'APPROVED': { label: 'Aprobada', cls: 'approved' },
+                'REJECTED': { label: 'Rechazada', cls: 'rejected' }
+            };
+            const st = statusMap[s.status] || statusMap['PENDING'];
+            return `
+                <div class="purchase-history-item">
+                    <div class="purchase-history-header">
+                        <span class="purchase-history-event">${escapeHtml(s.event_name || 'Evento')}</span>
+                        <span class="purchase-history-status ${st.cls}">${st.label}</span>
+                    </div>
+                    <div class="purchase-history-details">
+                        <span><i class="fa-solid fa-ticket"></i> ${s.quantity || 1}x ${escapeHtml(s.ticket_name || '')}</span>
+                        <span><i class="fa-solid fa-dollar-sign"></i> S/. ${(s.total || s.total_price || 0).toFixed(2)}</span>
+                        <span><i class="fa-regular fa-calendar"></i> ${formatDate(s.created_at)}</span>
+                    </div>
+                </div>
+            `;
+        }).join('')}</div>`;
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<div class="empty-state"><p>Error al cargar historial</p></div>';
+    }
+}
+
+// ==========================================
+// CONFETTI HELPER
+// ==========================================
+function launchConfetti() {
+    if (window.confetti) {
+        confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#ff4757', '#ff6b7a', '#10b981', '#3b82f6', '#f59e0b']
+        });
+    }
+}
+
+// ==========================================
+// PULL TO REFRESH
+// ==========================================
+function setupPullToRefresh() {
+    let startY = 0;
+    let pulling = false;
+    const threshold = 80;
+
+    const eventsMain = document.querySelector('.events-main');
+    if (!eventsMain) return;
+
+    eventsMain.addEventListener('touchstart', (e) => {
+        if (eventsMain.scrollTop === 0) {
+            startY = e.touches[0].clientY;
+            pulling = true;
+        }
+    }, { passive: true });
+
+    eventsMain.addEventListener('touchmove', (e) => {
+        if (!pulling) return;
+        const diff = e.touches[0].clientY - startY;
+        if (diff > threshold) {
+            const indicator = document.getElementById("pullToRefresh");
+            if (indicator) indicator.classList.remove("hidden");
+        }
+    }, { passive: true });
+
+    eventsMain.addEventListener('touchend', async () => {
+        if (!pulling) return;
+        pulling = false;
+        const indicator = document.getElementById("pullToRefresh");
+        if (indicator && !indicator.classList.contains("hidden")) {
+            await loadEvents();
+            await loadMyTickets();
+            indicator.classList.add("hidden");
+            toast('Actualizado', 'success');
+        }
+    }, { passive: true });
 }
 
 // ==========================================
@@ -1619,14 +1899,32 @@ function formatDate(dateStr) {
     return d.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
-function toast(msg) {
+function toast(msg, type = 'info') {
     const c = document.getElementById("toast-container");
     if (!c) return;
+
+    // Auto-detect type from message
+    if (msg.includes('Error') || msg.includes('error') || msg.includes('incorrec')) type = 'error';
+    else if (msg.includes('exitosa') || msg.includes('creada') || msg.includes('generada') || msg.includes('cambiada') || msg.includes('canjeado') || msg.includes('Copiado') || msg.includes('vinculada') || msg.includes('Bienvenido') || msg.includes('encontrados') || msg.includes('descargada')) type = 'success';
+    else if (msg.includes('Ingresa') || msg.includes('debe') || msg.includes('obligatorio') || msg.includes('Demasiados')) type = 'warning';
+
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-circle-xmark',
+        warning: 'fa-triangle-exclamation',
+        info: 'fa-circle-info'
+    };
+
     const t = document.createElement("div");
-    t.className = "toast";
-    t.textContent = msg;
+    t.className = `toast toast-${type}`;
+    t.innerHTML = `<i class="fa-solid ${icons[type] || icons.info} toast-icon"></i><span>${escapeHtml(msg)}</span>`;
     c.appendChild(t);
-    setTimeout(() => t.remove(), 3000);
+    setTimeout(() => {
+        t.style.opacity = '0';
+        t.style.transform = 'translateY(20px)';
+        t.style.transition = 'all 0.3s ease';
+        setTimeout(() => t.remove(), 300);
+    }, 3000);
 }
 
 // ==========================================
@@ -1858,12 +2156,15 @@ function setupEventListeners() {
         if (e.key === "Enter") window.handleRegister();
     });
 
-    // Modales
+    // Modales - cerrar al hacer clic fuera
     document.querySelectorAll('.modal').forEach(m => {
         m.addEventListener('click', e => {
             if (e.target === m) m.classList.add('hidden');
         });
     });
+
+    // Pull to refresh
+    setupPullToRefresh();
 }
 
 // ==========================================
@@ -1936,9 +2237,20 @@ console.log('✅ Funciones expuestas en window:', {
 window.openProfile = openProfile;
 window.closeProfile = closeProfile;
 window.doLogout = doLogout;
+window.confirmLogout = confirmLogout;
+window.uploadProfilePhoto = uploadProfilePhoto;
+window.handleProfilePhoto = handleProfilePhoto;
+window.openPurchaseHistory = openPurchaseHistory;
 
 // Modales
 window.closeModal = closeModal;
+
+// Eventos - búsqueda y filtros
+window.filterEvents = filterEvents;
+window.filterByDate = filterByDate;
+
+// QR - brillo
+window.toggleBrightness = toggleBrightness;
 
 // Otras
 window.selectDocType = selectDocType;

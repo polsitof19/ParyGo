@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="assets/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="cliente.css?v=2.0.0">
+    <link rel="stylesheet" href="cliente.css?v=3.0.0">
 </head>
 <body>
 
@@ -180,10 +180,30 @@
             </div>
         </header>
 
+        <!-- Pull to refresh indicator -->
+        <div id="pullToRefresh" class="pull-to-refresh hidden">
+            <i class="fa-solid fa-arrows-rotate fa-spin"></i>
+            <span>Actualizando...</span>
+        </div>
+
         <main class="events-main">
-            <h2 class="section-title">Próximos Eventos</h2>
+            <h2 class="section-title">Proximos Eventos</h2>
+
+            <!-- Buscador de eventos -->
+            <div class="search-bar">
+                <i class="fa-solid fa-search"></i>
+                <input type="text" id="search_events" placeholder="Buscar evento..." oninput="filterEvents()">
+            </div>
+
+            <!-- Filtros por fecha -->
+            <div class="date-filters">
+                <button class="date-filter-btn active" onclick="filterByDate('all')">Todos</button>
+                <button class="date-filter-btn" onclick="filterByDate('week')">Esta semana</button>
+                <button class="date-filter-btn" onclick="filterByDate('month')">Este mes</button>
+            </div>
+
             <div id="events_list" class="events-list">
-                <!-- Se llena dinámicamente -->
+                <!-- Se llena dinamicamente -->
             </div>
         </main>
 
@@ -289,12 +309,17 @@
                 <i class="fa-solid fa-arrow-left"></i>
             </button>
             <span>Mi Entrada</span>
-            <button class="btn-icon-header" onclick="downloadTicket()">
-                <i class="fa-solid fa-download"></i>
-            </button>
+            <div class="header-actions-qr">
+                <button class="btn-icon-header" onclick="toggleBrightness()" title="Modo brillo">
+                    <i class="fa-solid fa-sun"></i>
+                </button>
+                <button class="btn-icon-header" onclick="downloadTicket()">
+                    <i class="fa-solid fa-download"></i>
+                </button>
+            </div>
         </header>
 
-        <div class="ticket-qr-content">
+        <div class="ticket-qr-content" id="ticketCardCapture">
             <div class="ticket-card-full">
                 <div class="ticket-event-info">
                     <h2 id="qr_event_name">Nombre del Evento</h2>
@@ -316,11 +341,11 @@
                     </div>
                     <div class="ticket-detail-row">
                         <span>Titular</span>
-                        <strong id="qr_holder_name">Juan Pérez</strong>
+                        <strong id="qr_holder_name">Juan Perez</strong>
                     </div>
                     <div class="ticket-detail-row">
                         <span>Estado</span>
-                        <strong id="qr_status" class="status-active">VÁLIDA</strong>
+                        <strong id="qr_status" class="status-active">VALIDA</strong>
                     </div>
                 </div>
             </div>
@@ -706,7 +731,13 @@
     <div id="profileOverlay" class="overlay hidden" onclick="closeProfile()"></div>
     <div id="profileDrawer" class="drawer">
         <div class="drawer-header">
-            <div class="profile-avatar" id="profile_avatar">US</div>
+            <div class="profile-avatar-wrapper">
+                <div class="profile-avatar" id="profile_avatar">US</div>
+                <button class="profile-avatar-edit" onclick="uploadProfilePhoto()">
+                    <i class="fa-solid fa-camera"></i>
+                </button>
+                <input type="file" id="profile_photo_input" accept="image/*" hidden onchange="handleProfilePhoto(event)">
+            </div>
             <h2 id="profile_name">Nombre</h2>
             <span class="profile-doc" id="profile_doc">DNI: 12345678</span>
         </div>
@@ -721,23 +752,67 @@
             <div class="profile-item">
                 <i class="fa-solid fa-phone"></i>
                 <div>
-                    <label>Teléfono</label>
+                    <label>Telefono</label>
                     <span id="profile_phone">---</span>
                 </div>
             </div>
-            <div class="profile-item" onclick="openChangePasswordModal()" style="cursor: pointer;">
+            <div class="profile-item clickable" onclick="openChangePasswordModal()">
                 <i class="fa-solid fa-lock"></i>
                 <div>
-                    <label>CONTRASEÑA</label>
-                    <span>Cambiar contraseña</span>
+                    <label>Contrasena</label>
+                    <span>Cambiar contrasena</span>
                 </div>
+                <i class="fa-solid fa-chevron-right profile-item-arrow"></i>
+            </div>
+            <div class="profile-item clickable" onclick="openPurchaseHistory()">
+                <i class="fa-solid fa-receipt"></i>
+                <div>
+                    <label>Historial</label>
+                    <span>Mis compras</span>
+                </div>
+                <i class="fa-solid fa-chevron-right profile-item-arrow"></i>
             </div>
         </div>
         <div class="drawer-footer">
             <button class="btn-logout" onclick="doLogout()">
                 <i class="fa-solid fa-right-from-bracket"></i>
-                Cerrar Sesión
+                Cerrar Sesion
             </button>
+        </div>
+    </div>
+
+    <!-- ============ MODAL: HISTORIAL DE COMPRAS ============ -->
+    <div id="modalPurchaseHistory" class="modal hidden">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-receipt"></i> Mis Compras</h2>
+                <button class="modal-close" onclick="closeModal('modalPurchaseHistory')">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="purchase_history_content">
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card" style="height:80px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL: CONFIRMAR LOGOUT ============ -->
+    <div id="modalLogout" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-body" style="text-align:center; padding:30px 20px;">
+                <div class="logout-icon">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </div>
+                <h3 style="margin-bottom:8px;">Cerrar sesion</h3>
+                <p class="text-muted" style="margin-bottom:24px;">Tendras que iniciar sesion nuevamente para acceder a tus entradas.</p>
+                <div class="redeem-actions">
+                    <button class="btn-secondary" onclick="closeModal('modalLogout')">Cancelar</button>
+                    <button class="btn-primary" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="confirmLogout()">
+                        <i class="fa-solid fa-right-from-bracket"></i> Salir
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -746,6 +821,8 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-    <script type="module" src="js/cliente.js?v=2.0.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <script type="module" src="js/cliente.js?v=3.0.0"></script>
 </body>
 </html>
