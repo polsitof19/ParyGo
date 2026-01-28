@@ -969,9 +969,9 @@ function renderTicketsForSale() {
                 <h4>${escapeHtml(t.name)}</h4>
                 <span>${t.isFree || t.price === 0 ? 'Entrada gratuita' : ''}</span>
             </div>
-            ${t.price > 0 
+            ${t.price > 0
                 ? `<button class="ticket-item-btn" onclick="openBuyModal(${i})">S/. ${Number(t.price).toFixed(2)}</button>`
-                : `<span class="ticket-item-price">GRATIS</span>`
+                : `<button class="ticket-item-btn free" onclick="openFreeTicketModal(${i})">GRATIS</button>`
             }
         </div>
     `).join('');
@@ -1114,6 +1114,91 @@ function generateQRData(code) {
     const signature = btoa(`${data.c}-${data.e}-${data.u}-${data.t}`).substring(0, 16);
     data.s = signature;
     return btoa(JSON.stringify(data));
+}
+
+// ==========================================
+// OBTENER ENTRADA GRATUITA
+// ==========================================
+let freeTicketState = {
+    ticketType: null,
+    quantity: 1
+};
+
+function openFreeTicketModal(ticketIndex) {
+    const ticket = currentEvent?.tickets?.[ticketIndex];
+    if (!ticket) return;
+    if (!currentUserProfile) return toast("Inicia sesión para obtener entradas");
+
+    freeTicketState.ticketType = ticket;
+    freeTicketState.quantity = 1;
+
+    document.getElementById("free_ticket_name").textContent = ticket.name;
+    document.getElementById("free_qty").textContent = '1';
+
+    openModal('modalFreeTicket');
+}
+
+function changeFreeQty(delta) {
+    freeTicketState.quantity = Math.max(1, Math.min(5, freeTicketState.quantity + delta));
+    document.getElementById("free_qty").textContent = freeTicketState.quantity;
+}
+
+async function claimFreeTickets() {
+    if (!currentEvent || !currentUserProfile || !freeTicketState.ticketType) {
+        return toast("Error: datos incompletos");
+    }
+
+    const btn = document.querySelector('#modalFreeTicket .btn-primary');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
+    }
+
+    try {
+        const fullName = `${currentUserProfile.name || ''} ${currentUserProfile.lastname || ''}`.trim();
+        const ticketType = freeTicketState.ticketType;
+        const qty = freeTicketState.quantity;
+
+        for (let i = 0; i < qty; i++) {
+            const code = `FREE-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+            const qrData = generateQRData(code);
+
+            await addDoc(collection(db, "tickets"), {
+                user_id: currentUser.uid,
+                user_name: fullName,
+                user_doc: currentUserProfile.doc_number,
+                user_phone: currentUserProfile.phone,
+                user_email: currentUserProfile.email,
+                event_id: currentEvent.id,
+                event_name: currentEvent.name,
+                event_date: currentEvent.date,
+                brand_id: currentBrandId,
+                ticket_type: ticketType.name,
+                code: code,
+                qr_data: qrData,
+                type: 'FREE',
+                price_paid: 0,
+                status: 'ACTIVE',
+                created_at: new Date().toISOString()
+            });
+        }
+
+        closeModal('modalFreeTicket');
+        toast(`${qty} entrada${qty > 1 ? 's' : ''} generada${qty > 1 ? 's' : ''}`);
+        loadMyTickets();
+
+        // Mostrar éxito
+        openModal('modalFreeSuccess');
+
+    } catch (e) {
+        console.error(e);
+        toast("Error al generar entradas");
+    }
+
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> OBTENER ENTRADAS';
+    }
 }
 
 // ==========================================
@@ -1817,6 +1902,11 @@ window.downloadTicket = downloadTicket;
 window.shareTicket = shareTicket;
 window.redeemCode = redeemCode;
 window.confirmRedeem = confirmRedeem;
+
+// Entradas gratuitas
+window.openFreeTicketModal = openFreeTicketModal;
+window.changeFreeQty = changeFreeQty;
+window.claimFreeTickets = claimFreeTickets;
 
 // Compra
 window.openBuyModal = openBuyModal;

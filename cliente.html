@@ -336,6 +336,62 @@
         </div>
     </div>
 
+    <!-- ============ MODAL: ENTRADA GRATUITA ============ -->
+    <div id="modalFreeTicket" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-ticket"></i> Entrada Gratuita</h2>
+                <button class="modal-close" onclick="closeModal('modalFreeTicket')">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="ticket-selected">
+                    <div class="ticket-selected-info">
+                        <span class="ticket-type-name" id="free_ticket_name">General</span>
+                        <span class="ticket-type-price" style="color:var(--success);">GRATIS</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>¿Cuántas entradas?</label>
+                    <div class="qty-selector">
+                        <button class="qty-btn" onclick="changeFreeQty(-1)">−</button>
+                        <span id="free_qty">1</span>
+                        <button class="qty-btn" onclick="changeFreeQty(1)">+</button>
+                    </div>
+                </div>
+
+                <div class="free-ticket-note">
+                    <i class="fa-solid fa-info-circle"></i>
+                    <span>Las entradas se generarán inmediatamente con código QR.</span>
+                </div>
+
+                <button class="btn-primary full" onclick="claimFreeTickets()">
+                    <i class="fa-solid fa-check"></i> OBTENER ENTRADAS
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL: ÉXITO ENTRADA GRATUITA ============ -->
+    <div id="modalFreeSuccess" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-body">
+                <div class="success-state">
+                    <div class="success-icon">
+                        <i class="fa-solid fa-check-circle"></i>
+                    </div>
+                    <h3>¡Entradas generadas!</h3>
+                    <p>Tus entradas ya están listas con código QR.</p>
+                    <button class="btn-primary" onclick="closeModal('modalFreeSuccess'); openMyTickets();">
+                        VER MIS ENTRADAS
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ============ MODAL: COMPRAR ENTRADA ============ -->
     <div id="modalBuy" class="modal hidden">
         <div class="modal-content modal-large">
