@@ -435,23 +435,40 @@ export async function confirmApproveSale() {
             const ticketRef = doc(collection(db, APP_CONFIG.COLLECTIONS.TICKETS));
             const code = `TKT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
             
-            transaction.set(ticketRef, {
+            const ticketData = {
                 company_id: sale.company_id || "",
                 event_id: sale.event_id,
-                promoter_id: sale.promoter_id,
-                promoter_name: sale.promoter_name,
-                ticket_id: sale.ticket_id,
-                ticket_name: sale.ticket_name,
-                client_name: sale.full_name || sale.client_name,
-                client_dni: sale.client_dni,
+                event_name: sale.event_name || "",
+                event_date: sale.event_date || "",
+                brand_id: sale.brand_id || "",
+                user_id: sale.client_id || "",
+                user_name: sale.full_name || sale.client_name || "",
+                user_doc: sale.client_dni || "",
+                user_email: sale.client_email || "",
+                user_phone: sale.client_phone || "",
+                ticket_id: sale.ticket_id || "",
+                ticket_name: sale.ticket_name || "",
+                ticket_type: sale.ticket_name || "",
+                client_name: sale.full_name || sale.client_name || "",
+                client_dni: sale.client_dni || "",
                 is_free: false,
-                price_paid: sale.total_price,
+                price_paid: sale.total_price || sale.total || 0,
                 qr_token: code,
-                status: 'CLAIMED',
+                qr_data: code,
+                code: code,
+                status: 'ACTIVE',
                 sale_id: id,
                 operation_number: operationNumber,
                 created_at: new Date().toISOString()
-            });
+            };
+
+            // Solo agregar campos de promotor si existen
+            if (sale.promoter_id) {
+                ticketData.promoter_id = sale.promoter_id;
+                ticketData.promoter_name = sale.promoter_name || "";
+            }
+
+            transaction.set(ticketRef, ticketData);
         });
         
         // Cerrar modal y actualizar

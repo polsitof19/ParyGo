@@ -1636,6 +1636,7 @@ async function sendPaymentProof() {
             // Campos compartidos
             event_id: currentEvent.id,
             event_name: currentEvent.name,
+            event_date: currentEvent.date || '',
             brand_id: currentBrandId,
             quantity: buyState.quantity,
             unit_price: buyState.unitPrice,
