@@ -1681,8 +1681,8 @@ function fileToBase64(file) {
 async function loadMyTickets() {
     if (!currentUser || !currentBrandId) return;
 
+    // Cargar tickets de ESTA marca
     try {
-        // Cargar tickets de ESTA marca
         const qTickets = query(
             collection(db, "tickets"),
             where("user_id", "==", currentUser.uid),
@@ -1690,8 +1690,13 @@ async function loadMyTickets() {
         );
         const snapTickets = await getDocs(qTickets);
         myTickets = snapTickets.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (e) {
+        console.error('Error loading tickets:', e);
+        myTickets = [];
+    }
 
-        // Cargar compras pendientes de ESTA marca (ahora en colección sales)
+    // Cargar compras pendientes de ESTA marca (separado para que un error no bloquee tickets)
+    try {
         const qPurchases = query(
             collection(db, "sales"),
             where("client_id", "==", currentUser.uid),
@@ -1700,21 +1705,21 @@ async function loadMyTickets() {
         );
         const snapPurchases = await getDocs(qPurchases);
         myPurchases = snapPurchases.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        // Actualizar badge
-        const activeCount = myTickets.filter(t => t.status === 'ACTIVE').length;
-        const badge = document.getElementById("tickets_count");
-        if (badge) {
-            badge.textContent = activeCount;
-            badge.classList.toggle('hidden', activeCount === 0);
-        }
-
-        renderNextEventWidget();
-        updateFAB();
-
     } catch (e) {
-        console.error(e);
+        console.error('Error loading purchases:', e);
+        myPurchases = [];
     }
+
+    // Actualizar badge
+    const activeCount = myTickets.filter(t => t.status === 'ACTIVE').length;
+    const badge = document.getElementById("tickets_count");
+    if (badge) {
+        badge.textContent = activeCount;
+        badge.classList.toggle('hidden', activeCount === 0);
+    }
+
+    renderNextEventWidget();
+    updateFAB();
 }
 
 function openMyTickets() {
@@ -1950,6 +1955,34 @@ async function populateTicketQR(ticket) {
     await generateTicketQR(ticket);
 }
 
+function loadQRCodeScript() {
+    return new Promise((resolve, reject) => {
+        if (window.QRCode) return resolve();
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error('Failed to load QRCode script'));
+        document.head.appendChild(s);
+    });
+}
+
+async function ensureQRCode() {
+    if (window.QRCode) return true;
+    // Wait briefly for the static script tag to finish loading
+    for (let i = 0; i < 10; i++) {
+        await new Promise(r => setTimeout(r, 100));
+        if (window.QRCode) return true;
+    }
+    // Fallback: load dynamically
+    try {
+        await loadQRCodeScript();
+        return !!window.QRCode;
+    } catch (e) {
+        console.error('ensureQRCode: failed to load library', e);
+        return false;
+    }
+}
+
 async function generateTicketQR(ticket) {
     const imgEl = document.getElementById("qr_image");
     if (!imgEl || !ticket) {
@@ -1963,15 +1996,9 @@ async function generateTicketQR(ticket) {
         return;
     }
 
-    // Wait for QR library to load (max ~4 seconds)
-    let attempts = 0;
-    while (!window.QRCode && attempts < 20) {
-        await new Promise(r => setTimeout(r, 200));
-        attempts++;
-    }
-
-    if (!window.QRCode) {
-        console.error('generateTicketQR: QRCode library not loaded');
+    const loaded = await ensureQRCode();
+    if (!loaded) {
+        console.error('generateTicketQR: QRCode library not available');
         return;
     }
 

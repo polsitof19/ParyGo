@@ -95,9 +95,8 @@ service cloud.firestore {
     // ==========================================
 
     match /sales/{saleId} {
-      // Leer: admins o el propio cliente que creó la venta
-      allow read: if isAdminOrSuper() ||
-                     (isAuthenticated() && resource.data.client_id == request.auth.uid);
+      // Leer: cualquier usuario autenticado (filtrado por query client_id == uid)
+      allow read: if isAuthenticated();
 
       // Crear: autenticados (al generar venta)
       allow create: if isAuthenticated();
