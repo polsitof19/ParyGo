@@ -1958,7 +1958,7 @@ async function populateTicketQR(ticket) {
 function generateTicketQR(ticket) {
     const container = document.getElementById("ticketQRContainer");
     if (!container) {
-        console.warn('generateTicketQR: container ticketQRContainer no encontrado');
+        console.warn('generateTicketQR: container no encontrado');
         return;
     }
     if (!ticket) {
@@ -1966,9 +1966,10 @@ function generateTicketQR(ticket) {
         return;
     }
 
-    const qrData = ticket.qr_data || ticket.code;
-    if (!qrData) {
-        console.warn('generateTicketQR: no qr_data or code in ticket', ticket.id);
+    // Usar SOLO el código corto del ticket (compatible con scanner)
+    const qrCode = ticket.code || ticket.qr_token || '';
+    if (!qrCode) {
+        console.warn('generateTicketQR: no code in ticket', ticket.id);
         return;
     }
 
@@ -1978,14 +1979,13 @@ function generateTicketQR(ticket) {
     try {
         if (typeof QRCode !== 'undefined') {
             new QRCode(container, {
-                text: qrData,
+                text: qrCode,
                 width: 200,
                 height: 200,
                 colorDark: '#000000',
                 colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.H
+                correctLevel: QRCode.CorrectLevel.L
             });
-            console.log('QR generado exitosamente');
         } else {
             console.error('generateTicketQR: QRCode library not available');
             container.innerHTML = '<p style="color:#999;font-size:12px;">Error cargando QR</p>';
