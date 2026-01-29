@@ -9,7 +9,10 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(npm install:*)",
-      "Bash(node test-cliente.js:*)"
+      "Bash(node test-cliente.js:*)",
+      "mcp__filesystem__list_directory",
+      "Bash(git -C \"C:\\\\Users\\\\pauls\\\\Desktop\\\\nuevo admin\\\\ParyGo\" log -1)",
+      "Bash(npx claude-code-templates@latest:*)"
     ]
   }
 }

@@ -1,5 +1,5 @@
 // ==========================================
-// PARYGO CLIENTE - PORTAL MULTI-MARCA v4.0.0
+// PARYGO CLIENTE - PORTAL MULTI-MARCA v5.0.0
 // Sistema de subdominios: code.parygo.com
 // ==========================================
 
@@ -52,7 +52,8 @@ let allEvents = [];
 let currentEvent = null;
 let myTickets = [];
 let myPurchases = [];
-let currentTicketTab = 'upcoming'; // v4.0.0 - Changed from 'active'
+let currentTicketTab = 'upcoming';
+let ticketQROrigin = 'myTicketsView'; // v5.0.0 - Track where user came from
 let viewingTicket = null;
 let favorites = JSON.parse(localStorage.getItem('parygo_favorites') || '[]');
 
@@ -1127,23 +1128,7 @@ function goToNextEventTicket() {
         .find(t => new Date(t.event_date) >= now);
 
     if (nextTicket) {
-        viewingTicket = nextTicket;
-        showView('ticketQRView');
-        // Set QR view data
-        document.getElementById("qr_event_name").textContent = nextTicket.event_name;
-        document.getElementById("qr_event_date").textContent = formatDate(nextTicket.event_date);
-        document.getElementById("qr_code").textContent = nextTicket.code;
-        document.getElementById("qr_ticket_type").textContent = nextTicket.ticket_type;
-        document.getElementById("qr_holder_name").textContent = nextTicket.user_name;
-        const statusEl = document.getElementById("qr_status");
-        statusEl.textContent = 'VÁLIDA';
-        statusEl.className = 'status-active';
-        const canvas = document.getElementById("qr_canvas");
-        if (window.QRCode && canvas) {
-            QRCode.toCanvas(canvas, nextTicket.qr_data || nextTicket.code, {
-                width: 200, margin: 2, color: { dark: '#000000', light: '#ffffff' }
-            });
-        }
+        showTicketQR(nextTicket, 'eventsView');
     }
 }
 
@@ -1199,7 +1184,6 @@ function renderMyEventTickets() {
             <div class="ticket-group-item" onclick="viewTicketFromDetail(${globalIdx})">
                 <div class="ticket-group-item-info">
                     <span class="ticket-type">${escapeHtml(t.ticket_type)}</span>
-                    <span class="ticket-code">${t.code}</span>
                 </div>
                 <span class="status-badge ${t.status === 'ACTIVE' ? 'active' : 'used'}">
                     ${t.status === 'ACTIVE' ? 'Válida' : 'Usada'}
@@ -1211,31 +1195,7 @@ function renderMyEventTickets() {
 }
 
 function viewTicketFromDetail(globalIdx) {
-    viewingTicket = myTickets[globalIdx];
-    if (!viewingTicket) return;
-    showView('ticketQRView');
-
-    document.getElementById("qr_event_name").textContent = viewingTicket.event_name;
-    document.getElementById("qr_event_date").textContent = formatDate(viewingTicket.event_date);
-    document.getElementById("qr_code").textContent = viewingTicket.code;
-    document.getElementById("qr_ticket_type").textContent = viewingTicket.ticket_type;
-    document.getElementById("qr_holder_name").textContent = viewingTicket.user_name;
-
-    const statusEl = document.getElementById("qr_status");
-    if (viewingTicket.status === 'ACTIVE') {
-        statusEl.textContent = 'VÁLIDA';
-        statusEl.className = 'status-active';
-    } else {
-        statusEl.textContent = 'USADA';
-        statusEl.className = 'status-used';
-    }
-
-    const canvas = document.getElementById("qr_canvas");
-    if (window.QRCode && canvas) {
-        QRCode.toCanvas(canvas, viewingTicket.qr_data || viewingTicket.code, {
-            width: 200, margin: 2, color: { dark: '#000000', light: '#ffffff' }
-        });
-    }
+    showTicketQR(myTickets[globalIdx], 'eventDetailView');
 }
 
 function renderTicketsForSale() {
@@ -1864,7 +1824,6 @@ function renderMyTickets() {
                             <div class="ticket-group-item" onclick="viewTicketFromGroup(${globalIdx})">
                                 <div class="ticket-group-item-info">
                                     <span class="ticket-type">${escapeHtml(t.ticket_type)}</span>
-                                    <span class="ticket-code">${t.code}</span>
                                 </div>
                                 <span class="status-badge ${t.status === 'ACTIVE' ? 'active' : 'used'}">
                                     ${t.status === 'ACTIVE' ? 'Válida' : 'Usada'}
@@ -1900,69 +1859,107 @@ function toggleTicketGroup(key) {
 }
 
 function viewTicketFromGroup(globalIdx) {
-    viewingTicket = myTickets[globalIdx];
-    if (!viewingTicket) return;
-    showView('ticketQRView');
-
-    document.getElementById("qr_event_name").textContent = viewingTicket.event_name;
-    document.getElementById("qr_event_date").textContent = formatDate(viewingTicket.event_date);
-    document.getElementById("qr_code").textContent = viewingTicket.code;
-    document.getElementById("qr_ticket_type").textContent = viewingTicket.ticket_type;
-    document.getElementById("qr_holder_name").textContent = viewingTicket.user_name;
-
-    const statusEl = document.getElementById("qr_status");
-    if (viewingTicket.status === 'ACTIVE') {
-        statusEl.textContent = 'VÁLIDA';
-        statusEl.className = 'status-active';
-    } else {
-        statusEl.textContent = 'USADA';
-        statusEl.className = 'status-used';
-    }
-
-    const canvas = document.getElementById("qr_canvas");
-    if (window.QRCode && canvas) {
-        QRCode.toCanvas(canvas, viewingTicket.qr_data || viewingTicket.code, {
-            width: 200, margin: 2, color: { dark: '#000000', light: '#ffffff' }
-        });
-    }
+    showTicketQR(myTickets[globalIdx], 'myTicketsView');
 }
 
 function viewTicketQR(index, tab) {
     const list = tab === 'active' ? myTickets.filter(t => t.status === 'ACTIVE') : myTickets.filter(t => t.status !== 'ACTIVE');
-    viewingTicket = list[index];
-    if (!viewingTicket) return;
-
-    showView('ticketQRView');
-
-    document.getElementById("qr_event_name").textContent = viewingTicket.event_name;
-    document.getElementById("qr_event_date").textContent = formatDate(viewingTicket.event_date);
-    document.getElementById("qr_code").textContent = viewingTicket.code;
-    document.getElementById("qr_ticket_type").textContent = viewingTicket.ticket_type;
-    document.getElementById("qr_holder_name").textContent = viewingTicket.user_name;
-
-    const statusEl = document.getElementById("qr_status");
-    if (viewingTicket.status === 'ACTIVE') {
-        statusEl.textContent = 'VÁLIDA';
-        statusEl.className = 'status-active';
-    } else {
-        statusEl.textContent = 'USADA';
-        statusEl.className = 'status-used';
-    }
-
-    // Generar QR
-    const canvas = document.getElementById("qr_canvas");
-    if (window.QRCode && canvas) {
-        QRCode.toCanvas(canvas, viewingTicket.qr_data || viewingTicket.code, {
-            width: 200,
-            margin: 2,
-            color: { dark: '#000000', light: '#ffffff' }
-        });
-    }
+    showTicketQR(list[index], 'myTicketsView');
 };
 
 function backToMyTickets() {
     viewingTicket = null;
     showView('myTicketsView');
+}
+
+function backFromTicketQR() {
+    viewingTicket = null;
+    showView(ticketQROrigin || 'myTicketsView');
+}
+
+// ==========================================
+// v5.0.0 - SISTEMA UNIFICADO DE VISTA QR
+// ==========================================
+function showTicketQR(ticket, origin) {
+    if (!ticket) return;
+    viewingTicket = ticket;
+    ticketQROrigin = origin || 'myTicketsView';
+    showView('ticketQRView');
+    populateTicketQR(ticket);
+}
+
+function populateTicketQR(ticket) {
+    if (!ticket) return;
+
+    const eventData = allEvents.find(e => e.id === ticket.event_id);
+
+    // Event name
+    const nameEl = document.getElementById("qr_event_name");
+    if (nameEl) nameEl.textContent = ticket.event_name || '';
+
+    // Location
+    const locEl = document.getElementById("qr_event_location");
+    if (locEl) {
+        const venue = eventData?.venue || eventData?.location || '';
+        const address = eventData?.address || '';
+        locEl.textContent = [venue, address].filter(Boolean).join(', ') || 'Por confirmar';
+    }
+
+    // Date + Time
+    const dtEl = document.getElementById("qr_event_datetime");
+    if (dtEl) {
+        dtEl.textContent = `${formatDate(ticket.event_date)}${eventData?.time ? ' - ' + eventData.time : ''}`;
+    }
+
+    // Client name
+    const holderEl = document.getElementById("qr_holder_name");
+    if (holderEl) holderEl.textContent = ticket.user_name || '';
+
+    // Client doc
+    const docEl = document.getElementById("qr_holder_doc");
+    if (docEl) docEl.textContent = `DNI: ${ticket.user_doc || '---'}`;
+
+    // Ticket type badge
+    const typeEl = document.getElementById("qr_ticket_type");
+    if (typeEl) typeEl.textContent = ticket.ticket_type || 'General';
+
+    // Aforo note - only for free tickets (price === 0)
+    const aforoEl = document.getElementById("qr_aforo_note");
+    if (aforoEl) {
+        const isFree = ticket.type === 'FREE' || ticket.price_paid === 0 || ticket.price === 0;
+        aforoEl.classList.toggle('hidden', !isFree);
+    }
+
+    // Brand name
+    const brandEl = document.getElementById("qr_brand_name");
+    if (brandEl) brandEl.textContent = `Productora: ${currentBrand?.name || ''}`;
+
+    // Generate QR
+    generateTicketQR(ticket);
+}
+
+async function generateTicketQR(ticket) {
+    const canvas = document.getElementById("qr_canvas");
+    if (!canvas || !ticket) return;
+
+    const qrData = ticket.qr_data || ticket.code;
+    if (!qrData) return;
+
+    try {
+        if (window.QRCode) {
+            // Clear canvas first
+            const ctx = canvas.getContext('2d');
+            if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            await QRCode.toCanvas(canvas, qrData, {
+                width: 200,
+                margin: 2,
+                color: { dark: '#000000', light: '#ffffff' }
+            });
+        }
+    } catch (e) {
+        console.error('Error generating QR:', e);
+    }
 }
 
 let brightnessMode = false;
@@ -1980,15 +1977,15 @@ function toggleBrightness() {
 }
 
 async function downloadTicket() {
-    const captureEl = document.getElementById("ticketCardCapture");
+    const captureEl = document.getElementById("ticket-download-content");
     if (!captureEl) return;
 
     // Try html2canvas for full ticket image
     if (window.html2canvas) {
         try {
             toast('Generando imagen...', 'info');
-            const canvas = await html2canvas(captureEl.querySelector('.ticket-card-full'), {
-                backgroundColor: '#1a1a1a',
+            const canvas = await html2canvas(captureEl, {
+                backgroundColor: '#ffffff',
                 scale: 2,
                 useCORS: true,
                 logging: false
@@ -2578,6 +2575,7 @@ window.showEvents = showEvents;
 window.backToEvents = backToEvents;
 window.openEventDetail = openEventDetail;
 window.backToMyTickets = backToMyTickets;
+window.backFromTicketQR = backFromTicketQR;
 
 // Tickets
 window.openMyTickets = openMyTickets;
@@ -2606,16 +2604,9 @@ window.goToUploadProof = goToUploadProof;
 window.previewProofImage = previewProofImage;
 window.sendPaymentProof = sendPaymentProof;
 
-// Debugging - verificar que todas las funciones están expuestas
-console.log('✅ Funciones expuestas en window:', {
-    handleCheckDNI: typeof window.handleCheckDNI,
-    handleRegister: typeof window.handleRegister,
-    handleLogin: typeof window.handleLogin,
-    togglePassword: typeof window.togglePassword,
-    checkPasswordStrength: typeof window.checkPasswordStrength,
-    handleChangePassword: typeof window.handleChangePassword,
-    previewProofImage: typeof window.previewProofImage
-});
+// v5.0.0 - Funciones QR unificadas
+window.showTicketQR = showTicketQR;
+window.generateTicketQR = generateTicketQR;
 
 // Perfil
 window.openProfile = openProfile;
@@ -2642,7 +2633,7 @@ window.linkAccountToProfile = linkAccountToProfile;
 window.logoutAndRestart = logoutAndRestart;
 window.backToStep1 = backToStep1;
 
-// v4.0.0 - Nuevas funciones
+// v4.0.0+ funciones
 window.toggleFavorite = toggleFavorite;
 window.goToNextEventTicket = goToNextEventTicket;
 window.toggleTicketGroup = toggleTicketGroup;

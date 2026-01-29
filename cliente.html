@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="assets/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="cliente.css?v=4.0.0">
+    <link rel="stylesheet" href="cliente.css?v=5.0.0">
 </head>
 <body>
 
@@ -322,7 +322,7 @@
     <!-- ============ VER ENTRADA (QR) ============ -->
     <div id="ticketQRView" class="view hidden">
         <header class="detail-header">
-            <button class="btn-back" onclick="backToMyTickets()">
+            <button class="btn-back" onclick="backFromTicketQR()">
                 <i class="fa-solid fa-arrow-left"></i>
             </button>
             <span>Mi Entrada</span>
@@ -336,34 +336,38 @@
             </div>
         </header>
 
-        <div class="ticket-qr-content" id="ticketCardCapture">
-            <div class="ticket-card-full">
-                <div class="ticket-event-info">
-                    <h2 id="qr_event_name">Nombre del Evento</h2>
-                    <p id="qr_event_date">Fecha y hora</p>
-                </div>
-
+        <div class="ticket-qr-content">
+            <!-- Card blanca para ver y descargar -->
+            <div class="ticket-download-card" id="ticket-download-content">
                 <div class="qr-container">
                     <canvas id="qr_canvas"></canvas>
                 </div>
 
-                <div class="ticket-code">
-                    <span id="qr_code">JP4X7KM2</span>
+                <p id="qr_aforo_note" class="aforo-note hidden">Sujeto a capacidad de aforo</p>
+
+                <hr class="ticket-divider">
+
+                <div class="ticket-dl-section">
+                    <h2 id="qr_event_name" class="ticket-dl-event-name">Nombre del Evento</h2>
+                    <p class="ticket-dl-meta"><i class="fa-solid fa-location-dot"></i> <span id="qr_event_location">Ubicacion</span></p>
+                    <p class="ticket-dl-meta"><i class="fa-regular fa-calendar"></i> <span id="qr_event_datetime">Fecha - Hora</span></p>
                 </div>
 
-                <div class="ticket-details">
-                    <div class="ticket-detail-row">
-                        <span>Tipo</span>
-                        <strong id="qr_ticket_type">VIP</strong>
-                    </div>
-                    <div class="ticket-detail-row">
-                        <span>Titular</span>
-                        <strong id="qr_holder_name">Juan Perez</strong>
-                    </div>
-                    <div class="ticket-detail-row">
-                        <span>Estado</span>
-                        <strong id="qr_status" class="status-active">VALIDA</strong>
-                    </div>
+                <hr class="ticket-divider">
+
+                <div class="ticket-dl-section ticket-dl-client">
+                    <h3 id="qr_holder_name">Nombre Completo</h3>
+                    <p id="qr_holder_doc" class="ticket-dl-doc">DNI: 12345678</p>
+                </div>
+
+                <hr class="ticket-divider">
+
+                <div class="ticket-dl-section ticket-dl-type-section">
+                    <span class="ticket-type-badge" id="qr_ticket_type">General</span>
+                </div>
+
+                <div class="ticket-dl-section ticket-dl-brand">
+                    <span id="qr_brand_name">Productora: Marca</span>
                 </div>
             </div>
 
@@ -872,6 +876,6 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-    <script type="module" src="js/cliente.js?v=4.0.0"></script>
+    <script type="module" src="js/cliente.js?v=5.0.0"></script>
 </body>
 </html>
