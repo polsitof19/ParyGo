@@ -351,7 +351,7 @@ function renderSalesCards() {
     }
 
     container.innerHTML = filtered.map(sale => {
-        const clientName = sale.full_name || sale.payer_name || [sale.client_name, sale.client_lastname].filter(Boolean).join(' ') || 'Sin nombre';
+        const clientName = sale.full_name || [sale.client_name, sale.client_lastname].filter(Boolean).join(' ') || 'Sin nombre';
         const initials = clientName.split(' ').map(n => n.charAt(0).toUpperCase()).slice(0, 2).join('');
         const method = sale.payment_method || 'transfer';
         const methodLabel = method === 'yape' ? 'Yape' : method === 'plin' ? 'Plin' : 'Transferencia';
@@ -473,14 +473,30 @@ export async function approveSale(id) {
         const qty = sale.quantity || 1;
         const ticketName = sale.ticket_name || sale.ticket_type || 'General';
         const total = parseFloat(sale.total_price || sale.total || 0);
-        const clientName = sale.full_name || sale.payer_name || [sale.client_name, sale.client_lastname].filter(Boolean).join(' ') || '---';
-        const clientDni = sale.client_dni || '---';
+
+        // Obtener datos del CLIENTE (dueño de la cuenta), NO del pagador
+        let clientName = sale.full_name || [sale.client_name, sale.client_lastname].filter(Boolean).join(' ');
+        let clientDni = sale.client_dni || '';
+
+        // Si no hay nombre del cliente, buscar en colección "clientes"
+        if (!clientName && sale.client_id) {
+            try {
+                const clientDoc = await getDoc(doc(db, "clientes", sale.client_id));
+                if (clientDoc.exists()) {
+                    const c = clientDoc.data();
+                    clientName = [c.name, c.lastname].filter(Boolean).join(' ');
+                    clientDni = clientDni || c.doc_number || c.dni || '';
+                }
+            } catch (e) {
+                console.warn("No se pudo buscar cliente:", e);
+            }
+        }
 
         document.getElementById('approveSaleId').value = id;
         document.getElementById('approveTicketInfo').textContent = `${qty}x ${ticketName}`;
         document.getElementById('approveSaleTotal').textContent = `S/. ${total.toFixed(2)}`;
-        document.getElementById('approveClientName').textContent = clientName;
-        document.getElementById('approveClientDni').textContent = clientDni;
+        document.getElementById('approveClientName').textContent = clientName || '---';
+        document.getElementById('approveClientDni').textContent = clientDni || '---';
         document.getElementById('modalApproveSale').classList.remove('hidden');
 
     } catch (error) {
