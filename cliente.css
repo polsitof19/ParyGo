@@ -1916,26 +1916,6 @@ input, select, textarea {
 }
 
 /* ==========================================
-   SECCION 20: COUNTDOWN EN EVENT CARDS
-   ========================================== */
-.event-card-countdown {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--primary);
-    margin-top: 8px;
-    padding: 4px 10px;
-    background: rgba(255, 71, 87, 0.1);
-    border-radius: 20px;
-}
-
-.event-card-countdown i {
-    font-size: 10px;
-}
-
-/* ==========================================
    SECCION 21: MODO BRILLO PARA QR
    ========================================== */
 .brightness-mode {
@@ -2201,56 +2181,34 @@ input, select, textarea {
 }
 
 /* ==========================================
-   SECCION 29: WIDGET PROXIMO EVENTO
+   SECCION 29: COUNTDOWN BADGE EN CARDS
    ========================================== */
-.next-event-widget {
-    background: linear-gradient(135deg, rgba(255,71,87,0.15), rgba(255,107,122,0.08));
-    border: 1px solid rgba(255,71,87,0.25);
-    border-radius: 16px;
-    padding: 16px;
-    margin-bottom: 16px;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-.next-event-widget:active {
-    transform: scale(0.98);
-}
-.next-event-widget-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+.countdown-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 5px 10px;
+    border-radius: 20px;
     font-size: 11px;
-    font-weight: 700;
-    color: var(--primary);
-    text-transform: uppercase;
-    margin-bottom: 10px;
-}
-.next-event-widget-body {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-.next-event-widget-img {
-    width: 60px;
-    height: 60px;
-    border-radius: 12px;
-    object-fit: cover;
-    flex-shrink: 0;
-}
-.next-event-widget-info h4 {
-    font-size: 15px;
-    font-weight: 700;
-    margin-bottom: 4px;
-}
-.next-event-widget-info p {
-    font-size: 12px;
-    color: var(--text-secondary);
-}
-.next-event-widget-countdown {
-    font-size: 12px;
     font-weight: 600;
-    color: var(--primary);
-    margin-top: 4px;
+    z-index: 10;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.countdown-yellow {
+    background: rgba(234, 179, 8, 0.9);
+    color: #000;
+}
+.countdown-orange {
+    background: rgba(249, 115, 22, 0.9);
+    color: #fff;
+}
+.countdown-red {
+    background: rgba(239, 68, 68, 0.9);
+    color: #fff;
 }
 
 /* ==========================================

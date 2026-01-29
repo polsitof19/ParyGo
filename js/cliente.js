@@ -931,7 +931,6 @@ async function loadEvents() {
 
         // Use the filter renderer for consistent display
         renderFilteredEvents('', 'all');
-        renderNextEventWidget();
 
     } catch (e) {
         console.error(e);
@@ -1012,12 +1011,13 @@ function renderFilteredEvents(searchTerm, dateFilter) {
 
     container.innerHTML = filtered.map((e, i) => {
         const origIndex = allEvents.indexOf(e);
-        const countdown = getCountdown(e.date, e.time);
         const fav = isFavorite(e.id);
         const hasTicket = myTickets.some(t => t.event_id === e.id && t.status === 'ACTIVE');
+        const countdownBadge = getCountdownBadge(e.date);
         return `
             <div class="event-card" onclick="openEventDetail(${origIndex})">
                 <div class="event-card-image-wrapper">
+                    ${countdownBadge}
                     <img class="event-card-image" src="${e.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600'}" alt="${escapeHtml(e.name)}" loading="lazy">
                     <button class="event-card-fav ${fav ? 'active' : ''}" onclick="toggleFavorite('${e.id}', event)">
                         <i class="fa-${fav ? 'solid' : 'regular'} fa-star"></i>
@@ -1031,7 +1031,6 @@ function renderFilteredEvents(searchTerm, dateFilter) {
                         <span><i class="fa-regular fa-clock"></i> ${e.time || '---'}</span>
                         ${e.venue ? `<span><i class="fa-solid fa-location-dot"></i> ${escapeHtml(e.venue)}</span>` : ''}
                     </div>
-                    ${countdown ? `<div class="event-card-countdown"><i class="fa-solid fa-fire"></i> ${countdown}</div>` : ''}
                 </div>
             </div>
         `;
@@ -1055,45 +1054,34 @@ function getCountdown(dateStr, timeStr) {
 }
 
 // ==========================================
-// WIDGET PRÓXIMO EVENTO
+// COUNTDOWN BADGE PARA CARDS
 // ==========================================
-function renderNextEventWidget() {
-    const widget = document.getElementById("nextEventWidget");
-    if (!widget) return;
+function getCountdownBadge(eventDate) {
+    if (!eventDate) return '';
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const evDate = new Date(eventDate);
+    evDate.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((evDate - today) / (1000 * 60 * 60 * 24));
 
-    // Find the next event the user has a ticket for
-    const now = new Date();
-    const upcomingTickets = myTickets
-        .filter(t => t.status === 'ACTIVE' && t.event_date && new Date(t.event_date) >= now)
-        .sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
+    if (diffDays > 7 || diffDays < 0) return '';
 
-    if (!upcomingTickets.length) {
-        widget.classList.add('hidden');
-        return;
+    let text, colorClass;
+    if (diffDays === 0) {
+        text = 'Es hoy!';
+        colorClass = 'countdown-red';
+    } else if (diffDays === 1) {
+        text = 'Manana!';
+        colorClass = 'countdown-red';
+    } else if (diffDays <= 3) {
+        text = 'Faltan ' + diffDays + ' dias';
+        colorClass = 'countdown-orange';
+    } else {
+        text = 'Faltan ' + diffDays + ' dias';
+        colorClass = 'countdown-yellow';
     }
 
-    const ticket = upcomingTickets[0];
-    const eventData = allEvents.find(e => e.id === ticket.event_id);
-    const countdown = getCountdown(ticket.event_date, eventData?.time);
-
-    widget.classList.remove('hidden');
-    widget.onclick = () => {
-        const idx = allEvents.findIndex(e => e.id === ticket.event_id);
-        if (idx >= 0) openEventDetail(idx);
-    };
-    widget.innerHTML = `
-        <div class="next-event-widget-header">
-            <i class="fa-solid fa-ticket"></i> Tu próximo evento
-        </div>
-        <div class="next-event-widget-body">
-            <img class="next-event-widget-img" src="${eventData?.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600'}" alt="">
-            <div class="next-event-widget-info">
-                <h4>${escapeHtml(ticket.event_name)}</h4>
-                <p><i class="fa-regular fa-calendar"></i> ${formatDate(ticket.event_date)} ${eventData?.time ? '· ' + eventData.time : ''}</p>
-                ${countdown ? `<div class="next-event-widget-countdown"><i class="fa-solid fa-fire"></i> ${countdown}</div>` : ''}
-            </div>
-        </div>
-    `;
+    return `<span class="countdown-badge ${colorClass}"><i class="fa-regular fa-clock"></i> ${text}</span>`;
 }
 
 // ==========================================
@@ -1718,7 +1706,6 @@ async function loadMyTickets() {
         badge.classList.toggle('hidden', activeCount === 0);
     }
 
-    renderNextEventWidget();
     updateFAB();
 }
 
