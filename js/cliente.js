@@ -1159,14 +1159,16 @@ function renderMyEventTickets() {
     if (!container || !section || !currentEvent) return;
 
     const eventTickets = myTickets.filter(t => t.event_id === currentEvent.id);
+    const eventPending = myPurchases.filter(p => p.event_id === currentEvent.id);
 
-    if (!eventTickets.length) {
+    if (!eventTickets.length && !eventPending.length) {
         section.classList.add('hidden');
         return;
     }
 
     section.classList.remove('hidden');
-    container.innerHTML = eventTickets.map((t, i) => {
+
+    const ticketsHtml = eventTickets.map((t, i) => {
         const globalIdx = myTickets.indexOf(t);
         return `
             <div class="ticket-group-item" onclick="viewTicketFromDetail(${globalIdx})">
@@ -1180,6 +1182,18 @@ function renderMyEventTickets() {
             </div>
         `;
     }).join('');
+
+    const pendingHtml = eventPending.map(p => `
+        <div class="ticket-group-item pending-entry">
+            <div class="ticket-group-item-info">
+                <span class="ticket-type">${escapeHtml(p.ticket_name || 'Entrada')}</span>
+                <span class="ticket-status-text">${p.quantity || 1}x — S/. ${(p.total || 0).toFixed(2)}</span>
+            </div>
+            <span class="status-badge pending">Pendiente</span>
+        </div>
+    `).join('');
+
+    container.innerHTML = ticketsHtml + pendingHtml;
 }
 
 function viewTicketFromDetail(globalIdx) {

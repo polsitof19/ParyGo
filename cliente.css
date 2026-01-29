@@ -2674,3 +2674,17 @@ input, select, textarea {
 .payment-method-btn.active {
     animation: pulse-glow 2s ease-in-out infinite;
 }
+
+/* ==========================================
+   SECCION 38: ENTRADAS PENDIENTES EN EVENTO
+   ========================================== */
+.ticket-group-item.pending-entry {
+    opacity: 0.8;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-sm);
+    cursor: default;
+}
+
+.ticket-group-item.pending-entry:active {
+    background: transparent;
+}
