@@ -2184,19 +2184,14 @@ input, select, textarea {
    SECCION 29: COUNTDOWN BADGE EN CARDS
    ========================================== */
 .countdown-badge {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    padding: 5px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-    z-index: 10;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 6px;
 }
 .countdown-yellow {
     background: rgba(234, 179, 8, 0.9);

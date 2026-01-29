@@ -1017,7 +1017,6 @@ function renderFilteredEvents(searchTerm, dateFilter) {
         return `
             <div class="event-card" onclick="openEventDetail(${origIndex})">
                 <div class="event-card-image-wrapper">
-                    ${countdownBadge}
                     <img class="event-card-image" src="${e.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600'}" alt="${escapeHtml(e.name)}" loading="lazy">
                     <button class="event-card-fav ${fav ? 'active' : ''}" onclick="toggleFavorite('${e.id}', event)">
                         <i class="fa-${fav ? 'solid' : 'regular'} fa-star"></i>
@@ -1026,6 +1025,7 @@ function renderFilteredEvents(searchTerm, dateFilter) {
                 </div>
                 <div class="event-card-body">
                     <div class="event-card-title">${escapeHtml(e.name)}</div>
+                    ${countdownBadge}
                     <div class="event-card-meta">
                         <span><i class="fa-regular fa-calendar"></i> ${formatDate(e.date)}</span>
                         <span><i class="fa-regular fa-clock"></i> ${e.time || '---'}</span>
