@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="assets/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="cliente.css?v=5.8.0">
+    <link rel="stylesheet" href="cliente.css?v=6.0.0">
 </head>
 <body>
 
@@ -480,21 +480,24 @@
                 </button>
             </div>
 
-            <!-- Paso 2: Método de pago -->
+            <!-- Paso 2: Seleccionar método de pago -->
             <div id="buy_step2" class="modal-body hidden">
                 <button class="btn-back-inline" onclick="backToBuyStep1()">
                     <i class="fa-solid fa-arrow-left"></i> Volver
                 </button>
+                <p class="step-indicator">Paso 1 de 2</p>
 
-                <h3 class="step-title">Selecciona método de pago</h3>
+                <h3 class="step-title">Selecciona m\u00e9todo de pago</h3>
 
                 <div class="payment-methods">
                     <button class="payment-method-btn active" data-method="yape" onclick="selectPaymentMethod('yape')">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/7/7e/Yape_logo.png" alt="Yape">
+                        <img src="assets/logos/yape.png" alt="Yape" class="payment-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="payment-fallback yape-bg" style="display:none;">YAPE</div>
                         <span>Yape</span>
                     </button>
                     <button class="payment-method-btn" data-method="plin" onclick="selectPaymentMethod('plin')">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Plin_logo.png/600px-Plin_logo.png" alt="Plin">
+                        <img src="assets/logos/plin.png" alt="Plin" class="payment-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="payment-fallback plin-bg" style="display:none;">PLIN</div>
                         <span>Plin</span>
                     </button>
                     <button class="payment-method-btn" data-method="bank" onclick="selectPaymentMethod('bank')">
@@ -503,22 +506,38 @@
                     </button>
                 </div>
 
+                <button class="btn-primary full btn-large" onclick="goToUploadProof()">
+                    CONTINUAR <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Paso 3: Datos de pago + comprobante -->
+            <div id="buy_step3" class="modal-body hidden">
+                <div class="step-header-row">
+                    <button class="btn-back-inline" onclick="backToBuyStep2()">
+                        <i class="fa-solid fa-arrow-left"></i> Volver
+                    </button>
+                    <p class="step-indicator">Paso 2 de 2</p>
+                </div>
+
+                <h3 class="step-title" id="paymentMethodTitle">Pagar con YAPE</h3>
+
                 <!-- Datos de Yape/Plin -->
                 <div id="payment_yape_plin" class="payment-details">
                     <div class="payment-info-card">
                         <div class="payment-info-row">
-                            <span>A nombre de:</span>
-                            <strong id="pay_name">Juan Pérez</strong>
+                            <span><i class="fa-solid fa-phone"></i> N\u00famero:</span>
+                            <strong id="pay_phone">---</strong>
+                            <button class="copy-btn" onclick="copyToClipboard('pay_phone')"><i class="fa-regular fa-copy"></i></button>
                         </div>
-                        <div class="payment-info-row copyable" onclick="copyToClipboard('pay_phone')">
-                            <span>Número:</span>
-                            <strong id="pay_phone">987654321</strong>
-                            <i class="fa-regular fa-copy"></i>
+                        <div class="payment-info-row">
+                            <span><i class="fa-solid fa-user"></i> A nombre de:</span>
+                            <strong id="pay_name">---</strong>
                         </div>
-                        <div class="payment-info-row copyable" onclick="copyToClipboard('pay_amount')">
-                            <span>Monto exacto:</span>
-                            <strong id="pay_amount">S/. 50.37</strong>
-                            <i class="fa-regular fa-copy"></i>
+                        <div class="payment-info-row">
+                            <span><i class="fa-solid fa-coins"></i> Monto exacto:</span>
+                            <strong id="pay_amount">S/. 0.00</strong>
+                            <button class="copy-btn" onclick="copyToClipboard('pay_amount')"><i class="fa-regular fa-copy"></i></button>
                         </div>
                     </div>
 
@@ -531,74 +550,72 @@
                 <div id="payment_bank" class="payment-details hidden">
                     <div class="payment-info-card">
                         <div class="payment-info-row">
-                            <span>Banco:</span>
-                            <strong id="bank_name">BCP</strong>
+                            <span><i class="fa-solid fa-building-columns"></i> Banco:</span>
+                            <strong id="bank_name">---</strong>
                         </div>
                         <div class="payment-info-row">
-                            <span>Tipo:</span>
+                            <span><i class="fa-solid fa-credit-card"></i> Tipo:</span>
                             <strong id="bank_type">Cuenta de Ahorros</strong>
                         </div>
-                        <div class="payment-info-row copyable" onclick="copyToClipboard('bank_account')">
-                            <span>N° Cuenta:</span>
-                            <strong id="bank_account">123-456789-0-12</strong>
-                            <i class="fa-regular fa-copy"></i>
-                        </div>
-                        <div class="payment-info-row copyable" onclick="copyToClipboard('bank_cci')">
-                            <span>CCI:</span>
-                            <strong id="bank_cci">00212345678901234567</strong>
-                            <i class="fa-regular fa-copy"></i>
+                        <div class="payment-info-row">
+                            <span><i class="fa-solid fa-hashtag"></i> N\u00b0 Cuenta:</span>
+                            <strong id="bank_account">---</strong>
+                            <button class="copy-btn" onclick="copyToClipboard('bank_account')"><i class="fa-regular fa-copy"></i></button>
                         </div>
                         <div class="payment-info-row">
-                            <span>Titular:</span>
-                            <strong id="bank_holder">Juan Pérez García</strong>
+                            <span><i class="fa-solid fa-key"></i> CCI:</span>
+                            <strong id="bank_cci">---</strong>
+                            <button class="copy-btn" onclick="copyToClipboard('bank_cci')"><i class="fa-regular fa-copy"></i></button>
                         </div>
-                        <div class="payment-info-row copyable" onclick="copyToClipboard('bank_amount')">
-                            <span>Monto exacto:</span>
-                            <strong id="bank_amount">S/. 50.37</strong>
-                            <i class="fa-regular fa-copy"></i>
+                        <div class="payment-info-row">
+                            <span><i class="fa-solid fa-user"></i> Titular:</span>
+                            <strong id="bank_holder">---</strong>
+                        </div>
+                        <div class="payment-info-row">
+                            <span><i class="fa-solid fa-coins"></i> Monto exacto:</span>
+                            <strong id="bank_amount">S/. 0.00</strong>
+                            <button class="copy-btn" onclick="copyToClipboard('bank_amount')"><i class="fa-regular fa-copy"></i></button>
                         </div>
                     </div>
                 </div>
 
-                <button class="btn-primary full" onclick="goToUploadProof()">
-                    YA PAGUÉ, SUBIR COMPROBANTE
-                    <i class="fa-solid fa-arrow-right"></i>
-                </button>
-            </div>
+                <hr class="pay-divider">
 
-            <!-- Paso 3: Subir comprobante -->
-            <div id="buy_step3" class="modal-body hidden">
-                <button class="btn-back-inline" onclick="backToBuyStep2()">
-                    <i class="fa-solid fa-arrow-left"></i> Volver
-                </button>
+                <h4 class="proof-title"><i class="fa-solid fa-check-circle"></i> \u00bfYa hiciste el pago?</h4>
 
-                <h3 class="step-title">Subir comprobante de pago</h3>
-
-                <div class="form-group">
-                    <label>Nombres y apellidos de quien pagó *</label>
-                    <input type="text" id="proof_payer_name" placeholder="Ej: Juan Pérez García">
-                </div>
-
-                <div class="form-group">
-                    <label>Número de operación *</label>
-                    <input type="text" id="proof_operation" placeholder="Ej: 12345678">
-                </div>
-
-                <div class="form-group">
-                    <label>Captura del pago *</label>
-                    <div class="upload-area" id="upload_area" onclick="document.getElementById('proof_image').click()">
-                        <input type="file" id="proof_image" accept="image/*" hidden onchange="previewProofImage(event)">
-                        <div id="upload_placeholder">
-                            <i class="fa-solid fa-cloud-arrow-up"></i>
-                            <span>Toca para subir imagen</span>
+                <div class="proof-form">
+                    <div class="form-row-2col">
+                        <div class="form-group">
+                            <label>Nombre *</label>
+                            <input type="text" id="proof_payer_name" placeholder="Nombre">
                         </div>
-                        <img id="upload_preview" class="hidden" alt="Preview">
+                        <div class="form-group">
+                            <label>Apellido *</label>
+                            <input type="text" id="proof_payer_lastname" placeholder="Apellido">
+                        </div>
                     </div>
-                </div>
 
-                <button class="btn-primary full" id="btnSendProof" onclick="sendPaymentProof()">
-                    <i class="fa-solid fa-paper-plane"></i> ENVIAR COMPROBANTE
-                </button>
+                    <div class="form-group">
+                        <label>N\u00b0 de operaci\u00f3n *</label>
+                        <input type="text" id="proof_operation" placeholder="Ej: 123456">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Captura del pago *</label>
+                        <div class="upload-area" id="upload_area" onclick="document.getElementById('proof_image').click()">
+                            <input type="file" id="proof_image" accept="image/*" hidden onchange="previewProofImage(event)">
+                            <div id="upload_placeholder">
+                                <i class="fa-solid fa-camera"></i>
+                                <span>Toca para subir imagen</span>
+                            </div>
+                            <img id="upload_preview" class="hidden" alt="Preview">
+                        </div>
+                    </div>
+
+                    <button class="btn-primary full btn-large" id="btnSendProof" onclick="sendPaymentProof()">
+                        ENVIAR COMPROBANTE <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
             </div>
 
             <!-- Paso 4: Confirmación -->
@@ -872,6 +889,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-    <script type="module" src="js/cliente.js?v=5.8.0"></script>
+    <script type="module" src="js/cliente.js?v=6.0.0"></script>
 </body>
 </html>

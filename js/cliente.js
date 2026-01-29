@@ -1528,11 +1528,6 @@ function selectPaymentMethod(method) {
     buyState.paymentMethod = method;
     document.querySelectorAll('.payment-method-btn').forEach(b => b.classList.remove('active'));
     document.querySelector(`[data-method="${method}"]`)?.classList.add('active');
-
-    document.getElementById("payment_yape_plin")?.classList.toggle('hidden', method === 'bank');
-    document.getElementById("payment_bank")?.classList.toggle('hidden', method !== 'bank');
-
-    loadPaymentInfo();
 }
 
 function loadPaymentInfo() {
@@ -1581,6 +1576,17 @@ async function copyToClipboard(elementId) {
 
 function goToUploadProof() {
     showBuyStep(3);
+
+    // Update title based on selected method
+    const titles = { yape: 'Pagar con YAPE', plin: 'Pagar con PLIN', bank: 'Pagar con Transferencia' };
+    const titleEl = document.getElementById("paymentMethodTitle");
+    if (titleEl) titleEl.textContent = titles[buyState.paymentMethod] || 'Pagar';
+
+    // Show/hide appropriate payment info section
+    document.getElementById("payment_yape_plin")?.classList.toggle('hidden', buyState.paymentMethod === 'bank');
+    document.getElementById("payment_bank")?.classList.toggle('hidden', buyState.paymentMethod !== 'bank');
+
+    loadPaymentInfo();
 }
 
 function previewProofImage(event) {
@@ -1597,12 +1603,14 @@ function previewProofImage(event) {
 }
 
 async function sendPaymentProof() {
-    const payerName = document.getElementById("proof_payer_name").value.trim();
+    const payerFirstName = document.getElementById("proof_payer_name").value.trim();
+    const payerLastName = document.getElementById("proof_payer_lastname")?.value.trim() || '';
+    const payerName = `${payerFirstName} ${payerLastName}`.trim();
     const operation = document.getElementById("proof_operation").value.trim();
     const imageInput = document.getElementById("proof_image");
 
-    if (!payerName) return toast("Ingresa nombres y apellidos de quien pagó");
-    if (!operation) return toast("Ingresa el número de operación");
+    if (!payerFirstName) return toast("Ingresa el nombre de quien pag\u00f3");
+    if (!operation) return toast("Ingresa el n\u00famero de operaci\u00f3n");
     if (!imageInput.files[0]) return toast("Sube la captura del pago");
 
     const btn = document.getElementById("btnSendProof");
@@ -1651,7 +1659,7 @@ async function sendPaymentProof() {
     }
 
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> ENVIAR COMPROBANTE';
+    btn.innerHTML = 'ENVIAR COMPROBANTE <i class="fa-solid fa-arrow-right"></i>';
 };
 
 function fileToBase64(file) {
