@@ -57,6 +57,7 @@ let ticketQROrigin = 'myTicketsView'; // v5.0.0 - Track where user came from
 let viewingTicket = null;
 let carouselIndices = [];   // v7.2.0 - Indices globales de tickets en carrusel
 let carouselCurrent = 0;    // v7.2.0 - Slide actual del carrusel
+let carouselOrigin = 'myTicketsView'; // v7.3.0 - Vista de origen del carrusel
 let sharingTicket = null;   // v7.2.0 - Ticket seleccionado para compartir
 let favorites = JSON.parse(localStorage.getItem('parygo_favorites') || '[]');
 
@@ -1161,7 +1162,7 @@ function renderMyEventTickets() {
     const section = document.getElementById("myEventTickets");
     if (!container || !section || !currentEvent) return;
 
-    const eventTickets = myTickets.filter(t => t.event_id === currentEvent.id);
+    const eventTickets = myTickets.filter(t => t.event_id === currentEvent.id && t.status === 'ACTIVE');
     const eventPending = myPurchases.filter(p => p.event_id === currentEvent.id);
 
     if (!eventTickets.length && !eventPending.length) {
@@ -1171,17 +1172,26 @@ function renderMyEventTickets() {
 
     section.classList.remove('hidden');
 
-    const ticketsHtml = eventTickets.map((t, i) => {
-        const globalIdx = myTickets.indexOf(t);
+    // Agrupar por tipo de entrada
+    const typeGroups = {};
+    eventTickets.forEach(t => {
+        const typeName = t.ticket_type || 'General';
+        if (!typeGroups[typeName]) typeGroups[typeName] = [];
+        typeGroups[typeName].push(t);
+    });
+
+    const ticketsHtml = Object.entries(typeGroups).map(([typeName, typeTickets]) => {
+        const indices = typeTickets.map(t => myTickets.indexOf(t));
+        const indicesJson = JSON.stringify(indices);
         return `
-            <div class="ticket-group-item" onclick="viewTicketFromDetail(${globalIdx})">
-                <div class="ticket-group-item-info">
-                    <span class="ticket-type">${escapeHtml(t.ticket_type)}</span>
+            <div class="ticket-type-subgroup">
+                <div class="ticket-type-subgroup-info">
+                    <span class="ticket-type-subgroup-name">${escapeHtml(typeName)}</span>
+                    <span class="ticket-type-subgroup-count">${typeTickets.length} entrada${typeTickets.length > 1 ? 's' : ''}</span>
                 </div>
-                <span class="status-badge ${t.status === 'ACTIVE' ? 'active' : 'used'}">
-                    ${t.status === 'ACTIVE' ? 'Válida' : 'Usada'}
-                </span>
-                <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);margin-left:8px;font-size:12px;"></i>
+                <button class="btn-ver-type" onclick='openTicketCarouselFromEvent(${indicesJson})'>
+                    Ver <i class="fa-solid fa-arrow-right"></i>
+                </button>
             </div>
         `;
     }).join('');
@@ -1909,12 +1919,22 @@ function backFromTicketQR() {
 // ==========================================
 
 function openTicketCarousel(indices) {
+    carouselOrigin = 'myTicketsView';
+    _openCarousel(indices);
+}
+
+function openTicketCarouselFromEvent(indices) {
+    carouselOrigin = 'eventDetailView';
+    _openCarousel(indices);
+}
+
+function _openCarousel(indices) {
     carouselIndices = indices;
     carouselCurrent = 0;
 
     // Si solo hay 1 entrada, ir directo a la vista QR individual
     if (indices.length === 1) {
-        showTicketQR(myTickets[indices[0]], 'myTicketsView');
+        showTicketQR(myTickets[indices[0]], carouselOrigin);
         return;
     }
 
@@ -2044,7 +2064,7 @@ function updateCarouselCounter() {
 }
 
 function backFromCarousel() {
-    showView('myTicketsView');
+    showView(carouselOrigin || 'myTicketsView');
 }
 
 function toggleCarouselBrightness() {
@@ -2944,6 +2964,7 @@ window.handleChangeEmail = handleChangeEmail;
 
 // v7.2.0 - Carrusel y compartir
 window.openTicketCarousel = openTicketCarousel;
+window.openTicketCarouselFromEvent = openTicketCarouselFromEvent;
 window.goToSlide = goToSlide;
 window.backFromCarousel = backFromCarousel;
 window.toggleCarouselBrightness = toggleCarouselBrightness;
