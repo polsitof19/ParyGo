@@ -505,7 +505,7 @@ export async function approveSale(id) {
     }
 }
 
-// Confirmar aprobación con número de operación
+// Confirmar aprobación de venta
 export async function confirmApproveSale() {
     const id = document.getElementById('approveSaleId').value;
     const btn = document.getElementById('btnConfirmApprove');
@@ -520,54 +520,63 @@ export async function confirmApproveSale() {
             if (!saleSnap.exists()) throw new Error("Venta no encontrada");
 
             const sale = saleSnap.data();
+            const quantity = sale.quantity || 1;
+            const unitPrice = sale.unit_price || (parseFloat(sale.total_price || sale.total || 0) / quantity);
+            const clientName = sale.full_name || sale.client_name || "";
+            const now = new Date().toISOString();
 
-            // Actualizar venta
+            // Actualizar venta como aprobada
             transaction.update(saleRef, {
                 status: APP_CONFIG.STATUS.APPROVED,
-                approved_at: new Date().toISOString(),
+                approved_at: now,
                 approved_by: state.currentUser?.id
             });
 
-            // Crear ticket
-            const ticketRef = doc(collection(db, APP_CONFIG.COLLECTIONS.TICKETS));
-            const code = `TKT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+            // Crear UN TICKET POR CADA ENTRADA comprada
+            for (let i = 0; i < quantity; i++) {
+                const ticketRef = doc(collection(db, APP_CONFIG.COLLECTIONS.TICKETS));
+                const code = `TKT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
-            const ticketData = {
-                company_id: sale.company_id || "",
-                event_id: sale.event_id,
-                event_name: sale.event_name || "",
-                event_date: sale.event_date || "",
-                brand_id: sale.brand_id || "",
-                user_id: sale.client_id || "",
-                user_name: sale.full_name || sale.client_name || "",
-                user_doc: sale.client_dni || "",
-                user_email: sale.client_email || "",
-                user_phone: sale.client_phone || "",
-                ticket_id: sale.ticket_id || "",
-                ticket_name: sale.ticket_name || "",
-                ticket_type: sale.ticket_name || "",
-                client_name: sale.full_name || sale.client_name || "",
-                client_dni: sale.client_dni || "",
-                is_free: false,
-                price_paid: sale.total_price || sale.total || 0,
-                qr_token: code,
-                qr_data: code,
-                code: code,
-                status: 'ACTIVE',
-                sale_id: id,
-                created_at: new Date().toISOString()
-            };
+                const ticketData = {
+                    company_id: sale.company_id || "",
+                    event_id: sale.event_id,
+                    event_name: sale.event_name || "",
+                    event_date: sale.event_date || "",
+                    brand_id: sale.brand_id || "",
+                    user_id: sale.client_id || "",
+                    user_name: clientName,
+                    user_doc: sale.client_dni || "",
+                    user_email: sale.client_email || "",
+                    user_phone: sale.client_phone || "",
+                    ticket_id: sale.ticket_id || "",
+                    ticket_name: sale.ticket_name || "",
+                    ticket_type: sale.ticket_name || "",
+                    client_name: clientName,
+                    client_dni: sale.client_dni || "",
+                    is_free: false,
+                    price_paid: unitPrice,
+                    qr_token: code,
+                    qr_data: code,
+                    code: code,
+                    status: 'ACTIVE',
+                    claimed_at: now,
+                    sale_id: id,
+                    channel: 'web',
+                    created_at: now
+                };
 
-            if (sale.promoter_id) {
-                ticketData.promoter_id = sale.promoter_id;
-                ticketData.promoter_name = sale.promoter_name || "";
+                if (sale.promoter_id) {
+                    ticketData.promoter_id = sale.promoter_id;
+                    ticketData.promoter_name = sale.promoter_name || "";
+                }
+
+                transaction.set(ticketRef, ticketData);
             }
-
-            transaction.set(ticketRef, ticketData);
         });
 
         document.getElementById('modalApproveSale').classList.add('hidden');
-        toast("Venta aprobada y ticket generado", "success");
+        const qty = document.getElementById('approveTicketInfo')?.textContent || '';
+        toast(`Venta aprobada: ${qty} generadas`, "success");
 
         if (window.loadEventMetrics) window.loadEventMetrics(state.activeEventId);
         loadAllSales(state.activeEventId);
