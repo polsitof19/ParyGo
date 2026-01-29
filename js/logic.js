@@ -5,8 +5,8 @@
 // 1. IMPORTAR MÓDULOS
 // ==========================================
 
-import { db, auth, APP_CONFIG } from './config.js?v=6.8.0';
-import { state, resetTemps, getActiveEvent, debugState } from './state.js?v=6.8.0';
+import { db, auth, APP_CONFIG } from './config.js';
+import { state, resetTemps, getActiveEvent, debugState } from './state.js';
 import {
     Validator,
     toast,
@@ -19,7 +19,7 @@ import {
     formatDateTime,
     formatCurrency,
     debounce
-} from './utils.js?v=6.8.0';
+} from './utils.js';
 
 import {
     doLogin,
@@ -28,7 +28,7 @@ import {
     getCurrentUser,
     registerUser,
     changePassword
-} from './auth.js?v=6.8.0';
+} from './auth.js';
 
 import {
     loadEvents,
@@ -42,7 +42,7 @@ import {
     handleFileSelect,
     saveEvent,
     deleteEvent
-} from './events.js?v=6.8.0';
+} from './events.js';
 
 import {
     loadBrandsWithLogos,
@@ -60,7 +60,7 @@ import {
     updateBrandHeaderActions,
     editCurrentBrand,
     copyCurrentBrandLink
-} from './brands.js?v=6.8.0';
+} from './brands.js';
 
 import {
     renderTicketTable,
@@ -69,7 +69,7 @@ import {
     saveNewTicket,
     deleteTicket,
     toggleUsesField
-} from './tickets.js?v=6.8.0';
+} from './tickets.js';
 
 import {
     loadPromotersCache,
@@ -82,7 +82,7 @@ import {
     togglePromoterField,
     downloadCodesAsExcel,
     downloadCodesAsTxt
-} from './codes.js?v=6.8.0';
+} from './codes.js';
 import {
     loadEventMetrics,
     switchMetricTab,
@@ -105,7 +105,7 @@ import {
     filterAccessTable,
     openDrawer,
     closeDrawer
-} from './metrics.js?v=6.8.0';
+} from './metrics.js';
 
 import {
     loadPromotersView,
@@ -131,15 +131,15 @@ import {
     saveScanner,
     deleteScanner,
     handlePromoterImage
-} from './staff.js?v=6.8.0';
+} from './staff.js';
 
 import {
     loadRewardsView,
     renderRewards,
     deliverReward
-} from './rewards.js?v=6.8.0';
+} from './rewards.js';
 
-import { consultarDNI, autocompletarDNI } from './dni-api.js?v=6.8.0';
+import { consultarDNI, autocompletarDNI } from './dni-api.js';
 
 // ==========================================
 // 2. EXPONER FUNCIONES AL WINDOW
