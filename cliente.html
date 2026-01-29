@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="assets/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="cliente.css?v=6.4.0">
+    <link rel="stylesheet" href="cliente.css?v=7.2.0">
 </head>
 <body>
 
@@ -375,6 +375,41 @@
                     <i class="fa-solid fa-download"></i> Descargar
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- ============ CARRUSEL DE ENTRADAS ============ -->
+    <div id="ticketCarouselView" class="view hidden">
+        <header class="detail-header">
+            <button class="btn-back" onclick="backFromCarousel()">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <span id="carousel_title">Mis Entradas</span>
+            <div class="header-actions-qr">
+                <button class="btn-icon-header" onclick="toggleCarouselBrightness()" title="Modo brillo">
+                    <i class="fa-solid fa-sun"></i>
+                </button>
+                <button class="btn-icon-header" onclick="downloadCarouselTicket()">
+                    <i class="fa-solid fa-download"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="carousel-counter" id="carousel_counter">1 de 1</div>
+
+        <div class="carousel-track" id="carousel_track"></div>
+
+        <div class="carousel-dots" id="carousel_dots"></div>
+
+        <p class="carousel-hint" id="carousel_hint">Desliza para ver mas</p>
+
+        <div class="ticket-actions carousel-actions">
+            <button class="btn-secondary" onclick="shareCarouselTicket()">
+                <i class="fa-solid fa-share"></i> Compartir
+            </button>
+            <button class="btn-primary" onclick="downloadCarouselTicket()">
+                <i class="fa-solid fa-download"></i> Descargar
+            </button>
         </div>
     </div>
 
@@ -882,6 +917,39 @@
         </div>
     </div>
 
+    <!-- ============ MODAL: COMPARTIR ENTRADA ============ -->
+    <div id="modalShare" class="modal hidden">
+        <div class="modal-content share-modal-content">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-share-nodes"></i> Compartir Entrada</h2>
+                <button class="modal-close" onclick="closeModal('modalShare')">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="share-description">Tu amigo podrá ver el QR para entrar al evento.</p>
+                <div class="share-options">
+                    <button class="share-option-btn whatsapp" onclick="shareViaWhatsApp()">
+                        <i class="fa-brands fa-whatsapp"></i>
+                        <span>WhatsApp</span>
+                    </button>
+                    <button class="share-option-btn copy" onclick="shareViaCopyLink()">
+                        <i class="fa-solid fa-link"></i>
+                        <span>Copiar enlace</span>
+                    </button>
+                    <button class="share-option-btn message" onclick="shareViaMessage()">
+                        <i class="fa-solid fa-message"></i>
+                        <span>Mensaje</span>
+                    </button>
+                </div>
+                <div class="share-warning">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>Cualquier persona con el enlace puede ver esta entrada</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ============ TOAST ============ -->
     <div id="toast-container"></div>
 
@@ -889,6 +957,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-    <script type="module" src="js/cliente.js?v=6.4.0"></script>
+    <script type="module" src="js/cliente.js?v=7.2.0"></script>
 </body>
 </html>

@@ -55,6 +55,9 @@ let myPurchases = [];
 let currentTicketTab = 'upcoming';
 let ticketQROrigin = 'myTicketsView'; // v5.0.0 - Track where user came from
 let viewingTicket = null;
+let carouselIndices = [];   // v7.2.0 - Indices globales de tickets en carrusel
+let carouselCurrent = 0;    // v7.2.0 - Slide actual del carrusel
+let sharingTicket = null;   // v7.2.0 - Ticket seleccionado para compartir
 let favorites = JSON.parse(localStorage.getItem('parygo_favorites') || '[]');
 
 // Estado de compra
@@ -1820,6 +1823,30 @@ function renderMyTickets() {
 
     container.innerHTML = Object.entries(groups).map(([key, group]) => {
         const tickets = group.tickets;
+        // Sub-agrupar por tipo de entrada
+        const typeGroups = {};
+        tickets.forEach(t => {
+            const typeName = t.ticket_type || 'General';
+            if (!typeGroups[typeName]) typeGroups[typeName] = [];
+            typeGroups[typeName].push(t);
+        });
+
+        const typeGroupsHtml = Object.entries(typeGroups).map(([typeName, typeTickets]) => {
+            const indices = typeTickets.map(t => myTickets.indexOf(t));
+            const indicesJson = JSON.stringify(indices);
+            return `
+                <div class="ticket-type-subgroup">
+                    <div class="ticket-type-subgroup-info">
+                        <span class="ticket-type-subgroup-name">${escapeHtml(typeName)}</span>
+                        <span class="ticket-type-subgroup-count">${typeTickets.length} entrada${typeTickets.length > 1 ? 's' : ''}</span>
+                    </div>
+                    <button class="btn-ver-type" onclick='openTicketCarousel(${indicesJson})'>
+                        Ver <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            `;
+        }).join('');
+
         return `
             <div class="ticket-group">
                 <div class="ticket-group-header" onclick="toggleTicketGroup('${key}')">
@@ -1831,20 +1858,7 @@ function renderMyTickets() {
                     <i class="fa-solid fa-chevron-right ticket-group-chevron" id="chevron_${key}"></i>
                 </div>
                 <div class="ticket-group-body" id="group_${key}">
-                    ${tickets.map(t => {
-                        const globalIdx = myTickets.indexOf(t);
-                        return `
-                            <div class="ticket-group-item" onclick="viewTicketFromGroup(${globalIdx})">
-                                <div class="ticket-group-item-info">
-                                    <span class="ticket-type">${escapeHtml(t.ticket_type)}</span>
-                                </div>
-                                <span class="status-badge ${t.status === 'ACTIVE' ? 'active' : 'used'}">
-                                    ${t.status === 'ACTIVE' ? 'Válida' : 'Usada'}
-                                </span>
-                                <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);margin-left:8px;font-size:12px;"></i>
-                            </div>
-                        `;
-                    }).join('')}
+                    ${typeGroupsHtml}
                 </div>
             </div>
         `;
@@ -1888,6 +1902,250 @@ function backToMyTickets() {
 function backFromTicketQR() {
     viewingTicket = null;
     showView(ticketQROrigin || 'myTicketsView');
+}
+
+// ==========================================
+// CARRUSEL DE ENTRADAS v7.2.0
+// ==========================================
+
+function openTicketCarousel(indices) {
+    carouselIndices = indices;
+    carouselCurrent = 0;
+
+    // Si solo hay 1 entrada, ir directo a la vista QR individual
+    if (indices.length === 1) {
+        showTicketQR(myTickets[indices[0]], 'myTicketsView');
+        return;
+    }
+
+    showView('ticketCarouselView');
+    renderCarousel();
+}
+
+function renderCarousel() {
+    const track = document.getElementById('carousel_track');
+    const dotsContainer = document.getElementById('carousel_dots');
+    const hintEl = document.getElementById('carousel_hint');
+    if (!track || !dotsContainer) return;
+
+    // Título del carrusel
+    const firstTicket = myTickets[carouselIndices[0]];
+    const titleEl = document.getElementById('carousel_title');
+    if (titleEl) titleEl.textContent = `${firstTicket?.ticket_type || 'Entradas'} (${carouselIndices.length})`;
+
+    // Generar slides
+    track.innerHTML = carouselIndices.map((globalIdx, i) => {
+        const ticket = myTickets[globalIdx];
+        const eventData = allEvents.find(e => e.id === ticket.event_id);
+        const clientName = ticket.user_name ||
+            (currentUserProfile ? `${currentUserProfile.name || ''} ${currentUserProfile.lastname || ''}`.trim() : 'Cliente');
+        const docNumber = ticket.user_doc || currentUserProfile?.doc_number || currentUserProfile?.dni || '---';
+        const docType = currentUserProfile?.doc_type || 'DNI';
+        const venue = eventData?.venue || eventData?.location || '';
+        const address = eventData?.address || '';
+        const location = [venue, address].filter(Boolean).join(', ') || 'Por confirmar';
+        const datetime = `${formatDate(ticket.event_date)}${eventData?.time ? ' - ' + eventData.time : ''}`;
+        const isFree = ticket.type === 'FREE' || ticket.price_paid === 0 || ticket.price === 0;
+
+        return `
+            <div class="carousel-slide" data-index="${i}">
+                <div class="ticket-download-card" id="carousel-card-${i}">
+                    <div class="qr-container" id="carouselQR_${i}"></div>
+                    ${isFree ? '<p class="aforo-note">Sujeto a capacidad de aforo</p>' : ''}
+                    <hr class="ticket-divider">
+                    <div class="ticket-dl-section">
+                        <h2 class="ticket-dl-event-name">${escapeHtml(ticket.event_name || '')}</h2>
+                        <p class="ticket-dl-meta"><i class="fa-solid fa-location-dot"></i> <span>${escapeHtml(location)}</span></p>
+                        <p class="ticket-dl-meta"><i class="fa-regular fa-calendar"></i> <span>${datetime}</span></p>
+                    </div>
+                    <hr class="ticket-divider">
+                    <div class="ticket-dl-section ticket-dl-client">
+                        <h3>${escapeHtml(clientName)}</h3>
+                        <p class="ticket-dl-doc">${docType}: ${docNumber}</p>
+                    </div>
+                    <hr class="ticket-divider">
+                    <div class="ticket-dl-section ticket-dl-type-section">
+                        <span class="ticket-type-badge">${escapeHtml(ticket.ticket_type || 'General')}</span>
+                    </div>
+                    <div class="ticket-dl-section ticket-dl-brand">
+                        <span>Productora: ${escapeHtml(currentBrand?.name || '')}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Generar dots
+    dotsContainer.innerHTML = carouselIndices.map((_, i) =>
+        `<span class="carousel-dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></span>`
+    ).join('');
+
+    if (hintEl) hintEl.classList.toggle('hidden', carouselIndices.length <= 1);
+
+    updateCarouselCounter();
+
+    // Generar QRs después de que el DOM se actualice
+    setTimeout(() => {
+        carouselIndices.forEach((globalIdx, i) => {
+            const ticket = myTickets[globalIdx];
+            const container = document.getElementById(`carouselQR_${i}`);
+            if (container && typeof QRCode !== 'undefined') {
+                const qrCode = ticket.code || ticket.qr_token || '';
+                if (qrCode) {
+                    new QRCode(container, {
+                        text: qrCode,
+                        width: 200,
+                        height: 200,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.L
+                    });
+                }
+            }
+        });
+    }, 150);
+
+    // Listener de scroll snap
+    track.removeEventListener('scroll', handleCarouselScroll);
+    track.addEventListener('scroll', handleCarouselScroll);
+}
+
+function handleCarouselScroll() {
+    const track = document.getElementById('carousel_track');
+    if (!track) return;
+    const slideWidth = track.offsetWidth;
+    if (slideWidth === 0) return;
+    const newIndex = Math.round(track.scrollLeft / slideWidth);
+    if (newIndex !== carouselCurrent && newIndex >= 0 && newIndex < carouselIndices.length) {
+        carouselCurrent = newIndex;
+        updateCarouselDots();
+        updateCarouselCounter();
+    }
+}
+
+function goToSlide(index) {
+    const track = document.getElementById('carousel_track');
+    if (!track) return;
+    carouselCurrent = index;
+    track.scrollTo({ left: index * track.offsetWidth, behavior: 'smooth' });
+    updateCarouselDots();
+    updateCarouselCounter();
+}
+
+function updateCarouselDots() {
+    document.querySelectorAll('.carousel-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === carouselCurrent);
+    });
+}
+
+function updateCarouselCounter() {
+    const el = document.getElementById('carousel_counter');
+    if (el) el.textContent = `${carouselCurrent + 1} de ${carouselIndices.length}`;
+}
+
+function backFromCarousel() {
+    showView('myTicketsView');
+}
+
+function toggleCarouselBrightness() {
+    const content = document.querySelector('#ticketCarouselView .carousel-track');
+    if (content) content.classList.toggle('brightness-mode');
+}
+
+function downloadCarouselTicket() {
+    const ticket = myTickets[carouselIndices[carouselCurrent]];
+    if (!ticket) return;
+    const captureEl = document.getElementById(`carousel-card-${carouselCurrent}`);
+    if (captureEl && window.html2canvas) {
+        toast('Generando imagen...', 'info');
+        html2canvas(captureEl, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false })
+            .then(canvas => {
+                const link = document.createElement('a');
+                link.download = `entrada-${ticket.code || 'ticket'}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                toast('Entrada descargada');
+            })
+            .catch(() => toast('Error al descargar', 'error'));
+    }
+}
+
+// ==========================================
+// COMPARTIR ENTRADA v7.2.0
+// ==========================================
+
+async function getShareToken(ticket) {
+    if (!ticket || !ticket.id) return null;
+    if (ticket.share_token) return ticket.share_token;
+
+    const token = crypto.randomUUID ? crypto.randomUUID() :
+        Math.random().toString(36).substring(2) + Date.now().toString(36);
+
+    try {
+        await updateDoc(doc(db, "tickets", ticket.id), {
+            share_token: token,
+            share_token_created_at: new Date().toISOString()
+        });
+        ticket.share_token = token;
+    } catch (e) {
+        console.error('Error guardando share token:', e);
+        return null;
+    }
+    return token;
+}
+
+function buildShareUrl(ticket, token) {
+    const hostname = window.location.hostname;
+    const brandSlug = currentBrandSlug || currentBrand?.slug || 'parygo';
+    if (hostname.includes('.parygo.com') || hostname.includes('.parygo.')) {
+        return `https://${brandSlug}.parygo.com/ticket.html?id=${ticket.id}&token=${token}`;
+    }
+    return `${window.location.origin}/ticket.html?brand=${brandSlug}&id=${ticket.id}&token=${token}`;
+}
+
+function buildShareText(ticket, url) {
+    return `🎫 *${ticket.event_name || 'Evento'}*\n` +
+           `📅 ${formatDate(ticket.event_date)}\n` +
+           `🎟️ ${ticket.ticket_type || 'General'}\n\n` +
+           `Ver entrada:\n${url}`;
+}
+
+async function shareViaWhatsApp() {
+    const token = await getShareToken(sharingTicket);
+    if (!token) { toast('Error generando enlace', 'error'); return; }
+    closeModal('modalShare');
+    const url = buildShareUrl(sharingTicket, token);
+    const text = buildShareText(sharingTicket, url);
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+}
+
+async function shareViaCopyLink() {
+    const token = await getShareToken(sharingTicket);
+    if (!token) { toast('Error generando enlace', 'error'); return; }
+    closeModal('modalShare');
+    const url = buildShareUrl(sharingTicket, token);
+    try {
+        await navigator.clipboard.writeText(url);
+        toast('Enlace copiado');
+    } catch (e) {
+        toast('No se pudo copiar', 'error');
+    }
+}
+
+async function shareViaMessage() {
+    const token = await getShareToken(sharingTicket);
+    if (!token) { toast('Error generando enlace', 'error'); return; }
+    closeModal('modalShare');
+    const url = buildShareUrl(sharingTicket, token);
+    const text = buildShareText(sharingTicket, url);
+    if (navigator.share) {
+        try { await navigator.share({ text }); } catch (e) {}
+    } else {
+        try {
+            await navigator.clipboard.writeText(text);
+            toast('Texto copiado al portapapeles');
+        } catch (e) {}
+    }
 }
 
 // ==========================================
@@ -2055,18 +2313,17 @@ async function downloadTicket() {
 }
 
 async function shareTicket() {
-    const text = `🎫 Mi entrada para ${viewingTicket?.event_name}\nCódigo: ${viewingTicket?.code}`;
+    if (!viewingTicket) return;
+    sharingTicket = viewingTicket;
+    openModal('modalShare');
+}
 
-    if (navigator.share) {
-        try {
-            await navigator.share({ text });
-        } catch (e) {}
-    } else {
-        try {
-            await navigator.clipboard.writeText(text);
-            toast("Copiado al portapapeles");
-        } catch (e) {}
-    }
+function shareCarouselTicket() {
+    if (!carouselIndices.length) return;
+    const ticket = myTickets[carouselIndices[carouselCurrent]];
+    if (!ticket) return;
+    sharingTicket = ticket;
+    openModal('modalShare');
 }
 
 // ==========================================
@@ -2684,3 +2941,14 @@ window.viewTicketFromGroup = viewTicketFromGroup;
 window.viewTicketFromDetail = viewTicketFromDetail;
 window.openChangeEmailModal = openChangeEmailModal;
 window.handleChangeEmail = handleChangeEmail;
+
+// v7.2.0 - Carrusel y compartir
+window.openTicketCarousel = openTicketCarousel;
+window.goToSlide = goToSlide;
+window.backFromCarousel = backFromCarousel;
+window.toggleCarouselBrightness = toggleCarouselBrightness;
+window.downloadCarouselTicket = downloadCarouselTicket;
+window.shareCarouselTicket = shareCarouselTicket;
+window.shareViaWhatsApp = shareViaWhatsApp;
+window.shareViaCopyLink = shareViaCopyLink;
+window.shareViaMessage = shareViaMessage;

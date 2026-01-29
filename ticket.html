@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entrada - ParyGo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #0d0d0d;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .loading-state, .error-state, .ticket-content {
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .loading-state i, .error-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .loading-state i { color: #f43f5e; animation: pulse 1.5s infinite; }
+        .error-state i { color: #ef4444; }
+        .error-state h2 { margin-bottom: 8px; }
+        .error-state p { color: #888; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .hidden { display: none !important; }
+
+        .ticket-card {
+            background: #1a1a1a;
+            border-radius: 20px;
+            padding: 28px 24px;
+            border: 1px solid #2a2a2a;
+            margin-bottom: 20px;
+        }
+
+        .ticket-qr {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .ticket-qr canvas, .ticket-qr img {
+            border-radius: 12px;
+        }
+
+        .ticket-divider {
+            border: none;
+            border-top: 1px dashed #333;
+            margin: 16px 0;
+        }
+
+        .ticket-event-name {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .ticket-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #aaa;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .ticket-meta i { color: var(--accent, #f43f5e); width: 16px; text-align: center; }
+
+        .ticket-type-badge {
+            display: inline-block;
+            background: var(--accent, #f43f5e);
+            color: #fff;
+            padding: 6px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .ticket-brand {
+            color: #555;
+            font-size: 12px;
+            margin-top: 16px;
+        }
+
+        .cta-section {
+            margin-top: 24px;
+            text-align: center;
+        }
+        .cta-section p {
+            color: #888;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+        .cta-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--accent, #f43f5e);
+            color: #fff;
+            padding: 12px 28px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 15px;
+            transition: opacity 0.2s;
+        }
+        .cta-btn:hover { opacity: 0.85; }
+    </style>
+</head>
+<body>
+    <!-- Loading -->
+    <div id="loadingState" class="loading-state">
+        <i class="fa-solid fa-ticket"></i>
+        <p>Cargando entrada...</p>
+    </div>
+
+    <!-- Error -->
+    <div id="errorState" class="error-state hidden">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <h2>Enlace no valido</h2>
+        <p>Este enlace ha expirado o no es valido.</p>
+    </div>
+
+    <!-- Ticket -->
+    <div id="ticketContent" class="ticket-content hidden">
+        <div class="ticket-card">
+            <div class="ticket-qr" id="ticketQR"></div>
+            <hr class="ticket-divider">
+            <h2 class="ticket-event-name" id="ticketEventName"></h2>
+            <div class="ticket-meta">
+                <i class="fa-solid fa-location-dot"></i>
+                <span id="ticketLocation"></span>
+            </div>
+            <div class="ticket-meta">
+                <i class="fa-regular fa-calendar"></i>
+                <span id="ticketDate"></span>
+            </div>
+            <hr class="ticket-divider">
+            <div style="text-align:center;">
+                <span class="ticket-type-badge" id="ticketType"></span>
+            </div>
+            <p class="ticket-brand" id="ticketBrand"></p>
+        </div>
+
+        <div class="cta-section">
+            <p>Gestionado con ParyGo</p>
+            <a href="https://parygo.com" class="cta-btn" target="_blank">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i> Ir a ParyGo
+            </a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyANnihyrgd02ViR_GeKn6Mdf85nLwUjQg0",
+            authDomain: "parygo-da36a.firebaseapp.com",
+            projectId: "parygo-da36a",
+            storageBucket: "parygo-da36a.firebasestorage.app",
+            messagingSenderId: "58655250311",
+            appId: "1:58655250311:web:9b8f46dd35d0a44ce2e522"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Detectar marca por subdominio
+        function getBrandSlug() {
+            const hostname = window.location.hostname;
+            const parts = hostname.split('.');
+            if (parts.length >= 3 && parts[1] === 'parygo') {
+                return parts[0].toLowerCase();
+            }
+            // Fallback: query param
+            const params = new URLSearchParams(window.location.search);
+            return params.get('brand') || null;
+        }
+
+        // Aplicar color de marca
+        async function applyBrandTheme(slug) {
+            if (!slug) return;
+            try {
+                const brandDoc = await getDoc(doc(db, 'brands', slug));
+                if (brandDoc.exists()) {
+                    const data = brandDoc.data();
+                    if (data.color) {
+                        document.documentElement.style.setProperty('--accent', data.color);
+                    }
+                    return data;
+                }
+            } catch (e) {}
+            return null;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            try {
+                const d = new Date(dateStr + 'T00:00:00');
+                return d.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+            } catch (e) {
+                return dateStr;
+            }
+        }
+
+        function showError() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.remove('hidden');
+        }
+
+        function showTicket() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('ticketContent').classList.remove('hidden');
+        }
+
+        async function init() {
+            const params = new URLSearchParams(window.location.search);
+            const ticketId = params.get('id');
+            const token = params.get('token');
+
+            if (!ticketId || !token) {
+                showError();
+                return;
+            }
+
+            try {
+                const slug = getBrandSlug();
+                const brandData = await applyBrandTheme(slug);
+
+                const ticketDoc = await getDoc(doc(db, 'tickets', ticketId));
+                if (!ticketDoc.exists()) {
+                    showError();
+                    return;
+                }
+
+                const ticket = ticketDoc.data();
+
+                // Validar token
+                if (ticket.share_token !== token) {
+                    showError();
+                    return;
+                }
+
+                // Obtener datos del evento
+                let eventData = null;
+                if (ticket.event_id) {
+                    try {
+                        const eventDoc = await getDoc(doc(db, 'events', ticket.event_id));
+                        if (eventDoc.exists()) eventData = eventDoc.data();
+                    } catch (e) {}
+                }
+
+                // Rellenar datos
+                document.getElementById('ticketEventName').textContent = ticket.event_name || eventData?.name || 'Evento';
+
+                const venue = eventData?.venue || eventData?.location || ticket.location || '';
+                const address = eventData?.address || '';
+                document.getElementById('ticketLocation').textContent = [venue, address].filter(Boolean).join(', ') || 'Por confirmar';
+
+                const dateStr = ticket.event_date || eventData?.date || '';
+                const timeStr = eventData?.time || '';
+                document.getElementById('ticketDate').textContent = formatDate(dateStr) + (timeStr ? ` - ${timeStr}` : '');
+
+                document.getElementById('ticketType').textContent = ticket.ticket_type || 'General';
+
+                const brandName = brandData?.name || slug || '';
+                document.getElementById('ticketBrand').textContent = brandName ? `Productora: ${brandName}` : '';
+
+                // Generar QR
+                const qrContainer = document.getElementById('ticketQR');
+                const qrCode = ticket.code || ticket.qr_token || '';
+                if (qrCode && typeof QRCode !== 'undefined') {
+                    new QRCode(qrContainer, {
+                        text: qrCode,
+                        width: 200,
+                        height: 200,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.L
+                    });
+                }
+
+                // Titulo de la pagina
+                document.title = `${ticket.event_name || 'Entrada'} - ParyGo`;
+
+                showTicket();
+            } catch (e) {
+                console.error('Error loading ticket:', e);
+                showError();
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
