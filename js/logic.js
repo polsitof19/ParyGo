@@ -5,21 +5,21 @@
 // 1. IMPORTAR MÓDULOS
 // ==========================================
 
-import { db, auth, APP_CONFIG } from './config.js';
-import { state, resetTemps, getActiveEvent, debugState } from './state.js';
-import { 
-    Validator, 
-    toast, 
-    openModal, 
-    closeModals, 
+import { db, auth, APP_CONFIG } from './config.js?v=6.8.0';
+import { state, resetTemps, getActiveEvent, debugState } from './state.js?v=6.8.0';
+import {
+    Validator,
+    toast,
+    openModal,
+    closeModals,
     closeModal,
-    customConfirm, 
+    customConfirm,
     switchView,
     formatDate,
     formatDateTime,
     formatCurrency,
     debounce
-} from './utils.js';
+} from './utils.js?v=6.8.0';
 
 import {
     doLogin,
@@ -28,13 +28,13 @@ import {
     getCurrentUser,
     registerUser,
     changePassword
-} from './auth.js';
+} from './auth.js?v=6.8.0';
 
-import { 
-    loadEvents, 
-    renderEvents, 
-    filterEvents, 
-    showGlobalEvents, 
+import {
+    loadEvents,
+    renderEvents,
+    filterEvents,
+    showGlobalEvents,
     backToEvents,
     openEventDetail,
     openEventModal,
@@ -42,12 +42,12 @@ import {
     handleFileSelect,
     saveEvent,
     deleteEvent
-} from './events.js';
+} from './events.js?v=6.8.0';
 
-import { 
-    loadBrandsWithLogos, 
-    deleteBrand, 
-    saveBrand, 
+import {
+    loadBrandsWithLogos,
+    deleteBrand,
+    saveBrand,
     clearBrandLogo,
     handleBrandLogoSelect,
     editBrand,
@@ -60,7 +60,7 @@ import {
     updateBrandHeaderActions,
     editCurrentBrand,
     copyCurrentBrandLink
-} from './brands.js';
+} from './brands.js?v=6.8.0';
 
 import {
     renderTicketTable,
@@ -69,12 +69,12 @@ import {
     saveNewTicket,
     deleteTicket,
     toggleUsesField
-} from './tickets.js';
+} from './tickets.js?v=6.8.0';
 
 import {
     loadPromotersCache,
     selectPromoter,
-    fillCodeGen, 
+    fillCodeGen,
     generateCodes,
     openStockModal,
     loadStockTable,
@@ -82,7 +82,7 @@ import {
     togglePromoterField,
     downloadCodesAsExcel,
     downloadCodesAsTxt
-} from './codes.js';
+} from './codes.js?v=6.8.0';
 import {
     loadEventMetrics,
     switchMetricTab,
@@ -105,9 +105,9 @@ import {
     filterAccessTable,
     openDrawer,
     closeDrawer
-} from './metrics.js?v=6.7.0';
+} from './metrics.js?v=6.8.0';
 
-import { 
+import {
     loadPromotersView,
     openNewPromoterModal,
     editPromoter,
@@ -131,15 +131,15 @@ import {
     saveScanner,
     deleteScanner,
     handlePromoterImage
-} from './staff.js';
+} from './staff.js?v=6.8.0';
 
-import { 
-    loadRewardsView, 
-    renderRewards, 
-    deliverReward 
-} from './rewards.js';
+import {
+    loadRewardsView,
+    renderRewards,
+    deliverReward
+} from './rewards.js?v=6.8.0';
 
-import { consultarDNI, autocompletarDNI } from './dni-api.js';
+import { consultarDNI, autocompletarDNI } from './dni-api.js?v=6.8.0';
 
 // ==========================================
 // 2. EXPONER FUNCIONES AL WINDOW
