@@ -1048,7 +1048,7 @@ function getCountdown(dateStr, timeStr) {
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 
     if (days === 0) return `En ${hours}h`;
-    if (days === 1) return 'Manana';
+    if (days === 1) return 'Ma\u00f1ana';
     if (days <= 7) return `En ${days} dias`;
     return '';
 }
@@ -1068,16 +1068,16 @@ function getCountdownBadge(eventDate) {
 
     let text, colorClass;
     if (diffDays === 0) {
-        text = 'Es hoy!';
+        text = '\u00a1Es hoy!';
         colorClass = 'countdown-red';
     } else if (diffDays === 1) {
-        text = 'Manana!';
+        text = '\u00a1Ma\u00f1ana!';
         colorClass = 'countdown-red';
     } else if (diffDays <= 3) {
-        text = 'Faltan ' + diffDays + ' dias';
+        text = 'Faltan ' + diffDays + ' d\u00edas';
         colorClass = 'countdown-orange';
     } else {
-        text = 'Faltan ' + diffDays + ' dias';
+        text = 'Faltan ' + diffDays + ' d\u00edas';
         colorClass = 'countdown-yellow';
     }
 
