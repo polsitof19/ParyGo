@@ -502,8 +502,10 @@ input, select, textarea {
 
 .event-card-image {
     width: 100%;
-    aspect-ratio: 16/9;
+    height: 200px;
     object-fit: cover;
+    object-position: center;
+    display: block;
 }
 
 .event-card-body {
@@ -2176,23 +2178,16 @@ input, select, textarea {
 }
 
 /* ==========================================
-   SECCION 28: SCROLL HORIZONTAL EVENTOS
+   SECCION 28: EVENTOS - VERTICAL EN MOBILE
    ========================================== */
 @media (max-width: 768px) {
     .events-scroll {
         display: flex;
+        flex-direction: column;
         gap: 14px;
-        overflow-x: auto;
-        scroll-snap-type: x mandatory;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        padding-bottom: 4px;
     }
-    .events-scroll::-webkit-scrollbar { display: none; }
     .events-scroll .event-card {
-        min-width: 85vw;
-        scroll-snap-align: center;
-        flex-shrink: 0;
+        width: 100%;
     }
 }
 @media (min-width: 769px) {

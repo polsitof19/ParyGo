@@ -1880,15 +1880,17 @@ function backFromTicketQR() {
 // ==========================================
 // v5.0.0 - SISTEMA UNIFICADO DE VISTA QR
 // ==========================================
-function showTicketQR(ticket, origin) {
+async function showTicketQR(ticket, origin) {
     if (!ticket) return;
     viewingTicket = ticket;
     ticketQROrigin = origin || 'myTicketsView';
     showView('ticketQRView');
-    populateTicketQR(ticket);
+    // Small delay to ensure canvas is rendered in DOM before QR generation
+    await new Promise(r => setTimeout(r, 100));
+    await populateTicketQR(ticket);
 }
 
-function populateTicketQR(ticket) {
+async function populateTicketQR(ticket) {
     if (!ticket) return;
 
     const eventData = allEvents.find(e => e.id === ticket.event_id);
@@ -1911,13 +1913,23 @@ function populateTicketQR(ticket) {
         dtEl.textContent = `${formatDate(ticket.event_date)}${eventData?.time ? ' - ' + eventData.time : ''}`;
     }
 
-    // Client name
+    // Client name - fallback to currentUserProfile if ticket.user_name is empty
     const holderEl = document.getElementById("qr_holder_name");
-    if (holderEl) holderEl.textContent = ticket.user_name || '';
+    if (holderEl) {
+        let clientName = ticket.user_name || '';
+        if (!clientName && currentUserProfile) {
+            clientName = `${currentUserProfile.name || ''} ${currentUserProfile.lastname || ''}`.trim();
+        }
+        holderEl.textContent = clientName || 'Cliente';
+    }
 
-    // Client doc
+    // Client doc - fallback to currentUserProfile
     const docEl = document.getElementById("qr_holder_doc");
-    if (docEl) docEl.textContent = `DNI: ${ticket.user_doc || '---'}`;
+    if (docEl) {
+        const docNumber = ticket.user_doc || currentUserProfile?.doc_number || currentUserProfile?.dni || '---';
+        const docType = currentUserProfile?.doc_type || 'DNI';
+        docEl.textContent = `${docType}: ${docNumber}`;
+    }
 
     // Ticket type badge
     const typeEl = document.getElementById("qr_ticket_type");
@@ -1934,8 +1946,8 @@ function populateTicketQR(ticket) {
     const brandEl = document.getElementById("qr_brand_name");
     if (brandEl) brandEl.textContent = `Productora: ${currentBrand?.name || ''}`;
 
-    // Generate QR
-    generateTicketQR(ticket);
+    // Generate QR (awaited to ensure it completes)
+    await generateTicketQR(ticket);
 }
 
 async function generateTicketQR(ticket) {
