@@ -1951,42 +1951,18 @@ async function populateTicketQR(ticket) {
     const brandEl = document.getElementById("qr_brand_name");
     if (brandEl) brandEl.textContent = `Productora: ${currentBrand?.name || ''}`;
 
-    // Generate QR (awaited to ensure it completes)
-    await generateTicketQR(ticket);
+    // Generate QR
+    generateTicketQR(ticket);
 }
 
-function loadQRCodeScript() {
-    return new Promise((resolve, reject) => {
-        if (window.QRCode) return resolve();
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
-        s.onload = () => resolve();
-        s.onerror = () => reject(new Error('Failed to load QRCode script'));
-        document.head.appendChild(s);
-    });
-}
-
-async function ensureQRCode() {
-    if (window.QRCode) return true;
-    // Wait briefly for the static script tag to finish loading
-    for (let i = 0; i < 10; i++) {
-        await new Promise(r => setTimeout(r, 100));
-        if (window.QRCode) return true;
+function generateTicketQR(ticket) {
+    const container = document.getElementById("ticketQRContainer");
+    if (!container) {
+        console.warn('generateTicketQR: container ticketQRContainer no encontrado');
+        return;
     }
-    // Fallback: load dynamically
-    try {
-        await loadQRCodeScript();
-        return !!window.QRCode;
-    } catch (e) {
-        console.error('ensureQRCode: failed to load library', e);
-        return false;
-    }
-}
-
-async function generateTicketQR(ticket) {
-    const imgEl = document.getElementById("qr_image");
-    if (!imgEl || !ticket) {
-        console.warn('generateTicketQR: missing img element or ticket');
+    if (!ticket) {
+        console.warn('generateTicketQR: ticket vacío');
         return;
     }
 
@@ -1996,21 +1972,27 @@ async function generateTicketQR(ticket) {
         return;
     }
 
-    const loaded = await ensureQRCode();
-    if (!loaded) {
-        console.error('generateTicketQR: QRCode library not available');
-        return;
-    }
+    // Limpiar QR anterior
+    container.innerHTML = '';
 
     try {
-        const dataUrl = await QRCode.toDataURL(qrData, {
-            width: 200,
-            margin: 2,
-            color: { dark: '#000000', light: '#ffffff' }
-        });
-        imgEl.src = dataUrl;
+        if (typeof QRCode !== 'undefined') {
+            new QRCode(container, {
+                text: qrData,
+                width: 200,
+                height: 200,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            console.log('QR generado exitosamente');
+        } else {
+            console.error('generateTicketQR: QRCode library not available');
+            container.innerHTML = '<p style="color:#999;font-size:12px;">Error cargando QR</p>';
+        }
     } catch (e) {
         console.error('Error generating QR:', e);
+        container.innerHTML = '<p style="color:#999;font-size:12px;">Error generando QR</p>';
     }
 }
 
@@ -2053,8 +2035,9 @@ async function downloadTicket() {
         }
     }
 
-    // Fallback: download QR image only
-    const qrImg = document.getElementById("qr_image");
+    // Fallback: download QR image from container
+    const qrContainer = document.getElementById("ticketQRContainer");
+    const qrImg = qrContainer?.querySelector('img');
     if (!qrImg || !qrImg.src) return;
     const link = document.createElement('a');
     link.download = `entrada-${viewingTicket?.code || 'ticket'}.png`;

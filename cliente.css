@@ -1127,7 +1127,8 @@ input, select, textarea {
     justify-content: center;
 }
 
-.ticket-download-card .qr-container img {
+.ticket-download-card .qr-container img,
+.ticket-download-card .qr-container canvas {
     max-width: 200px;
     height: auto;
 }

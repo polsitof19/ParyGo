@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="assets/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="cliente.css?v=5.3.0">
+    <link rel="stylesheet" href="cliente.css?v=5.4.0">
 </head>
 <body>
 
@@ -339,8 +339,7 @@
         <div class="ticket-qr-content">
             <!-- Card blanca para ver y descargar -->
             <div class="ticket-download-card" id="ticket-download-content">
-                <div class="qr-container">
-                    <img id="qr_image" alt="QR Code" width="200" height="200" />
+                <div class="qr-container" id="ticketQRContainer">
                 </div>
 
                 <p id="qr_aforo_note" class="aforo-note hidden">Sujeto a capacidad de aforo</p>
@@ -873,9 +872,9 @@
     <div id="toast-container"></div>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-    <script type="module" src="js/cliente.js?v=5.3.0"></script>
+    <script type="module" src="js/cliente.js?v=5.4.0"></script>
 </body>
 </html>
