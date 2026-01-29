@@ -2578,3 +2578,127 @@ select option:hover {
     .sales-bulk-btns { width: 100%; }
     .sales-bulk-btn { flex: 1; }
 }
+
+/* ==========================================
+   Modal Aprobar Venta v7.0.0
+   ========================================== */
+.approve-modal {
+    max-width: 420px;
+    padding: 28px;
+}
+
+.approve-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.approve-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.approve-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--success);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.approve-section {
+    background: #141414;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.approve-section-title {
+    color: #888;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+.approve-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+}
+
+.approve-row + .approve-row {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.approve-label {
+    color: #888;
+    font-size: 13px;
+}
+
+.approve-value {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.approve-highlight {
+    color: var(--success);
+    font-size: 16px;
+}
+
+.approve-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+.approve-btn {
+    flex: 1;
+    padding: 14px 20px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.approve-btn.cancel {
+    background: rgba(255, 255, 255, 0.08);
+    color: #aaa;
+}
+
+.approve-btn.cancel:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--text);
+}
+
+.approve-btn.confirm {
+    background: var(--success);
+    color: white;
+}
+
+.approve-btn.confirm:hover {
+    background: #16a34a;
+}
+
+.approve-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

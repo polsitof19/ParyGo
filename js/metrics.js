@@ -460,25 +460,29 @@ export function viewProof(saleIdOrUrl) {
  * Aprobar venta
  */
 export async function approveSale(id) {
-    // Obtener datos de la venta
     try {
         const saleRef = doc(db, APP_CONFIG.COLLECTIONS.SALES, id);
         const saleSnap = await getDoc(saleRef);
-        
+
         if (!saleSnap.exists()) {
             toast("Venta no encontrada", "error");
             return;
         }
-        
+
         const sale = saleSnap.data();
-        
-        // Mostrar modal
+        const qty = sale.quantity || 1;
+        const ticketName = sale.ticket_name || sale.ticket_type || 'General';
+        const total = parseFloat(sale.total_price || sale.total || 0);
+        const clientName = sale.full_name || sale.payer_name || [sale.client_name, sale.client_lastname].filter(Boolean).join(' ') || '---';
+        const clientDni = sale.client_dni || '---';
+
         document.getElementById('approveSaleId').value = id;
-        document.getElementById('approveSaleTotal').textContent = `S/. ${parseFloat(sale.total_price || sale.total || 0).toFixed(2)}`;
-        document.getElementById('operationNumber').value = '';
+        document.getElementById('approveTicketInfo').textContent = `${qty}x ${ticketName}`;
+        document.getElementById('approveSaleTotal').textContent = `S/. ${total.toFixed(2)}`;
+        document.getElementById('approveClientName').textContent = clientName;
+        document.getElementById('approveClientDni').textContent = clientDni;
         document.getElementById('modalApproveSale').classList.remove('hidden');
-        document.getElementById('operationNumber').focus();
-        
+
     } catch (error) {
         console.error("Error:", error);
         toast("Error al cargar venta", "error");
@@ -488,34 +492,30 @@ export async function approveSale(id) {
 // Confirmar aprobación con número de operación
 export async function confirmApproveSale() {
     const id = document.getElementById('approveSaleId').value;
-    const operationNumber = document.getElementById('operationNumber').value.trim();
-    
-    if (!operationNumber) {
-        toast("Ingresa el número de operación", "error");
-        return;
-    }
-    
+    const btn = document.getElementById('btnConfirmApprove');
+
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Aprobando...'; }
+
     try {
         await runTransaction(db, async (transaction) => {
             const saleRef = doc(db, APP_CONFIG.COLLECTIONS.SALES, id);
             const saleSnap = await transaction.get(saleRef);
-            
+
             if (!saleSnap.exists()) throw new Error("Venta no encontrada");
-            
+
             const sale = saleSnap.data();
-            
-            // Actualizar venta con número de operación
+
+            // Actualizar venta
             transaction.update(saleRef, {
                 status: APP_CONFIG.STATUS.APPROVED,
-                operation_number: operationNumber,
                 approved_at: new Date().toISOString(),
                 approved_by: state.currentUser?.id
             });
-            
+
             // Crear ticket
             const ticketRef = doc(collection(db, APP_CONFIG.COLLECTIONS.TICKETS));
             const code = `TKT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
-            
+
             const ticketData = {
                 company_id: sale.company_id || "",
                 event_id: sale.event_id,
@@ -539,11 +539,9 @@ export async function confirmApproveSale() {
                 code: code,
                 status: 'ACTIVE',
                 sale_id: id,
-                operation_number: operationNumber,
                 created_at: new Date().toISOString()
             };
 
-            // Solo agregar campos de promotor si existen
             if (sale.promoter_id) {
                 ticketData.promoter_id = sale.promoter_id;
                 ticketData.promoter_name = sale.promoter_name || "";
@@ -551,19 +549,19 @@ export async function confirmApproveSale() {
 
             transaction.set(ticketRef, ticketData);
         });
-        
-        // Cerrar modal y actualizar
-        document.getElementById('modalApproveSale').classList.add('hidden');
 
-        toast("✅ Venta aprobada y ticket generado");
+        document.getElementById('modalApproveSale').classList.add('hidden');
+        toast("Venta aprobada y ticket generado", "success");
 
         if (window.loadEventMetrics) window.loadEventMetrics(state.activeEventId);
         loadAllSales(state.activeEventId);
-        
+
     } catch (error) {
         console.error("Error aprobando venta:", error);
         toast("Error al aprobar venta", "error");
     }
+
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmar'; }
 }
 
 /**

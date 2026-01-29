@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=6.9.0">
+    <link rel="stylesheet" href="style.css?v=7.0.0">
     <style>
         /* ESTILOS FILTROS ACCESOS */
         .filter-select {
@@ -1547,27 +1547,44 @@
    
    <!-- Modal: Aprobar Venta -->
 <div id="modalApproveSale" class="modal hidden">
-    <div class="modal-content" style="max-width:400px;">
+    <div class="modal-content approve-modal">
         <button class="modal-close" onclick="closeModals()"><i class="fa-solid fa-times"></i></button>
-        <h2><i class="fa-solid fa-check-circle" style="color:var(--success);"></i> Aprobar Venta</h2>
-        
-        <div class="sale-summary" style="background:rgba(34,197,94,0.1); border-radius:12px; padding:16px; margin-bottom:20px;">
-            <p style="margin:0; color:var(--text-muted); font-size:13px;">Total a recibir:</p>
-            <p style="margin:4px 0 0; font-size:24px; font-weight:700; color:var(--success);" id="approveSaleTotal">S/. 0.00</p>
+
+        <div class="approve-header">
+            <div class="approve-icon"><i class="fa-solid fa-check"></i></div>
+            <h3>Aprobar Venta</h3>
         </div>
-        
+
         <input type="hidden" id="approveSaleId">
-        
-        <div class="form-group">
-            <label>Número de Operación *</label>
-            <input type="text" id="operationNumber" placeholder="Ej: 123456789" maxlength="20">
-            <small style="color:var(--text-muted); font-size:11px;">Código de transacción Yape/Plin</small>
+
+        <div class="approve-section">
+            <div class="approve-section-title">RESUMEN DE COMPRA</div>
+            <div class="approve-row">
+                <span class="approve-label">Entradas</span>
+                <span class="approve-value" id="approveTicketInfo">2x VIP</span>
+            </div>
+            <div class="approve-row">
+                <span class="approve-label">Total</span>
+                <span class="approve-value approve-highlight" id="approveSaleTotal">S/. 100.00</span>
+            </div>
         </div>
-        
-        <div class="modal-actions">
-            <button class="btn btn-ghost" onclick="closeModals()">Cancelar</button>
-            <button class="btn btn-primary" id="btnConfirmApprove" style="background:var(--success);">
-                <i class="fa-solid fa-check"></i> Confirmar Aprobación
+
+        <div class="approve-section">
+            <div class="approve-section-title">DATOS DEL CLIENTE</div>
+            <div class="approve-row">
+                <span class="approve-label">Nombre</span>
+                <span class="approve-value" id="approveClientName">---</span>
+            </div>
+            <div class="approve-row">
+                <span class="approve-label">DNI</span>
+                <span class="approve-value" id="approveClientDni">---</span>
+            </div>
+        </div>
+
+        <div class="approve-actions">
+            <button class="approve-btn cancel" onclick="closeModals()">Cancelar</button>
+            <button class="approve-btn confirm" id="btnConfirmApprove">
+                <i class="fa-solid fa-check"></i> Confirmar
             </button>
         </div>
     </div>
@@ -1677,6 +1694,6 @@
 
 <!-- Scripts -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-<script type="module" src="js/logic.js?v=6.9.0"></script>
+<script type="module" src="js/logic.js?v=7.0.0"></script>
 </body>
 </html>
