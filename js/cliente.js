@@ -1951,24 +1951,37 @@ async function populateTicketQR(ticket) {
 }
 
 async function generateTicketQR(ticket) {
-    const canvas = document.getElementById("qr_canvas");
-    if (!canvas || !ticket) return;
+    const imgEl = document.getElementById("qr_image");
+    if (!imgEl || !ticket) {
+        console.warn('generateTicketQR: missing img element or ticket');
+        return;
+    }
 
     const qrData = ticket.qr_data || ticket.code;
-    if (!qrData) return;
+    if (!qrData) {
+        console.warn('generateTicketQR: no qr_data or code in ticket', ticket.id);
+        return;
+    }
+
+    // Wait for QR library to load (max ~4 seconds)
+    let attempts = 0;
+    while (!window.QRCode && attempts < 20) {
+        await new Promise(r => setTimeout(r, 200));
+        attempts++;
+    }
+
+    if (!window.QRCode) {
+        console.error('generateTicketQR: QRCode library not loaded');
+        return;
+    }
 
     try {
-        if (window.QRCode) {
-            // Clear canvas first
-            const ctx = canvas.getContext('2d');
-            if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            await QRCode.toCanvas(canvas, qrData, {
-                width: 200,
-                margin: 2,
-                color: { dark: '#000000', light: '#ffffff' }
-            });
-        }
+        const dataUrl = await QRCode.toDataURL(qrData, {
+            width: 200,
+            margin: 2,
+            color: { dark: '#000000', light: '#ffffff' }
+        });
+        imgEl.src = dataUrl;
     } catch (e) {
         console.error('Error generating QR:', e);
     }
@@ -2013,12 +2026,12 @@ async function downloadTicket() {
         }
     }
 
-    // Fallback: download QR only
-    const qrCanvas = document.getElementById("qr_canvas");
-    if (!qrCanvas) return;
+    // Fallback: download QR image only
+    const qrImg = document.getElementById("qr_image");
+    if (!qrImg || !qrImg.src) return;
     const link = document.createElement('a');
     link.download = `entrada-${viewingTicket?.code || 'ticket'}.png`;
-    link.href = qrCanvas.toDataURL();
+    link.href = qrImg.src;
     link.click();
     toast('Entrada descargada exitosamente');
 }
