@@ -105,7 +105,7 @@ import {
     filterAccessTable,
     openDrawer,
     closeDrawer
-} from './metrics.js';
+} from './metrics.js?v=6.9.0';
 
 import {
     loadPromotersView,
