@@ -150,6 +150,9 @@ export function switchMetricTab(type) {
 
 let allSalesData = [];
 let currentSalesFilter = 'PENDING';
+let currentMethodFilter = 'all';
+let selectedSaleIds = [];
+let salesSoundEnabled = true;
 
 /**
  * Cargar TODAS las ventas del evento (todos los estados)
@@ -187,8 +190,10 @@ export async function loadAllSales(eid) {
         const totalRecaudado = approvedSales.reduce((sum, s) => sum + Number(s.total_price || s.total || 0), 0);
         const trEl = document.getElementById("totalRecaudado");
         const tvEl = document.getElementById("totalVentas");
+        const tpEl = document.getElementById("totalPendientes");
         if (trEl) trEl.textContent = `S/. ${totalRecaudado.toFixed(2)}`;
         if (tvEl) tvEl.textContent = approvedSales.length;
+        if (tpEl) tpEl.textContent = pending;
 
         // Actualizar tabla oculta para exportación
         updateSalesExportTable();
@@ -216,7 +221,7 @@ export function filterSalesByStatus(status) {
     currentSalesFilter = status;
 
     // Actualizar botones activos
-    document.querySelectorAll('.sales-filter').forEach(btn => {
+    document.querySelectorAll('.sales-tab-v2').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-status') === status);
     });
 
@@ -224,16 +229,104 @@ export function filterSalesByStatus(status) {
 }
 
 /**
- * Renderizar cards de ventas
+ * Filtrar ventas por método de pago
+ */
+export function filterSalesByMethod(method) {
+    currentMethodFilter = method;
+    document.querySelectorAll('.sales-method-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-method') === method);
+    });
+    renderSalesCards();
+}
+
+/**
+ * Búsqueda en ventas
+ */
+export function searchSalesFilter() {
+    renderSalesCards();
+}
+
+/**
+ * Toggle selección de venta
+ */
+export function toggleSaleSelect(saleId) {
+    const idx = selectedSaleIds.indexOf(saleId);
+    if (idx > -1) selectedSaleIds.splice(idx, 1);
+    else selectedSaleIds.push(saleId);
+    updateBulkUI();
+    renderSalesCards();
+}
+
+function updateBulkUI() {
+    const el = document.getElementById('salesSelectedCount');
+    const container = document.getElementById('salesBulkActions');
+    if (el) el.textContent = selectedSaleIds.length;
+    if (container) container.classList.toggle('visible', selectedSaleIds.length > 0);
+}
+
+export function clearSalesSelection() {
+    selectedSaleIds = [];
+    updateBulkUI();
+    renderSalesCards();
+}
+
+export async function approveSelectedSales() {
+    for (const id of selectedSaleIds) {
+        await approveSale(id);
+    }
+    selectedSaleIds = [];
+    updateBulkUI();
+}
+
+export function toggleSalesSound() {
+    salesSoundEnabled = !salesSoundEnabled;
+    const btn = document.getElementById('soundToggle');
+    if (btn) {
+        btn.classList.toggle('active', salesSoundEnabled);
+        btn.innerHTML = salesSoundEnabled
+            ? '<i class="fa-solid fa-bell"></i>'
+            : '<i class="fa-solid fa-bell-slash"></i>';
+    }
+}
+
+function getTimeAgo(timestamp) {
+    if (!timestamp) return '';
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : (timestamp.toDate ? timestamp.toDate() : new Date(timestamp));
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000);
+    if (diff < 60) return 'Ahora';
+    if (diff < 3600) return `Hace ${Math.floor(diff / 60)} min`;
+    if (diff < 86400) return `Hace ${Math.floor(diff / 3600)}h`;
+    return `Hace ${Math.floor(diff / 86400)}d`;
+}
+
+/**
+ * Renderizar cards de ventas v6.5.0
  */
 function renderSalesCards() {
     const container = document.getElementById("salesCardsContainer");
     if (!container) return;
 
-    // Filtrar
+    const searchTerm = (document.getElementById('salesSearchInput')?.value || '').toLowerCase();
+
+    // Filtrar por estado
     let filtered = allSalesData;
     if (currentSalesFilter !== 'ALL') {
-        filtered = allSalesData.filter(s => s.status === currentSalesFilter);
+        filtered = filtered.filter(s => s.status === currentSalesFilter);
+    }
+
+    // Filtrar por método de pago
+    if (currentMethodFilter !== 'all') {
+        filtered = filtered.filter(s => s.payment_method === currentMethodFilter);
+    }
+
+    // Filtrar por búsqueda
+    if (searchTerm) {
+        filtered = filtered.filter(s => {
+            const name = (s.full_name || s.client_name || '').toLowerCase();
+            const dni = (s.client_dni || '').toLowerCase();
+            return name.includes(searchTerm) || dni.includes(searchTerm);
+        });
     }
 
     // Ordenar: pendientes primero, luego por fecha
@@ -249,7 +342,7 @@ function renderSalesCards() {
                     currentSalesFilter === 'REJECTED' ? 'No hay ventas rechazadas' :
                     'No hay ventas registradas';
         container.innerHTML = `
-            <div class="sales-empty-state" style="grid-column: 1 / -1;">
+            <div class="sales-empty-state">
                 <i class="fa-solid fa-money-bill"></i>
                 <p>${msg}</p>
             </div>
@@ -260,69 +353,57 @@ function renderSalesCards() {
     container.innerHTML = filtered.map(sale => {
         const clientName = sale.full_name || sale.client_name || 'Sin nombre';
         const initials = clientName.split(' ').map(n => n.charAt(0).toUpperCase()).slice(0, 2).join('');
-        const statusClass = sale.status === APP_CONFIG.STATUS.PENDING ? 'pending' :
-                           sale.status === APP_CONFIG.STATUS.APPROVED ? 'approved' : 'rejected';
-        const statusText = sale.status === APP_CONFIG.STATUS.PENDING ? 'Pendiente' :
-                          sale.status === APP_CONFIG.STATUS.APPROVED ? 'Aprobada' : 'Rechazada';
+        const method = sale.payment_method || 'transfer';
+        const methodLabel = method === 'yape' ? 'Yape' : method === 'plin' ? 'Plin' : 'Transferencia';
+        const timeAgo = getTimeAgo(sale.created_at);
+        const isSelected = selectedSaleIds.includes(sale.id);
+        const qty = sale.quantity || 1;
+        const ticketName = sale.ticket_name || sale.ticket_type || 'General';
+        const total = Number(sale.total_price || sale.total || 0);
 
-        const proofHtml = sale.proof_image ? `
-            <div class="sale-card-proof" onclick="window.viewProof('${sale.id}')">
-                <img src="${sale.proof_image}" alt="Comprobante" loading="lazy">
-                <div class="sale-card-proof-overlay">
-                    <i class="fa-solid fa-expand"></i>
-                </div>
-            </div>
-        ` : '';
+        const checkboxHtml = sale.status === APP_CONFIG.STATUS.PENDING
+            ? `<div class="sv2-checkbox ${isSelected ? 'checked' : ''}" onclick="event.stopPropagation(); window.toggleSaleSelect('${sale.id}')"></div>`
+            : '';
 
-        const actionsHtml = sale.status === APP_CONFIG.STATUS.PENDING ? `
-            <div class="sale-card-actions">
-                <button class="btn-approve" onclick="window.approveSale('${sale.id}')">
-                    <i class="fa-solid fa-check"></i> APROBAR
-                </button>
-                <button class="btn-reject" onclick="window.rejectSale('${sale.id}')">
-                    <i class="fa-solid fa-times"></i>
-                </button>
-            </div>
-        ` : '';
-
-        const createdAt = sale.created_at ? new Date(sale.created_at).toLocaleString('es-PE', {
-            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
-        }) : '';
+        // Acciones según estado
+        let actionsHtml = '';
+        if (sale.status === APP_CONFIG.STATUS.PENDING) {
+            actionsHtml = `
+                <div class="sv2-actions">
+                    ${sale.proof_image || sale.payment_proof ? `<button class="sv2-action-btn view" onclick="window.viewProof('${sale.id}')"><i class="fa-solid fa-image"></i><span>Comprobante</span></button>` : ''}
+                    <button class="sv2-action-btn approve" onclick="window.approveSale('${sale.id}')"><i class="fa-solid fa-check"></i><span>Aprobar</span></button>
+                    <button class="sv2-action-btn reject" onclick="window.rejectSale('${sale.id}')"><i class="fa-solid fa-xmark"></i><span>Rechazar</span></button>
+                </div>`;
+        } else if (sale.status === APP_CONFIG.STATUS.APPROVED) {
+            actionsHtml = sale.proof_image || sale.payment_proof
+                ? `<div class="sv2-actions"><button class="sv2-action-btn view" onclick="window.viewProof('${sale.id}')"><i class="fa-solid fa-image"></i><span>Comprobante</span></button></div>`
+                : '';
+        } else {
+            actionsHtml = sale.proof_image || sale.payment_proof
+                ? `<div class="sv2-actions"><button class="sv2-action-btn view" onclick="window.viewProof('${sale.id}')"><i class="fa-solid fa-image"></i><span>Comprobante</span></button></div>`
+                : '';
+        }
 
         return `
-            <div class="sale-card" id="sale_${sale.id}">
-                <div class="sale-card-header">
-                    <div class="sale-card-client">
-                        <div class="sale-card-avatar">${initials}</div>
-                        <div>
-                            <div class="sale-card-name">${Validator.sanitizeHTML(clientName)}</div>
-                            <div class="sale-card-dni">DNI: ${Validator.sanitizeHTML(sale.client_dni || '-')}</div>
-                        </div>
+            <div class="sv2-card ${isSelected ? 'selected' : ''}" id="sale_${sale.id}">
+                ${checkboxHtml}
+                <div class="sv2-avatar ${method}">${initials}</div>
+                <div class="sv2-info">
+                    <div class="sv2-client-name">${Validator.sanitizeHTML(clientName)}</div>
+                    <div class="sv2-client-dni">DNI: ${Validator.sanitizeHTML(sale.client_dni || '---')}</div>
+                    <div class="sv2-ticket-line">
+                        <span class="sv2-ticket-qty">${qty}x</span>
+                        <span class="sv2-ticket-type">${Validator.sanitizeHTML(ticketName)}</span>
+                        <span class="sv2-sale-amount">S/. ${total.toFixed(2)}</span>
                     </div>
-                    <span class="sale-card-status ${statusClass}">${statusText}</span>
-                </div>
-                <div class="sale-card-body">
-                    <div class="sale-card-info-grid">
-                        <div class="sale-card-info-item">
-                            <span class="sale-card-info-label">Entrada</span>
-                            <span class="sale-card-info-value">${Validator.sanitizeHTML(sale.ticket_name || '-')}</span>
-                        </div>
-                        <div class="sale-card-info-item">
-                            <span class="sale-card-info-label">Total</span>
-                            <span class="sale-card-info-value price">S/ ${Number(sale.total_price || sale.total || 0).toFixed(2)}</span>
-                        </div>
-                        <div class="sale-card-info-item">
-                            <span class="sale-card-info-label">Método</span>
-                            <span class="sale-card-info-value">${Validator.sanitizeHTML(sale.payment_method || '-')}</span>
-                        </div>
-                        <div class="sale-card-info-item">
-                            <span class="sale-card-info-label">N° Operación</span>
-                            <span class="sale-card-info-value">${Validator.sanitizeHTML(sale.operation_number || '-')}</span>
-                        </div>
+                    <div class="sv2-payment-line">
+                        <span class="sv2-payment-badge ${method}">
+                            <i class="fa-solid fa-${method === 'bank' ? 'building-columns' : 'mobile-screen'}"></i>
+                            ${methodLabel}
+                        </span>
+                        <span class="sv2-time">${timeAgo}</span>
                     </div>
-                    ${proofHtml}
                 </div>
-                ${createdAt ? `<div class="sale-card-date"><i class="fa-regular fa-clock"></i> ${createdAt}</div>` : ''}
                 ${actionsHtml}
             </div>
         `;

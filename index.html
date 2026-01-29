@@ -603,14 +603,22 @@
                         </div>
                     </div>
                     
-                    <!-- TAB: VENTAS -->
-                    <!-- TAB: VENTAS -->
+                    <!-- TAB: VENTAS v6.5.0 -->
 <div id="tab_sales" class="sub-content hidden">
-    <div class="section-header">
-        <h3>Historial de Ventas</h3>
-        <button class="btn btn-outline" id="btnExportSales" title="Exportar a Excel">
-            <i class="fa-solid fa-file-excel"></i> <span>Exportar</span>
-        </button>
+    <!-- Header -->
+    <div class="sales-page-header">
+        <h3 class="sales-page-title">Gestión de Ventas</h3>
+        <div class="sales-header-actions">
+            <button class="sales-icon-btn" id="soundToggle" onclick="window.toggleSalesSound()" title="Notificaciones">
+                <i class="fa-solid fa-bell"></i>
+            </button>
+            <button class="sales-icon-btn" onclick="window.loadAllSales(window._activeEventId)" title="Actualizar">
+                <i class="fa-solid fa-rotate"></i>
+            </button>
+            <button class="sales-icon-btn" id="btnExportSales" title="Exportar">
+                <i class="fa-solid fa-file-excel"></i>
+            </button>
+        </div>
     </div>
 
     <!-- Notificación de nuevas ventas -->
@@ -620,36 +628,63 @@
         <button class="btn btn-sm" onclick="window.loadAllSales(window._activeEventId)">Actualizar</button>
     </div>
 
-    <!-- Filtros de estado -->
-    <div class="sales-filters">
-        <button class="sales-filter active" data-status="PENDING" onclick="window.filterSalesByStatus('PENDING')">
-            <i class="fa-solid fa-clock"></i> Pendientes <span class="badge" id="badgePending">0</span>
+    <!-- Tabs de estado -->
+    <div class="sales-tabs-v2">
+        <button class="sales-tab-v2 active" data-status="PENDING" onclick="window.filterSalesByStatus('PENDING')">
+            <i class="fa-solid fa-clock"></i> Pendientes <span class="sales-tab-count" id="badgePending">0</span>
         </button>
-        <button class="sales-filter" data-status="APPROVED" onclick="window.filterSalesByStatus('APPROVED')">
-            <i class="fa-solid fa-check"></i> Aprobadas <span class="badge" id="badgeApproved">0</span>
+        <button class="sales-tab-v2" data-status="APPROVED" onclick="window.filterSalesByStatus('APPROVED')">
+            <i class="fa-solid fa-check"></i> Aprobadas <span class="sales-tab-count" id="badgeApproved">0</span>
         </button>
-        <button class="sales-filter" data-status="REJECTED" onclick="window.filterSalesByStatus('REJECTED')">
-            <i class="fa-solid fa-times"></i> Rechazadas <span class="badge" id="badgeRejected">0</span>
+        <button class="sales-tab-v2" data-status="REJECTED" onclick="window.filterSalesByStatus('REJECTED')">
+            <i class="fa-solid fa-xmark"></i> Rechazadas <span class="sales-tab-count" id="badgeRejected">0</span>
         </button>
-        <button class="sales-filter" data-status="ALL" onclick="window.filterSalesByStatus('ALL')">
-            <i class="fa-solid fa-list"></i> Todas <span class="badge" id="badgeAllSales">0</span>
+        <button class="sales-tab-v2" data-status="ALL" onclick="window.filterSalesByStatus('ALL')">
+            <i class="fa-solid fa-list"></i> Todas <span class="sales-tab-count" id="badgeAllSales">0</span>
         </button>
     </div>
 
-    <!-- Resumen de ventas -->
-    <div class="sales-summary">
-        <div class="summary-card">
-            <span class="summary-label">Total Recaudado</span>
-            <span class="summary-value" id="totalRecaudado">S/. 0.00</span>
+    <!-- Stats -->
+    <div class="sales-stats-v2">
+        <div class="sales-stat-card">
+            <div class="sales-stat-value green" id="totalRecaudado">S/. 0</div>
+            <div class="sales-stat-label">Recaudado</div>
         </div>
-        <div class="summary-card">
-            <span class="summary-label">Ventas Aprobadas</span>
-            <span class="summary-value" id="totalVentas">0</span>
+        <div class="sales-stat-card">
+            <div class="sales-stat-value" id="totalVentas">0</div>
+            <div class="sales-stat-label">Aprobadas</div>
+        </div>
+        <div class="sales-stat-card">
+            <div class="sales-stat-value yellow" id="totalPendientes">0</div>
+            <div class="sales-stat-label">Pendientes</div>
         </div>
     </div>
 
-    <!-- Cards Grid en vez de tabla -->
-    <div id="salesCardsContainer" class="sales-cards-grid">
+    <!-- Toolbar: búsqueda + filtros método -->
+    <div class="sales-toolbar-v2">
+        <div class="sales-search-box">
+            <i class="fa-solid fa-search"></i>
+            <input type="text" id="salesSearchInput" placeholder="Buscar por nombre o DNI..." oninput="window.searchSalesFilter()">
+        </div>
+        <div class="sales-method-filters">
+            <button class="sales-method-btn active" data-method="all" onclick="window.filterSalesByMethod('all')">Todos</button>
+            <button class="sales-method-btn yape" data-method="yape" onclick="window.filterSalesByMethod('yape')">Yape</button>
+            <button class="sales-method-btn plin" data-method="plin" onclick="window.filterSalesByMethod('plin')">Plin</button>
+            <button class="sales-method-btn" data-method="bank" onclick="window.filterSalesByMethod('bank')">Transf.</button>
+        </div>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div class="sales-bulk-actions" id="salesBulkActions">
+        <div class="sales-bulk-info"><strong id="salesSelectedCount">0</strong> seleccionadas</div>
+        <div class="sales-bulk-btns">
+            <button class="sales-bulk-btn approve" onclick="window.approveSelectedSales()">Aprobar todas</button>
+            <button class="sales-bulk-btn cancel" onclick="window.clearSalesSelection()">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Lista de ventas -->
+    <div id="salesCardsContainer" class="sales-list-v2">
         <!-- Se llena dinámicamente -->
     </div>
 
@@ -666,7 +701,7 @@
         </thead>
         <tbody></tbody>
     </table>
-                    </div>
+</div>
                     
                     <!-- TAB: STOCK -->
                     <div id="tab_stock" class="sub-content hidden">

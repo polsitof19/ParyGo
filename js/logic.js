@@ -89,6 +89,12 @@ import {
     loadEventSales,
     loadAllSales,
     filterSalesByStatus,
+    filterSalesByMethod,
+    searchSalesFilter,
+    toggleSaleSelect,
+    clearSalesSelection,
+    approveSelectedSales,
+    toggleSalesSound,
     viewProof,
     approveSale,
     rejectSale,
@@ -206,6 +212,12 @@ window.switchMetricTab = switchMetricTab;
 window.loadEventSales = loadEventSales;
 window.loadAllSales = loadAllSales;
 window.filterSalesByStatus = filterSalesByStatus;
+window.filterSalesByMethod = filterSalesByMethod;
+window.searchSalesFilter = searchSalesFilter;
+window.toggleSaleSelect = toggleSaleSelect;
+window.clearSalesSelection = clearSalesSelection;
+window.approveSelectedSales = approveSelectedSales;
+window.toggleSalesSound = toggleSalesSound;
 window.viewProof = viewProof;
 window.approveSale = approveSale;
 window.rejectSale = rejectSale;
