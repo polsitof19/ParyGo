@@ -351,7 +351,7 @@ function renderSalesCards() {
     }
 
     container.innerHTML = filtered.map(sale => {
-        const clientName = sale.full_name || sale.client_name || 'Sin nombre';
+        const clientName = sale.full_name || sale.payer_name || [sale.client_name, sale.client_lastname].filter(Boolean).join(' ') || 'Sin nombre';
         const initials = clientName.split(' ').map(n => n.charAt(0).toUpperCase()).slice(0, 2).join('');
         const method = sale.payment_method || 'transfer';
         const methodLabel = method === 'yape' ? 'Yape' : method === 'plin' ? 'Plin' : 'Transferencia';
