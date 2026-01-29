@@ -1496,9 +1496,7 @@ function changeQty(delta) {
 
 function updateBuyTotal() {
     const subtotal = buyState.quantity * buyState.unitPrice;
-    // Céntimos aleatorios para verificación
-    const cents = Math.floor(Math.random() * 99) + 1;
-    buyState.total = subtotal + (cents / 100);
+    buyState.total = subtotal;
 
     document.getElementById("buy_subtotal").textContent = `S/. ${subtotal.toFixed(2)}`;
     document.getElementById("buy_total").textContent = `S/. ${buyState.total.toFixed(2)}`;
@@ -1625,10 +1623,10 @@ async function sendPaymentProof() {
             // Campos para admin
             full_name: fullName,
             client_name: fullName,
-            client_dni: currentUserProfile.doc_number,
-            client_id: currentUser.uid,
-            client_email: currentUserProfile.email,
-            client_phone: currentUserProfile.phone,
+            client_dni: currentUserProfile?.doc_number || currentUserProfile?.dni || '',
+            client_id: currentUser?.uid || '',
+            client_email: currentUserProfile?.email || '',
+            client_phone: currentUserProfile?.phone || '',
             total_price: buyState.total,
             proof_image: imageBase64,
             ticket_name: buyState.ticketType.name,
