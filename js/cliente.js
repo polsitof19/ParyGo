@@ -1048,7 +1048,7 @@ function getCountdown(dateStr, timeStr) {
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 
     if (days === 0) return `En ${hours}h`;
-    if (days === 1) return 'Ma\u00f1ana';
+    if (days === 1) return 'Mañana';
     if (days <= 7) return `En ${days} dias`;
     return '';
 }
@@ -1068,16 +1068,16 @@ function getCountdownBadge(eventDate) {
 
     let text, colorClass;
     if (diffDays === 0) {
-        text = '\u00a1Es hoy!';
+        text = '¡Es hoy!';
         colorClass = 'countdown-red';
     } else if (diffDays === 1) {
-        text = '\u00a1Ma\u00f1ana!';
+        text = '¡Mañana!';
         colorClass = 'countdown-red';
     } else if (diffDays <= 3) {
-        text = 'Faltan ' + diffDays + ' d\u00edas';
+        text = 'Faltan ' + diffDays + ' días';
         colorClass = 'countdown-orange';
     } else {
-        text = 'Faltan ' + diffDays + ' d\u00edas';
+        text = 'Faltan ' + diffDays + ' días';
         colorClass = 'countdown-yellow';
     }
 
@@ -1609,8 +1609,8 @@ async function sendPaymentProof() {
     const operation = document.getElementById("proof_operation").value.trim();
     const imageInput = document.getElementById("proof_image");
 
-    if (!payerFirstName) return toast("Ingresa el nombre de quien pag\u00f3");
-    if (!operation) return toast("Ingresa el n\u00famero de operaci\u00f3n");
+    if (!payerFirstName) return toast("Ingresa el nombre de quien pagó");
+    if (!operation) return toast("Ingresa el número de operación");
     if (!imageInput.files[0]) return toast("Sube la captura del pago");
 
     const btn = document.getElementById("btnSendProof");

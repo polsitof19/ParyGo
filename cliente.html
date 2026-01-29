@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="assets/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="cliente.css?v=6.0.0">
+    <link rel="stylesheet" href="cliente.css?v=6.1.0">
 </head>
 <body>
 
@@ -187,7 +187,7 @@
         </div>
 
         <main class="events-main">
-            <h2 class="section-title">Proximos Eventos</h2>
+            <h2 class="section-title">Próximos Eventos</h2>
 
             <!-- Buscador de eventos -->
             <div class="search-bar">
@@ -487,7 +487,7 @@
                 </button>
                 <p class="step-indicator">Paso 1 de 2</p>
 
-                <h3 class="step-title">Selecciona m\u00e9todo de pago</h3>
+                <h3 class="step-title">Selecciona método de pago</h3>
 
                 <div class="payment-methods">
                     <button class="payment-method-btn active" data-method="yape" onclick="selectPaymentMethod('yape')">
@@ -526,7 +526,7 @@
                 <div id="payment_yape_plin" class="payment-details">
                     <div class="payment-info-card">
                         <div class="payment-info-row">
-                            <span><i class="fa-solid fa-phone"></i> N\u00famero:</span>
+                            <span><i class="fa-solid fa-phone"></i> Número:</span>
                             <strong id="pay_phone">---</strong>
                             <button class="copy-btn" onclick="copyToClipboard('pay_phone')"><i class="fa-regular fa-copy"></i></button>
                         </div>
@@ -558,7 +558,7 @@
                             <strong id="bank_type">Cuenta de Ahorros</strong>
                         </div>
                         <div class="payment-info-row">
-                            <span><i class="fa-solid fa-hashtag"></i> N\u00b0 Cuenta:</span>
+                            <span><i class="fa-solid fa-hashtag"></i> N° Cuenta:</span>
                             <strong id="bank_account">---</strong>
                             <button class="copy-btn" onclick="copyToClipboard('bank_account')"><i class="fa-regular fa-copy"></i></button>
                         </div>
@@ -581,7 +581,7 @@
 
                 <hr class="pay-divider">
 
-                <h4 class="proof-title"><i class="fa-solid fa-check-circle"></i> \u00bfYa hiciste el pago?</h4>
+                <h4 class="proof-title"><i class="fa-solid fa-check-circle"></i> ¿Ya hiciste el pago?</h4>
 
                 <div class="proof-form">
                     <div class="form-row-2col">
@@ -596,7 +596,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label>N\u00b0 de operaci\u00f3n *</label>
+                        <label>N° de operación *</label>
                         <input type="text" id="proof_operation" placeholder="Ej: 123456">
                     </div>
 
@@ -817,7 +817,7 @@
             <div class="profile-item">
                 <i class="fa-solid fa-phone"></i>
                 <div>
-                    <label>Telefono</label>
+                    <label>Teléfono</label>
                     <span id="profile_phone">---</span>
                 </div>
                 <i class="fa-solid fa-lock profile-item-lock"></i>
@@ -825,8 +825,8 @@
             <div class="profile-item clickable" onclick="openChangePasswordModal()">
                 <i class="fa-solid fa-lock"></i>
                 <div>
-                    <label>Contrasena</label>
-                    <span>Cambiar contrasena</span>
+                    <label>Contraseña</label>
+                    <span>Cambiar contraseña</span>
                 </div>
                 <i class="fa-solid fa-chevron-right profile-item-arrow"></i>
             </div>
@@ -870,8 +870,8 @@
                 <div class="logout-icon">
                     <i class="fa-solid fa-right-from-bracket"></i>
                 </div>
-                <h3 style="margin-bottom:8px;">Cerrar sesion</h3>
-                <p class="text-muted" style="margin-bottom:24px;">Tendras que iniciar sesion nuevamente para acceder a tus entradas.</p>
+                <h3 style="margin-bottom:8px;">Cerrar sesión</h3>
+                <p class="text-muted" style="margin-bottom:24px;">Tendrás que iniciar sesión nuevamente para acceder a tus entradas.</p>
                 <div class="redeem-actions">
                     <button class="btn-secondary" onclick="closeModal('modalLogout')">Cancelar</button>
                     <button class="btn-primary" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="confirmLogout()">
@@ -889,6 +889,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-    <script type="module" src="js/cliente.js?v=6.0.0"></script>
+    <script type="module" src="js/cliente.js?v=6.1.0"></script>
 </body>
 </html>

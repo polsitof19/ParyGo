@@ -2608,3 +2608,69 @@ input, select, textarea {
    SECCION 36: CHANGE EMAIL MODAL
    ========================================== */
 /* Uses existing modal styles */
+
+/* ==========================================
+   SECCION 37: PAYMENT METHOD GLOW EFFECTS
+   ========================================== */
+
+/* YAPE Glow */
+.payment-method-btn[data-method="yape"]:hover,
+.payment-method-btn[data-method="yape"].active {
+    border-color: #721E8E;
+    box-shadow:
+        0 0 20px rgba(114, 30, 142, 0.4),
+        0 0 40px rgba(114, 30, 142, 0.2),
+        inset 0 0 20px rgba(114, 30, 142, 0.1);
+    background: linear-gradient(180deg, rgba(114, 30, 142, 0.2) 0%, rgba(114, 30, 142, 0.05) 100%);
+}
+
+/* PLIN Glow */
+.payment-method-btn[data-method="plin"]:hover,
+.payment-method-btn[data-method="plin"].active {
+    border-color: #00D4AA;
+    box-shadow:
+        0 0 20px rgba(0, 212, 170, 0.4),
+        0 0 40px rgba(0, 212, 170, 0.2),
+        inset 0 0 20px rgba(0, 212, 170, 0.1);
+    background: linear-gradient(180deg, rgba(0, 212, 170, 0.2) 0%, rgba(0, 212, 170, 0.05) 100%);
+}
+
+/* Transfer Glow */
+.payment-method-btn[data-method="bank"]:hover,
+.payment-method-btn[data-method="bank"].active {
+    border-color: #ff4757;
+    box-shadow:
+        0 0 20px rgba(255, 71, 87, 0.4),
+        0 0 40px rgba(255, 71, 87, 0.2),
+        inset 0 0 20px rgba(255, 71, 87, 0.1);
+    background: linear-gradient(180deg, rgba(255, 71, 87, 0.2) 0%, rgba(255, 71, 87, 0.05) 100%);
+}
+
+/* Logo con sombra de color */
+.payment-method-btn[data-method="yape"] .payment-logo {
+    box-shadow: 0 4px 15px rgba(114, 30, 142, 0.5);
+}
+
+.payment-method-btn[data-method="yape"].active .payment-logo {
+    box-shadow: 0 8px 25px rgba(114, 30, 142, 0.7);
+    transform: scale(1.1);
+}
+
+.payment-method-btn[data-method="plin"] .payment-logo {
+    box-shadow: 0 4px 15px rgba(0, 212, 170, 0.5);
+}
+
+.payment-method-btn[data-method="plin"].active .payment-logo {
+    box-shadow: 0 8px 25px rgba(0, 212, 170, 0.7);
+    transform: scale(1.1);
+}
+
+/* Animacion pulse para activo */
+@keyframes pulse-glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+}
+
+.payment-method-btn.active {
+    animation: pulse-glow 2s ease-in-out infinite;
+}
