@@ -2696,19 +2696,22 @@ input, select, textarea {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 12px;
+    padding: 16px;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
     cursor: pointer;
     transition: background 0.2s;
-    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+}
+.ticket-type-subgroup:last-child {
+    margin-bottom: 0;
 }
 .ticket-type-subgroup:hover {
-    background: rgba(255, 255, 255, 0.02);
+    background: #222;
 }
 .ticket-type-subgroup:active {
-    background: var(--bg-hover);
-}
-.ticket-type-subgroup + .ticket-type-subgroup {
-    border-top: 1px solid var(--border);
+    background: #252525;
 }
 .ticket-type-subgroup-info {
     display: flex;
@@ -2718,16 +2721,16 @@ input, select, textarea {
 .ticket-type-subgroup-name {
     font-size: 15px;
     font-weight: 700;
-    color: var(--text);
+    color: #fff;
 }
 .ticket-type-subgroup-count {
     font-size: 12px;
-    color: var(--text-muted);
+    color: #888;
 }
 .btn-ver-type {
-    background: var(--primary);
-    color: white;
-    padding: 8px 16px;
+    background: #ff4757;
+    color: #fff;
+    padding: 8px 18px;
     border-radius: 20px;
     font-size: 14px;
     font-weight: 600;
@@ -2736,7 +2739,8 @@ input, select, textarea {
     gap: 6px;
     font-family: 'Outfit', sans-serif;
     pointer-events: none;
-    box-shadow: 0 2px 8px rgba(255, 71, 87, 0.3);
+    border: none;
+    white-space: nowrap;
 }
 
 /* ==========================================

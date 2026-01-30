@@ -1190,7 +1190,7 @@ function renderMyEventTickets() {
                     <span class="ticket-type-subgroup-count">${typeTickets.length} entrada${typeTickets.length > 1 ? 's' : ''}</span>
                 </div>
                 <span class="btn-ver-type">
-                    Ver →
+                    Ver <i class="fa-solid fa-chevron-right"></i>
                 </span>
             </div>
         `;
@@ -1851,7 +1851,7 @@ function renderMyTickets() {
                         <span class="ticket-type-subgroup-count">${typeTickets.length} entrada${typeTickets.length > 1 ? 's' : ''}</span>
                     </div>
                     <span class="btn-ver-type">
-                        Ver →
+                        Ver <i class="fa-solid fa-chevron-right"></i>
                     </span>
                 </div>
             `;
