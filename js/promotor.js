@@ -190,14 +190,15 @@ async function handleLogin() {
 async function handleCheckDNI() {
     const dni = document.getElementById("reg_dni").value.trim();
     const btn = document.getElementById("btnCheckDni");
-    
+
     if (dni.length !== 8) return toast("DNI debe tener 8 dígitos");
-    
+
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-    
+
     try {
-        const fn = httpsCallable(functions, 'consultaDNI');
+        // Consultar API pública de RENIEC (no requiere autenticación)
+        const fn = httpsCallable(functions, 'consultaDNIPublic');
         const result = await fn({ dni });
         const data = result.data;
 
@@ -206,14 +207,16 @@ async function handleCheckDNI() {
             document.getElementById("reg_name").value = name;
             document.getElementById("reg_name").setAttribute("readonly", "true");
             document.getElementById("reg_step2").classList.remove("hidden");
-            toast("Encontrado");
+            toast("Datos encontrados");
         } else {
+            // 3. API no encontró el DNI → permitir llenar manualmente
             enableManualEntry();
         }
-    } catch {
+    } catch (e) {
+        console.error("Error consultando DNI:", e);
         enableManualEntry();
     }
-    
+
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i>';
 }
