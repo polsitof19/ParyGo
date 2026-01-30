@@ -485,7 +485,7 @@ async function loadAdminsTable() {
  */
 export function openAdminModal() {
     // Limpiar formulario
-    const fields = ['adm_editing_id', 'adm_name', 'adm_lastname', 'adm_dni', 'adm_email', 'adm_phone', 'adm_password'];
+    const fields = ['adm_editing_id', 'adm_name', 'adm_lastname', 'adm_dni', 'adm_modal_email', 'adm_phone', 'adm_password'];
     fields.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
@@ -525,7 +525,7 @@ export async function editAdmin(adminId) {
         document.getElementById("adm_name").value = a.name || "";
         document.getElementById("adm_lastname").value = a.lastname || "";
         document.getElementById("adm_dni").value = a.dni || "";
-        document.getElementById("adm_email").value = a.email || "";
+        document.getElementById("adm_modal_email").value = a.email || "";
         document.getElementById("adm_phone").value = a.phone || "";
         
         // Título
@@ -559,7 +559,7 @@ export async function saveAdmin() {
     const name = document.getElementById("adm_name")?.value.trim();
     const lastname = document.getElementById("adm_lastname")?.value.trim();
     const dni = document.getElementById("adm_dni")?.value.trim();
-    const email = document.getElementById("adm_email")?.value.trim().toLowerCase();
+    const email = document.getElementById("adm_modal_email")?.value.trim().toLowerCase();
     const phone = document.getElementById("adm_phone")?.value.trim();
     const password = document.getElementById("adm_password")?.value;
     
