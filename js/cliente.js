@@ -89,6 +89,7 @@ let selectedDocType = 'DNI';
 let foundUserData = null;
 let existingUserNeedsProfile = false;
 let isProcessing = false;
+let isRegistering = false; // Flag para evitar signOut durante registro
 
 // ==========================================
 // INICIALIZACIÓN
@@ -115,6 +116,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (user) {
             currentUser = user;
+
+            // Si estamos en proceso de registro, no verificar perfil aún
+            if (isRegistering) return;
+
             // Verificar si tiene perfil en ESTA marca
             const hasProfile = await loadUserProfile(user.uid);
 
@@ -124,12 +129,31 @@ document.addEventListener("DOMContentLoaded", async () => {
                 loadEvents();
                 loadMyTickets();
             } else {
-                // No tiene perfil en esta marca → volver a auth
-                await signOut(auth);
-                toast("No tienes acceso a esta marca");
-                showView('authView');
-                showLoginScreen();
-            }
+                // No tiene perfil en esta marca → verificar si necesita vincular
+                // Buscar si tiene cuenta en OTRA marca
+                try {
+                    const qGlobal = query(
+                        collection(db, "clientes"),
+                        where("uid", "==", user.uid)
+                    );
+                    const snapGlobal = await getDocs(qGlobal);
+
+                    if (!snapGlobal.empty) {
+                        // Tiene perfil en otra marca → ofrecer vincular
+                        showLinkAccountPrompt(user);
+                    } else {
+                        // No tiene perfil en ninguna marca → volver a auth
+                        await signOut(auth);
+                        toast("No tienes acceso a esta marca");
+                        showView('authView');
+                        showLoginScreen();
+                    }
+                } catch (e) {
+                    console.error("Error verificando perfil:", e);
+                    await signOut(auth);
+                    showView('authView');
+                    showLoginScreen();
+                }
         } else {
             currentUser = null;
             currentUserProfile = null;
@@ -819,10 +843,14 @@ async function handleRegister() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> CREANDO CUENTA...';
 
     try {
-        // 1. Crear usuario en Firebase Auth PRIMERO
-        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        // Activar flag para evitar que onAuthStateChanged haga signOut
+        isRegistering = true;
 
-        // 2. DESPUÉS crear documento con ID compuesto (soporte multi-marca)
+        // 1. Crear usuario en Firebase Auth
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        currentUser = cred.user;
+
+        // 2. Crear documento con ID compuesto (soporte multi-marca)
         const clientDocId = `${cred.user.uid}_${currentBrandId}`;
         await setDoc(doc(db, "clientes", clientDocId), {
             uid: cred.user.uid,
@@ -837,10 +865,15 @@ async function handleRegister() {
             updated_at: new Date().toISOString()
         });
 
+        // 3. Cargar perfil y entrar
+        await loadUserProfile(cred.user.uid);
+
         toast("Cuenta creada exitosamente");
         launchConfetti();
 
-        // El onAuthStateChanged manejara la redireccion
+        showView('eventsView');
+        loadEvents();
+        loadMyTickets();
 
     } catch (e) {
         console.error("Error en registro:", e);
@@ -858,6 +891,7 @@ async function handleRegister() {
 
         toast(errorMsg);
     } finally {
+        isRegistering = false;
         btn.disabled = false;
         btn.innerHTML = 'REGISTRARME';
     }
@@ -2484,8 +2518,9 @@ async function handleProfilePhoto(event) {
     try {
         const base64 = await fileToBase64(file);
 
-        // Update Firestore
-        await updateDoc(doc(db, "clientes", currentUser.uid), {
+        // Update Firestore (usar ID del perfil, no UID directo)
+        const profileDocId = currentUserProfile?.id || `${currentUser.uid}_${currentBrandId}`;
+        await updateDoc(doc(db, "clientes", profileDocId), {
             photo: base64,
             updated_at: new Date().toISOString()
         });
@@ -2847,8 +2882,9 @@ async function handleChangePassword() {
         // Cambiar contraseña
         await updatePassword(user, newPassword);
 
-        // Actualizar timestamp en Firestore
-        await updateDoc(doc(db, "clientes", user.uid), {
+        // Actualizar timestamp en Firestore (usar ID del perfil)
+        const profileDocId = currentUserProfile?.id || `${user.uid}_${currentBrandId}`;
+        await updateDoc(doc(db, "clientes", profileDocId), {
             updated_at: new Date().toISOString()
         });
 
@@ -2906,8 +2942,9 @@ async function handleChangeEmail() {
         await reauthenticateWithCredential(user, credential);
         await updateEmail(user, newEmail);
 
-        // Update Firestore
-        await updateDoc(doc(db, "clientes", user.uid), {
+        // Update Firestore (usar ID del perfil)
+        const profileDocId = currentUserProfile?.id || `${user.uid}_${currentBrandId}`;
+        await updateDoc(doc(db, "clientes", profileDocId), {
             email: newEmail,
             updated_at: new Date().toISOString()
         });
