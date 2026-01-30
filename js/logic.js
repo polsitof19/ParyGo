@@ -405,13 +405,11 @@ function setupGlobalEventListeners() {
             if (tabId === 'tab_tickets' && state.activeEventId) {
                 const event = state.allEvents.find(e => e.id === state.activeEventId);
                 if (event) renderTicketTable(event);
-                if (tabId === 'tab_codegen' && state.activeEventId) {
-                    const event = state.allEvents.find(e => e.id === state.activeEventId);
-                    if (event) fillCodeGen(event);
-                    if (tabId === 'tab_metrics' && state.activeEventId) {
-                        if (window.loadEventMetrics) window.loadEventMetrics(state.activeEventId);
-                    }
-                }
+            } else if (tabId === 'tab_codegen' && state.activeEventId) {
+                const event = state.allEvents.find(e => e.id === state.activeEventId);
+                if (event) fillCodeGen(event);
+            } else if (tabId === 'tab_metrics' && state.activeEventId) {
+                if (window.loadEventMetrics) window.loadEventMetrics(state.activeEventId);
             }
         });
     });
