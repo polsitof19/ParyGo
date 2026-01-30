@@ -12,7 +12,11 @@
       "Bash(node test-cliente.js:*)",
       "mcp__filesystem__list_directory",
       "Bash(git -C \"C:\\\\Users\\\\pauls\\\\Desktop\\\\nuevo admin\\\\ParyGo\" log -1)",
-      "Bash(npx claude-code-templates@latest:*)"
+      "Bash(npx claude-code-templates@latest:*)",
+      "Bash(claude config set:*)",
+      "Bash(curl:*)",
+      "Bash(ls -la \"C:\\\\Users\\\\pauls\\\\Desktop\\\\nuevo admin\\\\ParyGo\\\\assets\\\\logos\"\" && file \"C:UserspaulsDesktopnuevo adminParyGoassetslogosyape.png\" && file \"C:UserspaulsDesktopnuevo adminParyGoassetslogosplin.png \")",
+      "mcp__filesystem__directory_tree"
     ]
   }
 }
