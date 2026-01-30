@@ -16,6 +16,40 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================
+// UTILIDADES
+// ==========================================
+let isProcessing = false;
+
+function sanitizeInput(str) {
+    if (!str) return '';
+    return str.toString().trim().replace(/[<>]/g, '');
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function generateUUID() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+function isValidPhone(phone) {
+    if (!phone) return false;
+    const cleaned = phone.replace(/\D/g, '');
+    return cleaned.length >= 9 && cleaned.length <= 15;
+}
+
+// ==========================================
 // ESTADO GLOBAL
 // ==========================================
 let state = {
@@ -147,16 +181,19 @@ function setupEventListeners() {
 // PASO 1: VALIDAR CÓDIGO
 // ==========================================
 async function validateCode() {
+    if (isProcessing) return;
+
     const codeInput = document.getElementById('inputCode');
     const code = codeInput.value.trim().toUpperCase();
-    
+
     if (!code) {
         showToast('Ingresa un código', 'error');
         return;
     }
-    
+
+    isProcessing = true;
     showLoading(true);
-    
+
     try {
         const q = query(
             collection(db, "tickets"),
@@ -255,15 +292,18 @@ async function validateCode() {
     } catch (error) {
         console.error('Error validando código:', error);
         showToast('Error al validar el código', 'error');
+    } finally {
+        isProcessing = false;
+        showLoading(false);
     }
-    
-    showLoading(false);
 }
 
 // ==========================================
 // PASO 2: BUSCAR DNI
 // ==========================================
 async function searchDNI() {
+    if (isProcessing) return;
+
     const idType = document.getElementById('idType').value;
     const dni = document.getElementById('inputDNI').value.trim();
     
@@ -271,12 +311,13 @@ async function searchDNI() {
         showToast('Ingresa tu identificación', 'error');
         return;
     }
-    
+
     if (idType === 'DNI' && dni.length !== 8) {
         showToast('El DNI debe tener 8 dígitos', 'error');
         return;
     }
-    
+
+    isProcessing = true;
     showLoading(true);
     
     state.userData.idType = idType;
@@ -316,53 +357,63 @@ async function searchDNI() {
         document.getElementById('showIdType').value = idType;
         document.getElementById('showDNI').value = dni;
         goToStep(3);
+    } finally {
+        isProcessing = false;
+        showLoading(false);
     }
-    
-    showLoading(false);
 }
 
 // ==========================================
 // PASO 3: RECLAMAR TICKET
 // ==========================================
 async function claimTicket() {
-    const name = document.getElementById('inputName').value.trim();
-    const lastname = document.getElementById('inputLastname').value.trim();
-    const email = document.getElementById('inputEmail').value.trim();
-    const phone = document.getElementById('inputPhone').value.trim();
-    
+    if (isProcessing) return;
+
+    if (!state.codeData) {
+        showToast('Primero debes ingresar un código válido', 'error');
+        goToStep(1);
+        return;
+    }
+
+    const name = sanitizeInput(document.getElementById('inputName').value);
+    const lastname = sanitizeInput(document.getElementById('inputLastname').value);
+    const email = sanitizeInput(document.getElementById('inputEmail').value).toLowerCase();
+    const phone = document.getElementById('inputPhone').value.trim().replace(/\D/g, '');
+
     if (!name) {
         showToast('Ingresa tu nombre', 'error');
         return;
     }
-    
+
     if (!lastname) {
         showToast('Ingresa tu apellido', 'error');
         return;
     }
-    
+
     if (!email || !isValidEmail(email)) {
         showToast('Ingresa un correo válido', 'error');
         return;
     }
-    
-    if (!phone || phone.length < 9) {
-        showToast('Ingresa un celular válido', 'error');
+
+    if (!isValidPhone(phone)) {
+        showToast('Ingresa un celular válido (9 dígitos)', 'error');
         return;
     }
-    
+
+    isProcessing = true;
     showLoading(true);
-    
+
     state.userData.name = name;
     state.userData.lastname = lastname;
     state.userData.email = email;
     state.userData.phone = phone;
-    
+
     try {
-        const qrToken = `TKT${crypto.randomUUID().replace(/-/g, '').toUpperCase()}`;
-        
+        const qrToken = `TKT${generateUUID().replace(/-/g, '').toUpperCase()}`;
+
         const codeType = state.codeData.type || state.codeData.ticket_type || "UNIQUE";
         const codeRef = doc(db, "tickets", state.codeData.id);
-        
+
         if (codeType === "UNIQUE") {
             await updateDoc(codeRef, {
                 status: 'CLAIMED',
@@ -375,32 +426,30 @@ async function claimTicket() {
                 id_type: state.userData.idType,
                 qr_token: qrToken,
                 claimed_by: {
-            name: `${name} ${lastname}`,
-            dni: state.userData.dni,
-            email: email,
-            phone: phone
-        }
-    });
+                    name: `${name} ${lastname}`,
+                    dni: state.userData.dni,
+                    email: email,
+                    phone: phone
+                }
+            });
+        } else {
+            // Código compartido: incrementar usos
+            const newUses = (state.codeData.current_uses || 0) + 1;
+            const maxUses = state.codeData.max_uses || 1;
 
-} else {
-    // Código compartido: incrementar usos
-    const newUses = (state.codeData.current_uses || 0) + 1;
-    const maxUses = state.codeData.max_uses || 1;
-    
-    await updateDoc(codeRef, {
-        current_uses: newUses,
-        status: newUses >= maxUses ? 'EXHAUSTED' : 'ACTIVE',
-        last_claimed_at: new Date().toISOString(),
-        client_name: `${name} ${lastname}`,
-        client_dni: state.userData.dni,
-        client_email: email,
-        client_phone: phone,
-        id_type: state.userData.idType,
-        qr_token: qrToken
-        
-    });
-}
-        
+            await updateDoc(codeRef, {
+                current_uses: newUses,
+                status: newUses >= maxUses ? 'EXHAUSTED' : 'ACTIVE',
+                last_claimed_at: new Date().toISOString(),
+                client_name: `${name} ${lastname}`,
+                client_dni: state.userData.dni,
+                client_email: email,
+                client_phone: phone,
+                id_type: state.userData.idType,
+                qr_token: qrToken
+            });
+        }
+
         await addDoc(collection(db, "accesses"), {
             brand_id: state.codeData.brand_id || state.brand?.id || "",
             event_id: state.codeData.event_id || '',
@@ -422,15 +471,16 @@ async function claimTicket() {
             is_free: true,
             created_at: new Date().toISOString()
         });
-        
+
         await showTicket(qrToken);
-        
+
     } catch (error) {
         console.error('Error reclamando ticket:', error);
         showToast('Error al generar el ticket', 'error');
+    } finally {
+        isProcessing = false;
+        showLoading(false);
     }
-    
-    showLoading(false);
 }
 
 // ==========================================
@@ -500,6 +550,11 @@ if (dateEl) {
         qrContainer.appendChild(qrDiv);
     }
 
+    if (typeof QRCode === 'undefined') {
+        showToast('Error: No se pudo cargar el generador QR', 'error');
+        return;
+    }
+
     new QRCode(qrDiv, {
         text: qrToken,
         width: 200,
@@ -508,7 +563,7 @@ if (dateEl) {
         colorLight: '#ffffff',
         correctLevel: QRCode.CorrectLevel.H
     });
-    
+
     goToStep(4);
 }
 
@@ -519,8 +574,10 @@ if (dateEl) {
 // DESCARGAR TICKET COMO IMAGEN
 // ==========================================
 async function downloadTicket() {
+    if (isProcessing) return;
+    isProcessing = true;
     showLoading(true);
-    
+
     try {
         const qrToken = state.qrToken;
         
@@ -561,10 +618,15 @@ async function downloadTicket() {
         const qrSize = 180;
         
         // Usar la librería QRCode para generar en canvas
+        if (typeof QRCode === 'undefined') {
+            showToast('Error: No se pudo cargar el generador QR', 'error');
+            return;
+        }
+
         await new Promise((resolve) => {
             const qrDiv = document.createElement('div');
             document.body.appendChild(qrDiv);
-            
+
             new QRCode(qrDiv, {
                 text: qrToken,
                 width: qrSize,
@@ -706,9 +768,10 @@ async function downloadTicket() {
     } catch (error) {
         console.error('Error descargando ticket:', error);
         showToast('Error al descargar', 'error');
+    } finally {
+        isProcessing = false;
+        showLoading(false);
     }
-    
-    showLoading(false);
 }
 // ==========================================
 // UTILIDADES
