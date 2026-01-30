@@ -208,7 +208,11 @@ function updateBrandUI() {
     const authLogo = document.getElementById("auth_brand_logo");
     if (authLogo) {
         if (currentBrand.logo) {
-            authLogo.innerHTML = `<img src="${currentBrand.logo}" alt="${currentBrand.name}">`;
+            const img = document.createElement('img');
+            img.src = currentBrand.logo;
+            img.alt = currentBrand.name || '';
+            authLogo.textContent = '';
+            authLogo.appendChild(img);
         } else {
             authLogo.innerHTML = `<i class="fa-solid fa-star"></i>`;
             authLogo.style.background = currentBrand.color || '#f43f5e';
@@ -219,7 +223,11 @@ function updateBrandUI() {
     const headerLogo = document.getElementById("header_brand_logo");
     if (headerLogo) {
         if (currentBrand.logo) {
-            headerLogo.innerHTML = `<img src="${currentBrand.logo}" alt="${currentBrand.name}">`;
+            const img = document.createElement('img');
+            img.src = currentBrand.logo;
+            img.alt = currentBrand.name || '';
+            headerLogo.textContent = '';
+            headerLogo.appendChild(img);
         } else {
             headerLogo.innerHTML = `<i class="fa-solid fa-star"></i>`;
             headerLogo.style.background = currentBrand.color || '#f43f5e';
@@ -244,11 +252,12 @@ function updateBrandUI() {
 
 function showError(message) {
     hideSplash();
+    const safe = escapeHtml(message);
     document.body.innerHTML = `
         <div style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center; background:#0a0a0f; color:white; font-family:'Outfit',sans-serif;">
             <i class="fa-solid fa-circle-exclamation" style="font-size:48px; color:#f43f5e; margin-bottom:16px;"></i>
             <h1 style="font-size:20px; margin-bottom:8px;">Error</h1>
-            <p style="color:#888; font-size:14px;">${message}</p>
+            <p style="color:#888; font-size:14px;">${safe}</p>
         </div>
     `;
 }

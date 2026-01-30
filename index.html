@@ -290,7 +290,7 @@
         <!-- SIDEBAR (desktop) -->
         <aside class="sidebar" id="sidebar">
             <div class="logo">
-                <img src="https://ibb.co/WQcspwm alt="ParyGo" style="height:140px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                <img src="assets/logos/logo.png" alt="ParyGo" style="height:140px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
                 <span style="display:none; font-size:24px; font-weight:800;"><span style="color:#f43f5e;">Pary</span><span style="color:#fff;">Go</span><span style="color:#f43f5e;">.</span></span>
             </div>
             
@@ -1212,7 +1212,7 @@
                 </div>
                 <div class="form-group">
                     <label>Tipo de Código</label>
-                    <select id="nt_type" onchange="toggleUsesField()">
+                    <select id="nt_type_edit" onchange="toggleUsesField()">
                         <option value="UNIQUE">Único (1 código = 1 persona)</option>
                         <option value="SHARED">Compartido (1 código = muchas personas)</option>
                     </select>
@@ -1488,8 +1488,7 @@
         </div>
     </div>
     
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
-    </html>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
     <!-- Modal: Crear Código Manual -->
 <div id="modalManualCode" class="modal hidden">
     <div class="modal-content" style="max-width:450px;">
@@ -1542,9 +1541,7 @@
         </div>
     </div>
 </div>
-    
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-   
+
    <!-- Modal: Aprobar Venta -->
 <div id="modalApproveSale" class="modal hidden">
     <div class="modal-content approve-modal">

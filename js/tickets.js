@@ -79,7 +79,7 @@ export function openTicketModal() {
     
     const titleEl = document.querySelector('#modalTicket h2');
     if (titleEl) titleEl.textContent = "Nuevo tipo de acceso";
-    if (document.getElementById("nt_type")) document.getElementById("nt_type").value = "UNIQUE"; 
+    if (document.getElementById("nt_type_edit")) document.getElementById("nt_type_edit").value = "UNIQUE"; 
     
     // Limpiar campos
     document.getElementById("nt_name").value = "";
@@ -127,7 +127,7 @@ export function editTicket(index) {
     document.getElementById("nt_price").value = tk.price || 0;
     document.getElementById("nt_color").value = tk.color || "#f43f5e";
     document.getElementById("nt_sku").value = tk.sku || "";
-    if (document.getElementById("nt_type")) document.getElementById("nt_type").value = tk.type || "UNIQUE";
+    if (document.getElementById("nt_type_edit")) document.getElementById("nt_type_edit").value = tk.type || "UNIQUE";
     
     // Campos avanzados
     if (document.getElementById("nt_stock")) document.getElementById("nt_stock").value = tk.stock || "";
@@ -165,7 +165,7 @@ export async function saveNewTicket() {
         isFree: price === 0,
         sku: document.getElementById("nt_sku")?.value.toUpperCase() || generateCode("TKT"),
         color: document.getElementById("nt_color")?.value || "#f43f5e",
-        type: document.getElementById("nt_type")?.value || "UNIQUE",
+        type: document.getElementById("nt_type_edit")?.value || "UNIQUE",
         stock,
         max_uses: Math.max(1, Number(document.getElementById("nt_uses")?.value) || 1),
         max_scans: Math.max(1, Number(document.getElementById("nt_scans")?.value) || 1),
@@ -273,7 +273,7 @@ export async function deleteTicket(index) {
  * Mostrar/ocultar campo de usos según tipo
  */
 export function toggleUsesField() {
-    const type = document.getElementById("nt_type")?.value;
+    const type = document.getElementById("nt_type_edit")?.value;
     const usesInput = document.getElementById("nt_uses");
     
     if (usesInput) {
