@@ -2,7 +2,7 @@
 // RECLAMAR ENTRADA - JAVASCRIPT
 // ==========================================
 
-import { db } from './js/config.js';
+import { db, functions } from './js/config.js';
 import { detectBrandSlug, loadBrandBySlug } from './utils/brand-detector.js';
 import {
     collection,
@@ -14,6 +14,9 @@ import {
     updateDoc,
     addDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+    httpsCallable
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
 // ==========================================
 // UTILIDADES
@@ -328,15 +331,13 @@ async function searchDNI() {
     try {
         if (idType === 'DNI') {
             try {
-                const response = await fetch(`https://dniruc.apisperu.com/api/v1/dni/${dni}?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InBhdWxzZWJhc3RpYW40MzlAZ21haWwuY29tIn0.6OW3nuSrcpVbUbhakLiTa7K4IAcWEJz4LJ1pALTNlSI`);
-                
-                if (response.ok) {
-                    const result = await response.json();
+                const fn = httpsCallable(functions, 'consultaDNIPublic');
+                const result = await fn({ dni });
+                const data = result.data;
 
-                    if (result.success !== false && result.nombres) {
-                        state.userData.name = result.nombres || '';
-                        state.userData.lastname = `${result.apellidoPaterno || ''} ${result.apellidoMaterno || ''}`.trim();
-                    }
+                if (data?.success && data?.nombres) {
+                    state.userData.name = data.nombres || '';
+                    state.userData.lastname = `${data.apellidoPaterno || ''} ${data.apellidoMaterno || ''}`.trim();
                 }
             } catch (apiError) {
                 console.error('Error API DNI:', apiError);

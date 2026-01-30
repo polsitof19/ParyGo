@@ -4,5 +4,8 @@
     "location": "nam5",
     "rules": "firestore/firestore.rules",
     "indexes": "firestore/firestore.indexes.json"
+  },
+  "functions": {
+    "source": "functions"
   }
 }

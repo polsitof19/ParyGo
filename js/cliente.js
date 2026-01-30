@@ -31,6 +31,10 @@ import {
     uploadBytes,
     getDownloadURL
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import {
+    getFunctions,
+    httpsCallable
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
 // ==========================================
 // FIREBASE CONFIG
@@ -48,6 +52,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+const cloudFunctions = getFunctions(app);
 
 // ==========================================
 // VARIABLES GLOBALES
@@ -418,11 +423,11 @@ function showLinkAccountPrompt(user) {
 
 async function searchRENIECForLink(dni) {
     try {
-        const TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InBhdWxzZWJhc3RpYW40MzlAZ21haWwuY29tIn0.6OW3nuSrcpVbUbhakLiTa7K4IAcWEJz4LJ1pALTNlSI";
-        const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`https://dniruc.apisperu.com/api/v1/dni/${dni}?token=${TOKEN}`));
-        const data = await res.json();
+        const fn = httpsCallable(cloudFunctions, 'consultaDNI');
+        const result = await fn({ dni });
+        const data = result.data;
 
-        if (data?.nombres) {
+        if (data?.success && data?.nombres) {
             document.getElementById("link_nombres").value = data.nombres;
             document.getElementById("link_apellidos").value = `${data.apellidoPaterno || ''} ${data.apellidoMaterno || ''}`.trim();
             toast("Datos encontrados");
@@ -582,11 +587,11 @@ async function searchDocument() {
 
 async function searchRENIEC(dni) {
     try {
-        const TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InBhdWxzZWJhc3RpYW40MzlAZ21haWwuY29tIn0.6OW3nuSrcpVbUbhakLiTa7K4IAcWEJz4LJ1pALTNlSI";
-        const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`https://dniruc.apisperu.com/api/v1/dni/${dni}?token=${TOKEN}`));
-        const data = await res.json();
+        const fn = httpsCallable(cloudFunctions, 'consultaDNI');
+        const result = await fn({ dni });
+        const data = result.data;
 
-        if (data?.nombres) {
+        if (data?.success && data?.nombres) {
             document.getElementById("reg_nombres").value = data.nombres;
             document.getElementById("reg_apellidos").value = `${data.apellidoPaterno || ''} ${data.apellidoMaterno || ''}`.trim();
             document.getElementById("reg_nombres").setAttribute("readonly", "true");
@@ -737,11 +742,11 @@ async function handleCheckDNI() {
 
 async function searchRENIECForRegistration(dni) {
     try {
-        const TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InBhdWxzZWJhc3RpYW40MzlAZ21haWwuY29tIn0.6OW3nuSrcpVbUbhakLiTa7K4IAcWEJz4LJ1pALTNlSI";
-        const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`https://dniruc.apisperu.com/api/v1/dni/${dni}?token=${TOKEN}`));
-        const data = await res.json();
+        const fn = httpsCallable(cloudFunctions, 'consultaDNI');
+        const result = await fn({ dni });
+        const data = result.data;
 
-        if (data?.nombres) {
+        if (data?.success && data?.nombres) {
             document.getElementById("reg_nombres").value = data.nombres;
             document.getElementById("reg_apellidos").value = `${data.apellidoPaterno || ''} ${data.apellidoMaterno || ''}`.trim();
             toast("Datos encontrados en RENIEC");

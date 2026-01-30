@@ -2,6 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
 // ==========================================
 // CONFIGURACIÓN DE FIREBASE
@@ -24,6 +25,7 @@ const app = initializeApp(firebaseConfig);
 // Exportar servicios
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+export const functions = getFunctions(app);
 
 // Configurar persistencia de sesión
 setPersistence(auth, browserLocalPersistence).catch((error) => {
@@ -31,11 +33,15 @@ setPersistence(auth, browserLocalPersistence).catch((error) => {
 });
 
 // ==========================================
-// CONFIGURACIÓN DE APIs EXTERNAS
+// CONSULTA DNI VÍA CLOUD FUNCTION
 // ==========================================
-// Token para consulta de DNI en RENIEC
-// NOTA: En producción, esto debería manejarse desde un backend seguro
-export const APIS_PERU_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InBhdWxzZWJhc3RpYW40MzlAZ21haWwuY29tIn0.6OW3nuSrcpVbUbhakLiTa7K4IAcWEJz4LJ1pALTNlSI";
+// Token movido a Cloud Function (functions/index.js)
+// Configurar con: firebase functions:config:set reniec.token="TU_TOKEN"
+export async function consultarDNISeguro(dni) {
+    const fn = httpsCallable(functions, 'consultaDNI');
+    const result = await fn({ dni });
+    return result.data;
+}
 
 // ==========================================
 // CONSTANTES DE LA APLICACIÓN

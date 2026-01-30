@@ -2,7 +2,7 @@
 // PARYGO PROMOTOR V3 - SISTEMA DE CÓDIGOS
 // ==========================================
 
-import { db, auth } from './config.js';
+import { db, auth, functions } from './config.js';
 import { detectBrandSlug, loadBrandBySlug } from '../utils/brand-detector.js';
 import {
     signInWithEmailAndPassword,
@@ -22,6 +22,9 @@ import {
     updateDoc,
     runTransaction
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+    httpsCallable
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
 // ==========================================
 // VARIABLES GLOBALES
@@ -194,16 +197,16 @@ async function handleCheckDNI() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     
     try {
-        const TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InBhdWxzZWJhc3RpYW40MzlAZ21haWwuY29tIn0.6OW3nuSrcpVbUbhakLiTa7K4IAcWEJz4LJ1pALTNlSI";
-        const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`https://dniruc.apisperu.com/api/v1/dni/${dni}?token=${TOKEN}`));
-        const data = await res.json();
-        
-        if (data?.nombres) {
+        const fn = httpsCallable(functions, 'consultaDNI');
+        const result = await fn({ dni });
+        const data = result.data;
+
+        if (data?.success && data?.nombres) {
             const name = `${data.nombres} ${data.apellidoPaterno || ""} ${data.apellidoMaterno || ""}`.trim();
             document.getElementById("reg_name").value = name;
             document.getElementById("reg_name").setAttribute("readonly", "true");
             document.getElementById("reg_step2").classList.remove("hidden");
-            toast("✅ Encontrado");
+            toast("Encontrado");
         } else {
             enableManualEntry();
         }
