@@ -68,7 +68,11 @@ import {
     editTicket,
     saveNewTicket,
     deleteTicket,
-    toggleUsesField
+    toggleUsesField,
+    togglePriceMode,
+    addPhaseRow,
+    removePhaseRow,
+    toggleDoorPrice
 } from './tickets.js';
 
 import {
@@ -195,6 +199,10 @@ window.editTicket = editTicket;
 window.saveNewTicket = saveNewTicket;
 window.deleteTicket = deleteTicket;
 window.toggleUsesField = toggleUsesField;
+window.togglePriceMode = togglePriceMode;
+window.addPhaseRow = addPhaseRow;
+window.removePhaseRow = removePhaseRow;
+window.toggleDoorPrice = toggleDoorPrice;
 
 // Códigos y Stock
 window.loadPromotersCache = loadPromotersCache;

@@ -42,7 +42,9 @@ export function renderTicketTable(event) {
                 </div>
             </td>
             <td style="font-weight:700; ${tk.price > 0 ? 'color:#10b981;' : 'color:var(--primary);'}">
-                ${tk.price > 0 ? 'S/ ' + Number(tk.price).toFixed(2) : 'GRATIS'}
+                ${tk.priceMode === 'PHASES'
+                    ? `<span style="color:#a78bfa;">Preventa</span> <small style="opacity:0.6;">S/ ${Number(tk.price).toFixed(2)}</small>`
+                    : tk.price > 0 ? 'S/ ' + Number(tk.price).toFixed(2) : 'GRATIS'}
             </td>
             <td>${tk.claim_until ? formatDate(tk.claim_until) : '-'}</td>
             <td>${tk.valid_until ? formatDate(tk.valid_until) : '-'}</td>
@@ -64,7 +66,129 @@ export function renderTicketTable(event) {
 }
 
 // ==========================================
-// 2. CREAR/EDITAR TICKETS
+// 2. MODALIDAD DE PRECIOS
+// ==========================================
+
+/**
+ * Cambiar modalidad de precio visible en el modal
+ */
+export function togglePriceMode(mode) {
+    // Actualizar botones
+    document.querySelectorAll('#nt_price_mode .price-mode-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+
+    // Mostrar/ocultar secciones
+    const freeSection = document.getElementById('priceFree');
+    const fixedSection = document.getElementById('priceFixed');
+    const phasesSection = document.getElementById('pricePhases');
+    if (freeSection) freeSection.classList.toggle('hidden', mode !== 'FREE');
+    if (fixedSection) fixedSection.classList.toggle('hidden', mode !== 'FIXED');
+    if (phasesSection) phasesSection.classList.toggle('hidden', mode !== 'PHASES');
+
+    // Si PHASES y no hay filas, agregar una por defecto
+    if (mode === 'PHASES') {
+        const container = document.getElementById('phasesContainer');
+        if (container && container.children.length === 0) {
+            addPhaseRow();
+        }
+    }
+}
+
+/**
+ * Obtener modo de precio seleccionado actualmente
+ */
+function getSelectedPriceMode() {
+    const activeBtn = document.querySelector('#nt_price_mode .price-mode-btn.active');
+    return activeBtn?.dataset.mode || 'FREE';
+}
+
+/**
+ * Agregar fila de fase de preventa
+ */
+export function addPhaseRow(data) {
+    const container = document.getElementById('phasesContainer');
+    if (!container) return;
+
+    const row = document.createElement('div');
+    row.className = 'phase-row';
+    row.innerHTML = `
+        <input type="text" class="phase-name" placeholder="Nombre fase" value="${data?.name || ''}">
+        <input type="number" class="phase-price" placeholder="Precio" step="0.01" min="0" value="${data?.price || ''}">
+        <input type="datetime-local" class="phase-until" value="${data?.until || ''}">
+        <button type="button" class="btn-icon phase-remove" onclick="window.removePhaseRow(this)" title="Eliminar fase">
+            <i class="fa-solid fa-times"></i>
+        </button>
+    `;
+    container.appendChild(row);
+}
+
+/**
+ * Eliminar fila de fase (mínimo 1 fila)
+ */
+export function removePhaseRow(btn) {
+    const container = document.getElementById('phasesContainer');
+    if (container && container.children.length <= 1) {
+        toast("Debe haber al menos una fase", "error");
+        return;
+    }
+    const row = btn.closest('.phase-row');
+    if (row) row.remove();
+}
+
+/**
+ * Mostrar/ocultar campo precio en puerta
+ */
+export function toggleDoorPrice() {
+    const checkbox = document.getElementById('nt_door_price_check');
+    const field = document.getElementById('door_price_field');
+    if (field) {
+        field.classList.toggle('hidden', !checkbox?.checked);
+        if (!checkbox?.checked) {
+            const input = document.getElementById('nt_door_price');
+            if (input) input.value = '';
+        }
+    }
+}
+
+/**
+ * Leer fases del DOM
+ */
+function readPhasesFromDOM() {
+    const rows = document.querySelectorAll('#phasesContainer .phase-row');
+    const phases = [];
+    rows.forEach(row => {
+        const name = row.querySelector('.phase-name')?.value.trim();
+        const price = Number(row.querySelector('.phase-price')?.value) || 0;
+        const until = row.querySelector('.phase-until')?.value || '';
+        if (name && price >= 0) {
+            phases.push({ name, price, until });
+        }
+    });
+    return phases;
+}
+
+/**
+ * Calcular precio activo según fases y fecha actual
+ */
+export function getActivePhasePrice(phases, doorPrice) {
+    if (!phases || phases.length === 0) return doorPrice || 0;
+
+    const now = new Date();
+    // Ordenar fases por fecha
+    const sorted = [...phases].sort((a, b) => new Date(a.until) - new Date(b.until));
+
+    for (const phase of sorted) {
+        if (phase.until && new Date(phase.until) >= now) {
+            return phase.price;
+        }
+    }
+    // Si todas las fases pasaron, usar precio puerta
+    return doorPrice || sorted[sorted.length - 1].price;
+}
+
+// ==========================================
+// 3. CREAR/EDITAR TICKETS
 // ==========================================
 
 /**
@@ -72,33 +196,35 @@ export function renderTicketTable(event) {
  */
 export function openTicketModal() {
     openModal('modalTicket');
-    
+
     // Limpiar para modo creación
     const indexInput = document.getElementById("nt_editing_index");
     if (indexInput) indexInput.value = "";
-    
+
     const titleEl = document.querySelector('#modalTicket h2');
     if (titleEl) titleEl.textContent = "Nuevo tipo de acceso";
-    if (document.getElementById("nt_type_edit")) document.getElementById("nt_type_edit").value = "UNIQUE"; 
-    
     // Limpiar campos
     document.getElementById("nt_name").value = "";
     document.getElementById("nt_price").value = "0";
     document.getElementById("nt_color").value = "#f43f5e";
-    
+
     // Generar SKU único
     const sku = generateCode("TKT").split("-").slice(0, 2).join("-");
     document.getElementById("nt_sku").value = sku;
-    
-    // Campos avanzados
-    if (document.getElementById("nt_stock")) document.getElementById("nt_stock").value = "";
+
+    // Campos de configuración
     if (document.getElementById("nt_uses")) document.getElementById("nt_uses").value = "1";
     if (document.getElementById("nt_scans")) document.getElementById("nt_scans").value = "1";
     if (document.getElementById("nt_claim")) document.getElementById("nt_claim").value = "";
     if (document.getElementById("nt_valid_until")) document.getElementById("nt_valid_until").value = "";
 
-    // Ocultar configuración avanzada
-    document.getElementById("adv_settings")?.classList.add("hidden");
+    // Modalidad de precio: por defecto FREE
+    togglePriceMode('FREE');
+    if (document.getElementById("nt_door_price")) document.getElementById("nt_door_price").value = "";
+    if (document.getElementById("nt_door_price_check")) document.getElementById("nt_door_price_check").checked = false;
+    if (document.getElementById("door_price_field")) document.getElementById("door_price_field").classList.add("hidden");
+    const phasesContainer = document.getElementById("phasesContainer");
+    if (phasesContainer) phasesContainer.innerHTML = "";
 }
 
 /**
@@ -110,31 +236,52 @@ export function editTicket(index) {
         toast("Ticket no encontrado", "error");
         return;
     }
-    
+
     const tk = event.tickets[index];
-    
+
     openModal('modalTicket');
-    
+
     // Indicar modo edición
     const indexInput = document.getElementById("nt_editing_index");
     if (indexInput) indexInput.value = index;
-    
+
     const titleEl = document.querySelector('#modalTicket h2');
     if (titleEl) titleEl.textContent = "Editar tipo de acceso";
-    
-    // Llenar campos
+
+    // Llenar campos básicos
     document.getElementById("nt_name").value = tk.name || "";
     document.getElementById("nt_price").value = tk.price || 0;
     document.getElementById("nt_color").value = tk.color || "#f43f5e";
     document.getElementById("nt_sku").value = tk.sku || "";
-    if (document.getElementById("nt_type_edit")) document.getElementById("nt_type_edit").value = tk.type || "UNIQUE";
-    
-    // Campos avanzados
-    if (document.getElementById("nt_stock")) document.getElementById("nt_stock").value = tk.stock || "";
+
+    // Campos de configuración
     if (document.getElementById("nt_uses")) document.getElementById("nt_uses").value = tk.max_uses || 1;
     if (document.getElementById("nt_scans")) document.getElementById("nt_scans").value = tk.max_scans || 1;
     if (document.getElementById("nt_claim")) document.getElementById("nt_claim").value = tk.claim_until || "";
     if (document.getElementById("nt_valid_until")) document.getElementById("nt_valid_until").value = tk.valid_until || "";
+
+    // Detectar modalidad de precio (compatibilidad hacia atrás)
+    let mode = tk.priceMode;
+    if (!mode) {
+        mode = (tk.isFree || tk.price === 0) ? 'FREE' : 'FIXED';
+    }
+    togglePriceMode(mode);
+
+    // Restaurar fases si es PHASES
+    const phasesContainer = document.getElementById("phasesContainer");
+    if (phasesContainer) phasesContainer.innerHTML = "";
+    if (mode === 'PHASES' && tk.phases) {
+        tk.phases.forEach(phase => addPhaseRow(phase));
+    }
+    // Restaurar precio puerta
+    const hasDoorPrice = tk.doorPrice != null && tk.doorPrice > 0;
+    const doorCheck = document.getElementById("nt_door_price_check");
+    const doorField = document.getElementById("door_price_field");
+    if (doorCheck) doorCheck.checked = hasDoorPrice;
+    if (doorField) doorField.classList.toggle("hidden", !hasDoorPrice);
+    if (document.getElementById("nt_door_price")) {
+        document.getElementById("nt_door_price").value = tk.doorPrice || "";
+    }
 }
 
 /**
@@ -156,22 +303,50 @@ export async function saveNewTicket() {
     const editingIndex = indexInput?.value;
     const isEditing = editingIndex !== "" && editingIndex !== undefined;
 
-    const price = Math.max(0, Number(document.getElementById("nt_price")?.value) || 0);
-    const stock = Number(document.getElementById("nt_stock")?.value) || 999999;
-    
+    const priceMode = getSelectedPriceMode();
+
+    // Calcular precio según modalidad
+    let price = 0;
+    let isFree = false;
+    let phases = null;
+    let doorPrice = null;
+
+    if (priceMode === 'FREE') {
+        price = 0;
+        isFree = true;
+    } else if (priceMode === 'FIXED') {
+        price = Math.max(0, Number(document.getElementById("nt_price")?.value) || 0);
+        isFree = price === 0;
+    } else if (priceMode === 'PHASES') {
+        phases = readPhasesFromDOM();
+        if (phases.length === 0) {
+            toast("Agrega al menos una fase de preventa", "error");
+            return;
+        }
+        const doorCheck = document.getElementById("nt_door_price_check");
+        doorPrice = doorCheck?.checked ? (Number(document.getElementById("nt_door_price")?.value) || null) : null;
+        price = getActivePhasePrice(phases, doorPrice);
+        isFree = false;
+    }
+
     const ticketData = {
         name,
         price,
-        isFree: price === 0,
+        isFree,
+        priceMode,
         sku: document.getElementById("nt_sku")?.value.toUpperCase() || generateCode("TKT"),
         color: document.getElementById("nt_color")?.value || "#f43f5e",
-        type: document.getElementById("nt_type_edit")?.value || "UNIQUE",
-        stock,
         max_uses: Math.max(1, Number(document.getElementById("nt_uses")?.value) || 1),
         max_scans: Math.max(1, Number(document.getElementById("nt_scans")?.value) || 1),
         claim_until: document.getElementById("nt_claim")?.value || "",
         valid_until: document.getElementById("nt_valid_until")?.value || ""
     };
+
+    // Agregar datos de fases si es PHASES
+    if (priceMode === 'PHASES') {
+        ticketData.phases = phases;
+        if (doorPrice !== null) ticketData.doorPrice = doorPrice;
+    }
 
     const btn = document.getElementById("btnSaveTicket");
     const originalText = btn ? btn.textContent : "Guardar cambios";
@@ -270,19 +445,8 @@ export async function deleteTicket(index) {
     }
 }
 /**
- * Mostrar/ocultar campo de usos según tipo
+ * Mostrar/ocultar campo de usos según tipo (legacy, mantenido para compatibilidad)
  */
 export function toggleUsesField() {
-    const type = document.getElementById("nt_type_edit")?.value;
-    const usesInput = document.getElementById("nt_uses");
-    
-    if (usesInput) {
-        if (type === "UNIQUE") {
-            usesInput.value = "1";
-            usesInput.closest('.form-group').style.display = "none";
-        } else {
-            usesInput.value = "100";
-            usesInput.closest('.form-group').style.display = "block";
-        }
-    }
+    // Campo nt_type_edit eliminado del modal - función mantenida para evitar errores
 }
