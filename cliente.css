@@ -2697,6 +2697,15 @@ input, select, textarea {
     align-items: center;
     justify-content: space-between;
     padding: 14px 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border-radius: var(--radius-sm);
+}
+.ticket-type-subgroup:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+.ticket-type-subgroup:active {
+    background: var(--bg-hover);
 }
 .ticket-type-subgroup + .ticket-type-subgroup {
     border-top: 1px solid var(--border);
@@ -2718,20 +2727,16 @@ input, select, textarea {
 .btn-ver-type {
     background: var(--primary);
     color: white;
-    border: none;
-    padding: 8px 18px;
+    padding: 8px 16px;
     border-radius: 20px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
-    cursor: pointer;
     display: flex;
     align-items: center;
     gap: 6px;
     font-family: 'Outfit', sans-serif;
-    transition: opacity 0.2s;
-}
-.btn-ver-type:active {
-    opacity: 0.7;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(255, 71, 87, 0.3);
 }
 
 /* ==========================================

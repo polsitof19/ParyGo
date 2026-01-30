@@ -1184,14 +1184,14 @@ function renderMyEventTickets() {
         const indices = typeTickets.map(t => myTickets.indexOf(t));
         const indicesJson = JSON.stringify(indices);
         return `
-            <div class="ticket-type-subgroup">
+            <div class="ticket-type-subgroup" onclick='openTicketCarouselFromEvent(${indicesJson})'>
                 <div class="ticket-type-subgroup-info">
                     <span class="ticket-type-subgroup-name">${escapeHtml(typeName)}</span>
                     <span class="ticket-type-subgroup-count">${typeTickets.length} entrada${typeTickets.length > 1 ? 's' : ''}</span>
                 </div>
-                <button class="btn-ver-type" onclick='openTicketCarouselFromEvent(${indicesJson})'>
-                    Ver <i class="fa-solid fa-arrow-right"></i>
-                </button>
+                <span class="btn-ver-type">
+                    Ver →
+                </span>
             </div>
         `;
     }).join('');
@@ -1845,14 +1845,14 @@ function renderMyTickets() {
             const indices = typeTickets.map(t => myTickets.indexOf(t));
             const indicesJson = JSON.stringify(indices);
             return `
-                <div class="ticket-type-subgroup">
+                <div class="ticket-type-subgroup" onclick='openTicketCarousel(${indicesJson})'>
                     <div class="ticket-type-subgroup-info">
                         <span class="ticket-type-subgroup-name">${escapeHtml(typeName)}</span>
                         <span class="ticket-type-subgroup-count">${typeTickets.length} entrada${typeTickets.length > 1 ? 's' : ''}</span>
                     </div>
-                    <button class="btn-ver-type" onclick='openTicketCarousel(${indicesJson})'>
-                        Ver <i class="fa-solid fa-arrow-right"></i>
-                    </button>
+                    <span class="btn-ver-type">
+                        Ver →
+                    </span>
                 </div>
             `;
         }).join('');
