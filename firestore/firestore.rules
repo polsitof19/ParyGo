@@ -244,17 +244,17 @@ service cloud.firestore {
     // ==========================================
 
     match /clientes/{clienteId} {
-      // Leer: autenticados (necesario para buscar perfil propio con ID compuesto uid_brandId)
-      allow read: if isAuthenticated();
+      // Leer: público (searchDocument busca por DNI antes de que el usuario se autentique)
+      allow read: if true;
 
-      // Crear: cualquier autenticado (registro con ID compuesto uid_brandId)
+      // Crear: autenticado y el documento le pertenece (uid en datos == auth uid)
       allow create: if isAuthenticated() &&
-                       clienteId.matches(request.auth.uid + '_.*');
+                       request.resource.data.uid == request.auth.uid;
 
-      // Actualizar: el propio cliente (ID compuesto empieza con su UID) o admins
+      // Actualizar: el propio cliente (uid en datos o ID compuesto) o admins
       allow update: if isAuthenticated() &&
-                       (clienteId.matches(request.auth.uid + '_.*') ||
-                        resource.data.uid == request.auth.uid ||
+                       (resource.data.uid == request.auth.uid ||
+                        clienteId.matches(request.auth.uid + '_.*') ||
                         isAdminOrSuper());
 
       // Eliminar: solo admins
