@@ -1196,25 +1196,6 @@
             <input type="hidden" id="nt_editing_index">
             <input type="hidden" id="nt_sku">
 
-            <!-- Templates rápidos -->
-            <div class="templates-section" id="templates_section">
-                <span class="templates-label">Crear desde plantilla:</span>
-                <div class="templates-buttons">
-                    <button type="button" class="template-btn" onclick="window.applyTemplate('general')">
-                        <strong>General</strong>
-                        <small>S/.30 · Fijo</small>
-                    </button>
-                    <button type="button" class="template-btn" onclick="window.applyTemplate('vip')">
-                        <strong>VIP</strong>
-                        <small>S/.60 · Fijo</small>
-                    </button>
-                    <button type="button" class="template-btn" onclick="window.applyTemplate('gratis')">
-                        <strong>Gratis</strong>
-                        <small>Free</small>
-                    </button>
-                </div>
-            </div>
-
             <!-- Info banner -->
             <div id="event_detected_info" class="info-banner hidden">
                 <span>Evento detectado: <strong id="detected_event_name"></strong></span>
@@ -1227,16 +1208,16 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Nombre *</label>
-                        <input type="text" id="nt_name" placeholder="Ej: General, VIP, Free Pass" oninput="window.updateTicketPreview()">
+                        <input type="text" id="nt_name" placeholder="Ej: General, VIP, Free Pass">
                     </div>
                     <div class="form-group">
                         <label>Color</label>
-                        <input type="color" id="nt_color" value="#f43f5e" oninput="window.updateTicketPreview()">
+                        <input type="color" id="nt_color" value="#f43f5e">
                     </div>
                 </div>
                 <div class="form-group" style="margin-top:16px;">
                     <label>Descripción (opcional)</label>
-                    <textarea id="nt_description" placeholder="Ej: Incluye 2 tragos + acceso preferencial" rows="2" maxlength="200" oninput="window.updateTicketPreview()"></textarea>
+                    <textarea id="nt_description" placeholder="Ej: Incluye 2 tragos + acceso preferencial" rows="2" maxlength="200"></textarea>
                     <small class="field-hint">Se muestra al cliente en la compra</small>
                 </div>
             </div>
@@ -1259,7 +1240,7 @@
                 <div id="priceFixed" class="price-section hidden">
                     <div class="form-group">
                         <label>Precio (S/.)</label>
-                        <input type="number" id="nt_price" placeholder="0.00" step="0.01" min="0" value="0" oninput="window.updateTicketPreview()">
+                        <input type="number" id="nt_price" placeholder="0.00" step="0.01" min="0" value="0">
                     </div>
                 </div>
 
@@ -1318,12 +1299,6 @@
                         <input type="datetime-local" id="nt_valid_until">
                     </div>
                 </div>
-            </div>
-
-            <!-- Vista previa -->
-            <div class="preview-section">
-                <div class="preview-label">Vista previa del cliente</div>
-                <div class="preview-container" id="ticket_preview"></div>
             </div>
 
             <div class="modal-actions">

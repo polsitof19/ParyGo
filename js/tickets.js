@@ -87,14 +87,200 @@ export function togglePriceMode(mode) {
             addPhaseRow();
         }
     }
-
-    updateTicketPreview();
 }
 
 function getSelectedPriceMode() {
     const activeBtn = document.querySelector('#nt_price_mode .price-mode-btn.active');
     return activeBtn?.dataset.mode || 'FREE';
 }
+
+// ==========================================
+// 3. SELECTOR FECHA/HORA PERSONALIZADO
+// ==========================================
+
+function getDaysInMonth(month, year) {
+    return new Date(year, month, 0).getDate();
+}
+
+export function adjustValue(btn, type, delta) {
+    const container = btn.closest('.date-time-selector');
+    if (!container) return;
+
+    const el = container.querySelector(`.sel-${type}`);
+    if (!el) return;
+
+    let val = parseInt(el.textContent) || 0;
+    val += delta;
+
+    if (type === 'day') {
+        const monthEl = container.querySelector('.sel-month');
+        const yearEl = container.querySelector('.sel-year');
+        const month = parseInt(monthEl?.textContent) || 1;
+        const year = parseInt(yearEl?.textContent) || new Date().getFullYear();
+        const maxDay = getDaysInMonth(month, year);
+        if (val < 1) val = maxDay;
+        if (val > maxDay) val = 1;
+    } else if (type === 'month') {
+        if (val < 1) val = 12;
+        if (val > 12) val = 1;
+        adjustDayLimit(container);
+    } else if (type === 'year') {
+        const currentYear = new Date().getFullYear();
+        if (val < currentYear) val = currentYear + 5;
+        if (val > currentYear + 5) val = currentYear;
+        adjustDayLimit(container);
+    } else if (type === 'hour') {
+        if (val < 1) val = 12;
+        if (val > 12) val = 1;
+    } else if (type === 'min') {
+        if (val < 0) val = 55;
+        if (val > 55) val = 0;
+    }
+
+    if (type === 'min') {
+        el.textContent = String(val).padStart(2, '0');
+    } else if (type === 'day' || type === 'month') {
+        el.textContent = String(val).padStart(2, '0');
+    } else {
+        el.textContent = val;
+    }
+}
+
+function adjustDayLimit(container) {
+    const dayEl = container.querySelector('.sel-day');
+    const monthEl = container.querySelector('.sel-month');
+    const yearEl = container.querySelector('.sel-year');
+    if (!dayEl || !monthEl || !yearEl) return;
+
+    const month = parseInt(monthEl.textContent) || 1;
+    const year = parseInt(yearEl.textContent) || new Date().getFullYear();
+    const maxDay = getDaysInMonth(month, year);
+    const currentDay = parseInt(dayEl.textContent) || 1;
+    if (currentDay > maxDay) {
+        dayEl.textContent = String(maxDay).padStart(2, '0');
+    }
+}
+
+export function toggleAmPm(btn) {
+    const el = btn.closest('.date-time-selector')?.querySelector('.sel-ampm');
+    if (!el) return;
+    el.textContent = el.textContent === 'AM' ? 'PM' : 'AM';
+}
+
+function createDateTimeSelector(isoValue) {
+    let day, month, year, hour, min, ampm;
+
+    if (isoValue) {
+        const d = new Date(isoValue);
+        if (!isNaN(d)) {
+            day = d.getDate();
+            month = d.getMonth() + 1;
+            year = d.getFullYear();
+            let h = d.getHours();
+            min = d.getMinutes();
+            ampm = h >= 12 ? 'PM' : 'AM';
+            hour = h % 12 || 12;
+        }
+    }
+
+    if (!day) {
+        const now = new Date();
+        day = now.getDate();
+        month = now.getMonth() + 1;
+        year = now.getFullYear();
+        hour = 11;
+        min = 0;
+        ampm = 'PM';
+    }
+
+    // Redondear minutos a múltiplos de 5
+    min = Math.round(min / 5) * 5;
+    if (min === 60) { min = 0; hour++; }
+
+    return `
+        <div class="date-time-selector">
+            <div class="dt-date-group">
+                <div class="dt-label">Fecha</div>
+                <div class="dt-fields">
+                    <div class="dt-field">
+                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'day',1)"><i class="fa-solid fa-chevron-up"></i></button>
+                        <span class="dt-value sel-day">${String(day).padStart(2, '0')}</span>
+                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'day',-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                        <span class="dt-field-label">Día</span>
+                    </div>
+                    <span class="dt-sep">/</span>
+                    <div class="dt-field">
+                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'month',1)"><i class="fa-solid fa-chevron-up"></i></button>
+                        <span class="dt-value sel-month">${String(month).padStart(2, '0')}</span>
+                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'month',-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                        <span class="dt-field-label">Mes</span>
+                    </div>
+                    <span class="dt-sep">/</span>
+                    <div class="dt-field">
+                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'year',1)"><i class="fa-solid fa-chevron-up"></i></button>
+                        <span class="dt-value sel-year">${year}</span>
+                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'year',-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                        <span class="dt-field-label">Año</span>
+                    </div>
+                </div>
+            </div>
+            <div class="dt-time-group">
+                <div class="dt-label">Hora</div>
+                <div class="dt-fields">
+                    <div class="dt-field">
+                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'hour',1)"><i class="fa-solid fa-chevron-up"></i></button>
+                        <span class="dt-value sel-hour">${String(hour).padStart(2, '0')}</span>
+                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'hour',-1)"><i class="fa-solid fa-chevron-down"></i></button>
+                        <span class="dt-field-label">Hora</span>
+                    </div>
+                    <span class="dt-sep">:</span>
+                    <div class="dt-field">
+                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'min',5)"><i class="fa-solid fa-chevron-up"></i></button>
+                        <span class="dt-value sel-min">${String(min).padStart(2, '0')}</span>
+                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'min',-5)"><i class="fa-solid fa-chevron-down"></i></button>
+                        <span class="dt-field-label">Min</span>
+                    </div>
+                    <div class="dt-field dt-ampm-field">
+                        <button type="button" class="dt-btn-ampm" onclick="window.toggleAmPm(this)">${ampm}</button>
+                        <span class="dt-value sel-ampm" style="display:none;">${ampm}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function readDateTimeFromSelector(container) {
+    const dayEl = container.querySelector('.sel-day');
+    const monthEl = container.querySelector('.sel-month');
+    const yearEl = container.querySelector('.sel-year');
+    const hourEl = container.querySelector('.sel-hour');
+    const minEl = container.querySelector('.sel-min');
+    const ampmBtn = container.querySelector('.dt-btn-ampm');
+
+    if (!dayEl || !monthEl || !yearEl || !hourEl || !minEl) return '';
+
+    const day = parseInt(dayEl.textContent) || 1;
+    const month = parseInt(monthEl.textContent) || 1;
+    const year = parseInt(yearEl.textContent) || new Date().getFullYear();
+    let hour = parseInt(hourEl.textContent) || 12;
+    const min = parseInt(minEl.textContent) || 0;
+    const ampm = ampmBtn?.textContent?.trim() || 'PM';
+
+    // Convertir 12h a 24h
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    else if (ampm === 'PM' && hour !== 12) hour += 12;
+
+    const m = String(month).padStart(2, '0');
+    const d = String(day).padStart(2, '0');
+    const h = String(hour).padStart(2, '0');
+    const mi = String(min).padStart(2, '0');
+    return `${year}-${m}-${d}T${h}:${mi}`;
+}
+
+// ==========================================
+// 4. FASES DE PREVENTA
+// ==========================================
 
 export function addPhaseRow(data) {
     const container = document.getElementById('phasesContainer');
@@ -111,24 +297,23 @@ export function addPhaseRow(data) {
             </button>
         </div>
         <div class="phase-fields">
-            <div class="form-group">
-                <label>Nombre</label>
-                <input type="text" class="phase-name" placeholder="Ej: Early Bird" value="${data?.name || ''}" oninput="window.updateTicketPreview()">
-            </div>
             <div class="phase-row-inline">
                 <div class="form-group">
-                    <label>Precio S/.</label>
-                    <input type="number" class="phase-price" placeholder="0.00" step="0.01" min="0" value="${data?.price || ''}" oninput="window.updateTicketPreview()">
+                    <label>Nombre</label>
+                    <input type="text" class="phase-name" placeholder="Ej: Early Bird" value="${data?.name || ''}">
                 </div>
                 <div class="form-group">
-                    <label>Disponible hasta</label>
-                    <input type="datetime-local" class="phase-until" value="${data?.until || ''}">
+                    <label>Precio S/.</label>
+                    <input type="number" class="phase-price" placeholder="0.00" step="0.01" min="0" value="${data?.price || ''}">
                 </div>
+            </div>
+            <div class="form-group">
+                <label>Disponible hasta</label>
+                ${createDateTimeSelector(data?.until || '')}
             </div>
         </div>
     `;
     container.appendChild(row);
-    updateTicketPreview();
 }
 
 export function removePhaseRow(btn) {
@@ -143,7 +328,6 @@ export function removePhaseRow(btn) {
         setTimeout(() => {
             row.remove();
             renumberPhases();
-            updateTicketPreview();
         }, 200);
     }
 }
@@ -179,7 +363,8 @@ function readPhasesFromDOM() {
     cards.forEach(card => {
         const name = card.querySelector('.phase-name')?.value.trim();
         const price = Number(card.querySelector('.phase-price')?.value) || 0;
-        const until = card.querySelector('.phase-until')?.value || '';
+        const selectorEl = card.querySelector('.date-time-selector');
+        const until = selectorEl ? readDateTimeFromSelector(selectorEl) : '';
         if (name && price >= 0) {
             phases.push({ name, price, until });
         }
@@ -202,41 +387,7 @@ export function getActivePhasePrice(phases, doorPrice) {
 }
 
 // ==========================================
-// 3. TEMPLATES RÁPIDOS
-// ==========================================
-
-export function applyTemplate(type) {
-    document.getElementById('nt_name').value = '';
-    const descEl = document.getElementById('nt_description');
-    if (descEl) descEl.value = '';
-
-    switch (type) {
-        case 'general':
-            document.getElementById('nt_name').value = 'General';
-            togglePriceMode('FIXED');
-            document.getElementById('nt_price').value = '30';
-            document.getElementById('nt_color').value = '#3b82f6';
-            break;
-        case 'vip':
-            document.getElementById('nt_name').value = 'VIP';
-            togglePriceMode('FIXED');
-            document.getElementById('nt_price').value = '60';
-            document.getElementById('nt_color').value = '#f59e0b';
-            if (descEl) descEl.value = 'Acceso preferencial + beneficios exclusivos';
-            break;
-        case 'gratis':
-            document.getElementById('nt_name').value = 'Free Pass';
-            togglePriceMode('FREE');
-            document.getElementById('nt_color').value = '#10b981';
-            break;
-    }
-
-    setDefaultDatesFromEvent();
-    updateTicketPreview();
-}
-
-// ==========================================
-// 4. FECHAS INTELIGENTES
+// 5. FECHAS INTELIGENTES
 // ==========================================
 
 function setDefaultDatesFromEvent() {
@@ -278,51 +429,6 @@ function toLocalDateTimeString(date) {
 }
 
 // ==========================================
-// 5. VISTA PREVIA
-// ==========================================
-
-export function updateTicketPreview() {
-    const preview = document.getElementById('ticket_preview');
-    if (!preview) return;
-
-    const name = document.getElementById('nt_name')?.value || 'Nombre entrada';
-    const mode = getSelectedPriceMode();
-    const color = document.getElementById('nt_color')?.value || '#f43f5e';
-    const description = document.getElementById('nt_description')?.value || '';
-
-    let priceHTML = '';
-
-    if (mode === 'FREE') {
-        priceHTML = '<span class="preview-price free">GRATIS</span>';
-    } else if (mode === 'FIXED') {
-        const price = document.getElementById('nt_price')?.value || '0';
-        priceHTML = `<span class="preview-price">S/. ${parseFloat(price).toFixed(2)}</span>`;
-    } else if (mode === 'PHASES') {
-        const phases = readPhasesFromDOM();
-        if (phases.length > 0) {
-            priceHTML = '<div class="preview-phases">' + phases.map((p, i) => `
-                <div class="preview-phase ${i === 0 ? 'active' : 'locked'}">
-                    <span>${Validator.sanitizeHTML(p.name || 'Fase ' + (i + 1))}</span>
-                    <span>S/. ${parseFloat(p.price || 0).toFixed(2)}</span>
-                </div>
-            `).join('') + '</div>';
-        }
-    }
-
-    preview.innerHTML = `
-        <div class="preview-ticket" style="border-left: 4px solid ${color}">
-            <div class="preview-header">
-                <strong>${Validator.sanitizeHTML(name)}</strong>
-                ${description ? `<small>${Validator.sanitizeHTML(description)}</small>` : ''}
-            </div>
-            <div class="preview-content">
-                ${priceHTML}
-            </div>
-        </div>
-    `;
-}
-
-// ==========================================
 // 6. CREAR/EDITAR TICKETS
 // ==========================================
 
@@ -335,9 +441,7 @@ export function openTicketModal() {
     const titleEl = document.querySelector('#modalTicket h2');
     if (titleEl) titleEl.textContent = "Nuevo tipo de acceso";
 
-    // Mostrar templates, ocultar banner
-    const templates = document.getElementById('templates_section');
-    if (templates) templates.classList.remove('hidden');
+    // Ocultar banner
     const banner = document.getElementById('event_detected_info');
     if (banner) banner.classList.add('hidden');
 
@@ -370,8 +474,6 @@ export function openTicketModal() {
 
     // Fechas inteligentes
     setDefaultDatesFromEvent();
-
-    updateTicketPreview();
 }
 
 export function editTicket(index) {
@@ -392,9 +494,7 @@ export function editTicket(index) {
     const titleEl = document.querySelector('#modalTicket h2');
     if (titleEl) titleEl.textContent = "Editar tipo de acceso";
 
-    // Ocultar templates y banner
-    const templates = document.getElementById('templates_section');
-    if (templates) templates.classList.add('hidden');
+    // Ocultar banner
     const banner = document.getElementById('event_detected_info');
     if (banner) banner.classList.add('hidden');
 
@@ -437,8 +537,6 @@ export function editTicket(index) {
     if (document.getElementById("nt_door_price")) {
         document.getElementById("nt_door_price").value = tk.doorPrice || "";
     }
-
-    updateTicketPreview();
 }
 
 export async function saveNewTicket() {
