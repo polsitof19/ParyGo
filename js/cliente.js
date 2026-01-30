@@ -25,6 +25,12 @@ import {
     runTransaction,
     increment
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+    getStorage,
+    ref,
+    uploadBytes,
+    getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 // ==========================================
 // FIREBASE CONFIG
@@ -41,6 +47,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 // ==========================================
 // VARIABLES GLOBALES
@@ -278,20 +285,28 @@ function hideSplash() {
 // ==========================================
 async function loadUserProfile(uid) {
     try {
-        // Buscar por UID del usuario autenticado
-        const docSnap = await getDoc(doc(db, "clientes", uid));
+        // Buscar con ID compuesto uid_brandId (multi-marca)
+        const compositeId = `${uid}_${currentBrandId}`;
+        const compositeSnap = await getDoc(doc(db, "clientes", compositeId));
 
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            // Verificar que pertenece a la marca actual
+        if (compositeSnap.exists()) {
+            currentUserProfile = { id: compositeSnap.id, ...compositeSnap.data() };
+            updateUserUI();
+            return true;
+        }
+
+        // Fallback: buscar por UID solo (datos anteriores al cambio multi-marca)
+        const legacySnap = await getDoc(doc(db, "clientes", uid));
+        if (legacySnap.exists()) {
+            const data = legacySnap.data();
             if (data.brand_id === currentBrandId) {
-                currentUserProfile = { id: docSnap.id, ...data };
+                currentUserProfile = { id: legacySnap.id, ...data };
                 updateUserUI();
                 return true;
             }
         }
 
-        // Fallback: buscar por query (para datos antiguos con ID compuesto)
+        // Fallback: buscar por query
         const q = query(
             collection(db, "clientes"),
             where("uid", "==", uid),
@@ -318,10 +333,9 @@ async function loadUserProfile(uid) {
 function showLinkAccountPrompt(user) {
     showView('authView');
 
-    // Ocultar pasos normales
-    document.getElementById("auth_step1").classList.add("hidden");
-    document.getElementById("auth_step2").classList.add("hidden");
-    document.getElementById("auth_step3").classList.add("hidden");
+    // Ocultar pantallas de auth existentes
+    document.getElementById("loginScreen")?.classList.add("hidden");
+    document.getElementById("registerScreen")?.classList.add("hidden");
 
     // Crear prompt especial
     const container = document.querySelector('.auth-container');
@@ -429,8 +443,9 @@ async function linkAccountToProfile() {
     if (!phone || phone.length !== 9 || !phone.startsWith('9')) return toast("Teléfono: 9 dígitos, empieza con 9");
 
     try {
-        // Crear perfil en clientes para esta marca
-        await setDoc(doc(db, "clientes", currentUser.uid), {
+        // Crear perfil con ID compuesto (soporte multi-marca)
+        const clientDocId = `${currentUser.uid}_${currentBrandId}`;
+        await setDoc(doc(db, "clientes", clientDocId), {
             uid: currentUser.uid,
             brand_id: currentBrandId,
             doc_type: selectedDocType,
@@ -595,11 +610,23 @@ function clearRegisterFields() {
 }
 
 function showAuthStep(step) {
-    document.getElementById("auth_step1")?.classList.add("hidden");
-    document.getElementById("auth_step2")?.classList.add("hidden");
-    document.getElementById("auth_step3")?.classList.add("hidden");
+    // Mapear auth_step a IDs reales del HTML
+    // step 1 = reg_step1 (DNI), step 2 = reg_step2 (datos), step 3 = loginScreen (login)
+    document.getElementById("reg_step1")?.classList.add("hidden");
+    document.getElementById("reg_step2")?.classList.add("hidden");
+    document.getElementById("loginScreen")?.classList.add("hidden");
     document.getElementById("link_prompt")?.classList.add("hidden");
-    document.getElementById(`auth_step${step}`)?.classList.remove("hidden");
+
+    const stepMap = { 1: "reg_step1", 2: "reg_step2", 3: "loginScreen" };
+    const targetId = stepMap[step];
+    if (targetId) {
+        document.getElementById(targetId)?.classList.remove("hidden");
+        // Asegurar que registerScreen esté visible para steps 1 y 2
+        if (step <= 2) {
+            document.getElementById("registerScreen")?.classList.remove("hidden");
+            document.getElementById("loginScreen")?.classList.add("hidden");
+        }
+    }
 }
 
 function backToStep1() {
@@ -790,8 +817,9 @@ async function handleRegister() {
         // 1. Crear usuario en Firebase Auth PRIMERO
         const cred = await createUserWithEmailAndPassword(auth, email, password);
 
-        // 2. DESPUÉS crear documento en colección "clientes" usando el UID del usuario como ID
-        await setDoc(doc(db, "clientes", cred.user.uid), {
+        // 2. DESPUÉS crear documento con ID compuesto (soporte multi-marca)
+        const clientDocId = `${cred.user.uid}_${currentBrandId}`;
+        await setDoc(doc(db, "clientes", clientDocId), {
             uid: cred.user.uid,
             brand_id: currentBrandId,
             doc_type: selectedDocType,
@@ -1696,8 +1724,14 @@ async function sendPaymentProof() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
 
     try {
-        const imageBase64 = await fileToBase64(imageInput.files[0]);
         const fullName = `${currentUserProfile.name || ''} ${currentUserProfile.lastname || ''}`.trim();
+
+        // Subir comprobante a Firebase Storage (evita límite 1MB de Firestore)
+        const file = imageInput.files[0];
+        const timestamp = Date.now();
+        const storageRef = ref(storage, `proofs/${currentBrandId}/${currentEvent.id}/${timestamp}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        const proofUrl = await getDownloadURL(storageRef);
 
         await addDoc(collection(db, "sales"), {
             // Campos para admin
@@ -1708,7 +1742,7 @@ async function sendPaymentProof() {
             client_email: currentUserProfile?.email || '',
             client_phone: currentUserProfile?.phone || '',
             total_price: buyState.total,
-            proof_image: imageBase64,
+            proof_image: proofUrl,
             ticket_name: buyState.ticketType.name,
             ticket_id: buyState.ticketType.id || '',
             company_id: currentBrand?.owner_id || '',
@@ -1724,7 +1758,7 @@ async function sendPaymentProof() {
             payment_method: buyState.paymentMethod,
             payer_name: payerName,
             operation_number: operation,
-            payment_proof: imageBase64,
+            payment_proof: proofUrl,
             status: "PENDING",
             created_at: new Date().toISOString()
         });
@@ -1806,7 +1840,7 @@ function openMyTickets() {
 
 function updateTicketTabCounters() {
     const now = new Date();
-    const upcomingCount = myTickets.filter(t => t.status === 'ACTIVE' && t.event_date && new Date(t.event_date) >= now).length;
+    const upcomingCount = myTickets.filter(t => t.status === 'ACTIVE' && (!t.event_date || new Date(t.event_date) >= now)).length;
     const pastCount = myTickets.filter(t => t.status === 'ACTIVE' && t.event_date && new Date(t.event_date) < now).length
         + myTickets.filter(t => t.status === 'SCANNED' || t.status === 'USED').length;
     const pendingCount = myPurchases.length;
@@ -1855,7 +1889,12 @@ function renderMyTickets() {
     // Group tickets by event
     let filtered = [];
     if (currentTicketTab === 'upcoming') {
-        filtered = myTickets.filter(t => t.status === 'ACTIVE' && t.event_date && new Date(t.event_date) >= now);
+        filtered = myTickets.filter(t => {
+            if (t.status !== 'ACTIVE') return false;
+            // Sin fecha → mostrar en próximos por defecto
+            if (!t.event_date) return true;
+            return new Date(t.event_date) >= now;
+        });
     } else {
         // past - includes used/scanned and active with past dates
         filtered = myTickets.filter(t => {
