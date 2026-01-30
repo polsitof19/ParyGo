@@ -2485,6 +2485,131 @@ input, select, textarea {
 }
 
 /* ==========================================
+   SECCION 32B: PREVENTAS / FASES DE PRECIO
+   ========================================== */
+.phase-tabs-container {
+    margin-bottom: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.phase-tabs-container::-webkit-scrollbar { display: none; }
+.phase-tabs {
+    display: flex;
+    gap: 6px;
+    min-width: min-content;
+}
+.phase-tab {
+    flex-shrink: 0;
+    padding: 8px 18px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Outfit', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.phase-tab.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+.phase-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.phase-panel.hidden { display: none; }
+.phase-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    transition: background 0.2s;
+}
+.phase-row.active {
+    cursor: pointer;
+    border-color: rgba(255,71,87,0.3);
+}
+.phase-row.active:active {
+    background: var(--bg-hover);
+}
+.phase-row.future {
+    opacity: 0.5;
+}
+.phase-row.door-price {
+    opacity: 0.6;
+    border-style: dashed;
+}
+.phase-row.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.phase-row-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.phase-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+.phase-row.future .phase-name {
+    color: var(--text-muted);
+}
+.phase-until {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.phase-row.active .phase-until {
+    color: var(--yellow);
+}
+.phase-row-action {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+.phase-price {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+}
+.phase-row.active .phase-price {
+    color: var(--green);
+}
+.phase-price.free {
+    color: var(--green);
+}
+.phase-row.future .phase-price {
+    color: var(--text-muted);
+}
+.phase-buy-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.phase-sold-out {
+    font-size: 10px;
+    font-weight: 700;
+    color: #ef4444;
+    text-transform: uppercase;
+}
+
+/* ==========================================
    SECCION 33: ENTRADAS AGRUPADAS POR EVENTO
    ========================================== */
 .ticket-group {

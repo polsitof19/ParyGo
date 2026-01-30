@@ -1304,10 +1304,19 @@ function renderTicketsForSale() {
         return;
     }
 
+    const hasPhases = tickets.some(t => t.priceMode === 'PHASES' && t.phases && t.phases.length > 0);
+
+    if (hasPhases) {
+        renderTicketsWithPhases(container, tickets);
+    } else {
+        renderTicketsSimple(container, tickets);
+    }
+}
+
+function renderTicketsSimple(container, tickets) {
     const now = new Date();
 
     container.innerHTML = tickets.map((t, i) => {
-        // Preventa logic
         let status = 'disponible';
         let statusLabel = 'Disponible';
         let disabled = false;
@@ -1347,6 +1356,167 @@ function renderTicketsForSale() {
             </div>
         `;
     }).join('');
+}
+
+function renderTicketsWithPhases(container, tickets) {
+    const now = new Date();
+
+    // Tabs para cada tipo de entrada
+    const tabsHtml = tickets.map((t, i) => {
+        return `<button class="phase-tab ${i === 0 ? 'active' : ''}" onclick="switchPhaseTab(${i})">${escapeHtml(t.name)}</button>`;
+    }).join('');
+
+    // Contenido de cada tab
+    const panelsHtml = tickets.map((t, i) => {
+        let panelContent = '';
+
+        if (t.priceMode === 'PHASES' && t.phases && t.phases.length > 0) {
+            const sorted = [...t.phases].sort((a, b) => new Date(a.until) - new Date(b.until));
+
+            let activeFound = false;
+            const phasesHtml = sorted.map(phase => {
+                const untilDate = phase.until ? new Date(phase.until) : null;
+                const isPast = untilDate && untilDate < now;
+                const isActive = !isPast && !activeFound;
+
+                if (isActive) activeFound = true;
+
+                if (isPast) return '';
+
+                const isFree = phase.price === 0;
+
+                if (isActive) {
+                    const untilLabel = untilDate ? formatPhaseDate(untilDate) : '';
+                    const onclick = isFree
+                        ? `onclick="openFreeTicketModal(${i})"`
+                        : `onclick="openBuyModalWithPrice(${i}, ${phase.price})"`;
+                    return `
+                        <div class="phase-row active" ${onclick}>
+                            <div class="phase-row-info">
+                                <span class="phase-name">${escapeHtml(phase.name)}</span>
+                                ${untilLabel ? `<span class="phase-until"><i class="fa-regular fa-clock"></i> Hasta ${untilLabel}</span>` : ''}
+                            </div>
+                            <div class="phase-row-action">
+                                <span class="phase-price ${isFree ? 'free' : ''}">${isFree ? 'GRATIS' : `S/. ${Number(phase.price).toFixed(2)}`}</span>
+                                <span class="phase-buy-label">COMPRAR <i class="fa-solid fa-chevron-right"></i></span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    const fromLabel = untilDate ? formatPhaseDate(untilDate) : '';
+                    // Calcular fecha de inicio: es el "until" de la fase anterior
+                    const phaseIdx = sorted.indexOf(phase);
+                    const prevUntil = phaseIdx > 0 && sorted[phaseIdx - 1].until ? new Date(sorted[phaseIdx - 1].until) : null;
+                    const startLabel = prevUntil ? formatPhaseDate(prevUntil) : '';
+
+                    return `
+                        <div class="phase-row future">
+                            <div class="phase-row-info">
+                                <span class="phase-name">${escapeHtml(phase.name)}</span>
+                                <span class="phase-until"><i class="fa-regular fa-clock"></i> A partir del ${startLabel || fromLabel}</span>
+                            </div>
+                            <div class="phase-row-action">
+                                <span class="phase-price">${isFree ? 'GRATIS' : `S/. ${Number(phase.price).toFixed(2)}`}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            }).filter(Boolean).join('');
+
+            panelContent += phasesHtml;
+
+            // Door price
+            if (t.doorPrice) {
+                const allExpired = sorted.every(p => p.until && new Date(p.until) < now);
+                if (allExpired) {
+                    const onclick = `onclick="openBuyModalWithPrice(${i}, ${t.doorPrice})"`;
+                    panelContent += `
+                        <div class="phase-row active" ${onclick}>
+                            <div class="phase-row-info">
+                                <span class="phase-name">Puerta</span>
+                            </div>
+                            <div class="phase-row-action">
+                                <span class="phase-price">S/. ${Number(t.doorPrice).toFixed(2)}</span>
+                                <span class="phase-buy-label">COMPRAR <i class="fa-solid fa-chevron-right"></i></span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    panelContent += `
+                        <div class="phase-row door-price">
+                            <div class="phase-row-info">
+                                <span class="phase-name"><i class="fa-solid fa-door-open"></i> Puerta</span>
+                            </div>
+                            <div class="phase-row-action">
+                                <span class="phase-price">S/. ${Number(t.doorPrice).toFixed(2)}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        } else {
+            // Ticket sin PHASES (FIXED o FREE en un evento mixto)
+            const isFree = t.isFree || t.price === 0;
+            let disabled = false;
+            if (t.stock !== undefined && t.sold !== undefined && t.sold >= t.stock) disabled = true;
+
+            const onclick = disabled ? '' : (isFree ? `onclick="openFreeTicketModal(${i})"` : `onclick="openBuyModal(${i})"`);
+            panelContent = `
+                <div class="phase-row ${disabled ? 'disabled' : 'active'}" ${onclick}>
+                    <div class="phase-row-info">
+                        <span class="phase-name">${isFree ? 'Entrada gratuita' : 'Precio fijo'}</span>
+                    </div>
+                    <div class="phase-row-action">
+                        <span class="phase-price ${isFree ? 'free' : ''}">${isFree ? 'GRATIS' : `S/. ${Number(t.price).toFixed(2)}`}</span>
+                        ${!disabled ? '<span class="phase-buy-label">COMPRAR <i class="fa-solid fa-chevron-right"></i></span>' : '<span class="phase-sold-out">AGOTADO</span>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        return `<div class="phase-panel ${i === 0 ? '' : 'hidden'}" data-panel="${i}">${panelContent}</div>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="phase-tabs-container">
+            <div class="phase-tabs">${tabsHtml}</div>
+        </div>
+        ${panelsHtml}
+    `;
+}
+
+function switchPhaseTab(index) {
+    document.querySelectorAll('.phase-tab').forEach((tab, i) => {
+        tab.classList.toggle('active', i === index);
+    });
+    document.querySelectorAll('.phase-panel').forEach((panel, i) => {
+        panel.classList.toggle('hidden', i !== index);
+    });
+}
+
+function formatPhaseDate(date) {
+    return date.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }) +
+        ' ' + date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function openBuyModalWithPrice(ticketIndex, price) {
+    const ticket = currentEvent?.tickets?.[ticketIndex];
+    if (!ticket) return;
+    if (!currentUserProfile) return toast("Inicia sesión para comprar entradas");
+
+    buyState.ticketType = ticket;
+    buyState.quantity = 1;
+    buyState.unitPrice = price;
+    buyState.paymentMethod = 'yape';
+
+    updateBuyTotal();
+
+    document.getElementById("buy_ticket_name").textContent = ticket.name;
+    document.getElementById("buy_ticket_price").textContent = `S/. ${Number(price).toFixed(2)}`;
+    document.getElementById("buy_qty").textContent = '1';
+
+    showBuyStep(1);
+    openModal('modalBuy');
 }
 
 function backToEvents() {
