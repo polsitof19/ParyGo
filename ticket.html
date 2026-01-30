@@ -170,7 +170,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyANnihyrgd02ViR_GeKn6Mdf85nLwUjQg0",
@@ -182,36 +182,7 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // Detectar marca por subdominio
-        function getBrandSlug() {
-            const hostname = window.location.hostname;
-            const parts = hostname.split('.');
-            if (parts.length >= 3 && parts[1] === 'parygo') {
-                return parts[0].toLowerCase();
-            }
-            // Fallback: query param
-            const params = new URLSearchParams(window.location.search);
-            return params.get('brand') || null;
-        }
-
-        // Aplicar color de marca (buscar por slug, no por doc ID)
-        async function applyBrandTheme(slug) {
-            if (!slug) return null;
-            try {
-                const q = query(collection(db, 'brands'), where('slug', '==', slug));
-                const snap = await getDocs(q);
-                if (!snap.empty) {
-                    const data = snap.docs[0].data();
-                    if (data.color) {
-                        document.documentElement.style.setProperty('--accent', data.color);
-                    }
-                    return data;
-                }
-            } catch (e) {}
-            return null;
-        }
+        const functions = getFunctions(app);
 
         function formatDate(dateStr) {
             if (!dateStr) return '';
@@ -244,54 +215,38 @@
             }
 
             try {
-                const slug = getBrandSlug();
-                const brandData = await applyBrandTheme(slug);
+                // Llamar Cloud Function (valida token server-side, retorna solo datos públicos)
+                const getSharedTicket = httpsCallable(functions, 'getSharedTicket');
+                const result = await getSharedTicket({ ticketId, token });
+                const data = result.data;
 
-                const ticketDoc = await getDoc(doc(db, 'tickets', ticketId));
-                if (!ticketDoc.exists()) {
+                if (!data || !data.success) {
                     showError();
                     return;
                 }
 
-                const ticket = ticketDoc.data();
-
-                // Validar token
-                if (ticket.share_token !== token) {
-                    showError();
-                    return;
-                }
-
-                // Obtener datos del evento
-                let eventData = null;
-                if (ticket.event_id) {
-                    try {
-                        const eventDoc = await getDoc(doc(db, 'events', ticket.event_id));
-                        if (eventDoc.exists()) eventData = eventDoc.data();
-                    } catch (e) {}
+                // Aplicar color de marca
+                if (data.brand_color) {
+                    document.documentElement.style.setProperty('--accent', data.brand_color);
                 }
 
                 // Rellenar datos
-                document.getElementById('ticketEventName').textContent = ticket.event_name || eventData?.name || 'Evento';
+                document.getElementById('ticketEventName').textContent = data.event_name || 'Evento';
 
-                const venue = eventData?.venue || eventData?.location || ticket.location || '';
-                const address = eventData?.address || '';
-                document.getElementById('ticketLocation').textContent = [venue, address].filter(Boolean).join(', ') || 'Por confirmar';
+                const locationParts = [data.location, data.address].filter(Boolean);
+                document.getElementById('ticketLocation').textContent = locationParts.join(', ') || 'Por confirmar';
 
-                const dateStr = ticket.event_date || eventData?.date || '';
-                const timeStr = eventData?.time || '';
-                document.getElementById('ticketDate').textContent = formatDate(dateStr) + (timeStr ? ` - ${timeStr}` : '');
+                document.getElementById('ticketDate').textContent = formatDate(data.event_date) + (data.time ? ` - ${data.time}` : '');
 
-                document.getElementById('ticketType').textContent = ticket.ticket_type || 'General';
+                document.getElementById('ticketType').textContent = data.ticket_type || 'General';
 
-                const brandName = brandData?.name || slug || '';
-                document.getElementById('ticketBrand').textContent = brandName ? `Productora: ${brandName}` : '';
+                document.getElementById('ticketBrand').textContent = data.brand_name ? `Productora: ${data.brand_name}` : '';
 
                 // Generar QR
                 const qrContainer = document.getElementById('ticketQR');
-                const qrCode = ticket.qr_data || ticket.code || ticket.qr_token || '';
-                if (qrCode && typeof QRCode !== 'undefined') {
+                if (data.qr_data && typeof QRCode !== 'undefined') {
                     new QRCode(qrContainer, {
-                        text: qrCode,
+                        text: data.qr_data,
                         width: 200,
                         height: 200,
                         colorDark: '#000000',
@@ -300,12 +255,11 @@
                     });
                 }
 
-                // Titulo de la pagina
-                document.title = `${ticket.event_name || 'Entrada'} - ParyGo`;
+                document.title = `${data.event_name || 'Entrada'} - ParyGo`;
 
                 showTicket();
             } catch (e) {
-                console.error('Error loading ticket:', e);
+                console.error('Error loading shared ticket:', e);
                 showError();
             }
         }

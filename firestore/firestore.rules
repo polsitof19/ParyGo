@@ -57,10 +57,8 @@ service cloud.firestore {
     // ==========================================
 
     match /tickets/{ticketId} {
-      // Leer individual (get): público (necesario para links compartidos con share_token)
-      // Listar (list/query): solo autenticados
-      allow get: if true;
-      allow list: if isAuthenticated();
+      // Leer: solo autenticados (links compartidos usan Cloud Function getSharedTicket)
+      allow read: if isAuthenticated();
 
       // Crear: cualquier usuario autenticado (compra de entrada)
       allow create: if isAuthenticated();
