@@ -36,19 +36,19 @@ service cloud.firestore {
 
     // Eventos: lectura pública, escritura solo admins
     match /events/{eventId} {
-      allow read: if true; // Público
+      allow read: if true;
       allow create, update, delete: if isAdminOrSuper();
     }
 
     // Marcas: lectura pública, escritura solo admins
     match /brands/{brandId} {
-      allow read: if true; // Público
+      allow read: if true;
       allow create, update, delete: if isAdminOrSuper();
     }
 
-    // Companies: lectura pública (para compatibilidad), escritura solo super admin
+    // Companies: lectura pública (compatibilidad), escritura solo super admin
     match /companies/{companyId} {
-      allow read: if true; // Público
+      allow read: if true;
       allow create, update, delete: if isSuperAdmin();
     }
 
@@ -57,13 +57,13 @@ service cloud.firestore {
     // ==========================================
 
     match /tickets/{ticketId} {
-      // Leer: cualquier usuario autenticado
+      // Leer: admins/staff ven todos, clientes solo los suyos
       allow read: if isAuthenticated();
 
       // Crear: cualquier usuario autenticado (compra de entrada)
       allow create: if isAuthenticated();
 
-      // Actualizar: solo admins o staff (scanner)
+      // Actualizar: admins o staff (scanner marca SCANNED)
       allow update: if isAdminOrSuper() || isStaff();
 
       // Eliminar: solo admins
@@ -78,16 +78,12 @@ service cloud.firestore {
       // Leer: autenticados (promotores ven sus cuotas)
       allow read: if isAuthenticated();
 
-      // Crear/editar: solo admins
-      allow create, update: if isAdminOrSuper();
+      // Crear/eliminar: solo admins
+      allow create, delete: if isAdminOrSuper();
 
-      // Actualizar cuota usada: admins o promotor propietario
-      allow update: if isAuthenticated() &&
-                       (isAdminOrSuper() ||
-                        resource.data.promoter_id == request.auth.uid);
-
-      // Eliminar: solo admins
-      allow delete: if isAdminOrSuper();
+      // Actualizar: admins o promotor propietario de la cuota
+      allow update: if isAdminOrSuper() ||
+                       (isAuthenticated() && resource.data.promoter_id == request.auth.uid);
     }
 
     // ==========================================
@@ -95,7 +91,7 @@ service cloud.firestore {
     // ==========================================
 
     match /sales/{saleId} {
-      // Leer: cualquier usuario autenticado (filtrado por query client_id == uid)
+      // Leer: cualquier usuario autenticado
       allow read: if isAuthenticated();
 
       // Crear: autenticados (al generar venta)
@@ -110,7 +106,7 @@ service cloud.firestore {
     // ==========================================
 
     match /rewards/{rewardId} {
-      // Leer: público o autenticados (según necesidad)
+      // Leer: público (clientes ven premios disponibles)
       allow read: if true;
 
       // Crear/editar/eliminar: solo admins
@@ -164,7 +160,7 @@ service cloud.firestore {
       allow read: if isAdminOrSuper() || isStaff();
 
       // Crear: staff (al escanear entrada)
-      allow create: if isAuthenticated();
+      allow create: if isStaff() || isAdminOrSuper();
 
       // Actualizar/eliminar: solo admins
       allow update, delete: if isAdminOrSuper();
@@ -175,8 +171,8 @@ service cloud.firestore {
     // ==========================================
 
     match /user_profiles/{profileId} {
-      // Leer: público (necesario para flujo de login por documento)
-      allow read: if true;
+      // Leer: autenticados (necesario para flujo de login)
+      allow read: if isAuthenticated();
 
       // Crear: cualquier usuario autenticado
       allow create: if isAuthenticated();
@@ -213,8 +209,8 @@ service cloud.firestore {
       // Leer: público (para validar códigos al reclamar)
       allow read: if true;
 
-      // Crear: solo admins
-      allow create: if isAdminOrSuper();
+      // Crear: admins o staff/promotores (promotores generan códigos)
+      allow create: if isAdminOrSuper() || isStaff();
 
       // Actualizar: autenticados (al canjear código)
       allow update: if isAuthenticated();
@@ -248,19 +244,16 @@ service cloud.firestore {
     // ==========================================
 
     match /clientes/{clienteId} {
-      // Leer: público (necesario para verificar DNI duplicado ANTES de registro)
-      // Se permite lectura sin autenticación para el flujo de registro en 2 pasos
-      allow read: if true;
+      // Leer: autenticados (necesario para buscar perfil propio con ID compuesto uid_brandId)
+      allow read: if isAuthenticated();
 
-      // Crear: cualquier autenticado (al completar el registro)
-      // El clienteId debe coincidir con el UID del usuario autenticado
+      // Crear: cualquier autenticado (registro con ID compuesto uid_brandId)
       allow create: if isAuthenticated() &&
-                       request.auth.uid == clienteId &&
-                       request.resource.data.uid == request.auth.uid;
+                       clienteId.matches(request.auth.uid + '_.*');
 
-      // Actualizar: el propio cliente o admins
+      // Actualizar: el propio cliente (ID compuesto empieza con su UID) o admins
       allow update: if isAuthenticated() &&
-                       (request.auth.uid == clienteId ||
+                       (clienteId.matches(request.auth.uid + '_.*') ||
                         resource.data.uid == request.auth.uid ||
                         isAdminOrSuper());
 
