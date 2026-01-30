@@ -21,7 +21,9 @@ import {
     doc,
     getDoc,
     setDoc,
-    updateDoc
+    updateDoc,
+    runTransaction,
+    increment
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================
@@ -74,6 +76,7 @@ let buyState = {
 let selectedDocType = 'DNI';
 let foundUserData = null;
 let existingUserNeedsProfile = false;
+let isProcessing = false;
 
 // ==========================================
 // INICIALIZACIÓN
@@ -699,6 +702,7 @@ async function handleCheckDNI() {
     } catch (e) {
         console.error("Error verificando documento:", e);
         toast("Error al verificar documento");
+    } finally {
         btn.disabled = false;
         btn.innerHTML = 'SIGUIENTE <i class="fa-solid fa-arrow-right"></i>';
     }
@@ -820,6 +824,7 @@ async function handleRegister() {
         }
 
         toast(errorMsg);
+    } finally {
         btn.disabled = false;
         btn.innerHTML = 'REGISTRARME';
     }
@@ -1351,24 +1356,38 @@ async function redeemCode() {
 
 async function confirmRedeem() {
     if (!pendingRedeemData) return toast("No hay código pendiente");
+    if (isProcessing) return;
+    isProcessing = true;
 
     const { code, codeDocId, codeData } = pendingRedeemData;
 
     try {
         closeModal('modalConfirmRedeem');
 
-        // Canjear código
+        const codeRef = doc(db, "codes", codeDocId);
         const fullName = `${currentUserProfile.name || ''} ${currentUserProfile.lastname || ''}`.trim();
-        await updateDoc(doc(db, "codes", codeDocId), {
-            status: "CLAIMED",
-            claimed_by: currentUser.uid,
-            claimed_name: fullName,
-            claimed_dni: currentUserProfile.doc_number,
-            claimed_phone: currentUserProfile.phone,
-            claimed_at: new Date().toISOString()
+
+        // Verificar y canjear atómicamente
+        await runTransaction(db, async (transaction) => {
+            const codeDoc = await transaction.get(codeRef);
+            if (!codeDoc.exists()) {
+                throw new Error('El código no existe');
+            }
+            const data = codeDoc.data();
+            if (data.status === 'CLAIMED' || data.status === 'USED') {
+                throw new Error('Este código ya fue canjeado');
+            }
+            transaction.update(codeRef, {
+                status: "CLAIMED",
+                claimed_by: currentUser.uid,
+                claimed_name: fullName,
+                claimed_dni: currentUserProfile.doc_number,
+                claimed_phone: currentUserProfile.phone,
+                claimed_at: new Date().toISOString()
+            });
         });
 
-        // Crear ticket
+        // Crear ticket después de transacción exitosa
         const qrData = generateQRData(code);
         await addDoc(collection(db, "tickets"), {
             user_id: currentUser.uid,
@@ -1398,7 +1417,9 @@ async function confirmRedeem() {
 
     } catch (e) {
         console.error(e);
-        toast("Error al canjear código");
+        toast(e.message || "Error al canjear código");
+    } finally {
+        isProcessing = false;
     }
 }
 
@@ -1447,6 +1468,8 @@ async function claimFreeTickets() {
     if (!currentEvent || !currentUserProfile || !freeTicketState.ticketType) {
         return toast("Error: datos incompletos");
     }
+    if (isProcessing) return;
+    isProcessing = true;
 
     const btn = document.querySelector('#modalFreeTicket .btn-primary');
     if (btn) {
@@ -1458,6 +1481,24 @@ async function claimFreeTickets() {
         const fullName = `${currentUserProfile.name || ''} ${currentUserProfile.lastname || ''}`.trim();
         const ticketType = freeTicketState.ticketType;
         const qty = freeTicketState.quantity;
+
+        // Verificar stock disponible
+        if (ticketType.stock !== undefined && ticketType.stock !== null) {
+            const eventRef = doc(db, "events", currentEvent.id);
+            const eventSnap = await getDoc(eventRef);
+            if (eventSnap.exists()) {
+                const eventData = eventSnap.data();
+                const tickets = eventData.tickets || eventData.ticket_types || [];
+                const currentType = tickets.find(t => t.name === ticketType.name);
+                if (currentType && currentType.stock !== undefined) {
+                    const available = currentType.stock - (currentType.sold || 0);
+                    if (qty > available) {
+                        toast(`Solo quedan ${Math.max(0, available)} entradas disponibles`);
+                        return;
+                    }
+                }
+            }
+        }
 
         for (let i = 0; i < qty; i++) {
             const code = `FREE-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
@@ -1494,11 +1535,12 @@ async function claimFreeTickets() {
     } catch (e) {
         console.error(e);
         toast("Error al generar entradas");
-    }
-
-    if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-check"></i> OBTENER ENTRADAS';
+    } finally {
+        isProcessing = false;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> OBTENER ENTRADAS';
+        }
     }
 }
 
@@ -1646,6 +1688,8 @@ async function sendPaymentProof() {
     if (!payerFirstName) return toast("Ingresa el nombre de quien pagó");
     if (!operation) return toast("Ingresa el número de operación");
     if (!imageInput.files[0]) return toast("Sube la captura del pago");
+    if (isProcessing) return;
+    isProcessing = true;
 
     const btn = document.getElementById("btnSendProof");
     btn.disabled = true;
@@ -1691,11 +1735,12 @@ async function sendPaymentProof() {
     } catch (e) {
         console.error(e);
         toast("Error al enviar comprobante");
+    } finally {
+        isProcessing = false;
+        btn.disabled = false;
+        btn.innerHTML = 'ENVIAR COMPROBANTE <i class="fa-solid fa-arrow-right"></i>';
     }
-
-    btn.disabled = false;
-    btn.innerHTML = 'ENVIAR COMPROBANTE <i class="fa-solid fa-arrow-right"></i>';
-};
+}
 
 function fileToBase64(file) {
     return new Promise((resolve, reject) => {
@@ -2019,6 +2064,7 @@ function renderCarousel() {
             const ticket = myTickets[globalIdx];
             const container = document.getElementById(`carouselQR_${i}`);
             if (container && typeof QRCode !== 'undefined') {
+                container.innerHTML = '';
                 const qrCode = ticket.code || ticket.qr_token || '';
                 if (qrCode) {
                     new QRCode(container, {
