@@ -110,21 +110,39 @@ export function addPhaseRow(data) {
     const container = document.getElementById('phasesContainer');
     if (!container) return;
 
+    const phaseNum = container.children.length + 1;
+
     const row = document.createElement('div');
-    row.className = 'phase-row';
+    row.className = 'phase-card';
     row.innerHTML = `
-        <input type="text" class="phase-name" placeholder="Nombre fase" value="${data?.name || ''}">
-        <input type="number" class="phase-price" placeholder="Precio" step="0.01" min="0" value="${data?.price || ''}">
-        <input type="datetime-local" class="phase-until" value="${data?.until || ''}">
-        <button type="button" class="btn-icon phase-remove" onclick="window.removePhaseRow(this)" title="Eliminar fase">
-            <i class="fa-solid fa-times"></i>
-        </button>
+        <div class="phase-header">
+            <span class="phase-number">Fase ${phaseNum}</span>
+            <button type="button" class="phase-remove" onclick="window.removePhaseRow(this)" title="Eliminar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="phase-fields">
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" class="phase-name" placeholder="Ej: Early Bird" value="${data?.name || ''}">
+            </div>
+            <div class="phase-row-inline">
+                <div class="form-group">
+                    <label>Precio S/.</label>
+                    <input type="number" class="phase-price" placeholder="0.00" step="0.01" min="0" value="${data?.price || ''}">
+                </div>
+                <div class="form-group">
+                    <label>Disponible hasta</label>
+                    <input type="datetime-local" class="phase-until" value="${data?.until || ''}">
+                </div>
+            </div>
+        </div>
     `;
     container.appendChild(row);
 }
 
 /**
- * Eliminar fila de fase (mínimo 1 fila)
+ * Eliminar fila de fase (mínimo 1 fila) y renumerar
  */
 export function removePhaseRow(btn) {
     const container = document.getElementById('phasesContainer');
@@ -132,8 +150,26 @@ export function removePhaseRow(btn) {
         toast("Debe haber al menos una fase", "error");
         return;
     }
-    const row = btn.closest('.phase-row');
-    if (row) row.remove();
+    const row = btn.closest('.phase-card');
+    if (row) {
+        row.classList.add('phase-removing');
+        setTimeout(() => {
+            row.remove();
+            renumberPhases();
+        }, 200);
+    }
+}
+
+/**
+ * Renumerar fases después de eliminar
+ */
+function renumberPhases() {
+    const container = document.getElementById('phasesContainer');
+    if (!container) return;
+    container.querySelectorAll('.phase-card').forEach((card, i) => {
+        const num = card.querySelector('.phase-number');
+        if (num) num.textContent = `Fase ${i + 1}`;
+    });
 }
 
 /**
@@ -143,8 +179,12 @@ export function toggleDoorPrice() {
     const checkbox = document.getElementById('nt_door_price_check');
     const field = document.getElementById('door_price_field');
     if (field) {
-        field.classList.toggle('hidden', !checkbox?.checked);
-        if (!checkbox?.checked) {
+        if (checkbox?.checked) {
+            field.classList.remove('hidden');
+            field.classList.add('slide-in');
+        } else {
+            field.classList.add('hidden');
+            field.classList.remove('slide-in');
             const input = document.getElementById('nt_door_price');
             if (input) input.value = '';
         }
@@ -155,12 +195,12 @@ export function toggleDoorPrice() {
  * Leer fases del DOM
  */
 function readPhasesFromDOM() {
-    const rows = document.querySelectorAll('#phasesContainer .phase-row');
+    const cards = document.querySelectorAll('#phasesContainer .phase-card');
     const phases = [];
-    rows.forEach(row => {
-        const name = row.querySelector('.phase-name')?.value.trim();
-        const price = Number(row.querySelector('.phase-price')?.value) || 0;
-        const until = row.querySelector('.phase-until')?.value || '';
+    cards.forEach(card => {
+        const name = card.querySelector('.phase-name')?.value.trim();
+        const price = Number(card.querySelector('.phase-price')?.value) || 0;
+        const until = card.querySelector('.phase-until')?.value || '';
         if (name && price >= 0) {
             phases.push({ name, price, until });
         }
@@ -367,13 +407,13 @@ export async function saveNewTicket() {
             ticketData.id = updatedTickets[idx]?.id || Date.now().toString();
             ticketData.slug = updatedTickets[idx]?.slug || name.toLowerCase().replace(/\s+/g, '-');
             updatedTickets[idx] = ticketData;
-            toast("✅ Ticket actualizado");
+            toast("Ticket actualizado");
         } else {
             // MODO CREACIÓN
             ticketData.id = Date.now().toString();
             ticketData.slug = name.toLowerCase().replace(/\s+/g, '-') + '-' + Math.random().toString(36).substr(2, 3);
             updatedTickets.push(ticketData);
-            toast("✅ Ticket creado");
+            toast("Ticket creado");
         }
 
         await updateDoc(ref, { tickets: updatedTickets });
@@ -434,7 +474,7 @@ export async function deleteTicket(index) {
         
         event.tickets = updatedTickets;
         
-        toast("✅ Ticket eliminado");
+        toast("Ticket eliminado");
         renderTicketTable(event);
         
         if (window.fillCodeGen) window.fillCodeGen(event);

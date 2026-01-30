@@ -2708,7 +2708,7 @@ select option:hover {
    ========================================== */
 
 .modal-section {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
 }
 
 .modal-section-title {
@@ -2716,9 +2716,9 @@ select option:hover {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: var(--muted);
-    margin-bottom: 12px;
-    padding-bottom: 6px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
     border-bottom: 1px solid var(--border);
 }
 
@@ -2726,44 +2726,39 @@ select option:hover {
 .price-mode-selector {
     display: flex;
     gap: 8px;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
 }
 
 .price-mode-btn {
     flex: 1;
-    padding: 10px 12px;
+    padding: 14px 20px;
     border: 2px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--radius);
     background: transparent;
-    color: var(--muted);
-    font-size: 13px;
+    color: var(--text-muted);
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
+    transition: var(--transition);
+    text-align: center;
+    font-family: inherit;
 }
 
 .price-mode-btn:hover {
-    border-color: var(--primary);
+    border-color: rgba(244, 63, 94, 0.4);
     color: var(--text);
+    background: rgba(255, 255, 255, 0.02);
 }
 
 .price-mode-btn.active {
     border-color: var(--primary);
-    background: rgba(244, 63, 94, 0.12);
-    color: var(--primary);
-}
-
-.price-mode-btn i {
-    font-size: 14px;
+    background: var(--primary);
+    color: white;
 }
 
 /* Secciones de precio */
 .price-section {
-    animation: fadeIn 0.2s ease;
+    animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .price-section.hidden {
@@ -2772,101 +2767,200 @@ select option:hover {
 
 /* Badge entrada gratuita */
 .free-badge {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 16px;
-    background: rgba(34, 197, 94, 0.1);
-    border: 1px solid rgba(34, 197, 94, 0.3);
-    border-radius: 10px;
-    color: #22c55e;
-    font-weight: 600;
+    padding: 14px 18px;
+    background: rgba(34, 197, 94, 0.08);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    border-radius: var(--radius);
+    color: var(--success);
+    font-weight: 500;
     font-size: 14px;
+    line-height: 1.5;
 }
 
-.free-badge i {
-    font-size: 16px;
-}
-
-/* Checkbox label inline */
-.checkbox-label {
+/* === FASES DE PREVENTA === */
+#phasesContainer {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    font-size: 13px;
-    color: var(--text);
+    flex-direction: column;
+    gap: 12px;
 }
 
-.checkbox-label input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--primary);
-    cursor: pointer;
-}
-
-/* Filas de fases de preventa */
-.phase-row {
-    display: grid;
-    grid-template-columns: 1fr 100px 1fr 36px;
-    gap: 8px;
-    margin-bottom: 8px;
-    align-items: center;
-    animation: fadeIn 0.2s ease;
-}
-
-.phase-row input {
-    width: 100%;
-    padding: 8px 10px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
+.phase-card {
     background: var(--bg);
-    color: var(--text);
-    font-size: 13px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: border-color 0.2s ease, opacity 0.2s ease;
 }
 
-.phase-row input:focus {
-    border-color: var(--primary);
-    outline: none;
+.phase-card:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.phase-card.phase-removing {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+    transition: all 0.2s ease;
+}
+
+.phase-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.phase-number {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--secondary);
+}
+
+.phase-fields .form-group {
+    margin-bottom: 10px;
+}
+
+.phase-fields .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.phase-row-inline {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
 }
 
 .phase-remove {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     border-radius: 8px;
-    background: rgba(239, 68, 68, 0.1) !important;
-    color: #ef4444 !important;
-    border: none;
+    background: rgba(239, 68, 68, 0.08);
+    color: var(--danger);
+    border: 1px solid rgba(239, 68, 68, 0.15);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s;
+    transition: var(--transition-fast);
+    font-size: 13px;
 }
 
 .phase-remove:hover {
-    background: rgba(239, 68, 68, 0.2) !important;
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
 }
 
-.btn-sm {
-    padding: 6px 14px;
+/* Botón agregar fase */
+.btn-add-phase {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px;
+    margin-top: 12px;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-add-phase:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(244, 63, 94, 0.04);
+}
+
+.btn-add-phase i {
     font-size: 12px;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
+/* Toggle precio en puerta */
+.door-price-toggle {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    user-select: none;
+}
+
+.toggle-label input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    background: var(--border);
+    border-radius: 11px;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+
+.toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    transition: var(--transition);
+}
+
+.toggle-label input:checked + .toggle-switch {
+    background: var(--primary);
+}
+
+.toggle-label input:checked + .toggle-switch::after {
+    transform: translateX(18px);
+    background: white;
+}
+
+.door-price-input {
+    margin-top: 12px;
+    animation: slideUp 0.2s ease;
+}
+
+.door-price-input.hidden {
+    display: none;
+}
+
+.door-price-input.slide-in {
+    animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Responsive: fases en móvil */
 @media (max-width: 768px) {
-    .phase-row {
-        grid-template-columns: 1fr 1fr;
+    .phase-row-inline {
+        grid-template-columns: 1fr;
     }
-    .phase-row input:nth-child(1) {
-        grid-column: 1 / -1;
+    .price-mode-selector {
+        gap: 6px;
     }
-    .phase-row .phase-remove {
-        justify-self: end;
+    .price-mode-btn {
+        padding: 12px 10px;
+        font-size: 13px;
     }
 }
