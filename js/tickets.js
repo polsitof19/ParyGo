@@ -8,22 +8,19 @@ import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/fireba
 // 1. RENDERIZAR TABLA DE TICKETS
 // ==========================================
 
-/**
- * Renderizar tabla de tipos de entrada del evento
- */
 export function renderTicketTable(event) {
     const table = document.getElementById("tblTickets");
     if (!table) return;
-    
+
     const tbody = table.querySelector("tbody");
     if (!tbody) return;
-    
+
     const tickets = event?.tickets || [];
-    
+
     if (tickets.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" style="text-align:center; color:var(--muted); padding:50px;">
+                <td colspan="7" style="text-align:center; color:var(--text-muted); padding:50px;">
                     <i class="fa-solid fa-ticket" style="font-size:40px; opacity:0.2; display:block; margin-bottom:15px;"></i>
                     No hay tipos de entrada creados
                     <br><small style="opacity:0.7;">Crea tu primer tipo de entrada para comenzar</small>
@@ -32,13 +29,16 @@ export function renderTicketTable(event) {
         `;
         return;
     }
-    
+
     tbody.innerHTML = tickets.map((tk, index) => `
         <tr>
             <td>
                 <div style="display:flex; align-items:center; gap:10px;">
                     <div style="width:8px; height:30px; border-radius:4px; background:${tk.color || 'var(--primary)'};"></div>
-                    <strong>${Validator.sanitizeHTML(tk.name)}</strong>
+                    <div>
+                        <strong>${Validator.sanitizeHTML(tk.name)}</strong>
+                        ${tk.description ? `<br><small style="color:var(--text-muted);">${Validator.sanitizeHTML(tk.description)}</small>` : ''}
+                    </div>
                 </div>
             </td>
             <td style="font-weight:700; ${tk.price > 0 ? 'color:#10b981;' : 'color:var(--primary);'}">
@@ -69,16 +69,11 @@ export function renderTicketTable(event) {
 // 2. MODALIDAD DE PRECIOS
 // ==========================================
 
-/**
- * Cambiar modalidad de precio visible en el modal
- */
 export function togglePriceMode(mode) {
-    // Actualizar botones
     document.querySelectorAll('#nt_price_mode .price-mode-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.mode === mode);
     });
 
-    // Mostrar/ocultar secciones
     const freeSection = document.getElementById('priceFree');
     const fixedSection = document.getElementById('priceFixed');
     const phasesSection = document.getElementById('pricePhases');
@@ -86,32 +81,26 @@ export function togglePriceMode(mode) {
     if (fixedSection) fixedSection.classList.toggle('hidden', mode !== 'FIXED');
     if (phasesSection) phasesSection.classList.toggle('hidden', mode !== 'PHASES');
 
-    // Si PHASES y no hay filas, agregar una por defecto
     if (mode === 'PHASES') {
         const container = document.getElementById('phasesContainer');
         if (container && container.children.length === 0) {
             addPhaseRow();
         }
     }
+
+    updateTicketPreview();
 }
 
-/**
- * Obtener modo de precio seleccionado actualmente
- */
 function getSelectedPriceMode() {
     const activeBtn = document.querySelector('#nt_price_mode .price-mode-btn.active');
     return activeBtn?.dataset.mode || 'FREE';
 }
 
-/**
- * Agregar fila de fase de preventa
- */
 export function addPhaseRow(data) {
     const container = document.getElementById('phasesContainer');
     if (!container) return;
 
     const phaseNum = container.children.length + 1;
-
     const row = document.createElement('div');
     row.className = 'phase-card';
     row.innerHTML = `
@@ -124,12 +113,12 @@ export function addPhaseRow(data) {
         <div class="phase-fields">
             <div class="form-group">
                 <label>Nombre</label>
-                <input type="text" class="phase-name" placeholder="Ej: Early Bird" value="${data?.name || ''}">
+                <input type="text" class="phase-name" placeholder="Ej: Early Bird" value="${data?.name || ''}" oninput="window.updateTicketPreview()">
             </div>
             <div class="phase-row-inline">
                 <div class="form-group">
                     <label>Precio S/.</label>
-                    <input type="number" class="phase-price" placeholder="0.00" step="0.01" min="0" value="${data?.price || ''}">
+                    <input type="number" class="phase-price" placeholder="0.00" step="0.01" min="0" value="${data?.price || ''}" oninput="window.updateTicketPreview()">
                 </div>
                 <div class="form-group">
                     <label>Disponible hasta</label>
@@ -139,11 +128,9 @@ export function addPhaseRow(data) {
         </div>
     `;
     container.appendChild(row);
+    updateTicketPreview();
 }
 
-/**
- * Eliminar fila de fase (mínimo 1 fila) y renumerar
- */
 export function removePhaseRow(btn) {
     const container = document.getElementById('phasesContainer');
     if (container && container.children.length <= 1) {
@@ -156,13 +143,11 @@ export function removePhaseRow(btn) {
         setTimeout(() => {
             row.remove();
             renumberPhases();
+            updateTicketPreview();
         }, 200);
     }
 }
 
-/**
- * Renumerar fases después de eliminar
- */
 function renumberPhases() {
     const container = document.getElementById('phasesContainer');
     if (!container) return;
@@ -172,9 +157,6 @@ function renumberPhases() {
     });
 }
 
-/**
- * Mostrar/ocultar campo precio en puerta
- */
 export function toggleDoorPrice() {
     const checkbox = document.getElementById('nt_door_price_check');
     const field = document.getElementById('door_price_field');
@@ -191,9 +173,6 @@ export function toggleDoorPrice() {
     }
 }
 
-/**
- * Leer fases del DOM
- */
 function readPhasesFromDOM() {
     const cards = document.querySelectorAll('#phasesContainer .phase-card');
     const phases = [];
@@ -208,14 +187,10 @@ function readPhasesFromDOM() {
     return phases;
 }
 
-/**
- * Calcular precio activo según fases y fecha actual
- */
 export function getActivePhasePrice(phases, doorPrice) {
     if (!phases || phases.length === 0) return doorPrice || 0;
 
     const now = new Date();
-    // Ordenar fases por fecha
     const sorted = [...phases].sort((a, b) => new Date(a.until) - new Date(b.until));
 
     for (const phase of sorted) {
@@ -223,53 +198,182 @@ export function getActivePhasePrice(phases, doorPrice) {
             return phase.price;
         }
     }
-    // Si todas las fases pasaron, usar precio puerta
     return doorPrice || sorted[sorted.length - 1].price;
 }
 
 // ==========================================
-// 3. CREAR/EDITAR TICKETS
+// 3. TEMPLATES RÁPIDOS
 // ==========================================
 
-/**
- * Abrir modal para crear ticket
- */
+export function applyTemplate(type) {
+    document.getElementById('nt_name').value = '';
+    const descEl = document.getElementById('nt_description');
+    if (descEl) descEl.value = '';
+
+    switch (type) {
+        case 'general':
+            document.getElementById('nt_name').value = 'General';
+            togglePriceMode('FIXED');
+            document.getElementById('nt_price').value = '30';
+            document.getElementById('nt_color').value = '#3b82f6';
+            break;
+        case 'vip':
+            document.getElementById('nt_name').value = 'VIP';
+            togglePriceMode('FIXED');
+            document.getElementById('nt_price').value = '60';
+            document.getElementById('nt_color').value = '#f59e0b';
+            if (descEl) descEl.value = 'Acceso preferencial + beneficios exclusivos';
+            break;
+        case 'gratis':
+            document.getElementById('nt_name').value = 'Free Pass';
+            togglePriceMode('FREE');
+            document.getElementById('nt_color').value = '#10b981';
+            break;
+    }
+
+    setDefaultDatesFromEvent();
+    updateTicketPreview();
+}
+
+// ==========================================
+// 4. FECHAS INTELIGENTES
+// ==========================================
+
+function setDefaultDatesFromEvent() {
+    const event = getActiveEvent();
+    if (!event || !event.date) return;
+
+    const eventDate = new Date(event.date + 'T00:00:00');
+    if (isNaN(eventDate)) return;
+
+    // Reclamar hasta: día del evento 18:00
+    const claimDate = new Date(eventDate);
+    claimDate.setHours(18, 0, 0, 0);
+    const claimEl = document.getElementById('nt_claim');
+    if (claimEl) claimEl.value = toLocalDateTimeString(claimDate);
+
+    // Válido hasta: día siguiente 06:00
+    const validDate = new Date(eventDate);
+    validDate.setDate(validDate.getDate() + 1);
+    validDate.setHours(6, 0, 0, 0);
+    const validEl = document.getElementById('nt_valid_until');
+    if (validEl) validEl.value = toLocalDateTimeString(validDate);
+
+    // Banner informativo
+    const banner = document.getElementById('event_detected_info');
+    const nameEl = document.getElementById('detected_event_name');
+    if (banner && nameEl) {
+        nameEl.textContent = event.name || '';
+        banner.classList.remove('hidden');
+    }
+}
+
+function toLocalDateTimeString(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const h = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${d}T${h}:${min}`;
+}
+
+// ==========================================
+// 5. VISTA PREVIA
+// ==========================================
+
+export function updateTicketPreview() {
+    const preview = document.getElementById('ticket_preview');
+    if (!preview) return;
+
+    const name = document.getElementById('nt_name')?.value || 'Nombre entrada';
+    const mode = getSelectedPriceMode();
+    const color = document.getElementById('nt_color')?.value || '#f43f5e';
+    const description = document.getElementById('nt_description')?.value || '';
+
+    let priceHTML = '';
+
+    if (mode === 'FREE') {
+        priceHTML = '<span class="preview-price free">GRATIS</span>';
+    } else if (mode === 'FIXED') {
+        const price = document.getElementById('nt_price')?.value || '0';
+        priceHTML = `<span class="preview-price">S/. ${parseFloat(price).toFixed(2)}</span>`;
+    } else if (mode === 'PHASES') {
+        const phases = readPhasesFromDOM();
+        if (phases.length > 0) {
+            priceHTML = '<div class="preview-phases">' + phases.map((p, i) => `
+                <div class="preview-phase ${i === 0 ? 'active' : 'locked'}">
+                    <span>${Validator.sanitizeHTML(p.name || 'Fase ' + (i + 1))}</span>
+                    <span>S/. ${parseFloat(p.price || 0).toFixed(2)}</span>
+                </div>
+            `).join('') + '</div>';
+        }
+    }
+
+    preview.innerHTML = `
+        <div class="preview-ticket" style="border-left: 4px solid ${color}">
+            <div class="preview-header">
+                <strong>${Validator.sanitizeHTML(name)}</strong>
+                ${description ? `<small>${Validator.sanitizeHTML(description)}</small>` : ''}
+            </div>
+            <div class="preview-content">
+                ${priceHTML}
+            </div>
+        </div>
+    `;
+}
+
+// ==========================================
+// 6. CREAR/EDITAR TICKETS
+// ==========================================
+
 export function openTicketModal() {
     openModal('modalTicket');
 
-    // Limpiar para modo creación
     const indexInput = document.getElementById("nt_editing_index");
     if (indexInput) indexInput.value = "";
 
     const titleEl = document.querySelector('#modalTicket h2');
     if (titleEl) titleEl.textContent = "Nuevo tipo de acceso";
+
+    // Mostrar templates, ocultar banner
+    const templates = document.getElementById('templates_section');
+    if (templates) templates.classList.remove('hidden');
+    const banner = document.getElementById('event_detected_info');
+    if (banner) banner.classList.add('hidden');
+
     // Limpiar campos
     document.getElementById("nt_name").value = "";
     document.getElementById("nt_price").value = "0";
     document.getElementById("nt_color").value = "#f43f5e";
+    const descEl = document.getElementById("nt_description");
+    if (descEl) descEl.value = "";
+    const limitEl = document.getElementById("nt_limit");
+    if (limitEl) limitEl.value = "";
 
-    // Generar SKU único
+    // Generar SKU
     const sku = generateCode("TKT").split("-").slice(0, 2).join("-");
     document.getElementById("nt_sku").value = sku;
 
-    // Campos de configuración
+    // Config
     if (document.getElementById("nt_uses")) document.getElementById("nt_uses").value = "1";
     if (document.getElementById("nt_scans")) document.getElementById("nt_scans").value = "1";
     if (document.getElementById("nt_claim")) document.getElementById("nt_claim").value = "";
     if (document.getElementById("nt_valid_until")) document.getElementById("nt_valid_until").value = "";
 
-    // Modalidad de precio: por defecto FREE
+    // Precio: por defecto FREE
     togglePriceMode('FREE');
     if (document.getElementById("nt_door_price")) document.getElementById("nt_door_price").value = "";
     if (document.getElementById("nt_door_price_check")) document.getElementById("nt_door_price_check").checked = false;
     if (document.getElementById("door_price_field")) document.getElementById("door_price_field").classList.add("hidden");
     const phasesContainer = document.getElementById("phasesContainer");
     if (phasesContainer) phasesContainer.innerHTML = "";
+
+    // Fechas inteligentes
+    setDefaultDatesFromEvent();
+
+    updateTicketPreview();
 }
 
-/**
- * Editar ticket existente
- */
 export function editTicket(index) {
     const event = getActiveEvent();
     if (!event || !event.tickets || !event.tickets[index]) {
@@ -281,39 +385,50 @@ export function editTicket(index) {
 
     openModal('modalTicket');
 
-    // Indicar modo edición
+    // Modo edición
     const indexInput = document.getElementById("nt_editing_index");
     if (indexInput) indexInput.value = index;
 
     const titleEl = document.querySelector('#modalTicket h2');
     if (titleEl) titleEl.textContent = "Editar tipo de acceso";
 
-    // Llenar campos básicos
+    // Ocultar templates y banner
+    const templates = document.getElementById('templates_section');
+    if (templates) templates.classList.add('hidden');
+    const banner = document.getElementById('event_detected_info');
+    if (banner) banner.classList.add('hidden');
+
+    // Campos básicos
     document.getElementById("nt_name").value = tk.name || "";
     document.getElementById("nt_price").value = tk.price || 0;
     document.getElementById("nt_color").value = tk.color || "#f43f5e";
     document.getElementById("nt_sku").value = tk.sku || "";
+    const descEl = document.getElementById("nt_description");
+    if (descEl) descEl.value = tk.description || "";
+    const limitEl = document.getElementById("nt_limit");
+    if (limitEl) limitEl.value = tk.limitPerPerson || "";
 
-    // Campos de configuración
+    // Config
     if (document.getElementById("nt_uses")) document.getElementById("nt_uses").value = tk.max_uses || 1;
     if (document.getElementById("nt_scans")) document.getElementById("nt_scans").value = tk.max_scans || 1;
     if (document.getElementById("nt_claim")) document.getElementById("nt_claim").value = tk.claim_until || "";
     if (document.getElementById("nt_valid_until")) document.getElementById("nt_valid_until").value = tk.valid_until || "";
 
-    // Detectar modalidad de precio (compatibilidad hacia atrás)
+    // Modalidad de precio
     let mode = tk.priceMode;
     if (!mode) {
         mode = (tk.isFree || tk.price === 0) ? 'FREE' : 'FIXED';
     }
     togglePriceMode(mode);
 
-    // Restaurar fases si es PHASES
+    // Fases
     const phasesContainer = document.getElementById("phasesContainer");
     if (phasesContainer) phasesContainer.innerHTML = "";
     if (mode === 'PHASES' && tk.phases) {
         tk.phases.forEach(phase => addPhaseRow(phase));
     }
-    // Restaurar precio puerta
+
+    // Precio puerta
     const hasDoorPrice = tk.doorPrice != null && tk.doorPrice > 0;
     const doorCheck = document.getElementById("nt_door_price_check");
     const doorField = document.getElementById("door_price_field");
@@ -322,30 +437,28 @@ export function editTicket(index) {
     if (document.getElementById("nt_door_price")) {
         document.getElementById("nt_door_price").value = tk.doorPrice || "";
     }
+
+    updateTicketPreview();
 }
 
-/**
- * Guardar ticket (crear o actualizar)
- */
 export async function saveNewTicket() {
     if (!state.activeEventId) {
         toast("No hay evento activo", "error");
         return;
     }
-    
+
     const name = document.getElementById("nt_name")?.value.trim();
     if (!Validator.notEmpty(name)) {
         toast("El nombre es obligatorio", "error");
         return;
     }
-    
+
     const indexInput = document.getElementById("nt_editing_index");
     const editingIndex = indexInput?.value;
     const isEditing = editingIndex !== "" && editingIndex !== undefined;
 
     const priceMode = getSelectedPriceMode();
 
-    // Calcular precio según modalidad
     let price = 0;
     let isFree = false;
     let phases = null;
@@ -374,42 +487,41 @@ export async function saveNewTicket() {
         price,
         isFree,
         priceMode,
+        description: document.getElementById("nt_description")?.value.trim() || "",
         sku: document.getElementById("nt_sku")?.value.toUpperCase() || generateCode("TKT"),
         color: document.getElementById("nt_color")?.value || "#f43f5e",
         max_uses: Math.max(1, Number(document.getElementById("nt_uses")?.value) || 1),
         max_scans: Math.max(1, Number(document.getElementById("nt_scans")?.value) || 1),
         claim_until: document.getElementById("nt_claim")?.value || "",
-        valid_until: document.getElementById("nt_valid_until")?.value || ""
+        valid_until: document.getElementById("nt_valid_until")?.value || "",
+        limitPerPerson: parseInt(document.getElementById("nt_limit")?.value) || null
     };
 
-    // Agregar datos de fases si es PHASES
     if (priceMode === 'PHASES') {
         ticketData.phases = phases;
         if (doorPrice !== null) ticketData.doorPrice = doorPrice;
     }
 
     const btn = document.getElementById("btnSaveTicket");
-    const originalText = btn ? btn.textContent : "Guardar cambios";
+    const originalText = btn ? btn.textContent : "GUARDAR";
 
     try {
         if (btn) {
             btn.textContent = "Guardando...";
             btn.disabled = true;
         }
-        
+
         const ref = doc(db, APP_CONFIG.COLLECTIONS.EVENTS, state.activeEventId);
         const event = state.allEvents.find(x => x.id === state.activeEventId);
         let updatedTickets = [...(event?.tickets || [])];
 
         if (isEditing) {
-            // MODO EDICIÓN
             const idx = parseInt(editingIndex);
             ticketData.id = updatedTickets[idx]?.id || Date.now().toString();
             ticketData.slug = updatedTickets[idx]?.slug || name.toLowerCase().replace(/\s+/g, '-');
             updatedTickets[idx] = ticketData;
             toast("Ticket actualizado");
         } else {
-            // MODO CREACIÓN
             ticketData.id = Date.now().toString();
             ticketData.slug = name.toLowerCase().replace(/\s+/g, '-') + '-' + Math.random().toString(36).substr(2, 3);
             updatedTickets.push(ticketData);
@@ -417,27 +529,23 @@ export async function saveNewTicket() {
         }
 
         await updateDoc(ref, { tickets: updatedTickets });
-        
-        // Actualizar estado local
-if (event) {
-    event.tickets = updatedTickets;
-}
 
-// Actualizar en state.allEvents también
-const eventIndex = state.allEvents.findIndex(e => e.id === state.activeEventId);
-if (eventIndex !== -1) {
-    state.allEvents[eventIndex].tickets = updatedTickets;
-}
+        if (event) {
+            event.tickets = updatedTickets;
+        }
 
-closeModals();
+        const eventIndex = state.allEvents.findIndex(e => e.id === state.activeEventId);
+        if (eventIndex !== -1) {
+            state.allEvents[eventIndex].tickets = updatedTickets;
+        }
 
-// Obtener evento actualizado y renderizar
-const updatedEvent = state.allEvents.find(e => e.id === state.activeEventId);
-renderTicketTable(updatedEvent);
-        
-        // Actualizar generador de códigos
+        closeModals();
+
+        const updatedEvent = state.allEvents.find(e => e.id === state.activeEventId);
+        renderTicketTable(updatedEvent);
+
         if (window.fillCodeGen) window.fillCodeGen(event);
-        
+
     } catch (error) {
         console.error("Error guardando ticket:", error);
         toast("Error al guardar ticket", "error");
@@ -449,44 +557,39 @@ renderTicketTable(updatedEvent);
     }
 }
 
-/**
- * Eliminar ticket
- */
 export async function deleteTicket(index) {
     if (!state.activeEventId) return;
-    
+
     const event = state.allEvents.find(e => e.id === state.activeEventId);
     if (!event || !event.tickets || !event.tickets[index]) {
         toast("Ticket no encontrado", "error");
         return;
     }
-    
+
     const ticketName = event.tickets[index].name;
     const confirmed = await customConfirm(`¿Eliminar el tipo de entrada "${ticketName}"?`);
     if (!confirmed) return;
-    
+
     try {
         const updatedTickets = event.tickets.filter((_, i) => i !== index);
-        
+
         await updateDoc(doc(db, APP_CONFIG.COLLECTIONS.EVENTS, state.activeEventId), {
             tickets: updatedTickets
         });
-        
+
         event.tickets = updatedTickets;
-        
+
         toast("Ticket eliminado");
         renderTicketTable(event);
-        
+
         if (window.fillCodeGen) window.fillCodeGen(event);
-        
+
     } catch (error) {
         console.error("Error eliminando ticket:", error);
         toast("Error al eliminar ticket", "error");
     }
 }
-/**
- * Mostrar/ocultar campo de usos según tipo (legacy, mantenido para compatibilidad)
- */
+
 export function toggleUsesField() {
-    // Campo nt_type_edit eliminado del modal - función mantenida para evitar errores
+    // Legacy - mantenido para compatibilidad
 }

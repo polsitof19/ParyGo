@@ -72,7 +72,9 @@ import {
     togglePriceMode,
     addPhaseRow,
     removePhaseRow,
-    toggleDoorPrice
+    toggleDoorPrice,
+    applyTemplate,
+    updateTicketPreview
 } from './tickets.js';
 
 import {
@@ -203,6 +205,8 @@ window.togglePriceMode = togglePriceMode;
 window.addPhaseRow = addPhaseRow;
 window.removePhaseRow = removePhaseRow;
 window.toggleDoorPrice = toggleDoorPrice;
+window.applyTemplate = applyTemplate;
+window.updateTicketPreview = updateTicketPreview;
 
 // Códigos y Stock
 window.loadPromotersCache = loadPromotersCache;
