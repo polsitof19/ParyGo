@@ -154,6 +154,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     showView('authView');
                     showLoginScreen();
                 }
+            }
         } else {
             currentUser = null;
             currentUserProfile = null;
