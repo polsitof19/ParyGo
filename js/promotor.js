@@ -35,6 +35,7 @@ let myCodes = [];
 let allEvents = [];
 let brandsCache = {};
 let lastGeneratedCode = null;
+let isProcessing = false;
 
 // Caracteres seguros (sin O, 0, I, L, 1 para evitar confusión)
 const SAFE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -98,8 +99,15 @@ async function loadUserData(uid) {
             await signOut(auth);
             return showView('loginView');
         }
-        
-        currentUser = { id: uid, ...snap.data() };
+
+        const userData = snap.data();
+        if (userData.status === 'INACTIVE') {
+            toast("Tu cuenta está desactivada");
+            await signOut(auth);
+            return showView('loginView');
+        }
+
+        currentUser = { id: uid, ...userData };
         const brands = currentUser.allowed_brands || currentUser.companies || [];
 
         if (!brands.length) {
@@ -126,18 +134,21 @@ async function loadUserData(uid) {
 // LOGIN
 // ==========================================
 async function handleLogin() {
+    if (isProcessing) return;
+
     const email = document.getElementById("login_email").value.trim().toLowerCase();
     const pass = document.getElementById("login_pass").value;
     const btn = document.getElementById("btnLogin");
-    
+
     const errorDiv = document.getElementById('loginError');
     if (errorDiv) errorDiv.style.display = 'none';
 
     if (!email || !pass) return toast("Ingresa tus datos");
 
+    isProcessing = true;
     btn.disabled = true;
     btn.innerHTML = '<span>Verificando...</span>';
-    
+
     try {
         await signInWithEmailAndPassword(auth, email, pass);
     } catch (e) {
@@ -163,7 +174,8 @@ async function handleLogin() {
             errorDiv.textContent = errorMsg;
             errorDiv.style.display = 'block';
         }
-
+    } finally {
+        isProcessing = false;
         btn.disabled = false;
         btn.innerHTML = '<span>INGRESAR</span><i class="fa-solid fa-arrow-right"></i>';
     }
@@ -243,7 +255,7 @@ async function handleRegister() {
 // ==========================================
 async function showBrandSelector() {
     showView('brandView');
-    document.getElementById("brand_user_name").textContent = currentUser.name.split(" ")[0];
+    document.getElementById("brand_user_name").textContent = (currentUser?.name || "Promotor").split(" ")[0];
     
     const container = document.getElementById("brands_grid");
     container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i></div>';
@@ -275,12 +287,17 @@ async function showBrandSelector() {
 }
 
 window.selectBrand = async (id) => {
-    selectedBrandId = id;
-    if (!brandsCache[id]) {
-        const snap = await getDoc(doc(db, "brands", id));
-        if (snap?.exists()) brandsCache[id] = { id, ...snap.data() };
+    try {
+        selectedBrandId = id;
+        if (!brandsCache[id]) {
+            const snap = await getDoc(doc(db, "brands", id));
+            if (snap?.exists()) brandsCache[id] = { id, ...snap.data() };
+        }
+        await showEventsList();
+    } catch (error) {
+        console.error('Error seleccionando marca:', error);
+        toast("Error al seleccionar marca");
     }
-    await showEventsList();
 };
 
 window.changeBrand = () => { selectedBrandId = null; currentEvent = null; showBrandSelector(); };
@@ -325,12 +342,20 @@ async function showEventsList() {
     }
 }
 
-window.selectEvent = async (i) => { 
-    currentEvent = allEvents[i]; 
-    if (currentEvent) { 
-        showView('dashboardView'); 
-        await loadDashboardData(); 
-    } 
+window.selectEvent = async (i) => {
+    if (i < 0 || i >= allEvents.length) return;
+    const event = allEvents[i];
+    if (!event) return;
+
+    // Verificar que el evento pertenece a la marca seleccionada
+    if (event.brand_id !== selectedBrandId && event.company_id !== selectedBrandId) {
+        toast("No tienes acceso a este evento");
+        return;
+    }
+
+    currentEvent = event;
+    showView('dashboardView');
+    await loadDashboardData();
 };
 
 // ==========================================
@@ -416,7 +441,7 @@ function renderCodesList() {
         return `
             <div class="code-card">
                 <div class="code-info">
-                    <div class="code-value">${c.code}</div>
+                    <div class="code-value">${escapeHtml(c.code)}</div>
                     <div class="code-status ${statusClass}">${statusText}</div>
                 </div>
                 <div class="code-actions">
@@ -447,7 +472,7 @@ function renderClaimedList() {
         <div class="claimed-card">
             <div class="claimed-info">
                 <h4>${escapeHtml(c.claimed_name || 'Sin nombre')}</h4>
-                <p>${c.code}</p>
+                <p>${escapeHtml(c.code)}</p>
             </div>
             <span class="claimed-badge ${c.status === 'SCANNED' ? 'scanned' : ''}">${c.status === 'SCANNED' ? '🎫 Entró' : '✅ Canjeado'}</span>
         </div>
@@ -457,8 +482,8 @@ function renderClaimedList() {
 function fillTicketDropdown() {
     const select = document.getElementById("gen_ticket_type");
     select.innerHTML = '<option value="">Selecciona tipo...</option>';
-    
-    if (!currentEvent.tickets?.length) return;
+
+    if (!currentEvent || !currentEvent.tickets?.length) return;
     
     myQuotas.forEach(q => {
         const ticket = currentEvent.tickets.find(t => t.id === q.ticket_id);
@@ -485,28 +510,32 @@ function fillTicketDropdown() {
 // GENERAR CÓDIGO
 // ==========================================
 async function handleGenerateCode() {
+    if (isProcessing) return;
+
     const select = document.getElementById("gen_ticket_type");
     const ticketId = select.value;
     const btn = document.getElementById("btnConfirmGenerate");
-    
+
     if (!ticketId) return toast("Selecciona tipo de entrada");
-    
+
+    if (select.selectedIndex < 0) return toast("Selecciona tipo de entrada");
     const opt = select.options[select.selectedIndex];
     const quotaId = opt.dataset.quota;
-    
+
+    isProcessing = true;
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
-    
+
     try {
         // Obtener prefijo del evento (primeras 2 letras del nombre)
         const prefix = (currentEvent.code_prefix || currentEvent.name || "PG")
             .replace(/[^A-Za-z]/g, '')
             .substring(0, 2)
             .toUpperCase();
-        
+
         // Generar código único
         let code = generateUniqueCode(prefix);
-        
+
         // Verificar que no exista (muy improbable pero por seguridad)
         let exists = true;
         let attempts = 0;
@@ -519,9 +548,9 @@ async function handleGenerateCode() {
                 attempts++;
             }
         }
-        
+
         if (exists) throw new Error("No se pudo generar código único");
-        
+
         // Guardar en Firestore
         await addDoc(collection(db, "codes"), {
             code: code,
@@ -538,25 +567,26 @@ async function handleGenerateCode() {
             scanned_at: null,
             created_at: new Date().toISOString()
         });
-        
+
         // Guardar para compartir
         lastGeneratedCode = code;
-        
+
         // Mostrar resultado
         document.getElementById("generated_code").textContent = code;
         closeModal('modalGenerate');
         openModal('modalCodeResult');
-        
+
         // Recargar datos
         await loadDashboardData();
-        
+
     } catch (e) {
         console.error(e);
         toast("Error: " + e.message);
+    } finally {
+        isProcessing = false;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-bolt"></i> GENERAR CÓDIGO';
     }
-    
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-bolt"></i> GENERAR CÓDIGO';
 }
 
 // ==========================================
