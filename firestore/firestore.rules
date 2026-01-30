@@ -63,8 +63,9 @@ service cloud.firestore {
       // Crear: cualquier usuario autenticado (compra de entrada)
       allow create: if isAuthenticated();
 
-      // Actualizar: admins o staff (scanner marca SCANNED)
-      allow update: if isAdminOrSuper() || isStaff();
+      // Actualizar: admins, staff, o el cliente dueño del ticket
+      allow update: if isAdminOrSuper() || isStaff() ||
+                       (isAuthenticated() && resource.data.user_id == request.auth.uid);
 
       // Eliminar: solo admins
       allow delete: if isAdminOrSuper();

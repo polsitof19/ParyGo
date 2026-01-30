@@ -2243,7 +2243,8 @@ async function getShareToken(ticket) {
         ticket.share_token = token;
     } catch (e) {
         console.error('Error guardando share token:', e);
-        return null;
+        // Fallback: usar token temporal en memoria para que compartir funcione
+        ticket.share_token = token;
     }
     return token;
 }
@@ -2273,17 +2274,39 @@ async function shareViaWhatsApp() {
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
 }
 
+function fallbackCopyToClipboard(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0;';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+        document.execCommand('copy');
+        return true;
+    } catch (e) {
+        return false;
+    } finally {
+        document.body.removeChild(textarea);
+    }
+}
+
+async function copyTextToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch (e) { /* fallback below */ }
+    }
+    return fallbackCopyToClipboard(text);
+}
+
 async function shareViaCopyLink() {
     const token = await getShareToken(sharingTicket);
     if (!token) { toast('Error generando enlace', 'error'); return; }
     closeModal('modalShare');
     const url = buildShareUrl(sharingTicket, token);
-    try {
-        await navigator.clipboard.writeText(url);
-        toast('Enlace copiado');
-    } catch (e) {
-        toast('No se pudo copiar', 'error');
-    }
+    const ok = await copyTextToClipboard(url);
+    toast(ok ? 'Enlace copiado' : 'No se pudo copiar', ok ? 'success' : 'error');
 }
 
 async function shareViaMessage() {
@@ -2293,13 +2316,10 @@ async function shareViaMessage() {
     const url = buildShareUrl(sharingTicket, token);
     const text = buildShareText(sharingTicket, url);
     if (navigator.share) {
-        try { await navigator.share({ text }); } catch (e) {}
-    } else {
-        try {
-            await navigator.clipboard.writeText(text);
-            toast('Texto copiado al portapapeles');
-        } catch (e) {}
+        try { await navigator.share({ title: sharingTicket.event_name || 'Entrada', text, url }); return; } catch (e) { /* fallback */ }
     }
+    const ok = await copyTextToClipboard(text);
+    if (ok) toast('Texto copiado al portapapeles');
 }
 
 // ==========================================
