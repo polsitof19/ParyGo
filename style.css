@@ -3087,6 +3087,10 @@ select option:hover {
     display: none;
 }
 
+#event_detected_info {
+    display: none !important;
+}
+
 .info-banner small {
     color: var(--text-muted);
     font-size: 12px;
