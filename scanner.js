@@ -22,6 +22,8 @@ import {
 // ==========================================
 // STATE
 // ==========================================
+let isProcessing = false;
+
 let state = {
     currentUser: null,
     allowedBrands: [],
@@ -130,6 +132,7 @@ async function handleLogin(e) {
             msg = "Email inválido";
         }
         showLoginError(msg);
+    } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Ingresar';
     }
@@ -249,7 +252,7 @@ async function loadEvents() {
                 : `<div class="event-card-thumb-placeholder"><i class="fa-solid fa-calendar-day"></i></div>`;
 
             return `
-                <button class="event-card" data-event-id="${event.id}" data-event-name="${escapeHtml(event.name)}">
+                <button class="event-card" data-event-id="${escapeHtml(event.id)}" data-event-name="${escapeHtml(event.name)}">
                     ${thumbHtml}
                     <div class="event-card-info">
                         <span class="event-card-name">${escapeHtml(event.name)}</span>
@@ -393,6 +396,11 @@ function initScanner() {
     const readerElement = document.getElementById('reader');
     if (!readerElement) return;
 
+    if (typeof Html5Qrcode === 'undefined') {
+        showToast('Error: librería QR no disponible', 'error');
+        return;
+    }
+
     if (!state.html5QrCode) {
         state.html5QrCode = new Html5Qrcode("reader");
     }
@@ -433,17 +441,22 @@ async function stopScanner() {
 }
 
 async function switchCamera() {
-    await stopScanner();
-    state.currentCamera = state.currentCamera === 'environment' ? 'user' : 'environment';
-    await startScanner();
-    showToast(`Cámara ${state.currentCamera === 'environment' ? 'trasera' : 'frontal'}`, 'success');
+    try {
+        await stopScanner();
+        state.currentCamera = state.currentCamera === 'environment' ? 'user' : 'environment';
+        await startScanner();
+        showToast(`Cámara ${state.currentCamera === 'environment' ? 'trasera' : 'frontal'}`, 'success');
+    } catch (error) {
+        console.error('Error cambiando cámara:', error);
+        showToast('Error al cambiar cámara', 'error');
+    }
 }
 
 // ==========================================
 // SCAN CALLBACKS
 // ==========================================
 async function onScanSuccess(decodedText) {
-    if (state.isScanning) return;
+    if (state.isScanning || isProcessing) return;
     state.isScanning = true;
 
     // Vibrar
@@ -479,6 +492,8 @@ async function validateCode(code) {
         return;
     }
 
+    if (isProcessing) return;
+    isProcessing = true;
     showLoading(true);
 
     try {
@@ -532,7 +547,6 @@ async function validateCode(code) {
             addToHistory(codeOriginal, 'error', 'No encontrado');
             state.stats.total++;
             updateStats();
-            showLoading(false);
             return;
         }
 
@@ -564,7 +578,6 @@ async function validateCode(code) {
             state.stats.duplicate++;
             state.stats.total++;
             updateStats();
-            showLoading(false);
             return;
         }
 
@@ -575,7 +588,6 @@ async function validateCode(code) {
             addToHistory(clientName, 'error', 'Anulada');
             state.stats.total++;
             updateStats();
-            showLoading(false);
             return;
         }
 
@@ -591,7 +603,6 @@ async function validateCode(code) {
                 addToHistory(clientName, 'error', 'Expirada');
                 state.stats.total++;
                 updateStats();
-                showLoading(false);
                 return;
             }
         }
@@ -603,7 +614,6 @@ async function validateCode(code) {
             addToHistory(codeOriginal, 'warning', 'Sin reclamar');
             state.stats.total++;
             updateStats();
-            showLoading(false);
             return;
         }
 
@@ -614,15 +624,18 @@ async function validateCode(code) {
     } catch (error) {
         console.error('Error validando código:', error);
         showResult('error', 'Error', 'Error al validar el código', {});
+    } finally {
+        showLoading(false);
+        isProcessing = false;
     }
-
-    showLoading(false);
 }
 
 // ==========================================
 // MANUAL VALIDATION
 // ==========================================
 async function validateManual() {
+    if (isProcessing) return;
+
     const input = document.getElementById('manualCode');
     const code = input.value.trim();
 
@@ -698,7 +711,8 @@ function showResult(type, title, subtitle, data, ticketId = null) {
 }
 
 async function approveEntry() {
-    if (!pendingTicketId) return;
+    if (!pendingTicketId || isProcessing) return;
+    isProcessing = true;
 
     try {
         await updateDoc(doc(db, "tickets", pendingTicketId), {
@@ -716,10 +730,11 @@ async function approveEntry() {
     } catch (error) {
         console.error('Error aprobando entrada:', error);
         showToast('Error al aprobar', 'error');
+    } finally {
+        isProcessing = false;
+        pendingTicketId = null;
+        closeResult();
     }
-
-    pendingTicketId = null;
-    closeResult();
 }
 
 function rejectEntry() {
@@ -776,7 +791,7 @@ function renderHistory() {
                 <div class="name">${escapeHtml(h.name)}</div>
                 <div class="meta">${escapeHtml(h.detail)}</div>
             </div>
-            <div class="time">${h.time}</div>
+            <div class="time">${escapeHtml(h.time)}</div>
         </div>
     `).join('');
 }
