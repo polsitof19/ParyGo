@@ -4,7 +4,7 @@ const fetch = require("node-fetch");
 // Token seguro en variables de entorno de Firebase
 // Configurar con: firebase functions:config:set reniec.token="TU_TOKEN"
 // O con variable de entorno: RENIEC_TOKEN
-const RENIEC_TOKEN = functions.config().reniec?.token || process.env.RENIEC_TOKEN || "";
+const RENIEC_TOKEN = process.env.RENIEC_TOKEN;
 
 /**
  * Cloud Function: Consulta DNI en RENIEC
