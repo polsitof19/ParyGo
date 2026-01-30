@@ -170,7 +170,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyANnihyrgd02ViR_GeKn6Mdf85nLwUjQg0",
@@ -196,13 +196,14 @@
             return params.get('brand') || null;
         }
 
-        // Aplicar color de marca
+        // Aplicar color de marca (buscar por slug, no por doc ID)
         async function applyBrandTheme(slug) {
-            if (!slug) return;
+            if (!slug) return null;
             try {
-                const brandDoc = await getDoc(doc(db, 'brands', slug));
-                if (brandDoc.exists()) {
-                    const data = brandDoc.data();
+                const q = query(collection(db, 'brands'), where('slug', '==', slug));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    const data = snap.docs[0].data();
                     if (data.color) {
                         document.documentElement.style.setProperty('--accent', data.color);
                     }
@@ -287,7 +288,7 @@
 
                 // Generar QR
                 const qrContainer = document.getElementById('ticketQR');
-                const qrCode = ticket.code || ticket.qr_token || '';
+                const qrCode = ticket.qr_data || ticket.code || ticket.qr_token || '';
                 if (qrCode && typeof QRCode !== 'undefined') {
                     new QRCode(qrContainer, {
                         text: qrCode,
