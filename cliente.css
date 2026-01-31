@@ -2483,6 +2483,15 @@ input, select, textarea {
     color: var(--text-muted);
     display: block;
 }
+.ticket-action-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: block;
+    margin-top: 4px;
+}
 
 /* ==========================================
    SECCION 32B: PREVENTAS / FASES DE PRECIO

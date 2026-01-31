@@ -1340,6 +1340,7 @@ function renderTicketsSimple(container, tickets) {
             ? `<span class="stock">${t.stock - t.sold} disponibles</span>`
             : '';
 
+        const actionLabel = isFree ? 'OBTENER' : 'COMPRAR';
         const onclick = disabled ? '' : (isFree ? `onclick="openFreeTicketModal(${i})"` : `onclick="openBuyModal(${i})"`);
 
         return `
@@ -1351,8 +1352,8 @@ function renderTicketsSimple(container, tickets) {
                 <div class="ticket-item-price-info">
                     <span class="price ${isFree ? 'free' : ''}">${isFree ? 'GRATIS' : `S/. ${Number(t.price).toFixed(2)}`}</span>
                     ${stockInfo}
+                    ${!disabled ? `<span class="ticket-action-label">${actionLabel} <i class="fa-solid fa-chevron-right"></i></span>` : ''}
                 </div>
-                ${!disabled ? '<i class="fa-solid fa-chevron-right ticket-item-arrow"></i>' : ''}
             </div>
         `;
     }).join('');
@@ -1387,6 +1388,7 @@ function renderTicketsWithPhases(container, tickets) {
 
                 if (isActive) {
                     const untilLabel = untilDate ? formatPhaseDate(untilDate) : '';
+                    const actionLabel = isFree ? 'OBTENER' : 'COMPRAR';
                     const onclick = isFree
                         ? `onclick="openFreeTicketModal(${i})"`
                         : `onclick="openBuyModalWithPrice(${i}, ${phase.price})"`;
@@ -1398,7 +1400,7 @@ function renderTicketsWithPhases(container, tickets) {
                             </div>
                             <div class="phase-row-action">
                                 <span class="phase-price ${isFree ? 'free' : ''}">${isFree ? 'GRATIS' : `S/. ${Number(phase.price).toFixed(2)}`}</span>
-                                <span class="phase-buy-label">COMPRAR <i class="fa-solid fa-chevron-right"></i></span>
+                                <span class="phase-buy-label">${actionLabel} <i class="fa-solid fa-chevron-right"></i></span>
                             </div>
                         </div>
                     `;
@@ -1482,6 +1484,7 @@ function renderTicketsWithPhases(container, tickets) {
                 disabledLabel = 'AGOTADO';
             }
 
+            const actionLabel = isFree ? 'OBTENER' : 'COMPRAR';
             const onclick = disabled ? '' : (isFree ? `onclick="openFreeTicketModal(${i})"` : `onclick="openBuyModal(${i})"`);
             panelContent = `
                 <div class="phase-row ${disabled ? 'disabled' : 'active'}" ${onclick}>
@@ -1491,7 +1494,7 @@ function renderTicketsWithPhases(container, tickets) {
                     </div>
                     <div class="phase-row-action">
                         <span class="phase-price ${isFree ? 'free' : ''}">${isFree ? 'GRATIS' : `S/. ${Number(t.price).toFixed(2)}`}</span>
-                        ${!disabled ? '<span class="phase-buy-label">COMPRAR <i class="fa-solid fa-chevron-right"></i></span>' : (disabledLabel === 'AGOTADO' ? '<span class="phase-sold-out">AGOTADO</span>' : '')}
+                        ${!disabled ? `<span class="phase-buy-label">${actionLabel} <i class="fa-solid fa-chevron-right"></i></span>` : (disabledLabel === 'AGOTADO' ? '<span class="phase-sold-out">AGOTADO</span>' : '')}
                     </div>
                 </div>
             `;
