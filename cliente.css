@@ -2601,7 +2601,7 @@ input, select, textarea {
 }
 
 .tcu-phase.future {
-    opacity: 0.4;
+    background: var(--bg-surface);
 }
 
 .tcu-phase.door {
@@ -2626,7 +2626,7 @@ input, select, textarea {
 }
 
 .tcu-phase.future .tcu-phase-name {
-    color: var(--text-muted);
+    color: var(--text-secondary);
 }
 
 .tcu-phase-until {
@@ -2660,7 +2660,14 @@ input, select, textarea {
 }
 
 .tcu-phase.future .tcu-phase-price {
+    color: var(--text-secondary);
+}
+
+.tcu-phase-locked {
+    font-size: var(--text-xs);
+    font-weight: 500;
     color: var(--text-muted);
+    letter-spacing: 0.2px;
 }
 
 .tcu-phase-btn {

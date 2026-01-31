@@ -1391,10 +1391,11 @@ function renderTicketCardPhases(t, i, now) {
                 <div class="tcu-phase future">
                     <div class="tcu-phase-info">
                         <span class="tcu-phase-name">${escapeHtml(phase.name)}</span>
-                        <span class="tcu-phase-until"><i class="fa-regular fa-clock"></i> A partir del ${startLabel}</span>
+                        <span class="tcu-phase-until"><i class="fa-regular fa-clock"></i> Inicia ${startLabel}</span>
                     </div>
                     <div class="tcu-phase-action">
                         <span class="tcu-phase-price">${isFree ? 'GRATIS' : `S/. ${Number(phase.price).toFixed(2)}`}</span>
+                        <span class="tcu-phase-locked">Aún no disponible</span>
                     </div>
                 </div>
             `;
