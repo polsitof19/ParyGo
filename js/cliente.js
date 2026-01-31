@@ -1301,223 +1301,156 @@ function renderTicketsForSale() {
         return;
     }
 
-    const hasPhases = tickets.some(t => t.priceMode === 'PHASES' && t.phases && t.phases.length > 0);
-
-    if (hasPhases) {
-        renderTicketsWithPhases(container, tickets);
-    } else {
-        renderTicketsSimple(container, tickets);
-    }
-}
-
-function renderTicketsSimple(container, tickets) {
     const now = new Date();
 
     container.innerHTML = tickets.map((t, i) => {
-        let status = 'disponible';
-        let statusLabel = 'Disponible';
-        let disabled = false;
-
         const isFree = t.isFree || t.price === 0;
         const mode = t.priceMode || (isFree ? 'FREE' : 'FIXED');
 
-        // Verificar disponibilidad según modalidad
-        if (mode === 'FREE' && t.claim_until && new Date(t.claim_until) < now) {
-            status = 'finalizado';
-            statusLabel = 'Ya no disponible';
-            disabled = true;
-        } else if (mode === 'FIXED' && t.buy_until && new Date(t.buy_until) < now) {
-            status = 'finalizado';
-            statusLabel = 'Venta finalizada';
-            disabled = true;
-        } else if (t.stock !== undefined && t.sold !== undefined && t.sold >= t.stock) {
-            status = 'agotado';
-            statusLabel = 'Agotado';
-            disabled = true;
+        // === PREVENTAS (fases) ===
+        if (mode === 'PHASES' && t.phases && t.phases.length > 0) {
+            return renderTicketCardPhases(t, i, now);
         }
 
-        const stockInfo = (t.stock !== undefined && t.sold !== undefined && status === 'disponible')
-            ? `<span class="stock">${t.stock - t.sold} disponibles</span>`
-            : '';
-
-        const actionLabel = isFree ? 'OBTENER' : 'COMPRAR';
-        const onclick = disabled ? '' : (isFree ? `onclick="openFreeTicketModal(${i})"` : `onclick="openBuyModal(${i})"`);
-
-        return `
-            <div class="ticket-item-row ${disabled ? 'disabled' : ''}" ${onclick}>
-                <div class="ticket-item-info">
-                    <h4>${escapeHtml(t.name)}</h4>
-                    <span class="ticket-status-tag ${status}">${statusLabel}</span>
-                </div>
-                <div class="ticket-item-price-info">
-                    <span class="price ${isFree ? 'free' : ''}">${isFree ? 'GRATIS' : `S/. ${Number(t.price).toFixed(2)}`}</span>
-                    ${stockInfo}
-                    ${!disabled ? `<span class="ticket-action-label">${actionLabel} <i class="fa-solid fa-chevron-right"></i></span>` : ''}
-                </div>
-            </div>
-        `;
+        // === GRATIS o FIJO ===
+        return renderTicketCardSimple(t, i, mode, isFree, now);
     }).join('');
 }
 
-function renderTicketsWithPhases(container, tickets) {
-    const now = new Date();
+function renderTicketCardSimple(t, i, mode, isFree, now) {
+    let disabled = false;
+    let statusLabel = '';
 
-    // Tabs para cada tipo de entrada
-    const tabsHtml = tickets.map((t, i) => {
-        return `<button class="phase-tab ${i === 0 ? 'active' : ''}" onclick="switchPhaseTab(${i})">${escapeHtml(t.name)}</button>`;
-    }).join('');
+    if (mode === 'FREE' && t.claim_until && new Date(t.claim_until) < now) {
+        disabled = true;
+        statusLabel = 'Ya no disponible';
+    } else if (mode === 'FIXED' && t.buy_until && new Date(t.buy_until) < now) {
+        disabled = true;
+        statusLabel = 'Venta finalizada';
+    } else if (t.stock !== undefined && t.sold !== undefined && t.sold >= t.stock) {
+        disabled = true;
+        statusLabel = 'Agotado';
+    }
 
-    // Contenido de cada tab
-    const panelsHtml = tickets.map((t, i) => {
-        let panelContent = '';
+    const actionLabel = isFree ? 'OBTENER' : 'COMPRAR';
+    const onclick = disabled ? '' : (isFree ? `onclick="openFreeTicketModal(${i})"` : `onclick="openBuyModal(${i})"`);
 
-        if (t.priceMode === 'PHASES' && t.phases && t.phases.length > 0) {
-            const sorted = [...t.phases].sort((a, b) => new Date(a.until) - new Date(b.until));
-
-            let activeFound = false;
-            const phasesHtml = sorted.map(phase => {
-                const untilDate = phase.until ? new Date(phase.until) : null;
-                const isPast = untilDate && untilDate < now;
-                const isActive = !isPast && !activeFound;
-
-                if (isActive) activeFound = true;
-
-                if (isPast) return '';
-
-                const isFree = phase.price === 0;
-
-                if (isActive) {
-                    const untilLabel = untilDate ? formatPhaseDate(untilDate) : '';
-                    const actionLabel = isFree ? 'OBTENER' : 'COMPRAR';
-                    const onclick = isFree
-                        ? `onclick="openFreeTicketModal(${i})"`
-                        : `onclick="openBuyModalWithPrice(${i}, ${phase.price})"`;
-                    return `
-                        <div class="phase-row active" ${onclick}>
-                            <div class="phase-row-info">
-                                <span class="phase-name">${escapeHtml(phase.name)}</span>
-                                ${untilLabel ? `<span class="phase-until"><i class="fa-regular fa-clock"></i> Hasta ${untilLabel}</span>` : ''}
-                            </div>
-                            <div class="phase-row-action">
-                                <span class="phase-price ${isFree ? 'free' : ''}">${isFree ? 'GRATIS' : `S/. ${Number(phase.price).toFixed(2)}`}</span>
-                                <span class="phase-buy-label">${actionLabel} <i class="fa-solid fa-chevron-right"></i></span>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    const fromLabel = untilDate ? formatPhaseDate(untilDate) : '';
-                    // Calcular fecha de inicio: es el "until" de la fase anterior
-                    const phaseIdx = sorted.indexOf(phase);
-                    const prevUntil = phaseIdx > 0 && sorted[phaseIdx - 1].until ? new Date(sorted[phaseIdx - 1].until) : null;
-                    const startLabel = prevUntil ? formatPhaseDate(prevUntil) : '';
-
-                    return `
-                        <div class="phase-row future">
-                            <div class="phase-row-info">
-                                <span class="phase-name">${escapeHtml(phase.name)}</span>
-                                <span class="phase-until"><i class="fa-regular fa-clock"></i> A partir del ${startLabel || fromLabel}</span>
-                            </div>
-                            <div class="phase-row-action">
-                                <span class="phase-price">${isFree ? 'GRATIS' : `S/. ${Number(phase.price).toFixed(2)}`}</span>
-                            </div>
-                        </div>
-                    `;
+    return `
+        <div class="ticket-card-unified ${disabled ? 'disabled' : ''}" ${onclick}>
+            <div class="tcu-header">
+                <div class="tcu-color" style="background:${t.color || 'var(--primary)'}"></div>
+                <div class="tcu-title">${escapeHtml(t.name)}</div>
+                <div class="tcu-price ${isFree ? 'free' : ''}">${isFree ? 'GRATIS' : `S/. ${Number(t.price).toFixed(2)}`}</div>
+            </div>
+            <div class="tcu-body">
+                ${statusLabel
+                    ? `<span class="tcu-status">${statusLabel}</span>`
+                    : `<span class="tcu-action">${actionLabel} <i class="fa-solid fa-chevron-right"></i></span>`
                 }
-            }).filter(Boolean).join('');
+            </div>
+        </div>
+    `;
+}
 
-            panelContent += phasesHtml;
+function renderTicketCardPhases(t, i, now) {
+    const sorted = [...t.phases].sort((a, b) => new Date(a.until) - new Date(b.until));
 
-            // Door price
-            const allExpired = sorted.every(p => p.until && new Date(p.until) < now);
-            if (t.doorPrice) {
-                if (allExpired) {
-                    const onclick = `onclick="openBuyModalWithPrice(${i}, ${t.doorPrice})"`;
-                    panelContent += `
-                        <div class="phase-row active" ${onclick}>
-                            <div class="phase-row-info">
-                                <span class="phase-name">Puerta</span>
-                            </div>
-                            <div class="phase-row-action">
-                                <span class="phase-price">S/. ${Number(t.doorPrice).toFixed(2)}</span>
-                                <span class="phase-buy-label">COMPRAR <i class="fa-solid fa-chevron-right"></i></span>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    panelContent += `
-                        <div class="phase-row door-price">
-                            <div class="phase-row-info">
-                                <span class="phase-name"><i class="fa-solid fa-door-open"></i> Puerta</span>
-                            </div>
-                            <div class="phase-row-action">
-                                <span class="phase-price">S/. ${Number(t.doorPrice).toFixed(2)}</span>
-                            </div>
-                        </div>
-                    `;
-                }
-            } else if (allExpired && !phasesHtml) {
-                // Todas las fases expiraron y no hay precio puerta
-                panelContent += `
-                    <div class="phase-row disabled">
-                        <div class="phase-row-info">
-                            <span class="phase-name">Venta finalizada</span>
-                            <span class="phase-until" style="color:var(--text-muted);">Todas las fases han expirado</span>
-                        </div>
-                    </div>
-                `;
-            }
-        } else {
-            // Ticket sin PHASES (FIXED o FREE en un evento mixto)
-            const isFree = t.isFree || t.price === 0;
-            const mode = t.priceMode || (isFree ? 'FREE' : 'FIXED');
-            let disabled = false;
-            let disabledLabel = '';
+    let activeFound = false;
+    const phasesHtml = sorted.map(phase => {
+        const untilDate = phase.until ? new Date(phase.until) : null;
+        const isPast = untilDate && untilDate < now;
+        const isActive = !isPast && !activeFound;
 
-            if (mode === 'FREE' && t.claim_until && new Date(t.claim_until) < now) {
-                disabled = true;
-                disabledLabel = 'Ya no disponible';
-            } else if (mode === 'FIXED' && t.buy_until && new Date(t.buy_until) < now) {
-                disabled = true;
-                disabledLabel = 'Venta finalizada';
-            } else if (t.stock !== undefined && t.sold !== undefined && t.sold >= t.stock) {
-                disabled = true;
-                disabledLabel = 'AGOTADO';
-            }
+        if (isActive) activeFound = true;
+        if (isPast) return '';
 
+        const isFree = phase.price === 0;
+
+        if (isActive) {
+            const untilLabel = untilDate ? formatPhaseDate(untilDate) : '';
             const actionLabel = isFree ? 'OBTENER' : 'COMPRAR';
-            const onclick = disabled ? '' : (isFree ? `onclick="openFreeTicketModal(${i})"` : `onclick="openBuyModal(${i})"`);
-            panelContent = `
-                <div class="phase-row ${disabled ? 'disabled' : 'active'}" ${onclick}>
-                    <div class="phase-row-info">
-                        <span class="phase-name">${isFree ? 'Entrada gratuita' : 'Precio fijo'}</span>
-                        ${disabled && disabledLabel !== 'AGOTADO' ? `<span class="phase-until" style="color:var(--text-muted);">${disabledLabel}</span>` : ''}
+            const onclick = isFree
+                ? `onclick="openFreeTicketModal(${i})"`
+                : `onclick="openBuyModalWithPrice(${i}, ${phase.price})"`;
+            return `
+                <div class="tcu-phase active" ${onclick}>
+                    <div class="tcu-phase-info">
+                        <span class="tcu-phase-name">${escapeHtml(phase.name)}</span>
+                        ${untilLabel ? `<span class="tcu-phase-until"><i class="fa-regular fa-clock"></i> Hasta ${untilLabel}</span>` : ''}
                     </div>
-                    <div class="phase-row-action">
-                        <span class="phase-price ${isFree ? 'free' : ''}">${isFree ? 'GRATIS' : `S/. ${Number(t.price).toFixed(2)}`}</span>
-                        ${!disabled ? `<span class="phase-buy-label">${actionLabel} <i class="fa-solid fa-chevron-right"></i></span>` : (disabledLabel === 'AGOTADO' ? '<span class="phase-sold-out">AGOTADO</span>' : '')}
+                    <div class="tcu-phase-action">
+                        <span class="tcu-phase-price">${isFree ? 'GRATIS' : `S/. ${Number(phase.price).toFixed(2)}`}</span>
+                        <span class="tcu-phase-btn">${actionLabel} <i class="fa-solid fa-chevron-right"></i></span>
+                    </div>
+                </div>
+            `;
+        } else {
+            const phaseIdx = sorted.indexOf(phase);
+            const prevUntil = phaseIdx > 0 && sorted[phaseIdx - 1].until ? new Date(sorted[phaseIdx - 1].until) : null;
+            const startLabel = prevUntil ? formatPhaseDate(prevUntil) : (untilDate ? formatPhaseDate(untilDate) : '');
+            return `
+                <div class="tcu-phase future">
+                    <div class="tcu-phase-info">
+                        <span class="tcu-phase-name">${escapeHtml(phase.name)}</span>
+                        <span class="tcu-phase-until"><i class="fa-regular fa-clock"></i> A partir del ${startLabel}</span>
+                    </div>
+                    <div class="tcu-phase-action">
+                        <span class="tcu-phase-price">${isFree ? 'GRATIS' : `S/. ${Number(phase.price).toFixed(2)}`}</span>
                     </div>
                 </div>
             `;
         }
+    }).filter(Boolean).join('');
 
-        return `<div class="phase-panel ${i === 0 ? '' : 'hidden'}" data-panel="${i}">${panelContent}</div>`;
-    }).join('');
+    // Door price
+    const allExpired = sorted.every(p => p.until && new Date(p.until) < now);
+    let doorHtml = '';
+    if (t.doorPrice) {
+        if (allExpired) {
+            const onclick = `onclick="openBuyModalWithPrice(${i}, ${t.doorPrice})"`;
+            doorHtml = `
+                <div class="tcu-phase active" ${onclick}>
+                    <div class="tcu-phase-info">
+                        <span class="tcu-phase-name">Puerta</span>
+                    </div>
+                    <div class="tcu-phase-action">
+                        <span class="tcu-phase-price">S/. ${Number(t.doorPrice).toFixed(2)}</span>
+                        <span class="tcu-phase-btn">COMPRAR <i class="fa-solid fa-chevron-right"></i></span>
+                    </div>
+                </div>
+            `;
+        } else {
+            doorHtml = `
+                <div class="tcu-phase door">
+                    <div class="tcu-phase-info">
+                        <span class="tcu-phase-name"><i class="fa-solid fa-door-open"></i> Puerta</span>
+                    </div>
+                    <div class="tcu-phase-action">
+                        <span class="tcu-phase-price">S/. ${Number(t.doorPrice).toFixed(2)}</span>
+                    </div>
+                </div>
+            `;
+        }
+    } else if (allExpired && !phasesHtml) {
+        doorHtml = `
+            <div class="tcu-phase expired">
+                <span class="tcu-status">Venta finalizada</span>
+            </div>
+        `;
+    }
 
-    container.innerHTML = `
-        <div class="phase-tabs-container">
-            <div class="phase-tabs">${tabsHtml}</div>
+    return `
+        <div class="ticket-card-unified phases">
+            <div class="tcu-header">
+                <div class="tcu-color" style="background:${t.color || 'var(--primary)'}"></div>
+                <div class="tcu-title">${escapeHtml(t.name)}</div>
+            </div>
+            <div class="tcu-phases">
+                ${phasesHtml}
+                ${doorHtml}
+            </div>
         </div>
-        ${panelsHtml}
     `;
-}
-
-function switchPhaseTab(index) {
-    document.querySelectorAll('.phase-tab').forEach((tab, i) => {
-        tab.classList.toggle('active', i === index);
-    });
-    document.querySelectorAll('.phase-panel').forEach((panel, i) => {
-        panel.classList.toggle('hidden', i !== index);
-    });
 }
 
 function formatPhaseDate(date) {

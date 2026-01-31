@@ -2494,128 +2494,148 @@ input, select, textarea {
 }
 
 /* ==========================================
-   SECCION 32B: PREVENTAS / FASES DE PRECIO
+   SECCION 32B: CARDS DE ENTRADAS UNIFICADAS
    ========================================== */
-.phase-tabs-container {
-    margin-bottom: 12px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-}
-.phase-tabs-container::-webkit-scrollbar { display: none; }
-.phase-tabs {
-    display: flex;
-    gap: 6px;
-    min-width: min-content;
-}
-.phase-tab {
-    flex-shrink: 0;
-    padding: 8px 18px;
-    border-radius: 20px;
-    border: 1px solid var(--border);
-    background: var(--bg);
-    color: var(--text-muted);
-    font-size: 13px;
-    font-weight: 600;
-    font-family: 'Outfit', sans-serif;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-}
-.phase-tab.active {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: #fff;
-}
-.phase-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-.phase-panel.hidden { display: none; }
-.phase-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px;
+.ticket-card-unified {
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
+    overflow: hidden;
     transition: background 0.2s;
 }
-.phase-row.active {
+.ticket-card-unified:not(.phases):not(.disabled) {
     cursor: pointer;
-    border-color: rgba(255,71,87,0.3);
 }
-.phase-row.active:active {
+.ticket-card-unified:not(.phases):not(.disabled):active {
     background: var(--bg-hover);
 }
-.phase-row.future {
+.ticket-card-unified.disabled {
     opacity: 0.5;
 }
-.phase-row.door-price {
-    opacity: 0.6;
-    border-style: dashed;
+.tcu-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
 }
-.phase-row.disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
+.tcu-color {
+    width: 6px;
+    height: 32px;
+    border-radius: 3px;
+    flex-shrink: 0;
 }
-.phase-row-info {
+.tcu-title {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+}
+.tcu-price {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--green);
+    white-space: nowrap;
+}
+.tcu-price.free {
+    color: var(--green);
+}
+.tcu-body {
+    padding: 0 14px 14px;
+    display: flex;
+    justify-content: flex-end;
+}
+.tcu-status {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+.tcu-action {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Fases dentro de card */
+.tcu-phases {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 1px;
+    background: var(--border);
+    border-top: 1px solid var(--border);
 }
-.phase-name {
-    font-size: 14px;
+.tcu-phase {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: var(--bg);
+    transition: background 0.2s;
+}
+.tcu-phase.active {
+    cursor: pointer;
+}
+.tcu-phase.active:active {
+    background: var(--bg-hover);
+}
+.tcu-phase.future {
+    opacity: 0.5;
+}
+.tcu-phase.door {
+    opacity: 0.6;
+}
+.tcu-phase.expired {
+    padding: 16px 14px;
+    justify-content: center;
+}
+.tcu-phase-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.tcu-phase-name {
+    font-size: 13px;
     font-weight: 600;
     color: var(--text);
 }
-.phase-row.future .phase-name {
+.tcu-phase.future .tcu-phase-name {
     color: var(--text-muted);
 }
-.phase-until {
+.tcu-phase-until {
     font-size: 11px;
     color: var(--text-muted);
     display: flex;
     align-items: center;
     gap: 4px;
 }
-.phase-row.active .phase-until {
+.tcu-phase.active .tcu-phase-until {
     color: var(--yellow);
 }
-.phase-row-action {
+.tcu-phase-action {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     gap: 2px;
+    flex-shrink: 0;
 }
-.phase-price {
-    font-size: 16px;
+.tcu-phase-price {
+    font-size: 15px;
     font-weight: 700;
     color: var(--text);
 }
-.phase-row.active .phase-price {
+.tcu-phase.active .tcu-phase-price {
     color: var(--green);
 }
-.phase-price.free {
-    color: var(--green);
-}
-.phase-row.future .phase-price {
+.tcu-phase.future .tcu-phase-price {
     color: var(--text-muted);
 }
-.phase-buy-label {
+.tcu-phase-btn {
     font-size: 10px;
     font-weight: 700;
     color: var(--primary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-}
-.phase-sold-out {
-    font-size: 10px;
-    font-weight: 700;
-    color: #ef4444;
-    text-transform: uppercase;
 }
 
 /* ==========================================
