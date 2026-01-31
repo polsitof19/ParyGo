@@ -1,6 +1,6 @@
 /* ==========================================
-   PARYGO CLIENTE - PORTAL DE EVENTOS v14.1.0
-   Design System: Minimalist Elegant (colors-only patch on v12 layout)
+   PARYGO CLIENTE - PORTAL DE EVENTOS v15.0.0
+   Design System: Minimalist Elegant Final
    Typography: Inter, refined scale
    Visual Reform: Modern, clean, professional
    ========================================== */
@@ -15,8 +15,8 @@
     --bg-elevated: #18181b;
     --bg-hover: #1f1f24;
     --bg-surface: #0e0e11;
-    --border: #1c1c21;
-    --border-strong: #2a2a32;
+    --border: #2a2a35;
+    --border-strong: #2a2a35;
     --border-focus: rgba(255,255,255,0.25);
     --text: #ffffff;
     --text-secondary: #9a9aa3;
@@ -518,10 +518,12 @@ input, select, textarea {
 }
 
 .section-title {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: var(--space-7);
-    letter-spacing: -0.8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-5);
+    letter-spacing: 0;
+    text-transform: none;
 }
 
 .events-list {
@@ -532,23 +534,23 @@ input, select, textarea {
 
 .event-card {
     background: var(--bg-card);
-    border: 1px solid #1c1c21;
+    border: 1px solid #2a2a35;
     border-radius: var(--radius);
     overflow: hidden;
     cursor: pointer;
     transition: transform var(--duration-slow) var(--ease), box-shadow var(--duration-slow) var(--ease), border-color var(--duration-slow) var(--ease);
     opacity: 0;
-    transform: translateY(16px);
-    animation: fadeInUp 0.5s var(--ease-out) forwards;
+    transform: translateY(10px);
+    animation: fadeInUp 0.3s ease forwards;
     box-shadow: var(--shadow-sm);
 }
 
-.event-card:nth-child(1) { animation-delay: 0.04s; }
-.event-card:nth-child(2) { animation-delay: 0.09s; }
-.event-card:nth-child(3) { animation-delay: 0.14s; }
-.event-card:nth-child(4) { animation-delay: 0.19s; }
-.event-card:nth-child(5) { animation-delay: 0.24s; }
-.event-card:nth-child(6) { animation-delay: 0.29s; }
+.event-card:nth-child(1) { animation-delay: 0.05s; }
+.event-card:nth-child(2) { animation-delay: 0.10s; }
+.event-card:nth-child(3) { animation-delay: 0.15s; }
+.event-card:nth-child(4) { animation-delay: 0.20s; }
+.event-card:nth-child(5) { animation-delay: 0.25s; }
+.event-card:nth-child(6) { animation-delay: 0.30s; }
 
 .event-card:active {
     transform: scale(0.975);
@@ -563,9 +565,9 @@ input, select, textarea {
 
 @media (hover: hover) {
     .event-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 30px rgba(0,0,0,0.3);
-        border-color: #2a2a32;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        border-color: #3a3a45;
     }
 }
 
@@ -675,7 +677,7 @@ input, select, textarea {
 
 .modal-content {
     background: var(--bg-card);
-    border: 1px solid #1c1c21;
+    border: 1px solid #2a2a35;
     border-radius: var(--radius) var(--radius) 0 0;
     width: 100%;
     max-width: 500px;
@@ -778,10 +780,10 @@ input, select, textarea {
     background: transparent;
     color: #ffffff;
     border: 1px solid #ffffff;
-    padding: 12px 20px;
+    padding: 10px 20px;
     border-radius: var(--radius-xs);
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 500;
     font-family: inherit;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -840,7 +842,7 @@ input, select, textarea {
 
 @media (hover: hover) {
     .btn-secondary:hover {
-        border-color: #2a2a32;
+        border-color: #3a3a45;
         background: var(--bg-hover);
         transform: translateY(-1px);
     }
@@ -988,13 +990,14 @@ input, select, textarea {
 }
 
 .action-section h3 {
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
     margin-bottom: var(--space-3);
     display: flex;
     align-items: center;
     gap: var(--space-3);
-    letter-spacing: -0.4px;
+    letter-spacing: 0;
 }
 
 .action-section h3 i {
@@ -1073,9 +1076,9 @@ input, select, textarea {
 }
 
 .ticket-item-price {
-    font-size: var(--text-lg);
-    font-weight: 700;
-    color: var(--green);
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
 }
 
 .ticket-item-btn {
@@ -1166,7 +1169,7 @@ input, select, textarea {
 
 @media (hover: hover) {
     .my-ticket-card:hover {
-        border-color: #2a2a32;
+        border-color: #3a3a45;
         box-shadow: var(--shadow-md);
         transform: translateY(-2px);
     }
@@ -1399,8 +1402,8 @@ input, select, textarea {
 }
 
 .ticket-type-price {
-    color: var(--green);
-    font-weight: 700;
+    color: #ffffff;
+    font-weight: 600;
 }
 
 .qty-selector {
@@ -2589,18 +2592,18 @@ input, select, textarea {
    ========================================== */
 .ticket-card-unified {
     background: var(--bg-card);
-    border: 1px solid #1c1c21;
+    border: 1px solid #2a2a35;
     border-radius: var(--radius);
     overflow: hidden;
     transition: transform var(--duration-slow) var(--ease), box-shadow var(--duration-slow) var(--ease), border-color var(--duration-slow) var(--ease);
-    animation: tcuFadeIn 0.45s var(--ease-out) both;
+    animation: tcuFadeIn 0.3s ease both;
     box-shadow: var(--shadow-sm);
 }
 
-.ticket-card-unified:nth-child(1) { animation-delay: 0.04s; }
-.ticket-card-unified:nth-child(2) { animation-delay: 0.08s; }
-.ticket-card-unified:nth-child(3) { animation-delay: 0.12s; }
-.ticket-card-unified:nth-child(4) { animation-delay: 0.16s; }
+.ticket-card-unified:nth-child(1) { animation-delay: 0.05s; }
+.ticket-card-unified:nth-child(2) { animation-delay: 0.10s; }
+.ticket-card-unified:nth-child(3) { animation-delay: 0.15s; }
+.ticket-card-unified:nth-child(4) { animation-delay: 0.20s; }
 
 @keyframes tcuFadeIn {
     from { opacity: 0; transform: translateY(10px); }
@@ -2617,9 +2620,9 @@ input, select, textarea {
 
 @media (hover: hover) {
     .ticket-card-unified:not(.phases):not(.disabled):hover {
-        border-color: #2a2a32;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.3);
-        transform: translateY(-3px);
+        border-color: #3a3a45;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        transform: translateY(-1px);
     }
 }
 
@@ -2634,10 +2637,10 @@ input, select, textarea {
 }
 
 .tcu-name {
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 500;
     color: var(--text);
-    letter-spacing: -0.5px;
+    letter-spacing: -0.3px;
     line-height: 1.2;
 }
 
@@ -2650,10 +2653,10 @@ input, select, textarea {
 }
 
 .tcu-price-tag {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--green);
-    letter-spacing: -0.3px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: -0.2px;
 }
 
 .tcu-price-tag.free {
@@ -2667,11 +2670,11 @@ input, select, textarea {
     background: transparent;
     color: #ffffff;
     border: 1px solid #ffffff;
-    padding: var(--space-3) var(--space-6);
+    padding: 10px 20px;
     border-radius: var(--radius-xs);
     font-size: var(--text-sm);
-    font-weight: 600;
-    letter-spacing: 0.3px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
     white-space: nowrap;
     transition: all 0.2s ease;
     box-shadow: none;
@@ -2702,11 +2705,11 @@ input, select, textarea {
 
 .tcu-disabled-label {
     font-size: var(--text-sm);
-    font-weight: 600;
+    font-weight: 400;
     color: var(--text-muted);
-    background: rgba(82,82,91,0.12);
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-xs);
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
 }
 
 /* -- Legacy compat (hidden) -- */
@@ -2720,8 +2723,8 @@ input, select, textarea {
 }
 
 .ticket-card-unified.phases .tcu-name {
-    font-size: var(--text-xl);
-    font-weight: 700;
+    font-size: 15px;
+    font-weight: 500;
 }
 
 /* -- Phases list -- */
@@ -2788,12 +2791,12 @@ input, select, textarea {
 
 .tcu-phase-name {
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--text);
 }
 
 .tcu-phase.future .tcu-phase-name {
-    color: #ffffff;
+    color: var(--text-muted);
 }
 
 .tcu-phase-until {
@@ -2818,18 +2821,18 @@ input, select, textarea {
 }
 
 .tcu-phase-price {
-    font-size: 20px;
-    font-weight: 700;
+    font-size: 16px;
+    font-weight: 600;
     color: var(--text-secondary);
-    letter-spacing: -0.3px;
+    letter-spacing: -0.2px;
 }
 
 .tcu-phase.active .tcu-phase-price {
-    color: var(--green);
+    color: #ffffff;
 }
 
 .tcu-phase.future .tcu-phase-price {
-    color: #6b7280;
+    color: var(--text-muted);
 }
 
 .tcu-phase .tcu-btn {
@@ -2842,12 +2845,12 @@ input, select, textarea {
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
-    font-size: var(--text-xs);
-    font-weight: 600;
+    font-size: var(--text-sm);
+    font-weight: 400;
     color: var(--text-muted);
-    background: rgba(82,82,91,0.1);
-    padding: var(--space-1) var(--space-3);
-    border-radius: var(--radius-xs);
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
 }
 
 .tcu-phase-locked i {
@@ -3230,7 +3233,7 @@ input, select, textarea {
 
 @media (hover: hover) {
     .share-option-btn:hover {
-        border-color: #2a2a32;
+        border-color: #3a3a45;
         transform: translateY(-2px);
         box-shadow: var(--shadow-md);
     }
