@@ -73,8 +73,7 @@ import {
     addPhaseRow,
     removePhaseRow,
     toggleDoorPrice,
-    adjustValue,
-    toggleAmPm
+    onDateChange
 } from './tickets.js';
 
 import {
@@ -205,8 +204,7 @@ window.togglePriceMode = togglePriceMode;
 window.addPhaseRow = addPhaseRow;
 window.removePhaseRow = removePhaseRow;
 window.toggleDoorPrice = toggleDoorPrice;
-window.adjustValue = adjustValue;
-window.toggleAmPm = toggleAmPm;
+window.onDateChange = onDateChange;
 
 // Códigos y Stock
 window.loadPromotersCache = loadPromotersCache;

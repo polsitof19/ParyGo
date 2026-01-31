@@ -2973,99 +2973,56 @@ select option:hover {
     margin-bottom: 8px;
 }
 
-.dt-fields {
+.dt-selects {
     display: flex;
     align-items: center;
-    gap: 4px;
-    background: var(--bg);
+    gap: 6px;
+}
+
+.dt-select {
+    background: var(--bg-card, var(--card, #1a1a2e));
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 8px 6px;
-}
-
-.dt-field {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    min-width: 36px;
-}
-
-.dt-btn {
-    width: 28px;
-    height: 20px;
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 8px;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    font-size: 10px;
-    transition: var(--transition-fast);
-    padding: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 24px;
+    min-width: 0;
+    transition: border-color 0.2s;
 }
 
-.dt-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text);
+.dt-select:focus {
+    outline: none;
+    border-color: var(--primary);
 }
 
-.dt-btn:active {
-    background: rgba(255, 255, 255, 0.15);
+.dt-select option {
+    background: #1a1a2e;
+    color: #fff;
 }
 
-.dt-value {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--text);
-    line-height: 1;
-    user-select: none;
-    min-width: 28px;
-    text-align: center;
-}
-
-.dt-field-label {
-    font-size: 9px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    opacity: 0.6;
-}
+.sel-day { width: 72px; }
+.sel-month { width: 72px; }
+.sel-year { width: 88px; }
+.sel-hour { width: 72px; }
+.sel-min { width: 72px; }
+.sel-ampm { width: 72px; color: var(--primary); }
 
 .dt-sep {
     font-size: 16px;
     font-weight: 600;
     color: var(--text-muted);
     opacity: 0.4;
-    align-self: center;
-    margin: 0 2px;
-    padding-bottom: 14px;
-}
-
-.dt-ampm-field {
-    margin-left: 4px;
-}
-
-.dt-btn-ampm {
-    width: 40px;
-    height: 44px;
-    border: 1px solid var(--border);
-    background: var(--card);
-    color: var(--primary);
-    cursor: pointer;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 700;
-    font-family: inherit;
-    transition: var(--transition-fast);
-    letter-spacing: 0.5px;
-}
-
-.dt-btn-ampm:hover {
-    background: rgba(244, 63, 94, 0.1);
-    border-color: var(--primary);
+    flex-shrink: 0;
 }
 
 /* Info banner */
@@ -3128,4 +3085,14 @@ select option:hover {
     .dt-time-group {
         min-width: 100%;
     }
+    .dt-selects {
+        flex-wrap: wrap;
+    }
+    .dt-select {
+        font-size: 13px;
+        padding: 9px 6px;
+        padding-right: 22px;
+    }
+    .sel-day, .sel-month, .sel-hour, .sel-min, .sel-ampm { width: 64px; }
+    .sel-year { width: 80px; }
 }

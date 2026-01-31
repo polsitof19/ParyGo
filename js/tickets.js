@@ -95,76 +95,46 @@ function getSelectedPriceMode() {
 }
 
 // ==========================================
-// 3. SELECTOR FECHA/HORA PERSONALIZADO
+// 3. SELECTOR FECHA/HORA CON DROPDOWNS
 // ==========================================
 
 function getDaysInMonth(month, year) {
     return new Date(year, month, 0).getDate();
 }
 
-export function adjustValue(btn, type, delta) {
-    const container = btn.closest('.date-time-selector');
-    if (!container) return;
-
-    const el = container.querySelector(`.sel-${type}`);
-    if (!el) return;
-
-    let val = parseInt(el.textContent) || 0;
-    val += delta;
-
-    if (type === 'day') {
-        const monthEl = container.querySelector('.sel-month');
-        const yearEl = container.querySelector('.sel-year');
-        const month = parseInt(monthEl?.textContent) || 1;
-        const year = parseInt(yearEl?.textContent) || new Date().getFullYear();
-        const maxDay = getDaysInMonth(month, year);
-        if (val < 1) val = maxDay;
-        if (val > maxDay) val = 1;
-    } else if (type === 'month') {
-        if (val < 1) val = 12;
-        if (val > 12) val = 1;
-        adjustDayLimit(container);
-    } else if (type === 'year') {
-        const currentYear = new Date().getFullYear();
-        if (val < currentYear) val = currentYear + 5;
-        if (val > currentYear + 5) val = currentYear;
-        adjustDayLimit(container);
-    } else if (type === 'hour') {
-        if (val < 1) val = 12;
-        if (val > 12) val = 1;
-    } else if (type === 'min') {
-        if (val < 0) val = 55;
-        if (val > 55) val = 0;
+function buildOptions(start, end, selected, pad) {
+    let html = '';
+    for (let i = start; i <= end; i++) {
+        const val = pad ? String(i).padStart(2, '0') : String(i);
+        html += `<option value="${i}" ${i === selected ? 'selected' : ''}>${val}</option>`;
     }
-
-    if (type === 'min') {
-        el.textContent = String(val).padStart(2, '0');
-    } else if (type === 'day' || type === 'month') {
-        el.textContent = String(val).padStart(2, '0');
-    } else {
-        el.textContent = val;
-    }
+    return html;
 }
 
-function adjustDayLimit(container) {
-    const dayEl = container.querySelector('.sel-day');
+function buildMinuteOptions(selected) {
+    let html = '';
+    for (let i = 0; i <= 55; i += 5) {
+        const val = String(i).padStart(2, '0');
+        html += `<option value="${i}" ${i === selected ? 'selected' : ''}>${val}</option>`;
+    }
+    return html;
+}
+
+export function onDateChange(sel) {
+    const container = sel.closest('.date-time-selector');
+    if (!container) return;
     const monthEl = container.querySelector('.sel-month');
     const yearEl = container.querySelector('.sel-year');
-    if (!dayEl || !monthEl || !yearEl) return;
+    const dayEl = container.querySelector('.sel-day');
+    if (!monthEl || !yearEl || !dayEl) return;
 
-    const month = parseInt(monthEl.textContent) || 1;
-    const year = parseInt(yearEl.textContent) || new Date().getFullYear();
+    const month = parseInt(monthEl.value) || 1;
+    const year = parseInt(yearEl.value) || new Date().getFullYear();
     const maxDay = getDaysInMonth(month, year);
-    const currentDay = parseInt(dayEl.textContent) || 1;
-    if (currentDay > maxDay) {
-        dayEl.textContent = String(maxDay).padStart(2, '0');
-    }
-}
+    const currentDay = parseInt(dayEl.value) || 1;
 
-export function toggleAmPm(btn) {
-    const el = btn.closest('.date-time-selector')?.querySelector('.sel-ampm');
-    if (!el) return;
-    el.textContent = el.textContent === 'AM' ? 'PM' : 'AM';
+    // Reconstruir opciones de día
+    dayEl.innerHTML = buildOptions(1, maxDay, Math.min(currentDay, maxDay), true);
 }
 
 function createDateTimeSelector(isoValue) {
@@ -193,57 +163,45 @@ function createDateTimeSelector(isoValue) {
         ampm = 'PM';
     }
 
-    // Redondear minutos a múltiplos de 5
     min = Math.round(min / 5) * 5;
     if (min === 60) { min = 0; hour++; }
+    if (hour > 12) hour = 12;
+
+    const currentYear = new Date().getFullYear();
+    const maxDay = getDaysInMonth(month, year);
 
     return `
         <div class="date-time-selector">
             <div class="dt-date-group">
                 <div class="dt-label">Fecha</div>
-                <div class="dt-fields">
-                    <div class="dt-field">
-                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'day',1)"><i class="fa-solid fa-chevron-up"></i></button>
-                        <span class="dt-value sel-day">${String(day).padStart(2, '0')}</span>
-                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'day',-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                        <span class="dt-field-label">Día</span>
-                    </div>
+                <div class="dt-selects">
+                    <select class="dt-select sel-day" onchange="window.onDateChange(this)">
+                        ${buildOptions(1, maxDay, day, true)}
+                    </select>
                     <span class="dt-sep">/</span>
-                    <div class="dt-field">
-                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'month',1)"><i class="fa-solid fa-chevron-up"></i></button>
-                        <span class="dt-value sel-month">${String(month).padStart(2, '0')}</span>
-                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'month',-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                        <span class="dt-field-label">Mes</span>
-                    </div>
+                    <select class="dt-select sel-month" onchange="window.onDateChange(this)">
+                        ${buildOptions(1, 12, month, true)}
+                    </select>
                     <span class="dt-sep">/</span>
-                    <div class="dt-field">
-                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'year',1)"><i class="fa-solid fa-chevron-up"></i></button>
-                        <span class="dt-value sel-year">${year}</span>
-                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'year',-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                        <span class="dt-field-label">Año</span>
-                    </div>
+                    <select class="dt-select sel-year" onchange="window.onDateChange(this)">
+                        ${buildOptions(currentYear, currentYear + 5, year, false)}
+                    </select>
                 </div>
             </div>
             <div class="dt-time-group">
                 <div class="dt-label">Hora</div>
-                <div class="dt-fields">
-                    <div class="dt-field">
-                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'hour',1)"><i class="fa-solid fa-chevron-up"></i></button>
-                        <span class="dt-value sel-hour">${String(hour).padStart(2, '0')}</span>
-                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'hour',-1)"><i class="fa-solid fa-chevron-down"></i></button>
-                        <span class="dt-field-label">Hora</span>
-                    </div>
+                <div class="dt-selects">
+                    <select class="dt-select sel-hour">
+                        ${buildOptions(1, 12, hour, true)}
+                    </select>
                     <span class="dt-sep">:</span>
-                    <div class="dt-field">
-                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'min',5)"><i class="fa-solid fa-chevron-up"></i></button>
-                        <span class="dt-value sel-min">${String(min).padStart(2, '0')}</span>
-                        <button type="button" class="dt-btn" onclick="window.adjustValue(this,'min',-5)"><i class="fa-solid fa-chevron-down"></i></button>
-                        <span class="dt-field-label">Min</span>
-                    </div>
-                    <div class="dt-field dt-ampm-field">
-                        <button type="button" class="dt-btn-ampm" onclick="window.toggleAmPm(this)">${ampm}</button>
-                        <span class="dt-value sel-ampm" style="display:none;">${ampm}</span>
-                    </div>
+                    <select class="dt-select sel-min">
+                        ${buildMinuteOptions(min)}
+                    </select>
+                    <select class="dt-select sel-ampm">
+                        <option value="AM" ${ampm === 'AM' ? 'selected' : ''}>AM</option>
+                        <option value="PM" ${ampm === 'PM' ? 'selected' : ''}>PM</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -256,16 +214,16 @@ function readDateTimeFromSelector(container) {
     const yearEl = container.querySelector('.sel-year');
     const hourEl = container.querySelector('.sel-hour');
     const minEl = container.querySelector('.sel-min');
-    const ampmBtn = container.querySelector('.dt-btn-ampm');
+    const ampmEl = container.querySelector('.sel-ampm');
 
     if (!dayEl || !monthEl || !yearEl || !hourEl || !minEl) return '';
 
-    const day = parseInt(dayEl.textContent) || 1;
-    const month = parseInt(monthEl.textContent) || 1;
-    const year = parseInt(yearEl.textContent) || new Date().getFullYear();
-    let hour = parseInt(hourEl.textContent) || 12;
-    const min = parseInt(minEl.textContent) || 0;
-    const ampm = ampmBtn?.textContent?.trim() || 'PM';
+    const day = parseInt(dayEl.value) || 1;
+    const month = parseInt(monthEl.value) || 1;
+    const year = parseInt(yearEl.value) || new Date().getFullYear();
+    let hour = parseInt(hourEl.value) || 12;
+    const min = parseInt(minEl.value) || 0;
+    const ampm = ampmEl?.value || 'PM';
 
     // Convertir 12h a 24h
     if (ampm === 'AM' && hour === 12) hour = 0;
