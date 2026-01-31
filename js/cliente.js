@@ -1002,16 +1002,12 @@ async function loadEvents() {
         snap1.docs.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
         snap2.docs.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
 
-        // Filtrar solo eventos futuros
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
+        // Mostrar todos los eventos activos (el admin controla cuáles existen)
         allEvents = Array.from(map.values())
-            .filter(e => new Date(e.date) >= today)
             .sort((a, b) => new Date(a.date) - new Date(b.date));
 
         if (!allEvents.length) {
-            container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i><h3>Sin eventos</h3><p>No hay eventos proximos</p></div>';
+            container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i><h3>Sin eventos</h3><p>No hay eventos disponibles</p></div>';
             return;
         }
 
@@ -1073,20 +1069,21 @@ function renderFilteredEvents(searchTerm, dateFilter) {
         );
     }
 
-    // Filter by date
+    // Filter by date range (sin excluir eventos de hoy)
     const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     if (dateFilter === 'week') {
-        const endOfWeek = new Date(now);
+        const endOfWeek = new Date(startOfToday);
         endOfWeek.setDate(endOfWeek.getDate() + 7);
         filtered = filtered.filter(e => {
-            const d = new Date(e.date);
-            return d >= now && d <= endOfWeek;
+            const d = new Date(e.date + 'T23:59:59');
+            return d >= startOfToday && d <= endOfWeek;
         });
     } else if (dateFilter === 'month') {
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
         filtered = filtered.filter(e => {
-            const d = new Date(e.date);
-            return d >= now && d <= endOfMonth;
+            const d = new Date(e.date + 'T23:59:59');
+            return d >= startOfToday && d <= endOfMonth;
         });
     }
 
@@ -1321,13 +1318,17 @@ function renderTicketsSimple(container, tickets) {
         let statusLabel = 'Disponible';
         let disabled = false;
 
-        if (t.start_date && new Date(t.start_date) > now) {
-            status = 'proximamente';
-            statusLabel = 'Próximamente';
-            disabled = true;
-        } else if (t.end_date && new Date(t.end_date) < now) {
+        const isFree = t.isFree || t.price === 0;
+        const mode = t.priceMode || (isFree ? 'FREE' : 'FIXED');
+
+        // Verificar disponibilidad según modalidad
+        if (mode === 'FREE' && t.claim_until && new Date(t.claim_until) < now) {
             status = 'finalizado';
-            statusLabel = 'Finalizado';
+            statusLabel = 'Ya no disponible';
+            disabled = true;
+        } else if (mode === 'FIXED' && t.buy_until && new Date(t.buy_until) < now) {
+            status = 'finalizado';
+            statusLabel = 'Venta finalizada';
             disabled = true;
         } else if (t.stock !== undefined && t.sold !== undefined && t.sold >= t.stock) {
             status = 'agotado';
@@ -1339,7 +1340,6 @@ function renderTicketsSimple(container, tickets) {
             ? `<span class="stock">${t.stock - t.sold} disponibles</span>`
             : '';
 
-        const isFree = t.isFree || t.price === 0;
         const onclick = disabled ? '' : (isFree ? `onclick="openFreeTicketModal(${i})"` : `onclick="openBuyModal(${i})"`);
 
         return `
@@ -1426,8 +1426,8 @@ function renderTicketsWithPhases(container, tickets) {
             panelContent += phasesHtml;
 
             // Door price
+            const allExpired = sorted.every(p => p.until && new Date(p.until) < now);
             if (t.doorPrice) {
-                const allExpired = sorted.every(p => p.until && new Date(p.until) < now);
                 if (allExpired) {
                     const onclick = `onclick="openBuyModalWithPrice(${i}, ${t.doorPrice})"`;
                     panelContent += `
@@ -1453,22 +1453,45 @@ function renderTicketsWithPhases(container, tickets) {
                         </div>
                     `;
                 }
+            } else if (allExpired && !phasesHtml) {
+                // Todas las fases expiraron y no hay precio puerta
+                panelContent += `
+                    <div class="phase-row disabled">
+                        <div class="phase-row-info">
+                            <span class="phase-name">Venta finalizada</span>
+                            <span class="phase-until" style="color:var(--text-muted);">Todas las fases han expirado</span>
+                        </div>
+                    </div>
+                `;
             }
         } else {
             // Ticket sin PHASES (FIXED o FREE en un evento mixto)
             const isFree = t.isFree || t.price === 0;
+            const mode = t.priceMode || (isFree ? 'FREE' : 'FIXED');
             let disabled = false;
-            if (t.stock !== undefined && t.sold !== undefined && t.sold >= t.stock) disabled = true;
+            let disabledLabel = '';
+
+            if (mode === 'FREE' && t.claim_until && new Date(t.claim_until) < now) {
+                disabled = true;
+                disabledLabel = 'Ya no disponible';
+            } else if (mode === 'FIXED' && t.buy_until && new Date(t.buy_until) < now) {
+                disabled = true;
+                disabledLabel = 'Venta finalizada';
+            } else if (t.stock !== undefined && t.sold !== undefined && t.sold >= t.stock) {
+                disabled = true;
+                disabledLabel = 'AGOTADO';
+            }
 
             const onclick = disabled ? '' : (isFree ? `onclick="openFreeTicketModal(${i})"` : `onclick="openBuyModal(${i})"`);
             panelContent = `
                 <div class="phase-row ${disabled ? 'disabled' : 'active'}" ${onclick}>
                     <div class="phase-row-info">
                         <span class="phase-name">${isFree ? 'Entrada gratuita' : 'Precio fijo'}</span>
+                        ${disabled && disabledLabel !== 'AGOTADO' ? `<span class="phase-until" style="color:var(--text-muted);">${disabledLabel}</span>` : ''}
                     </div>
                     <div class="phase-row-action">
                         <span class="phase-price ${isFree ? 'free' : ''}">${isFree ? 'GRATIS' : `S/. ${Number(t.price).toFixed(2)}`}</span>
-                        ${!disabled ? '<span class="phase-buy-label">COMPRAR <i class="fa-solid fa-chevron-right"></i></span>' : '<span class="phase-sold-out">AGOTADO</span>'}
+                        ${!disabled ? '<span class="phase-buy-label">COMPRAR <i class="fa-solid fa-chevron-right"></i></span>' : (disabledLabel === 'AGOTADO' ? '<span class="phase-sold-out">AGOTADO</span>' : '')}
                     </div>
                 </div>
             `;
