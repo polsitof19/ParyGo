@@ -2389,9 +2389,9 @@ function buildShareUrl(ticket, token) {
 }
 
 function buildShareText(ticket, url) {
-    return `🎫 *${ticket.event_name || 'Evento'}*\n` +
-           `📅 ${formatDate(ticket.event_date)}\n` +
-           `🎟️ ${ticket.ticket_type || 'General'}\n\n` +
+    return `*${ticket.event_name || 'Evento'}*\n` +
+           `${formatDate(ticket.event_date)}\n` +
+           `${ticket.ticket_type || 'General'}\n\n` +
            `Ver entrada:\n${url}`;
 }
 
@@ -2925,10 +2925,10 @@ function checkPasswordMatch() {
     }
 
     if (password === confirmPassword) {
-        hint.textContent = '✓ Las contraseñas coinciden';
+        hint.textContent = 'Las contraseñas coinciden';
         hint.className = 'field-hint success';
     } else {
-        hint.textContent = '✗ Las contraseñas no coinciden';
+        hint.textContent = 'Las contraseñas no coinciden';
         hint.className = 'field-hint error';
     }
 }
@@ -2995,10 +2995,10 @@ function checkNewPasswordMatch() {
     }
 
     if (password === confirmPassword) {
-        hint.textContent = '✓ Las contraseñas coinciden';
+        hint.textContent = 'Las contraseñas coinciden';
         hint.className = 'field-hint success';
     } else {
-        hint.textContent = '✗ Las contraseñas no coinciden';
+        hint.textContent = 'Las contraseñas no coinciden';
         hint.className = 'field-hint error';
     }
 }
