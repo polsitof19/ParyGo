@@ -495,8 +495,8 @@
                                 <tr>
                                     <th>Nombre</th>
                                     <th>Precio</th>
-                                    <th>Reclamo hasta</th>
-                                    <th>Válido hasta</th>
+                                    <th>Disponible hasta</th>
+                                    <th>Escanear hasta</th>
                                     <th>Color</th>
                                     <th>Acciones</th>
                                 </tr>
@@ -1234,6 +1234,10 @@
                 <!-- Gratis -->
                 <div id="priceFree" class="price-section">
                     <div class="free-badge">Entrada gratuita — no se cobra al asistente</div>
+                    <div class="form-group" style="margin-top:16px;">
+                        <label><i class="fa-regular fa-clock"></i> Reclamar hasta</label>
+                        <div id="free_claim_until_selector"></div>
+                    </div>
                 </div>
 
                 <!-- Precio fijo -->
@@ -1241,6 +1245,10 @@
                     <div class="form-group">
                         <label>Precio (S/.)</label>
                         <input type="number" id="nt_price" placeholder="0.00" step="0.01" min="0" value="0">
+                    </div>
+                    <div class="form-group" style="margin-top:16px;">
+                        <label><i class="fa-regular fa-clock"></i> Comprar hasta</label>
+                        <div id="fixed_buy_until_selector"></div>
                     </div>
                 </div>
 
@@ -1275,10 +1283,6 @@
                         <input type="number" id="nt_uses" value="1" min="1">
                     </div>
                     <div class="form-group">
-                        <label>Escaneos en puerta</label>
-                        <input type="number" id="nt_scans" value="1" min="1">
-                    </div>
-                    <div class="form-group">
                         <label>Límite por persona</label>
                         <input type="number" id="nt_limit" placeholder="Sin límite" min="1" max="100">
                         <small class="field-hint">Máximo que puede comprar una persona</small>
@@ -1289,15 +1293,9 @@
             <!-- Sección: Vigencia -->
             <div class="modal-section">
                 <div class="modal-section-title">Vigencia</div>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Reclamar hasta</label>
-                        <input type="datetime-local" id="nt_claim">
-                    </div>
-                    <div class="form-group">
-                        <label>Válido hasta</label>
-                        <input type="datetime-local" id="nt_valid_until">
-                    </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-qrcode"></i> Escanear hasta</label>
+                    <div id="scan_until_selector"></div>
                 </div>
             </div>
 

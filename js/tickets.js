@@ -46,7 +46,7 @@ export function renderTicketTable(event) {
                     ? `<span style="color:#a78bfa;">Preventa</span> <small style="opacity:0.6;">S/ ${Number(tk.price).toFixed(2)}</small>`
                     : tk.price > 0 ? 'S/ ' + Number(tk.price).toFixed(2) : 'GRATIS'}
             </td>
-            <td>${tk.claim_until ? formatDate(tk.claim_until) : '-'}</td>
+            <td>${(tk.claim_until || tk.buy_until) ? formatDate(tk.claim_until || tk.buy_until) : (tk.priceMode === 'PHASES' ? '<span style="color:var(--text-muted);">Por fases</span>' : '-')}</td>
             <td>${tk.valid_until ? formatDate(tk.valid_until) : '-'}</td>
             <td>
                 <div style="width:28px; height:28px; border-radius:50%; background:${tk.color || 'var(--primary)'}; border:2px solid var(--border);"></div>
@@ -390,27 +390,42 @@ export function getActivePhasePrice(phases, doorPrice) {
 // 5. FECHAS INTELIGENTES
 // ==========================================
 
-function setDefaultDatesFromEvent() {
+function getDefaultDatesFromEvent() {
     const event = getActiveEvent();
-    if (!event || !event.date) return;
+    if (!event || !event.date) return { claim: '', buy: '', scan: '' };
 
     const eventDate = new Date(event.date + 'T00:00:00');
-    if (isNaN(eventDate)) return;
+    if (isNaN(eventDate)) return { claim: '', buy: '', scan: '' };
 
-    // Reclamar hasta: día del evento 18:00
+    // Reclamar/Comprar hasta: día del evento 18:00
     const claimDate = new Date(eventDate);
     claimDate.setHours(18, 0, 0, 0);
-    const claimEl = document.getElementById('nt_claim');
-    if (claimEl) claimEl.value = toLocalDateTimeString(claimDate);
 
-    // Válido hasta: día siguiente 06:00
-    const validDate = new Date(eventDate);
-    validDate.setDate(validDate.getDate() + 1);
-    validDate.setHours(6, 0, 0, 0);
-    const validEl = document.getElementById('nt_valid_until');
-    if (validEl) validEl.value = toLocalDateTimeString(validDate);
+    // Escanear hasta: día siguiente 06:00
+    const scanDate = new Date(eventDate);
+    scanDate.setDate(scanDate.getDate() + 1);
+    scanDate.setHours(6, 0, 0, 0);
 
-    // Banner informativo
+    return {
+        claim: toLocalDateTimeString(claimDate),
+        buy: toLocalDateTimeString(claimDate),
+        scan: toLocalDateTimeString(scanDate)
+    };
+}
+
+function initDateTimeSelectors(claimValue, buyValue, scanValue) {
+    const freeClaimEl = document.getElementById('free_claim_until_selector');
+    const fixedBuyEl = document.getElementById('fixed_buy_until_selector');
+    const scanEl = document.getElementById('scan_until_selector');
+
+    if (freeClaimEl) freeClaimEl.innerHTML = createDateTimeSelector(claimValue);
+    if (fixedBuyEl) fixedBuyEl.innerHTML = createDateTimeSelector(buyValue);
+    if (scanEl) scanEl.innerHTML = createDateTimeSelector(scanValue);
+}
+
+function showEventDetectedBanner() {
+    const event = getActiveEvent();
+    if (!event) return;
     const banner = document.getElementById('event_detected_info');
     const nameEl = document.getElementById('detected_event_name');
     if (banner && nameEl) {
@@ -460,9 +475,6 @@ export function openTicketModal() {
 
     // Config
     if (document.getElementById("nt_uses")) document.getElementById("nt_uses").value = "1";
-    if (document.getElementById("nt_scans")) document.getElementById("nt_scans").value = "1";
-    if (document.getElementById("nt_claim")) document.getElementById("nt_claim").value = "";
-    if (document.getElementById("nt_valid_until")) document.getElementById("nt_valid_until").value = "";
 
     // Precio: por defecto FREE
     togglePriceMode('FREE');
@@ -472,8 +484,10 @@ export function openTicketModal() {
     const phasesContainer = document.getElementById("phasesContainer");
     if (phasesContainer) phasesContainer.innerHTML = "";
 
-    // Fechas inteligentes
-    setDefaultDatesFromEvent();
+    // Fechas inteligentes con selectores personalizados
+    const defaults = getDefaultDatesFromEvent();
+    initDateTimeSelectors(defaults.claim, defaults.buy, defaults.scan);
+    if (defaults.claim) showEventDetectedBanner();
 }
 
 export function editTicket(index) {
@@ -510,9 +524,6 @@ export function editTicket(index) {
 
     // Config
     if (document.getElementById("nt_uses")) document.getElementById("nt_uses").value = tk.max_uses || 1;
-    if (document.getElementById("nt_scans")) document.getElementById("nt_scans").value = tk.max_scans || 1;
-    if (document.getElementById("nt_claim")) document.getElementById("nt_claim").value = tk.claim_until || "";
-    if (document.getElementById("nt_valid_until")) document.getElementById("nt_valid_until").value = tk.valid_until || "";
 
     // Modalidad de precio
     let mode = tk.priceMode;
@@ -520,6 +531,13 @@ export function editTicket(index) {
         mode = (tk.isFree || tk.price === 0) ? 'FREE' : 'FIXED';
     }
     togglePriceMode(mode);
+
+    // Selectores de fecha/hora según modalidad
+    initDateTimeSelectors(
+        tk.claim_until || '',
+        tk.buy_until || tk.claim_until || '',
+        tk.valid_until || ''
+    );
 
     // Fases
     const phasesContainer = document.getElementById("phasesContainer");
@@ -580,6 +598,21 @@ export async function saveNewTicket() {
         isFree = false;
     }
 
+    // Leer escanear hasta (compartido para todas las modalidades)
+    const scanSelectorEl = document.querySelector('#scan_until_selector .date-time-selector');
+    const validUntil = scanSelectorEl ? readDateTimeFromSelector(scanSelectorEl) : '';
+
+    // Leer fecha específica según modalidad
+    let claimUntil = '';
+    let buyUntil = '';
+    if (priceMode === 'FREE') {
+        const freeClaimEl = document.querySelector('#free_claim_until_selector .date-time-selector');
+        claimUntil = freeClaimEl ? readDateTimeFromSelector(freeClaimEl) : '';
+    } else if (priceMode === 'FIXED') {
+        const fixedBuyEl = document.querySelector('#fixed_buy_until_selector .date-time-selector');
+        buyUntil = fixedBuyEl ? readDateTimeFromSelector(fixedBuyEl) : '';
+    }
+
     const ticketData = {
         name,
         price,
@@ -589,11 +622,15 @@ export async function saveNewTicket() {
         sku: document.getElementById("nt_sku")?.value.toUpperCase() || generateCode("TKT"),
         color: document.getElementById("nt_color")?.value || "#f43f5e",
         max_uses: Math.max(1, Number(document.getElementById("nt_uses")?.value) || 1),
-        max_scans: Math.max(1, Number(document.getElementById("nt_scans")?.value) || 1),
-        claim_until: document.getElementById("nt_claim")?.value || "",
-        valid_until: document.getElementById("nt_valid_until")?.value || "",
+        valid_until: validUntil,
         limitPerPerson: parseInt(document.getElementById("nt_limit")?.value) || null
     };
+
+    if (priceMode === 'FREE') {
+        ticketData.claim_until = claimUntil;
+    } else if (priceMode === 'FIXED') {
+        ticketData.buy_until = buyUntil;
+    }
 
     if (priceMode === 'PHASES') {
         ticketData.phases = phases;
