@@ -1008,8 +1008,8 @@ input, select, textarea {
 .tickets-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
-    margin-top: var(--space-4);
+    gap: var(--space-4);
+    margin-top: var(--space-5);
 }
 
 .ticket-item {
@@ -2497,14 +2497,25 @@ input, select, textarea {
 }
 
 /* ==========================================
-   UNIFIED TICKET CARDS
+   UNIFIED TICKET CARDS - REDESIGN v10.1
    ========================================== */
 .ticket-card-unified {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
     overflow: hidden;
-    transition: all var(--transition);
+    transition: transform var(--duration-base) var(--ease), box-shadow var(--duration-base) var(--ease);
+    animation: tcuFadeIn 0.4s var(--ease-out) both;
+}
+
+.ticket-card-unified:nth-child(1) { animation-delay: 0.04s; }
+.ticket-card-unified:nth-child(2) { animation-delay: 0.08s; }
+.ticket-card-unified:nth-child(3) { animation-delay: 0.12s; }
+.ticket-card-unified:nth-child(4) { animation-delay: 0.16s; }
+
+@keyframes tcuFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .ticket-card-unified:not(.phases):not(.disabled) {
@@ -2512,69 +2523,119 @@ input, select, textarea {
 }
 
 .ticket-card-unified:not(.phases):not(.disabled):active {
-    background: var(--bg-hover);
-    transform: scale(0.99);
+    transform: scale(0.98);
+}
+
+@media (hover: hover) {
+    .ticket-card-unified:not(.phases):not(.disabled):hover {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 1px var(--primary), 0 4px 20px rgba(244,63,94,0.12);
+        transform: translateY(-1px);
+    }
 }
 
 .ticket-card-unified.disabled {
-    opacity: 0.4;
+    opacity: 0.5;
+    border-style: dashed;
 }
 
-.tcu-header {
+/* -- Card simple: top & bottom -- */
+.tcu-top {
+    padding: var(--space-5) var(--space-6) var(--space-2);
+}
+
+.tcu-name {
+    font-size: var(--text-2xl);
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.4px;
+    line-height: 1.2;
+}
+
+.tcu-bottom {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    padding: var(--space-2) var(--space-6) var(--space-5);
     gap: var(--space-4);
-    padding: var(--space-5);
 }
 
-.tcu-color {
+.tcu-price-tag {
+    font-size: var(--text-xl);
+    font-weight: 800;
+    color: var(--green);
+    letter-spacing: -0.3px;
+}
+
+.tcu-price-tag.free {
+    color: var(--green);
+}
+
+.tcu-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    background: var(--primary);
+    color: white;
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-xs);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    transition: all var(--duration-fast) var(--ease);
+    box-shadow: 0 2px 8px rgba(244,63,94,0.25);
+}
+
+.tcu-btn.free {
+    background: var(--green);
+    box-shadow: 0 2px 8px rgba(16,185,129,0.25);
+}
+
+.tcu-btn i {
+    font-size: var(--text-sm);
+}
+
+@media (hover: hover) {
+    .ticket-card-unified:not(.disabled):hover .tcu-btn {
+        transform: scale(1.03);
+        box-shadow: 0 4px 16px rgba(244,63,94,0.35);
+    }
+    .ticket-card-unified:not(.disabled):hover .tcu-btn.free {
+        box-shadow: 0 4px 16px rgba(16,185,129,0.35);
+    }
+}
+
+.tcu-disabled-label {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text-muted);
+    background: rgba(82,82,91,0.12);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-xs);
+}
+
+/* -- Legacy compat (hidden) -- */
+.tcu-header, .tcu-color, .tcu-title, .tcu-price, .tcu-body, .tcu-action, .tcu-status {
     display: none;
 }
 
-.tcu-title {
-    flex: 1;
-    font-size: var(--text-md);
-    font-weight: 600;
-    color: var(--text);
-    letter-spacing: -0.2px;
+/* -- Phases card header -- */
+.tcu-card-header {
+    padding: var(--space-5) var(--space-6) var(--space-3);
 }
 
-.tcu-price {
-    font-size: var(--text-lg);
+.ticket-card-unified.phases .tcu-name {
+    font-size: var(--text-xl);
     font-weight: 700;
-    color: var(--green);
-    white-space: nowrap;
 }
 
-.tcu-price.free {
-    color: var(--green);
-}
-
-.tcu-body {
-    padding: 0 var(--space-5) var(--space-4);
-    display: flex;
-    justify-content: flex-end;
-}
-
-.tcu-status {
-    font-size: var(--text-sm);
-    font-weight: 500;
-    color: var(--text-muted);
-}
-
-.tcu-action {
-    font-size: var(--text-sm);
-    font-weight: 600;
-    color: var(--primary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* Phases inside card */
+/* -- Phases list -- */
 .tcu-phases {
     display: flex;
     flex-direction: column;
-    border-top: 1px solid var(--border);
+    gap: var(--space-2);
+    padding: 0 var(--space-4) var(--space-4);
 }
 
 .tcu-phase {
@@ -2583,45 +2644,56 @@ input, select, textarea {
     justify-content: space-between;
     padding: var(--space-4) var(--space-5);
     background: var(--bg-elevated);
-    transition: all var(--transition);
-    border-bottom: 1px solid var(--border);
-}
-
-.tcu-phase:last-child {
-    border-bottom: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    transition: all var(--duration-base) var(--ease);
 }
 
 .tcu-phase.active {
     cursor: pointer;
-    background: rgba(244,63,94,0.03);
+    border-color: rgba(244,63,94,0.2);
+    background: rgba(244,63,94,0.04);
 }
 
 .tcu-phase.active:active {
+    transform: scale(0.98);
     background: var(--bg-hover);
+}
+
+@media (hover: hover) {
+    .tcu-phase.active:hover {
+        border-color: var(--primary);
+        background: rgba(244,63,94,0.06);
+        box-shadow: 0 2px 12px rgba(244,63,94,0.1);
+    }
 }
 
 .tcu-phase.future {
     background: var(--bg-surface);
+    border-color: var(--border);
 }
 
 .tcu-phase.door {
-    opacity: 0.5;
+    opacity: 0.6;
+    border-style: dashed;
 }
 
 .tcu-phase.expired {
     padding: var(--space-5);
     justify-content: center;
+    border-style: dashed;
 }
 
+/* Phase info */
 .tcu-phase-info {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: var(--space-1);
 }
 
 .tcu-phase-name {
-    font-size: var(--text-base);
-    font-weight: 600;
+    font-size: var(--text-md);
+    font-weight: 700;
     color: var(--text);
 }
 
@@ -2641,18 +2713,20 @@ input, select, textarea {
     color: var(--text-secondary);
 }
 
+/* Phase action */
 .tcu-phase-action {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 3px;
+    gap: var(--space-1);
     flex-shrink: 0;
 }
 
 .tcu-phase-price {
-    font-size: var(--text-lg);
-    font-weight: 700;
+    font-size: var(--text-xl);
+    font-weight: 800;
     color: var(--text-secondary);
+    letter-spacing: -0.3px;
 }
 
 .tcu-phase.active .tcu-phase-price {
@@ -2663,19 +2737,26 @@ input, select, textarea {
     color: var(--text-secondary);
 }
 
-.tcu-phase-locked {
+.tcu-phase .tcu-btn {
+    padding: var(--space-2) var(--space-4);
     font-size: var(--text-xs);
-    font-weight: 500;
-    color: var(--text-muted);
-    letter-spacing: 0.2px;
 }
 
-.tcu-phase-btn {
+/* Locked badge */
+.tcu-phase-locked {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
     font-size: var(--text-xs);
     font-weight: 600;
-    color: var(--primary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    background: rgba(82,82,91,0.1);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-xs);
+}
+
+.tcu-phase-locked i {
+    font-size: 9px;
 }
 
 /* ==========================================

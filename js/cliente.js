@@ -1332,19 +1332,20 @@ function renderTicketCardSimple(t, i, mode, isFree, now) {
         statusLabel = 'Agotado';
     }
 
-    const actionLabel = isFree ? 'OBTENER' : 'COMPRAR';
+    const actionLabel = isFree ? 'Obtener' : 'Comprar';
     const onclick = disabled ? '' : (isFree ? `onclick="openFreeTicketModal(${i})"` : `onclick="openBuyModal(${i})"`);
+    const btnClass = isFree ? 'tcu-btn free' : 'tcu-btn';
 
     return `
         <div class="ticket-card-unified ${disabled ? 'disabled' : ''}" ${onclick}>
-            <div class="tcu-header">
-                <div class="tcu-title">${escapeHtml(t.name)}</div>
-                <div class="tcu-price ${isFree ? 'free' : ''}">${isFree ? 'GRATIS' : `S/. ${Number(t.price).toFixed(2)}`}</div>
+            <div class="tcu-top">
+                <span class="tcu-name">${escapeHtml(t.name)}</span>
             </div>
-            <div class="tcu-body">
-                ${statusLabel
-                    ? `<span class="tcu-status">${statusLabel}</span>`
-                    : `<span class="tcu-action">${actionLabel} <i class="fa-solid fa-chevron-right"></i></span>`
+            <div class="tcu-bottom">
+                <span class="tcu-price-tag ${isFree ? 'free' : ''}">${isFree ? 'GRATIS' : `S/. ${Number(t.price).toFixed(2)}`}</span>
+                ${disabled
+                    ? `<span class="tcu-disabled-label">${statusLabel}</span>`
+                    : `<span class="${btnClass}"><i class="fa-solid fa-${isFree ? 'gift' : 'bag-shopping'}"></i> ${actionLabel}</span>`
                 }
             </div>
         </div>
@@ -1367,7 +1368,8 @@ function renderTicketCardPhases(t, i, now) {
 
         if (isActive) {
             const untilLabel = untilDate ? formatPhaseDate(untilDate) : '';
-            const actionLabel = isFree ? 'OBTENER' : 'COMPRAR';
+            const actionLabel = isFree ? 'Obtener' : 'Comprar';
+            const btnClass = isFree ? 'tcu-btn free' : 'tcu-btn';
             const onclick = isFree
                 ? `onclick="openFreeTicketModal(${i})"`
                 : `onclick="openBuyModalWithPrice(${i}, ${phase.price})"`;
@@ -1379,7 +1381,7 @@ function renderTicketCardPhases(t, i, now) {
                     </div>
                     <div class="tcu-phase-action">
                         <span class="tcu-phase-price">${isFree ? 'GRATIS' : `S/. ${Number(phase.price).toFixed(2)}`}</span>
-                        <span class="tcu-phase-btn">${actionLabel} <i class="fa-solid fa-chevron-right"></i></span>
+                        <span class="${btnClass}"><i class="fa-solid fa-${isFree ? 'gift' : 'bag-shopping'}"></i> ${actionLabel}</span>
                     </div>
                 </div>
             `;
@@ -1395,7 +1397,7 @@ function renderTicketCardPhases(t, i, now) {
                     </div>
                     <div class="tcu-phase-action">
                         <span class="tcu-phase-price">${isFree ? 'GRATIS' : `S/. ${Number(phase.price).toFixed(2)}`}</span>
-                        <span class="tcu-phase-locked">Aún no disponible</span>
+                        <span class="tcu-phase-locked"><i class="fa-solid fa-lock"></i> Próximamente</span>
                     </div>
                 </div>
             `;
@@ -1415,7 +1417,7 @@ function renderTicketCardPhases(t, i, now) {
                     </div>
                     <div class="tcu-phase-action">
                         <span class="tcu-phase-price">S/. ${Number(t.doorPrice).toFixed(2)}</span>
-                        <span class="tcu-phase-btn">COMPRAR <i class="fa-solid fa-chevron-right"></i></span>
+                        <span class="tcu-btn"><i class="fa-solid fa-bag-shopping"></i> Comprar</span>
                     </div>
                 </div>
             `;
@@ -1434,15 +1436,15 @@ function renderTicketCardPhases(t, i, now) {
     } else if (allExpired && !phasesHtml) {
         doorHtml = `
             <div class="tcu-phase expired">
-                <span class="tcu-status">Venta finalizada</span>
+                <span class="tcu-disabled-label">Venta finalizada</span>
             </div>
         `;
     }
 
     return `
         <div class="ticket-card-unified phases">
-            <div class="tcu-header">
-                <div class="tcu-title">${escapeHtml(t.name)}</div>
+            <div class="tcu-card-header">
+                <span class="tcu-name">${escapeHtml(t.name)}</span>
             </div>
             <div class="tcu-phases">
                 ${phasesHtml}
