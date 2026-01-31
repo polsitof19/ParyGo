@@ -1338,7 +1338,6 @@ function renderTicketCardSimple(t, i, mode, isFree, now) {
     return `
         <div class="ticket-card-unified ${disabled ? 'disabled' : ''}" ${onclick}>
             <div class="tcu-header">
-                <div class="tcu-color" style="background:${t.color || 'var(--primary)'}"></div>
                 <div class="tcu-title">${escapeHtml(t.name)}</div>
                 <div class="tcu-price ${isFree ? 'free' : ''}">${isFree ? 'GRATIS' : `S/. ${Number(t.price).toFixed(2)}`}</div>
             </div>
@@ -1442,7 +1441,6 @@ function renderTicketCardPhases(t, i, now) {
     return `
         <div class="ticket-card-unified phases">
             <div class="tcu-header">
-                <div class="tcu-color" style="background:${t.color || 'var(--primary)'}"></div>
                 <div class="tcu-title">${escapeHtml(t.name)}</div>
             </div>
             <div class="tcu-phases">
