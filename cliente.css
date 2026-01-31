@@ -1,54 +1,56 @@
 /* ==========================================
-   PARYGO CLIENTE - PORTAL DE EVENTOS v10.0.0
+   PARYGO CLIENTE - PORTAL DE EVENTOS v11.0.0
    Design System: 8pt grid, 1.25 type scale
    Tokens: semantic spacing, elevation, motion
+   Visual Reform: palette, typography, animations
    ========================================== */
 
 /* ==========================================
    SECTION 1: DESIGN TOKENS & RESET
    ========================================== */
 :root {
-    /* Color Palette */
-    --bg: #09090b;
-    --bg-card: #111114;
-    --bg-elevated: #18181b;
-    --bg-hover: #1f1f23;
-    --bg-surface: #0f0f12;
-    --border: rgba(255,255,255,0.06);
-    --border-strong: rgba(255,255,255,0.1);
+    /* Color Palette - Refined dark */
+    --bg: #08080a;
+    --bg-card: #101013;
+    --bg-elevated: #161619;
+    --bg-hover: #1c1c20;
+    --bg-surface: #0c0c0f;
+    --border: rgba(255,255,255,0.05);
+    --border-strong: rgba(255,255,255,0.09);
     --border-focus: rgba(244,63,94,0.5);
-    --text: #fafafa;
-    --text-secondary: #a1a1aa;
-    --text-muted: #52525b;
-    --text-dim: #3f3f46;
+    --text: #f5f5f7;
+    --text-secondary: #9d9daa;
+    --text-muted: #4e4e5a;
+    --text-dim: #3a3a44;
 
-    /* Accent */
+    /* Accent - Vibrant rose */
     --primary: #f43f5e;
-    --primary-soft: rgba(244,63,94,0.10);
-    --primary-glow: rgba(244,63,94,0.20);
+    --primary-hover: #e11d48;
+    --primary-soft: rgba(244,63,94,0.08);
+    --primary-glow: rgba(244,63,94,0.18);
 
-    /* Semantic Colors */
-    --green: #10b981;
-    --green-soft: rgba(16,185,129,0.10);
+    /* Semantic Colors - Brighter */
+    --green: #22c55e;
+    --green-soft: rgba(34,197,94,0.10);
     --blue: #3b82f6;
     --blue-soft: rgba(59,130,246,0.10);
-    --yellow: #f59e0b;
-    --yellow-soft: rgba(245,158,11,0.10);
+    --yellow: #facc15;
+    --yellow-soft: rgba(250,204,21,0.10);
     --red: #ef4444;
     --red-soft: rgba(239,68,68,0.10);
     --purple: #a855f7;
 
     /* Type Scale (1.25 ratio, base 14px) */
     --text-xs: 11px;
-    --text-sm: 12px;
+    --text-sm: 12.5px;
     --text-base: 14px;
     --text-md: 15px;
-    --text-lg: 16px;
-    --text-xl: 18px;
-    --text-2xl: 20px;
-    --text-3xl: 24px;
-    --text-4xl: 30px;
-    --text-5xl: 36px;
+    --text-lg: 17px;
+    --text-xl: 19px;
+    --text-2xl: 22px;
+    --text-3xl: 26px;
+    --text-4xl: 32px;
+    --text-5xl: 40px;
 
     /* Spacing (8pt grid) */
     --space-1: 4px;
@@ -64,23 +66,25 @@
     --space-16: 64px;
 
     /* Radii */
-    --radius: 16px;
-    --radius-sm: 12px;
-    --radius-xs: 8px;
+    --radius: 18px;
+    --radius-sm: 14px;
+    --radius-xs: 10px;
     --radius-full: 9999px;
 
-    /* Elevation */
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
-    --shadow-lg: 0 8px 30px rgba(0,0,0,0.5);
-    --shadow-xl: 0 16px 48px rgba(0,0,0,0.6);
+    /* Elevation - Richer shadows */
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.45);
+    --shadow-lg: 0 10px 36px rgba(0,0,0,0.55);
+    --shadow-xl: 0 20px 56px rgba(0,0,0,0.65);
+    --shadow-glow: 0 0 20px var(--primary-glow);
 
-    /* Motion */
+    /* Motion - Smoother */
     --ease: cubic-bezier(0.4, 0, 0.2, 1);
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
     --duration-fast: 150ms;
-    --duration-base: 200ms;
-    --duration-slow: 300ms;
+    --duration-base: 220ms;
+    --duration-slow: 350ms;
     --transition: var(--duration-base) var(--ease);
 
     /* Layout */
@@ -129,13 +133,19 @@ input, select, textarea {
     justify-content: center;
     gap: var(--space-8);
     z-index: 9999;
-    transition: opacity 0.4s ease;
+    transition: opacity 0.5s var(--ease);
 }
 
 .splash-logo {
-    font-size: 48px;
+    font-size: 52px;
     font-weight: 800;
-    letter-spacing: -1.5px;
+    letter-spacing: -2px;
+    animation: splashPulse 1.8s var(--ease) infinite;
+}
+
+@keyframes splashPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
 }
 
 .logo-pary { color: var(--primary); }
@@ -176,7 +186,14 @@ input, select, textarea {
     font-size: var(--text-5xl);
     font-weight: 800;
     margin-bottom: var(--space-10);
-    letter-spacing: -1.5px;
+    letter-spacing: -2px;
+}
+
+.auth-parygo-logo .logo-pary {
+    background: linear-gradient(135deg, var(--primary), #fb7185);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .auth-logo {
@@ -184,16 +201,16 @@ input, select, textarea {
 }
 
 .brand-logo {
-    width: 72px;
-    height: 72px;
+    width: 76px;
+    height: 76px;
     border-radius: var(--radius);
     background: var(--primary);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 26px;
+    font-size: 28px;
     overflow: hidden;
-    box-shadow: 0 0 0 4px var(--primary-soft);
+    box-shadow: 0 0 0 4px var(--primary-soft), 0 8px 24px rgba(244,63,94,0.15);
 }
 
 .brand-logo img {
@@ -394,11 +411,11 @@ input, select, textarea {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--space-3) var(--space-5);
-    padding-top: calc(var(--space-3) + var(--safe-area-top));
-    background: rgba(9,9,11,0.88);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    padding: var(--space-4) var(--space-5);
+    padding-top: calc(var(--space-4) + var(--safe-area-top));
+    background: rgba(8,8,10,0.85);
+    backdrop-filter: blur(28px) saturate(1.4);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4);
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
@@ -430,9 +447,9 @@ input, select, textarea {
 }
 
 .header-brand-name {
-    font-size: var(--text-lg);
-    font-weight: 700;
-    letter-spacing: -0.3px;
+    font-size: var(--text-xl);
+    font-weight: 800;
+    letter-spacing: -0.5px;
 }
 
 .header-actions {
@@ -443,9 +460,9 @@ input, select, textarea {
 
 .btn-icon-header {
     position: relative;
-    width: 40px;
-    height: 40px;
-    background: transparent;
+    width: 42px;
+    height: 42px;
+    background: var(--bg-elevated);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm);
     color: var(--text-secondary);
@@ -510,15 +527,15 @@ input, select, textarea {
 
 .section-title {
     font-size: var(--text-3xl);
-    font-weight: 700;
-    margin-bottom: var(--space-6);
-    letter-spacing: -0.5px;
+    font-weight: 800;
+    margin-bottom: var(--space-7);
+    letter-spacing: -0.8px;
 }
 
 .events-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-5);
+    gap: var(--space-6);
 }
 
 .event-card {
@@ -527,21 +544,22 @@ input, select, textarea {
     border-radius: var(--radius);
     overflow: hidden;
     cursor: pointer;
-    transition: transform var(--transition), box-shadow var(--transition);
+    transition: transform var(--duration-slow) var(--ease), box-shadow var(--duration-slow) var(--ease), border-color var(--duration-slow) var(--ease);
     opacity: 0;
-    transform: translateY(12px);
-    animation: fadeInUp 0.45s var(--ease-out) forwards;
+    transform: translateY(16px);
+    animation: fadeInUp 0.5s var(--ease-out) forwards;
+    box-shadow: var(--shadow-sm);
 }
 
-.event-card:nth-child(1) { animation-delay: 0.03s; }
-.event-card:nth-child(2) { animation-delay: 0.06s; }
-.event-card:nth-child(3) { animation-delay: 0.09s; }
-.event-card:nth-child(4) { animation-delay: 0.12s; }
-.event-card:nth-child(5) { animation-delay: 0.15s; }
-.event-card:nth-child(6) { animation-delay: 0.18s; }
+.event-card:nth-child(1) { animation-delay: 0.04s; }
+.event-card:nth-child(2) { animation-delay: 0.09s; }
+.event-card:nth-child(3) { animation-delay: 0.14s; }
+.event-card:nth-child(4) { animation-delay: 0.19s; }
+.event-card:nth-child(5) { animation-delay: 0.24s; }
+.event-card:nth-child(6) { animation-delay: 0.29s; }
 
 .event-card:active {
-    transform: scale(0.98);
+    transform: scale(0.975);
 }
 
 @keyframes fadeInUp {
@@ -553,31 +571,31 @@ input, select, textarea {
 
 @media (hover: hover) {
     .event-card:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-lg);
-        border-color: var(--border-strong);
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg), 0 0 0 1px var(--border-strong);
+        border-color: rgba(255,255,255,0.12);
     }
 }
 
 .event-card-image {
     width: 100%;
-    height: 200px;
+    height: 220px;
     object-fit: cover;
     object-position: center;
     display: block;
 }
 
 .event-card-body {
-    padding: var(--space-4) var(--space-5);
+    padding: var(--space-5) var(--space-5);
     padding-bottom: var(--space-5);
 }
 
 .event-card-title {
-    font-size: var(--text-lg);
+    font-size: var(--text-xl);
     font-weight: 700;
-    margin-bottom: var(--space-2);
-    letter-spacing: -0.3px;
-    line-height: 1.3;
+    margin-bottom: var(--space-3);
+    letter-spacing: -0.4px;
+    line-height: 1.25;
 }
 
 .event-card-meta {
@@ -596,7 +614,8 @@ input, select, textarea {
 
 .event-card-meta span i {
     font-size: var(--text-xs);
-    color: var(--text-dim);
+    color: var(--primary);
+    opacity: 0.6;
 }
 
 /* ==========================================
@@ -608,11 +627,11 @@ input, select, textarea {
     left: 0;
     right: 0;
     display: flex;
-    background: rgba(9,9,11,0.92);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    background: rgba(8,8,10,0.92);
+    backdrop-filter: blur(28px) saturate(1.4);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4);
     border-top: 1px solid var(--border);
-    padding: var(--space-1) 0;
+    padding: var(--space-2) 0 var(--space-1);
     padding-bottom: calc(var(--space-1) + var(--safe-area-bottom));
     z-index: 100;
 }
@@ -622,26 +641,30 @@ input, select, textarea {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 3px;
+    gap: 4px;
     padding: var(--space-2);
     background: none;
     border: none;
     color: var(--text-muted);
     font-size: 10px;
-    font-weight: 500;
+    font-weight: 600;
     font-family: inherit;
     cursor: pointer;
-    transition: color var(--transition);
-    min-height: 48px;
+    transition: color var(--transition), transform var(--duration-fast);
+    min-height: 50px;
+}
+
+.nav-item:active {
+    transform: scale(0.9);
 }
 
 .nav-item i {
     font-size: var(--text-2xl);
-    transition: color var(--transition);
+    transition: color var(--transition), transform var(--duration-fast);
 }
 
 .nav-item.active { color: var(--primary); }
-.nav-item.active i { color: var(--primary); }
+.nav-item.active i { color: var(--primary); transform: scale(1.1); }
 
 /* ==========================================
    SECTION 8: MODALS
@@ -649,9 +672,9 @@ input, select, textarea {
 .modal {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.7);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(12px) saturate(1.2);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
     display: flex;
     align-items: flex-end;
     justify-content: center;
@@ -670,6 +693,7 @@ input, select, textarea {
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     animation: slideUp var(--duration-slow) var(--ease-out);
+    box-shadow: var(--shadow-xl);
 }
 
 .modal-large {
@@ -714,12 +738,12 @@ input, select, textarea {
 }
 
 .modal-header h2 {
-    font-size: var(--text-lg);
-    font-weight: 700;
+    font-size: var(--text-xl);
+    font-weight: 800;
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    letter-spacing: -0.3px;
+    letter-spacing: -0.4px;
 }
 
 .modal-header h2 i {
@@ -765,32 +789,35 @@ input, select, textarea {
     border: none;
     padding: var(--space-4) var(--space-6);
     border-radius: var(--radius-xs);
-    font-size: var(--text-base);
-    font-weight: 600;
+    font-size: var(--text-md);
+    font-weight: 700;
     font-family: inherit;
     cursor: pointer;
-    transition: all var(--transition);
-    min-height: 48px;
+    transition: all var(--duration-base) var(--ease);
+    min-height: 52px;
     letter-spacing: 0.2px;
+    box-shadow: 0 2px 12px rgba(244,63,94,0.2);
 }
 
 .btn-primary:active {
-    transform: scale(0.97);
-    opacity: 0.9;
+    transform: scale(0.96);
+    box-shadow: 0 1px 4px rgba(244,63,94,0.15);
 }
 
 .btn-primary:disabled {
-    opacity: 0.4;
+    opacity: 0.35;
     cursor: not-allowed;
     transform: none;
+    box-shadow: none;
 }
 
 .btn-primary.full { width: 100%; }
 
 @media (hover: hover) {
     .btn-primary:hover:not(:disabled) {
-        opacity: 0.9;
-        transform: translateY(-1px);
+        background: var(--primary-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(244,63,94,0.3);
     }
 }
 
@@ -804,16 +831,25 @@ input, select, textarea {
     color: var(--text);
     padding: var(--space-4) var(--space-6);
     border-radius: var(--radius-xs);
-    font-size: var(--text-base);
+    font-size: var(--text-md);
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
-    transition: all var(--transition);
-    min-height: 48px;
+    transition: all var(--duration-base) var(--ease);
+    min-height: 52px;
 }
 
 .btn-secondary:active {
-    transform: scale(0.97);
+    transform: scale(0.96);
+    background: var(--bg-hover);
+}
+
+@media (hover: hover) {
+    .btn-secondary:hover {
+        border-color: rgba(255,255,255,0.15);
+        background: var(--bg-hover);
+        transform: translateY(-1px);
+    }
 }
 
 .btn-secondary.full { width: 100%; }
@@ -851,11 +887,11 @@ input, select, textarea {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--space-3) var(--space-5);
-    padding-top: calc(var(--space-3) + var(--safe-area-top));
-    background: rgba(9,9,11,0.88);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    padding: var(--space-4) var(--space-5);
+    padding-top: calc(var(--space-4) + var(--safe-area-top));
+    background: rgba(8,8,10,0.85);
+    backdrop-filter: blur(28px) saturate(1.4);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4);
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
@@ -864,8 +900,8 @@ input, select, textarea {
 
 .detail-header span {
     font-size: var(--text-lg);
-    font-weight: 600;
-    letter-spacing: -0.2px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
 }
 
 .btn-back {
@@ -897,21 +933,21 @@ input, select, textarea {
 
 .event-cover {
     width: 100%;
-    max-height: 280px;
+    max-height: 300px;
     overflow: hidden;
     position: relative;
 }
 
 .event-cover img {
     width: 100%;
-    max-height: 280px;
+    max-height: 300px;
     object-fit: cover;
     object-position: center;
     display: block;
 }
 
 .event-info-card {
-    padding: var(--space-6) var(--space-5);
+    padding: var(--space-7) var(--space-6);
     background: var(--bg-card);
     margin: 0;
     border-radius: 0;
@@ -919,11 +955,11 @@ input, select, textarea {
 }
 
 .event-info-card h1 {
-    font-size: var(--text-3xl);
-    font-weight: 700;
-    margin-bottom: var(--space-4);
-    letter-spacing: -0.5px;
-    line-height: 1.2;
+    font-size: var(--text-4xl);
+    font-weight: 800;
+    margin-bottom: var(--space-5);
+    letter-spacing: -0.8px;
+    line-height: 1.15;
 }
 
 .event-meta {
@@ -936,13 +972,14 @@ input, select, textarea {
     display: flex;
     align-items: center;
     gap: var(--space-3);
-    font-size: var(--text-base);
+    font-size: var(--text-md);
     color: var(--text-secondary);
 }
 
 .meta-item i {
-    color: var(--text-muted);
-    width: var(--space-4);
+    color: var(--primary);
+    opacity: 0.5;
+    width: var(--space-5);
     text-align: center;
     font-size: var(--text-sm);
 }
@@ -953,22 +990,23 @@ input, select, textarea {
 .action-section {
     background: var(--bg-card);
     border-top: 1px solid var(--border);
-    padding: var(--space-6) var(--space-5);
+    padding: var(--space-7) var(--space-6);
 }
 
 .action-section h3 {
-    font-size: var(--text-lg);
-    font-weight: 700;
-    margin-bottom: var(--space-2);
+    font-size: var(--text-xl);
+    font-weight: 800;
+    margin-bottom: var(--space-3);
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    letter-spacing: -0.3px;
+    gap: var(--space-3);
+    letter-spacing: -0.4px;
 }
 
 .action-section h3 i {
-    color: var(--text-muted);
-    font-size: var(--text-md);
+    color: var(--primary);
+    font-size: var(--text-lg);
+    opacity: 0.7;
 }
 
 .action-section > p {
@@ -985,15 +1023,22 @@ input, select, textarea {
 
 .code-input-row input {
     flex: 1;
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-4) var(--space-5);
     background: var(--bg-elevated);
-    border: 1px solid var(--border-strong);
+    border: 1.5px solid var(--border-strong);
     border-radius: var(--radius-xs);
     color: var(--text);
     font-family: 'Outfit', monospace;
-    letter-spacing: 3px;
+    letter-spacing: 4px;
     text-align: center;
-    font-weight: 600;
+    font-weight: 700;
+    font-size: var(--text-lg);
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.code-input-row input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
 .code-input-row .btn-primary {
@@ -1069,14 +1114,14 @@ input, select, textarea {
     gap: 0;
     background: var(--bg-elevated);
     border-radius: var(--radius-sm);
-    padding: 3px;
-    margin-bottom: var(--space-6);
+    padding: 4px;
+    margin-bottom: var(--space-7);
     border: 1px solid var(--border);
 }
 
 .tab-btn {
     flex: 1;
-    padding: var(--space-3);
+    padding: var(--space-3) var(--space-4);
     background: transparent;
     border: none;
     border-radius: var(--radius-xs);
@@ -1085,13 +1130,14 @@ input, select, textarea {
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
-    transition: all var(--transition);
-    min-height: 44px;
+    transition: all var(--duration-base) var(--ease);
+    min-height: 46px;
 }
 
 .tab-btn.active {
     background: var(--primary);
     color: white;
+    box-shadow: 0 2px 8px rgba(244,63,94,0.25);
 }
 
 .my-tickets-list {
@@ -1106,11 +1152,20 @@ input, select, textarea {
     border-radius: var(--radius);
     padding: var(--space-5);
     cursor: pointer;
-    transition: all var(--transition);
+    transition: all var(--duration-base) var(--ease);
+    box-shadow: var(--shadow-sm);
 }
 
 .my-ticket-card:active {
-    transform: scale(0.98);
+    transform: scale(0.975);
+}
+
+@media (hover: hover) {
+    .my-ticket-card:hover {
+        border-color: rgba(255,255,255,0.12);
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
 }
 
 .my-ticket-header {
@@ -1121,9 +1176,9 @@ input, select, textarea {
 }
 
 .my-ticket-event {
-    font-size: var(--text-md);
-    font-weight: 700;
-    letter-spacing: -0.2px;
+    font-size: var(--text-lg);
+    font-weight: 800;
+    letter-spacing: -0.3px;
 }
 
 .my-ticket-type {
@@ -1195,10 +1250,10 @@ input, select, textarea {
     background: #ffffff;
     border-radius: var(--radius);
     overflow: hidden;
-    padding: var(--space-6) var(--space-5);
+    padding: var(--space-7) var(--space-6);
     text-align: center;
     color: #111111;
-    box-shadow: var(--shadow-xl);
+    box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255,255,255,0.08);
 }
 
 .ticket-download-card .qr-container {
@@ -1315,10 +1370,10 @@ input, select, textarea {
    BUY MODAL
    ========================================== */
 .step-title {
-    font-size: var(--text-lg);
-    font-weight: 700;
+    font-size: var(--text-xl);
+    font-weight: 800;
     margin-bottom: var(--space-5);
-    letter-spacing: -0.2px;
+    letter-spacing: -0.4px;
 }
 
 .ticket-selected {
@@ -1373,9 +1428,9 @@ input, select, textarea {
 }
 
 .qty-selector > span {
-    font-size: var(--text-4xl);
+    font-size: var(--text-5xl);
     font-weight: 800;
-    min-width: 50px;
+    min-width: 60px;
     text-align: center;
 }
 
@@ -1399,8 +1454,8 @@ input, select, textarea {
     border-top: 1px solid var(--border);
     margin-top: var(--space-2);
     padding-top: var(--space-4);
-    font-weight: 700;
-    font-size: var(--text-lg);
+    font-weight: 800;
+    font-size: var(--text-xl);
     color: var(--text);
 }
 
@@ -1428,7 +1483,7 @@ input, select, textarea {
 
 .payment-method-btn {
     flex: 1;
-    padding: var(--space-4) var(--space-3);
+    padding: var(--space-5) var(--space-3);
     background: var(--bg-elevated);
     border: 2px solid var(--border-strong);
     border-radius: var(--radius);
@@ -1440,9 +1495,9 @@ input, select, textarea {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: var(--space-2);
-    transition: all var(--transition);
-    min-height: 100px;
+    gap: var(--space-3);
+    transition: all var(--duration-base) var(--ease);
+    min-height: 110px;
 }
 
 .payment-method-btn .payment-logo {
@@ -1655,16 +1710,22 @@ input, select, textarea {
 }
 
 .success-icon {
-    width: var(--space-16);
-    height: var(--space-16);
+    width: 72px;
+    height: 72px;
     background: var(--yellow-soft);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto var(--space-6);
-    font-size: var(--space-7);
+    font-size: var(--space-8);
     color: var(--yellow);
+    animation: successBounce 0.5s var(--ease-spring);
+}
+
+@keyframes successBounce {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
 }
 
 .success-icon.green {
@@ -1673,9 +1734,10 @@ input, select, textarea {
 }
 
 .success-state h3 {
-    font-size: var(--text-2xl);
+    font-size: var(--text-3xl);
+    font-weight: 800;
     margin-bottom: var(--space-3);
-    letter-spacing: -0.3px;
+    letter-spacing: -0.5px;
 }
 
 .success-state p {
@@ -1691,7 +1753,7 @@ input, select, textarea {
 .skeleton {
     background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-elevated) 50%, var(--bg-card) 75%);
     background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
+    animation: shimmer 1.8s ease infinite;
     border-radius: var(--radius-xs);
 }
 
@@ -1724,16 +1786,16 @@ input, select, textarea {
 }
 
 .empty-state i {
-    font-size: var(--space-12);
-    opacity: 0.15;
-    margin-bottom: var(--space-5);
+    font-size: 56px;
+    opacity: 0.12;
+    margin-bottom: var(--space-6);
     display: block;
 }
 
 .empty-state h3 {
-    font-size: var(--text-lg);
-    font-weight: 600;
-    margin-bottom: var(--space-2);
+    font-size: var(--text-xl);
+    font-weight: 700;
+    margin-bottom: var(--space-3);
     color: var(--text-secondary);
 }
 
@@ -1761,13 +1823,15 @@ input, select, textarea {
     padding: var(--space-4) var(--space-5);
     border-radius: var(--radius-sm);
     font-size: var(--text-base);
-    font-weight: 500;
+    font-weight: 600;
     text-align: left;
-    animation: toastIn var(--duration-slow) var(--ease-out);
+    animation: toastIn var(--duration-slow) var(--ease-spring);
     box-shadow: var(--shadow-lg);
     display: flex;
     align-items: center;
     gap: var(--space-3);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 }
 
 .toast-icon {
@@ -1811,14 +1875,15 @@ input, select, textarea {
     top: 0;
     right: -100%;
     width: 100%;
-    max-width: 320px;
+    max-width: 340px;
     height: 100dvh;
     background: var(--bg-card);
     z-index: 999;
-    transition: right var(--duration-slow) var(--ease);
+    transition: right var(--duration-slow) var(--ease-out);
     display: flex;
     flex-direction: column;
     border-left: 1px solid var(--border);
+    box-shadow: -8px 0 40px rgba(0,0,0,0.4);
 }
 
 .drawer.open { right: 0; }
@@ -1832,24 +1897,25 @@ input, select, textarea {
 }
 
 .profile-avatar {
-    width: var(--space-16);
-    height: var(--space-16);
-    background: var(--primary);
+    width: 72px;
+    height: 72px;
+    background: linear-gradient(135deg, var(--primary), #fb7185);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: var(--text-3xl);
-    font-weight: 700;
+    font-weight: 800;
     margin: 0 auto var(--space-4);
     color: white;
+    box-shadow: 0 4px 16px rgba(244,63,94,0.25);
 }
 
 .drawer-header h2 {
-    font-size: var(--text-xl);
-    font-weight: 700;
+    font-size: var(--text-2xl);
+    font-weight: 800;
     margin-bottom: var(--space-1);
-    letter-spacing: -0.3px;
+    letter-spacing: -0.4px;
 }
 
 .profile-doc {
@@ -1941,43 +2007,43 @@ input, select, textarea {
     .events-main {
         max-width: 1200px;
         margin: 0 auto;
-        padding: var(--space-10) var(--space-6);
-        padding-bottom: var(--space-12);
+        padding: var(--space-12) var(--space-8);
+        padding-bottom: var(--space-16);
     }
 
     .bottom-nav { display: none; }
 
     .ticket-qr-content {
-        max-width: 500px;
+        max-width: 520px;
         margin: 0 auto;
     }
 
     .tickets-main {
-        max-width: 700px;
+        max-width: 720px;
         margin: 0 auto;
     }
 
     .event-detail-content {
-        max-width: 700px;
+        max-width: 720px;
         margin: 0 auto;
     }
 
     .action-section {
         border-radius: var(--radius);
         border: 1px solid var(--border);
-        margin: var(--space-5) 0;
+        margin: var(--space-6) 0;
     }
 
     .event-info-card {
         border-radius: var(--radius);
         border: 1px solid var(--border);
-        margin: var(--space-5) 0;
+        margin: var(--space-6) 0;
     }
 
     .event-cover {
         border-radius: var(--radius);
-        margin: var(--space-5) auto 0;
-        max-width: 700px;
+        margin: var(--space-6) auto 0;
+        max-width: 720px;
     }
 
     .event-cover img {
@@ -2008,10 +2074,10 @@ input, select, textarea {
 }
 
 .redeem-meta h3 {
-    font-size: var(--text-lg);
-    font-weight: 700;
+    font-size: var(--text-xl);
+    font-weight: 800;
     margin-bottom: var(--space-3);
-    letter-spacing: -0.2px;
+    letter-spacing: -0.3px;
 }
 
 .redeem-meta-row {
@@ -2155,23 +2221,28 @@ input, select, textarea {
 
 .date-filter-btn {
     flex-shrink: 0;
-    padding: var(--space-2) var(--space-4);
+    padding: var(--space-2) var(--space-5);
     background: transparent;
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-full);
     color: var(--text-muted);
     font-size: var(--text-sm);
-    font-weight: 500;
+    font-weight: 600;
     font-family: inherit;
     cursor: pointer;
-    transition: all var(--transition);
+    transition: all var(--duration-base) var(--ease);
     white-space: nowrap;
+}
+
+.date-filter-btn:active {
+    transform: scale(0.95);
 }
 
 .date-filter-btn.active {
     background: var(--text);
     border-color: var(--text);
     color: var(--bg);
+    font-weight: 700;
 }
 
 /* ==========================================
@@ -2338,17 +2409,22 @@ input, select, textarea {
    ANIMATIONS
    ========================================== */
 @keyframes fadeInScale {
-    from { opacity: 0; transform: scale(0.96); }
+    from { opacity: 0; transform: scale(0.94); }
     to { opacity: 1; transform: scale(1); }
 }
 
 @keyframes slideInRight {
-    from { opacity: 0; transform: translateX(20px); }
+    from { opacity: 0; transform: translateX(24px); }
     to { opacity: 1; transform: translateX(0); }
 }
 
 .stagger-in {
-    animation: fadeInUp 0.4s var(--ease-out) forwards;
+    animation: fadeInUp 0.45s var(--ease-out) forwards;
+}
+
+/* Utility: smooth appear */
+.fade-in {
+    animation: fadeIn var(--duration-slow) var(--ease) forwards;
 }
 
 .tab-badge {
@@ -2400,8 +2476,14 @@ input, select, textarea {
     padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-full);
     font-size: var(--text-xs);
-    font-weight: 600;
-    margin: var(--space-1) 0;
+    font-weight: 700;
+    margin: var(--space-2) 0;
+    animation: badgePulse 2s ease infinite;
+}
+
+@keyframes badgePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.75; }
 }
 
 .countdown-yellow {
@@ -2426,24 +2508,31 @@ input, select, textarea {
     position: fixed;
     bottom: calc(80px + var(--safe-area-bottom));
     right: var(--space-5);
-    width: 52px;
-    height: 52px;
+    width: 56px;
+    height: 56px;
     background: var(--primary);
     border: none;
     border-radius: 50%;
     color: white;
     font-size: var(--text-2xl);
     cursor: pointer;
-    box-shadow: 0 4px 16px var(--primary-glow);
+    box-shadow: 0 6px 24px rgba(244,63,94,0.35);
     z-index: 99;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all var(--transition);
+    transition: all var(--duration-base) var(--ease);
 }
 
 .fab-btn:active {
-    transform: scale(0.9);
+    transform: scale(0.88);
+}
+
+@media (hover: hover) {
+    .fab-btn:hover {
+        transform: scale(1.08);
+        box-shadow: 0 8px 32px rgba(244,63,94,0.45);
+    }
 }
 
 @media (min-width: 769px) {
@@ -2457,10 +2546,11 @@ input, select, textarea {
     position: absolute;
     top: var(--space-3);
     right: var(--space-3);
-    width: 34px;
-    height: 34px;
-    background: rgba(0,0,0,0.45);
-    backdrop-filter: blur(4px);
+    width: 36px;
+    height: 36px;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border: none;
     border-radius: 50%;
     color: white;
@@ -2470,11 +2560,11 @@ input, select, textarea {
     align-items: center;
     justify-content: center;
     z-index: 2;
-    transition: transform var(--transition);
+    transition: transform var(--duration-fast) var(--ease-spring), color var(--transition);
 }
 
-.event-card-fav:active { transform: scale(0.85); }
-.event-card-fav.active { color: var(--yellow); }
+.event-card-fav:active { transform: scale(0.8); }
+.event-card-fav.active { color: var(--yellow); transform: scale(1.1); }
 
 .event-card-image-wrapper {
     position: relative;
@@ -2497,15 +2587,16 @@ input, select, textarea {
 }
 
 /* ==========================================
-   UNIFIED TICKET CARDS - REDESIGN v10.1
+   UNIFIED TICKET CARDS - REDESIGN v11.0
    ========================================== */
 .ticket-card-unified {
     background: var(--bg-card);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius);
     overflow: hidden;
-    transition: transform var(--duration-base) var(--ease), box-shadow var(--duration-base) var(--ease);
-    animation: tcuFadeIn 0.4s var(--ease-out) both;
+    transition: transform var(--duration-slow) var(--ease), box-shadow var(--duration-slow) var(--ease), border-color var(--duration-slow) var(--ease);
+    animation: tcuFadeIn 0.45s var(--ease-out) both;
+    box-shadow: var(--shadow-sm);
 }
 
 .ticket-card-unified:nth-child(1) { animation-delay: 0.04s; }
@@ -2529,8 +2620,8 @@ input, select, textarea {
 @media (hover: hover) {
     .ticket-card-unified:not(.phases):not(.disabled):hover {
         border-color: var(--primary);
-        box-shadow: 0 0 0 1px var(--primary), 0 4px 20px rgba(244,63,94,0.12);
-        transform: translateY(-1px);
+        box-shadow: 0 0 0 1px var(--primary), 0 6px 24px rgba(244,63,94,0.15);
+        transform: translateY(-3px);
     }
 }
 
@@ -2546,9 +2637,9 @@ input, select, textarea {
 
 .tcu-name {
     font-size: var(--text-2xl);
-    font-weight: 700;
+    font-weight: 800;
     color: var(--text);
-    letter-spacing: -0.4px;
+    letter-spacing: -0.5px;
     line-height: 1.2;
 }
 
@@ -2561,7 +2652,7 @@ input, select, textarea {
 }
 
 .tcu-price-tag {
-    font-size: var(--text-xl);
+    font-size: var(--text-2xl);
     font-weight: 800;
     color: var(--green);
     letter-spacing: -0.3px;
@@ -2577,19 +2668,19 @@ input, select, textarea {
     gap: var(--space-2);
     background: var(--primary);
     color: white;
-    padding: var(--space-3) var(--space-5);
+    padding: var(--space-3) var(--space-6);
     border-radius: var(--radius-xs);
     font-size: var(--text-sm);
     font-weight: 700;
     letter-spacing: 0.3px;
     white-space: nowrap;
-    transition: all var(--duration-fast) var(--ease);
-    box-shadow: 0 2px 8px rgba(244,63,94,0.25);
+    transition: all var(--duration-base) var(--ease);
+    box-shadow: 0 3px 12px rgba(244,63,94,0.3);
 }
 
 .tcu-btn.free {
     background: var(--green);
-    box-shadow: 0 2px 8px rgba(16,185,129,0.25);
+    box-shadow: 0 3px 12px rgba(34,197,94,0.3);
 }
 
 .tcu-btn i {
@@ -2598,11 +2689,12 @@ input, select, textarea {
 
 @media (hover: hover) {
     .ticket-card-unified:not(.disabled):hover .tcu-btn {
-        transform: scale(1.03);
-        box-shadow: 0 4px 16px rgba(244,63,94,0.35);
+        transform: scale(1.05);
+        box-shadow: 0 6px 24px rgba(244,63,94,0.4);
+        background: var(--primary-hover);
     }
     .ticket-card-unified:not(.disabled):hover .tcu-btn.free {
-        box-shadow: 0 4px 16px rgba(16,185,129,0.35);
+        box-shadow: 0 6px 24px rgba(34,197,94,0.4);
     }
 }
 
@@ -2642,29 +2734,30 @@ input, select, textarea {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--space-4) var(--space-5);
+    padding: var(--space-5) var(--space-5);
     background: var(--bg-elevated);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    transition: all var(--duration-base) var(--ease);
+    transition: all var(--duration-slow) var(--ease);
 }
 
 .tcu-phase.active {
     cursor: pointer;
-    border-color: rgba(244,63,94,0.2);
+    border-color: rgba(244,63,94,0.25);
     background: rgba(244,63,94,0.04);
 }
 
 .tcu-phase.active:active {
-    transform: scale(0.98);
+    transform: scale(0.975);
     background: var(--bg-hover);
 }
 
 @media (hover: hover) {
     .tcu-phase.active:hover {
         border-color: var(--primary);
-        background: rgba(244,63,94,0.06);
-        box-shadow: 0 2px 12px rgba(244,63,94,0.1);
+        background: rgba(244,63,94,0.07);
+        box-shadow: 0 4px 16px rgba(244,63,94,0.12);
+        transform: translateY(-2px);
     }
 }
 
@@ -2692,7 +2785,7 @@ input, select, textarea {
 }
 
 .tcu-phase-name {
-    font-size: var(--text-md);
+    font-size: var(--text-lg);
     font-weight: 700;
     color: var(--text);
 }
@@ -2723,7 +2816,7 @@ input, select, textarea {
 }
 
 .tcu-phase-price {
-    font-size: var(--text-xl);
+    font-size: var(--text-2xl);
     font-weight: 800;
     color: var(--text-secondary);
     letter-spacing: -0.3px;
@@ -2950,9 +3043,10 @@ input, select, textarea {
 }
 
 .detail-countdown-value {
-    font-size: var(--text-2xl);
+    font-size: var(--text-3xl);
     font-weight: 800;
     color: var(--primary);
+    letter-spacing: -0.5px;
 }
 
 /* ==========================================
@@ -3113,8 +3207,8 @@ input, select, textarea {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-4) var(--space-3);
+    gap: var(--space-3);
+    padding: var(--space-5) var(--space-3);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background: var(--bg-elevated);
@@ -3123,13 +3217,21 @@ input, select, textarea {
     font-family: 'Outfit', sans-serif;
     font-size: var(--text-sm);
     font-weight: 600;
-    transition: all var(--transition);
+    transition: all var(--duration-base) var(--ease);
     flex: 1;
 }
 
 .share-option-btn:active {
     background: var(--bg-hover);
-    transform: scale(0.97);
+    transform: scale(0.95);
+}
+
+@media (hover: hover) {
+    .share-option-btn:hover {
+        border-color: rgba(255,255,255,0.12);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
 }
 
 .share-option-btn i { font-size: var(--text-3xl); }
