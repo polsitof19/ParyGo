@@ -215,6 +215,8 @@ window.openStockModal = openStockModal;
 window.loadStockTable = loadStockTable;
 window.saveStockAssignment = saveStockAssignment;
 window.togglePromoterField = togglePromoterField;
+window.downloadCodesAsExcel = downloadCodesAsExcel;
+window.downloadCodesAsTxt = downloadCodesAsTxt;
 
 // Métricas y Ventas
 window.loadEventMetrics = loadEventMetrics;
@@ -436,7 +438,13 @@ function setupGlobalEventListeners() {
     document.querySelectorAll('.filter-tabs .f-tab').forEach(tab => {
         tab.addEventListener('click', function() {
             const filter = this.getAttribute('data-filter');
-            filterAccessStatus(filter, this);
+            // Actualizar UI de tabs
+            document.querySelectorAll('.filter-tabs .f-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            // Actualizar select oculto y aplicar filtros
+            const filterSelect = document.getElementById('filterAccessStatus');
+            if (filterSelect) filterSelect.value = filter;
+            if (window.applyAccessFilters) window.applyAccessFilters();
         });
     });
     
@@ -930,7 +938,7 @@ function exportMetricsReport() {
     const fileName = `Reporte_${eventName.replace(/[^a-zA-Z0-9]/g, '_')}_${fecha}`;
     XLSX.writeFile(wb, `${fileName}.xlsx`);
     
-    showToast('Reporte completo descargado', 'success');
+    toast('Reporte completo descargado', 'success');
 }
 
 // Función auxiliar para convertir tabla a hoja

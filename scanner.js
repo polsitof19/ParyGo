@@ -462,7 +462,12 @@ async function startScanner() {
         );
     } catch (err) {
         console.error("Error iniciando cámara:", err);
-        showToast('Error al acceder a la cámara', 'error');
+        const msg = err.name === 'NotAllowedError' ? 'Permiso de cámara denegado. Actívalo en configuración del navegador'
+            : err.name === 'NotFoundError' ? 'No se encontró una cámara en este dispositivo'
+            : err.name === 'NotReadableError' ? 'La cámara está siendo usada por otra aplicación'
+            : err.name === 'OverconstrainedError' ? 'La cámara seleccionada no está disponible'
+            : 'Error al acceder a la cámara';
+        showToast(msg, 'error');
     }
 }
 
@@ -502,12 +507,14 @@ async function onScanSuccess(decodedText) {
 
     playBeep('success');
 
-    await validateCode(decodedText);
-
-    // Cooldown
-    setTimeout(() => {
-        state.isScanning = false;
-    }, 2000);
+    try {
+        await validateCode(decodedText);
+    } finally {
+        // Cooldown después de que validateCode termine
+        setTimeout(() => {
+            state.isScanning = false;
+        }, 2000);
+    }
 }
 
 function onScanFailure(error) {
@@ -603,7 +610,7 @@ async function validateCode(code) {
         };
 
         // Ya escaneado
-        if (ticketData.status?.includes('SCANNED')) {
+        if (ticketData.status === 'SCANNED' || ticketData.status === 'SCANNED_IN') {
             const scannedAt = ticketData.scanned_at
                 ? new Date(ticketData.scanned_at).toLocaleString('es-PE')
                 : 'Desconocido';

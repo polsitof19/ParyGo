@@ -2569,21 +2569,12 @@ async function populateTicketQR(ticket) {
 
 function generateTicketQR(ticket) {
     const container = document.getElementById("ticketQRContainer");
-    if (!container) {
-        console.warn('generateTicketQR: container no encontrado');
-        return;
-    }
-    if (!ticket) {
-        console.warn('generateTicketQR: ticket vacío');
-        return;
-    }
+    if (!container) return;
+    if (!ticket) return;
 
     // Usar SOLO el código corto del ticket (compatible con scanner)
     const qrCode = ticket.code || ticket.qr_token || '';
-    if (!qrCode) {
-        console.warn('generateTicketQR: no code in ticket', ticket.id);
-        return;
-    }
+    if (!qrCode) return;
 
     // Limpiar QR anterior
     container.innerHTML = '';

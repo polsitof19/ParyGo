@@ -77,7 +77,7 @@ function updatePromotersDropdown() {
     if (state.allPromotersData.length > 0) {
         state.allPromotersData.forEach(p => {
             html += `
-                <div class="custom-dropdown-item" onclick="window.selectPromoter('${Validator.sanitizeHTML(p.name)}', '${p.id}')">
+                <div class="custom-dropdown-item" onclick="window.selectPromoter('${Validator.sanitizeHTML(p.name)}', '${Validator.sanitizeHTML(p.id)}')">
                     <i class="fa-regular fa-user"></i> 
                     <span>${Validator.sanitizeHTML(p.name)}</span>
                     <span style="font-size:10px; opacity:0.5; margin-left:auto;">${p.dni}</span>
@@ -410,7 +410,7 @@ export async function loadStockTable() {
                     <td style="text-align:center;">${q.used || 0}</td>
                     <td style="text-align:center; font-weight:700; color:${disponible > 0 ? 'var(--success)' : 'var(--danger)'};">${disponible}</td>
                     <td>
-                        <button class="btn-icon" onclick="window.editStock('${d.id}')" title="Editar">
+                        <button class="btn-icon" onclick="window.editStock('${Validator.sanitizeHTML(d.id)}')" title="Editar">
                             <i class="fa-solid fa-pen"></i>
                         </button>
                     </td>

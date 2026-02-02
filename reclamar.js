@@ -214,7 +214,7 @@ async function validateCode() {
             const snapshot2 = await getDocs(q2);
             
             if (snapshot2.empty) {
-                showToast('Código no válido', 'error');
+                showToast('Código no encontrado. Verifica que esté bien escrito', 'error');
                 showLoading(false);
                 return;
             }
@@ -225,7 +225,7 @@ async function validateCode() {
         }
         
         if (state.brand && state.codeData.brand_id && state.codeData.brand_id !== state.brand.id) {
-            showToast('Este código no es válido para esta marca', 'error');
+            showToast(`Este código pertenece a otra marca, no a ${state.brand.name || 'esta'}`, 'error');
             showLoading(false);
             return;
         }
@@ -243,7 +243,7 @@ async function validateCode() {
             const currentUses = state.codeData.current_uses || 0;
             
             if (currentUses >= maxUses) {
-                showToast('Este código ha alcanzado su límite de usos', 'error');
+                showToast(`Este código alcanzó su límite (${currentUses}/${maxUses} usos)`, 'error');
                 showLoading(false);
                 return;
             }
@@ -252,10 +252,11 @@ async function validateCode() {
         if (state.codeData.expires_at) {
             const expiryDate = new Date(state.codeData.expires_at);
             const today = new Date();
-            today.setHours(23, 59, 59, 999);
-            
+            today.setHours(0, 0, 0, 0);
+
             if (expiryDate < today) {
-                showToast('Este código ha expirado', 'error');
+                const expStr = expiryDate.toLocaleDateString('es-PE');
+                showToast(`Este código expiró el ${expStr}`, 'error');
                 showLoading(false);
                 return;
             }
@@ -268,7 +269,7 @@ async function validateCode() {
                     const event = eventDoc.data();
                     
                     if (event.status === 'FINISHED' || event.status === 'CANCELLED') {
-                        showToast('Este evento ya finalizó', 'error');
+                        showToast(`El evento "${event.name || ''}" ya finalizó`, 'error');
                         showLoading(false);
                         return;
                     }

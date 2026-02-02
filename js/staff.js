@@ -100,10 +100,10 @@ async function loadPromotersTable() {
                     <td>${promoterBrands}</td>
                     <td>
                         <div style="display:flex; gap:8px;">
-                            <button class="btn-icon" onclick="window.editPromoter('${p.id}')" title="Editar">
+                            <button class="btn-icon" onclick="window.editPromoter('${Validator.sanitizeHTML(p.id)}')" title="Editar">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
-                            <button class="btn-icon" style="background:rgba(239,68,68,0.15); color:#ef4444;" onclick="window.deletePromoter('${p.id}')" title="Eliminar">
+                            <button class="btn-icon" style="background:rgba(239,68,68,0.15); color:#ef4444;" onclick="window.deletePromoter('${Validator.sanitizeHTML(p.id)}')" title="Eliminar">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </div>
@@ -356,7 +356,7 @@ export function renderPromoterBrandSelector() {
             return `
                 <div class="brand-chip" style="display:inline-flex; align-items:center; gap:5px; padding:5px 10px; background:var(--primary); color:#fff; border-radius:20px; font-size:12px; margin:2px;">
                     <span>${Validator.sanitizeHTML(name)}</span>
-                    <i class="fa-solid fa-times" style="cursor:pointer; opacity:0.8;" onclick="window.removeBrandChip('${id}')"></i>
+                    <i class="fa-solid fa-times" style="cursor:pointer; opacity:0.8;" onclick="window.removeBrandChip('${Validator.sanitizeHTML(id)}')"></i>
                 </div>
             `;
         }).join('');
@@ -370,7 +370,7 @@ export function renderPromoterBrandSelector() {
             const isSelected = tempSelectedBrands.includes(b.id);
             return `
                 <div class="multi-option ${isSelected ? 'selected' : ''}" 
-                     onclick="window.selectBrand('${b.id}')" 
+                     onclick="window.selectBrand('${Validator.sanitizeHTML(b.id)}')"
                      style="padding:12px 15px; cursor:pointer; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border); ${isSelected ? 'background:rgba(244,63,94,0.1);' : ''}">
                     ${b.logo 
                         ? `<img src="${b.logo}" style="width:24px; height:24px; border-radius:4px; object-fit:cover;">` 
@@ -462,10 +462,10 @@ async function loadAdminsTable() {
                     <td>${statusBadge}</td>
                     <td>
                         <div style="display:flex; gap:8px;">
-                            <button class="btn-icon" onclick="window.editAdmin('${a.id}')" title="Editar">
+                            <button class="btn-icon" onclick="window.editAdmin('${Validator.sanitizeHTML(a.id)}')" title="Editar">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
-                            <button class="btn-icon" style="background:rgba(239,68,68,0.15); color:#ef4444;" onclick="window.deleteAdmin('${a.id}')" title="Eliminar">
+                            <button class="btn-icon" style="background:rgba(239,68,68,0.15); color:#ef4444;" onclick="window.deleteAdmin('${Validator.sanitizeHTML(a.id)}')" title="Eliminar">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </div>
@@ -679,7 +679,7 @@ export function renderAdminBrandSelector() {
             return `
                 <div class="brand-chip" style="display:inline-flex; align-items:center; gap:5px; padding:5px 10px; background:var(--primary); color:#fff; border-radius:20px; font-size:12px; margin:2px;">
                     <span>${Validator.sanitizeHTML(name)}</span>
-                    <i class="fa-solid fa-times" style="cursor:pointer; opacity:0.8;" onclick="window.removeAdminBrandChip('${id}')"></i>
+                    <i class="fa-solid fa-times" style="cursor:pointer; opacity:0.8;" onclick="window.removeAdminBrandChip('${Validator.sanitizeHTML(id)}')"></i>
                 </div>
             `;
         }).join('');
@@ -693,7 +693,7 @@ export function renderAdminBrandSelector() {
             const isSelected = tempAdminBrands.includes(b.id);
             return `
                 <div class="dropdown-item ${isSelected ? 'selected' : ''}" 
-                     onclick="window.selectAdminBrand('${b.id}')" 
+                     onclick="window.selectAdminBrand('${Validator.sanitizeHTML(b.id)}')"
                      style="padding:12px 15px; cursor:pointer; display:flex; align-items:center; gap:10px; ${isSelected ? 'background:rgba(244,63,94,0.1);' : ''}">
                     ${b.logo 
                         ? `<img src="${b.logo}" style="width:24px; height:24px; border-radius:4px; object-fit:cover;">` 
@@ -776,7 +776,7 @@ async function loadScannersTable() {
                 <td>${Validator.sanitizeHTML(s.email || '-')}</td>
                 <td><span style="color:var(--muted);">Todos los eventos</span></td>
                 <td>
-                    <button class="btn-icon" style="background:rgba(239,68,68,0.15); color:#ef4444;" onclick="window.deleteScanner('${s.id}')" title="Eliminar">
+                    <button class="btn-icon" style="background:rgba(239,68,68,0.15); color:#ef4444;" onclick="window.deleteScanner('${Validator.sanitizeHTML(s.id)}')" title="Eliminar">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </td>

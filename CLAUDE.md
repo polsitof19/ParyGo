@@ -47,7 +47,6 @@ ParyGo es una plataforma SaaS multi-marca para gestión de eventos, venta de ent
 | `api.js` | Servicios externos (WhatsApp, exportación) |
 | `dni-api.js` | Consulta DNI en RENIEC (Perú) |
 | `register.js` | Registro de usuarios |
-| `access.js` | ⚠️ CÓDIGO MUERTO - No se usa |
 
 ### Archivos Scanner (separados)
 | Archivo | Función |
@@ -380,10 +379,8 @@ function getBrandFromSubdomain() {
 - Control de acceso solo client-side
 
 ### Código
-- `js/access.js` es código muerto (no se usa)
 - `js/tickets.js` línea 99: variable `tk` no definida
-- Muchos `console.log` en producción
-- Funciones duplicadas: `escapeHtml`, validación email, validación DNI
+- Funciones duplicadas: `escapeHtml` (utils.js, cliente.js, promotor.js, reclamar.js)
 
 ### Pendientes
 - Sistema de subdominios (en desarrollo)

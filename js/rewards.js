@@ -49,7 +49,7 @@ export async function renderRewards() {
                 : '<span class="badge badge-blue">Pendiente</span>';
             
             const deliverBtn = data.status !== APP_CONFIG.STATUS.DELIVERED 
-                ? `<button class="btn" style="background:var(--success); color:#fff; padding:8px 16px; height:auto; font-size:12px;" onclick="window.deliverReward('${d.id}')">
+                ? `<button class="btn" style="background:var(--success); color:#fff; padding:8px 16px; height:auto; font-size:12px;" onclick="window.deliverReward('${Validator.sanitizeHTML(d.id)}')">
                        <i class="fa-solid fa-check"></i> Entregar
                    </button>` 
                 : '<span style="color:var(--success);"><i class="fa-solid fa-check-circle"></i> Entregado</span>';

@@ -612,7 +612,7 @@
             <button class="sales-icon-btn" id="soundToggle" onclick="window.toggleSalesSound()" title="Notificaciones">
                 <i class="fa-solid fa-bell"></i>
             </button>
-            <button class="sales-icon-btn" onclick="window.loadAllSales(window._activeEventId)" title="Actualizar">
+            <button class="sales-icon-btn" onclick="window.loadAllSales(window._activeEventId || state?.activeEventId)" title="Actualizar">
                 <i class="fa-solid fa-rotate"></i>
             </button>
             <button class="sales-icon-btn" id="btnExportSales" title="Exportar">
@@ -625,7 +625,7 @@
     <div id="newSalesNotification" class="new-sales-notification hidden">
         <i class="fa-solid fa-bell"></i>
         <span>Nuevas ventas pendientes</span>
-        <button class="btn btn-sm" onclick="window.loadAllSales(window._activeEventId)">Actualizar</button>
+        <button class="btn btn-sm" onclick="window.loadAllSales(window._activeEventId || state?.activeEventId)">Actualizar</button>
     </div>
 
     <!-- Tabs de estado -->

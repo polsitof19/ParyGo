@@ -18,7 +18,7 @@ const DOMAIN = "parygo.com"; // Cambiar si usas otro dominio
  * CARGAR MARCAS desde Firebase con filtrado por permisos
  */
 export async function loadBrandsWithLogos() { 
-    if (!state.currentUser) return console.error("Esperando usuario...");
+    if (!state.currentUser) return;
     
     try {
         const q = query(collection(db, "brands")); 

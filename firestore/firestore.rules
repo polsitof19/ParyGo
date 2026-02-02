@@ -34,19 +34,19 @@ service cloud.firestore {
     // PÚBLICO (sin autenticación)
     // ==========================================
 
-    // Eventos: lectura pública, escritura solo admins
+    // Eventos: lectura pública (necesario para portal cliente), escritura solo admins
     match /events/{eventId} {
       allow read: if true;
       allow create, update, delete: if isAdminOrSuper();
     }
 
-    // Marcas: lectura pública, escritura solo admins
+    // Marcas: lectura pública (necesario para portal cliente y subdominios)
     match /brands/{brandId} {
       allow read: if true;
       allow create, update, delete: if isAdminOrSuper();
     }
 
-    // Companies: lectura pública (compatibilidad), escritura solo super admin
+    // Companies: lectura pública (compatibilidad con portal cliente)
     match /companies/{companyId} {
       allow read: if true;
       allow create, update, delete: if isSuperAdmin();
@@ -57,11 +57,13 @@ service cloud.firestore {
     // ==========================================
 
     match /tickets/{ticketId} {
-      // Leer: solo autenticados (links compartidos usan Cloud Function getSharedTicket)
-      allow read: if isAuthenticated();
+      // Leer: dueño del ticket, admins o staff (links compartidos usan Cloud Function getSharedTicket)
+      allow read: if isAdminOrSuper() || isStaff() ||
+                     (isAuthenticated() && resource.data.user_id == request.auth.uid);
 
-      // Crear: cualquier usuario autenticado (compra de entrada)
-      allow create: if isAuthenticated();
+      // Crear: admins, staff, o usuario autenticado (solo sus propios tickets)
+      allow create: if isAdminOrSuper() || isStaff() ||
+                       (isAuthenticated() && request.resource.data.user_id == request.auth.uid);
 
       // Actualizar: admins, staff, o el cliente dueño del ticket
       allow update: if isAdminOrSuper() || isStaff() ||
@@ -76,8 +78,9 @@ service cloud.firestore {
     // ==========================================
 
     match /quotas/{quotaId} {
-      // Leer: autenticados (promotores ven sus cuotas)
-      allow read: if isAuthenticated();
+      // Leer: admins, staff, o el promotor dueño de la cuota
+      allow read: if isAdminOrSuper() || isStaff() ||
+                     (isAuthenticated() && resource.data.promoter_id == request.auth.uid);
 
       // Crear/eliminar: solo admins
       allow create, delete: if isAdminOrSuper();
@@ -92,11 +95,13 @@ service cloud.firestore {
     // ==========================================
 
     match /sales/{saleId} {
-      // Leer: cualquier usuario autenticado
-      allow read: if isAuthenticated();
+      // Leer: admins, staff, o el comprador
+      allow read: if isAdminOrSuper() || isStaff() ||
+                     (isAuthenticated() && resource.data.client_id == request.auth.uid);
 
-      // Crear: autenticados (al generar venta)
-      allow create: if isAuthenticated();
+      // Crear: autenticados (al generar venta, solo propias)
+      allow create: if isAuthenticated() &&
+                       request.resource.data.client_id == request.auth.uid;
 
       // Actualizar/eliminar: solo admins
       allow update, delete: if isAdminOrSuper();
@@ -107,8 +112,8 @@ service cloud.firestore {
     // ==========================================
 
     match /rewards/{rewardId} {
-      // Leer: público (clientes ven premios disponibles)
-      allow read: if true;
+      // Leer: autenticados (admins y promotores ven premios)
+      allow read: if isAuthenticated();
 
       // Crear/editar/eliminar: solo admins
       allow create, update, delete: if isAdminOrSuper();
@@ -207,8 +212,8 @@ service cloud.firestore {
     // ==========================================
 
     match /codes/{codeId} {
-      // Leer: público (para validar códigos al reclamar)
-      allow read: if true;
+      // Leer: autenticados (validación de códigos usa query por campo 'code')
+      allow read: if isAuthenticated();
 
       // Crear: admins o staff/promotores (promotores generan códigos)
       allow create: if isAdminOrSuper() || isStaff();

@@ -42,7 +42,7 @@ export async function loadEventMetrics(eid) {
             if (!typeStats[typeName]) typeStats[typeName] = { gen: 0, claimed: 0, scanned: 0 };
             typeStats[typeName].gen++;
             if (t.status === 'CLAIMED' || t.client_name) typeStats[typeName].claimed++;
-            if (t.status?.includes('SCANNED')) typeStats[typeName].scanned++;
+            if (t.status === 'SCANNED' || t.status === 'SCANNED_IN') typeStats[typeName].scanned++;
         });
         
         const tblGen = document.getElementById("tblMetGeneral");
@@ -78,7 +78,7 @@ export async function loadEventMetrics(eid) {
                 };
             }
             promoStats[pid].gen++;
-            if (t.status?.includes('SCANNED')) promoStats[pid].scanned++;
+            if (t.status === 'SCANNED' || t.status === 'SCANNED_IN') promoStats[pid].scanned++;
         });
 
         quotas.forEach(q => {
@@ -160,6 +160,7 @@ let salesSoundEnabled = true;
 export async function loadAllSales(eid) {
     if (!eid) return;
     window._activeEventId = eid;
+    state.activeEventId = eid;
 
     try {
         const snapshot = await getDocs(
@@ -361,8 +362,9 @@ function renderSalesCards() {
         const ticketName = sale.ticket_name || sale.ticket_type || 'General';
         const total = Number(sale.total_price || sale.total || 0);
 
+        const safeId = Validator.sanitizeHTML(sale.id);
         const checkboxHtml = sale.status === APP_CONFIG.STATUS.PENDING
-            ? `<div class="sv2-checkbox ${isSelected ? 'checked' : ''}" onclick="event.stopPropagation(); window.toggleSaleSelect('${sale.id}')"></div>`
+            ? `<div class="sv2-checkbox ${isSelected ? 'checked' : ''}" onclick="event.stopPropagation(); window.toggleSaleSelect('${safeId}')"></div>`
             : '';
 
         // Acciones según estado
@@ -370,17 +372,17 @@ function renderSalesCards() {
         if (sale.status === APP_CONFIG.STATUS.PENDING) {
             actionsHtml = `
                 <div class="sv2-actions">
-                    ${sale.proof_image || sale.payment_proof ? `<button class="sv2-action-btn view" onclick="window.viewProof('${sale.id}')"><i class="fa-solid fa-image"></i><span>Comprobante</span></button>` : ''}
-                    <button class="sv2-action-btn approve" onclick="window.approveSale('${sale.id}')"><i class="fa-solid fa-check"></i><span>Aprobar</span></button>
-                    <button class="sv2-action-btn reject" onclick="window.rejectSale('${sale.id}')"><i class="fa-solid fa-xmark"></i><span>Rechazar</span></button>
+                    ${sale.proof_image || sale.payment_proof ? `<button class="sv2-action-btn view" onclick="window.viewProof('${safeId}')"><i class="fa-solid fa-image"></i><span>Comprobante</span></button>` : ''}
+                    <button class="sv2-action-btn approve" onclick="window.approveSale('${safeId}')"><i class="fa-solid fa-check"></i><span>Aprobar</span></button>
+                    <button class="sv2-action-btn reject" onclick="window.rejectSale('${safeId}')"><i class="fa-solid fa-xmark"></i><span>Rechazar</span></button>
                 </div>`;
         } else if (sale.status === APP_CONFIG.STATUS.APPROVED) {
             actionsHtml = sale.proof_image || sale.payment_proof
-                ? `<div class="sv2-actions"><button class="sv2-action-btn view" onclick="window.viewProof('${sale.id}')"><i class="fa-solid fa-image"></i><span>Comprobante</span></button></div>`
+                ? `<div class="sv2-actions"><button class="sv2-action-btn view" onclick="window.viewProof('${safeId}')"><i class="fa-solid fa-image"></i><span>Comprobante</span></button></div>`
                 : '';
         } else {
             actionsHtml = sale.proof_image || sale.payment_proof
-                ? `<div class="sv2-actions"><button class="sv2-action-btn view" onclick="window.viewProof('${sale.id}')"><i class="fa-solid fa-image"></i><span>Comprobante</span></button></div>`
+                ? `<div class="sv2-actions"><button class="sv2-action-btn view" onclick="window.viewProof('${safeId}')"><i class="fa-solid fa-image"></i><span>Comprobante</span></button></div>`
                 : '';
         }
 
@@ -676,12 +678,12 @@ export function applyAccessFilters() {
             realStatus = "CANCELLED";
         } else if (a.expires_at) {
             const expDate = new Date(a.expires_at);
-            if (expDate < today && a.status !== "CLAIMED" && !a.status?.includes("SCANNED")) {
+            if (expDate < today && a.status !== "CLAIMED" && a.status !== 'SCANNED' && a.status !== 'SCANNED_IN') {
                 realStatus = "EXPIRED";
-            } else if (a.status === "CLAIMED" || a.status?.includes("SCANNED") || a.client_name) {
+            } else if (a.status === "CLAIMED" || a.status === 'SCANNED' || a.status === 'SCANNED_IN' || a.client_name) {
                 realStatus = "CLAIMED";
             }
-        } else if (a.status === "CLAIMED" || a.status?.includes("SCANNED") || a.client_name) {
+        } else if (a.status === "CLAIMED" || a.status === 'SCANNED' || a.status === 'SCANNED_IN' || a.client_name) {
             realStatus = "CLAIMED";
         }
         
@@ -772,7 +774,7 @@ function renderAccessTable() {
         const idNumber = a.client_dni || a.claimed_by?.dni || '-';
         
         return `
-            <tr data-access-id="${a.id}" style="cursor: pointer;" onclick="window.openDrawer('${a.id}')">
+            <tr data-access-id="${Validator.sanitizeHTML(a.id)}" style="cursor: pointer;" onclick="window.openDrawer('${Validator.sanitizeHTML(a.id)}')">
                 <td>
                     <div class="table-name-cell">
                         <div class="table-avatar" style="background: ${a.ticket_color || 'var(--primary)'};">${initials}</div>
@@ -787,10 +789,10 @@ function renderAccessTable() {
                 <td>
                     <div class="action-btns">
                         ${a._realStatus !== 'CANCELLED' ? `
-                            <button class="btn-cancel" onclick="window.cancelAccess('${a.id}')" title="Anular entrada">
+                            <button class="btn-cancel" onclick="window.cancelAccess('${Validator.sanitizeHTML(a.id)}')" title="Anular entrada">
                                 <i class="fa-solid fa-times"></i>
                             </button>
-                            <button class="btn-favorite" onclick="window.openDrawer('${a.id}')" title="Ver detalles">
+                            <button class="btn-favorite" onclick="window.openDrawer('${Validator.sanitizeHTML(a.id)}')" title="Ver detalles">
                                 <i class="fa-regular fa-heart"></i>
                             </button>
                         ` : `
@@ -865,7 +867,7 @@ export function openDrawer(id) {
     let statusText = 'Sin utilizar';
     if (access.status === 'CANCELLED') {
         statusText = 'Anulado';
-    } else if (access.status?.includes('SCANNED')) {
+    } else if (access.status === 'SCANNED' || access.status === 'SCANNED_IN') {
         statusText = 'Escaneado';
     } else if (access.status === 'CLAIMED' || access.client_name || access.claimed_by?.name) {
         statusText = 'Sin utilizar';

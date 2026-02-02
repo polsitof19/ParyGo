@@ -139,22 +139,8 @@ export function setLoading(isLoading) {
 }
 
 /**
- * Debug: Imprimir estado actual
+ * Debug: Imprimir estado actual (solo en desarrollo)
  */
 export function debugState() {
-    console.group('Estado Actual');
-    console.info('Usuario:', state.currentUser?.name || 'No logueado');
-    console.info('Super Admin:', state.isSuperAdmin);
-    console.info('Eventos:', state.allEvents.length);
-    console.info('Marcas:', state.allBrands.length);
-    console.info('Promotores:', state.allPromotersData.length);
-    console.info('Evento Activo:', state.activeEventId);
-    console.info('Filtro:', state.currentFilter);
-    console.groupEnd();
-}
-
-// Exponer para debugging en consola
-if (typeof window !== 'undefined') {
-    window.__PARYGO_STATE__ = state;
-    window.__PARYGO_DEBUG__ = debugState;
+    // Deshabilitado en producción para no exponer datos sensibles
 }

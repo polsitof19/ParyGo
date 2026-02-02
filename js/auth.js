@@ -290,7 +290,6 @@ export function checkAuth() {
                         resolve(userData);
                     } else {
                         // Usuario de Firebase Auth sin datos en Firestore
-                        console.error("⚠️ Usuario autenticado pero sin datos en Firestore");
                         await signOut(auth);
                         showLoginScreen();
                         resolve(null);

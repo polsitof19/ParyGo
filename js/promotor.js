@@ -294,8 +294,9 @@ async function showBrandSelector() {
     for (const id of brandIds) {
         if (!id) continue;
         if (!brandsCache[id]) {
-            const snap = await getDoc(doc(db, "brands", id)) || await getDoc(doc(db, "companies", id));
-            if (snap?.exists()) brandsCache[id] = { id, ...snap.data() };
+            let snap = await getDoc(doc(db, "brands", id));
+            if (!snap.exists()) snap = await getDoc(doc(db, "companies", id));
+            if (snap.exists()) brandsCache[id] = { id, ...snap.data() };
         }
         if (brandsCache[id]) brands.push(brandsCache[id]);
     }
@@ -306,8 +307,8 @@ async function showBrandSelector() {
     }
     
     container.innerHTML = brands.map(b => `
-        <div class="brand-card" onclick="selectBrand('${b.id}')">
-            <div class="brand-card-logo" style="background:${b.color||'#f43f5e'}">${b.logo?`<img src="${b.logo}">`:'<i class="fa-solid fa-crown"></i>'}</div>
+        <div class="brand-card" onclick="selectBrand('${escapeHtml(b.id)}')">
+            <div class="brand-card-logo" style="background:${escapeHtml(b.color||'#f43f5e')}">${b.logo?`<img src="${escapeHtml(b.logo)}">`:'<i class="fa-solid fa-crown"></i>'}</div>
             <div class="brand-card-name">${escapeHtml(b.name)}</div>
             <div class="brand-card-arrow"><i class="fa-solid fa-chevron-right"></i></div>
         </div>
