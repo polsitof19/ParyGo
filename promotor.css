@@ -103,7 +103,7 @@ html, body {
     border: none;
     padding: 15px 0;
     color: var(--text);
-    font-size: 15px;
+    font-size: 16px;
     font-family: inherit;
     outline: none;
 }
@@ -124,6 +124,7 @@ html, body {
     font-family: inherit;
     cursor: pointer;
     transition: all 0.2s;
+    min-height: 48px;
 }
 .btn-primary:hover { background: var(--primary-dark); }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -690,9 +691,10 @@ html, body {
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     color: var(--text);
-    font-size: 14px;
+    font-size: 16px;
     font-family: inherit;
     cursor: pointer;
+    min-height: 48px;
 }
 
 .available-info {
@@ -920,4 +922,153 @@ html, body {
 @keyframes toastIn {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================
+   RESPONSIVE - DESKTOP (> 768px)
+   ========================================== */
+@media (min-width: 769px) {
+
+    /* Login y Registro centrados con más espacio */
+    .login-form,
+    .register-step {
+        max-width: 400px;
+    }
+
+    .login-container {
+        padding: 60px 32px;
+    }
+
+    /* Selector de marca centrado */
+    .brand-selector {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 60px 32px 40px;
+    }
+
+    .brands-grid {
+        gap: 12px;
+    }
+
+    .brand-card {
+        padding: 18px 20px;
+    }
+
+    .brand-card-logo {
+        width: 52px;
+        height: 52px;
+    }
+
+    .brand-card-name {
+        font-size: 16px;
+    }
+
+    /* Header centrado */
+    .app-header,
+    .event-header {
+        padding: 14px 32px;
+    }
+
+    /* Contenido de eventos centrado */
+    .events-content {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 24px 32px;
+    }
+
+    .events-grid {
+        gap: 14px;
+    }
+
+    .event-card-image {
+        height: 160px;
+    }
+
+    .event-card-body {
+        padding: 16px 18px;
+    }
+
+    .event-card-title {
+        font-size: 16px;
+    }
+
+    /* Dashboard: Stats y Tabs centrados */
+    .stats-panel {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px 32px;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .stat-item {
+        min-width: 70px;
+        padding: 0 12px;
+    }
+
+    .stat-number {
+        font-size: 26px;
+    }
+
+    .stat-label {
+        font-size: 10px;
+    }
+
+    .tabs-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 0 32px;
+    }
+
+    .tab-btn {
+        padding: 16px 20px;
+        font-size: 14px;
+    }
+
+    .tab-content {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 24px 32px 100px;
+    }
+
+    /* Cards de códigos más espaciadas */
+    .code-card {
+        padding: 16px 20px;
+    }
+
+    .code-value {
+        font-size: 20px;
+    }
+
+    .claimed-card {
+        padding: 16px 20px;
+    }
+
+    /* FAB centrado respecto al contenido */
+    .fab {
+        right: calc(50% - 300px + 20px);
+        bottom: 32px;
+        padding: 16px 28px;
+        font-size: 15px;
+    }
+
+    /* Modal más ancho */
+    .modal-content {
+        max-width: 440px;
+    }
+
+    /* Drawer posicionado */
+    .drawer {
+        max-width: 380px;
+    }
+
+    /* Toast centrado */
+    #toast-container {
+        max-width: 360px;
+    }
+
+    /* Empty state */
+    .empty-state {
+        padding: 60px 24px;
+    }
 }
