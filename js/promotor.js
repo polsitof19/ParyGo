@@ -193,13 +193,31 @@ async function handleCheckDNI() {
     const dni = document.getElementById("reg_dni").value.trim();
     const btn = document.getElementById("btnCheckDni");
 
-    if (dni.length !== 8) return toast("DNI debe tener 8 dígitos");
+    if (!/^\d{8}$/.test(dni)) return toast("DNI debe tener 8 dígitos");
 
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
     try {
-        // Consultar API pública de RENIEC (no requiere autenticación)
+        // 1. Buscar si ya está registrado en Firestore (colección staff)
+        const staffQuery = query(collection(db, "staff"), where("dni", "==", dni));
+        const staffSnap = await getDocs(staffQuery);
+
+        if (!staffSnap.empty) {
+            const existing = staffSnap.docs[0].data();
+            const name = existing.name || `${existing.nombres || ""} ${existing.lastname || ""}`.trim();
+            if (name) {
+                document.getElementById("reg_name").value = name;
+                document.getElementById("reg_name").setAttribute("readonly", "true");
+                document.getElementById("reg_step2").classList.remove("hidden");
+                toast("DNI encontrado");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i>';
+                return;
+            }
+        }
+
+        // 2. Si no está en Firestore, consultar API RENIEC
         const fn = httpsCallable(functions, 'consultaDNIPublic');
         const result = await fn({ dni });
         const data = result.data;
@@ -229,6 +247,7 @@ function enableManualEntry() {
     inp.removeAttribute("readonly");
     document.getElementById("reg_step2").classList.remove("hidden");
     inp.focus();
+    toast("Ingresa tu nombre manualmente");
 }
 
 async function handleRegister() {
@@ -807,6 +826,7 @@ function setupEventListeners() {
     document.getElementById("btnLogin")?.addEventListener("click", handleLogin);
     document.getElementById("login_pass")?.addEventListener("keypress", e => e.key === "Enter" && handleLogin());
     document.getElementById("btnCheckDni")?.addEventListener("click", handleCheckDNI);
+    document.getElementById("reg_dni")?.addEventListener("keypress", e => { if (e.key === "Enter") handleCheckDNI(); });
     document.getElementById("btnRegister")?.addEventListener("click", handleRegister);
     document.getElementById("btnBackEvents")?.addEventListener("click", () => {
         currentEvent = null;
