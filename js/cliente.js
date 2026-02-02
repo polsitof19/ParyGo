@@ -74,6 +74,8 @@ let carouselCurrent = 0;    // v7.2.0 - Slide actual del carrusel
 let carouselOrigin = 'myTicketsView'; // v7.3.0 - Vista de origen del carrusel
 let sharingTicket = null;   // v7.2.0 - Ticket seleccionado para compartir
 let favorites = JSON.parse(localStorage.getItem('parygo_favorites') || '[]');
+let currentViewId = null; // Tracking para History API - evitar pushState duplicados
+let handlingPopstate = false; // Flag para evitar pushState durante popstate
 
 // Estado de compra
 let buyState = {
@@ -126,6 +128,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (hasProfile) {
                 // Tiene perfil → Entrar
                 showView('eventsView');
+                replaceViewState('events', '#eventos');
                 loadEvents();
                 loadMyTickets();
             } else {
@@ -493,6 +496,7 @@ async function linkAccountToProfile() {
         // Recargar
         await loadUserProfile(currentUser.uid);
         showView('eventsView');
+        replaceViewState('events', '#eventos');
         loadEvents();
         loadMyTickets();
 
@@ -873,6 +877,7 @@ async function handleRegister() {
         launchConfetti();
 
         showView('eventsView');
+        replaceViewState('events', '#eventos');
         loadEvents();
         loadMyTickets();
 
@@ -1208,6 +1213,7 @@ function openEventDetail(index) {
     if (!currentEvent) return;
 
     showView('eventDetailView');
+    pushViewState('event-detail', '#evento', { eventIndex: index });
 
     document.getElementById("detail_image").src = currentEvent.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600';
     document.getElementById("detail_name").textContent = currentEvent.name;
@@ -1484,12 +1490,18 @@ function openBuyModalWithPrice(ticketIndex, price) {
 
 function backToEvents() {
     currentEvent = null;
-    showView('eventsView');
+    if (history.state && history.state.section) {
+        history.back();
+    } else {
+        showView('eventsView');
+        updateNavActive(0);
+    }
 }
 
 function showEvents() {
     showView('eventsView');
     updateNavActive(0);
+    pushViewState('events', '#eventos');
 }
 
 function updateNavActive(index) {
@@ -2007,6 +2019,7 @@ async function loadMyTickets() {
 function openMyTickets() {
     showView('myTicketsView');
     updateNavActive(1);
+    pushViewState('my-tickets', '#mis-entradas');
     updateTicketTabCounters();
     renderMyTickets();
 }
@@ -2172,12 +2185,20 @@ function viewTicketQR(index, tab) {
 
 function backToMyTickets() {
     viewingTicket = null;
-    showView('myTicketsView');
+    if (history.state && history.state.section) {
+        history.back();
+    } else {
+        showView('myTicketsView');
+    }
 }
 
 function backFromTicketQR() {
     viewingTicket = null;
-    showView(ticketQROrigin || 'myTicketsView');
+    if (history.state && history.state.section) {
+        history.back();
+    } else {
+        showView(ticketQROrigin || 'myTicketsView');
+    }
 }
 
 // ==========================================
@@ -2205,6 +2226,7 @@ function _openCarousel(indices) {
     }
 
     showView('ticketCarouselView');
+    pushViewState('carousel', '#carrusel', { origin: carouselOrigin });
     renderCarousel();
 }
 
@@ -2331,7 +2353,11 @@ function updateCarouselCounter() {
 }
 
 function backFromCarousel() {
-    showView(carouselOrigin || 'myTicketsView');
+    if (history.state && history.state.section) {
+        history.back();
+    } else {
+        showView(carouselOrigin || 'myTicketsView');
+    }
 }
 
 function toggleCarouselBrightness() {
@@ -2463,6 +2489,7 @@ async function showTicketQR(ticket, origin) {
     viewingTicket = ticket;
     ticketQROrigin = origin || 'myTicketsView';
     showView('ticketQRView');
+    pushViewState('ticket-qr', '#entrada', { origin: ticketQROrigin });
     // Small delay to ensure canvas is rendered in DOM before QR generation
     await new Promise(r => setTimeout(r, 100));
     await populateTicketQR(ticket);
@@ -2806,7 +2833,82 @@ function setupPullToRefresh() {
 function showView(id) {
     document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
     document.getElementById(id)?.classList.remove('hidden');
+    currentViewId = id;
 }
+
+// ==========================================
+// HISTORY API - Navegación con botón atrás
+// ==========================================
+function pushViewState(section, hash, extra = {}) {
+    if (handlingPopstate) return;
+    const state = { section, ...extra };
+    history.pushState(state, '', hash);
+}
+
+function replaceViewState(section, hash, extra = {}) {
+    const state = { section, ...extra };
+    history.replaceState(state, '', hash);
+}
+
+window.addEventListener('popstate', function(event) {
+    handlingPopstate = true;
+    try {
+        const state = event.state;
+        if (!state || !state.section) {
+            // Sin estado → volver a eventos (si está logueado)
+            if (currentViewId && currentViewId !== 'authView') {
+                currentEvent = null;
+                viewingTicket = null;
+                showView('eventsView');
+                updateNavActive(0);
+            }
+            return;
+        }
+        switch (state.section) {
+            case 'events':
+                currentEvent = null;
+                showView('eventsView');
+                updateNavActive(0);
+                break;
+            case 'event-detail':
+                if (state.eventIndex !== undefined && allEvents[state.eventIndex]) {
+                    currentEvent = allEvents[state.eventIndex];
+                    showView('eventDetailView');
+                    document.getElementById("detail_image").src = currentEvent.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600';
+                    document.getElementById("detail_name").textContent = currentEvent.name;
+                    document.getElementById("detail_date").textContent = formatDate(currentEvent.date);
+                    document.getElementById("detail_time").textContent = currentEvent.time || 'Por confirmar';
+                    document.getElementById("detail_venue").textContent = currentEvent.venue || 'Por confirmar';
+                    renderTicketsForSale();
+                    updateDetailCountdown();
+                    renderMyEventTickets();
+                } else {
+                    currentEvent = null;
+                    showView('eventsView');
+                    updateNavActive(0);
+                }
+                break;
+            case 'my-tickets':
+                showView('myTicketsView');
+                updateNavActive(1);
+                updateTicketTabCounters();
+                renderMyTickets();
+                break;
+            case 'ticket-qr':
+                // No restaurar QR (requiere ticket completo), volver a origen
+                showView(state.origin || 'myTicketsView');
+                break;
+            case 'carousel':
+                showView(state.origin || 'myTicketsView');
+                break;
+            default:
+                showView('eventsView');
+                updateNavActive(0);
+        }
+    } finally {
+        handlingPopstate = false;
+    }
+});
 
 function openModal(id) {
     document.getElementById(id)?.classList.remove('hidden');
