@@ -2012,7 +2012,7 @@ input, select, textarea {
     }
 
     .events-main {
-        max-width: 960px;
+        max-width: 900px;
         margin: 0 auto;
         padding: var(--space-12) var(--space-8);
         padding-bottom: var(--space-16);
@@ -2025,36 +2025,91 @@ input, select, textarea {
         margin: 0 auto;
     }
 
+    /* Mis entradas: más ancho y 2 columnas */
     .tickets-main {
-        max-width: 720px;
+        max-width: 900px;
         margin: 0 auto;
+        padding: var(--space-6) var(--space-8);
     }
 
+    .tickets-main .my-tickets-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-5);
+    }
+
+    /* Detalle del evento: contenedor más amplio */
     .event-detail-content {
-        max-width: 480px;
+        max-width: 900px;
         margin: 0 auto;
+        padding: 0 var(--space-8) var(--space-12);
     }
 
+    /* Header del evento: imagen izquierda, info derecha */
+    .event-detail-hero {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-6);
+        align-items: stretch;
+        margin: var(--space-6) 0;
+    }
+
+    .event-detail-hero .detail-countdown {
+        width: 100%;
+        order: -1;
+        border-radius: var(--radius);
+    }
+
+    .event-cover {
+        border-radius: var(--radius);
+        width: 280px;
+        min-width: 280px;
+        max-height: none;
+        margin: 0;
+    }
+
+    .event-cover img {
+        border-radius: var(--radius);
+        width: 280px;
+        height: 100%;
+        min-height: 200px;
+        max-height: none;
+        object-fit: cover;
+    }
+
+    .event-info-card {
+        flex: 1;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    /* Secciones de acción más anchas */
     .action-section {
         border-radius: var(--radius);
         border: 1px solid var(--border);
         margin: var(--space-6) 0;
     }
 
-    .event-info-card {
-        border-radius: var(--radius);
-        border: 1px solid var(--border);
-        margin: var(--space-6) 0;
+    /* Tickets a la venta: 2 columnas */
+    .action-section .tickets-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-4);
     }
 
-    .event-cover {
-        border-radius: var(--radius);
-        margin: var(--space-6) auto 0;
-        max-width: 720px;
+    /* Entradas con fases: 1 columna (son más complejas) */
+    .ticket-card-unified.phases {
+        grid-column: 1 / -1;
     }
 
-    .event-cover img {
-        border-radius: var(--radius);
+    /* Header del detalle centrado */
+    .detail-header {
+        max-width: 900px;
+        margin: 0 auto;
     }
 }
 
