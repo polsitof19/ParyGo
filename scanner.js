@@ -39,6 +39,8 @@ let state = {
     html5QrCode: null,
     currentCamera: 'environment'
 };
+let currentScreen = 'login';
+let handlingPopstate = false;
 
 // ==========================================
 // INITIALIZATION
@@ -158,6 +160,7 @@ function showLoginScreen() {
     document.getElementById('eventSelection')?.classList.add('hidden');
     document.querySelector('.header')?.classList.add('hidden');
     document.getElementById('mainContent')?.classList.add('hidden');
+    currentScreen = 'login';
 }
 
 function showEventSelection() {
@@ -165,6 +168,15 @@ function showEventSelection() {
     document.getElementById('eventSelection')?.classList.remove('hidden');
     document.querySelector('.header')?.classList.add('hidden');
     document.getElementById('mainContent')?.classList.add('hidden');
+    const prev = currentScreen;
+    currentScreen = 'events';
+    if (!handlingPopstate && prev !== 'events') {
+        if (prev === 'login') {
+            history.replaceState({ screen: 'events' }, '', '#eventos');
+        } else {
+            history.pushState({ screen: 'events' }, '', '#eventos');
+        }
+    }
 }
 
 function showScannerScreen() {
@@ -172,7 +184,27 @@ function showScannerScreen() {
     document.getElementById('eventSelection')?.classList.add('hidden');
     document.querySelector('.header')?.classList.remove('hidden');
     document.getElementById('mainContent')?.classList.remove('hidden');
+    const prev = currentScreen;
+    currentScreen = 'scanner';
+    if (!handlingPopstate && prev !== 'scanner') {
+        history.pushState({ screen: 'scanner' }, '', '#scanner');
+    }
 }
+
+// History API - botón atrás del navegador
+window.addEventListener('popstate', function(event) {
+    handlingPopstate = true;
+    try {
+        const screen = event.state?.screen;
+        if (!screen || screen === 'events') {
+            if (currentScreen === 'scanner') {
+                goBackToEvents();
+            }
+        }
+    } finally {
+        handlingPopstate = false;
+    }
+});
 
 function showLoginError(msg) {
     const el = document.getElementById('loginError');
@@ -311,7 +343,11 @@ async function goBackToEvents() {
     document.getElementById('searchBox')?.classList.add('hidden');
     document.getElementById('actionButtons')?.classList.remove('hidden');
 
-    showEventSelection();
+    if (!handlingPopstate && history.state?.screen) {
+        history.back();
+    } else {
+        showEventSelection();
+    }
 }
 
 // ==========================================

@@ -617,11 +617,17 @@ document.getElementById('btnConfirmApprove')?.addEventListener('click', () => {
 // ========================================
 
 let navigationHistory = ['eventos'];
+let handlingPopstate = false;
 
 function mobileGoTo(section) {
     // Guardar en historial
     if (navigationHistory[navigationHistory.length - 1] !== section) {
         navigationHistory.push(section);
+    }
+
+    // History API - sincronizar con navegador
+    if (!handlingPopstate) {
+        history.pushState({ section }, '', `#${section}`);
     }
 
     // Update active nav item
@@ -681,11 +687,15 @@ function mobileGoTo(section) {
 
 function goBack() {
     if (navigationHistory.length > 1) {
-        navigationHistory.pop();
-        const previousSection = navigationHistory[navigationHistory.length - 1];
-        const temp = navigationHistory.slice();
-        mobileGoTo(previousSection);
-        navigationHistory = temp;
+        if (history.state?.section) {
+            history.back();
+        } else {
+            navigationHistory.pop();
+            const previousSection = navigationHistory[navigationHistory.length - 1];
+            const temp = navigationHistory.slice();
+            mobileGoTo(previousSection);
+            navigationHistory = temp;
+        }
     }
 }
 
@@ -704,6 +714,20 @@ function closeExtrasPanel() {
     document.getElementById('extrasOverlay').classList.remove('active');
     document.body.style.overflow = '';
 }
+
+// History API - botón atrás del navegador
+history.replaceState({ section: 'eventos' }, '', '#eventos');
+window.addEventListener('popstate', function(event) {
+    handlingPopstate = true;
+    try {
+        const section = event.state?.section || 'eventos';
+        // Sincronizar historial interno
+        navigationHistory.push(section);
+        mobileGoTo(section);
+    } finally {
+        handlingPopstate = false;
+    }
+});
 
 function handleLogout() {
     closeExtrasPanel();

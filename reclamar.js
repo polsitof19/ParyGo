@@ -22,6 +22,8 @@ import {
 // UTILIDADES
 // ==========================================
 let isProcessing = false;
+let currentStep = 1;
+let handlingPopstate = false;
 
 function sanitizeInput(str) {
     if (!str) return '';
@@ -778,12 +780,40 @@ async function downloadTicket() {
 // UTILIDADES
 // ==========================================
 function goToStep(step) {
+    const prevStep = currentStep;
+    currentStep = step;
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(`step${step}`).classList.add('active');
     window.scrollTo(0, 0);
+
+    // History API
+    if (!handlingPopstate) {
+        if (step > prevStep) {
+            history.pushState({ step }, '', `#paso${step}`);
+        } else if (step < prevStep) {
+            // Retroceso manual desde UI, no pushear
+        }
+    }
 }
 
 window.goToStep = goToStep;
+
+// History API - botón atrás del navegador
+history.replaceState({ step: 1 }, '', '#paso1');
+window.addEventListener('popstate', function(event) {
+    handlingPopstate = true;
+    try {
+        const step = event.state?.step || 1;
+        if (step < currentStep) {
+            currentStep = step;
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(`step${step}`)?.classList.add('active');
+            window.scrollTo(0, 0);
+        }
+    } finally {
+        handlingPopstate = false;
+    }
+});
 
 function showLoading(show) {
     const overlay = document.getElementById('loadingOverlay');

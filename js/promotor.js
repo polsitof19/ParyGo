@@ -37,6 +37,8 @@ let myQuotas = [];
 let myCodes = [];
 let allEvents = [];
 let brandsCache = {};
+let currentViewIdPromo = null;
+let handlingPopstate = false;
 let lastGeneratedCode = null;
 let isProcessing = false;
 
@@ -261,6 +263,7 @@ async function handleRegister() {
 // ==========================================
 async function showBrandSelector() {
     showView('brandView');
+    if (!handlingPopstate) history.replaceState({ section: 'brands' }, '', '#marcas');
     document.getElementById("brand_user_name").textContent = (currentUser?.name || "Promotor").split(" ")[0];
     
     const container = document.getElementById("brands_grid");
@@ -306,13 +309,22 @@ window.selectBrand = async (id) => {
     }
 };
 
-window.changeBrand = () => { selectedBrandId = null; currentEvent = null; showBrandSelector(); };
+window.changeBrand = () => {
+    selectedBrandId = null;
+    currentEvent = null;
+    if (history.state?.section) {
+        history.back();
+    } else {
+        showBrandSelector();
+    }
+};
 
 // ==========================================
 // EVENTOS
 // ==========================================
 async function showEventsList() {
     showView('eventsView');
+    if (!handlingPopstate) history.pushState({ section: 'events' }, '', '#eventos');
     updateEventsHeader();
     
     const container = document.getElementById("events_grid");
@@ -361,6 +373,7 @@ window.selectEvent = async (i) => {
 
     currentEvent = event;
     showView('dashboardView');
+    if (!handlingPopstate) history.pushState({ section: 'dashboard', eventIndex: i }, '', '#dashboard');
     await loadDashboardData();
 };
 
@@ -651,6 +664,7 @@ window.shareCode = async () => {
 function showView(id) {
     document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
     document.getElementById(id)?.classList.remove('hidden');
+    currentViewIdPromo = id;
 }
 
 window.switchTab = (tab) => {
@@ -741,6 +755,51 @@ window.toast = (msg) => {
 window.showLogin = () => showView('loginView');
 window.showRegister = () => showView('registerView');
 
+// History API - botón atrás del navegador
+window.addEventListener('popstate', function(event) {
+    handlingPopstate = true;
+    try {
+        const state = event.state;
+        if (!state || !state.section) {
+            // Sin estado → volver a marcas si está logueado
+            if (currentViewIdPromo && currentViewIdPromo !== 'loginView' && currentViewIdPromo !== 'registerView') {
+                currentEvent = null;
+                selectedBrandId = null;
+                showBrandSelector();
+            }
+            return;
+        }
+        switch (state.section) {
+            case 'brands':
+                selectedBrandId = null;
+                currentEvent = null;
+                showBrandSelector();
+                break;
+            case 'events':
+                currentEvent = null;
+                if (selectedBrandId) {
+                    showEventsList();
+                } else {
+                    showBrandSelector();
+                }
+                break;
+            case 'dashboard':
+                if (state.eventIndex !== undefined && allEvents[state.eventIndex]) {
+                    currentEvent = allEvents[state.eventIndex];
+                    showView('dashboardView');
+                    loadDashboardData();
+                } else {
+                    showEventsList();
+                }
+                break;
+            default:
+                showBrandSelector();
+        }
+    } finally {
+        handlingPopstate = false;
+    }
+});
+
 // ==========================================
 // EVENT LISTENERS
 // ==========================================
@@ -749,7 +808,14 @@ function setupEventListeners() {
     document.getElementById("login_pass")?.addEventListener("keypress", e => e.key === "Enter" && handleLogin());
     document.getElementById("btnCheckDni")?.addEventListener("click", handleCheckDNI);
     document.getElementById("btnRegister")?.addEventListener("click", handleRegister);
-    document.getElementById("btnBackEvents")?.addEventListener("click", () => { currentEvent = null; showEventsList(); });
+    document.getElementById("btnBackEvents")?.addEventListener("click", () => {
+        currentEvent = null;
+        if (history.state?.section) {
+            history.back();
+        } else {
+            showEventsList();
+        }
+    });
     document.getElementById("btnConfirmGenerate")?.addEventListener("click", handleGenerateCode);
     
     document.querySelectorAll('.modal').forEach(m => {
