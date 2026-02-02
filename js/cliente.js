@@ -1143,7 +1143,7 @@ function getCountdownBadge(eventDate) {
     if (!eventDate) return '';
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const evDate = new Date(eventDate);
+    const evDate = new Date(eventDate + 'T00:00:00');
     evDate.setHours(0, 0, 0, 0);
     const diffDays = Math.ceil((evDate - today) / (1000 * 60 * 60 * 24));
 
@@ -2821,7 +2821,11 @@ function escapeHtml(text) {
 
 function formatDate(dateStr) {
     if (!dateStr) return '---';
-    const d = new Date(dateStr);
+    // Si es un Firestore Timestamp (tiene .toDate), convertirlo
+    if (dateStr.toDate) return dateStr.toDate().toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short' });
+    // Si es solo fecha YYYY-MM-DD (10 chars, sin T), agregar T00:00:00 para evitar desfase UTC
+    const str = String(dateStr);
+    const d = (str.length === 10 && str[4] === '-') ? new Date(str + 'T00:00:00') : new Date(str);
     return d.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
