@@ -255,7 +255,7 @@ function updateBrandUI() {
             authLogo.appendChild(img);
         } else {
             authLogo.innerHTML = `<i class="fa-solid fa-star"></i>`;
-            authLogo.style.background = currentBrand.color || '#f43f5e';
+            authLogo.style.background = currentBrand.color || '#2a2a35';
         }
     }
 
@@ -270,7 +270,7 @@ function updateBrandUI() {
             headerLogo.appendChild(img);
         } else {
             headerLogo.innerHTML = `<i class="fa-solid fa-star"></i>`;
-            headerLogo.style.background = currentBrand.color || '#f43f5e';
+            headerLogo.style.background = currentBrand.color || '#2a2a35';
         }
     }
 
@@ -294,8 +294,8 @@ function showError(message) {
     hideSplash();
     const safe = escapeHtml(message);
     document.body.innerHTML = `
-        <div style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center; background:#0a0a0f; color:white; font-family:'Outfit',sans-serif;">
-            <i class="fa-solid fa-circle-exclamation" style="font-size:48px; color:#f43f5e; margin-bottom:16px;"></i>
+        <div style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center; background:#09090b; color:white; font-family:'Inter',sans-serif;">
+            <i class="fa-solid fa-circle-exclamation" style="font-size:48px; color:#9a9aa3; margin-bottom:16px;"></i>
             <h1 style="font-size:20px; margin-bottom:8px;">Error</h1>
             <p style="color:#888; font-size:14px;">${safe}</p>
         </div>
@@ -377,8 +377,8 @@ function showLinkAccountPrompt(user) {
     prompt.id = "link_prompt";
     prompt.className = "auth-step";
     prompt.innerHTML = `
-        <div class="user-found-card" style="background:rgba(59,130,246,0.1); border-color:rgba(59,130,246,0.3);">
-            <i class="fa-solid fa-link" style="color:#3b82f6;"></i>
+        <div class="user-found-card" style="background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.1);">
+            <i class="fa-solid fa-link" style="color:#9a9aa3;"></i>
             <div>
                 <span>Ya tienes una cuenta ParyGo</span>
                 <strong>${user.email}</strong>
@@ -2752,7 +2752,7 @@ function launchConfetti() {
             particleCount: 100,
             spread: 70,
             origin: { y: 0.6 },
-            colors: ['#ff4757', '#ff6b7a', '#10b981', '#3b82f6', '#f59e0b']
+            colors: ['#ffffff', '#d4d4d8', '#9a9aa3', '#5a5a63', '#3a3a42']
         });
     }
 }
