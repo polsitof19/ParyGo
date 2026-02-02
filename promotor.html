@@ -139,48 +139,99 @@
 
     <!-- ============ DASHBOARD PRINCIPAL ============ -->
     <div id="dashboardView" class="view hidden">
-        
-        <!-- Header del evento -->
-        <header class="event-header">
+
+        <!-- Header compacto -->
+        <header class="dash-header">
             <button class="btn-back-header" id="btnBackEvents">
                 <i class="fa-solid fa-chevron-left"></i>
             </button>
-            <div class="event-header-info">
-                <h1 id="dash_event_name">Nombre del Evento</h1>
-                <p id="dash_event_date">Fecha</p>
+            <div class="dash-header-info">
+                <span class="dash-greeting" id="dash_greeting">Hola, Promotor</span>
             </div>
             <div class="avatar-btn" onclick="openProfile()">
                 <span id="dash_avatar">PR</span>
             </div>
         </header>
 
-        <!-- Panel de Estadísticas -->
-        <div class="stats-panel">
-            <div class="stat-item">
-                <span class="stat-number" id="stat_assigned">0</span>
-                <span class="stat-label">Asignados</span>
+        <main class="dash-scroll">
+
+            <!-- Card del evento -->
+            <div class="dash-event-card" id="dash_event_card">
+                <img class="dash-event-img" id="dash_event_img" src="" alt="">
+                <div class="dash-event-info">
+                    <div class="dash-event-name" id="dash_event_name">Evento</div>
+                    <div class="dash-event-brand" id="dash_event_brand">Marca</div>
+                    <div class="dash-event-meta" id="dash_event_date">Fecha</div>
+                </div>
             </div>
-            <div class="stat-divider"></div>
-            <div class="stat-item">
-                <span class="stat-number" id="stat_generated">0</span>
-                <span class="stat-label">Generados</span>
+
+            <!-- Sección: Ganancias -->
+            <div class="dash-section">
+                <div class="dash-section-title">TUS GANANCIAS</div>
+                <div class="earnings-grid">
+                    <div class="earning-card">
+                        <span class="earning-number" id="stat_ventas">0</span>
+                        <span class="earning-label">Ventas</span>
+                    </div>
+                    <div class="earning-card">
+                        <span class="earning-number" id="stat_gratis">0</span>
+                        <span class="earning-label">Gratis</span>
+                    </div>
+                    <div class="earning-card earning-highlight">
+                        <span class="earning-number" id="stat_comision">S/. 0</span>
+                        <span class="earning-label">Comisión</span>
+                    </div>
+                </div>
             </div>
-            <div class="stat-divider"></div>
-            <div class="stat-item highlight-green">
-                <span class="stat-number" id="stat_available">0</span>
-                <span class="stat-label">Libres</span>
+
+            <!-- Sección: Metas -->
+            <div class="dash-section" id="goals_section" style="display:none;">
+                <div class="dash-section-title">TUS METAS</div>
+                <div id="goals_list" class="goals-progress-list"></div>
             </div>
-            <div class="stat-divider"></div>
-            <div class="stat-item highlight-blue">
-                <span class="stat-number" id="stat_claimed">0</span>
-                <span class="stat-label">Canjeados</span>
+
+            <!-- Sección: Entradas para vender -->
+            <div class="dash-section" id="sell_section" style="display:none;">
+                <div class="dash-section-title">COMPRAR CÓDIGO PARA VENDER</div>
+                <div id="sell_tickets_list"></div>
             </div>
-            <div class="stat-divider"></div>
-            <div class="stat-item highlight-purple">
-                <span class="stat-number" id="stat_scanned">0</span>
-                <span class="stat-label">Escaneados</span>
+
+            <!-- Sección: Entradas gratis -->
+            <div class="dash-section" id="free_section" style="display:none;">
+                <div class="dash-section-title">ENTRADA GRATIS</div>
+                <div id="free_tickets_list"></div>
             </div>
-        </div>
+
+            <!-- Sin entradas asignadas -->
+            <div class="dash-section" id="no_tickets_msg" style="display:none;">
+                <div class="empty-state-inline">
+                    <i class="fa-solid fa-ticket-simple"></i>
+                    <p>No tienes entradas asignadas para este evento</p>
+                </div>
+            </div>
+
+            <!-- Historial -->
+            <div class="dash-section">
+                <button class="btn-history" onclick="showHistoryView()">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Ver historial completo</span>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ============ HISTORIAL (CÓDIGOS Y CANJEADOS) ============ -->
+    <div id="historyView" class="view hidden">
+        <header class="dash-header">
+            <button class="btn-back-header" id="btnBackDashboard">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <div class="dash-header-info">
+                <span class="dash-greeting">Historial</span>
+            </div>
+        </header>
 
         <!-- Tabs -->
         <div class="tabs-container">
@@ -194,21 +245,12 @@
 
         <!-- Contenido de Tabs -->
         <main class="tab-content">
-            
-            <!-- TAB: Mis Códigos -->
             <div id="tab_codes" class="tab-panel active">
-                <div id="codes_list" class="codes-list">
-                    <!-- Se llena dinámicamente -->
-                </div>
+                <div id="codes_list" class="codes-list"></div>
             </div>
-
-            <!-- TAB: Canjeados -->
             <div id="tab_claimed" class="tab-panel">
-                <div id="claimed_list" class="claimed-list">
-                    <!-- Se llena dinámicamente -->
-                </div>
+                <div id="claimed_list" class="claimed-list"></div>
             </div>
-
         </main>
 
         <!-- Botón Flotante Generar -->
@@ -216,7 +258,6 @@
             <i class="fa-solid fa-plus"></i>
             <span>GENERAR</span>
         </button>
-
     </div>
 
     <!-- ============ MODAL: GENERAR CÓDIGO ============ -->

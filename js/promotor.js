@@ -402,12 +402,24 @@ window.selectEvent = async (i) => {
 // ==========================================
 async function loadDashboardData() {
     if (!currentEvent) return;
-    
+
     // Header
+    const firstName = (currentUser?.name || 'Promotor').split(' ')[0];
+    document.getElementById("dash_greeting").textContent = `Hola, ${firstName}`;
     document.getElementById("dash_event_name").textContent = currentEvent.name;
-    document.getElementById("dash_event_date").textContent = currentEvent.date || "---";
+    document.getElementById("dash_event_date").textContent = formatEventDate(currentEvent.date, currentEvent.time);
+
+    // Event card image
+    const imgEl = document.getElementById("dash_event_img");
+    if (imgEl) imgEl.src = currentEvent.image || '';
+
+    // Brand name on event card
+    const brand = brandsCache[selectedBrandId];
+    const brandEl = document.getElementById("dash_event_brand");
+    if (brandEl) brandEl.textContent = brand ? `EN ${brand.name.toUpperCase()}` : '';
+
     updateAvatars();
-    
+
     try {
         // Cargar cuotas asignadas
         const qQuotas = query(
@@ -416,7 +428,7 @@ async function loadDashboardData() {
             where("event_id", "==", currentEvent.id)
         );
         myQuotas = (await getDocs(qQuotas)).docs.map(d => ({ id: d.id, ...d.data() }));
-        
+
         // Cargar códigos generados
         const qCodes = query(
             collection(db, "codes"),
@@ -424,34 +436,212 @@ async function loadDashboardData() {
             where("event_id", "==", currentEvent.id)
         );
         myCodes = (await getDocs(qCodes)).docs.map(d => ({ id: d.id, ...d.data() }));
-        
-        // Calcular estadísticas
-        const totalAssigned = myQuotas.reduce((sum, q) => sum + (q.assigned || 0), 0);
-        const totalGenerated = myCodes.length;
-        const totalAvailable = totalAssigned - totalGenerated;
-        const totalClaimed = myCodes.filter(c => c.status === 'CLAIMED' || c.status === 'SCANNED').length;
-        const totalScanned = myCodes.filter(c => c.status === 'SCANNED').length;
-        
-        // Actualizar UI
-        document.getElementById("stat_assigned").textContent = totalAssigned;
-        document.getElementById("stat_generated").textContent = totalGenerated;
-        document.getElementById("stat_available").textContent = totalAvailable;
-        document.getElementById("stat_claimed").textContent = totalClaimed;
-        document.getElementById("stat_scanned").textContent = totalScanned;
-        
+
+        // Calcular estadísticas de ganancias
+        const tickets = currentEvent.tickets || [];
+        let totalVentas = 0;
+        let totalGratis = 0;
+        let totalComision = 0;
+
+        const claimedOrScanned = myCodes.filter(c => c.status === 'CLAIMED' || c.status === 'SCANNED');
+
+        claimedOrScanned.forEach(code => {
+            const tk = tickets.find(t => t.id === code.ticket_id);
+            if (!tk) return;
+            if (tk.isFree || tk.price === 0) {
+                totalGratis++;
+                // Comisión por entrada gratis
+                if (tk.freeCommission?.cash) totalComision += tk.freeCommission.cash;
+            } else {
+                totalVentas++;
+                // Comisión por venta
+                if (tk.promotorCommission) {
+                    if (tk.promotorCommission.type === 'percentage') {
+                        totalComision += (tk.price * tk.promotorCommission.value / 100);
+                    } else {
+                        totalComision += (tk.promotorCommission.value || 0);
+                    }
+                }
+            }
+        });
+
+        document.getElementById("stat_ventas").textContent = totalVentas;
+        document.getElementById("stat_gratis").textContent = totalGratis;
+        document.getElementById("stat_comision").textContent = `S/. ${totalComision.toFixed(2)}`;
+
         // Habilitar/deshabilitar botón generar
+        const totalAssigned = myQuotas.reduce((sum, q) => sum + (q.assigned || 0), 0);
         const fab = document.getElementById("btnGenerateCode");
-        fab.disabled = totalAvailable <= 0;
-        
-        // Renderizar listas
+        if (fab) fab.disabled = (totalAssigned - myCodes.length) <= 0;
+
+        // Renderizar secciones
+        renderGoals(totalVentas + totalGratis);
+        renderSellTickets(tickets);
+        renderFreeTickets(tickets);
         renderCodesList();
         renderClaimedList();
         fillTicketDropdown();
-        
+
     } catch (e) {
         console.error(e);
         toast("Error al cargar datos");
     }
+}
+
+function formatEventDate(date, time) {
+    if (!date) return '---';
+    try {
+        const d = new Date(date + 'T00:00:00');
+        const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        let str = `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
+        if (time) str += ` · ${time}`;
+        return str;
+    } catch {
+        return date;
+    }
+}
+
+// ==========================================
+// RENDER: METAS
+// ==========================================
+function renderGoals(totalEntradas) {
+    const goals = currentEvent.promotorGoals;
+    const section = document.getElementById("goals_section");
+    const container = document.getElementById("goals_list");
+    if (!section || !container) return;
+
+    if (!goals || goals.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = '';
+    container.innerHTML = goals.map((g, i) => {
+        const target = g.target || 0;
+        const progress = Math.min(totalEntradas, target);
+        const pct = target > 0 ? Math.min(100, Math.round((progress / target) * 100)) : 0;
+        const achieved = progress >= target;
+        const icon = achieved ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-regular fa-clock"></i>';
+        const cls = achieved ? 'goal-achieved' : '';
+
+        return `
+            <div class="goal-progress-card ${cls}">
+                <div class="goal-progress-header">
+                    <span class="goal-progress-icon">${icon}</span>
+                    <span class="goal-progress-title">Meta ${i + 1}: ${target} entradas</span>
+                </div>
+                <div class="goal-progress-prize">Premio: ${escapeHtml(g.reward || g.prize || '')}</div>
+                <div class="goal-progress-bar-bg">
+                    <div class="goal-progress-bar-fill" style="width:${pct}%"></div>
+                </div>
+                <div class="goal-progress-count">${progress}/${target}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ==========================================
+// RENDER: ENTRADAS PARA VENDER
+// ==========================================
+function renderSellTickets(tickets) {
+    const section = document.getElementById("sell_section");
+    const container = document.getElementById("sell_tickets_list");
+    const noMsg = document.getElementById("no_tickets_msg");
+    if (!section || !container) return;
+
+    // Filtrar tickets con promotorEnabled y precio > 0
+    const sellable = tickets.filter(tk => tk.promotorEnabled && !tk.isFree && tk.price > 0);
+
+    if (sellable.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = '';
+    if (noMsg) noMsg.style.display = 'none';
+
+    container.innerHTML = sellable.map(tk => {
+        let commText = '';
+        if (tk.promotorCommission) {
+            if (tk.promotorCommission.type === 'percentage') {
+                commText = `${tk.promotorCommission.value}% = S/. ${(tk.price * tk.promotorCommission.value / 100).toFixed(2)}`;
+            } else {
+                commText = `S/. ${Number(tk.promotorCommission.value || 0).toFixed(2)}`;
+            }
+        }
+
+        // Contar disponibles para este tipo
+        const quota = myQuotas.find(q => q.ticket_id === tk.id);
+        const generated = myCodes.filter(c => c.ticket_id === tk.id).length;
+        const available = quota ? Math.max(0, (quota.assigned || 0) - generated) : 0;
+
+        return `
+            <div class="ticket-action-card">
+                <div class="ticket-action-top">
+                    <div class="ticket-action-info">
+                        <span class="ticket-action-name">${escapeHtml(tk.name)} · S/. ${Number(tk.price).toFixed(2)}</span>
+                        ${commText ? `<span class="ticket-action-commission">Tu comisión: ${commText}</span>` : ''}
+                        ${available > 0 ? `<span class="ticket-action-available">${available} disponibles</span>` : ''}
+                    </div>
+                    ${available > 0 ? `<button class="btn-action-generate" onclick="quickGenerate('${escapeHtml(tk.id)}')">Generar <i class="fa-solid fa-arrow-right"></i></button>` : '<span class="ticket-action-sold-out">Agotado</span>'}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ==========================================
+// RENDER: ENTRADAS GRATIS
+// ==========================================
+function renderFreeTickets(tickets) {
+    const section = document.getElementById("free_section");
+    const container = document.getElementById("free_tickets_list");
+    const noMsg = document.getElementById("no_tickets_msg");
+    if (!section || !container) return;
+
+    // Filtrar tickets gratis con freeEnabled
+    const freeTickets = tickets.filter(tk => tk.freeEnabled && (tk.isFree || tk.price === 0));
+
+    if (freeTickets.length === 0) {
+        section.style.display = 'none';
+        // Mostrar mensaje si tampoco hay tickets vendibles
+        const sellSection = document.getElementById("sell_section");
+        if (noMsg && (!sellSection || sellSection.style.display === 'none')) {
+            noMsg.style.display = '';
+        }
+        return;
+    }
+
+    section.style.display = '';
+    if (noMsg) noMsg.style.display = 'none';
+
+    container.innerHTML = freeTickets.map(tk => {
+        // Comisiones gratis
+        const comms = [];
+        if (tk.freeCommission?.cash) comms.push(`S/. ${Number(tk.freeCommission.cash).toFixed(2)}`);
+        if (tk.freeCommission?.drinks) comms.push(`${tk.freeCommission.drinks} trago${tk.freeCommission.drinks > 1 ? 's' : ''}`);
+        if (tk.freeCommission?.other) comms.push(tk.freeCommission.other);
+        const commText = comms.length ? comms.join(' + ') : '';
+
+        // Contar disponibles
+        const quota = myQuotas.find(q => q.ticket_id === tk.id);
+        const generated = myCodes.filter(c => c.ticket_id === tk.id).length;
+        const available = quota ? Math.max(0, (quota.assigned || 0) - generated) : 0;
+
+        return `
+            <div class="ticket-action-card ticket-free">
+                <div class="ticket-action-top">
+                    <div class="ticket-action-info">
+                        <span class="ticket-action-name">${escapeHtml(tk.name)} · GRATIS</span>
+                        ${available > 0 ? `<span class="ticket-action-available">Disponibles: ${available}</span>` : ''}
+                        ${commText ? `<span class="ticket-action-commission">Tu comisión: ${commText}</span>` : ''}
+                    </div>
+                    ${available > 0 ? `<button class="btn-action-generate" onclick="quickGenerate('${escapeHtml(tk.id)}')">Dar entrada <i class="fa-solid fa-arrow-right"></i></button>` : '<span class="ticket-action-sold-out">Sin cuota</span>'}
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 function renderCodesList() {
@@ -718,6 +908,39 @@ function getInitials(name) {
     return name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
 }
 
+// ==========================================
+// HISTORIAL Y QUICK GENERATE
+// ==========================================
+window.showHistoryView = () => {
+    showView('historyView');
+    if (!handlingPopstate) history.pushState({ section: 'history' }, '', '#historial');
+    renderCodesList();
+    renderClaimedList();
+    fillTicketDropdown();
+
+    const totalAssigned = myQuotas.reduce((sum, q) => sum + (q.assigned || 0), 0);
+    const fab = document.getElementById("btnGenerateCode");
+    if (fab) fab.disabled = (totalAssigned - myCodes.length) <= 0;
+};
+
+window.quickGenerate = (ticketId) => {
+    // Abrir modal de generar con el tipo pre-seleccionado
+    fillTicketDropdown();
+    const select = document.getElementById("gen_ticket_type");
+    if (select) {
+        // Buscar la opción con ese ticketId
+        for (let i = 0; i < select.options.length; i++) {
+            if (select.options[i].value === ticketId) {
+                select.selectedIndex = i;
+                const av = select.options[i].dataset?.available || 0;
+                document.getElementById("gen_available_count").textContent = av;
+                break;
+            }
+        }
+    }
+    openModal('modalGenerate');
+};
+
 window.openGenerateModal = () => {
     fillTicketDropdown();
     document.getElementById("gen_ticket_type").selectedIndex = 0;
@@ -812,6 +1035,14 @@ window.addEventListener('popstate', function(event) {
                     showEventsList();
                 }
                 break;
+            case 'history':
+                if (currentEvent) {
+                    showView('dashboardView');
+                    loadDashboardData();
+                } else {
+                    showEventsList();
+                }
+                break;
             default:
                 showBrandSelector();
         }
@@ -835,6 +1066,14 @@ function setupEventListeners() {
             history.back();
         } else {
             showEventsList();
+        }
+    });
+    document.getElementById("btnBackDashboard")?.addEventListener("click", () => {
+        if (history.state?.section) {
+            history.back();
+        } else if (currentEvent) {
+            showView('dashboardView');
+            loadDashboardData();
         }
     });
     document.getElementById("btnConfirmGenerate")?.addEventListener("click", handleGenerateCode);
