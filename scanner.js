@@ -192,13 +192,22 @@ function showScannerScreen() {
 }
 
 // History API - botón atrás del navegador
-window.addEventListener('popstate', function(event) {
+window.addEventListener('popstate', async function(event) {
     handlingPopstate = true;
     try {
         const screen = event.state?.screen;
         if (!screen || screen === 'events') {
             if (currentScreen === 'scanner') {
-                goBackToEvents();
+                // Navegar directamente sin llamar goBackToEvents
+                // (goBackToEvents llama history.back() que causaría doble retroceso)
+                await stopScanner();
+                state.currentEventId = null;
+                state.currentEventName = '';
+                resetStats();
+                document.getElementById('scannerBox')?.classList.add('hidden');
+                document.getElementById('searchBox')?.classList.add('hidden');
+                document.getElementById('actionButtons')?.classList.remove('hidden');
+                showEventSelection();
             }
         }
     } finally {
