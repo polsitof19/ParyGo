@@ -533,27 +533,61 @@ function setupGlobalEventListeners() {
 // ==========================================
 
 /**
- * Agregar fila de meta
+ * Agregar fila de meta para promotores
  */
 window.addGoalRow = function(target = '', reward = '') {
     const container = document.getElementById('goals_container');
     if (!container) return;
-    
-    const row = document.createElement('div');
-    row.className = 'goal-row';
-    row.style.cssText = 'display:flex; gap:10px; align-items:center; margin-bottom:10px;';
-    row.innerHTML = `
-        <input type="number" class="goal-target" placeholder="Cantidad" value="${target}" 
-               style="flex:1; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text);">
-        <input type="text" class="goal-reward" placeholder="Premio" value="${Validator.sanitizeHTML(reward)}" 
-               style="flex:2; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text);">
-        <button type="button" class="btn-icon" style="background:rgba(239,68,68,0.15); color:#ef4444;" 
-                onclick="this.parentElement.remove()">
-            <i class="fa-solid fa-trash"></i>
-        </button>
+
+    const num = container.children.length + 1;
+    const card = document.createElement('div');
+    card.className = 'goal-card';
+    card.innerHTML = `
+        <div class="goal-card-header">
+            <span class="goal-number">Meta ${num}</span>
+            <button type="button" class="goal-remove" onclick="window.removeGoalRow(this)" title="Eliminar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="goal-card-body">
+            <div class="form-group">
+                <label>Vender</label>
+                <div class="goal-target-row">
+                    <input type="number" class="goal-target" placeholder="0" min="1" value="${target}">
+                    <span class="field-suffix">entradas</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Premio</label>
+                <input type="text" class="goal-reward" placeholder="Ej: Bono S/. 50 + 2 tragos" value="${Validator.sanitizeHTML(reward)}">
+            </div>
+        </div>
     `;
-    container.appendChild(row);
+    container.appendChild(card);
 };
+
+/**
+ * Eliminar fila de meta y renumerar
+ */
+window.removeGoalRow = function(btn) {
+    const card = btn.closest('.goal-card');
+    if (card) {
+        card.classList.add('goal-removing');
+        setTimeout(() => {
+            card.remove();
+            renumberGoals();
+        }, 200);
+    }
+};
+
+function renumberGoals() {
+    const container = document.getElementById('goals_container');
+    if (!container) return;
+    container.querySelectorAll('.goal-card').forEach((card, i) => {
+        const num = card.querySelector('.goal-number');
+        if (num) num.textContent = `Meta ${i + 1}`;
+    });
+}
 
 /**
  * Limpiar preview de imagen de evento
