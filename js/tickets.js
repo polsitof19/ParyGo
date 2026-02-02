@@ -402,7 +402,144 @@ function toLocalDateTimeString(date) {
 }
 
 // ==========================================
-// 6. CREAR/EDITAR TICKETS
+// 6. PROMOTORES - UI TOGGLES
+// ==========================================
+
+export function togglePromotorSection() {
+    const checked = document.getElementById('nt_promotor_enabled')?.checked;
+    const section = document.getElementById('promotorConfigSection');
+    if (section) section.classList.toggle('hidden', !checked);
+}
+
+export function toggleCommissionType(type) {
+    document.querySelectorAll('#nt_commission_type .commission-type-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === type);
+    });
+    const label = document.getElementById('nt_commission_label');
+    if (label) label.textContent = type === 'percentage' ? 'Porcentaje por venta (%)' : 'Monto por venta (S/.)';
+}
+
+export function toggleFreeCommissionSection() {
+    const checked = document.getElementById('nt_free_enabled')?.checked;
+    const section = document.getElementById('freeCommissionSection');
+    if (section) section.classList.toggle('hidden', !checked);
+}
+
+export function toggleFreeField(field) {
+    const checked = document.getElementById(`nt_free_${field}_check`)?.checked;
+    const el = document.getElementById(`free_${field}_field`);
+    if (el) el.classList.toggle('hidden', !checked);
+}
+
+function getSelectedCommissionType() {
+    const activeBtn = document.querySelector('#nt_commission_type .commission-type-btn.active');
+    return activeBtn?.dataset.type || 'fixed';
+}
+
+function resetPromotorFields() {
+    const pe = document.getElementById('nt_promotor_enabled');
+    if (pe) pe.checked = false;
+    const section = document.getElementById('promotorConfigSection');
+    if (section) section.classList.add('hidden');
+
+    // Comisión por venta
+    toggleCommissionType('fixed');
+    const cv = document.getElementById('nt_commission_value');
+    if (cv) cv.value = '0';
+
+    // Entradas gratis
+    const fe = document.getElementById('nt_free_enabled');
+    if (fe) fe.checked = false;
+    const fcs = document.getElementById('freeCommissionSection');
+    if (fcs) fcs.classList.add('hidden');
+
+    ['cash', 'drinks', 'other'].forEach(f => {
+        const chk = document.getElementById(`nt_free_${f}_check`);
+        if (chk) chk.checked = false;
+        const fld = document.getElementById(`free_${f}_field`);
+        if (fld) fld.classList.add('hidden');
+        const input = document.getElementById(`nt_free_${f}`);
+        if (input) input.value = '';
+    });
+}
+
+function loadPromotorFields(tk) {
+    const pe = document.getElementById('nt_promotor_enabled');
+    if (pe) pe.checked = !!tk.promotorEnabled;
+    togglePromotorSection();
+
+    if (tk.promotorCommission) {
+        toggleCommissionType(tk.promotorCommission.type || 'fixed');
+        const cv = document.getElementById('nt_commission_value');
+        if (cv) cv.value = tk.promotorCommission.value || 0;
+    }
+
+    const fe = document.getElementById('nt_free_enabled');
+    if (fe) fe.checked = !!tk.freeEnabled;
+    toggleFreeCommissionSection();
+
+    if (tk.freeCommission) {
+        const fc = tk.freeCommission;
+        if (fc.cash != null && fc.cash > 0) {
+            const chk = document.getElementById('nt_free_cash_check');
+            if (chk) chk.checked = true;
+            toggleFreeField('cash');
+            const inp = document.getElementById('nt_free_cash');
+            if (inp) inp.value = fc.cash;
+        }
+        if (fc.drinks != null && fc.drinks > 0) {
+            const chk = document.getElementById('nt_free_drinks_check');
+            if (chk) chk.checked = true;
+            toggleFreeField('drinks');
+            const inp = document.getElementById('nt_free_drinks');
+            if (inp) inp.value = fc.drinks;
+        }
+        if (fc.other) {
+            const chk = document.getElementById('nt_free_other_check');
+            if (chk) chk.checked = true;
+            toggleFreeField('other');
+            const inp = document.getElementById('nt_free_other');
+            if (inp) inp.value = fc.other;
+        }
+    }
+}
+
+function readPromotorFields() {
+    const enabled = document.getElementById('nt_promotor_enabled')?.checked || false;
+    if (!enabled) return { promotorEnabled: false };
+
+    const commType = getSelectedCommissionType();
+    const commValue = Math.max(0, Number(document.getElementById('nt_commission_value')?.value) || 0);
+
+    const freeEnabled = document.getElementById('nt_free_enabled')?.checked || false;
+
+    const result = {
+        promotorEnabled: true,
+        promotorCommission: { type: commType, value: commValue }
+    };
+
+    if (freeEnabled) {
+        result.freeEnabled = true;
+        const freeCommission = {};
+        if (document.getElementById('nt_free_cash_check')?.checked) {
+            freeCommission.cash = Math.max(0, Number(document.getElementById('nt_free_cash')?.value) || 0);
+        }
+        if (document.getElementById('nt_free_drinks_check')?.checked) {
+            freeCommission.drinks = Math.max(0, Number(document.getElementById('nt_free_drinks')?.value) || 0);
+        }
+        if (document.getElementById('nt_free_other_check')?.checked) {
+            freeCommission.other = document.getElementById('nt_free_other')?.value.trim() || null;
+        }
+        result.freeCommission = freeCommission;
+    } else {
+        result.freeEnabled = false;
+    }
+
+    return result;
+}
+
+// ==========================================
+// 7. CREAR/EDITAR TICKETS
 // ==========================================
 
 export function openTicketModal() {
@@ -441,6 +578,9 @@ export function openTicketModal() {
     if (document.getElementById("door_price_field")) document.getElementById("door_price_field").classList.add("hidden");
     const phasesContainer = document.getElementById("phasesContainer");
     if (phasesContainer) phasesContainer.innerHTML = "";
+
+    // Promotores: limpiar campos
+    resetPromotorFields();
 
     // Fechas inteligentes con selectores personalizados
     const defaults = getDefaultDatesFromEvent();
@@ -503,6 +643,10 @@ export function editTicket(index) {
     if (mode === 'PHASES' && tk.phases) {
         tk.phases.forEach(phase => addPhaseRow(phase));
     }
+
+    // Promotores
+    resetPromotorFields();
+    loadPromotorFields(tk);
 
     // Precio puerta
     const hasDoorPrice = tk.doorPrice != null && tk.doorPrice > 0;
@@ -571,6 +715,9 @@ export async function saveNewTicket() {
         buyUntil = fixedBuyEl ? readDateTimeFromSelector(fixedBuyEl) : '';
     }
 
+    // Leer campos de promotores
+    const promotorData = readPromotorFields();
+
     const ticketData = {
         name,
         price,
@@ -581,7 +728,11 @@ export async function saveNewTicket() {
         color: document.getElementById("nt_color")?.value || "#f43f5e",
         max_uses: Math.max(1, Number(document.getElementById("nt_uses")?.value) || 1),
         valid_until: validUntil,
-        limitPerPerson: parseInt(document.getElementById("nt_limit")?.value) || null
+        limitPerPerson: parseInt(document.getElementById("nt_limit")?.value) || null,
+        promotorEnabled: promotorData.promotorEnabled || false,
+        promotorCommission: promotorData.promotorCommission || null,
+        freeEnabled: promotorData.freeEnabled || false,
+        freeCommission: promotorData.freeCommission || null
     };
 
     if (priceMode === 'FREE') {

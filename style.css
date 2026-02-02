@@ -2954,6 +2954,100 @@ select option:hover {
     animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Sección promotores en modal ticket */
+.subsection-box {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+}
+
+.subsection-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+.commission-type-selector {
+    display: flex;
+    gap: 8px;
+}
+
+.commission-type-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.commission-type-btn.active {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(244, 63, 94, 0.08);
+}
+
+.commission-checks {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.commission-check-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.commission-value-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-left: 54px;
+}
+
+.commission-value-field.hidden {
+    display: none;
+}
+
+.commission-value-field input {
+    width: 100px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-secondary);
+    color: var(--text);
+    font-size: 14px;
+}
+
+.commission-value-field input[type="text"] {
+    width: 200px;
+}
+
+.field-suffix {
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .commission-value-field {
+        padding-left: 0;
+        margin-top: 4px;
+    }
+    .commission-value-field input[type="text"] {
+        width: 100%;
+    }
+}
+
 /* Selector fecha/hora personalizado */
 .date-time-selector {
     display: flex;

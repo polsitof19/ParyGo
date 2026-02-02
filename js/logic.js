@@ -73,7 +73,11 @@ import {
     addPhaseRow,
     removePhaseRow,
     toggleDoorPrice,
-    onDateChange
+    onDateChange,
+    togglePromotorSection,
+    toggleCommissionType,
+    toggleFreeCommissionSection,
+    toggleFreeField
 } from './tickets.js';
 
 import {
@@ -205,6 +209,10 @@ window.addPhaseRow = addPhaseRow;
 window.removePhaseRow = removePhaseRow;
 window.toggleDoorPrice = toggleDoorPrice;
 window.onDateChange = onDateChange;
+window.togglePromotorSection = togglePromotorSection;
+window.toggleCommissionType = toggleCommissionType;
+window.toggleFreeCommissionSection = toggleFreeCommissionSection;
+window.toggleFreeField = toggleFreeField;
 
 // Códigos y Stock
 window.loadPromotersCache = loadPromotersCache;

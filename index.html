@@ -1290,6 +1290,80 @@
                 </div>
             </div>
 
+            <!-- Sección: Promotores -->
+            <div class="modal-section">
+                <div class="modal-section-title">Promotores</div>
+
+                <!-- Habilitar venta para promotores -->
+                <label class="toggle-label" style="margin-bottom:16px;">
+                    <input type="checkbox" id="nt_promotor_enabled" onchange="window.togglePromotorSection()">
+                    <span class="toggle-switch"></span>
+                    <span>Habilitar venta para promotores</span>
+                </label>
+
+                <div id="promotorConfigSection" class="hidden">
+                    <!-- Comisión por venta -->
+                    <div class="subsection-box">
+                        <div class="subsection-title">Comisión por venta</div>
+                        <div class="commission-type-selector" id="nt_commission_type">
+                            <button type="button" class="commission-type-btn active" data-type="fixed" onclick="window.toggleCommissionType('fixed')">Fijo (S/.)</button>
+                            <button type="button" class="commission-type-btn" data-type="percentage" onclick="window.toggleCommissionType('percentage')">Porcentaje (%)</button>
+                        </div>
+                        <div class="form-group" style="margin-top:12px;">
+                            <label id="nt_commission_label">Monto por venta (S/.)</label>
+                            <input type="number" id="nt_commission_value" placeholder="0.00" step="0.01" min="0" value="0">
+                        </div>
+                    </div>
+
+                    <!-- Entradas gratis -->
+                    <label class="toggle-label" style="margin:20px 0 12px;">
+                        <input type="checkbox" id="nt_free_enabled" onchange="window.toggleFreeCommissionSection()">
+                        <span class="toggle-switch"></span>
+                        <span>Habilitar entradas gratis</span>
+                    </label>
+
+                    <div id="freeCommissionSection" class="hidden">
+                        <div class="subsection-box">
+                            <div class="subsection-title">Comisión por entrada gratis</div>
+                            <div class="commission-checks">
+                                <div class="commission-check-row">
+                                    <label class="toggle-label">
+                                        <input type="checkbox" id="nt_free_cash_check" onchange="window.toggleFreeField('cash')">
+                                        <span class="toggle-switch"></span>
+                                        <span>Efectivo</span>
+                                    </label>
+                                    <div id="free_cash_field" class="commission-value-field hidden">
+                                        <input type="number" id="nt_free_cash" placeholder="0.00" step="0.01" min="0">
+                                        <span class="field-suffix">S/. por entrada</span>
+                                    </div>
+                                </div>
+                                <div class="commission-check-row">
+                                    <label class="toggle-label">
+                                        <input type="checkbox" id="nt_free_drinks_check" onchange="window.toggleFreeField('drinks')">
+                                        <span class="toggle-switch"></span>
+                                        <span>Tragos</span>
+                                    </label>
+                                    <div id="free_drinks_field" class="commission-value-field hidden">
+                                        <input type="number" id="nt_free_drinks" placeholder="0" step="1" min="0">
+                                        <span class="field-suffix">tragos por entrada</span>
+                                    </div>
+                                </div>
+                                <div class="commission-check-row">
+                                    <label class="toggle-label">
+                                        <input type="checkbox" id="nt_free_other_check" onchange="window.toggleFreeField('other')">
+                                        <span class="toggle-switch"></span>
+                                        <span>Otro</span>
+                                    </label>
+                                    <div id="free_other_field" class="commission-value-field hidden">
+                                        <input type="text" id="nt_free_other" placeholder="Ej: Merchandising, pase backstage..." maxlength="100">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Sección: Vigencia -->
             <div class="modal-section">
                 <div class="modal-section-title">Vigencia</div>
