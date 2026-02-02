@@ -2391,21 +2391,33 @@ async function getShareToken(ticket) {
     if (!ticket || !ticket.id) return null;
     if (ticket.share_token) return ticket.share_token;
 
-    const token = crypto.randomUUID ? crypto.randomUUID() :
-        Math.random().toString(36).substring(2) + Date.now().toString(36);
-
     try {
+        // Usar Cloud Function para guardar el token (bypassa reglas de Firestore)
+        const fn = httpsCallable(cloudFunctions, 'generateShareToken');
+        const result = await fn({ ticketId: ticket.id });
+
+        if (result.data?.success && result.data?.token) {
+            ticket.share_token = result.data.token;
+            return result.data.token;
+        }
+    } catch (e) {
+        console.error('Error generando share token via CF:', e);
+    }
+
+    // Fallback: intentar updateDoc directo
+    try {
+        const token = crypto.randomUUID ? crypto.randomUUID() :
+            Math.random().toString(36).substring(2) + Date.now().toString(36);
         await updateDoc(doc(db, "tickets", ticket.id), {
             share_token: token,
             share_token_created_at: new Date().toISOString()
         });
         ticket.share_token = token;
-    } catch (e) {
-        console.error('Error guardando share token:', e);
-        // Fallback: usar token temporal en memoria para que compartir funcione
-        ticket.share_token = token;
+        return token;
+    } catch (e2) {
+        console.error('Error guardando share token:', e2);
+        return null;
     }
-    return token;
 }
 
 function buildShareUrl(ticket, token) {

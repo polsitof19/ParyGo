@@ -195,3 +195,48 @@ exports.getSharedTicket = functions.https.onCall(async (data) => {
         brand_color: brandData?.color || ""
     };
 });
+
+/**
+ * Cloud Function: Generar share_token para un ticket
+ * Requiere autenticación. Solo el dueño del ticket puede generar el token.
+ */
+exports.generateShareToken = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "Debes iniciar sesión");
+    }
+
+    const { ticketId } = data;
+    if (!ticketId) {
+        throw new functions.https.HttpsError("invalid-argument", "ticketId es requerido");
+    }
+
+    const dbAdmin = admin.firestore();
+    const ticketDoc = await dbAdmin.collection("tickets").doc(ticketId).get();
+
+    if (!ticketDoc.exists) {
+        throw new functions.https.HttpsError("not-found", "Ticket no encontrado");
+    }
+
+    const ticket = ticketDoc.data();
+
+    // Verificar que el ticket pertenece al usuario autenticado
+    if (ticket.user_id !== context.auth.uid) {
+        throw new functions.https.HttpsError("permission-denied", "No tienes acceso a este ticket");
+    }
+
+    // Si ya tiene share_token, retornarlo
+    if (ticket.share_token) {
+        return { success: true, token: ticket.share_token };
+    }
+
+    // Generar nuevo token
+    const crypto = require('crypto');
+    const token = crypto.randomUUID();
+
+    await dbAdmin.collection("tickets").doc(ticketId).update({
+        share_token: token,
+        share_token_created_at: new Date().toISOString()
+    });
+
+    return { success: true, token };
+});
