@@ -1321,10 +1321,13 @@ function renderTicketCardSimple(t, i, mode, isFree, now) {
     let disabled = false;
     let statusLabel = '';
 
-    if (mode === 'FREE' && t.claim_until && new Date(t.claim_until) < now) {
+    // Fecha límite: buy_until para FIXED, claim_until para FREE (con fallback cruzado)
+    const untilDate = t.buy_until || t.claim_until;
+
+    if (mode === 'FREE' && (t.claim_until || t.buy_until) && new Date(t.claim_until || t.buy_until) < now) {
         disabled = true;
         statusLabel = 'Ya no disponible';
-    } else if (mode === 'FIXED' && t.buy_until && new Date(t.buy_until) < now) {
+    } else if (mode === 'FIXED' && untilDate && new Date(untilDate) < now) {
         disabled = true;
         statusLabel = 'Venta finalizada';
     } else if (t.stock !== undefined && t.sold !== undefined && t.sold >= t.stock) {
