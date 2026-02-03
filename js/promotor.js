@@ -475,7 +475,7 @@ async function loadDashboardData() {
         if (fab) fab.disabled = (totalAssigned - myCodes.length) <= 0;
 
         // Renderizar secciones
-        renderGoals(totalVentas + totalGratis);
+        renderGoals(totalGratis);
         renderSellTickets(tickets);
         renderFreeTickets(tickets);
         renderCodesList();
@@ -503,23 +503,36 @@ function formatEventDate(date, time) {
 }
 
 // ==========================================
-// RENDER: METAS
+// RENDER: METAS (ahora por entrada, desde ticket.freeGoals)
 // ==========================================
-function renderGoals(totalEntradas) {
-    const goals = currentEvent.promotorGoals;
+function renderGoals(totalGratis) {
     const section = document.getElementById("goals_section");
     const container = document.getElementById("goals_list");
     if (!section || !container) return;
 
-    if (!goals || goals.length === 0) {
+    // Recolectar metas de todos los tickets gratis
+    const tickets = currentEvent.tickets || [];
+    const allGoals = [];
+    tickets.forEach(tk => {
+        if (tk.freeGoals && tk.freeGoals.length > 0) {
+            tk.freeGoals.forEach(g => {
+                allGoals.push({ ...g, ticketName: tk.name });
+            });
+        }
+    });
+
+    // Ordenar por target ascendente
+    allGoals.sort((a, b) => (a.target || 0) - (b.target || 0));
+
+    if (allGoals.length === 0) {
         section.style.display = 'none';
         return;
     }
 
     section.style.display = '';
-    container.innerHTML = goals.map((g, i) => {
+    container.innerHTML = allGoals.map((g, i) => {
         const target = g.target || 0;
-        const progress = Math.min(totalEntradas, target);
+        const progress = Math.min(totalGratis, target);
         const pct = target > 0 ? Math.min(100, Math.round((progress / target) * 100)) : 0;
         const achieved = progress >= target;
         const icon = achieved ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-regular fa-clock"></i>';
@@ -529,9 +542,9 @@ function renderGoals(totalEntradas) {
             <div class="goal-progress-card ${cls}">
                 <div class="goal-progress-header">
                     <span class="goal-progress-icon">${icon}</span>
-                    <span class="goal-progress-title">Meta ${i + 1}: ${target} entradas</span>
+                    <span class="goal-progress-title">Meta: Regalar ${target} entradas</span>
                 </div>
-                <div class="goal-progress-prize">Premio: ${escapeHtml(g.reward || g.prize || '')}</div>
+                <div class="goal-progress-prize">Premio: ${escapeHtml(g.prize || '')}</div>
                 <div class="goal-progress-bar-bg">
                     <div class="goal-progress-bar-fill" style="width:${pct}%"></div>
                 </div>

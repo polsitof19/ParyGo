@@ -318,18 +318,6 @@ export function editCurrentEvent() {
         document.getElementById("ev_comm_sale").value = inc.comm_sale || "";
     }
     
-    // Cargar Metas de promotores
-    const goalsContainer = document.getElementById("goals_container");
-    if(goalsContainer) {
-        goalsContainer.innerHTML = "";
-        const goals = event.promotorGoals || inc.goals || [];
-        if (goals.length > 0) {
-            goals.forEach(g => {
-                if(window.addGoalRow) window.addGoalRow(g.target, g.reward);
-            });
-        }
-    }
-
     // CARGAR LEGAL (si existen los campos)
     const leg = event.legal || {};
     if(document.getElementById("ev_terms")) {
@@ -409,15 +397,7 @@ export async function saveEvent() {
         };
     }
 
-    // 2. METAS DE PROMOTORES (opcionales)
-    const promotorGoals = [];
-    document.querySelectorAll(".goal-card").forEach(card => {
-        const t = card.querySelector(".goal-target")?.value;
-        const r = card.querySelector(".goal-reward")?.value;
-        if (t && r) promotorGoals.push({ target: parseInt(t), reward: r.trim() });
-    });
-
-    // 3. INCENTIVOS (opcionales)
+    // 2. INCENTIVOS (opcionales)
     let incentives = { comm_free: 0, comm_sale: 0 };
     if(document.getElementById("ev_comm_free")) {
         incentives = {
@@ -446,7 +426,6 @@ export async function saveEvent() {
         image: state.tempImgBase64 || "",
         payment_config: paymentConfig,
         incentives: incentives,
-        promotorGoals: promotorGoals,
         legal: legal,
         status: document.getElementById("ev_status")?.value || "ACTIVE",
         updated_at: new Date().toISOString()

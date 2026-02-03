@@ -402,12 +402,20 @@ function toLocalDateTimeString(date) {
 }
 
 // ==========================================
-// 6. PROMOTORES - UI TOGGLES
+// 6. PROMOTORES - UI TOGGLES (INDEPENDIENTES)
 // ==========================================
 
+// Toggle para venta de promotores
 export function togglePromotorSection() {
     const checked = document.getElementById('nt_promotor_enabled')?.checked;
     const section = document.getElementById('promotorConfigSection');
+    if (section) section.classList.toggle('hidden', !checked);
+}
+
+// Toggle para entradas gratis (INDEPENDIENTE de promotorEnabled)
+export function toggleFreeSection() {
+    const checked = document.getElementById('nt_free_enabled')?.checked;
+    const section = document.getElementById('freeConfigSection');
     if (section) section.classList.toggle('hidden', !checked);
 }
 
@@ -417,12 +425,6 @@ export function toggleCommissionType(type) {
     });
     const label = document.getElementById('nt_commission_label');
     if (label) label.textContent = type === 'percentage' ? 'Porcentaje por venta (%)' : 'Monto por venta (S/.)';
-}
-
-export function toggleFreeCommissionSection() {
-    const checked = document.getElementById('nt_free_enabled')?.checked;
-    const section = document.getElementById('freeCommissionSection');
-    if (section) section.classList.toggle('hidden', !checked);
 }
 
 export function toggleFreeField(field) {
@@ -436,21 +438,103 @@ function getSelectedCommissionType() {
     return activeBtn?.dataset.type || 'fixed';
 }
 
+// ==========================================
+// 6b. METAS POR ENTRADA (freeGoals)
+// ==========================================
+
+export function addTicketGoal(target = '', prize = '') {
+    const container = document.getElementById('ticket_goals_container');
+    if (!container) return;
+
+    const num = container.children.length + 1;
+    const card = document.createElement('div');
+    card.className = 'ticket-goal-card';
+    card.innerHTML = `
+        <div class="ticket-goal-header">
+            <span class="ticket-goal-number">Meta ${num}</span>
+            <button type="button" class="ticket-goal-remove" onclick="window.removeTicketGoal(this)" title="Eliminar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="ticket-goal-body">
+            <div class="form-group">
+                <label>Regalar</label>
+                <div class="ticket-goal-target-row">
+                    <input type="number" class="ticket-goal-target" placeholder="0" min="1" value="${target}">
+                    <span class="field-suffix">entradas</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Premio</label>
+                <input type="text" class="ticket-goal-prize" placeholder="Ej: 1 botella de vodka" value="${Validator.sanitizeHTML(prize)}" maxlength="150">
+            </div>
+        </div>
+    `;
+    container.appendChild(card);
+}
+
+export function removeTicketGoal(btn) {
+    const card = btn.closest('.ticket-goal-card');
+    if (card) {
+        card.classList.add('ticket-goal-removing');
+        setTimeout(() => {
+            card.remove();
+            renumberTicketGoals();
+        }, 200);
+    }
+}
+
+function renumberTicketGoals() {
+    const container = document.getElementById('ticket_goals_container');
+    if (!container) return;
+    container.querySelectorAll('.ticket-goal-card').forEach((card, i) => {
+        const num = card.querySelector('.ticket-goal-number');
+        if (num) num.textContent = `Meta ${i + 1}`;
+    });
+}
+
+function readTicketGoals() {
+    const container = document.getElementById('ticket_goals_container');
+    if (!container) return [];
+    const goals = [];
+    container.querySelectorAll('.ticket-goal-card').forEach(card => {
+        const target = parseInt(card.querySelector('.ticket-goal-target')?.value) || 0;
+        const prize = card.querySelector('.ticket-goal-prize')?.value.trim() || '';
+        if (target > 0 && prize) {
+            goals.push({ target, prize });
+        }
+    });
+    // Ordenar por target ascendente
+    return goals.sort((a, b) => a.target - b.target);
+}
+
+function loadTicketGoals(freeGoals) {
+    const container = document.getElementById('ticket_goals_container');
+    if (!container) return;
+    container.innerHTML = '';
+    if (freeGoals && freeGoals.length > 0) {
+        freeGoals.forEach(g => addTicketGoal(g.target, g.prize));
+    }
+}
+
+// ==========================================
+// 6c. RESET / LOAD / READ PROMOTOR FIELDS
+// ==========================================
+
 function resetPromotorFields() {
+    // Reset venta
     const pe = document.getElementById('nt_promotor_enabled');
     if (pe) pe.checked = false;
-    const section = document.getElementById('promotorConfigSection');
-    if (section) section.classList.add('hidden');
-
-    // Comisión por venta
+    const ps = document.getElementById('promotorConfigSection');
+    if (ps) ps.classList.add('hidden');
     toggleCommissionType('fixed');
     const cv = document.getElementById('nt_commission_value');
     if (cv) cv.value = '0';
 
-    // Entradas gratis
+    // Reset gratis (INDEPENDIENTE)
     const fe = document.getElementById('nt_free_enabled');
     if (fe) fe.checked = false;
-    const fcs = document.getElementById('freeCommissionSection');
+    const fcs = document.getElementById('freeConfigSection');
     if (fcs) fcs.classList.add('hidden');
 
     ['cash', 'drinks', 'other'].forEach(f => {
@@ -461,9 +545,14 @@ function resetPromotorFields() {
         const input = document.getElementById(`nt_free_${f}`);
         if (input) input.value = '';
     });
+
+    // Reset metas
+    const goalsContainer = document.getElementById('ticket_goals_container');
+    if (goalsContainer) goalsContainer.innerHTML = '';
 }
 
 function loadPromotorFields(tk) {
+    // Cargar venta
     const pe = document.getElementById('nt_promotor_enabled');
     if (pe) pe.checked = !!tk.promotorEnabled;
     togglePromotorSection();
@@ -474,9 +563,10 @@ function loadPromotorFields(tk) {
         if (cv) cv.value = tk.promotorCommission.value || 0;
     }
 
+    // Cargar gratis (INDEPENDIENTE)
     const fe = document.getElementById('nt_free_enabled');
     if (fe) fe.checked = !!tk.freeEnabled;
-    toggleFreeCommissionSection();
+    toggleFreeSection();
 
     if (tk.freeCommission) {
         const fc = tk.freeCommission;
@@ -502,24 +592,29 @@ function loadPromotorFields(tk) {
             if (inp) inp.value = fc.other;
         }
     }
+
+    // Cargar metas
+    loadTicketGoals(tk.freeGoals || []);
 }
 
 function readPromotorFields() {
-    const enabled = document.getElementById('nt_promotor_enabled')?.checked || false;
-    if (!enabled) return { promotorEnabled: false };
+    const result = {};
 
-    const commType = getSelectedCommissionType();
-    const commValue = Math.max(0, Number(document.getElementById('nt_commission_value')?.value) || 0);
+    // Leer venta (independiente)
+    const promotorEnabled = document.getElementById('nt_promotor_enabled')?.checked || false;
+    result.promotorEnabled = promotorEnabled;
+    if (promotorEnabled) {
+        const commType = getSelectedCommissionType();
+        const commValue = Math.max(0, Number(document.getElementById('nt_commission_value')?.value) || 0);
+        result.promotorCommission = { type: commType, value: commValue };
+    } else {
+        result.promotorCommission = null;
+    }
 
+    // Leer gratis (independiente)
     const freeEnabled = document.getElementById('nt_free_enabled')?.checked || false;
-
-    const result = {
-        promotorEnabled: true,
-        promotorCommission: { type: commType, value: commValue }
-    };
-
+    result.freeEnabled = freeEnabled;
     if (freeEnabled) {
-        result.freeEnabled = true;
         const freeCommission = {};
         if (document.getElementById('nt_free_cash_check')?.checked) {
             freeCommission.cash = Math.max(0, Number(document.getElementById('nt_free_cash')?.value) || 0);
@@ -531,8 +626,10 @@ function readPromotorFields() {
             freeCommission.other = document.getElementById('nt_free_other')?.value.trim() || null;
         }
         result.freeCommission = freeCommission;
+        result.freeGoals = readTicketGoals();
     } else {
-        result.freeEnabled = false;
+        result.freeCommission = null;
+        result.freeGoals = [];
     }
 
     return result;
@@ -732,7 +829,8 @@ export async function saveNewTicket() {
         promotorEnabled: promotorData.promotorEnabled || false,
         promotorCommission: promotorData.promotorCommission || null,
         freeEnabled: promotorData.freeEnabled || false,
-        freeCommission: promotorData.freeCommission || null
+        freeCommission: promotorData.freeCommission || null,
+        freeGoals: promotorData.freeGoals || []
     };
 
     if (priceMode === 'FREE') {

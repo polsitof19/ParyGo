@@ -76,8 +76,10 @@ import {
     onDateChange,
     togglePromotorSection,
     toggleCommissionType,
-    toggleFreeCommissionSection,
-    toggleFreeField
+    toggleFreeSection,
+    toggleFreeField,
+    addTicketGoal,
+    removeTicketGoal
 } from './tickets.js';
 
 import {
@@ -211,8 +213,10 @@ window.toggleDoorPrice = toggleDoorPrice;
 window.onDateChange = onDateChange;
 window.togglePromotorSection = togglePromotorSection;
 window.toggleCommissionType = toggleCommissionType;
-window.toggleFreeCommissionSection = toggleFreeCommissionSection;
+window.toggleFreeSection = toggleFreeSection;
 window.toggleFreeField = toggleFreeField;
+window.addTicketGoal = addTicketGoal;
+window.removeTicketGoal = removeTicketGoal;
 
 // Códigos y Stock
 window.loadPromotersCache = loadPromotersCache;
@@ -521,73 +525,11 @@ function setupGlobalEventListeners() {
         });
     }
     
-    // AGREGAR META (Goals)
-    document.getElementById('btnAddGoal')?.addEventListener('click', () => {
-        addGoalRow();
-    });
-    
 }
 
 // ==========================================
 // 5. FUNCIONES AUXILIARES
 // ==========================================
-
-/**
- * Agregar fila de meta para promotores
- */
-window.addGoalRow = function(target = '', reward = '') {
-    const container = document.getElementById('goals_container');
-    if (!container) return;
-
-    const num = container.children.length + 1;
-    const card = document.createElement('div');
-    card.className = 'goal-card';
-    card.innerHTML = `
-        <div class="goal-card-header">
-            <span class="goal-number">Meta ${num}</span>
-            <button type="button" class="goal-remove" onclick="window.removeGoalRow(this)" title="Eliminar">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-        <div class="goal-card-body">
-            <div class="form-group">
-                <label>Vender</label>
-                <div class="goal-target-row">
-                    <input type="number" class="goal-target" placeholder="0" min="1" value="${target}">
-                    <span class="field-suffix">entradas</span>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Premio</label>
-                <input type="text" class="goal-reward" placeholder="Ej: Bono S/. 50 + 2 tragos" value="${Validator.sanitizeHTML(reward)}">
-            </div>
-        </div>
-    `;
-    container.appendChild(card);
-};
-
-/**
- * Eliminar fila de meta y renumerar
- */
-window.removeGoalRow = function(btn) {
-    const card = btn.closest('.goal-card');
-    if (card) {
-        card.classList.add('goal-removing');
-        setTimeout(() => {
-            card.remove();
-            renumberGoals();
-        }, 200);
-    }
-};
-
-function renumberGoals() {
-    const container = document.getElementById('goals_container');
-    if (!container) return;
-    container.querySelectorAll('.goal-card').forEach((card, i) => {
-        const num = card.querySelector('.goal-number');
-        if (num) num.textContent = `Meta ${i + 1}`;
-    });
-}
 
 /**
  * Limpiar preview de imagen de evento

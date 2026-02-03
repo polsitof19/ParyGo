@@ -1003,14 +1003,6 @@
                 </div>
                 
                 <div class="form-group full-width">
-                    <label><i class="fa-solid fa-bullseye"></i> Metas para promotores</label>
-                    <div id="goals_container" class="goals-list"></div>
-                    <button type="button" class="btn btn-ghost" id="btnAddGoal">
-                        <i class="fa-solid fa-plus"></i> Agregar meta
-                    </button>
-                </div>
-                
-                <div class="form-group full-width">
                     <label>Términos y condiciones</label>
                     <textarea id="ev_terms" rows="3" placeholder="Términos legales del evento..."></textarea>
                 </div>
@@ -1294,15 +1286,15 @@
             <div class="modal-section">
                 <div class="modal-section-title">Promotores</div>
 
-                <!-- Habilitar venta para promotores -->
-                <label class="toggle-label" style="margin-bottom:16px;">
+                <!-- Toggle 1: Venta para promotores -->
+                <label class="toggle-label">
                     <input type="checkbox" id="nt_promotor_enabled" onchange="window.togglePromotorSection()">
                     <span class="toggle-switch"></span>
                     <span>Habilitar venta para promotores</span>
                 </label>
 
-                <div id="promotorConfigSection" class="hidden">
-                    <!-- Comisión por venta -->
+                <!-- Config venta (visible solo si promotorEnabled) -->
+                <div id="promotorConfigSection" class="promotor-subsection hidden">
                     <div class="subsection-box">
                         <div class="subsection-title">Comisión por venta</div>
                         <div class="commission-type-selector" id="nt_commission_type">
@@ -1314,52 +1306,62 @@
                             <input type="number" id="nt_commission_value" placeholder="0.00" step="0.01" min="0" value="0">
                         </div>
                     </div>
+                </div>
 
-                    <!-- Entradas gratis -->
-                    <label class="toggle-label" style="margin:20px 0 12px;">
-                        <input type="checkbox" id="nt_free_enabled" onchange="window.toggleFreeCommissionSection()">
-                        <span class="toggle-switch"></span>
-                        <span>Habilitar entradas gratis</span>
-                    </label>
+                <!-- Toggle 2: Entradas gratis (INDEPENDIENTE) -->
+                <label class="toggle-label" style="margin-top:16px;">
+                    <input type="checkbox" id="nt_free_enabled" onchange="window.toggleFreeSection()">
+                    <span class="toggle-switch"></span>
+                    <span>Habilitar entradas gratis</span>
+                </label>
 
-                    <div id="freeCommissionSection" class="hidden">
-                        <div class="subsection-box">
-                            <div class="subsection-title">Comisión por entrada gratis</div>
-                            <div class="commission-checks">
-                                <div class="commission-check-row">
-                                    <label class="toggle-label">
-                                        <input type="checkbox" id="nt_free_cash_check" onchange="window.toggleFreeField('cash')">
-                                        <span class="toggle-switch"></span>
-                                        <span>Efectivo</span>
-                                    </label>
-                                    <div id="free_cash_field" class="commission-value-field hidden">
-                                        <input type="number" id="nt_free_cash" placeholder="0.00" step="0.01" min="0">
-                                        <span class="field-suffix">S/. por entrada</span>
-                                    </div>
+                <!-- Config gratis (visible solo si freeEnabled) -->
+                <div id="freeConfigSection" class="promotor-subsection hidden">
+                    <div class="subsection-box">
+                        <div class="subsection-title">Comisión por entrada gratis</div>
+                        <div class="commission-checks">
+                            <div class="commission-check-row">
+                                <label class="toggle-label">
+                                    <input type="checkbox" id="nt_free_cash_check" onchange="window.toggleFreeField('cash')">
+                                    <span class="toggle-switch"></span>
+                                    <span>Efectivo</span>
+                                </label>
+                                <div id="free_cash_field" class="commission-value-field hidden">
+                                    <input type="number" id="nt_free_cash" placeholder="0.00" step="0.01" min="0">
+                                    <span class="field-suffix">S/. por entrada</span>
                                 </div>
-                                <div class="commission-check-row">
-                                    <label class="toggle-label">
-                                        <input type="checkbox" id="nt_free_drinks_check" onchange="window.toggleFreeField('drinks')">
-                                        <span class="toggle-switch"></span>
-                                        <span>Tragos</span>
-                                    </label>
-                                    <div id="free_drinks_field" class="commission-value-field hidden">
-                                        <input type="number" id="nt_free_drinks" placeholder="0" step="1" min="0">
-                                        <span class="field-suffix">tragos por entrada</span>
-                                    </div>
+                            </div>
+                            <div class="commission-check-row">
+                                <label class="toggle-label">
+                                    <input type="checkbox" id="nt_free_drinks_check" onchange="window.toggleFreeField('drinks')">
+                                    <span class="toggle-switch"></span>
+                                    <span>Tragos</span>
+                                </label>
+                                <div id="free_drinks_field" class="commission-value-field hidden">
+                                    <input type="number" id="nt_free_drinks" placeholder="0" step="1" min="0">
+                                    <span class="field-suffix">tragos por entrada</span>
                                 </div>
-                                <div class="commission-check-row">
-                                    <label class="toggle-label">
-                                        <input type="checkbox" id="nt_free_other_check" onchange="window.toggleFreeField('other')">
-                                        <span class="toggle-switch"></span>
-                                        <span>Otro</span>
-                                    </label>
-                                    <div id="free_other_field" class="commission-value-field hidden">
-                                        <input type="text" id="nt_free_other" placeholder="Ej: Merchandising, pase backstage..." maxlength="100">
-                                    </div>
+                            </div>
+                            <div class="commission-check-row">
+                                <label class="toggle-label">
+                                    <input type="checkbox" id="nt_free_other_check" onchange="window.toggleFreeField('other')">
+                                    <span class="toggle-switch"></span>
+                                    <span>Otro</span>
+                                </label>
+                                <div id="free_other_field" class="commission-value-field hidden">
+                                    <input type="text" id="nt_free_other" placeholder="Ej: Merchandising, pase backstage..." maxlength="100">
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Metas para esta entrada gratis -->
+                    <div class="subsection-box" style="margin-top:16px;">
+                        <div class="subsection-title">Metas para promotores</div>
+                        <div id="ticket_goals_container" class="ticket-goals-list"></div>
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="window.addTicketGoal()">
+                            <i class="fa-solid fa-plus"></i> Agregar meta
+                        </button>
                     </div>
                 </div>
             </div>
