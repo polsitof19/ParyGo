@@ -92,7 +92,10 @@ import {
     saveStockAssignment,
     togglePromoterField,
     downloadCodesAsExcel,
-    downloadCodesAsTxt
+    downloadCodesAsTxt,
+    loadPendingPayments,
+    approvePayment,
+    rejectPayment
 } from './codes.js';
 import {
     loadEventMetrics,
@@ -229,6 +232,9 @@ window.saveStockAssignment = saveStockAssignment;
 window.togglePromoterField = togglePromoterField;
 window.downloadCodesAsExcel = downloadCodesAsExcel;
 window.downloadCodesAsTxt = downloadCodesAsTxt;
+window.loadPendingPayments = loadPendingPayments;
+window.approvePayment = approvePayment;
+window.rejectPayment = rejectPayment;
 
 // Métricas y Ventas
 window.loadEventMetrics = loadEventMetrics;
@@ -382,6 +388,9 @@ function setupGlobalEventListeners() {
     // ASIGNAR STOCK
     document.getElementById('btnAddStock')?.addEventListener('click', openStockModal);
     document.getElementById('btnSaveStock')?.addEventListener('click', saveStockAssignment);
+
+    // PAGOS PENDIENTES
+    document.getElementById('btnRefreshPendingPayments')?.addEventListener('click', loadPendingPayments);
     
     // EDITAR EVENTO ACTUAL
     document.getElementById('btnEditEvent')?.addEventListener('click', editCurrentEvent);
@@ -425,6 +434,9 @@ function setupGlobalEventListeners() {
             }
             if (tabId === 'tab_stock' && state.activeEventId) {
                 loadStockTable();
+            }
+            if (tabId === 'tab_pending_payments' && state.activeEventId) {
+                loadPendingPayments();
             }
             if (tabId === 'tab_tickets' && state.activeEventId) {
                 const event = state.allEvents.find(e => e.id === state.activeEventId);

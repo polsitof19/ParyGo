@@ -419,6 +419,9 @@
                         <button class="sub-tab" data-tab="tab_stock">
                             <i class="fa-solid fa-boxes-stacked"></i> Stock
                         </button>
+                        <button class="sub-tab" data-tab="tab_pending_payments">
+                            <i class="fa-solid fa-clock"></i> Pagos <span id="pending_payments_badge" class="tab-badge hidden">0</span>
+                        </button>
                     </div>
                 </div>
                 
@@ -719,6 +722,33 @@
                                     <th>Asignado</th>
                                     <th>Usado</th>
                                     <th>Disponible</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <!-- TAB: PAGOS PENDIENTES -->
+                    <div id="tab_pending_payments" class="sub-content hidden">
+                        <div class="section-header">
+                            <h3>Pagos Pendientes de Promotores</h3>
+                            <button class="btn btn-outline" id="btnRefreshPendingPayments">
+                                <i class="fa-solid fa-refresh"></i> Actualizar
+                            </button>
+                        </div>
+                        <div id="pending_payments_empty" class="empty-state-inline">
+                            <i class="fa-solid fa-check-circle"></i>
+                            <p>No hay pagos pendientes de aprobación</p>
+                        </div>
+                        <table id="tblPendingPayments" class="data-table" style="display:none;">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Promotor</th>
+                                    <th>Entrada</th>
+                                    <th>Monto</th>
+                                    <th>Fecha</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>

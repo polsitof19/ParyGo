@@ -706,10 +706,10 @@ export function downloadCodesAsTxt(codes, eventName) {
  */
 export async function sendCodesByEmail(email, codes, eventName, ticketName, recipientName) {
     if (!email) return false;
-    
+
     // Crear contenido del correo
     const codesListText = codes.map((c, i) => `${i + 1}. ${c.code}`).join('\n');
-    
+
     const subject = `🎫 Tus códigos para ${eventName}`;
     const body = `Hola ${recipientName || ''},
 
@@ -722,10 +722,142 @@ Total: ${codes.length} código(s)
 Para reclamar tu entrada, ingresa el código en el link de la marca.
 
 ¡Nos vemos en el evento!`;
-    
+
     // Abrir cliente de correo
     const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(mailtoLink, '_blank');
-    
+
     return true;
+}
+
+// ==========================================
+// 6. PAGOS PENDIENTES DE PROMOTORES
+// ==========================================
+
+import { updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+/**
+ * Cargar tabla de pagos pendientes
+ */
+export async function loadPendingPayments() {
+    if (!state.activeEventId) return;
+
+    try {
+        const snapshot = await getDocs(
+            query(
+                collection(db, "promotorCodes"),
+                where("event_id", "==", state.activeEventId),
+                where("status", "==", "PENDING")
+            )
+        );
+
+        const tbody = document.querySelector("#tblPendingPayments tbody");
+        const emptyState = document.getElementById("pending_payments_empty");
+        const table = document.getElementById("tblPendingPayments");
+        const badge = document.getElementById("pending_payments_badge");
+
+        if (!tbody) return;
+
+        // Actualizar badge
+        const count = snapshot.docs.length;
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        if (snapshot.empty) {
+            if (emptyState) emptyState.style.display = '';
+            if (table) table.style.display = 'none';
+            return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+        if (table) table.style.display = '';
+
+        tbody.innerHTML = snapshot.docs.map(d => {
+            const pc = d.data();
+            const formattedDate = pc.created_at
+                ? new Date(pc.created_at).toLocaleDateString('es-PE', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })
+                : '---';
+
+            return `
+                <tr data-code-id="${d.id}">
+                    <td><code style="font-family:monospace; font-weight:600;">${Validator.sanitizeHTML(pc.code)}</code></td>
+                    <td>${Validator.sanitizeHTML(pc.promoter_name || 'Desconocido')}</td>
+                    <td>${Validator.sanitizeHTML(pc.ticket_name || '-')}</td>
+                    <td style="font-weight:600;">S/. ${Number(pc.payment_amount || 0).toFixed(2)}</td>
+                    <td>${formattedDate}</td>
+                    <td>
+                        <button class="btn btn-sm btn-success" onclick="window.approvePayment('${d.id}')" title="Aprobar pago">
+                            <i class="fa-solid fa-check"></i> Aprobar
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="window.rejectPayment('${d.id}')" title="Rechazar">
+                            <i class="fa-solid fa-times"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+
+    } catch (error) {
+        console.error("Error cargando pagos pendientes:", error);
+        toast("Error cargando pagos pendientes", "error");
+    }
+}
+
+/**
+ * Aprobar pago de un código de promotor
+ */
+export async function approvePayment(codeId) {
+    if (!codeId) return;
+
+    try {
+        await updateDoc(doc(db, "promotorCodes", codeId), {
+            status: "APPROVED",
+            approved_at: new Date().toISOString(),
+            approved_by: state.currentUser?.id || "admin"
+        });
+
+        toast("✅ Pago aprobado correctamente");
+        await loadPendingPayments();
+
+    } catch (error) {
+        console.error("Error aprobando pago:", error);
+        toast("Error al aprobar pago", "error");
+    }
+}
+
+/**
+ * Rechazar pago de un código de promotor
+ */
+export async function rejectPayment(codeId) {
+    if (!codeId) return;
+
+    if (!confirm("¿Estás seguro de rechazar este pago? El código será eliminado.")) {
+        return;
+    }
+
+    try {
+        await updateDoc(doc(db, "promotorCodes", codeId), {
+            status: "REJECTED",
+            rejected_at: new Date().toISOString(),
+            rejected_by: state.currentUser?.id || "admin"
+        });
+
+        toast("❌ Pago rechazado");
+        await loadPendingPayments();
+
+    } catch (error) {
+        console.error("Error rechazando pago:", error);
+        toast("Error al rechazar pago", "error");
+    }
 }
