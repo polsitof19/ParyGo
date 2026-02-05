@@ -208,7 +208,7 @@ service cloud.firestore {
     }
 
     // ==========================================
-    // CODES (códigos de promotores)
+    // CODES (códigos de promotores - legacy)
     // ==========================================
 
     match /codes/{codeId} {
@@ -220,6 +220,29 @@ service cloud.firestore {
 
       // Actualizar: autenticados (al canjear código)
       allow update: if isAuthenticated();
+
+      // Eliminar: solo admins
+      allow delete: if isAdminOrSuper();
+    }
+
+    // ==========================================
+    // PROMOTOR CODES (nuevo sistema de códigos)
+    // ==========================================
+
+    match /promotorCodes/{codeId} {
+      // Leer: admins, staff, o el promotor dueño del código
+      // También público para validar códigos en reclamar.html
+      allow read: if true;
+
+      // Crear: promotores autenticados (solo sus propios códigos)
+      allow create: if isStaff() &&
+                       request.resource.data.promoter_id == request.auth.uid;
+
+      // Actualizar: admins (aprobar pagos), staff (su propio código),
+      // o cualquiera autenticado (para canjear el código)
+      allow update: if isAdminOrSuper() ||
+                       (isStaff() && resource.data.promoter_id == request.auth.uid) ||
+                       isAuthenticated();
 
       // Eliminar: solo admins
       allow delete: if isAdminOrSuper();

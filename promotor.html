@@ -210,13 +210,13 @@
                 </div>
             </div>
 
-            <!-- Historial -->
-            <div class="dash-section">
-                <button class="btn-history" onclick="showHistoryView()">
-                    <i class="fa-solid fa-clock-rotate-left"></i>
-                    <span>Ver historial completo</span>
-                    <i class="fa-solid fa-chevron-right"></i>
-                </button>
+            <!-- Sección: Mis Códigos (nueva) -->
+            <div class="dash-section" id="my_codes_section">
+                <div class="dash-section-header">
+                    <div class="dash-section-title">MIS CÓDIGOS</div>
+                    <button class="btn-see-all" onclick="showHistoryView()">Ver todo <i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+                <div id="my_codes_preview" class="my-codes-preview"></div>
             </div>
 
         </main>
@@ -292,6 +292,52 @@
         </div>
     </div>
 
+    <!-- ============ MODAL: COMPRAR CÓDIGO PARA VENDER ============ -->
+    <div id="modalBuyCode" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-shopping-cart"></i> Comprar Código</h2>
+                <button class="modal-close" onclick="closeModal('modalBuyCode')">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Resumen de la entrada -->
+                <div class="buy-summary" id="buy_summary">
+                    <div class="buy-ticket-name" id="buy_ticket_name">General</div>
+                    <div class="buy-ticket-price">Precio: <strong id="buy_ticket_price">S/. 0</strong></div>
+                    <div class="buy-ticket-commission">Tu comisión: <strong id="buy_ticket_commission">S/. 0</strong></div>
+                </div>
+
+                <!-- Información de pago -->
+                <div class="payment-info-box" id="payment_info_box">
+                    <div class="payment-info-title"><i class="fa-solid fa-wallet"></i> Realiza el pago a:</div>
+                    <div class="payment-info-row">
+                        <span class="payment-label">Nombre:</span>
+                        <span class="payment-value" id="payment_name">---</span>
+                    </div>
+                    <div class="payment-info-row">
+                        <span class="payment-label">Yape/Plin:</span>
+                        <span class="payment-value" id="payment_phone">---</span>
+                        <button class="btn-copy-small" onclick="copyPaymentPhone()"><i class="fa-solid fa-copy"></i></button>
+                    </div>
+                </div>
+
+                <!-- Instrucciones -->
+                <div class="payment-instructions">
+                    <i class="fa-solid fa-info-circle"></i>
+                    <p>Realiza el pago y luego confirma. Tu código quedará <strong>pendiente</strong> hasta que el admin apruebe el pago.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('modalBuyCode')">Cancelar</button>
+                <button class="btn-primary" id="btnConfirmBuy" onclick="confirmBuyCode()">
+                    <i class="fa-solid fa-check"></i> Ya pagué, generar código
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ============ MODAL: CÓDIGO GENERADO ============ -->
     <div id="modalCodeResult" class="modal hidden">
         <div class="modal-content code-result">
@@ -299,21 +345,41 @@
                 <i class="fa-solid fa-check"></i>
             </div>
             <h2>¡Código Generado!</h2>
-            
+
             <div class="code-display">
                 <span id="generated_code">JP4X7KM2</span>
                 <button class="btn-copy" onclick="copyGeneratedCode()">
                     <i class="fa-solid fa-copy"></i>
                 </button>
             </div>
-            
+
             <p class="code-hint">Comparte este código con tu invitado</p>
-            
+
             <div class="modal-actions">
                 <button class="btn-secondary" onclick="closeModal('modalCodeResult')">CERRAR</button>
                 <button class="btn-primary" onclick="shareCode()">
                     <i class="fa-solid fa-share"></i> COMPARTIR
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL: CÓDIGO PENDIENTE ============ -->
+    <div id="modalCodePending" class="modal hidden">
+        <div class="modal-content code-result pending">
+            <div class="pending-icon">
+                <i class="fa-solid fa-clock"></i>
+            </div>
+            <h2>Código Pendiente</h2>
+
+            <div class="code-display pending">
+                <span id="pending_code">JP4X7KM2</span>
+            </div>
+
+            <p class="code-hint pending">Tu código está esperando aprobación del pago. Te notificaremos cuando esté listo.</p>
+
+            <div class="modal-actions">
+                <button class="btn-primary full" onclick="closeModal('modalCodePending')">ENTENDIDO</button>
             </div>
         </div>
     </div>

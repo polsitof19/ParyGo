@@ -34,13 +34,15 @@ let selectedBrandId = null;
 let subdomainBrandId = null;
 let currentEvent = null;
 let myQuotas = [];
-let myCodes = [];
+let myCodes = [];        // Colección "codes" antigua (para compatibilidad)
+let myPromotorCodes = []; // Nueva colección "promotorCodes"
 let allEvents = [];
 let brandsCache = {};
 let currentViewIdPromo = null;
 let handlingPopstate = false;
 let lastGeneratedCode = null;
 let isProcessing = false;
+let pendingBuyTicket = null; // Ticket seleccionado para compra
 
 // Caracteres seguros (sin O, 0, I, L, 1 para evitar confusión)
 const SAFE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -429,7 +431,7 @@ async function loadDashboardData() {
         );
         myQuotas = (await getDocs(qQuotas)).docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // Cargar códigos generados
+        // Cargar códigos antiguos (colección codes - para compatibilidad)
         const qCodes = query(
             collection(db, "codes"),
             where("promoter_id", "==", currentUser.id),
@@ -437,24 +439,53 @@ async function loadDashboardData() {
         );
         myCodes = (await getDocs(qCodes)).docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // Calcular estadísticas de ganancias
+        // Cargar códigos nuevos (colección promotorCodes)
+        const qPromotorCodes = query(
+            collection(db, "promotorCodes"),
+            where("promoter_id", "==", currentUser.id),
+            where("event_id", "==", currentEvent.id)
+        );
+        myPromotorCodes = (await getDocs(qPromotorCodes)).docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // Calcular estadísticas de ganancias (combinando ambas colecciones)
         const tickets = currentEvent.tickets || [];
         let totalVentas = 0;
         let totalGratis = 0;
         let totalComision = 0;
 
-        const claimedOrScanned = myCodes.filter(c => c.status === 'CLAIMED' || c.status === 'SCANNED');
+        // Códigos antiguos (codes collection)
+        const claimedOrScannedOld = myCodes.filter(c => c.status === 'CLAIMED' || c.status === 'SCANNED');
 
-        claimedOrScanned.forEach(code => {
+        claimedOrScannedOld.forEach(code => {
             const tk = tickets.find(t => t.id === code.ticket_id);
             if (!tk) return;
             if (tk.isFree || tk.price === 0) {
                 totalGratis++;
-                // Comisión por entrada gratis
                 if (tk.freeCommission?.cash) totalComision += tk.freeCommission.cash;
             } else {
                 totalVentas++;
-                // Comisión por venta
+                if (tk.promotorCommission) {
+                    if (tk.promotorCommission.type === 'percentage') {
+                        totalComision += (tk.price * tk.promotorCommission.value / 100);
+                    } else {
+                        totalComision += (tk.promotorCommission.value || 0);
+                    }
+                }
+            }
+        });
+
+        // Códigos nuevos (promotorCodes collection)
+        // Solo contar los CLAIMED (ya canjeados por cliente)
+        const claimedNew = myPromotorCodes.filter(c => c.status === 'CLAIMED' || c.status === 'SCANNED');
+
+        claimedNew.forEach(code => {
+            const tk = tickets.find(t => t.id === code.ticket_id);
+            if (!tk) return;
+            if (code.type === 'free') {
+                totalGratis++;
+                if (tk.freeCommission?.cash) totalComision += tk.freeCommission.cash;
+            } else if (code.type === 'sell') {
+                totalVentas++;
                 if (tk.promotorCommission) {
                     if (tk.promotorCommission.type === 'percentage') {
                         totalComision += (tk.price * tk.promotorCommission.value / 100);
@@ -478,6 +509,7 @@ async function loadDashboardData() {
         renderGoals(totalGratis);
         renderSellTickets(tickets);
         renderFreeTickets(tickets);
+        renderMyCodesPreview();  // Nueva sección de códigos en dashboard
         renderCodesList();
         renderClaimedList();
         fillTicketDropdown();
@@ -576,18 +608,24 @@ function renderSellTickets(tickets) {
 
     container.innerHTML = sellable.map(tk => {
         let commText = '';
+        let commValue = 0;
         if (tk.promotorCommission) {
             if (tk.promotorCommission.type === 'percentage') {
-                commText = `${tk.promotorCommission.value}% = S/. ${(tk.price * tk.promotorCommission.value / 100).toFixed(2)}`;
+                commValue = tk.price * tk.promotorCommission.value / 100;
+                commText = `${tk.promotorCommission.value}% = S/. ${commValue.toFixed(2)}`;
             } else {
-                commText = `S/. ${Number(tk.promotorCommission.value || 0).toFixed(2)}`;
+                commValue = Number(tk.promotorCommission.value || 0);
+                commText = `S/. ${commValue.toFixed(2)}`;
             }
         }
 
-        // Contar disponibles para este tipo
-        const quota = myQuotas.find(q => q.ticket_id === tk.id);
-        const generated = myCodes.filter(c => c.ticket_id === tk.id).length;
-        const available = quota ? Math.max(0, (quota.assigned || 0) - generated) : 0;
+        // Contar códigos ya generados (ambas colecciones)
+        const generatedOld = myCodes.filter(c => c.ticket_id === tk.id).length;
+        const generatedNew = myPromotorCodes.filter(c => c.ticket_id === tk.id && c.type === 'sell').length;
+        const totalGenerated = generatedOld + generatedNew;
+
+        // Verificar si hay configuración de pago
+        const hasPayment = currentEvent.payment_config?.active === true;
 
         return `
             <div class="ticket-action-card">
@@ -595,9 +633,11 @@ function renderSellTickets(tickets) {
                     <div class="ticket-action-info">
                         <span class="ticket-action-name">${escapeHtml(tk.name)} · S/. ${Number(tk.price).toFixed(2)}</span>
                         ${commText ? `<span class="ticket-action-commission">Tu comisión: ${commText}</span>` : ''}
-                        ${available > 0 ? `<span class="ticket-action-available">${available} disponibles</span>` : ''}
                     </div>
-                    ${available > 0 ? `<button class="btn-action-generate" onclick="quickGenerate('${escapeHtml(tk.id)}')">Generar <i class="fa-solid fa-arrow-right"></i></button>` : '<span class="ticket-action-sold-out">Agotado</span>'}
+                    ${hasPayment
+                        ? `<button class="btn-action-buy" onclick="openBuyModal('${escapeHtml(tk.id)}')"><i class="fa-solid fa-shopping-cart"></i> Comprar</button>`
+                        : `<button class="btn-action-generate" onclick="quickGenerate('${escapeHtml(tk.id)}')">Generar <i class="fa-solid fa-arrow-right"></i></button>`
+                    }
                 </div>
             </div>
         `;
@@ -637,20 +677,27 @@ function renderFreeTickets(tickets) {
         if (tk.freeCommission?.other) comms.push(tk.freeCommission.other);
         const commText = comms.length ? comms.join(' + ') : '';
 
-        // Contar disponibles
+        // Contar códigos generados (ambas colecciones)
+        const generatedOld = myCodes.filter(c => c.ticket_id === tk.id).length;
+        const generatedNew = myPromotorCodes.filter(c => c.ticket_id === tk.id && c.type === 'free').length;
+        const totalGenerated = generatedOld + generatedNew;
+
+        // Contar disponibles basado en cuotas
         const quota = myQuotas.find(q => q.ticket_id === tk.id);
-        const generated = myCodes.filter(c => c.ticket_id === tk.id).length;
-        const available = quota ? Math.max(0, (quota.assigned || 0) - generated) : 0;
+        const available = quota ? Math.max(0, (quota.assigned || 0) - totalGenerated) : 999; // Sin límite si no hay cuota
 
         return `
             <div class="ticket-action-card ticket-free">
                 <div class="ticket-action-top">
                     <div class="ticket-action-info">
                         <span class="ticket-action-name">${escapeHtml(tk.name)} · GRATIS</span>
-                        ${available > 0 ? `<span class="ticket-action-available">Disponibles: ${available}</span>` : ''}
+                        ${quota ? `<span class="ticket-action-available">Disponibles: ${available}</span>` : ''}
                         ${commText ? `<span class="ticket-action-commission">Tu comisión: ${commText}</span>` : ''}
                     </div>
-                    ${available > 0 ? `<button class="btn-action-generate" onclick="quickGenerate('${escapeHtml(tk.id)}')">Dar entrada <i class="fa-solid fa-arrow-right"></i></button>` : '<span class="ticket-action-sold-out">Sin cuota</span>'}
+                    ${available > 0 || !quota
+                        ? `<button class="btn-action-free" onclick="generateFreeCode('${escapeHtml(tk.id)}')"><i class="fa-solid fa-gift"></i> Dar entrada</button>`
+                        : '<span class="ticket-action-sold-out">Sin cuota</span>'
+                    }
                 </div>
             </div>
         `;
@@ -659,66 +706,114 @@ function renderFreeTickets(tickets) {
 
 function renderCodesList() {
     const container = document.getElementById("codes_list");
-    
-    if (!myCodes.length) {
+
+    // Combinar ambas colecciones
+    const allCodes = [
+        ...myCodes.map(c => ({ ...c, source: 'old' })),
+        ...myPromotorCodes.map(c => ({ ...c, source: 'new' }))
+    ];
+
+    if (allCodes.length === 0) {
         container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-ticket"></i><p>No has generado códigos aún</p></div>';
         return;
     }
-    
-    // Ordenar: más recientes primero
-    const sorted = [...myCodes].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    
-    container.innerHTML = sorted.map(c => {
-        let statusClass = 'free';
-        let statusText = '⚪ Libre';
-        
-        if (c.status === 'CLAIMED') {
-            statusClass = 'claimed';
-            statusText = '✅ Canjeado';
-        } else if (c.status === 'SCANNED') {
-            statusClass = 'scanned';
-            statusText = '🎫 Escaneado';
-        }
-        
+
+    // Ordenar: pendientes primero, luego por fecha
+    allCodes.sort((a, b) => {
+        if (a.status === 'PENDING' && b.status !== 'PENDING') return -1;
+        if (b.status === 'PENDING' && a.status !== 'PENDING') return 1;
+        return new Date(b.created_at) - new Date(a.created_at);
+    });
+
+    container.innerHTML = allCodes.map(c => {
+        const statusInfo = getCodeStatusInfo(c.status);
+        const ticket = currentEvent.tickets?.find(t => t.id === c.ticket_id);
+        const ticketName = ticket ? ticket.name : '';
+        const typeLabel = c.type === 'sell' ? '💰 Venta' : c.type === 'free' ? '🎁 Gratis' : '';
+
+        // Determinar si se puede copiar/compartir
+        const canShare = c.status === 'APPROVED' || c.status === 'FREE' || c.status === 'CLAIMED' || c.status === 'SCANNED' || !c.status;
+
         return `
-            <div class="code-card">
+            <div class="code-card ${statusInfo.class}">
                 <div class="code-info">
                     <div class="code-value">${escapeHtml(c.code)}</div>
-                    <div class="code-status ${statusClass}">${statusText}</div>
+                    <div class="code-meta">
+                        ${ticketName ? `<span class="code-ticket">${escapeHtml(ticketName)}</span>` : ''}
+                        ${typeLabel ? `<span class="code-type">${typeLabel}</span>` : ''}
+                    </div>
+                    <div class="code-status ${statusInfo.class}">${statusInfo.icon} ${statusInfo.text}</div>
                 </div>
                 <div class="code-actions">
-                    <button class="btn-copy" onclick="copyCode('${c.code}', this)" title="Copiar">
-                        <i class="fa-solid fa-copy"></i>
-                    </button>
+                    ${canShare ? `
+                        <button class="btn-copy" onclick="copyCode('${c.code}', this)" title="Copiar">
+                            <i class="fa-solid fa-copy"></i>
+                        </button>
+                        <button class="btn-share" onclick="shareSpecificCode('${c.code}')" title="Compartir">
+                            <i class="fa-solid fa-share"></i>
+                        </button>
+                    ` : `
+                        <span class="code-waiting"><i class="fa-solid fa-clock"></i></span>
+                    `}
                 </div>
             </div>
         `;
     }).join("");
 }
 
+window.shareSpecificCode = async (code) => {
+    const text = `🎫 Tu código de entrada para ${currentEvent.name}:\n\n${code}\n\nCanjéalo en: ${window.location.origin}/reclamar.html`;
+
+    if (navigator.share) {
+        try {
+            await navigator.share({ text });
+        } catch (e) {
+            // Usuario canceló
+        }
+    } else {
+        try {
+            await navigator.clipboard.writeText(text);
+            toast("✅ Mensaje copiado");
+        } catch (e) {
+            toast("Error al compartir");
+        }
+    }
+};
+
 function renderClaimedList() {
     const container = document.getElementById("claimed_list");
-    
-    // Solo códigos canjeados o escaneados
-    const claimed = myCodes.filter(c => c.status === 'CLAIMED' || c.status === 'SCANNED');
-    
-    if (!claimed.length) {
+
+    // Combinar ambas colecciones, solo canjeados o escaneados
+    const claimedOld = myCodes.filter(c => c.status === 'CLAIMED' || c.status === 'SCANNED');
+    const claimedNew = myPromotorCodes.filter(c => c.status === 'CLAIMED' || c.status === 'SCANNED');
+    const claimed = [...claimedOld, ...claimedNew];
+
+    if (claimed.length === 0) {
         container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-user-check"></i><p>Nadie ha canjeado tus códigos aún</p></div>';
         return;
     }
-    
+
     // Ordenar por fecha de canje
     claimed.sort((a, b) => new Date(b.claimed_at || b.created_at) - new Date(a.claimed_at || a.created_at));
-    
-    container.innerHTML = claimed.map(c => `
-        <div class="claimed-card">
-            <div class="claimed-info">
-                <h4>${escapeHtml(c.claimed_name || 'Sin nombre')}</h4>
-                <p>${escapeHtml(c.code)}</p>
+
+    container.innerHTML = claimed.map(c => {
+        const ticket = currentEvent.tickets?.find(t => t.id === c.ticket_id);
+        const ticketName = ticket ? ticket.name : '';
+        const claimedName = c.claimed_by?.name || c.claimed_name || 'Sin nombre';
+
+        return `
+            <div class="claimed-card ${c.status === 'SCANNED' ? 'scanned' : ''}">
+                <div class="claimed-info">
+                    <h4>${escapeHtml(claimedName)}</h4>
+                    <div class="claimed-meta">
+                        <span class="claimed-code">${escapeHtml(c.code)}</span>
+                        ${ticketName ? `<span class="claimed-ticket">${escapeHtml(ticketName)}</span>` : ''}
+                    </div>
+                </div>
+                <span class="claimed-badge ${c.status === 'SCANNED' ? 'scanned' : ''}">${c.status === 'SCANNED' ? '🎫 Entró' : '✅ Canjeado'}</span>
             </div>
-            <span class="claimed-badge ${c.status === 'SCANNED' ? 'scanned' : ''}">${c.status === 'SCANNED' ? '🎫 Entró' : '✅ Canjeado'}</span>
-        </div>
-    `).join("");
+        `;
+    }).join("");
 }
 
 function fillTicketDropdown() {
@@ -964,6 +1059,279 @@ window.openGenerateModal = () => {
 
 function openModal(id) { document.getElementById(id)?.classList.remove('hidden'); }
 window.closeModal = (id) => document.getElementById(id)?.classList.add('hidden');
+
+// ==========================================
+// RENDER: MIS CÓDIGOS (PREVIEW EN DASHBOARD)
+// ==========================================
+function renderMyCodesPreview() {
+    const container = document.getElementById("my_codes_preview");
+    if (!container) return;
+
+    // Combinar ambas colecciones
+    const allCodes = [
+        ...myCodes.map(c => ({ ...c, source: 'old' })),
+        ...myPromotorCodes.map(c => ({ ...c, source: 'new' }))
+    ];
+
+    // Ordenar: pendientes primero, luego por fecha
+    allCodes.sort((a, b) => {
+        // Pendientes primero
+        if (a.status === 'PENDING' && b.status !== 'PENDING') return -1;
+        if (b.status === 'PENDING' && a.status !== 'PENDING') return 1;
+        // Luego por fecha más reciente
+        return new Date(b.created_at) - new Date(a.created_at);
+    });
+
+    // Mostrar solo los primeros 5
+    const preview = allCodes.slice(0, 5);
+
+    if (preview.length === 0) {
+        container.innerHTML = `
+            <div class="empty-codes-preview">
+                <i class="fa-solid fa-ticket"></i>
+                <span>No tienes códigos aún</span>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = preview.map(c => {
+        const statusInfo = getCodeStatusInfo(c.status);
+        const ticket = currentEvent.tickets?.find(t => t.id === c.ticket_id);
+        const ticketName = ticket ? ticket.name : 'Entrada';
+
+        return `
+            <div class="code-preview-item ${statusInfo.class}">
+                <div class="code-preview-left">
+                    <span class="code-preview-value">${escapeHtml(c.code)}</span>
+                    <span class="code-preview-type">${escapeHtml(ticketName)}</span>
+                </div>
+                <div class="code-preview-right">
+                    <span class="code-preview-status">${statusInfo.icon} ${statusInfo.text}</span>
+                    ${c.status === 'APPROVED' || c.status === 'FREE' ? `<button class="btn-copy-mini" onclick="copyCode('${c.code}', this)"><i class="fa-solid fa-copy"></i></button>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function getCodeStatusInfo(status) {
+    switch (status) {
+        case 'PENDING':
+            return { class: 'status-pending', icon: '⏳', text: 'Pendiente' };
+        case 'APPROVED':
+            return { class: 'status-approved', icon: '✅', text: 'Aprobado' };
+        case 'FREE':
+            return { class: 'status-free', icon: '🎁', text: 'Listo' };
+        case 'CLAIMED':
+            return { class: 'status-claimed', icon: '🎫', text: 'Canjeado' };
+        case 'SCANNED':
+            return { class: 'status-scanned', icon: '✓', text: 'Escaneado' };
+        default:
+            return { class: 'status-free', icon: '⚪', text: 'Libre' };
+    }
+}
+
+// ==========================================
+// MODAL: COMPRAR CÓDIGO PARA VENDER
+// ==========================================
+window.openBuyModal = (ticketId) => {
+    const ticket = currentEvent.tickets?.find(t => t.id === ticketId);
+    if (!ticket) return toast("Entrada no encontrada");
+
+    pendingBuyTicket = ticket;
+
+    // Llenar información del ticket
+    document.getElementById("buy_ticket_name").textContent = ticket.name;
+    document.getElementById("buy_ticket_price").textContent = `S/. ${Number(ticket.price).toFixed(2)}`;
+
+    // Calcular comisión
+    let commValue = 0;
+    if (ticket.promotorCommission) {
+        if (ticket.promotorCommission.type === 'percentage') {
+            commValue = ticket.price * ticket.promotorCommission.value / 100;
+        } else {
+            commValue = Number(ticket.promotorCommission.value || 0);
+        }
+    }
+    document.getElementById("buy_ticket_commission").textContent = `S/. ${commValue.toFixed(2)}`;
+
+    // Información de pago
+    const payConfig = currentEvent.payment_config || {};
+    document.getElementById("payment_name").textContent = payConfig.name || '---';
+    document.getElementById("payment_phone").textContent = payConfig.phone || '---';
+
+    openModal('modalBuyCode');
+};
+
+window.copyPaymentPhone = async () => {
+    const phone = document.getElementById("payment_phone").textContent;
+    if (!phone || phone === '---') return;
+    try {
+        await navigator.clipboard.writeText(phone);
+        toast("✅ Número copiado");
+    } catch (e) {
+        toast("Error al copiar");
+    }
+};
+
+window.confirmBuyCode = async () => {
+    if (isProcessing || !pendingBuyTicket) return;
+
+    const ticket = pendingBuyTicket;
+    const btn = document.getElementById("btnConfirmBuy");
+
+    isProcessing = true;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
+
+    try {
+        // Generar código único
+        const prefix = (currentEvent.code_prefix || currentEvent.name || "PG")
+            .replace(/[^A-Za-z]/g, '')
+            .substring(0, 2)
+            .toUpperCase();
+
+        let code = generateUniqueCode(prefix);
+
+        // Verificar unicidad
+        let exists = true;
+        let attempts = 0;
+        while (exists && attempts < 10) {
+            const check = await getDocs(query(collection(db, "promotorCodes"), where("code", "==", code)));
+            if (check.empty) {
+                exists = false;
+            } else {
+                code = generateUniqueCode(prefix);
+                attempts++;
+            }
+        }
+
+        if (exists) throw new Error("No se pudo generar código único");
+
+        // Guardar en promotorCodes con estado PENDING
+        await addDoc(collection(db, "promotorCodes"), {
+            code: code,
+            event_id: currentEvent.id,
+            brand_id: selectedBrandId,
+            promoter_id: currentUser.id,
+            promoter_name: currentUser.name,
+            ticket_id: ticket.id,
+            ticket_name: ticket.name,
+            ticket_price: ticket.price,
+            type: 'sell',
+            status: 'PENDING', // Esperando aprobación de pago
+            payment_amount: ticket.price,
+            claimed_by: null,
+            claimed_at: null,
+            scanned_at: null,
+            created_at: new Date().toISOString()
+        });
+
+        lastGeneratedCode = code;
+
+        // Mostrar modal de código pendiente
+        document.getElementById("pending_code").textContent = code;
+        closeModal('modalBuyCode');
+        openModal('modalCodePending');
+
+        // Recargar datos
+        await loadDashboardData();
+
+    } catch (e) {
+        console.error(e);
+        toast("Error: " + e.message);
+    } finally {
+        isProcessing = false;
+        pendingBuyTicket = null;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Ya pagué, generar código';
+    }
+};
+
+// ==========================================
+// GENERAR CÓDIGO GRATIS (INSTANTÁNEO)
+// ==========================================
+window.generateFreeCode = async (ticketId) => {
+    if (isProcessing) return;
+
+    const ticket = currentEvent.tickets?.find(t => t.id === ticketId);
+    if (!ticket) return toast("Entrada no encontrada");
+
+    // Verificar cuota si existe
+    const quota = myQuotas.find(q => q.ticket_id === ticketId);
+    if (quota) {
+        const generatedOld = myCodes.filter(c => c.ticket_id === ticketId).length;
+        const generatedNew = myPromotorCodes.filter(c => c.ticket_id === ticketId && c.type === 'free').length;
+        const totalGenerated = generatedOld + generatedNew;
+        if (totalGenerated >= (quota.assigned || 0)) {
+            return toast("Ya usaste toda tu cuota para este tipo");
+        }
+    }
+
+    isProcessing = true;
+    toast("Generando código...");
+
+    try {
+        // Generar código único
+        const prefix = (currentEvent.code_prefix || currentEvent.name || "PG")
+            .replace(/[^A-Za-z]/g, '')
+            .substring(0, 2)
+            .toUpperCase();
+
+        let code = generateUniqueCode(prefix);
+
+        // Verificar unicidad
+        let exists = true;
+        let attempts = 0;
+        while (exists && attempts < 10) {
+            const check = await getDocs(query(collection(db, "promotorCodes"), where("code", "==", code)));
+            if (check.empty) {
+                const checkOld = await getDocs(query(collection(db, "codes"), where("code", "==", code)));
+                exists = !checkOld.empty;
+            }
+            if (exists) {
+                code = generateUniqueCode(prefix);
+                attempts++;
+            }
+        }
+
+        if (exists) throw new Error("No se pudo generar código único");
+
+        // Guardar en promotorCodes con estado FREE (listo para usar)
+        await addDoc(collection(db, "promotorCodes"), {
+            code: code,
+            event_id: currentEvent.id,
+            brand_id: selectedBrandId,
+            promoter_id: currentUser.id,
+            promoter_name: currentUser.name,
+            ticket_id: ticket.id,
+            ticket_name: ticket.name,
+            ticket_price: 0,
+            type: 'free',
+            status: 'FREE', // Listo para compartir inmediatamente
+            claimed_by: null,
+            claimed_at: null,
+            scanned_at: null,
+            created_at: new Date().toISOString()
+        });
+
+        lastGeneratedCode = code;
+
+        // Mostrar resultado
+        document.getElementById("generated_code").textContent = code;
+        openModal('modalCodeResult');
+
+        // Recargar datos
+        await loadDashboardData();
+
+    } catch (e) {
+        console.error(e);
+        toast("Error: " + e.message);
+    } finally {
+        isProcessing = false;
+    }
+};
 
 // ==========================================
 // PERFIL

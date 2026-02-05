@@ -200,28 +200,61 @@ async function validateCode() {
     showLoading(true);
 
     try {
-        const q = query(
+        // 1. Buscar en tickets por código
+        const qTickets = query(
             collection(db, "tickets"),
             where("code", "==", code)
         );
-        const snapshot = await getDocs(q);
-        
-        if (snapshot.empty) {
-            const q2 = query(
+        const snapshotTickets = await getDocs(qTickets);
+
+        if (!snapshotTickets.empty) {
+            state.codeData = { id: snapshotTickets.docs[0].id, ...snapshotTickets.docs[0].data(), source: 'tickets' };
+        } else {
+            // 2. Buscar en tickets por qr_token
+            const qTicketsQR = query(
                 collection(db, "tickets"),
                 where("qr_token", "==", code)
             );
-            const snapshot2 = await getDocs(q2);
-            
-            if (snapshot2.empty) {
-                showToast('Código no encontrado. Verifica que esté bien escrito', 'error');
-                showLoading(false);
-                return;
+            const snapshotQR = await getDocs(qTicketsQR);
+
+            if (!snapshotQR.empty) {
+                state.codeData = { id: snapshotQR.docs[0].id, ...snapshotQR.docs[0].data(), source: 'tickets' };
+            } else {
+                // 3. Buscar en promotorCodes (nuevo sistema)
+                const qPromotorCodes = query(
+                    collection(db, "promotorCodes"),
+                    where("code", "==", code)
+                );
+                const snapshotPC = await getDocs(qPromotorCodes);
+
+                if (!snapshotPC.empty) {
+                    const pcData = snapshotPC.docs[0].data();
+                    // Verificar estado del código de promotor
+                    if (pcData.status === 'PENDING') {
+                        showToast('Este código está pendiente de aprobación', 'error');
+                        showLoading(false);
+                        isProcessing = false;
+                        return;
+                    }
+                    state.codeData = { id: snapshotPC.docs[0].id, ...pcData, source: 'promotorCodes' };
+                } else {
+                    // 4. Buscar en codes (sistema antiguo de promotores)
+                    const qCodes = query(
+                        collection(db, "codes"),
+                        where("code", "==", code)
+                    );
+                    const snapshotCodes = await getDocs(qCodes);
+
+                    if (!snapshotCodes.empty) {
+                        state.codeData = { id: snapshotCodes.docs[0].id, ...snapshotCodes.docs[0].data(), source: 'codes' };
+                    } else {
+                        showToast('Código no encontrado. Verifica que esté bien escrito', 'error');
+                        showLoading(false);
+                        isProcessing = false;
+                        return;
+                    }
+                }
             }
-            
-            state.codeData = { id: snapshot2.docs[0].id, ...snapshot2.docs[0].data() };
-        } else {
-            state.codeData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
         }
         
         if (state.brand && state.codeData.brand_id && state.codeData.brand_id !== state.brand.id) {
@@ -414,44 +447,79 @@ async function claimTicket() {
 
     try {
         const qrToken = `TKT${generateUUID().replace(/-/g, '').toUpperCase()}`;
+        const source = state.codeData.source || 'tickets';
 
-        const codeType = state.codeData.type || state.codeData.ticket_type || "UNIQUE";
-        const codeRef = doc(db, "tickets", state.codeData.id);
-
-        if (codeType === "UNIQUE") {
+        // Diferentes flujos según la fuente del código
+        if (source === 'promotorCodes') {
+            // Código de promotor nuevo
+            const codeRef = doc(db, "promotorCodes", state.codeData.id);
             await updateDoc(codeRef, {
                 status: 'CLAIMED',
-                current_uses: 1,
                 claimed_at: new Date().toISOString(),
-                client_name: `${name} ${lastname}`,
-                client_dni: state.userData.dni,
-                client_email: email,
-                client_phone: phone,
-                id_type: state.userData.idType,
                 qr_token: qrToken,
                 claimed_by: {
                     name: `${name} ${lastname}`,
                     dni: state.userData.dni,
                     email: email,
                     phone: phone
-                }
+                },
+                claimed_name: `${name} ${lastname}`
+            });
+        } else if (source === 'codes') {
+            // Código de promotor antiguo
+            const codeRef = doc(db, "codes", state.codeData.id);
+            await updateDoc(codeRef, {
+                status: 'CLAIMED',
+                claimed_at: new Date().toISOString(),
+                qr_token: qrToken,
+                claimed_by: {
+                    name: `${name} ${lastname}`,
+                    dni: state.userData.dni,
+                    email: email,
+                    phone: phone
+                },
+                claimed_name: `${name} ${lastname}`
             });
         } else {
-            // Código compartido: incrementar usos
-            const newUses = (state.codeData.current_uses || 0) + 1;
-            const maxUses = state.codeData.max_uses || 1;
+            // Ticket tradicional
+            const codeType = state.codeData.type || state.codeData.ticket_type || "UNIQUE";
+            const codeRef = doc(db, "tickets", state.codeData.id);
 
-            await updateDoc(codeRef, {
-                current_uses: newUses,
-                status: newUses >= maxUses ? 'EXHAUSTED' : 'ACTIVE',
-                last_claimed_at: new Date().toISOString(),
-                client_name: `${name} ${lastname}`,
-                client_dni: state.userData.dni,
-                client_email: email,
-                client_phone: phone,
-                id_type: state.userData.idType,
-                qr_token: qrToken
-            });
+            if (codeType === "UNIQUE") {
+                await updateDoc(codeRef, {
+                    status: 'CLAIMED',
+                    current_uses: 1,
+                    claimed_at: new Date().toISOString(),
+                    client_name: `${name} ${lastname}`,
+                    client_dni: state.userData.dni,
+                    client_email: email,
+                    client_phone: phone,
+                    id_type: state.userData.idType,
+                    qr_token: qrToken,
+                    claimed_by: {
+                        name: `${name} ${lastname}`,
+                        dni: state.userData.dni,
+                        email: email,
+                        phone: phone
+                    }
+                });
+            } else {
+                // Código compartido: incrementar usos
+                const newUses = (state.codeData.current_uses || 0) + 1;
+                const maxUses = state.codeData.max_uses || 1;
+
+                await updateDoc(codeRef, {
+                    current_uses: newUses,
+                    status: newUses >= maxUses ? 'EXHAUSTED' : 'ACTIVE',
+                    last_claimed_at: new Date().toISOString(),
+                    client_name: `${name} ${lastname}`,
+                    client_dni: state.userData.dni,
+                    client_email: email,
+                    client_phone: phone,
+                    id_type: state.userData.idType,
+                    qr_token: qrToken
+                });
+            }
         }
 
         await addDoc(collection(db, "accesses"), {
