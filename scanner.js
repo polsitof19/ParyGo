@@ -9,6 +9,7 @@ import {
     query,
     where,
     getDocs,
+    onSnapshot,
     getDoc,
     doc,
     updateDoc
@@ -41,6 +42,11 @@ let state = {
 };
 let currentScreen = 'login';
 let handlingPopstate = false;
+let eventsUnsubscribe = null;
+
+function cleanupListeners() {
+    if (eventsUnsubscribe) { try { eventsUnsubscribe(); } catch(e) {} eventsUnsubscribe = null; }
+}
 
 // ==========================================
 // INITIALIZATION
@@ -97,7 +103,7 @@ async function validateScannerRole(user) {
         if (greetingEl) greetingEl.textContent = `Hola, ${userName}`;
 
         showEventSelection();
-        await loadEvents();
+        loadEvents();
         setupEventListeners();
 
     } catch (error) {
@@ -143,6 +149,7 @@ async function handleLogin(e) {
 async function handleLogout() {
     if (confirm("¿Cerrar sesión?")) {
         await stopScanner();
+        cleanupListeners();
         await signOut(auth);
         state.currentUser = null;
         state.allowedBrands = [];
@@ -231,9 +238,12 @@ function hideLoginError() {
 // ==========================================
 // LOAD EVENTS
 // ==========================================
-async function loadEvents() {
+function loadEvents() {
     const eventList = document.getElementById('eventList');
     if (!eventList) return;
+
+    // Si el listener ya está activo, no crear otro
+    if (eventsUnsubscribe) return;
 
     eventList.innerHTML = `
         <div class="event-list-loading">
@@ -242,87 +252,90 @@ async function loadEvents() {
         </div>
     `;
 
-    try {
-        const snapshot = await getDocs(collection(db, "events"));
-        const activeEvents = [];
-
-        snapshot.docs.forEach(docSnap => {
-            const event = docSnap.data();
-            if (event.status === 'ACTIVE') {
-                const eventBrand = event.brand_id || event.company_id;
-                const hasAccess = state.allowedBrands.length === 0 ||
-                                  state.allowedBrands.includes(eventBrand) ||
-                                  state.allowedBrands.includes(event.company_id);
-
-                if (hasAccess) {
-                    activeEvents.push({
-                        id: docSnap.id,
-                        name: event.name,
-                        date: event.date,
-                        location: event.location || '',
-                        image: event.image || event.flyer || event.cover || ''
-                    });
-                }
-            }
-        });
-
-        // Ordenar por fecha
-        activeEvents.sort((a, b) => {
-            if (!a.date) return 1;
-            if (!b.date) return -1;
-            return new Date(b.date) - new Date(a.date);
-        });
-
-        if (activeEvents.length === 0) {
-            eventList.innerHTML = `
-                <div class="event-list-empty">
-                    <i class="fa-solid fa-calendar-xmark"></i>
-                    <p>No hay eventos disponibles</p>
-                </div>
-            `;
-            return;
-        }
-
-        eventList.innerHTML = activeEvents.map(event => {
-            const dateStr = event.date
-                ? new Date(event.date + 'T00:00:00').toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short' })
-                : 'Sin fecha';
-
-            const thumbHtml = event.image
-                ? `<img class="event-card-thumb" src="${escapeHtml(event.image)}" alt="" loading="lazy">`
-                : `<div class="event-card-thumb-placeholder"><i class="fa-solid fa-calendar-day"></i></div>`;
-
-            return `
-                <button class="event-card" data-event-id="${escapeHtml(event.id)}" data-event-name="${escapeHtml(event.name)}">
-                    ${thumbHtml}
-                    <div class="event-card-info">
-                        <span class="event-card-name">${escapeHtml(event.name)}</span>
-                        <span class="event-card-meta">
-                            <i class="fa-regular fa-calendar"></i> ${dateStr}
-                            ${event.location ? `<span class="event-card-sep">&middot;</span> <i class="fa-solid fa-location-dot"></i> ${escapeHtml(event.location)}` : ''}
-                        </span>
-                    </div>
-                    <i class="fa-solid fa-chevron-right event-card-arrow"></i>
-                </button>
-            `;
-        }).join('');
-
-        // Click listeners para las cards
-        eventList.querySelectorAll('.event-card').forEach(card => {
-            card.addEventListener('click', () => {
-                selectEvent(card.dataset.eventId, card.dataset.eventName);
-            });
-        });
-
-    } catch (error) {
-        console.error('Error cargando eventos:', error);
+    eventsUnsubscribe = onSnapshot(collection(db, "events"), (snapshot) => {
+        renderScannerEvents(eventList, snapshot);
+    }, (error) => {
+        console.error('Error listener eventos:', error);
+        eventsUnsubscribe = null; // Permitir reintentar
         eventList.innerHTML = `
             <div class="event-list-empty">
                 <i class="fa-solid fa-triangle-exclamation"></i>
                 <p>Error al cargar eventos</p>
             </div>
         `;
+    });
+}
+
+function renderScannerEvents(eventList, snapshot) {
+    const activeEvents = [];
+
+    snapshot.docs.forEach(docSnap => {
+        const event = docSnap.data();
+        if (event.status === 'ACTIVE') {
+            const eventBrand = event.brand_id || event.company_id;
+            const hasAccess = state.allowedBrands.length === 0 ||
+                              state.allowedBrands.includes(eventBrand) ||
+                              state.allowedBrands.includes(event.company_id);
+
+            if (hasAccess) {
+                activeEvents.push({
+                    id: docSnap.id,
+                    name: event.name,
+                    date: event.date,
+                    location: event.location || '',
+                    image: event.image || event.flyer || event.cover || ''
+                });
+            }
+        }
+    });
+
+    // Ordenar por fecha
+    activeEvents.sort((a, b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(b.date) - new Date(a.date);
+    });
+
+    if (activeEvents.length === 0) {
+        eventList.innerHTML = `
+            <div class="event-list-empty">
+                <i class="fa-solid fa-calendar-xmark"></i>
+                <p>No hay eventos disponibles</p>
+            </div>
+        `;
+        return;
     }
+
+    eventList.innerHTML = activeEvents.map(event => {
+        const dateStr = event.date
+            ? new Date(event.date + 'T00:00:00').toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short' })
+            : 'Sin fecha';
+
+        const thumbHtml = event.image
+            ? `<img class="event-card-thumb" src="${escapeHtml(event.image)}" alt="" loading="lazy">`
+            : `<div class="event-card-thumb-placeholder"><i class="fa-solid fa-calendar-day"></i></div>`;
+
+        return `
+            <button class="event-card" data-event-id="${escapeHtml(event.id)}" data-event-name="${escapeHtml(event.name)}">
+                ${thumbHtml}
+                <div class="event-card-info">
+                    <span class="event-card-name">${escapeHtml(event.name)}</span>
+                    <span class="event-card-meta">
+                        <i class="fa-regular fa-calendar"></i> ${dateStr}
+                        ${event.location ? `<span class="event-card-sep">&middot;</span> <i class="fa-solid fa-location-dot"></i> ${escapeHtml(event.location)}` : ''}
+                    </span>
+                </div>
+                <i class="fa-solid fa-chevron-right event-card-arrow"></i>
+            </button>
+        `;
+    }).join('');
+
+    // Click listeners para las cards
+    eventList.querySelectorAll('.event-card').forEach(card => {
+        card.addEventListener('click', () => {
+            selectEvent(card.dataset.eventId, card.dataset.eventName);
+        });
+    });
 }
 
 function selectEvent(eventId, eventName) {

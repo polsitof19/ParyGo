@@ -16,6 +16,7 @@ import {
     collection,
     addDoc,
     getDocs,
+    onSnapshot,
     query,
     where,
     doc,
@@ -92,6 +93,30 @@ let foundUserData = null;
 let existingUserNeedsProfile = false;
 let isProcessing = false;
 let isRegistering = false; // Flag para evitar signOut durante registro
+
+// Real-time listener references
+let eventsUnsubs = [];
+let eventsSnap1 = [];
+let eventsSnap2 = [];
+let ticketsUnsub = null;
+let purchasesUnsub = null;
+
+function cleanupEventsListeners() {
+    eventsUnsubs.forEach(unsub => { try { unsub(); } catch(e) {} });
+    eventsUnsubs = [];
+    eventsSnap1 = [];
+    eventsSnap2 = [];
+}
+
+function cleanupTicketListeners() {
+    if (ticketsUnsub) { try { ticketsUnsub(); } catch(e) {} ticketsUnsub = null; }
+    if (purchasesUnsub) { try { purchasesUnsub(); } catch(e) {} purchasesUnsub = null; }
+}
+
+function cleanupAllListeners() {
+    cleanupEventsListeners();
+    cleanupTicketListeners();
+}
 
 // ==========================================
 // INICIALIZACIÓN
@@ -510,6 +535,7 @@ async function linkAccountToProfile() {
 };
 
 async function logoutAndRestart() {
+    cleanupAllListeners();
     await signOut(auth);
     location.reload();
 }
@@ -988,41 +1014,58 @@ function getInitials(name) {
 // ==========================================
 // EVENTOS
 // ==========================================
-async function loadEvents() {
+function loadEvents() {
     const container = document.getElementById("events_list");
+
+    // Si el listener ya está activo, solo re-renderizar
+    if (eventsUnsubs.length > 0) {
+        renderFilteredEvents('', 'all');
+        return;
+    }
+
     container.innerHTML = `
         <div class="skeleton skeleton-card"></div>
         <div class="skeleton skeleton-card"></div>
         <div class="skeleton skeleton-card"></div>
     `;
 
-    try {
-        // Buscar eventos de esta marca
-        const q1 = query(collection(db, "events"), where("brand_id", "==", currentBrandId));
-        const q2 = query(collection(db, "events"), where("company_id", "==", currentBrandId));
+    const q1 = query(collection(db, "events"), where("brand_id", "==", currentBrandId));
+    const q2 = query(collection(db, "events"), where("company_id", "==", currentBrandId));
 
-        const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+    const unsub1 = onSnapshot(q1, (snap) => {
+        eventsSnap1 = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        mergeAndRenderClientEvents();
+    }, (error) => {
+        console.error("Error listener eventos (brand_id):", error);
+    });
 
-        const map = new Map();
-        snap1.docs.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
-        snap2.docs.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
+    const unsub2 = onSnapshot(q2, (snap) => {
+        eventsSnap2 = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        mergeAndRenderClientEvents();
+    }, (error) => {
+        console.error("Error listener eventos (company_id):", error);
+    });
 
-        // Mostrar todos los eventos activos (el admin controla cuáles existen)
-        allEvents = Array.from(map.values())
-            .sort((a, b) => new Date(a.date) - new Date(b.date));
+    eventsUnsubs = [unsub1, unsub2];
+}
 
-        if (!allEvents.length) {
-            container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i><h3>Sin eventos</h3><p>No hay eventos disponibles</p></div>';
-            return;
-        }
+function mergeAndRenderClientEvents() {
+    const map = new Map();
+    eventsSnap1.forEach(e => map.set(e.id, e));
+    eventsSnap2.forEach(e => map.set(e.id, e));
 
-        // Use the filter renderer for consistent display
-        renderFilteredEvents('', 'all');
+    allEvents = Array.from(map.values())
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    } catch (e) {
-        console.error(e);
-        container.innerHTML = '<div class="empty-state"><p>Error al cargar eventos</p></div>';
+    const container = document.getElementById("events_list");
+    if (!container) return;
+
+    if (!allEvents.length) {
+        container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i><h3>Sin eventos</h3><p>No hay eventos disponibles</p></div>';
+        return;
     }
+
+    renderFilteredEvents('', 'all');
 }
 
 let currentDateFilter = 'all';
@@ -1973,38 +2016,47 @@ function fileToBase64(file) {
 // ==========================================
 // MIS ENTRADAS
 // ==========================================
-async function loadMyTickets() {
+function loadMyTickets() {
     if (!currentUser || !currentBrandId) return;
 
-    // Cargar tickets de ESTA marca
-    try {
-        const qTickets = query(
-            collection(db, "tickets"),
-            where("user_id", "==", currentUser.uid),
-            where("brand_id", "==", currentBrandId)
-        );
-        const snapTickets = await getDocs(qTickets);
-        myTickets = snapTickets.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch (e) {
-        console.error('Error loading tickets:', e);
-        myTickets = [];
+    // Si los listeners ya están activos, solo re-renderizar
+    if (ticketsUnsub && purchasesUnsub) {
+        processTicketsData();
+        return;
     }
 
-    // Cargar compras pendientes de ESTA marca (separado para que un error no bloquee tickets)
-    try {
-        const qPurchases = query(
-            collection(db, "sales"),
-            where("client_id", "==", currentUser.uid),
-            where("brand_id", "==", currentBrandId),
-            where("status", "==", "PENDING")
-        );
-        const snapPurchases = await getDocs(qPurchases);
-        myPurchases = snapPurchases.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch (e) {
-        console.error('Error loading purchases:', e);
-        myPurchases = [];
-    }
+    // Cleanup anteriores
+    cleanupTicketListeners();
 
+    // Listener: tickets de esta marca
+    const qTickets = query(
+        collection(db, "tickets"),
+        where("user_id", "==", currentUser.uid),
+        where("brand_id", "==", currentBrandId)
+    );
+    ticketsUnsub = onSnapshot(qTickets, (snap) => {
+        myTickets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        processTicketsData();
+    }, (error) => {
+        console.error("Error listener tickets:", error);
+    });
+
+    // Listener: compras pendientes de esta marca
+    const qPurchases = query(
+        collection(db, "sales"),
+        where("client_id", "==", currentUser.uid),
+        where("brand_id", "==", currentBrandId),
+        where("status", "==", "PENDING")
+    );
+    purchasesUnsub = onSnapshot(qPurchases, (snap) => {
+        myPurchases = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        processTicketsData();
+    }, (error) => {
+        console.error("Error listener purchases:", error);
+    });
+}
+
+function processTicketsData() {
     // Actualizar badge
     const activeCount = myTickets.filter(t => t.status === 'ACTIVE').length;
     const badge = document.getElementById("tickets_count");
@@ -2682,6 +2734,7 @@ function doLogout() {
 
 async function confirmLogout() {
     closeModal('modalLogout');
+    cleanupAllListeners();
     await signOut(auth);
     currentUser = null;
     currentUserProfile = null;
@@ -2822,8 +2875,8 @@ function setupPullToRefresh() {
         pulling = false;
         const indicator = document.getElementById("pullToRefresh");
         if (indicator && !indicator.classList.contains("hidden")) {
-            await loadEvents();
-            await loadMyTickets();
+            loadEvents();
+            loadMyTickets();
             indicator.classList.add("hidden");
             toast('Actualizado', 'success');
         }

@@ -14,6 +14,7 @@ import {
     collection,
     addDoc,
     getDocs,
+    onSnapshot,
     query,
     where,
     doc,
@@ -43,6 +44,33 @@ let handlingPopstate = false;
 let lastGeneratedCode = null;
 let isProcessing = false;
 let pendingBuyTicket = null; // Ticket seleccionado para compra
+
+// Real-time listener references
+let eventsUnsubs = [];
+let dashboardUnsubs = [];
+let eventsSnap1 = [];
+let eventsSnap2 = [];
+let eventsBrandId = null;
+let dashboardEventId = null;
+
+function cleanupDashboardListeners() {
+    dashboardUnsubs.forEach(unsub => { try { unsub(); } catch(e) {} });
+    dashboardUnsubs = [];
+    dashboardEventId = null;
+}
+
+function cleanupEventsListeners() {
+    eventsUnsubs.forEach(unsub => { try { unsub(); } catch(e) {} });
+    eventsUnsubs = [];
+    eventsSnap1 = [];
+    eventsSnap2 = [];
+    eventsBrandId = null;
+}
+
+function cleanupAllListeners() {
+    cleanupDashboardListeners();
+    cleanupEventsListeners();
+}
 
 // Caracteres seguros (sin O, 0, I, L, 1 para evitar confusión)
 const SAFE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -324,7 +352,7 @@ window.selectBrand = async (id) => {
             const snap = await getDoc(doc(db, "brands", id));
             if (snap?.exists()) brandsCache[id] = { id, ...snap.data() };
         }
-        await showEventsList();
+        showEventsList();
     } catch (error) {
         console.error('Error seleccionando marca:', error);
         toast("Error al seleccionar marca");
@@ -334,6 +362,7 @@ window.selectBrand = async (id) => {
 window.changeBrand = () => {
     selectedBrandId = null;
     currentEvent = null;
+    cleanupAllListeners();
     if (history.state?.section) {
         history.back();
     } else {
@@ -344,45 +373,75 @@ window.changeBrand = () => {
 // ==========================================
 // EVENTOS
 // ==========================================
-async function showEventsList() {
+function showEventsList() {
     showView('eventsView');
     if (!handlingPopstate) history.pushState({ section: 'events' }, '', '#eventos');
     updateEventsHeader();
-    
+    cleanupDashboardListeners();
+
     const container = document.getElementById("events_grid");
-    container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i></div>';
-    
-    try {
-        const [s1, s2] = await Promise.all([
-            getDocs(query(collection(db, "events"), where("brand_id", "==", selectedBrandId))),
-            getDocs(query(collection(db, "events"), where("company_id", "==", selectedBrandId)))
-        ]);
-        
-        const map = new Map();
-        s1.docs.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
-        s2.docs.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
-        allEvents = Array.from(map.values()).sort((a, b) => new Date(b.date) - new Date(a.date));
-        
-        if (!allEvents.length) {
-            container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i><p>No hay eventos</p></div>';
-            return;
-        }
-        
-        container.innerHTML = allEvents.map((e, i) => `
-            <div class="event-card" onclick="selectEvent(${i})">
-                <img class="event-card-image" src="${e.image||'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'}">
-                <div class="event-card-body">
-                    <div class="event-card-title">${escapeHtml(e.name)}</div>
-                    <div class="event-card-meta"><i class="fa-regular fa-calendar"></i> ${e.date||'---'}</div>
-                </div>
-            </div>
-        `).join("");
-    } catch (e) {
-        container.innerHTML = '<div class="empty-state"><p>Error al cargar</p></div>';
+
+    // Si el listener ya está activo para esta marca, solo re-renderizar
+    if (eventsUnsubs.length > 0 && eventsBrandId === selectedBrandId) {
+        renderEventsList();
+        return;
     }
+
+    // Limpiar listeners anteriores (puede haber cambiado de marca)
+    cleanupEventsListeners();
+    eventsBrandId = selectedBrandId;
+
+    container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i></div>';
+
+    const q1 = query(collection(db, "events"), where("brand_id", "==", selectedBrandId));
+    const q2 = query(collection(db, "events"), where("company_id", "==", selectedBrandId));
+
+    const unsub1 = onSnapshot(q1, (snap) => {
+        eventsSnap1 = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        mergeAndRenderEvents();
+    }, (error) => {
+        console.error("Error listener eventos (brand_id):", error);
+    });
+
+    const unsub2 = onSnapshot(q2, (snap) => {
+        eventsSnap2 = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        mergeAndRenderEvents();
+    }, (error) => {
+        console.error("Error listener eventos (company_id):", error);
+    });
+
+    eventsUnsubs = [unsub1, unsub2];
 }
 
-window.selectEvent = async (i) => {
+function mergeAndRenderEvents() {
+    const map = new Map();
+    eventsSnap1.forEach(e => map.set(e.id, e));
+    eventsSnap2.forEach(e => map.set(e.id, e));
+    allEvents = Array.from(map.values()).sort((a, b) => new Date(b.date) - new Date(a.date));
+    renderEventsList();
+}
+
+function renderEventsList() {
+    const container = document.getElementById("events_grid");
+    if (!container) return;
+
+    if (!allEvents.length) {
+        container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i><p>No hay eventos</p></div>';
+        return;
+    }
+
+    container.innerHTML = allEvents.map((e, i) => `
+        <div class="event-card" onclick="selectEvent(${i})">
+            <img class="event-card-image" src="${e.image||'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'}">
+            <div class="event-card-body">
+                <div class="event-card-title">${escapeHtml(e.name)}</div>
+                <div class="event-card-meta"><i class="fa-regular fa-calendar"></i> ${e.date||'---'}</div>
+            </div>
+        </div>
+    `).join("");
+}
+
+window.selectEvent = (i) => {
     if (i < 0 || i >= allEvents.length) return;
     const event = allEvents[i];
     if (!event) return;
@@ -396,13 +455,13 @@ window.selectEvent = async (i) => {
     currentEvent = event;
     showView('dashboardView');
     if (!handlingPopstate) history.pushState({ section: 'dashboard', eventIndex: i }, '', '#dashboard');
-    await loadDashboardData();
+    loadDashboardData();
 };
 
 // ==========================================
 // DASHBOARD
 // ==========================================
-async function loadDashboardData() {
+function loadDashboardData() {
     if (!currentEvent) return;
 
     // Header
@@ -422,102 +481,125 @@ async function loadDashboardData() {
 
     updateAvatars();
 
-    try {
-        // Cargar cuotas asignadas
-        const qQuotas = query(
-            collection(db, "quotas"),
-            where("promoter_id", "==", currentUser.id),
-            where("event_id", "==", currentEvent.id)
-        );
-        myQuotas = (await getDocs(qQuotas)).docs.map(d => ({ id: d.id, ...d.data() }));
-
-        // Cargar códigos antiguos (colección codes - para compatibilidad)
-        const qCodes = query(
-            collection(db, "codes"),
-            where("promoter_id", "==", currentUser.id),
-            where("event_id", "==", currentEvent.id)
-        );
-        myCodes = (await getDocs(qCodes)).docs.map(d => ({ id: d.id, ...d.data() }));
-
-        // Cargar códigos nuevos (colección promotorCodes)
-        const qPromotorCodes = query(
-            collection(db, "promotorCodes"),
-            where("promoter_id", "==", currentUser.id),
-            where("event_id", "==", currentEvent.id)
-        );
-        myPromotorCodes = (await getDocs(qPromotorCodes)).docs.map(d => ({ id: d.id, ...d.data() }));
-
-        // Calcular estadísticas de ganancias (combinando ambas colecciones)
-        const tickets = currentEvent.tickets || [];
-        let totalVentas = 0;
-        let totalGratis = 0;
-        let totalComision = 0;
-
-        // Códigos antiguos (codes collection)
-        const claimedOrScannedOld = myCodes.filter(c => c.status === 'CLAIMED' || c.status === 'SCANNED');
-
-        claimedOrScannedOld.forEach(code => {
-            const tk = tickets.find(t => t.id === code.ticket_id);
-            if (!tk) return;
-            if (tk.isFree || tk.price === 0) {
-                totalGratis++;
-                if (tk.freeCommission?.cash) totalComision += tk.freeCommission.cash;
-            } else {
-                totalVentas++;
-                if (tk.promotorCommission) {
-                    if (tk.promotorCommission.type === 'percentage') {
-                        totalComision += (tk.price * tk.promotorCommission.value / 100);
-                    } else {
-                        totalComision += (tk.promotorCommission.value || 0);
-                    }
-                }
-            }
-        });
-
-        // Códigos nuevos (promotorCodes collection)
-        // Solo contar los CLAIMED (ya canjeados por cliente)
-        const claimedNew = myPromotorCodes.filter(c => c.status === 'CLAIMED' || c.status === 'SCANNED');
-
-        claimedNew.forEach(code => {
-            const tk = tickets.find(t => t.id === code.ticket_id);
-            if (!tk) return;
-            if (code.type === 'free') {
-                totalGratis++;
-                if (tk.freeCommission?.cash) totalComision += tk.freeCommission.cash;
-            } else if (code.type === 'sell') {
-                totalVentas++;
-                if (tk.promotorCommission) {
-                    if (tk.promotorCommission.type === 'percentage') {
-                        totalComision += (tk.price * tk.promotorCommission.value / 100);
-                    } else {
-                        totalComision += (tk.promotorCommission.value || 0);
-                    }
-                }
-            }
-        });
-
-        document.getElementById("stat_ventas").textContent = totalVentas;
-        document.getElementById("stat_gratis").textContent = totalGratis;
-        document.getElementById("stat_comision").textContent = `S/. ${totalComision.toFixed(2)}`;
-
-        // Habilitar/deshabilitar botón generar
-        const totalAssigned = myQuotas.reduce((sum, q) => sum + (q.assigned || 0), 0);
-        const fab = document.getElementById("btnGenerateCode");
-        if (fab) fab.disabled = (totalAssigned - myCodes.length) <= 0;
-
-        // Renderizar secciones
-        renderGoals(totalGratis);
-        renderSellTickets(tickets);
-        renderFreeTickets(tickets);
-        renderMyCodesPreview();  // Nueva sección de códigos en dashboard
-        renderCodesList();
-        renderClaimedList();
-        fillTicketDropdown();
-
-    } catch (e) {
-        console.error(e);
-        toast("Error al cargar datos");
+    // Si los listeners ya están activos para este evento, solo re-renderizar
+    if (dashboardEventId === currentEvent.id && dashboardUnsubs.length > 0) {
+        processDashboardData();
+        return;
     }
+
+    // Limpiar listeners anteriores (puede haber cambiado de evento)
+    cleanupDashboardListeners();
+    dashboardEventId = currentEvent.id;
+
+    // Listener: cuotas asignadas
+    const qQuotas = query(
+        collection(db, "quotas"),
+        where("promoter_id", "==", currentUser.id),
+        where("event_id", "==", currentEvent.id)
+    );
+    const unsub1 = onSnapshot(qQuotas, (snap) => {
+        myQuotas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        processDashboardData();
+    }, (error) => {
+        console.error("Error listener quotas:", error);
+    });
+
+    // Listener: códigos antiguos (colección codes - compatibilidad)
+    const qCodes = query(
+        collection(db, "codes"),
+        where("promoter_id", "==", currentUser.id),
+        where("event_id", "==", currentEvent.id)
+    );
+    const unsub2 = onSnapshot(qCodes, (snap) => {
+        myCodes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        processDashboardData();
+    }, (error) => {
+        console.error("Error listener codes:", error);
+    });
+
+    // Listener: códigos nuevos (colección promotorCodes)
+    const qPromotorCodes = query(
+        collection(db, "promotorCodes"),
+        where("promoter_id", "==", currentUser.id),
+        where("event_id", "==", currentEvent.id)
+    );
+    const unsub3 = onSnapshot(qPromotorCodes, (snap) => {
+        myPromotorCodes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        processDashboardData();
+    }, (error) => {
+        console.error("Error listener promotorCodes:", error);
+    });
+
+    dashboardUnsubs = [unsub1, unsub2, unsub3];
+}
+
+function processDashboardData() {
+    if (!currentEvent || dashboardEventId !== currentEvent.id) return;
+
+    const tickets = currentEvent.tickets || [];
+    let totalVentas = 0;
+    let totalGratis = 0;
+    let totalComision = 0;
+
+    // Códigos antiguos (codes collection)
+    const claimedOrScannedOld = myCodes.filter(c => c.status === 'CLAIMED' || c.status === 'SCANNED');
+
+    claimedOrScannedOld.forEach(code => {
+        const tk = tickets.find(t => t.id === code.ticket_id);
+        if (!tk) return;
+        if (tk.isFree || tk.price === 0) {
+            totalGratis++;
+            if (tk.freeCommission?.cash) totalComision += tk.freeCommission.cash;
+        } else {
+            totalVentas++;
+            if (tk.promotorCommission) {
+                if (tk.promotorCommission.type === 'percentage') {
+                    totalComision += (tk.price * tk.promotorCommission.value / 100);
+                } else {
+                    totalComision += (tk.promotorCommission.value || 0);
+                }
+            }
+        }
+    });
+
+    // Códigos nuevos (promotorCodes collection)
+    const claimedNew = myPromotorCodes.filter(c => c.status === 'CLAIMED' || c.status === 'SCANNED');
+
+    claimedNew.forEach(code => {
+        const tk = tickets.find(t => t.id === code.ticket_id);
+        if (!tk) return;
+        if (code.type === 'free') {
+            totalGratis++;
+            if (tk.freeCommission?.cash) totalComision += tk.freeCommission.cash;
+        } else if (code.type === 'sell') {
+            totalVentas++;
+            if (tk.promotorCommission) {
+                if (tk.promotorCommission.type === 'percentage') {
+                    totalComision += (tk.price * tk.promotorCommission.value / 100);
+                } else {
+                    totalComision += (tk.promotorCommission.value || 0);
+                }
+            }
+        }
+    });
+
+    document.getElementById("stat_ventas").textContent = totalVentas;
+    document.getElementById("stat_gratis").textContent = totalGratis;
+    document.getElementById("stat_comision").textContent = `S/. ${totalComision.toFixed(2)}`;
+
+    // Habilitar/deshabilitar botón generar
+    const totalAssigned = myQuotas.reduce((sum, q) => sum + (q.assigned || 0), 0);
+    const fab = document.getElementById("btnGenerateCode");
+    if (fab) fab.disabled = (totalAssigned - myCodes.length) <= 0;
+
+    // Renderizar secciones
+    renderGoals(totalGratis);
+    renderSellTickets(tickets);
+    renderFreeTickets(tickets);
+    renderMyCodesPreview();
+    renderCodesList();
+    renderClaimedList();
+    fillTicketDropdown();
 }
 
 function formatEventDate(date, time) {
@@ -914,7 +996,7 @@ async function handleGenerateCode() {
         openModal('modalCodeResult');
 
         // Recargar datos
-        await loadDashboardData();
+        loadDashboardData();
 
     } catch (e) {
         console.error(e);
@@ -1236,7 +1318,7 @@ window.confirmBuyCode = async () => {
         openModal('modalCodePending');
 
         // Recargar datos
-        await loadDashboardData();
+        loadDashboardData();
 
     } catch (e) {
         console.error(e);
@@ -1323,7 +1405,7 @@ window.generateFreeCode = async (ticketId) => {
         openModal('modalCodeResult');
 
         // Recargar datos
-        await loadDashboardData();
+        loadDashboardData();
 
     } catch (e) {
         console.error(e);
@@ -1353,6 +1435,7 @@ window.closeProfile = () => {
 
 window.doLogout = async () => {
     if (!confirm("¿Cerrar sesión?")) return;
+    cleanupAllListeners();
     await signOut(auth);
     showView('loginView');
 };
@@ -1389,6 +1472,7 @@ window.addEventListener('popstate', function(event) {
             if (currentViewIdPromo && currentViewIdPromo !== 'loginView' && currentViewIdPromo !== 'registerView') {
                 currentEvent = null;
                 selectedBrandId = null;
+                cleanupAllListeners();
                 showBrandSelector();
             }
             return;
@@ -1397,6 +1481,7 @@ window.addEventListener('popstate', function(event) {
             case 'brands':
                 selectedBrandId = null;
                 currentEvent = null;
+                cleanupAllListeners();
                 showBrandSelector();
                 break;
             case 'events':
@@ -1404,6 +1489,7 @@ window.addEventListener('popstate', function(event) {
                 if (selectedBrandId) {
                     showEventsList();
                 } else {
+                    cleanupAllListeners();
                     showBrandSelector();
                 }
                 break;
