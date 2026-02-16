@@ -6,7 +6,7 @@
 // ==========================================
 
 import { db, auth, APP_CONFIG } from './config.js';
-import { state, resetTemps, getActiveEvent, debugState } from './state.js';
+import { state, resetTemps, getActiveEvent, debugState, cleanupListeners } from './state.js';
 import {
     Validator,
     toast,
@@ -298,6 +298,9 @@ window.autocompletarDNI = autocompletarDNI;
 
 // Debug
 window.debugState = debugState;
+
+// Listeners
+window.cleanupListeners = cleanupListeners;
 
 // ==========================================
 // 3. INICIALIZACIÓN DE LA APLICACIÓN

@@ -2,48 +2,85 @@
 import { db } from './config.js';
 import { state, resetTemps } from './state.js';
 import { Validator, toast, openModal, closeModals, customConfirm, switchView } from './utils.js';
-import { collection, query, where, getDocs, doc, addDoc, updateDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, query, where, getDocs, doc, addDoc, updateDoc, deleteDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================
 // 1. CARGAR Y RENDERIZAR EVENTOS
 // ==========================================
 
+// Referencia al unsubscribe del listener de eventos
+let eventsUnsubscribe = null;
+
 /**
- * CARGAR EVENTOS con filtrado por permisos
+ * Procesar snapshot de eventos y actualizar estado + UI
  */
-export async function loadEvents() {
-    try {
-        const snapshot = await getDocs(query(collection(db, "events")));
-        let fetchedEvents = snapshot.docs.map(d => ({id: d.id, ...d.data()}))
-                                         .sort((a, b) => new Date(b.date) - new Date(a.date));
+function processEventsSnapshot(snapshot) {
+    let fetchedEvents = snapshot.docs.map(d => ({id: d.id, ...d.data()}))
+                                     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        const user = state.currentUser;
-        
-        // Sincronizar isSuperAdmin
-        state.isSuperAdmin = user.is_super_admin === true || 
-                             user.role === 'super_admin' || 
-                             user.collection === 'empresa';
+    const user = state.currentUser;
+    if (!user) return;
 
-        // FILTRADO POR PERMISOS
-        if (state.isSuperAdmin) {
-            state.allEvents = fetchedEvents;
-        } else {
-            state.allEvents = fetchedEvents.filter(event => {
-                // Filtrar por company_id (sistema nuevo)
-                if (event.company_id === user.companyId) return true;
+    // Sincronizar isSuperAdmin
+    state.isSuperAdmin = user.is_super_admin === true ||
+                         user.role === 'super_admin' ||
+                         user.collection === 'empresa';
 
-                // Fallback: brand_id (sistema antiguo)
-                const myPermissions = user.allowed_brands || [];
-                if (myPermissions.includes(event.brand_id)) return true;
+    // FILTRADO POR PERMISOS
+    if (state.isSuperAdmin) {
+        state.allEvents = fetchedEvents;
+    } else {
+        state.allEvents = fetchedEvents.filter(event => {
+            // Filtrar por company_id (sistema nuevo)
+            if (event.company_id === user.companyId) return true;
 
-                return false;
-            });
-        }
-        
+            // Fallback: brand_id (sistema antiguo)
+            const myPermissions = user.allowed_brands || [];
+            if (myPermissions.includes(event.brand_id)) return true;
+
+            return false;
+        });
+    }
+
+    renderEvents();
+}
+
+/**
+ * CARGAR EVENTOS con listener en tiempo real
+ * Si ya existe un listener activo, no crea otro.
+ */
+export function loadEvents() {
+    // Si ya hay un listener activo, solo re-renderizar
+    if (eventsUnsubscribe) {
         renderEvents();
-    } catch (error) { 
-        console.error("Error cargando eventos:", error);
+        return;
+    }
+
+    try {
+        const q = query(collection(db, "events"));
+        eventsUnsubscribe = onSnapshot(q,
+            (snapshot) => processEventsSnapshot(snapshot),
+            (error) => {
+                console.error("Error en listener de eventos:", error);
+                toast("Error cargando eventos", "error");
+            }
+        );
+        state.activeListeners.push(eventsUnsubscribe);
+    } catch (error) {
+        console.error("Error configurando listener de eventos:", error);
         toast("Error cargando eventos", "error");
+    }
+}
+
+/**
+ * Desuscribir listener de eventos (para limpieza)
+ */
+export function cleanupEventsListener() {
+    if (eventsUnsubscribe) {
+        const oldUnsub = eventsUnsubscribe;
+        eventsUnsubscribe = null;
+        oldUnsub();
+        state.activeListeners = state.activeListeners.filter(fn => fn !== oldUnsub);
     }
 }
 
@@ -159,7 +196,7 @@ export function showGlobalEvents() {
 export function backToEvents() {
     state.activeEventId = null;
     switchView('view_events');
-    loadEvents();
+    renderEvents(); // Listener ya mantiene los datos actualizados
 }
 
 // ==========================================
@@ -446,8 +483,8 @@ export async function saveEvent() {
         
         closeModals();
         resetTemps();
-        await loadEvents();
-        
+        // onSnapshot se encarga de re-renderizar automáticamente
+
     } catch (error) {
         console.error("Error guardando evento:", error);
         toast("Error al guardar evento", "error");
@@ -476,7 +513,7 @@ export async function deleteEvent() {
         toast("✅ Evento eliminado");
         state.activeEventId = null;
         switchView('view_events');
-        await loadEvents();
+        // onSnapshot se encarga de re-renderizar automáticamente
     } catch (error) {
         console.error("Error eliminando evento:", error);
         toast("Error al eliminar evento", "error");

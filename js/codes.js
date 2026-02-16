@@ -2,24 +2,52 @@
 import { db, APP_CONFIG } from './config.js';
 import { state, getActiveEvent, getPromoterById } from './state.js';
 import { Validator, toast, openModal, closeModals, generateCode } from './utils.js';
-import { 
-    collection, 
-    query, 
-    where, 
-    getDocs, 
-    doc, 
-    writeBatch, 
-    setDoc 
+import {
+    collection,
+    query,
+    where,
+    getDocs,
+    doc,
+    writeBatch,
+    setDoc,
+    onSnapshot,
+    updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================
 // 1. CACHE DE PROMOTORES
 // ==========================================
 
+// Referencia al unsubscribe del listener de promotores
+let promotersUnsubscribe = null;
+
 /**
- * Cargar cache de promotores para dropdown
+ * Procesar snapshot de promotores y actualizar estado + UI
  */
-export async function loadPromotersCache() {
+function processPromotersSnapshot(snapshot) {
+    state.allPromotersData = snapshot.docs.map(d => {
+        const data = d.data();
+        return {
+            id: d.id,
+            name: `${data.name || ''} ${data.lastname || ''}`.trim(),
+            dni: data.dni || 'S/D',
+            email: data.email || ''
+        };
+    });
+
+    updatePromotersDropdown();
+}
+
+/**
+ * Cargar cache de promotores con listener en tiempo real
+ */
+export function loadPromotersCache() {
+    // Si ya hay un listener activo, solo re-renderizar dropdown
+    if (promotersUnsubscribe) {
+        updatePromotersDropdown();
+        return;
+    }
+
     try {
         let staffQuery;
 
@@ -41,22 +69,14 @@ export async function loadPromotersCache() {
             );
         }
 
-        const snapshot = await getDocs(staffQuery);
-        
-        state.allPromotersData = snapshot.docs.map(d => {
-            const data = d.data();
-            return { 
-                id: d.id, 
-                name: `${data.name || ''} ${data.lastname || ''}`.trim(),
-                dni: data.dni || 'S/D',
-                email: data.email || ''
-            };
-        });
-        
-        updatePromotersDropdown();
-        
+        promotersUnsubscribe = onSnapshot(staffQuery,
+            (snapshot) => processPromotersSnapshot(snapshot),
+            (error) => console.error("Error en listener de promotores:", error)
+        );
+        state.activeListeners.push(promotersUnsubscribe);
+
     } catch (error) {
-        console.error("Error cargando promotores:", error);
+        console.error("Error configurando listener de promotores:", error);
     }
 }
 
@@ -369,57 +389,80 @@ export function openStockModal() {
     openModal('modalStock');
 }
 
+// Referencia al unsubscribe del listener de stock
+let stockUnsubscribe = null;
+
 /**
- * Cargar tabla de stock asignado
+ * Renderizar tabla de stock desde snapshot
  */
-export async function loadStockTable() {
+function renderStockFromSnapshot(snapshot) {
+    const tbody = document.querySelector("#tblStock tbody");
+    if (!tbody) return;
+
+    if (snapshot.empty) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align:center; padding:40px; color:var(--muted);">
+                    No hay stock asignado para este evento
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = snapshot.docs.map(d => {
+        const q = d.data();
+        const promoter = state.allPromotersData?.find(p => p.id === q.promoter_id);
+        const disponible = (q.assigned || 0) - (q.used || 0);
+
+        return `
+            <tr>
+                <td>${Validator.sanitizeHTML(promoter?.name || 'Desconocido')}</td>
+                <td>${Validator.sanitizeHTML(q.ticket_name || '-')}</td>
+                <td style="text-align:center;">${q.assigned || 0}</td>
+                <td style="text-align:center;">${q.used || 0}</td>
+                <td style="text-align:center; font-weight:700; color:${disponible > 0 ? 'var(--success)' : 'var(--danger)'};">${disponible}</td>
+                <td>
+                    <button class="btn-icon" onclick="window.editStock('${Validator.sanitizeHTML(d.id)}')" title="Editar">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join("");
+}
+
+/**
+ * Cargar tabla de stock con listener en tiempo real
+ */
+export function loadStockTable() {
     if (!state.activeEventId) return;
-    
+
+    // Limpiar listener anterior de stock (cambia por evento)
+    if (stockUnsubscribe) {
+        const oldUnsub = stockUnsubscribe;
+        stockUnsubscribe = null;
+        oldUnsub();
+        state.activeListeners = state.activeListeners.filter(fn => fn !== oldUnsub);
+    }
+
     try {
-        const snapshot = await getDocs(
-            query(
-                collection(db, APP_CONFIG.COLLECTIONS.QUOTAS),
-                where("event_id", "==", state.activeEventId)
-            )
+        const q = query(
+            collection(db, APP_CONFIG.COLLECTIONS.QUOTAS),
+            where("event_id", "==", state.activeEventId)
         );
-        
-        const tbody = document.querySelector("#tblStock tbody");
-        if (!tbody) return;
-        
-        if (snapshot.empty) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" style="text-align:center; padding:40px; color:var(--muted);">
-                        No hay stock asignado para este evento
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-        
-        tbody.innerHTML = snapshot.docs.map(d => {
-            const q = d.data();
-            const promoter = state.allPromotersData?.find(p => p.id === q.promoter_id);
-            const disponible = (q.assigned || 0) - (q.used || 0);
-            
-            return `
-                <tr>
-                    <td>${Validator.sanitizeHTML(promoter?.name || 'Desconocido')}</td>
-                    <td>${Validator.sanitizeHTML(q.ticket_name || '-')}</td>
-                    <td style="text-align:center;">${q.assigned || 0}</td>
-                    <td style="text-align:center;">${q.used || 0}</td>
-                    <td style="text-align:center; font-weight:700; color:${disponible > 0 ? 'var(--success)' : 'var(--danger)'};">${disponible}</td>
-                    <td>
-                        <button class="btn-icon" onclick="window.editStock('${Validator.sanitizeHTML(d.id)}')" title="Editar">
-                            <i class="fa-solid fa-pen"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }).join("");
-        
+
+        stockUnsubscribe = onSnapshot(q,
+            (snapshot) => renderStockFromSnapshot(snapshot),
+            (error) => {
+                console.error("Error en listener de stock:", error);
+                toast("Error cargando stock", "error");
+            }
+        );
+        state.activeListeners.push(stockUnsubscribe);
+
     } catch (error) {
-        console.error("Error cargando stock:", error);
+        console.error("Error configurando listener de stock:", error);
         toast("Error cargando stock", "error");
     }
 }
@@ -457,9 +500,9 @@ export async function saveStockAssignment() {
         }, { merge: true });
         
         toast("✅ Stock asignado correctamente");
-        
+
         closeModals();
-        await loadStockTable();
+        // onSnapshot se encarga de re-renderizar automáticamente
         
     } catch (error) {
         console.error("Error asignando stock:", error);
@@ -734,82 +777,103 @@ Para reclamar tu entrada, ingresa el código en el link de la marca.
 // 6. PAGOS PENDIENTES DE PROMOTORES
 // ==========================================
 
-import { updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+// Referencia al unsubscribe del listener de pagos pendientes
+let paymentsUnsubscribe = null;
 
 /**
- * Cargar tabla de pagos pendientes
+ * Renderizar tabla de pagos pendientes desde snapshot
  */
-export async function loadPendingPayments() {
+function renderPendingPaymentsFromSnapshot(snapshot) {
+    const tbody = document.querySelector("#tblPendingPayments tbody");
+    const emptyState = document.getElementById("pending_payments_empty");
+    const table = document.getElementById("tblPendingPayments");
+    const badge = document.getElementById("pending_payments_badge");
+
+    if (!tbody) return;
+
+    // Actualizar badge
+    const count = snapshot.docs.length;
+    if (badge) {
+        if (count > 0) {
+            badge.textContent = count;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+
+    if (snapshot.empty) {
+        if (emptyState) emptyState.style.display = '';
+        if (table) table.style.display = 'none';
+        return;
+    }
+
+    if (emptyState) emptyState.style.display = 'none';
+    if (table) table.style.display = '';
+
+    tbody.innerHTML = snapshot.docs.map(d => {
+        const pc = d.data();
+        const formattedDate = pc.created_at
+            ? new Date(pc.created_at).toLocaleDateString('es-PE', {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            })
+            : '---';
+
+        return `
+            <tr data-code-id="${d.id}">
+                <td><code style="font-family:monospace; font-weight:600;">${Validator.sanitizeHTML(pc.code)}</code></td>
+                <td>${Validator.sanitizeHTML(pc.promoter_name || 'Desconocido')}</td>
+                <td>${Validator.sanitizeHTML(pc.ticket_name || '-')}</td>
+                <td style="font-weight:600;">S/. ${Number(pc.payment_amount || 0).toFixed(2)}</td>
+                <td>${formattedDate}</td>
+                <td>
+                    <button class="btn btn-sm btn-success" onclick="window.approvePayment('${d.id}')" title="Aprobar pago">
+                        <i class="fa-solid fa-check"></i> Aprobar
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="window.rejectPayment('${d.id}')" title="Rechazar">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join("");
+}
+
+/**
+ * Cargar tabla de pagos pendientes con listener en tiempo real
+ */
+export function loadPendingPayments() {
     if (!state.activeEventId) return;
 
+    // Limpiar listener anterior de pagos (cambia por evento)
+    if (paymentsUnsubscribe) {
+        const oldUnsub = paymentsUnsubscribe;
+        paymentsUnsubscribe = null;
+        oldUnsub();
+        state.activeListeners = state.activeListeners.filter(fn => fn !== oldUnsub);
+    }
+
     try {
-        const snapshot = await getDocs(
-            query(
-                collection(db, "promotorCodes"),
-                where("event_id", "==", state.activeEventId),
-                where("status", "==", "PENDING")
-            )
+        const q = query(
+            collection(db, "promotorCodes"),
+            where("event_id", "==", state.activeEventId),
+            where("status", "==", "PENDING")
         );
 
-        const tbody = document.querySelector("#tblPendingPayments tbody");
-        const emptyState = document.getElementById("pending_payments_empty");
-        const table = document.getElementById("tblPendingPayments");
-        const badge = document.getElementById("pending_payments_badge");
-
-        if (!tbody) return;
-
-        // Actualizar badge
-        const count = snapshot.docs.length;
-        if (badge) {
-            if (count > 0) {
-                badge.textContent = count;
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
+        paymentsUnsubscribe = onSnapshot(q,
+            (snapshot) => renderPendingPaymentsFromSnapshot(snapshot),
+            (error) => {
+                console.error("Error en listener de pagos pendientes:", error);
+                toast("Error cargando pagos pendientes", "error");
             }
-        }
-
-        if (snapshot.empty) {
-            if (emptyState) emptyState.style.display = '';
-            if (table) table.style.display = 'none';
-            return;
-        }
-
-        if (emptyState) emptyState.style.display = 'none';
-        if (table) table.style.display = '';
-
-        tbody.innerHTML = snapshot.docs.map(d => {
-            const pc = d.data();
-            const formattedDate = pc.created_at
-                ? new Date(pc.created_at).toLocaleDateString('es-PE', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                })
-                : '---';
-
-            return `
-                <tr data-code-id="${d.id}">
-                    <td><code style="font-family:monospace; font-weight:600;">${Validator.sanitizeHTML(pc.code)}</code></td>
-                    <td>${Validator.sanitizeHTML(pc.promoter_name || 'Desconocido')}</td>
-                    <td>${Validator.sanitizeHTML(pc.ticket_name || '-')}</td>
-                    <td style="font-weight:600;">S/. ${Number(pc.payment_amount || 0).toFixed(2)}</td>
-                    <td>${formattedDate}</td>
-                    <td>
-                        <button class="btn btn-sm btn-success" onclick="window.approvePayment('${d.id}')" title="Aprobar pago">
-                            <i class="fa-solid fa-check"></i> Aprobar
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="window.rejectPayment('${d.id}')" title="Rechazar">
-                            <i class="fa-solid fa-times"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }).join("");
+        );
+        state.activeListeners.push(paymentsUnsubscribe);
 
     } catch (error) {
-        console.error("Error cargando pagos pendientes:", error);
+        console.error("Error configurando listener de pagos:", error);
         toast("Error cargando pagos pendientes", "error");
     }
 }
@@ -828,7 +892,7 @@ export async function approvePayment(codeId) {
         });
 
         toast("✅ Pago aprobado correctamente");
-        await loadPendingPayments();
+        // onSnapshot se encarga de re-renderizar automáticamente
 
     } catch (error) {
         console.error("Error aprobando pago:", error);
@@ -854,7 +918,7 @@ export async function rejectPayment(codeId) {
         });
 
         toast("❌ Pago rechazado");
-        await loadPendingPayments();
+        // onSnapshot se encarga de re-renderizar automáticamente
 
     } catch (error) {
         console.error("Error rechazando pago:", error);

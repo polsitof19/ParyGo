@@ -41,6 +41,11 @@ export const state = {
     // ==========================================
     isLoading: false,
     modalStack: [], // Para manejar modales anidados
+
+    // ==========================================
+    // REAL-TIME LISTENERS
+    // ==========================================
+    activeListeners: [], // Array de funciones unsubscribe de onSnapshot
 };
 
 // ==========================================
@@ -59,9 +64,20 @@ export function resetTemps() {
 }
 
 /**
+ * Desuscribir todos los listeners activos de onSnapshot
+ */
+export function cleanupListeners() {
+    state.activeListeners.forEach(unsub => {
+        try { unsub(); } catch(e) { /* ya desuscrito */ }
+    });
+    state.activeListeners = [];
+}
+
+/**
  * Limpiar sesión completa
  */
 export function clearSession() {
+    cleanupListeners();
     state.currentUser = null;
     state.currentCompany = null;
     state.isSuperAdmin = false;
