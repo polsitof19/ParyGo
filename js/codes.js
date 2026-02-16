@@ -243,7 +243,28 @@ export async function generateCodes() {
         toast("Entrada no encontrada", "error");
         return;
     }
-    
+
+    // BUG-2 FIX: Validar stock disponible antes de generar
+    const totalToGenerate = qty * targets.length;
+    if (ticket.stock != null) {
+        const existingQ = query(
+            collection(db, APP_CONFIG.COLLECTIONS.TICKETS),
+            where("event_id", "==", state.activeEventId),
+            where("ticket_id", "==", ticketId)
+        );
+        const existingSnap = await getDocs(existingQ);
+        const activeCount = existingSnap.docs.filter(d => {
+            const s = d.data().status;
+            return s !== 'CANCELLED';
+        }).length;
+        const available = ticket.stock - activeCount;
+
+        if (totalToGenerate > available) {
+            toast(`Stock insuficiente. Disponible: ${available}, Solicitado: ${totalToGenerate}`, "error");
+            return;
+        }
+    }
+
     const btn = document.getElementById("btnGenCodes");
     const originalText = btn ? btn.innerHTML : "GENERAR CÓDIGOS";
     

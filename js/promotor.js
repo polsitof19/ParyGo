@@ -905,7 +905,7 @@ function fillTicketDropdown() {
     if (!currentEvent || !currentEvent.tickets?.length) return;
     
     myQuotas.forEach(q => {
-        const ticket = currentEvent.tickets.find(t => t.id === q.ticket_id);
+        const ticket = currentEvent.tickets?.find(t => t.id === q.ticket_id);
         if (!ticket) return;
         
         // Contar cuántos códigos ya generó de este tipo

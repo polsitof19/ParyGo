@@ -230,19 +230,30 @@ service cloud.firestore {
     // ==========================================
 
     match /promotorCodes/{codeId} {
-      // Leer: admins, staff, o el promotor dueño del código
-      // También público para validar códigos en reclamar.html
+      // RIESGO CONOCIDO: lectura pública necesaria para reclamar.html
+      // reclamar.html NO usa Firebase Auth, hace query por campo "code"
+      // sin autenticación. Firestore rules no pueden filtrar por query.
+      // TODO: Migrar validación de códigos a Cloud Function para eliminar
+      // lectura pública y proteger datos de clientes (claimed_by).
       allow read: if true;
 
       // Crear: promotores autenticados (solo sus propios códigos)
       allow create: if isStaff() &&
                        request.resource.data.promoter_id == request.auth.uid;
 
-      // Actualizar: admins (aprobar pagos), staff (su propio código),
-      // o cualquiera autenticado (para canjear el código)
+      // SEC-1 FIX: Solo admins pueden aprobar pagos (status APPROVED, approved_at, approved_by)
+      // Promotores pueden actualizar sus propios códigos pero NO aprobar
+      // Público puede reclamar códigos (cambiar status a CLAIMED) - necesario para reclamar.html
       allow update: if isAdminOrSuper() ||
-                       (isStaff() && resource.data.promoter_id == request.auth.uid) ||
-                       isAuthenticated();
+                       (isStaff() && resource.data.promoter_id == request.auth.uid &&
+                        request.resource.data.status != 'APPROVED' &&
+                        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['approved_at', 'approved_by'])) ||
+                       (request.resource.data.status == 'CLAIMED' &&
+                        resource.data.status != 'CLAIMED' &&
+                        resource.data.status != 'SCANNED' &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+                          ['status', 'claimed_at', 'qr_token', 'claimed_by', 'claimed_name']
+                        ));
 
       // Eliminar: solo admins
       allow delete: if isAdminOrSuper();
@@ -273,7 +284,11 @@ service cloud.firestore {
     // ==========================================
 
     match /clientes/{clienteId} {
-      // Leer: público (searchDocument busca por DNI antes de que el usuario se autentique)
+      // RIESGO CONOCIDO: lectura pública necesaria para cliente.js searchDocument()
+      // El flujo de login busca por doc_number ANTES de que el usuario se autentique.
+      // Firestore rules no pueden restringir por campos del query.
+      // TODO: Migrar searchDocument a Cloud Function para eliminar lectura pública
+      // y proteger PII de clientes (nombre, DNI, email, teléfono).
       allow read: if true;
 
       // Crear: autenticado y el documento le pertenece (uid en datos == auth uid)
