@@ -1,6 +1,8 @@
 {
   "permissions": {
     "allow": [
+      "Write",
+      "Edit",
       "Bash(test:*)",
       "Bash(firebase deploy:*)",
       "Bash(git add:*)",
@@ -16,7 +18,19 @@
       "Bash(claude config set:*)",
       "Bash(curl:*)",
       "Bash(ls -la \"C:\\\\Users\\\\pauls\\\\Desktop\\\\nuevo admin\\\\ParyGo\\\\assets\\\\logos\"\" && file \"C:UserspaulsDesktopnuevo adminParyGoassetslogosyape.png\" && file \"C:UserspaulsDesktopnuevo adminParyGoassetslogosplin.png \")",
-      "mcp__filesystem__directory_tree"
+      "mcp__filesystem__directory_tree",
+      "Bash(dir \"C:\\\\Users\\\\pauls\\\\.claude\\\\skills\" /s /b)",
+      "Bash(findstr:*)",
+      "Bash(git checkout:*)",
+      "Bash(cd:*)",
+      "Bash(node -c:*)",
+      "Bash(node:*)",
+      "Bash(grep:*)",
+      "Bash(git -c:*)",
+      "Bash(npx firebase deploy:*)",
+      "Bash(where.exe:*)",
+      "Bash(cmd.exe /c \"where firebase\")",
+      "Bash(firebase:*)"
     ]
   }
 }

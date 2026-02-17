@@ -1,88 +1,144 @@
-# 🎉 ParyGo - Sistema de Gestión de Eventos y Entradas
+# ParyGo - Sistema de Gestion de Eventos y Entradas
 
-## 📋 Descripción General
+## Descripcion General
 
-ParyGo es una plataforma SaaS multi-marca para gestión de eventos, venta de entradas, control de acceso y gestión de promotores.
+ParyGo es una plataforma SaaS multi-marca para gestion de eventos, venta de entradas, control de acceso y gestion de promotores.
 
 **Modelo de negocio:**
-- **Super Admin (dueño):** Paul - dueño de ParyGo, vende el servicio a marcas/discotecas
+- **Super Admin (dueno):** Paul - dueno de ParyGo, vende el servicio a marcas/discotecas
 - **Brand Admin (clientes):** Administradores de cada marca (discotecas, productoras)
-- **Promotores:** Generan códigos de descuento/invitación para sus clientes
+- **Promotores:** Generan codigos de descuento/invitacion para sus clientes
 - **Scanners:** Personal que escanea entradas en la puerta del evento
-- **Clientes finales:** Compran entradas o reclaman códigos de promotores
+- **Clientes finales:** Compran entradas o reclaman codigos de promotores
 
 ---
 
-## 🗂️ Estructura de Archivos
+## Estructura de Archivos
 
-### Páginas HTML
-| Archivo | Función | Acceso |
+### Paginas HTML (raiz)
+| Archivo | Funcion | Acceso |
 |---------|---------|--------|
 | `index.html` | Panel Admin principal | Super admin y Brand admin |
-| `cliente.html` | Portal cliente - ver eventos, comprar entradas | Público / Clientes |
-| `promotor.html` | Portal promotores - generar códigos, ver estadísticas | Promotores |
+| `cliente.html` | Portal cliente - ver eventos, comprar entradas | Publico / Clientes |
+| `promotor.html` | Portal promotores - generar codigos, ver estadisticas | Promotores |
 | `scanner.html` | App escaneo QR - validar entradas | Staff scanner |
-| `reclamar.html` | Reclamar código de promotor | Clientes |
-| `public.html` | Reserva pública (usa localStorage, no Firebase) | Público |
+| `reclamar.html` | Reclamar codigo de promotor | Clientes |
+| `ticket.html` | Vista de entrada compartida (via share_token) | Publico (solo lectura) |
+| `public.html` | Reserva publica (usa localStorage, no Firebase) | Publico |
 | `create-admin.html` | Crear administrador | Super admin |
 | `migrate-admin.html` | Migrar administrador | Super admin |
 | `migrate-promoter.html` | Migrar promotor | Admin |
 
 ### Archivos JavaScript (carpeta js/)
-| Archivo | Función |
+| Archivo | Funcion |
 |---------|---------|
-| `config.js` | Configuración Firebase, constantes globales, roles |
-| `auth.js` | Autenticación, login, logout, verificación de roles |
-| `logic.js` | Orquestador principal del admin, navegación, eventos globales |
-| `state.js` | Estado global de la aplicación |
+| `config.js` | Configuracion Firebase, constantes globales, roles, helpers de seguridad |
+| `auth.js` | Autenticacion, login, logout, verificacion de roles |
+| `logic.js` | Orquestador principal del admin, navegacion, eventos globales |
+| `state.js` | Estado global de la aplicacion |
 | `events.js` | CRUD de eventos, renderizado de cards |
 | `brands.js` | CRUD de marcas |
-| `tickets.js` | Gestión de tickets/entradas |
-| `codes.js` | Generación de códigos para promotores |
-| `metrics.js` | Métricas y estadísticas de eventos |
-| `staff.js` | Gestión de personal (promotores, scanners, admins) |
+| `tickets.js` | Gestion de tipos de entrada (precios, fases, colores) |
+| `codes.js` | Gestion de codigos de promotores, aprobacion de pagos |
+| `metrics.js` | Metricas y estadisticas de eventos |
+| `staff.js` | Gestion de personal (promotores, scanners, admins) |
 | `rewards.js` | Sistema de premios/recompensas |
-| `promoters.js` | Lógica específica de promotores |
-| `utils.js` | Funciones utilitarias (validación, toast, modales) |
-| `api.js` | Servicios externos (WhatsApp, exportación) |
-| `dni-api.js` | Consulta DNI en RENIEC (Perú) |
-| `register.js` | Registro de usuarios |
+| `promotor.js` | Logica del portal promotor (codigos, ganancias, metas) |
+| `cliente.js` | Logica del portal cliente (eventos, compras, registro) |
+| `utils.js` | Funciones utilitarias (validacion, toast, modales, sanitize) |
+| `dni-api.js` | Consulta DNI en RENIEC (Peru) - wrapper de Cloud Function |
 
-### Archivos Scanner (separados)
-| Archivo | Función |
+### Archivos JavaScript (raiz, independientes)
+| Archivo | Funcion |
 |---------|---------|
-| `scanner.js` | Lógica completa del scanner QR |
-| `scanner.css` | Estilos del scanner |
-| `scanner.html` | Interfaz del scanner |
+| `scanner.js` | Logica completa del scanner QR |
+| `reclamar.js` | Logica de reclamar codigos de promotor |
+
+### Utilidades (carpeta utils/)
+| Archivo | Funcion |
+|---------|---------|
+| `brand-detector.js` | Deteccion de marca por subdominio, query param o path |
+
+### Cloud Functions (carpeta functions/)
+| Archivo | Funcion |
+|---------|---------|
+| `index.js` | 4 Cloud Functions (ver seccion Cloud Functions) |
+| `package.json` | Dependencias: firebase-admin, firebase-functions, node-fetch |
+| `.env` | Variable `RENIEC_TOKEN` (NO commitear) |
+
+### Configuracion Firebase (carpeta firestore/)
+| Archivo | Funcion |
+|---------|---------|
+| `firestore.rules` | Reglas de seguridad de Firestore (302 lineas) |
+| `firestore.indexes.json` | Indices de Firestore |
 
 ### Estilos CSS
-| Archivo | Función |
+| Archivo | Funcion |
 |---------|---------|
 | `style.css` | Estilos del panel admin |
 | `cliente.css` | Estilos del portal cliente |
 | `promotor.css` | Estilos del portal promotor |
 | `scanner.css` | Estilos del scanner |
-| `reclamar.css` | Estilos de página reclamar |
+| `reclamar.css` | Estilos de pagina reclamar |
 
-### Otros
-| Archivo/Carpeta | Función |
+### Configuracion del proyecto (raiz)
+| Archivo | Funcion |
+|---------|---------|
+| `firebase.json` | Config de deployment: apunta a `firestore/` y `functions/` |
+| `.firebaserc` | Proyecto Firebase: `parygo-da36a` |
+| `package.json` | Dependencias raiz (Puppeteer para testing) |
+
+### Assets
+| Archivo/Carpeta | Funcion |
 |-----------------|---------|
-| `assets/` | Logo e imágenes |
-| `assets/logo.png` | Logo de ParyGo |
+| `assets/logoparygo (1).png` | Logo principal de ParyGo |
+| `assets/logos/logo.png` | Logo alternativo |
+| `assets/logos/yape.png` | Logo Yape (metodo de pago) |
+| `assets/logos/plin.png` | Logo Plin (metodo de pago) |
 
 ---
 
-## 🔥 Firebase
+## Firebase
 
-### Configuración
+### Configuracion
 - **Proyecto:** `parygo-da36a`
 - **Auth Domain:** `parygo-da36a.firebaseapp.com`
 - **Storage:** `parygo-da36a.firebasestorage.app`
+- **SDK:** Firebase JS SDK v10.7.1 (via CDN gstatic)
+- **Functions Runtime:** Node 20
+
+### Cloud Functions
+
+4 funciones desplegadas en Firebase Functions (`functions/index.js`):
+
+| Funcion | Tipo | Auth | Descripcion |
+|---------|------|------|-------------|
+| `consultaDNI` | `onCall` | Requerida | Consulta DNI en RENIEC (para admin/promotor) |
+| `consultaDNIPublic` | `onCall` | No | Consulta DNI publica (para reclamar.html) |
+| `getSharedTicket` | `onCall` | No | Valida share_token y devuelve datos publicos del ticket |
+| `generateShareToken` | `onCall` | Requerida | Genera token para compartir entrada (solo dueno del ticket) |
+
+**Variables de entorno:**
+- `RENIEC_TOKEN` - Token JWT para API de RENIEC (dniruc.apisperu.com)
+- Configurar en `functions/.env` o con `firebase functions:config:set`
+
+### Firestore Security Rules
+
+Archivo: `firestore/firestore.rules` - Reglas completas con control de acceso por rol.
+
+**Funciones auxiliares definidas:**
+- `isAuthenticated()` - Usuario autenticado
+- `isSuperAdmin()` - Existe en coleccion `empresa`
+- `isBrandAdmin()` - Existe en coleccion `admins`
+- `isStaff()` - Existe en coleccion `staff`
+- `isAdminOrSuper()` - Super admin o brand admin
+
+**Regla por defecto:** Denegar todo (`allow read, write: if false`)
 
 ### Colecciones Firestore
 
 #### `empresa`
-Super admin (dueño de ParyGo)
+Super admin (dueno de ParyGo). Escritura bloqueada desde cliente.
 ```javascript
 {
   email: "string",
@@ -99,7 +155,7 @@ Administradores de marca (clientes de ParyGo)
   email: "string",
   name: "string",
   role: "brand_admin",
-  companyId: "string", // ID de su empresa
+  companyId: "string",
   allowed_brands: ["brand_id_1", "brand_id_2"],
   status: "ACTIVE" | "INACTIVE",
   created_at: "timestamp"
@@ -112,25 +168,25 @@ Promotores y Scanners
 {
   email: "string",
   name: "string",
-  lastname: "string", // solo promotores
-  dni: "string", // solo promotores
-  phone: "string", // solo promotores
+  lastname: "string",      // solo promotores
+  dni: "string",            // solo promotores
+  phone: "string",          // solo promotores
   role: "promoter" | "scanner",
   status: "ACTIVE" | "INACTIVE",
   company_id: "string",
   allowed_brands: ["brand_id"],
-  photo: "base64", // solo promotores
+  photo: "base64",          // solo promotores
   created_at: "timestamp",
   created_by: "admin_uid"
 }
 ```
 
 #### `brands`
-Marcas/Empresas (clientes)
+Marcas/Empresas (clientes). Lectura publica (portal cliente).
 ```javascript
 {
   name: "string",
-  slug: "string", // para subdominio: hoesky.parygo.com
+  slug: "string",           // para subdominio: hoesky.parygo.com
   logo: "base64",
   color: "#hex",
   owner_id: "admin_uid",
@@ -139,23 +195,42 @@ Marcas/Empresas (clientes)
 }
 ```
 
+#### `companies`
+Compatibilidad con portal cliente. Lectura publica. Solo super admin escribe.
+```javascript
+{
+  // Misma estructura que brands (fallback para subdominios)
+  slug: "string",
+  name: "string"
+}
+```
+
 #### `events`
-Eventos
+Eventos. Lectura publica (portal cliente).
 ```javascript
 {
   name: "string",
   brand_id: "string",
   company_id: "string",
-  image: "base64", // flyer
+  image: "base64",          // flyer
   date: "YYYY-MM-DD",
   time: "HH:MM",
   location: "string",
   address: "string",
   description: "string",
   status: "ACTIVE" | "PAUSED" | "FINISHED",
-  ticket_types: [
-    { name: "General", price: 50, stock: 100 },
-    { name: "VIP", price: 100, stock: 50 }
+  tickets: [                // tipos de entrada
+    {
+      name: "General",
+      price: 50,
+      priceMode: "FREE" | "FIXED" | "PHASES",
+      color: "#hex",
+      claim_until: "YYYY-MM-DD",
+      valid_until: "YYYY-MM-DD",
+      promoter_enabled: true,
+      promoter_free: false,
+      promoter_goal: 100
+    }
   ],
   created_at: "timestamp"
 }
@@ -167,27 +242,32 @@ Entradas vendidas/generadas
 {
   event_id: "string",
   brand_id: "string",
-  code: "string", // código único
-  qr_token: "string", // token para QR
-  type: "string", // tipo de entrada
+  code: "string",           // codigo unico
+  qr_token: "string",       // token para QR
+  qr_data: "string",        // datos del QR
+  type: "string",           // tipo de entrada
+  ticket_type: "string",
   price: number,
   status: "PENDING" | "CLAIMED" | "SCANNED" | "CANCELLED",
+  user_id: "string",        // uid del comprador
   client_name: "string",
   client_dni: "string",
   client_email: "string",
   client_phone: "string",
-  promoter_id: "string", // si fue por promotor
+  promoter_id: "string",    // si fue por promotor
   promoter_name: "string",
   claimed_by: { name, dni, email, phone },
   claimed_at: "timestamp",
   scanned_at: "timestamp",
   scanned_by: "string",
+  share_token: "string",    // token para compartir (generado por Cloud Function)
+  share_token_created_at: "string",
   created_at: "timestamp"
 }
 ```
 
 #### `quotas`
-Cuotas de códigos para promotores
+Cuotas de codigos para promotores
 ```javascript
 {
   event_id: "string",
@@ -195,6 +275,35 @@ Cuotas de códigos para promotores
   ticket_type: "string",
   quantity: number,
   used: number,
+  created_at: "timestamp"
+}
+```
+
+#### `codes`
+Codigos de promotores (sistema legacy)
+```javascript
+{
+  code: "string",           // codigo unico generado
+  event_id: "string",
+  promoter_id: "string",
+  ticket_type: "string",
+  status: "ACTIVE" | "USED",
+  created_at: "timestamp"
+}
+```
+
+#### `promotorCodes`
+Codigos de promotores (sistema nuevo con flujo de pago)
+```javascript
+{
+  code: "string",
+  event_id: "string",
+  promoter_id: "string",
+  promoter_name: "string",
+  ticket_type: "string",
+  price: number,
+  status: "PENDING" | "APPROVED" | "REJECTED" | "USED",
+  payment_status: "string",
   created_at: "timestamp"
 }
 ```
@@ -208,9 +317,65 @@ Ventas realizadas
   amount: number,
   payment_method: "string",
   channel: "web" | "promoter" | "door",
+  client_id: "string",
   created_at: "timestamp"
 }
 ```
+
+#### `clientes`
+Usuarios finales del portal cliente. Lectura publica (busqueda por DNI pre-auth).
+```javascript
+{
+  uid: "string",            // Firebase Auth UID
+  dni: "string",
+  name: "string",
+  email: "string",
+  phone: "string",
+  brand_id: "string",
+  created_at: "timestamp"
+}
+```
+
+#### `purchases`
+Historial de compras/reservas
+```javascript
+{
+  user_id: "string",
+  event_id: "string",
+  ticket_id: "string",
+  amount: number,
+  created_at: "timestamp"
+}
+```
+
+#### `users`
+Perfiles globales de usuario
+```javascript
+{
+  // Perfil basico del usuario autenticado
+  email: "string",
+  name: "string",
+  created_at: "timestamp"
+}
+```
+
+#### `user_profiles`
+Perfiles de usuario por marca
+```javascript
+{
+  user_id: "string",
+  brand_id: "string",
+  name: "string",
+  dni: "string",
+  created_at: "timestamp"
+}
+```
+
+#### `accesos`
+Registros de acceso/entrada a eventos (creado por scanner). Solo admins y staff.
+
+#### `accesses`
+Registros de acceso (usado en reclamar.js)
 
 #### `rewards`
 Sistema de premios
@@ -227,76 +392,62 @@ Sistema de premios
 
 ---
 
-## 👥 Sistema de Roles
+## Sistema de Roles
 
 ### Super Admin (empresa)
 - **Acceso:** TODO el sistema
-- **Puede:**
-  - Ver todas las marcas
-  - Ver todos los eventos
-  - Crear/editar/eliminar admins de marca
-  - Crear marcas
-  - Acceder a cualquier dato
-- **Identificación:** `is_super_admin: true` o `collection: "empresa"`
+- **Puede:** Ver todas las marcas, todos los eventos, crear/editar/eliminar admins, crear marcas, aprobar pagos de promotores
+- **Identificacion:** `is_super_admin: true` o existe en coleccion `empresa`
+- **Firestore:** Escritura bloqueada desde cliente (solo backend)
 
 ### Brand Admin (admins)
 - **Acceso:** Solo su marca y datos relacionados
-- **Puede:**
-  - Ver/crear/editar eventos de su marca
-  - Gestionar promotores de su marca
-  - Gestionar scanners de su marca
-  - Ver métricas de sus eventos
-- **Identificación:** `role: "brand_admin"` en colección `admins`
+- **Puede:** Ver/crear/editar eventos, gestionar promotores y scanners, ver metricas, aprobar/rechazar codigos de promotores
+- **Identificacion:** `role: "brand_admin"` en coleccion `admins`
 
 ### Promotor (staff)
-- **Acceso:** Portal promotor
-- **Puede:**
-  - Ver eventos de las marcas asignadas
-  - Generar códigos según su cuota
-  - Ver sus estadísticas
-- **Identificación:** `role: "promoter"` en colección `staff`
+- **Acceso:** Portal promotor (`promotor.html`)
+- **Puede:** Ver eventos asignados, generar codigos segun cuota, ver ganancias y metas, crear codigos con flujo de pago
+- **Identificacion:** `role: "promoter"` en coleccion `staff`
+- **Login:** Por DNI (busca en `staff` donde `dni == input`)
 
 ### Scanner (staff)
-- **Acceso:** App scanner
-- **Puede:**
-  - Ver eventos de las marcas asignadas
-  - Escanear QR y validar entradas
-  - Buscar por DNI o código
-- **Identificación:** `role: "scanner"` en colección `staff`
+- **Acceso:** App scanner (`scanner.html`)
+- **Puede:** Ver eventos asignados, escanear QR, buscar por DNI o codigo, validar entradas
+- **Identificacion:** `role: "scanner"` en coleccion `staff`
 
 ---
 
-## 🌐 Dominios y Subdominios
+## Dominios y Subdominios
 
-### Configuración actual
+### Configuracion actual
 - **Dominio principal:** `parygo.com`
 - **Cloudflare Pages:** `parygo.pages.dev`
-- **DNS Wildcard:** `*.parygo.com` → `parygo.pages.dev`
+- **DNS Wildcard:** `*.parygo.com` -> `parygo.pages.dev`
 
 ### Estructura de URLs
-| URL | Destino | Función |
+| URL | Destino | Funcion |
 |-----|---------|---------|
 | `parygo.com` | index.html | Panel Admin |
 | `parygo.com/scanner.html` | scanner.html | Scanner general |
 | `hoesky.parygo.com` | cliente.html | Portal cliente de Hoesky |
 | `hoesky.parygo.com/promotor.html` | promotor.html | Promotores de Hoesky |
-| `hoesky.parygo.com/reclamar.html` | reclamar.html | Reclamar código Hoesky |
+| `hoesky.parygo.com/reclamar.html` | reclamar.html | Reclamar codigo Hoesky |
+| `parygo.com/ticket.html?id=X&token=Y` | ticket.html | Entrada compartida |
 
-### Detección de subdominio
+### Deteccion de subdominio
+Implementado en `utils/brand-detector.js`:
 ```javascript
-function getBrandFromSubdomain() {
-    const hostname = window.location.hostname;
-    const parts = hostname.split('.');
-    if (parts.length >= 3 && parts[1] === 'parygo') {
-        return parts[0].toLowerCase(); // "hoesky"
-    }
-    return null;
-}
+// Produccion: hoesky.parygo.com -> "hoesky"
+// Desarrollo: localhost?brand=hoesky -> "hoesky"
+import { detectBrandSlug, loadBrandBySlug } from '../utils/brand-detector.js';
 ```
+
+Fallback de marca: busca en `brands` por slug -> `companies` por slug -> ID directo.
 
 ---
 
-## 🎨 Estilos y Diseño
+## Estilos y Diseno
 
 ### Colores
 ```css
@@ -304,14 +455,14 @@ function getBrandFromSubdomain() {
 --bg-secondary: #1a1a1a;    /* Cards, contenedores */
 --border: #2a2a2a;          /* Bordes */
 --accent: #ff4757;          /* Color principal (rosa/rojo) */
---success: #22c55e;         /* Verde éxito */
+--success: #22c55e;         /* Verde exito */
 --error: #ef4444;           /* Rojo error */
 --warning: #f59e0b;         /* Amarillo advertencia */
 --text: #ffffff;            /* Texto principal */
 --text-muted: #666666;      /* Texto secundario */
 ```
 
-### Tipografía
+### Tipografia
 - **Font:** Outfit (Google Fonts)
 - **Weights:** 400, 500, 600, 700, 800
 
@@ -319,30 +470,37 @@ function getBrandFromSubdomain() {
 - **Mobile first:** Optimizado para iPhone
 - **Breakpoint:** 768px
 - **Desktop:** Sidebar izquierdo fijo
-- **Mobile:** Menú inferior (Eventos, Marca, Promo, Extras)
+- **Mobile:** Menu inferior (Eventos, Marca, Promo, Extras)
 
 ### Componentes Mobile
-- Header fijo con logo, búsqueda y perfil
-- Menú inferior con 4 opciones
+- Header fijo con logo, busqueda y perfil
+- Menu inferior con 4 opciones
 - Panel Extras (slide desde derecha, pantalla completa)
-- FAB (botón flotante) para crear evento
+- FAB (boton flotante) para crear evento
 - Pull to refresh
 - Swipe para volver (iOS style)
+- History API para navegacion con boton atras del navegador
 
 ---
 
-## 📱 Flujos Principales
+## Flujos Principales
 
 ### Login Admin
 1. Usuario entra a `parygo.com`
-2. Ingresa email y contraseña
+2. Ingresa email y contrasena
 3. Sistema busca en `empresa` (super admin) o `admins` (brand admin)
 4. Verifica rol y estado
 5. Redirige al dashboard
 
+### Login Promotor
+1. Promotor entra a `[marca].parygo.com/promotor.html`
+2. Ingresa DNI
+3. Sistema busca en `staff` con `role: "promoter"` y `dni == input`
+4. Muestra eventos de sus marcas asignadas con ganancias y metas
+
 ### Login Scanner
 1. Usuario entra a `parygo.com/scanner.html`
-2. Ingresa email y contraseña
+2. Ingresa email y contrasena
 3. Sistema busca en `staff` con `role: "scanner"`
 4. Verifica marca asignada
 5. Muestra eventos de su marca
@@ -351,97 +509,171 @@ function getBrandFromSubdomain() {
 1. Cliente entra a `[marca].parygo.com`
 2. Ve eventos de esa marca
 3. Selecciona evento y tipo de entrada
-4. Completa datos personales
-5. Paga (integración pendiente)
-6. Recibe QR por email
+4. Completa datos personales (DNI autocompletado via RENIEC)
+5. Paga (integracion pendiente)
+6. Recibe QR y puede compartir entrada via share_token
 
-### Reclamar Código (promotor)
-1. Cliente recibe código de promotor
+### Flujo de Codigos de Promotor (nuevo)
+1. Promotor genera codigo desde su portal
+2. Si la entrada tiene costo, codigo queda en estado `PENDING`
+3. Admin ve codigos pendientes en panel "Pagos" del admin
+4. Admin aprueba o rechaza el codigo
+5. Codigo aprobado puede ser reclamado por el cliente
+
+### Reclamar Codigo
+1. Cliente recibe codigo de promotor
 2. Entra a `[marca].parygo.com/reclamar.html`
-3. Ingresa código y DNI
-4. Sistema valida cuota del promotor
+3. Ingresa codigo y DNI
+4. Sistema busca en `promotorCodes` (nuevo) y `codes` (legacy)
 5. Genera entrada con QR
+
+### Compartir Entrada
+1. Cliente con ticket genera share_token via Cloud Function `generateShareToken`
+2. Comparte link: `parygo.com/ticket.html?id=TICKET_ID&token=TOKEN`
+3. Cloud Function `getSharedTicket` valida token y devuelve solo datos publicos
+4. Vista muestra evento, tipo, QR (sin datos personales del comprador)
 
 ### Escaneo de Entrada
 1. Scanner selecciona evento
-2. Escanea QR o busca por DNI/código
+2. Escanea QR o busca por DNI/codigo
 3. Sistema muestra datos del cliente
 4. Scanner aprueba o rechaza
 5. Se marca como SCANNED en Firebase
 
 ---
 
-## ⚠️ Problemas Conocidos
+## Problemas Conocidos
 
 ### Seguridad
-- `APIS_PERU_TOKEN` expuesto en frontend (config.js línea 38)
-- Falta archivo `firestore.rules` en el repo
-- Control de acceso solo client-side
-
-### Código
-- `js/tickets.js` línea 99: variable `tk` no definida
-- Funciones duplicadas: `escapeHtml` (utils.js, cliente.js, promotor.js, reclamar.js)
+- Funciones duplicadas: `escapeHtml` existe en utils.js, cliente.js, promotor.js, reclamar.js
 
 ### Pendientes
-- Sistema de subdominios (en desarrollo)
-- Pasarela de pago
+- Pasarela de pago (integracion)
 - Notificaciones push
 - PWA completa
 
 ---
 
-## ✅ Reglas para Claude Code
+## Deployment
+
+### Cloudflare Pages
+- **Repositorio:** `github.com/polsitof19/ParyGo`
+- **Build:** No requiere build (HTML/CSS/JS vanilla)
+- **Output:** Raiz del proyecto
+
+### Firebase
+```bash
+# Desplegar reglas de Firestore
+firebase deploy --only firestore:rules
+
+# Desplegar indices de Firestore
+firebase deploy --only firestore:indexes
+
+# Desplegar Cloud Functions
+firebase deploy --only functions
+
+# Desplegar todo Firebase
+firebase deploy
+```
+
+### Variables de entorno (Cloud Functions)
+```bash
+# El token RENIEC se configura en functions/.env
+# O via Firebase config:
+firebase functions:config:set reniec.token="TU_TOKEN"
+```
+
+---
+
+## Dependencias
+
+### Raiz (`package.json`)
+- `puppeteer` (devDependency) - Testing con navegador headless
+
+### Cloud Functions (`functions/package.json`)
+- `firebase-admin` ^11.11.0
+- `firebase-functions` ^4.5.0
+- `node-fetch` ^2.7.0
+- **Runtime:** Node 20
+
+### CDN (cargados en HTML)
+- Firebase JS SDK v10.7.1
+- Font Awesome 6.5.1
+- Google Fonts (Outfit)
+- QRCode.js (generacion de QR)
+
+---
+
+## Constantes de la Aplicacion
+
+Definidas en `js/config.js` → `APP_CONFIG`:
+
+```javascript
+APP_CONFIG.ROLES    // SUPER_ADMIN, BRAND_ADMIN, ADMIN, PROMOTER, SCANNER
+APP_CONFIG.COLLECTIONS  // EMPRESA, ADMINS, STAFF, BRANDS, EVENTS, TICKETS, QUOTAS, SALES, REWARDS
+APP_CONFIG.STATUS   // ACTIVE, INACTIVE, PENDING, APPROVED, REJECTED, SCANNED, DELIVERED
+APP_CONFIG.LIMITS   // MAX_IMAGE_SIZE (5MB), MAX_LOGO_SIZE (2MB), MAX_CODES_PER_BATCH (1000), MIN_PASSWORD_LENGTH (6)
+```
+
+Helpers de seguridad exportados:
+- `isSuperAdminRole(user)` - Verifica si es super admin
+- `hasPermissionForBrand(user, brandId)` - Verifica permiso sobre marca
+
+---
+
+## Reglas para Claude Code
 
 ### SIEMPRE
-- Mantener diseño responsive (desktop y móvil)
+- Mantener diseno responsive (desktop y movil)
 - Seguir la paleta de colores existente
-- Hacer commits descriptivos en español
+- Hacer commits descriptivos en espanol
 - Probar cambios antes de push
 - Respetar la estructura de archivos existente
 
 ### NUNCA
 - Eliminar funcionalidades existentes sin confirmar
-- Cambiar la configuración de Firebase
-- Modificar datos de producción
+- Cambiar la configuracion de Firebase
+- Modificar datos de produccion
 - Hardcodear credenciales nuevas
-- Romper el flujo de autenticación
+- Romper el flujo de autenticacion
+- Modificar `firestore/firestore.rules` sin confirmar impacto
 
 ### PREFERIR
 - Editar archivos existentes vs crear nuevos
 - Reutilizar funciones de `utils.js`
-- Usar constantes de `config.js`
+- Usar constantes de `APP_CONFIG` en `config.js`
 - CSS mobile-first
-- Nombres descriptivos en español para UI
+- Nombres descriptivos en espanol para UI
+- Cloud Functions para logica sensible (tokens, APIs externas)
+- `utils/brand-detector.js` para deteccion de marca
 
 ---
 
-## 🚀 Comandos Útiles
+## Comandos Utiles
 ```bash
-# Ver estado de git
+# Git
 git status
-
-# Crear rama para feature
 git checkout -b feature/nombre
-
-# Commit con mensaje
 git add .
-git commit -m "descripción del cambio"
-
-# Push a GitHub
+git commit -m "descripcion del cambio"
 git push origin nombre-rama
 
-# Volver a main
-git checkout main
-git pull
+# Firebase
+firebase deploy --only functions
+firebase deploy --only firestore:rules
+firebase deploy
+
+# Testing local
+# Abrir con Live Server o similar (requiere HTTPS para Firebase Auth)
 ```
 
 ---
 
-## 📞 Contacto
+## Contacto
 
 - **Proyecto:** ParyGo
-- **Dueño:** Paul
-- **Stack:** HTML, CSS, JavaScript vanilla, Firebase
-- **Hosting:** Cloudflare Pages
+- **Dueno:** Paul
+- **Repo:** github.com/polsitof19/ParyGo
+- **Stack:** HTML, CSS, JavaScript vanilla, Firebase (Auth + Firestore + Functions)
+- **Hosting:** Cloudflare Pages (frontend) + Firebase Functions (backend)
 - **Dominio:** parygo.com
-```
