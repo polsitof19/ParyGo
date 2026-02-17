@@ -2,7 +2,7 @@
 import { db } from './config.js';
 import { state, resetTemps } from './state.js';
 import { Validator, toast, openModal, closeModals, customConfirm, switchView } from './utils.js';
-import { collection, query, where, getDocs, doc, addDoc, updateDoc, deleteDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, query, where, getDocs, doc, addDoc, updateDoc, deleteDoc, getDoc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================
 // 1. CARGAR Y RENDERIZAR EVENTOS
@@ -496,24 +496,55 @@ export async function saveEvent() {
  */
 export async function deleteEvent() {
     if (!state.activeEventId) return toast("No hay evento activo", "error");
-    
+
     const event = state.allEvents.find(e => e.id === state.activeEventId);
     if (!event) return toast("Evento no encontrado", "error");
-    
+
     // Verificar permisos
     if (!canEditEvent(event)) {
         return toast("No tienes permiso para eliminar este evento", "error");
     }
-    
-    const confirmed = await customConfirm(`¿Eliminar el evento "${event.name}"? Se perderán todos los datos asociados.`);
+
+    // BUG-5 FIX: Confirmación detallada y eliminación en cascada
+    const eventId = state.activeEventId;
+    const confirmed = await customConfirm(
+        `¿Eliminar el evento "${event.name}"?\n\nEsto eliminará el evento y todos sus datos (entradas, códigos, cuotas, compras). Esta acción no se puede deshacer.`
+    );
     if (!confirmed) return;
-    
+
     try {
-        await deleteDoc(doc(db, "events", state.activeEventId));
-        toast("✅ Evento eliminado");
+        // Eliminar datos relacionados en batches
+        const collectionsToClean = [
+            { name: "tickets", field: "event_id" },
+            { name: "promotorCodes", field: "event_id" },
+            { name: "codes", field: "event_id" },
+            { name: "quotas", field: "event_id" },
+            { name: "purchases", field: "event_id" },
+            { name: "sales", field: "event_id" },
+            { name: "accesos", field: "event_id" },
+            { name: "accesses", field: "event_id" }
+        ];
+
+        for (const col of collectionsToClean) {
+            const q = query(collection(db, col.name), where(col.field, "==", eventId));
+            const snap = await getDocs(q);
+
+            // Firestore batch limit es 500
+            const batchSize = 450;
+            for (let i = 0; i < snap.docs.length; i += batchSize) {
+                const batch = writeBatch(db);
+                const chunk = snap.docs.slice(i, i + batchSize);
+                chunk.forEach(d => batch.delete(d.ref));
+                await batch.commit();
+            }
+        }
+
+        // Eliminar el evento
+        await deleteDoc(doc(db, "events", eventId));
+
+        toast("Evento y datos asociados eliminados");
         state.activeEventId = null;
         switchView('view_events');
-        // onSnapshot se encarga de re-renderizar automáticamente
     } catch (error) {
         console.error("Error eliminando evento:", error);
         toast("Error al eliminar evento", "error");

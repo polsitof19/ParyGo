@@ -12,7 +12,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
     collection,
-    addDoc,
     getDocs,
     onSnapshot,
     query,
@@ -587,10 +586,10 @@ function processDashboardData() {
     document.getElementById("stat_gratis").textContent = totalGratis;
     document.getElementById("stat_comision").textContent = `S/. ${totalComision.toFixed(2)}`;
 
-    // Habilitar/deshabilitar botón generar
+    // BUG-4 FIX: Incluir ambas colecciones en el cálculo de cuota
     const totalAssigned = myQuotas.reduce((sum, q) => sum + (q.assigned || 0), 0);
     const fab = document.getElementById("btnGenerateCode");
-    if (fab) fab.disabled = (totalAssigned - myCodes.length) <= 0;
+    if (fab) fab.disabled = (totalAssigned - (myCodes.length + myPromotorCodes.length)) <= 0;
 
     // Renderizar secciones
     renderGoals(totalGratis);
@@ -908,9 +907,10 @@ function fillTicketDropdown() {
         const ticket = currentEvent.tickets?.find(t => t.id === q.ticket_id);
         if (!ticket) return;
         
-        // Contar cuántos códigos ya generó de este tipo
-        const generated = myCodes.filter(c => c.ticket_id === q.ticket_id).length;
-        const available = (q.assigned || 0) - generated;
+        // BUG-4 FIX: Contar códigos de ambas colecciones
+        const generatedOld = myCodes.filter(c => c.ticket_id === q.ticket_id).length;
+        const generatedNew = myPromotorCodes.filter(c => c.ticket_id === q.ticket_id).length;
+        const available = (q.assigned || 0) - (generatedOld + generatedNew);
         
         if (available > 0) {
             select.innerHTML += `<option value="${q.ticket_id}" data-quota="${q.id}" data-available="${available}">${escapeHtml(ticket.name)} (${available} disponibles)</option>`;
@@ -946,56 +946,55 @@ async function handleGenerateCode() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
 
     try {
-        // Obtener prefijo del evento (primeras 2 letras del nombre)
         const prefix = (currentEvent.code_prefix || currentEvent.name || "PG")
             .replace(/[^A-Za-z]/g, '')
             .substring(0, 2)
             .toUpperCase();
 
-        // Generar código único
-        let code = generateUniqueCode(prefix);
-
-        // Verificar que no exista (muy improbable pero por seguridad)
-        let exists = true;
+        // SEC-7 FIX: Operación atómica con runTransaction + code como doc ID
+        let code;
+        let created = false;
         let attempts = 0;
-        while (exists && attempts < 10) {
-            const check = await getDocs(query(collection(db, "codes"), where("code", "==", code)));
-            if (check.empty) {
-                exists = false;
-            } else {
-                code = generateUniqueCode(prefix);
-                attempts++;
+
+        while (!created && attempts < 10) {
+            code = generateUniqueCode(prefix);
+            const codeDocRef = doc(db, "codes", code);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const snap = await transaction.get(codeDocRef);
+                    if (snap.exists()) throw new Error("CODE_EXISTS");
+                    transaction.set(codeDocRef, {
+                        code: code,
+                        event_id: currentEvent.id,
+                        brand_id: selectedBrandId,
+                        promoter_id: currentUser.id,
+                        promoter_name: currentUser.name,
+                        ticket_id: ticketId,
+                        quota_id: quotaId,
+                        status: "FREE",
+                        claimed_by: null,
+                        claimed_name: null,
+                        claimed_at: null,
+                        scanned_at: null,
+                        created_at: new Date().toISOString()
+                    });
+                });
+                created = true;
+            } catch (e) {
+                if (e.message === "CODE_EXISTS") {
+                    attempts++;
+                } else {
+                    throw e;
+                }
             }
         }
 
-        if (exists) throw new Error("No se pudo generar código único");
+        if (!created) throw new Error("No se pudo generar código único");
 
-        // Guardar en Firestore
-        await addDoc(collection(db, "codes"), {
-            code: code,
-            event_id: currentEvent.id,
-            brand_id: selectedBrandId,
-            promoter_id: currentUser.id,
-            promoter_name: currentUser.name,
-            ticket_id: ticketId,
-            quota_id: quotaId,
-            status: "FREE", // FREE → CLAIMED → SCANNED
-            claimed_by: null,
-            claimed_name: null,
-            claimed_at: null,
-            scanned_at: null,
-            created_at: new Date().toISOString()
-        });
-
-        // Guardar para compartir
         lastGeneratedCode = code;
-
-        // Mostrar resultado
         document.getElementById("generated_code").textContent = code;
         closeModal('modalGenerate');
         openModal('modalCodeResult');
-
-        // Recargar datos
         loadDashboardData();
 
     } catch (e) {
@@ -1108,9 +1107,10 @@ window.showHistoryView = () => {
     renderClaimedList();
     fillTicketDropdown();
 
+    // BUG-4 FIX: Incluir ambas colecciones en el cálculo de cuota
     const totalAssigned = myQuotas.reduce((sum, q) => sum + (q.assigned || 0), 0);
     const fab = document.getElementById("btnGenerateCode");
-    if (fab) fab.disabled = (totalAssigned - myCodes.length) <= 0;
+    if (fab) fab.disabled = (totalAssigned - (myCodes.length + myPromotorCodes.length)) <= 0;
 };
 
 window.quickGenerate = (ticketId) => {
@@ -1134,7 +1134,8 @@ window.quickGenerate = (ticketId) => {
 window.openGenerateModal = () => {
     fillTicketDropdown();
     document.getElementById("gen_ticket_type").selectedIndex = 0;
-    const total = myQuotas.reduce((s, q) => s + (q.assigned || 0), 0) - myCodes.length;
+    // BUG-4 FIX: Incluir ambas colecciones
+    const total = myQuotas.reduce((s, q) => s + (q.assigned || 0), 0) - (myCodes.length + myPromotorCodes.length);
     document.getElementById("gen_available_count").textContent = total;
     openModal('modalGenerate');
 };
@@ -1268,56 +1269,68 @@ window.confirmBuyCode = async () => {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
 
     try {
-        // Generar código único
         const prefix = (currentEvent.code_prefix || currentEvent.name || "PG")
             .replace(/[^A-Za-z]/g, '')
             .substring(0, 2)
             .toUpperCase();
 
-        let code = generateUniqueCode(prefix);
-
-        // Verificar unicidad
-        let exists = true;
+        // SEC-7 + BUG-7 FIX: Operación atómica con verificación de stock
+        let code;
+        let created = false;
         let attempts = 0;
-        while (exists && attempts < 10) {
-            const check = await getDocs(query(collection(db, "promotorCodes"), where("code", "==", code)));
-            if (check.empty) {
-                exists = false;
-            } else {
-                code = generateUniqueCode(prefix);
-                attempts++;
+
+        while (!created && attempts < 10) {
+            code = generateUniqueCode(prefix);
+            const codeDocRef = doc(db, "promotorCodes", code);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const snap = await transaction.get(codeDocRef);
+                    if (snap.exists()) throw new Error("CODE_EXISTS");
+
+                    // BUG-7: Verificar que el evento y ticket siguen activos
+                    const eventRef = doc(db, "events", currentEvent.id);
+                    const eventSnap = await transaction.get(eventRef);
+                    if (!eventSnap.exists()) throw new Error("Evento no encontrado");
+
+                    const eventData = eventSnap.data();
+                    const ticketType = eventData.tickets?.find(t => t.id === ticket.id);
+                    if (!ticketType) throw new Error("Entrada no disponible");
+                    if (!ticketType.promotorEnabled) throw new Error("Entrada no habilitada para promotores");
+
+                    transaction.set(codeDocRef, {
+                        code: code,
+                        event_id: currentEvent.id,
+                        brand_id: selectedBrandId,
+                        promoter_id: currentUser.id,
+                        promoter_name: currentUser.name,
+                        ticket_id: ticket.id,
+                        ticket_name: ticket.name,
+                        ticket_price: ticket.price,
+                        type: 'sell',
+                        status: 'PENDING',
+                        payment_amount: ticket.price,
+                        claimed_by: null,
+                        claimed_at: null,
+                        scanned_at: null,
+                        created_at: new Date().toISOString()
+                    });
+                });
+                created = true;
+            } catch (e) {
+                if (e.message === "CODE_EXISTS") {
+                    attempts++;
+                } else {
+                    throw e;
+                }
             }
         }
 
-        if (exists) throw new Error("No se pudo generar código único");
-
-        // Guardar en promotorCodes con estado PENDING
-        await addDoc(collection(db, "promotorCodes"), {
-            code: code,
-            event_id: currentEvent.id,
-            brand_id: selectedBrandId,
-            promoter_id: currentUser.id,
-            promoter_name: currentUser.name,
-            ticket_id: ticket.id,
-            ticket_name: ticket.name,
-            ticket_price: ticket.price,
-            type: 'sell',
-            status: 'PENDING', // Esperando aprobación de pago
-            payment_amount: ticket.price,
-            claimed_by: null,
-            claimed_at: null,
-            scanned_at: null,
-            created_at: new Date().toISOString()
-        });
+        if (!created) throw new Error("No se pudo generar código único");
 
         lastGeneratedCode = code;
-
-        // Mostrar modal de código pendiente
         document.getElementById("pending_code").textContent = code;
         closeModal('modalBuyCode');
         openModal('modalCodePending');
-
-        // Recargar datos
         loadDashboardData();
 
     } catch (e) {
@@ -1355,56 +1368,60 @@ window.generateFreeCode = async (ticketId) => {
     toast("Generando código...");
 
     try {
-        // Generar código único
         const prefix = (currentEvent.code_prefix || currentEvent.name || "PG")
             .replace(/[^A-Za-z]/g, '')
             .substring(0, 2)
             .toUpperCase();
 
-        let code = generateUniqueCode(prefix);
-
-        // Verificar unicidad
-        let exists = true;
+        // SEC-7 FIX: Operación atómica con runTransaction + code como doc ID
+        let code;
+        let created = false;
         let attempts = 0;
-        while (exists && attempts < 10) {
-            const check = await getDocs(query(collection(db, "promotorCodes"), where("code", "==", code)));
-            if (check.empty) {
-                const checkOld = await getDocs(query(collection(db, "codes"), where("code", "==", code)));
-                exists = !checkOld.empty;
-            }
-            if (exists) {
-                code = generateUniqueCode(prefix);
-                attempts++;
+
+        while (!created && attempts < 10) {
+            code = generateUniqueCode(prefix);
+            const codeDocRef = doc(db, "promotorCodes", code);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const snap = await transaction.get(codeDocRef);
+                    if (snap.exists()) throw new Error("CODE_EXISTS");
+                    // Verificar también en colección legacy
+                    const oldCodeRef = doc(db, "codes", code);
+                    const oldSnap = await transaction.get(oldCodeRef);
+                    if (oldSnap.exists()) throw new Error("CODE_EXISTS");
+
+                    transaction.set(codeDocRef, {
+                        code: code,
+                        event_id: currentEvent.id,
+                        brand_id: selectedBrandId,
+                        promoter_id: currentUser.id,
+                        promoter_name: currentUser.name,
+                        ticket_id: ticket.id,
+                        ticket_name: ticket.name,
+                        ticket_price: 0,
+                        type: 'free',
+                        status: 'FREE',
+                        claimed_by: null,
+                        claimed_at: null,
+                        scanned_at: null,
+                        created_at: new Date().toISOString()
+                    });
+                });
+                created = true;
+            } catch (e) {
+                if (e.message === "CODE_EXISTS") {
+                    attempts++;
+                } else {
+                    throw e;
+                }
             }
         }
 
-        if (exists) throw new Error("No se pudo generar código único");
-
-        // Guardar en promotorCodes con estado FREE (listo para usar)
-        await addDoc(collection(db, "promotorCodes"), {
-            code: code,
-            event_id: currentEvent.id,
-            brand_id: selectedBrandId,
-            promoter_id: currentUser.id,
-            promoter_name: currentUser.name,
-            ticket_id: ticket.id,
-            ticket_name: ticket.name,
-            ticket_price: 0,
-            type: 'free',
-            status: 'FREE', // Listo para compartir inmediatamente
-            claimed_by: null,
-            claimed_at: null,
-            scanned_at: null,
-            created_at: new Date().toISOString()
-        });
+        if (!created) throw new Error("No se pudo generar código único");
 
         lastGeneratedCode = code;
-
-        // Mostrar resultado
         document.getElementById("generated_code").textContent = code;
         openModal('modalCodeResult');
-
-        // Recargar datos
         loadDashboardData();
 
     } catch (e) {
