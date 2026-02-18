@@ -534,6 +534,8 @@ function loadDashboardData() {
 
 function processDashboardData() {
     if (!currentEvent || dashboardEventId !== currentEvent.id) return;
+    // BUG-8 FIX: No escribir al DOM si no estamos en dashboard o historial
+    if (currentViewIdPromo !== 'dashboardView' && currentViewIdPromo !== 'historyView') return;
 
     const tickets = currentEvent.tickets || [];
     let totalVentas = 0;
@@ -604,7 +606,8 @@ function processDashboardData() {
 function formatEventDate(date, time) {
     if (!date) return '---';
     try {
-        const d = new Date(date + 'T00:00:00');
+        // BUG-11 FIX: Usar timezone de Perú para evitar desfase de fecha
+        const d = new Date(date + 'T00:00:00-05:00');
         const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
         const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
         let str = `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;

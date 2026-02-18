@@ -2,7 +2,7 @@
 import { db } from './config.js';
 import { state, resetTemps } from './state.js';
 import { Validator, toast, openModal, closeModals, customConfirm, switchView } from './utils.js';
-import { collection, query, where, getDocs, doc, addDoc, updateDoc, deleteDoc, getDoc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, query, where, getDocs, doc, addDoc, updateDoc, deleteDoc, getDoc, onSnapshot, writeBatch, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================
 // 1. CARGAR Y RENDERIZAR EVENTOS
@@ -470,8 +470,30 @@ export async function saveEvent() {
     
     try {
         if (id) {
-            // Actualizar
-            await updateDoc(doc(db, "events", id), eventData);
+            // BUG-6 FIX: Optimistic locking con runTransaction
+            const eventRef = doc(db, "events", id);
+            await runTransaction(db, async (transaction) => {
+                const currentDoc = await transaction.get(eventRef);
+                if (!currentDoc.exists()) throw new Error("El evento ya no existe");
+
+                const currentData = currentDoc.data();
+                const loadedEvent = state.allEvents.find(x => x.id === id);
+                const loadedUpdatedAt = loadedEvent?.updated_at;
+
+                // Si otro usuario modificó el evento después de que lo cargamos, abortar
+                // Para eventos legacy sin updated_at: si nosotros tenemos timestamp pero
+                // el server no, permitir (primera vez que se guarda con lock)
+                if (loadedUpdatedAt && currentData.updated_at &&
+                    currentData.updated_at !== loadedUpdatedAt) {
+                    throw new Error("CONCURRENT_EDIT");
+                }
+
+                // Generar updated_at dentro de la transacción (timestamp fresco)
+                transaction.update(eventRef, {
+                    ...eventData,
+                    updated_at: new Date().toISOString()
+                });
+            });
             toast("✅ Evento actualizado");
         } else {
             // Crear nuevo
@@ -480,14 +502,18 @@ export async function saveEvent() {
             await addDoc(collection(db, "events"), eventData);
             toast("✅ Evento creado");
         }
-        
+
         closeModals();
         resetTemps();
         // onSnapshot se encarga de re-renderizar automáticamente
 
     } catch (error) {
-        console.error("Error guardando evento:", error);
-        toast("Error al guardar evento", "error");
+        if (error.message === "CONCURRENT_EDIT") {
+            toast("Otro usuario modificó este evento. Recarga e intenta de nuevo.", "error");
+        } else {
+            console.error("Error guardando evento:", error);
+            toast("Error al guardar evento", "error");
+        }
     }
 }
 

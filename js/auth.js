@@ -57,14 +57,16 @@ export async function doLogin() {
         btn.disabled = true;
     }
 
+    let authSucceeded = false;
     try {
         // Autenticar con Firebase Auth
         const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+        authSucceeded = true;
         const firebaseUser = userCredential.user;
-        
+
         // Buscar datos del usuario en Firestore
         const userData = await getUserData(firebaseUser.uid, email);
-        
+
         if (!userData) {
             await signOut(auth);
             throw new Error("Usuario no encontrado en el sistema");
@@ -74,14 +76,20 @@ export async function doLogin() {
         await createSession(userData, firebaseUser.uid);
 
         toast(`¡Bienvenido ${userData.name}!`, "success");
-        
+
         // Recargar para aplicar la sesión
         setTimeout(() => window.location.reload(), 800);
 
     } catch (error) {
         console.error("Error Login:", error);
-        
-        let errorMsg = "Error al iniciar sesión";
+
+        // BUG-10 FIX: Limpiar sesión solo si Firebase Auth aceptó las credenciales
+        // pero la verificación de Firestore falló (evita cerrar sesiones de otras pestañas)
+        if (authSucceeded && auth.currentUser) {
+            try { await signOut(auth); } catch (e) { /* ignore */ }
+        }
+
+        let errorMsg = error.message || "Error al iniciar sesión";
         switch (error.code) {
             case 'auth/invalid-credential':
             case 'auth/wrong-password':
@@ -97,7 +105,7 @@ export async function doLogin() {
                 errorMsg = "Email inválido";
                 break;
         }
-        
+
         toast(errorMsg, "error");
 
         if (errorDiv) {

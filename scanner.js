@@ -252,7 +252,25 @@ function loadEvents() {
         </div>
     `;
 
-    eventsUnsubscribe = onSnapshot(collection(db, "events"), (snapshot) => {
+    // BUG-12 FIX: Filtrar eventos por marca del scanner en la query
+    let eventsQuery;
+    if (state.allowedBrands.length === 0) {
+        // Sin marcas asignadas → no cargar eventos
+        eventList.innerHTML = `
+            <div class="event-list-empty">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <p>Sin marcas asignadas. Contacta al administrador.</p>
+            </div>
+        `;
+        return;
+    } else if (state.allowedBrands.length <= 30) {
+        eventsQuery = query(collection(db, "events"), where("brand_id", "in", state.allowedBrands));
+    } else {
+        // >30 marcas: fallback a query sin filtro + filtro client-side
+        eventsQuery = query(collection(db, "events"));
+    }
+
+    eventsUnsubscribe = onSnapshot(eventsQuery, (snapshot) => {
         renderScannerEvents(eventList, snapshot);
     }, (error) => {
         console.error('Error listener eventos:', error);
@@ -267,6 +285,9 @@ function loadEvents() {
 }
 
 function renderScannerEvents(eventList, snapshot) {
+    // BUG-8 FIX: No escribir al DOM si ya no estamos en la pantalla de eventos
+    if (currentScreen !== 'events') return;
+
     const activeEvents = [];
 
     snapshot.docs.forEach(docSnap => {
@@ -307,8 +328,9 @@ function renderScannerEvents(eventList, snapshot) {
     }
 
     eventList.innerHTML = activeEvents.map(event => {
+        // BUG-11 FIX: Usar timezone de Perú para evitar desfase de fecha
         const dateStr = event.date
-            ? new Date(event.date + 'T00:00:00').toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short' })
+            ? new Date(event.date + 'T00:00:00-05:00').toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short' })
             : 'Sin fecha';
 
         const thumbHtml = event.image

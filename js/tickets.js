@@ -53,10 +53,10 @@ export function renderTicketTable(event) {
             </td>
             <td>
                 <div style="display:flex; gap:8px;">
-                    <button class="btn-icon" onclick="window.editTicket(${index})" title="Editar">
+                    <button class="btn-icon" onclick="window.editTicket('${tk.id || index}')" title="Editar">
                         <i class="fa-solid fa-pen"></i>
                     </button>
-                    <button class="btn-icon" style="background:rgba(239,68,68,0.15); color:#ef4444;" onclick="window.deleteTicket(${index})" title="Eliminar">
+                    <button class="btn-icon" style="background:rgba(239,68,68,0.15); color:#ef4444;" onclick="window.deleteTicket('${tk.id || index}')" title="Eliminar">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
@@ -685,9 +685,20 @@ export function openTicketModal() {
     if (defaults.claim) showEventDetectedBanner();
 }
 
-export function editTicket(index) {
+export function editTicket(ticketIdOrIndex) {
     const event = getActiveEvent();
-    if (!event || !event.tickets || !event.tickets[index]) {
+    if (!event || !event.tickets) {
+        toast("Ticket no encontrado", "error");
+        return;
+    }
+
+    // BUG-9 FIX: Buscar por ID primero, fallback a índice para compatibilidad
+    let index = event.tickets.findIndex(t => t.id === ticketIdOrIndex);
+    if (index === -1) {
+        // Fallback: interpretar como índice numérico
+        index = parseInt(ticketIdOrIndex);
+    }
+    if (index < 0 || index >= event.tickets.length || !event.tickets[index]) {
         toast("Ticket no encontrado", "error");
         return;
     }
@@ -696,9 +707,9 @@ export function editTicket(index) {
 
     openModal('modalTicket');
 
-    // Modo edición
+    // Modo edición - guardar ID del ticket para resolución segura
     const indexInput = document.getElementById("nt_editing_index");
-    if (indexInput) indexInput.value = index;
+    if (indexInput) indexInput.value = tk.id || index;
 
     const titleEl = document.querySelector('#modalTicket h2');
     if (titleEl) titleEl.textContent = "Editar tipo de acceso";
@@ -858,7 +869,13 @@ export async function saveNewTicket() {
         let updatedTickets = [...(event?.tickets || [])];
 
         if (isEditing) {
-            const idx = parseInt(editingIndex);
+            // BUG-9 FIX: Buscar por ID, fallback a índice numérico
+            let idx = updatedTickets.findIndex(t => t.id === editingIndex);
+            if (idx === -1) idx = parseInt(editingIndex);
+            if (idx < 0 || idx >= updatedTickets.length) {
+                toast("Ticket no encontrado para editar", "error");
+                return;
+            }
             ticketData.id = updatedTickets[idx]?.id || Date.now().toString();
             ticketData.slug = updatedTickets[idx]?.slug || name.toLowerCase().replace(/\s+/g, '-');
             updatedTickets[idx] = ticketData;
@@ -899,11 +916,19 @@ export async function saveNewTicket() {
     }
 }
 
-export async function deleteTicket(index) {
+export async function deleteTicket(ticketIdOrIndex) {
     if (!state.activeEventId) return;
 
     const event = state.allEvents.find(e => e.id === state.activeEventId);
-    if (!event || !event.tickets || !event.tickets[index]) {
+    if (!event || !event.tickets) {
+        toast("Ticket no encontrado", "error");
+        return;
+    }
+
+    // BUG-9 FIX: Buscar por ID primero, fallback a índice
+    let index = event.tickets.findIndex(t => t.id === ticketIdOrIndex);
+    if (index === -1) index = parseInt(ticketIdOrIndex);
+    if (index < 0 || index >= event.tickets.length || !event.tickets[index]) {
         toast("Ticket no encontrado", "error");
         return;
     }

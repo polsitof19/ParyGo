@@ -3,16 +3,15 @@
 // Sistema de subdominios: code.parygo.com
 // ==========================================
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+// ARQ-3 FIX: Importar Firebase desde config.js centralizado (sin duplicar init)
+import { db, auth, functions as cloudFunctions, storage } from './config.js';
 import {
-    getAuth,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
     signOut,
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
-    getFirestore,
     collection,
     addDoc,
     getDocs,
@@ -27,33 +26,13 @@ import {
     increment
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
-    getStorage,
     ref,
     uploadBytes,
     getDownloadURL
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import {
-    getFunctions,
     httpsCallable
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
-
-// ==========================================
-// FIREBASE CONFIG
-// ==========================================
-const firebaseConfig = {
-    apiKey: "AIzaSyANnihyrgd02ViR_GeKn6Mdf85nLwUjQg0",
-    authDomain: "parygo-da36a.firebaseapp.com",
-    projectId: "parygo-da36a",
-    storageBucket: "parygo-da36a.firebasestorage.app",
-    messagingSenderId: "58655250311",
-    appId: "1:58655250311:web:9b8f46dd35d0a44ce2e522"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
-const cloudFunctions = getFunctions(app);
 
 // ==========================================
 // VARIABLES GLOBALES
