@@ -1,7 +1,7 @@
 // js/metrics.js - MÉTRICAS, VENTAS Y ACCESOS
 import { db, APP_CONFIG } from './config.js';
 import { state, getPromoterById } from './state.js';
-import { Validator, toast, openModal, customConfirm, formatDateTime } from './utils.js';
+import { Validator, toast, openModal, customConfirm, formatDateTime, logger } from './utils.js';
 import { 
     collection, 
     query, 
@@ -490,7 +490,7 @@ export async function approveSale(id) {
                     clientDni = clientDni || c.doc_number || c.dni || '';
                 }
             } catch (e) {
-                console.warn("No se pudo buscar cliente:", e);
+                logger.warn("No se pudo buscar cliente:", e);
             }
         }
 

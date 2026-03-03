@@ -17,6 +17,7 @@ import {
 import {
     httpsCallable
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+import { escapeHtml, showToast, logger } from './js/utils.js';
 
 // ==========================================
 // UTILIDADES
@@ -28,13 +29,6 @@ let handlingPopstate = false;
 function sanitizeInput(str) {
     if (!str) return '';
     return str.toString().trim().replace(/[<>]/g, '');
-}
-
-function escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
 }
 
 function generateUUID() {
@@ -448,6 +442,7 @@ async function claimTicket() {
     try {
         const qrToken = `TKT${generateUUID().replace(/-/g, '').toUpperCase()}`;
         const source = state.codeData.source || 'tickets';
+        const codeType = state.codeData.type || state.codeData.ticket_type || "UNIQUE";
 
         // Diferentes flujos según la fuente del código
         if (source === 'promotorCodes') {
@@ -482,7 +477,6 @@ async function claimTicket() {
             });
         } else {
             // Ticket tradicional
-            const codeType = state.codeData.type || state.codeData.ticket_type || "UNIQUE";
             const codeRef = doc(db, "tickets", state.codeData.id);
 
             if (codeType === "UNIQUE") {
@@ -891,18 +885,6 @@ function showLoading(show) {
     } else {
         overlay.classList.remove('active');
     }
-}
-
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    container.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
 }
 
 function isValidEmail(email) {

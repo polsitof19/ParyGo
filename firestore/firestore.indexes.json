@@ -43,6 +43,20 @@
       "density": "SPARSE_ALL"
     },
     {
+      "collectionGroup": "staff",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "role",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "tickets",
       "queryScope": "COLLECTION",
       "fields": [

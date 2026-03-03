@@ -1,17 +1,19 @@
 // js/codes.js - GENERACIÓN DE CÓDIGOS QR Y GESTIÓN DE STOCK
 import { db, APP_CONFIG } from './config.js';
 import { state, getActiveEvent, getPromoterById } from './state.js';
-import { Validator, toast, openModal, closeModals, generateCode } from './utils.js';
+import { Validator, toast, openModal, closeModals, customConfirm, generateCode, logger } from './utils.js';
 import {
     collection,
     query,
     where,
     getDocs,
+    getDoc,
     doc,
     writeBatch,
     setDoc,
     onSnapshot,
-    updateDoc
+    updateDoc,
+    limit
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================
@@ -274,33 +276,36 @@ export async function generateCodes() {
             btn.disabled = true;
         }
         
-        const batch = writeBatch(db);
+        const BATCH_SIZE = APP_CONFIG.LIMITS.BATCH_LIMIT || 450;
         let totalGenerated = 0;
         const generatedCodes = new Set();
         const allGeneratedCodes = []; // Para descarga del admin
         const codesByTarget = {}; // Para enviar por correo a cada uno
-        
+
+        // Acumular todas las operaciones primero
+        const allOps = [];
+
         for (const targetPerson of targets) {
             codesByTarget[targetPerson.email || targetPerson.id || 'admin'] = {
                 name: targetPerson.name,
                 email: targetPerson.email,
                 codes: []
             };
-            
+
             for (let i = 0; i < qty; i++) {
                 let code;
                 let attempts = 0;
-                
+
                 // Generar código único
                 do {
                     code = generateCode(event.name || "TKT");
                     attempts++;
                 } while (attempts < 10 && generatedCodes.has(code));
-                
+
                 generatedCodes.add(code);
-                
+
                 const ref = doc(collection(db, APP_CONFIG.COLLECTIONS.TICKETS));
-                
+
                 const codeData = {
                     company_id: event.company_id || "",
                     event_id: state.activeEventId,
@@ -323,15 +328,21 @@ export async function generateCodes() {
                     expires_at: ticket.claim_until || event.date || null,
                     created_at: new Date().toISOString()
                 };
-                
-                batch.set(ref, codeData);
+
+                allOps.push({ ref, codeData });
                 allGeneratedCodes.push(codeData);
                 codesByTarget[targetPerson.email || targetPerson.id || 'admin'].codes.push(codeData);
                 totalGenerated++;
             }
         }
 
-        await batch.commit();
+        // Dividir en batches de máximo BATCH_SIZE operaciones
+        for (let i = 0; i < allOps.length; i += BATCH_SIZE) {
+            const chunk = allOps.slice(i, i + BATCH_SIZE);
+            const batch = writeBatch(db);
+            chunk.forEach(op => batch.set(op.ref, op.codeData));
+            await batch.commit();
+        }
         
         // Descargar archivos si está marcado (solo para el admin)
         if (shouldDownload) {
@@ -505,10 +516,14 @@ export async function saveStockAssignment() {
         const event = getActiveEvent();
         const ticket = event?.tickets?.find(t => t.id === ticketId);
         const promoter = state.allPromotersData?.find(p => p.id === promoterId);
-        
+
         const quotaId = `${state.activeEventId}_${promoterId}_${ticketId}`;
-        
-        await setDoc(doc(db, APP_CONFIG.COLLECTIONS.QUOTAS, quotaId), {
+
+        // Verificar si la cuota ya existe para no resetear el campo "used"
+        const quotaRef = doc(db, APP_CONFIG.COLLECTIONS.QUOTAS, quotaId);
+        const existingQuota = await getDoc(quotaRef);
+
+        const quotaData = {
             company_id: event?.company_id || "",
             event_id: state.activeEventId,
             promoter_id: promoterId,
@@ -516,10 +531,16 @@ export async function saveStockAssignment() {
             ticket_id: ticketId,
             ticket_name: ticket?.name || "",
             assigned: qty,
-            used: 0,
             assigned_at: new Date().toISOString()
-        }, { merge: true });
-        
+        };
+
+        // Solo inicializar "used" en cuotas nuevas
+        if (!existingQuota.exists()) {
+            quotaData.used = 0;
+        }
+
+        await setDoc(quotaRef, quotaData, { merge: true });
+
         toast("✅ Stock asignado correctamente");
 
         closeModals();
@@ -878,10 +899,12 @@ export function loadPendingPayments() {
     }
 
     try {
+        // SEC-6 FIX: Limit para evitar cargar demasiados documentos
         const q = query(
             collection(db, "promotorCodes"),
             where("event_id", "==", state.activeEventId),
-            where("status", "==", "PENDING")
+            where("status", "==", "PENDING"),
+            limit(APP_CONFIG.LIMITS.ITEMS_PER_PAGE)
         );
 
         paymentsUnsubscribe = onSnapshot(q,
@@ -906,6 +929,24 @@ export async function approvePayment(codeId) {
     if (!codeId) return;
 
     try {
+        // SEC-8 FIX: Verificar comprobante antes de aprobar
+        const codeSnap = await getDoc(doc(db, "promotorCodes", codeId));
+        if (!codeSnap.exists()) {
+            toast("Código no encontrado", "error");
+            return;
+        }
+
+        const codeData = codeSnap.data();
+        const hasProof = codeData.payment_proof_url || codeData.operation_number;
+
+        if (!hasProof) {
+            const confirmed = await customConfirm(
+                "Este pago no tiene comprobante adjunto. ¿Aprobar de todos modos?",
+                "Sin comprobante"
+            );
+            if (!confirmed) return;
+        }
+
         await updateDoc(doc(db, "promotorCodes", codeId), {
             status: "APPROVED",
             approved_at: new Date().toISOString(),
@@ -913,7 +954,6 @@ export async function approvePayment(codeId) {
         });
 
         toast("✅ Pago aprobado correctamente");
-        // onSnapshot se encarga de re-renderizar automáticamente
 
     } catch (error) {
         console.error("Error aprobando pago:", error);
@@ -927,9 +967,8 @@ export async function approvePayment(codeId) {
 export async function rejectPayment(codeId) {
     if (!codeId) return;
 
-    if (!confirm("¿Estás seguro de rechazar este pago? El código será eliminado.")) {
-        return;
-    }
+    const confirmed = await customConfirm("¿Estás seguro de rechazar este pago? El código será eliminado.", "Rechazar pago");
+    if (!confirmed) return;
 
     try {
         await updateDoc(doc(db, "promotorCodes", codeId), {

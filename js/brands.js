@@ -1,9 +1,9 @@
 // js/brands.js - MÓDULO DE GESTIÓN DE MARCAS
 // ACTUALIZADO: Edición completa, slug automático, link para clientes
-import { db } from './config.js';
+import { db, storage, APP_CONFIG } from './config.js';
 import { state } from './state.js';
-import { Validator, toast, openModal, closeModals, customConfirm } from './utils.js';
-import { collection, query, getDocs, doc, addDoc, updateDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { Validator, toast, openModal, closeModals, customConfirm, uploadToStorage, logger } from './utils.js';
+import { collection, query, getDocs, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================
 // CONFIGURACIÓN
@@ -204,13 +204,22 @@ export async function saveBrand() {
     }
     
     try {
+        // SEC-5 FIX: Subir logo a Firebase Storage
+        const newRef = editingId ? null : doc(collection(db, "brands"));
+        const docId = editingId || newRef.id;
+        let logoUrl = state.tempBrandLogo || "";
+        if (logoUrl && logoUrl.startsWith('data:')) {
+            const storagePath = `images/brands/${docId}/${Date.now()}.png`;
+            logoUrl = await uploadToStorage(storage, logoUrl, storagePath);
+        }
+
         const brandData = {
             name,
             slug,
             color,
             color_secondary: colorSecondary,
             description,
-            logo: state.tempBrandLogo || "",
+            logo: logoUrl,
             contact: {
                 phone,
                 email,
@@ -230,10 +239,10 @@ export async function saveBrand() {
             await updateDoc(doc(db, "brands", editingId), brandData);
             toast("✅ Marca actualizada");
         } else {
-            // CREAR
+            // CREAR con ID pre-generado (para que Storage path coincida)
             brandData.created_at = new Date().toISOString();
             brandData.status = "ACTIVE";
-            await addDoc(collection(db, "brands"), brandData);
+            await setDoc(newRef, brandData);
             toast("✅ Marca creada");
         }
         
@@ -458,7 +467,7 @@ export async function handleBrandLogoSelect(input) {
     
     const file = input.files[0];
     if (!file.type.match(/image.*/)) return toast("Solo se permiten imágenes", "error");
-    if (file.size > 2 * 1024 * 1024) return toast("Imagen muy grande (máx 2MB)", "error");
+    if (file.size > APP_CONFIG.LIMITS.MAX_LOGO_SIZE) return toast("Imagen muy grande (máx 2MB)", "error");
     
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -467,7 +476,7 @@ export async function handleBrandLogoSelect(input) {
         img.onload = () => {
             // Redimensionar si es muy grande
             const canvas = document.createElement('canvas');
-            const maxSize = 400;
+            const maxSize = APP_CONFIG.LIMITS.IMAGE_THUMB_WIDTH;
             const scale = maxSize / Math.max(img.width, img.height);
             canvas.width = img.width * scale;
             canvas.height = img.height * scale;

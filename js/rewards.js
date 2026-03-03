@@ -1,6 +1,6 @@
 // js/rewards.js - GESTIÓN DE RECOMPENSAS
 import { db, APP_CONFIG } from './config.js';
-import { Validator, toast, switchView } from './utils.js';
+import { Validator, toast, switchView, logger } from './utils.js';
 import { 
     collection, 
     getDocs, 

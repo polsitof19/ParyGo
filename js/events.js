@@ -1,8 +1,8 @@
 // js/events.js - MÓDULO COMPLETO DE EVENTOS
-import { db } from './config.js';
+import { db, storage, APP_CONFIG } from './config.js';
 import { state, resetTemps } from './state.js';
-import { Validator, toast, openModal, closeModals, customConfirm, switchView } from './utils.js';
-import { collection, query, where, getDocs, doc, addDoc, updateDoc, deleteDoc, getDoc, onSnapshot, writeBatch, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { Validator, toast, openModal, closeModals, customConfirm, switchView, uploadToStorage, logger } from './utils.js';
+import { collection, query, where, getDocs, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, onSnapshot, writeBatch, runTransaction, limit, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================
 // 1. CARGAR Y RENDERIZAR EVENTOS
@@ -57,7 +57,7 @@ export function loadEvents() {
     }
 
     try {
-        const q = query(collection(db, "events"));
+        const q = query(collection(db, "events"), orderBy("date", "desc"), limit(APP_CONFIG.LIMITS.ITEMS_PER_PAGE));
         eventsUnsubscribe = onSnapshot(q,
             (snapshot) => processEventsSnapshot(snapshot),
             (error) => {
@@ -323,6 +323,7 @@ export function editCurrentEvent() {
     document.getElementById("ev_id").value = event.id;
     document.getElementById("ev_name").value = event.name || "";
     document.getElementById("ev_status").value = event.status || "ACTIVE";
+    if(document.getElementById("ev_desc")) document.getElementById("ev_desc").value = event.description || "";
     document.getElementById("ev_date").value = event.date || "";
     setTimeToSelects(event.time || "");
     document.getElementById("ev_venue").value = event.venue || "";
@@ -371,7 +372,7 @@ export async function handleFileSelect(input) {
     
     const file = input.files[0];
     if (!file.type.match(/image.*/)) return toast("Solo se permiten imágenes", "error");
-    if (file.size > 5 * 1024 * 1024) return toast("Imagen muy grande (máx 5MB)", "error");
+    if (file.size > APP_CONFIG.LIMITS.MAX_IMAGE_SIZE) return toast("Imagen muy grande (máx 5MB)", "error");
     
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -379,7 +380,7 @@ export async function handleFileSelect(input) {
         img.src = e.target.result;
         img.onload = () => {
             const canvas = document.createElement('canvas');
-            const maxWidth = 800;
+            const maxWidth = APP_CONFIG.LIMITS.IMAGE_MAX_WIDTH;
             const scale = maxWidth / img.width;
             canvas.width = maxWidth;
             canvas.height = img.height * scale;
@@ -452,9 +453,13 @@ export async function saveEvent() {
         };
     }
 
+    // 5. DESCRIPCIÓN (opcional)
+    const description = document.getElementById("ev_desc")?.value || "";
+
     // Construir objeto del evento
     const eventData = {
         name: name,
+        description: description,
         date: document.getElementById("ev_date").value,
         time: getTimeFromSelects(),
         venue: document.getElementById("ev_venue").value || "",
@@ -467,8 +472,15 @@ export async function saveEvent() {
         status: document.getElementById("ev_status")?.value || "ACTIVE",
         updated_at: new Date().toISOString()
     };
-    
+
     try {
+        // SEC-5 FIX: Subir imagen a Firebase Storage en lugar de base64 en Firestore
+        const newRef = id ? null : doc(collection(db, "events"));
+        const docId = id || newRef.id;
+        if (state.tempImgBase64 && state.tempImgBase64.startsWith('data:')) {
+            const storagePath = `images/events/${docId}/${Date.now()}.jpg`;
+            eventData.image = await uploadToStorage(storage, state.tempImgBase64, storagePath);
+        }
         if (id) {
             // BUG-6 FIX: Optimistic locking con runTransaction
             const eventRef = doc(db, "events", id);
@@ -496,10 +508,10 @@ export async function saveEvent() {
             });
             toast("✅ Evento actualizado");
         } else {
-            // Crear nuevo
+            // Crear nuevo con ID pre-generado (para que Storage path coincida)
             eventData.tickets = [];
             eventData.created_at = new Date().toISOString();
-            await addDoc(collection(db, "events"), eventData);
+            await setDoc(newRef, eventData);
             toast("✅ Evento creado");
         }
 
@@ -556,7 +568,7 @@ export async function deleteEvent() {
             const snap = await getDocs(q);
 
             // Firestore batch limit es 500
-            const batchSize = 450;
+            const batchSize = APP_CONFIG.LIMITS.BATCH_LIMIT;
             for (let i = 0; i < snap.docs.length; i += batchSize) {
                 const batch = writeBatch(db);
                 const chunk = snap.docs.slice(i, i + batchSize);

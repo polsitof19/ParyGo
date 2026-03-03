@@ -3,7 +3,7 @@
 // ==========================================
 
 import { db, auth } from './js/config.js';
-import { escapeHtml } from './js/utils.js';
+import { escapeHtml, showToast, logger } from './js/utils.js';
 import {
     collection,
     query,
@@ -919,25 +919,6 @@ function showLoading(show) {
     }
 }
 
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `
-        <i class="fa-solid fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'times-circle' : 'info-circle'}"></i>
-        ${escapeHtml(message)}
-    `;
-
-    container.appendChild(toast);
-
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(-20px)';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
 
 // ==========================================
 // SOUND

@@ -158,7 +158,7 @@ service cloud.firestore {
     }
 
     // ==========================================
-    // ACCESOS (control de acceso a eventos)
+    // ACCESOS (control de acceso a eventos - scanner)
     // ==========================================
 
     match /accesos/{accesoId} {
@@ -167,6 +167,21 @@ service cloud.firestore {
 
       // Crear: staff (al escanear entrada)
       allow create: if isStaff() || isAdminOrSuper();
+
+      // Actualizar/eliminar: solo admins
+      allow update, delete: if isAdminOrSuper();
+    }
+
+    // ==========================================
+    // ACCESSES (registros de reclamo - reclamar.html)
+    // ==========================================
+
+    match /accesses/{accessId} {
+      // Leer: solo admins y staff
+      allow read: if isAdminOrSuper() || isStaff();
+
+      // Crear: público (reclamar.html no usa Firebase Auth)
+      allow create: if true;
 
       // Actualizar/eliminar: solo admins
       allow update, delete: if isAdminOrSuper();

@@ -1,7 +1,7 @@
 // js/auth.js - AUTENTICACIÓN CON FIREBASE AUTH (SEGURO)
 import { db, auth, APP_CONFIG, isSuperAdminRole } from './config.js';
 import { state, clearSession } from './state.js';
-import { toast } from './utils.js';
+import { toast, logger } from './utils.js';
 import { 
     signInWithEmailAndPassword, 
     signOut, 

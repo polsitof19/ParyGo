@@ -6,7 +6,6 @@ import { db, auth, functions } from './config.js';
 import { detectBrandSlug, loadBrandBySlug } from '../utils/brand-detector.js';
 import {
     signInWithEmailAndPassword,
-    createUserWithEmailAndPassword,
     signOut,
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -25,6 +24,8 @@ import {
 import {
     httpsCallable
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+import { escapeHtml, toast, logger } from './utils.js';
+window.toast = toast;
 
 // ==========================================
 // VARIABLES GLOBALES
@@ -280,30 +281,9 @@ function enableManualEntry() {
 }
 
 async function handleRegister() {
-    const name = document.getElementById("reg_name").value.trim();
-    const dni = document.getElementById("reg_dni").value.trim();
-    const email = document.getElementById("reg_email").value.trim().toLowerCase();
-    const phone = document.getElementById("reg_phone").value.trim();
-    const pass = document.getElementById("reg_pass").value;
-    const btn = document.getElementById("btnRegister");
-    
-    if (!name || !email || !phone || !pass || dni.length !== 8) return toast("Completa todos los campos");
-    if (pass.length < 6) return toast("Contraseña mínimo 6 caracteres");
-    
-    btn.disabled = true;
-    btn.innerHTML = '<span>Procesando...</span>';
-    
-    try {
-        const cred = await createUserWithEmailAndPassword(auth, email, pass);
-        await setDoc(doc(db, "staff", cred.user.uid), {
-            name, dni, email, phone, role: "promoter", status: "ACTIVE", allowed_brands: [], created_at: new Date().toISOString()
-        });
-        toast("🎉 ¡Cuenta creada!");
-    } catch (e) {
-        toast(e.code === "auth/email-already-in-use" ? "Correo ya existe" : "Error");
-        btn.disabled = false;
-        btn.innerHTML = '<span>CREAR CUENTA</span><i class="fa-solid fa-check"></i>';
-    }
+    // B6 FIX: Auto-registro deshabilitado por seguridad.
+    // Los promotores solo pueden ser creados desde el panel admin.
+    toast("El registro no está disponible. Contacta al administrador del evento para obtener acceso.", "error");
 }
 
 // ==========================================
@@ -1463,24 +1443,11 @@ window.doLogout = async () => {
 // ==========================================
 // UTILIDADES
 // ==========================================
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text || "";
-    return div.innerHTML;
-}
-
-window.toast = (msg) => {
-    const c = document.getElementById("toast-container");
-    if (!c) return;
-    const t = document.createElement("div");
-    t.className = "toast";
-    t.textContent = msg;
-    c.appendChild(t);
-    setTimeout(() => t.remove(), 3000);
-};
-
 window.showLogin = () => showView('loginView');
-window.showRegister = () => showView('registerView');
+window.showRegister = () => {
+    // B6 FIX: Auto-registro deshabilitado por seguridad
+    toast("El registro no está disponible. Contacta al administrador del evento para obtener acceso.", "error");
+};
 
 // History API - botón atrás del navegador
 window.addEventListener('popstate', function(event) {

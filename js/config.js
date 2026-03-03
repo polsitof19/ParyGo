@@ -90,7 +90,13 @@ export const APP_CONFIG = {
         MAX_IMAGE_SIZE: 5 * 1024 * 1024, // 5MB
         MAX_LOGO_SIZE: 2 * 1024 * 1024,  // 2MB
         MAX_CODES_PER_BATCH: 1000,
-        MIN_PASSWORD_LENGTH: 6
+        MIN_PASSWORD_LENGTH: 6,
+        TOAST_DURATION: 3000,
+        IMAGE_MAX_WIDTH: 800,
+        IMAGE_THUMB_WIDTH: 400,
+        CODE_LENGTH: 8,
+        BATCH_LIMIT: 450,
+        ITEMS_PER_PAGE: 50
     }
 };
 

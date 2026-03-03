@@ -1,7 +1,7 @@
 // js/tickets.js - GESTIÓN DE TIPOS DE ENTRADA
 import { db, APP_CONFIG } from './config.js';
 import { state, getActiveEvent } from './state.js';
-import { Validator, toast, openModal, closeModals, customConfirm, generateCode, formatDate } from './utils.js';
+import { Validator, toast, openModal, closeModals, customConfirm, generateCode, formatDate, logger } from './utils.js';
 import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================

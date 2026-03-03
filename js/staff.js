@@ -1,21 +1,24 @@
 // js/staff.js - GESTIÓN DE PERSONAL (PROMOTORES, ADMINS, SCANNERS)
 // VERSIÓN CORREGIDA - Soluciona problemas de botones y modales
 
-import { db, auth, APP_CONFIG } from './config.js';
+import { db, auth, storage, APP_CONFIG } from './config.js';
 import { state, resetTemps } from './state.js';
-import { Validator, toast, openModal, closeModals, customConfirm, switchView, compressImage } from './utils.js';
+import { Validator, toast, openModal, closeModals, customConfirm, switchView, compressImage, uploadToStorage, logger } from './utils.js';
 import { registerUser } from './auth.js';
 import { 
-    collection, 
-    addDoc, 
-    getDocs, 
-    getDoc, 
-    doc, 
-    updateDoc, 
-    deleteDoc, 
-    query, 
+    collection,
+    addDoc,
+    getDocs,
+    getDoc,
+    doc,
+    updateDoc,
+    deleteDoc,
+    query,
     where,
-    setDoc
+    setDoc,
+    limit,
+    startAfter,
+    orderBy
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { 
     getAuth, 
@@ -28,6 +31,11 @@ import {
 let tempSelectedBrands = [];  // Marcas seleccionadas para promotor
 let tempAdminBrands = [];     // Marcas seleccionadas para admin
 let tempPromoterPhoto = null; // Foto del promotor
+
+// SEC-6 FIX: Paginación
+let promotersLastDoc = null;
+let adminsLastDoc = null;
+let scannersLastDoc = null;
 
 // ==========================================
 // PROMOTORES
@@ -44,18 +52,38 @@ export function loadPromotersView() {
 /**
  * Cargar tabla de promotores
  */
-async function loadPromotersTable() {
+async function loadPromotersTable(loadMore = false) {
     const tbody = document.querySelector('#tblPromoters tbody');
     if (!tbody) return;
-    
-    tbody.innerHTML = '<tr><td colspan="5" style="padding:40px; text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</td></tr>';
-    
+
+    if (!loadMore) {
+        promotersLastDoc = null;
+        tbody.innerHTML = '<tr><td colspan="5" style="padding:40px; text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</td></tr>';
+    }
+
     try {
-        const snapshot = await getDocs(query(
+        // SEC-6 FIX: Paginación con limit y orderBy
+        let q = query(
             collection(db, APP_CONFIG.COLLECTIONS.STAFF),
-            where("role", "==", APP_CONFIG.ROLES.PROMOTER)
-        ));
-        
+            where("role", "==", APP_CONFIG.ROLES.PROMOTER),
+            orderBy("created_at", "desc"),
+            limit(APP_CONFIG.LIMITS.ITEMS_PER_PAGE)
+        );
+        if (loadMore && promotersLastDoc) {
+            q = query(
+                collection(db, APP_CONFIG.COLLECTIONS.STAFF),
+                where("role", "==", APP_CONFIG.ROLES.PROMOTER),
+                orderBy("created_at", "desc"),
+                startAfter(promotersLastDoc),
+                limit(APP_CONFIG.LIMITS.ITEMS_PER_PAGE)
+            );
+        }
+
+        const snapshot = await getDocs(q);
+        if (snapshot.docs.length > 0) {
+            promotersLastDoc = snapshot.docs[snapshot.docs.length - 1];
+        }
+
         const promoters = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
         if (promoters.length === 0) {
@@ -71,17 +99,17 @@ async function loadPromotersTable() {
         }
         
         const brands = state.allBrands || [];
-        
-        tbody.innerHTML = promoters.map(p => {
+
+        const newRows = promoters.map(p => {
             const promoterBrands = (p.allowed_brands || p.companies || []).map(brandId => {
                 const brand = brands.find(b => b.id === brandId);
                 return brand ? `<span class="badge badge-blue" style="margin:2px;">${Validator.sanitizeHTML(brand.name)}</span>` : '';
             }).filter(Boolean).join('') || '<span style="color:var(--muted);">Sin marcas</span>';
-            
-            const statusBadge = p.status === 'ACTIVE' 
-                ? '<span class="badge badge-green">Activo</span>' 
+
+            const statusBadge = p.status === 'ACTIVE'
+                ? '<span class="badge badge-green">Activo</span>'
                 : '<span class="badge" style="background:rgba(239,68,68,0.15); color:#ef4444;">Inactivo</span>';
-            
+
             return `
                 <tr>
                     <td>
@@ -111,12 +139,38 @@ async function loadPromotersTable() {
                 </tr>
             `;
         }).join('');
-        
+
+        if (loadMore) {
+            const loadMoreRow = tbody.querySelector('.load-more-row');
+            if (loadMoreRow) loadMoreRow.remove();
+            tbody.insertAdjacentHTML('beforeend', newRows);
+        } else {
+            tbody.innerHTML = newRows;
+        }
+
+        // Botón "Cargar más"
+        const loadMoreRow = tbody.querySelector('.load-more-row');
+        if (loadMoreRow) loadMoreRow.remove();
+        if (snapshot.docs.length >= APP_CONFIG.LIMITS.ITEMS_PER_PAGE) {
+            tbody.insertAdjacentHTML('beforeend', `
+                <tr class="load-more-row">
+                    <td colspan="5" style="text-align:center; padding:15px;">
+                        <button class="btn btn-ghost" onclick="window.loadMorePromoters()">
+                            <i class="fa-solid fa-arrow-down"></i> Cargar más
+                        </button>
+                    </td>
+                </tr>
+            `);
+        }
+
     } catch (error) {
         console.error('Error cargando promotores:', error);
         tbody.innerHTML = '<tr><td colspan="5" style="padding:40px; text-align:center; color:var(--danger);">Error al cargar promotores</td></tr>';
     }
 }
+
+// Exponer para HTML
+window.loadMorePromoters = () => loadPromotersTable(true);
 
 /**
  * Abrir modal para crear nuevo promotor
@@ -266,6 +320,14 @@ export async function savePromoter() {
             btn.disabled = true;
         }
         
+        // SEC-5 FIX: Subir foto a Firebase Storage
+        let photoUrl = tempPromoterPhoto || '';
+        if (photoUrl && photoUrl.startsWith('data:')) {
+            const docId = editingId || 'new_' + Date.now();
+            const storagePath = `images/staff/${docId}/${Date.now()}.jpg`;
+            photoUrl = await uploadToStorage(storage, photoUrl, storagePath);
+        }
+
         const promoterData = {
             name,
             lastname,
@@ -276,7 +338,7 @@ export async function savePromoter() {
             status: APP_CONFIG.STATUS.ACTIVE,
             allowed_brands: [...tempSelectedBrands],
             companies: [...tempSelectedBrands], // Compatibilidad
-            photo: tempPromoterPhoto || '',
+            photo: photoUrl,
             updated_at: new Date().toISOString()
         };
         
@@ -418,14 +480,23 @@ export function loadAdminsView() {
 /**
  * Cargar tabla de administradores
  */
-async function loadAdminsTable() {
+async function loadAdminsTable(loadMore = false) {
     const tbody = document.querySelector('#tblAdmins tbody');
     if (!tbody) return;
-    
-    tbody.innerHTML = '<tr><td colspan="7" style="padding:40px; text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</td></tr>';
-    
+
+    if (!loadMore) {
+        adminsLastDoc = null;
+        tbody.innerHTML = '<tr><td colspan="7" style="padding:40px; text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</td></tr>';
+    }
+
     try {
-        const snapshot = await getDocs(collection(db, APP_CONFIG.COLLECTIONS.ADMINS));
+        // SEC-6 FIX: Paginación con limit y orderBy
+        let q = query(collection(db, APP_CONFIG.COLLECTIONS.ADMINS), orderBy("created_at", "desc"), limit(APP_CONFIG.LIMITS.ITEMS_PER_PAGE));
+        if (loadMore && adminsLastDoc) {
+            q = query(collection(db, APP_CONFIG.COLLECTIONS.ADMINS), orderBy("created_at", "desc"), startAfter(adminsLastDoc), limit(APP_CONFIG.LIMITS.ITEMS_PER_PAGE));
+        }
+        const snapshot = await getDocs(q);
+        if (snapshot.docs.length > 0) adminsLastDoc = snapshot.docs[snapshot.docs.length - 1];
         const admins = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
         if (admins.length === 0) {
@@ -442,16 +513,16 @@ async function loadAdminsTable() {
         
         const brands = state.allBrands || [];
         
-        tbody.innerHTML = admins.map(a => {
+        const newRows = admins.map(a => {
             const adminBrands = (a.allowed_brands || []).map(brandId => {
                 const brand = brands.find(b => b.id === brandId);
                 return brand ? `<span class="badge badge-blue" style="margin:2px;">${Validator.sanitizeHTML(brand.name)}</span>` : '';
             }).filter(Boolean).join('') || '<span style="color:var(--muted);">Sin marcas</span>';
-            
-            const statusBadge = a.status === 'ACTIVE' 
-                ? '<span class="badge badge-green">Activo</span>' 
+
+            const statusBadge = a.status === 'ACTIVE'
+                ? '<span class="badge badge-green">Activo</span>'
                 : '<span class="badge" style="background:rgba(239,68,68,0.15); color:#ef4444;">Inactivo</span>';
-            
+
             return `
                 <tr>
                     <td style="font-weight:600;">${Validator.sanitizeHTML(a.name || '')} ${Validator.sanitizeHTML(a.lastname || '')}</td>
@@ -473,12 +544,37 @@ async function loadAdminsTable() {
                 </tr>
             `;
         }).join('');
-        
+
+        if (loadMore) {
+            const loadMoreRow = tbody.querySelector('.load-more-row');
+            if (loadMoreRow) loadMoreRow.remove();
+            tbody.insertAdjacentHTML('beforeend', newRows);
+        } else {
+            tbody.innerHTML = newRows;
+        }
+
+        // Botón "Cargar más"
+        const existingLoadMore = tbody.querySelector('.load-more-row');
+        if (existingLoadMore) existingLoadMore.remove();
+        if (snapshot.docs.length >= APP_CONFIG.LIMITS.ITEMS_PER_PAGE) {
+            tbody.insertAdjacentHTML('beforeend', `
+                <tr class="load-more-row">
+                    <td colspan="7" style="text-align:center; padding:15px;">
+                        <button class="btn btn-ghost" onclick="window.loadMoreAdmins()">
+                            <i class="fa-solid fa-arrow-down"></i> Cargar más
+                        </button>
+                    </td>
+                </tr>
+            `);
+        }
+
     } catch (error) {
         console.error('Error cargando admins:', error);
         tbody.innerHTML = '<tr><td colspan="7" style="padding:40px; text-align:center; color:var(--danger);">Error al cargar administradores</td></tr>';
     }
 }
+
+window.loadMoreAdmins = () => loadAdminsTable(true);
 
 /**
  * Abrir modal para crear nuevo admin
@@ -744,18 +840,35 @@ export function loadScannersView() {
 /**
  * Cargar tabla de scanners
  */
-async function loadScannersTable() {
+async function loadScannersTable(loadMore = false) {
     const tbody = document.querySelector('#tblScanners tbody');
     if (!tbody) return;
-    
-    tbody.innerHTML = '<tr><td colspan="4" style="padding:40px; text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</td></tr>';
-    
+
+    if (!loadMore) {
+        scannersLastDoc = null;
+        tbody.innerHTML = '<tr><td colspan="4" style="padding:40px; text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</td></tr>';
+    }
+
     try {
-        const snapshot = await getDocs(query(
+        // SEC-6 FIX: Paginación con limit y orderBy
+        let q = query(
             collection(db, APP_CONFIG.COLLECTIONS.STAFF),
-            where("role", "==", APP_CONFIG.ROLES.SCANNER)
-        ));
-        
+            where("role", "==", APP_CONFIG.ROLES.SCANNER),
+            orderBy("created_at", "desc"),
+            limit(APP_CONFIG.LIMITS.ITEMS_PER_PAGE)
+        );
+        if (loadMore && scannersLastDoc) {
+            q = query(
+                collection(db, APP_CONFIG.COLLECTIONS.STAFF),
+                where("role", "==", APP_CONFIG.ROLES.SCANNER),
+                orderBy("created_at", "desc"),
+                startAfter(scannersLastDoc),
+                limit(APP_CONFIG.LIMITS.ITEMS_PER_PAGE)
+            );
+        }
+        const snapshot = await getDocs(q);
+        if (snapshot.docs.length > 0) scannersLastDoc = snapshot.docs[snapshot.docs.length - 1];
+
         const scanners = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
         if (scanners.length === 0) {
@@ -770,7 +883,7 @@ async function loadScannersTable() {
             return;
         }
         
-        tbody.innerHTML = scanners.map(s => `
+        const newRows = scanners.map(s => `
             <tr>
                 <td style="font-weight:600;">${Validator.sanitizeHTML(s.name || '-')}</td>
                 <td>${Validator.sanitizeHTML(s.email || '-')}</td>
@@ -782,12 +895,37 @@ async function loadScannersTable() {
                 </td>
             </tr>
         `).join('');
-        
+
+        if (loadMore) {
+            const loadMoreRow = tbody.querySelector('.load-more-row');
+            if (loadMoreRow) loadMoreRow.remove();
+            tbody.insertAdjacentHTML('beforeend', newRows);
+        } else {
+            tbody.innerHTML = newRows;
+        }
+
+        // Botón "Cargar más"
+        const existingLoadMore = tbody.querySelector('.load-more-row');
+        if (existingLoadMore) existingLoadMore.remove();
+        if (snapshot.docs.length >= APP_CONFIG.LIMITS.ITEMS_PER_PAGE) {
+            tbody.insertAdjacentHTML('beforeend', `
+                <tr class="load-more-row">
+                    <td colspan="4" style="text-align:center; padding:15px;">
+                        <button class="btn btn-ghost" onclick="window.loadMoreScanners()">
+                            <i class="fa-solid fa-arrow-down"></i> Cargar más
+                        </button>
+                    </td>
+                </tr>
+            `);
+        }
+
     } catch (error) {
         console.error('Error cargando scanners:', error);
         tbody.innerHTML = '<tr><td colspan="4" style="padding:40px; text-align:center; color:var(--danger);">Error al cargar scanners</td></tr>';
     }
 }
+
+window.loadMoreScanners = () => loadScannersTable(true);
 
 /**
  * Abrir modal para crear scanner

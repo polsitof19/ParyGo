@@ -33,6 +33,7 @@ import {
 import {
     httpsCallable
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+import { escapeHtml, toast, logger } from './utils.js';
 
 // ==========================================
 // VARIABLES GLOBALES
@@ -2953,12 +2954,6 @@ function closeModal(id) {
     document.getElementById(id)?.classList.add('hidden');
 }
 
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text || '';
-    return div.innerHTML;
-}
-
 function formatDate(dateStr) {
     if (!dateStr) return '---';
     // Si es un Firestore Timestamp (tiene .toDate), convertirlo
@@ -2967,34 +2962,6 @@ function formatDate(dateStr) {
     const str = String(dateStr);
     const d = (str.length === 10 && str[4] === '-') ? new Date(str + 'T00:00:00') : new Date(str);
     return d.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short' });
-}
-
-function toast(msg, type = 'info') {
-    const c = document.getElementById("toast-container");
-    if (!c) return;
-
-    // Auto-detect type from message
-    if (msg.includes('Error') || msg.includes('error') || msg.includes('incorrec')) type = 'error';
-    else if (msg.includes('exitosa') || msg.includes('creada') || msg.includes('generada') || msg.includes('cambiada') || msg.includes('canjeado') || msg.includes('Copiado') || msg.includes('vinculada') || msg.includes('Bienvenido') || msg.includes('encontrados') || msg.includes('descargada')) type = 'success';
-    else if (msg.includes('Ingresa') || msg.includes('debe') || msg.includes('obligatorio') || msg.includes('Demasiados')) type = 'warning';
-
-    const icons = {
-        success: 'fa-check-circle',
-        error: 'fa-circle-xmark',
-        warning: 'fa-triangle-exclamation',
-        info: 'fa-circle-info'
-    };
-
-    const t = document.createElement("div");
-    t.className = `toast toast-${type}`;
-    t.innerHTML = `<i class="fa-solid ${icons[type] || icons.info} toast-icon"></i><span>${escapeHtml(msg)}</span>`;
-    c.appendChild(t);
-    setTimeout(() => {
-        t.style.opacity = '0';
-        t.style.transform = 'translateY(-20px)';
-        t.style.transition = 'all 0.3s ease';
-        setTimeout(() => t.remove(), 300);
-    }, 3000);
 }
 
 // ==========================================

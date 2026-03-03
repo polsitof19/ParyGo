@@ -1,4 +1,16 @@
 // js/utils.js - UTILIDADES GLOBALES
+import { APP_CONFIG } from './config.js';
+import { ref as storageRefFn, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+// ==========================================
+// 0. LOGGER (solo logea en desarrollo)
+// ==========================================
+const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+export const logger = {
+    log: (...args) => isDev && console.log(...args),
+    error: (...args) => console.error(...args),
+    warn: (...args) => isDev && console.warn(...args)
+};
 
 // ==========================================
 // 1. VALIDADOR
@@ -70,38 +82,41 @@ export const Validator = {
  * @param {string} type - Tipo: 'success', 'error', 'warning', 'info'
  */
 export function toast(msg, type = 'success') {
-    const container = document.getElementById('toast-container');
+    const container = document.getElementById('toast-container') || document.getElementById('toastContainer');
     if (!container) {
-        console.warn('Toast container not found');
+        logger.warn('Toast container not found');
         return;
     }
-    
+
     const toastEl = document.createElement('div');
-    toastEl.className = `custom-toast ${type}`;
-    
+    toastEl.className = `custom-toast toast toast-${type} ${type}`;
+
     // Iconos según tipo
     const icons = {
-        success: '<i class="fa-solid fa-circle-check" style="color:#10b981;"></i>',
-        error: '<i class="fa-solid fa-circle-xmark" style="color:#ef4444;"></i>',
-        warning: '<i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b;"></i>',
-        info: '<i class="fa-solid fa-circle-info" style="color:#3b82f6;"></i>'
+        success: 'fa-circle-check',
+        error: 'fa-circle-xmark',
+        warning: 'fa-triangle-exclamation',
+        info: 'fa-circle-info'
     };
-    
+
     const icon = icons[type] || icons.success;
-    toastEl.innerHTML = `${icon} <span>${Validator.sanitizeHTML(msg)}</span>`;
-    
+    toastEl.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${Validator.sanitizeHTML(msg)}</span>`;
+
     container.appendChild(toastEl);
-    
-    // Remover después de 3 segundos
+
+    const duration = APP_CONFIG.LIMITS.TOAST_DURATION;
     setTimeout(() => {
-        toastEl.classList.add('hiding');
-        toastEl.addEventListener('animationend', () => {
-            if (toastEl.parentNode) {
-                toastEl.remove();
-            }
-        });
-    }, 3000);
+        toastEl.style.opacity = '0';
+        toastEl.style.transform = 'translateY(-20px)';
+        toastEl.style.transition = 'all 0.3s ease';
+        setTimeout(() => {
+            if (toastEl.parentNode) toastEl.remove();
+        }, 300);
+    }, duration);
 }
+
+// Alias para archivos que usan showToast (scanner.js, reclamar.js)
+export const showToast = toast;
 
 // ==========================================
 // 3. MODALES - SISTEMA UNIFICADO
@@ -114,7 +129,7 @@ export function toast(msg, type = 'success') {
 export function openModal(id) {
     const modal = document.getElementById(id);
     if (!modal) {
-        console.error(`Modal ${id} not found`);
+        logger.error(`Modal ${id} not found`);
         return;
     }
     
@@ -278,7 +293,7 @@ export function switchView(viewId) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
         
     } else {
-        console.error(`Vista no encontrada: ${viewId}`);
+        logger.error(`Vista no encontrada: ${viewId}`);
     }
 }
 
@@ -341,7 +356,7 @@ export function formatCurrency(amount) {
  * @param {number} quality - Calidad (0-1)
  * @returns {Promise<string>}
  */
-export function compressImage(file, maxWidth = 800, quality = 0.7) {
+export function compressImage(file, maxWidth = APP_CONFIG.LIMITS.IMAGE_MAX_WIDTH, quality = 0.7) {
     return new Promise((resolve, reject) => {
         if (!file || !file.type.match(/image.*/)) {
             reject(new Error('Archivo no es una imagen'));
@@ -369,6 +384,24 @@ export function compressImage(file, maxWidth = 800, quality = 0.7) {
         reader.onerror = () => reject(new Error('Error leyendo archivo'));
         reader.readAsDataURL(file);
     });
+}
+
+/**
+ * Subir imagen a Firebase Storage
+ * @param {object} storageInstance - Firebase Storage instance
+ * @param {string} base64Data - Datos base64 de la imagen
+ * @param {string} path - Ruta en Storage (ej: images/events/docId/timestamp.jpg)
+ * @returns {Promise<string>} URL de descarga
+ */
+export async function uploadToStorage(storageInstance, base64Data, path) {
+    if (!base64Data || !base64Data.startsWith('data:')) {
+        return base64Data || '';
+    }
+    const response = await fetch(base64Data);
+    const blob = await response.blob();
+    const sRef = storageRefFn(storageInstance, path);
+    const snapshot = await uploadBytes(sRef, blob);
+    return getDownloadURL(snapshot.ref);
 }
 
 // ==========================================
@@ -453,6 +486,7 @@ export function escapeHtml(text) {
 export default {
     Validator,
     toast,
+    showToast,
     openModal,
     closeModals,
     closeModal,
@@ -462,9 +496,11 @@ export default {
     formatDateTime,
     formatCurrency,
     compressImage,
+    uploadToStorage,
     generateCode,
     generateUID,
     debounce,
     throttle,
-    escapeHtml
+    escapeHtml,
+    logger
 };
