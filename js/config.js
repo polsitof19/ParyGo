@@ -30,8 +30,8 @@ export const functions = getFunctions(app);
 export const storage = getStorage(app);
 
 // Configurar persistencia de sesión
-setPersistence(auth, browserLocalPersistence).catch((error) => {
-    console.error("Error configurando persistencia:", error);
+setPersistence(auth, browserLocalPersistence).catch(() => {
+    // Silently handle persistence error - app will still work with session persistence
 });
 
 // ==========================================

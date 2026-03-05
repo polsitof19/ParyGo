@@ -81,7 +81,7 @@ export async function doLogin() {
         setTimeout(() => window.location.reload(), 800);
 
     } catch (error) {
-        console.error("Error Login:", error);
+        logger.error("Error Login:", error);
 
         // BUG-10 FIX: Limpiar sesión solo si Firebase Auth aceptó las credenciales
         // pero la verificación de Firestore falló (evita cerrar sesiones de otras pestañas)
@@ -268,7 +268,7 @@ export async function doLogout() {
         setTimeout(() => window.location.reload(), 500);
         
     } catch (error) {
-        console.error("Error al cerrar sesión:", error);
+        logger.error("Error al cerrar sesión:", error);
         toast("Error al cerrar sesión", "error");
     }
 }
@@ -406,7 +406,7 @@ export async function registerUser(email, password, userData, targetCollection =
         return { success: true, uid };
         
     } catch (error) {
-        console.error("Error registrando usuario:", error);
+        logger.error("Error registrando usuario:", error);
         
         let errorMsg = "Error al crear usuario";
         switch (error.code) {
@@ -442,7 +442,7 @@ export async function changePassword(currentPassword, newPassword) {
         
         return { success: true };
     } catch (error) {
-        console.error("Error cambiando contraseña:", error);
+        logger.error("Error cambiando contraseña:", error);
         return { success: false, error: error.message };
     }
 }

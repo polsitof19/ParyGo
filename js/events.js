@@ -2,7 +2,7 @@
 import { db, storage, APP_CONFIG } from './config.js';
 import { state, resetTemps } from './state.js';
 import { Validator, toast, openModal, closeModals, customConfirm, switchView, uploadToStorage, logger } from './utils.js';
-import { collection, query, where, getDocs, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, onSnapshot, writeBatch, runTransaction, limit, orderBy, startAfter } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, query, where, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc, onSnapshot, writeBatch, runTransaction, limit, orderBy, startAfter } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================
 // 1. CARGAR Y RENDERIZAR EVENTOS
@@ -81,13 +81,13 @@ export function loadEvents() {
         eventsUnsubscribe = onSnapshot(q,
             (snapshot) => processEventsSnapshot(snapshot),
             (error) => {
-                console.error("Error en listener de eventos:", error);
+                logger.error("Error en listener de eventos:", error);
                 toast("Error cargando eventos", "error");
             }
         );
         state.activeListeners.push(eventsUnsubscribe);
     } catch (error) {
-        console.error("Error configurando listener de eventos:", error);
+        logger.error("Error configurando listener de eventos:", error);
         toast("Error cargando eventos", "error");
     }
 }
@@ -109,7 +109,7 @@ export async function loadMoreEvents() {
         const snapshot = await getDocs(q);
         processEventsSnapshot(snapshot, true);
     } catch (error) {
-        console.error("Error cargando más eventos:", error);
+        logger.error("Error cargando más eventos:", error);
         toast("Error cargando más eventos", "error");
     } finally {
         isLoadingMore = false;
@@ -585,7 +585,7 @@ export async function saveEvent() {
         if (error.message === "CONCURRENT_EDIT") {
             toast("Otro usuario modificó este evento. Recarga e intenta de nuevo.", "error");
         } else {
-            console.error("Error guardando evento:", error);
+            logger.error("Error guardando evento:", error);
             toast("Error al guardar evento", "error");
         }
     }
@@ -654,7 +654,7 @@ export async function deleteEvent() {
         state.activeEventId = null;
         switchView('view_events');
     } catch (error) {
-        console.error("Error eliminando evento:", error);
+        logger.error("Error eliminando evento:", error);
         toast("Error al eliminar evento", "error");
     }
 }
@@ -758,6 +758,6 @@ function setTimeToSelects(timeStr) {
         if (ampmEl) ampmEl.value = ampm;
         
     } catch (e) {
-        console.error('Error parseando hora:', e);
+        logger.error('Error parseando hora:', e);
     }
 }

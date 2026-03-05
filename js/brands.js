@@ -3,7 +3,7 @@
 import { db, storage, APP_CONFIG } from './config.js';
 import { state } from './state.js';
 import { Validator, toast, openModal, closeModals, customConfirm, uploadToStorage, logger } from './utils.js';
-import { collection, query, getDocs, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, where, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, query, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc, where, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================
 // CONFIGURACIÓN
@@ -43,7 +43,7 @@ export async function loadBrandsWithLogos() {
         renderBrandsSidebar(isGodMode);
         
     } catch (error) {
-        console.error("Error cargando marcas:", error);
+        logger.error("Error cargando marcas:", error);
         toast("Error cargando marcas", "error");
     }
 }
@@ -252,7 +252,7 @@ export async function saveBrand() {
         await loadBrandsWithLogos();
         
     } catch (error) {
-        console.error("Error guardando marca:", error);
+        logger.error("Error guardando marca:", error);
         toast("Error al guardar marca", "error");
     }
 }
@@ -387,7 +387,7 @@ if (document.getElementById("br_card_color")) document.getElementById("br_card_c
         openModal('modalBrand');
         
     } catch (error) {
-        console.error("Error cargando marca:", error);
+        logger.error("Error cargando marca:", error);
         toast("Error al cargar marca", "error");
     }
 }
@@ -438,7 +438,7 @@ export async function deleteBrand(brandId, event) {
             if (window.showGlobalEvents) window.showGlobalEvents();
         }
     } catch (error) {
-        console.error("Error eliminando marca:", error);
+        logger.error("Error eliminando marca:", error);
         toast("Error al eliminar marca", "error");
     }
 }

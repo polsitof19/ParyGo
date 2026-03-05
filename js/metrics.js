@@ -2,16 +2,15 @@
 import { db, APP_CONFIG } from './config.js';
 import { state, getPromoterById } from './state.js';
 import { Validator, toast, openModal, customConfirm, formatDateTime, logger } from './utils.js';
-import { 
-    collection, 
-    query, 
-    where, 
+import {
+    collection,
+    query,
+    where,
     getDoc,
-    getDocs, 
-    doc, 
-    updateDoc, 
-    runTransaction, 
-    setDoc 
+    getDocs,
+    doc,
+    updateDoc,
+    runTransaction
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // Variables locales
@@ -127,7 +126,7 @@ export async function loadEventMetrics(eid) {
         }
 
     } catch (error) {
-        console.error("Error cargando métricas:", error);
+        logger.error("Error cargando métricas:", error);
         toast("Error cargando métricas", "error");
     }
 }
@@ -203,7 +202,7 @@ export async function loadAllSales(eid) {
         renderSalesCards();
 
     } catch (error) {
-        console.error("Error cargando ventas:", error);
+        logger.error("Error cargando ventas:", error);
         toast("Error cargando ventas", "error");
     }
 }
@@ -502,7 +501,7 @@ export async function approveSale(id) {
         document.getElementById('modalApproveSale').classList.remove('hidden');
 
     } catch (error) {
-        console.error("Error:", error);
+        logger.error("Error:", error);
         toast("Error al cargar venta", "error");
     }
 }
@@ -598,7 +597,7 @@ export async function confirmApproveSale() {
         loadAllSales(state.activeEventId);
 
     } catch (error) {
-        console.error("Error aprobando venta:", error);
+        logger.error("Error aprobando venta:", error);
         toast("Error al aprobar venta", "error");
     }
 
@@ -623,7 +622,7 @@ export async function rejectSale(id) {
         loadAllSales(state.activeEventId);
         
     } catch (error) {
-        console.error("Error rechazando venta:", error);
+        logger.error("Error rechazando venta:", error);
         toast("Error al rechazar venta", "error");
     }
 }
@@ -650,7 +649,7 @@ export async function loadAccesses(eid) {
         applyAccessFilters();
         
     } catch (error) {
-        console.error("Error cargando accesos:", error);
+        logger.error("Error cargando accesos:", error);
         toast("Error cargando accesos", "error");
     }
 }
@@ -851,7 +850,7 @@ export async function cancelAccess(id) {
         toast("Entrada anulada correctamente");
         
     } catch (error) {
-        console.error("Error anulando entrada:", error);
+        logger.error("Error anulando entrada:", error);
         toast("Error al anular la entrada", "error");
     }
 }

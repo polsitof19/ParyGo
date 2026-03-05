@@ -22,8 +22,7 @@ import {
     getDoc,
     setDoc,
     updateDoc,
-    runTransaction,
-    increment
+    runTransaction
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
     ref,
@@ -164,7 +163,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         showLoginScreen();
                     }
                 } catch (e) {
-                    console.error("Error verificando perfil:", e);
+                    logger.error("Error verificando perfil:", e);
                     await signOut(auth);
                     showView('authView');
                     showLoginScreen();
@@ -251,7 +250,7 @@ async function loadBrandBySlug() {
 
         return false;
     } catch (e) {
-        console.error("Error cargando marca:", e);
+        logger.error("Error cargando marca:", e);
         return false;
     }
 }
@@ -370,7 +369,7 @@ async function loadUserProfile(uid) {
         }
         return false;
     } catch (e) {
-        console.error("Error cargando perfil:", e);
+        logger.error("Error cargando perfil:", e);
         return false;
     }
 }
@@ -519,7 +518,7 @@ async function linkAccountToProfile() {
         document.getElementById("link_prompt")?.remove();
 
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         toast("Error al vincular cuenta");
     }
 };
@@ -616,7 +615,7 @@ async function searchDocument() {
             }
         }
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         toast("Error de conexión");
     }
 
@@ -775,7 +774,7 @@ async function handleCheckDNI() {
         showRegStep(2);
 
     } catch (e) {
-        console.error("Error verificando documento:", e);
+        logger.error("Error verificando documento:", e);
         toast("Error al verificar documento");
     } finally {
         btn.disabled = false;
@@ -799,7 +798,7 @@ async function searchRENIECForRegistration(dni) {
             document.getElementById("reg_apellidos").value = "";
         }
     } catch (e) {
-        console.error("Error RENIEC:", e);
+        logger.error("Error RENIEC:", e);
         // No importa si falla RENIEC, el usuario puede ingresar manualmente
     }
 }
@@ -896,7 +895,7 @@ async function handleRegister() {
         loadMyTickets();
 
     } catch (e) {
-        console.error("Error en registro:", e);
+        logger.error("Error en registro:", e);
 
         let errorMsg = "Error al crear cuenta";
         if (e.code === 'auth/email-already-in-use') {
@@ -939,7 +938,7 @@ async function handleLogin() {
         toast("Bienvenido");
 
     } catch (e) {
-        console.error("Error en login:", e);
+        logger.error("Error en login:", e);
 
         let errorMsg = "Error al iniciar sesión";
         if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
@@ -1024,14 +1023,14 @@ function loadEvents() {
         eventsSnap1 = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         mergeAndRenderClientEvents();
     }, (error) => {
-        console.error("Error listener eventos (brand_id):", error);
+        logger.error("Error listener eventos (brand_id):", error);
     });
 
     const unsub2 = onSnapshot(q2, (snap) => {
         eventsSnap2 = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         mergeAndRenderClientEvents();
     }, (error) => {
-        console.error("Error listener eventos (company_id):", error);
+        logger.error("Error listener eventos (company_id):", error);
     });
 
     eventsUnsubs = [unsub1, unsub2];
@@ -1600,7 +1599,7 @@ async function redeemCode() {
         openModal('modalConfirmRedeem');
 
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         toast("Error al validar código");
     }
 }
@@ -1667,7 +1666,7 @@ async function confirmRedeem() {
         loadMyTickets();
 
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         toast(e.message || "Error al canjear código");
     } finally {
         isProcessing = false;
@@ -1784,7 +1783,7 @@ async function claimFreeTickets() {
         launchConfetti();
 
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         toast("Error al generar entradas");
     } finally {
         isProcessing = false;
@@ -1990,7 +1989,7 @@ async function sendPaymentProof() {
         loadMyTickets();
 
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         toast("Error al enviar comprobante");
     } finally {
         isProcessing = false;
@@ -2033,7 +2032,7 @@ function loadMyTickets() {
         myTickets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         processTicketsData();
     }, (error) => {
-        console.error("Error listener tickets:", error);
+        logger.error("Error listener tickets:", error);
     });
 
     // Listener: compras pendientes de esta marca
@@ -2047,7 +2046,7 @@ function loadMyTickets() {
         myPurchases = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         processTicketsData();
     }, (error) => {
-        console.error("Error listener purchases:", error);
+        logger.error("Error listener purchases:", error);
     });
 }
 
@@ -2448,7 +2447,7 @@ async function getShareToken(ticket) {
             return result.data.token;
         }
     } catch (e) {
-        console.error('Error generando share token via CF:', e);
+        logger.error('Error generando share token via CF:', e);
     }
 
     // Fallback: intentar updateDoc directo
@@ -2462,7 +2461,7 @@ async function getShareToken(ticket) {
         ticket.share_token = token;
         return token;
     } catch (e2) {
-        console.error('Error guardando share token:', e2);
+        logger.error('Error guardando share token:', e2);
         return null;
     }
 }
@@ -2637,11 +2636,11 @@ function generateTicketQR(ticket) {
                 correctLevel: QRCode.CorrectLevel.L
             });
         } else {
-            console.error('generateTicketQR: QRCode library not available');
+            logger.error('generateTicketQR: QRCode library not available');
             container.innerHTML = '<p style="color:#999;font-size:12px;">Error cargando QR</p>';
         }
     } catch (e) {
-        console.error('Error generating QR:', e);
+        logger.error('Error generating QR:', e);
         container.innerHTML = '<p style="color:#999;font-size:12px;">Error generando QR</p>';
     }
 }
@@ -2681,7 +2680,7 @@ async function downloadTicket() {
             toast('Entrada descargada exitosamente');
             return;
         } catch (e) {
-            console.error('html2canvas error:', e);
+            logger.error('html2canvas error:', e);
         }
     }
 
@@ -2824,7 +2823,7 @@ async function handleProfilePhoto(event) {
         updateUserUI();
         toast('Foto actualizada exitosamente');
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         toast('Error al subir foto');
     }
 }
@@ -2882,7 +2881,7 @@ async function openPurchaseHistory() {
             `;
         }).join('')}</div>`;
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         container.innerHTML = '<div class="empty-state"><p>Error al cargar historial</p></div>';
     }
 }
@@ -3232,7 +3231,7 @@ async function handleChangePassword() {
         closeModal('modalChangePassword');
 
     } catch (e) {
-        console.error("Error cambiando contraseña:", e);
+        logger.error("Error cambiando contraseña:", e);
 
         let errorMsg = "Error al cambiar contraseña";
         if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
@@ -3295,7 +3294,7 @@ async function handleChangeEmail() {
         closeModal('modalChangeEmail');
 
     } catch (e) {
-        console.error("Error cambiando email:", e);
+        logger.error("Error cambiando email:", e);
         let errorMsg = "Error al cambiar email";
         if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
             errorMsg = "La contraseña es incorrecta";

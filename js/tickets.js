@@ -906,7 +906,7 @@ export async function saveNewTicket() {
         if (window.fillCodeGen) window.fillCodeGen(event);
 
     } catch (error) {
-        console.error("Error guardando ticket:", error);
+        logger.error("Error guardando ticket:", error);
         toast("Error al guardar ticket", "error");
     } finally {
         if (btn) {
@@ -952,7 +952,7 @@ export async function deleteTicket(ticketIdOrIndex) {
         if (window.fillCodeGen) window.fillCodeGen(event);
 
     } catch (error) {
-        console.error("Error eliminando ticket:", error);
+        logger.error("Error eliminando ticket:", error);
         toast("Error al eliminar ticket", "error");
     }
 }

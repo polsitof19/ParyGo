@@ -153,7 +153,7 @@ async function validateScannerRole(user) {
         setupEventListeners();
 
     } catch (error) {
-        console.error("Error validando rol:", error);
+        logger.error("Error validando rol:", error);
         showLoginError("Error de autenticación");
         await signOut(auth);
     }
@@ -178,7 +178,7 @@ async function handleLogin(e) {
     try {
         await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
-        console.error("Error login:", error);
+        logger.error("Error login:", error);
         let msg = "Error al iniciar sesión";
         if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
             msg = "Email o contraseña incorrectos";
@@ -319,7 +319,7 @@ function loadEvents() {
     eventsUnsubscribe = onSnapshot(eventsQuery, (snapshot) => {
         renderScannerEvents(eventList, snapshot);
     }, (error) => {
-        console.error('Error listener eventos:', error);
+        logger.error('Error listener eventos:', error);
         eventsUnsubscribe = null; // Permitir reintentar
         eventList.innerHTML = `
             <div class="event-list-empty">
@@ -551,7 +551,7 @@ async function startScanner() {
             onScanFailure
         );
     } catch (err) {
-        console.error("Error iniciando cámara:", err);
+        logger.error("Error iniciando cámara:", err);
         const msg = err.name === 'NotAllowedError' ? 'Permiso de cámara denegado. Actívalo en configuración del navegador'
             : err.name === 'NotFoundError' ? 'No se encontró una cámara en este dispositivo'
             : err.name === 'NotReadableError' ? 'La cámara está siendo usada por otra aplicación'
@@ -566,7 +566,7 @@ async function stopScanner() {
         try {
             await state.html5QrCode.stop();
         } catch (err) {
-            console.error('Error deteniendo scanner:', err);
+            logger.error('Error deteniendo scanner:', err);
         }
     }
 }
@@ -578,7 +578,7 @@ async function switchCamera() {
         await startScanner();
         showToast(`Cámara ${state.currentCamera === 'environment' ? 'trasera' : 'frontal'}`, 'success');
     } catch (error) {
-        console.error('Error cambiando cámara:', error);
+        logger.error('Error cambiando cámara:', error);
         showToast('Error al cambiar cámara', 'error');
     }
 }
@@ -787,7 +787,7 @@ async function validateCode(code) {
         addToHistory(clientName, 'success', ticketType);
 
     } catch (error) {
-        console.error('Error validando código:', error);
+        logger.error('Error validando código:', error);
         showResult('error', 'Error', 'Error al validar el código', {});
     } finally {
         showLoading(false);
@@ -901,7 +901,7 @@ async function approveEntry() {
         playBeep('success');
         showToast('Entrada aprobada', 'success');
     } catch (error) {
-        console.error('Error aprobando entrada:', error);
+        logger.error('Error aprobando entrada:', error);
         showToast('Error al aprobar', 'error');
     } finally {
         isProcessing = false;

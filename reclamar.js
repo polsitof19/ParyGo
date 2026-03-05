@@ -123,7 +123,7 @@ async function loadBrand() {
         applyBrandTheme();
 
     } catch (error) {
-        console.error('Error cargando marca:', error);
+        logger.error('Error cargando marca:', error);
         showErrorScreen('Error de conexion', 'No se pudo conectar con el servidor. Verifica tu conexion a internet.');
     }
 
@@ -320,7 +320,7 @@ async function searchDNI() {
                     state.userData.lastname = `${data.apellidoPaterno || ''} ${data.apellidoMaterno || ''}`.trim();
                 }
             } catch (apiError) {
-                console.error('Error API DNI:', apiError);
+                logger.error('Error API DNI:', apiError);
             }
         }
         
@@ -334,7 +334,7 @@ async function searchDNI() {
         goToStep(3);
         
     } catch (error) {
-        console.error('Error buscando DNI:', error);
+        logger.error('Error buscando DNI:', error);
         document.getElementById('showIdType').value = idType;
         document.getElementById('showDNI').value = dni;
         goToStep(3);
@@ -705,7 +705,7 @@ async function downloadTicket() {
         showToast('Entrada descargada', 'success');
         
     } catch (error) {
-        console.error('Error descargando ticket:', error);
+        logger.error('Error descargando ticket:', error);
         showToast('Error al descargar', 'error');
     } finally {
         isProcessing = false;
@@ -831,7 +831,7 @@ function formatEventDate(dateStr, timeStr) {
         return resultado;
         
     } catch (e) {
-        console.error('Error formateando fecha:', e);
+        logger.error('Error formateando fecha:', e);
         return dateStr + (timeStr ? ' - ' + timeStr : '');
     }
 }

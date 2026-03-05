@@ -1,6 +1,6 @@
 // js/dni-api.js - CONSULTA DNI VÍA CLOUD FUNCTION (seguro)
 import { functions } from './config.js';
-import { toast } from './utils.js';
+import { toast, logger } from './utils.js';
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
 /**
@@ -42,7 +42,7 @@ export async function consultarDNI(dni) {
         }
 
     } catch (error) {
-        console.error("Error consultando DNI:", error);
+        logger.error("Error consultando DNI:", error);
 
         // Extraer mensaje del HttpsError
         const msg = error?.message || "Error al consultar DNI";

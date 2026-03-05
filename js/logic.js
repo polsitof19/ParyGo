@@ -5,7 +5,7 @@
 // 1. IMPORTAR MÓDULOS
 // ==========================================
 
-import { db, auth, APP_CONFIG } from './config.js';
+import { db } from './config.js';
 import { state, resetTemps, getActiveEvent, debugState, cleanupListeners } from './state.js';
 import {
     Validator,
@@ -15,9 +15,6 @@ import {
     closeModal,
     customConfirm,
     switchView,
-    formatDate,
-    formatDateTime,
-    formatCurrency,
     debounce,
     initErrorMonitor
 } from './utils.js';

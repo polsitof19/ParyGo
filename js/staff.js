@@ -1,7 +1,7 @@
 // js/staff.js - GESTIÓN DE PERSONAL (PROMOTORES, ADMINS, SCANNERS)
 // VERSIÓN CORREGIDA - Soluciona problemas de botones y modales
 
-import { db, auth, storage, APP_CONFIG } from './config.js';
+import { db, storage, APP_CONFIG } from './config.js';
 import { state, resetTemps } from './state.js';
 import { Validator, toast, openModal, closeModals, customConfirm, switchView, compressImage, uploadToStorage, logger } from './utils.js';
 import { registerUser } from './auth.js';
@@ -20,10 +20,6 @@ import {
     startAfter,
     orderBy
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { 
-    getAuth, 
-    createUserWithEmailAndPassword 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 // ==========================================
 // VARIABLES DEL MÓDULO
@@ -164,7 +160,7 @@ async function loadPromotersTable(loadMore = false) {
         }
 
     } catch (error) {
-        console.error('Error cargando promotores:', error);
+        logger.error('Error cargando promotores:', error);
         tbody.innerHTML = '<tr><td colspan="5" style="padding:40px; text-align:center; color:var(--danger);">Error al cargar promotores</td></tr>';
     }
 }
@@ -268,7 +264,7 @@ export async function editPromoter(promoterId) {
         openModal('modalPromoter');
         
     } catch (error) {
-        console.error("Error cargando promotor:", error);
+        logger.error("Error cargando promotor:", error);
         toast("Error al cargar datos del promotor", "error");
     }
 }
@@ -367,7 +363,7 @@ export async function savePromoter() {
         await loadPromotersTable();
         
     } catch (error) {
-        console.error("Error guardando promotor:", error);
+        logger.error("Error guardando promotor:", error);
         toast(error.message || "Error al guardar promotor", "error");
     } finally {
         if (btn) {
@@ -389,7 +385,7 @@ export async function deletePromoter(id) {
         toast("✅ Promotor eliminado");
         loadPromotersTable();
     } catch (error) {
-        console.error("Error eliminando promotor:", error);
+        logger.error("Error eliminando promotor:", error);
         toast("Error al eliminar promotor", "error");
     }
 }
@@ -569,7 +565,7 @@ async function loadAdminsTable(loadMore = false) {
         }
 
     } catch (error) {
-        console.error('Error cargando admins:', error);
+        logger.error('Error cargando admins:', error);
         tbody.innerHTML = '<tr><td colspan="7" style="padding:40px; text-align:center; color:var(--danger);">Error al cargar administradores</td></tr>';
     }
 }
@@ -639,7 +635,7 @@ export async function editAdmin(adminId) {
         openModal('modalAdmin');
         
     } catch (error) {
-        console.error("Error cargando admin:", error);
+        logger.error("Error cargando admin:", error);
         toast("Error al cargar datos del administrador", "error");
     }
 }
@@ -727,7 +723,7 @@ export async function saveAdmin() {
         await loadAdminsTable();
         
     } catch (error) {
-        console.error("Error guardando admin:", error);
+        logger.error("Error guardando admin:", error);
         toast(error.message || "Error al guardar administrador", "error");
     } finally {
         if (btn) {
@@ -749,7 +745,7 @@ export async function deleteAdmin(id) {
         toast("✅ Administrador eliminado");
         loadAdminsTable();
     } catch (error) {
-        console.error("Error eliminando admin:", error);
+        logger.error("Error eliminando admin:", error);
         toast("Error al eliminar administrador", "error");
     }
 }
@@ -920,7 +916,7 @@ async function loadScannersTable(loadMore = false) {
         }
 
     } catch (error) {
-        console.error('Error cargando scanners:', error);
+        logger.error('Error cargando scanners:', error);
         tbody.innerHTML = '<tr><td colspan="4" style="padding:40px; text-align:center; color:var(--danger);">Error al cargar scanners</td></tr>';
     }
 }
@@ -995,7 +991,7 @@ export async function saveScanner() {
         await loadScannersTable();
         
     } catch (error) {
-        console.error("Error creando scanner:", error);
+        logger.error("Error creando scanner:", error);
         toast(error.message || "Error al crear scanner", "error");
     } finally {
         if (btn) {
@@ -1017,7 +1013,7 @@ export async function deleteScanner(id) {
         toast("✅ Scanner eliminado");
         loadScannersTable();
     } catch (error) {
-        console.error("Error eliminando scanner:", error);
+        logger.error("Error eliminando scanner:", error);
         toast("Error al eliminar scanner", "error");
     }
 }
@@ -1060,7 +1056,7 @@ export async function handlePromoterImage(input) {
         }
         
     } catch (error) {
-        console.error("Error procesando imagen:", error);
+        logger.error("Error procesando imagen:", error);
         toast("Error al procesar imagen", "error");
     }
 }

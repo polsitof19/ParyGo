@@ -165,7 +165,7 @@ async function loadUserData(uid) {
             await showBrandSelector();
         }
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         toast("Error al cargar");
         showView('loginView');
     }
@@ -269,7 +269,7 @@ async function handleCheckDNI() {
             enableManualEntry();
         }
     } catch (e) {
-        console.error("Error consultando DNI:", e);
+        logger.error("Error consultando DNI:", e);
         enableManualEntry();
     }
 
@@ -339,7 +339,7 @@ window.selectBrand = async (id) => {
         }
         showEventsList();
     } catch (error) {
-        console.error('Error seleccionando marca:', error);
+        logger.error('Error seleccionando marca:', error);
         toast("Error al seleccionar marca");
     }
 };
@@ -385,14 +385,14 @@ function showEventsList() {
         eventsSnap1 = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         mergeAndRenderEvents();
     }, (error) => {
-        console.error("Error listener eventos (brand_id):", error);
+        logger.error("Error listener eventos (brand_id):", error);
     });
 
     const unsub2 = onSnapshot(q2, (snap) => {
         eventsSnap2 = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         mergeAndRenderEvents();
     }, (error) => {
-        console.error("Error listener eventos (company_id):", error);
+        logger.error("Error listener eventos (company_id):", error);
     });
 
     eventsUnsubs = [unsub1, unsub2];
@@ -486,7 +486,7 @@ function loadDashboardData() {
         myQuotas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         processDashboardData();
     }, (error) => {
-        console.error("Error listener quotas:", error);
+        logger.error("Error listener quotas:", error);
     });
 
     // Listener: códigos antiguos (colección codes - compatibilidad)
@@ -499,7 +499,7 @@ function loadDashboardData() {
         myCodes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         processDashboardData();
     }, (error) => {
-        console.error("Error listener codes:", error);
+        logger.error("Error listener codes:", error);
     });
 
     // Listener: códigos nuevos (colección promotorCodes)
@@ -512,7 +512,7 @@ function loadDashboardData() {
         myPromotorCodes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         processDashboardData();
     }, (error) => {
-        console.error("Error listener promotorCodes:", error);
+        logger.error("Error listener promotorCodes:", error);
     });
 
     dashboardUnsubs = [unsub1, unsub2, unsub3];
@@ -997,7 +997,7 @@ async function handleGenerateCode() {
         loadDashboardData();
 
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         toast("Error: " + e.message);
     } finally {
         isProcessing = false;
@@ -1343,7 +1343,7 @@ window.confirmBuyCode = async () => {
         loadDashboardData();
 
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         toast("Error: " + e.message);
     } finally {
         isProcessing = false;
@@ -1434,7 +1434,7 @@ window.generateFreeCode = async (ticketId) => {
         loadDashboardData();
 
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         toast("Error: " + e.message);
     } finally {
         isProcessing = false;

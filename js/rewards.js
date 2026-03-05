@@ -65,7 +65,7 @@ export async function renderRewards() {
         }).join("");
         
     } catch (error) {
-        console.error("Error cargando premios:", error);
+        logger.error("Error cargando premios:", error);
         toast("Error cargando premios", "error");
     }
 }
@@ -88,7 +88,7 @@ export async function deliverReward(id) {
         renderRewards();
         
     } catch (error) {
-        console.error("Error actualizando premio:", error);
+        logger.error("Error actualizando premio:", error);
         toast("Error al actualizar premio", "error");
     }
 }

@@ -73,12 +73,12 @@ export function loadPromotersCache() {
 
         promotersUnsubscribe = onSnapshot(staffQuery,
             (snapshot) => processPromotersSnapshot(snapshot),
-            (error) => console.error("Error en listener de promotores:", error)
+            (error) => logger.error("Error en listener de promotores:", error)
         );
         state.activeListeners.push(promotersUnsubscribe);
 
     } catch (error) {
-        console.error("Error configurando listener de promotores:", error);
+        logger.error("Error configurando listener de promotores:", error);
     }
 }
 
@@ -403,7 +403,7 @@ export async function generateCodes() {
         if (window.loadEventMetrics) window.loadEventMetrics(state.activeEventId);
         
     } catch (error) {
-        console.error("Error generando códigos:", error);
+        logger.error("Error generando códigos:", error);
         toast("Error al generar códigos", "error");
     } finally {
         if (btn) {
@@ -513,14 +513,14 @@ export function loadStockTable() {
         stockUnsubscribe = onSnapshot(q,
             (snapshot) => renderStockFromSnapshot(snapshot),
             (error) => {
-                console.error("Error en listener de stock:", error);
+                logger.error("Error en listener de stock:", error);
                 toast("Error cargando stock", "error");
             }
         );
         state.activeListeners.push(stockUnsubscribe);
 
     } catch (error) {
-        console.error("Error configurando listener de stock:", error);
+        logger.error("Error configurando listener de stock:", error);
         toast("Error cargando stock", "error");
     }
 }
@@ -573,7 +573,7 @@ export async function saveStockAssignment() {
         // onSnapshot se encarga de re-renderizar automáticamente
         
     } catch (error) {
-        console.error("Error asignando stock:", error);
+        logger.error("Error asignando stock:", error);
         toast("Error al asignar stock", "error");
     }
 }
@@ -720,7 +720,7 @@ export async function saveManualCode() {
         if (window.loadEventMetrics) window.loadEventMetrics(state.activeEventId);
         
     } catch (error) {
-        console.error("Error creando código:", error);
+        logger.error("Error creando código:", error);
         toast("Error al crear el código", "error");
     }
 }
@@ -936,14 +936,14 @@ export function loadPendingPayments() {
         paymentsUnsubscribe = onSnapshot(q,
             (snapshot) => renderPendingPaymentsFromSnapshot(snapshot),
             (error) => {
-                console.error("Error en listener de pagos pendientes:", error);
+                logger.error("Error en listener de pagos pendientes:", error);
                 toast("Error cargando pagos pendientes", "error");
             }
         );
         state.activeListeners.push(paymentsUnsubscribe);
 
     } catch (error) {
-        console.error("Error configurando listener de pagos:", error);
+        logger.error("Error configurando listener de pagos:", error);
         toast("Error cargando pagos pendientes", "error");
     }
 }
@@ -982,7 +982,7 @@ export async function approvePayment(codeId) {
         toast("✅ Pago aprobado correctamente");
 
     } catch (error) {
-        console.error("Error aprobando pago:", error);
+        logger.error("Error aprobando pago:", error);
         toast("Error al aprobar pago", "error");
     }
 }
@@ -1007,7 +1007,7 @@ export async function rejectPayment(codeId) {
         // onSnapshot se encarga de re-renderizar automáticamente
 
     } catch (error) {
-        console.error("Error rechazando pago:", error);
+        logger.error("Error rechazando pago:", error);
         toast("Error al rechazar pago", "error");
     }
 }
