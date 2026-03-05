@@ -22,12 +22,19 @@
 }
 
 body {
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Urbanist', sans-serif;
     background: #0a0a0a;
     color: #ffffff;
     min-height: 100vh;
     line-height: 1.6;
+    font-weight: 400;
 }
+
+h1 { font-weight: 800; letter-spacing: -0.5px; }
+h2 { font-weight: 700; letter-spacing: -0.3px; }
+h3 { font-weight: 600; }
+label, small { font-weight: 500; }
+button, .btn, [class*="btn-"] { font-weight: 600; letter-spacing: 0.3px; }
 
 /* ========== PANTALLAS ========== */
 .screen {

@@ -305,7 +305,7 @@ function showError(message) {
     const brandSlug = currentBrandSlug || '';
     const homeUrl = brandSlug ? `https://${brandSlug}.parygo.com` : 'https://parygo.com';
     document.body.innerHTML = `
-        <div style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; background:#09090b; color:white; font-family:'Outfit','Inter',sans-serif;">
+        <div style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; background:#09090b; color:white; font-family:'Urbanist','Inter',sans-serif;">
             <div style="font-size:64px; margin-bottom:16px;">😕</div>
             <h1 style="font-size:22px; font-weight:700; margin-bottom:8px;">Algo salio mal</h1>
             <p style="color:#888; font-size:14px; max-width:300px; margin-bottom:24px;">${safe}</p>

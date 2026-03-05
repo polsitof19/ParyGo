@@ -610,7 +610,7 @@ async function downloadTicket() {
         
         // Texto "Sujeto a capacidad de aforo"
         ctx.fillStyle = '#999999';
-        ctx.font = '12px Outfit, Arial, sans-serif';
+        ctx.font = '12px Urbanist, Arial, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('Sujeto a capacidad de aforo', width / 2, 250);
         
@@ -626,21 +626,21 @@ async function downloadTicket() {
         
         // Nombre del evento
         ctx.fillStyle = '#0a0a0a';
-        ctx.font = 'bold 18px Outfit, Arial, sans-serif';
+        ctx.font = 'bold 18px Urbanist, Arial, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(eventName, width / 2, 320);
         
         // Ubicación
         if (venue) {
             ctx.fillStyle = '#666666';
-            ctx.font = '13px Outfit, Arial, sans-serif';
+            ctx.font = '13px Urbanist, Arial, sans-serif';
             ctx.fillText(venue, width / 2, 345);
         }
         
         // Fecha y hora
         if (dateTime) {
             ctx.fillStyle = '#666666';
-            ctx.font = '13px Outfit, Arial, sans-serif';
+            ctx.font = '13px Urbanist, Arial, sans-serif';
             ctx.fillText(dateTime, width / 2, 370);
         }
         
@@ -654,12 +654,12 @@ async function downloadTicket() {
         
         // Nombre del cliente
         ctx.fillStyle = '#333333';
-        ctx.font = 'bold 16px Outfit, Arial, sans-serif';
+        ctx.font = 'bold 16px Urbanist, Arial, sans-serif';
         ctx.fillText(clientName, width / 2, 440);
         
         // DNI
         ctx.fillStyle = '#666666';
-        ctx.font = '14px Outfit, Arial, sans-serif';
+        ctx.font = '14px Urbanist, Arial, sans-serif';
         ctx.fillText(`DNI: ${dni}`, width / 2, 465);
         
         // Línea divisoria
@@ -704,13 +704,13 @@ async function downloadTicket() {
         
         // Texto del tipo de entrada
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 16px Outfit, Arial, sans-serif';
+        ctx.font = 'bold 16px Urbanist, Arial, sans-serif';
         ctx.fillText(ticketType, width / 2, btnY + 30);
         
         // Productora
         if (brandName) {
             ctx.fillStyle = '#888888';
-            ctx.font = '13px Outfit, Arial, sans-serif';
+            ctx.font = '13px Urbanist, Arial, sans-serif';
             ctx.fillText(brandName, width / 2, 600);
         }
         
@@ -813,7 +813,7 @@ function showErrorScreen(title, subtitle) {
     const homeUrl = brandSlug ? `https://${brandSlug}.parygo.com` : 'https://parygo.com';
 
     document.body.innerHTML = `
-        <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;background:#0a0a0a;color:#fff;font-family:'Outfit',sans-serif;">
+        <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;background:#0a0a0a;color:#fff;font-family:'Urbanist',sans-serif;">
             <div style="font-size:64px;margin-bottom:16px;">😕</div>
             <h1 style="font-size:22px;font-weight:700;margin-bottom:8px;">${escapeHtml(title)}</h1>
             <p style="color:#888;font-size:14px;margin-bottom:24px;max-width:300px;">${escapeHtml(subtitle)}</p>

@@ -22,13 +22,22 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-html, body { 
-    font-family: 'Outfit', sans-serif; 
-    background: var(--bg); 
-    color: var(--text); 
+html, body {
+    font-family: 'Urbanist', sans-serif;
+    background: var(--bg);
+    color: var(--text);
     min-height: 100vh;
     overflow-x: hidden;
+    line-height: 1.6;
+    font-weight: 400;
 }
+
+h1 { font-weight: 800; letter-spacing: -0.5px; }
+h2 { font-weight: 700; letter-spacing: -0.3px; }
+h3 { font-weight: 600; }
+label, small { font-weight: 500; }
+button, .btn, [class*="btn-"] { font-weight: 600; letter-spacing: 0.3px; }
+.stat-value, .stat-number, .earnings-amount { font-weight: 700; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
 
 .hidden { display: none !important; }
 .flex-1 { flex: 1; }
@@ -475,7 +484,7 @@ html, body {
 .code-value {
     font-size: 18px;
     font-weight: 800;
-    font-family: 'Outfit', monospace;
+    font-family: 'Urbanist', monospace;
     letter-spacing: 1px;
 }
 
@@ -759,7 +768,7 @@ html, body {
 .code-display span {
     font-size: 28px;
     font-weight: 800;
-    font-family: 'Outfit', monospace;
+    font-family: 'Urbanist', monospace;
     letter-spacing: 2px;
     color: var(--primary);
 }
@@ -1190,7 +1199,7 @@ html, body {
     align-items: center;
     gap: 6px;
     transition: opacity 0.2s;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Urbanist', sans-serif;
 }
 
 .btn-action-generate:active {
@@ -1239,7 +1248,7 @@ html, body {
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Urbanist', sans-serif;
     transition: background 0.2s;
 }
 
