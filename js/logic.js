@@ -16,7 +16,8 @@ import {
     customConfirm,
     switchView,
     debounce,
-    initErrorMonitor
+    initErrorMonitor,
+    logger
 } from './utils.js';
 
 import {
@@ -363,7 +364,7 @@ function setupGlobalEventListeners() {
     document.getElementById('btnCreateEvent')?.addEventListener('click', openEventModal);
     
     // CREAR MARCA
-    document.getElementById('btnCreateBrand')?.addEventListener('click', openBrandModal);
+    document.getElementById('btnCreateBrand')?.addEventListener('click', () => window.openBrandModal());
     
     // STAFF - BOTONES DE CREAR
     document.getElementById('btnNewPromoter')?.addEventListener('click', openNewPromoterModal);

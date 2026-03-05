@@ -1788,6 +1788,7 @@ async function claimFreeTickets() {
                     const available = currentType.stock - (currentType.sold || 0);
                     if (qty > available) {
                         toast(`Solo quedan ${Math.max(0, available)} entradas disponibles`);
+                        isProcessing = false;
                         return;
                     }
                 }
