@@ -18,7 +18,8 @@ import {
     formatDate,
     formatDateTime,
     formatCurrency,
-    debounce
+    debounce,
+    initErrorMonitor
 } from './utils.js';
 
 import {
@@ -307,6 +308,9 @@ window.cleanupListeners = cleanupListeners;
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // MEJORA 6: Error monitoring
+    initErrorMonitor(db, 'admin');
+
     // Verificar autenticación
     const user = await checkAuth();
     
@@ -792,12 +796,20 @@ document.addEventListener('touchmove', (e) => {
 document.addEventListener('touchend', () => {
     if (isPulling) {
         if (typeof loadEvents === 'function') {
-            loadEvents().then(() => {
+            const result = loadEvents();
+            if (result && typeof result.then === 'function') {
+                result.then(() => {
+                    setTimeout(() => {
+                        document.getElementById('pullRefresh')?.classList.remove('active');
+                        isPulling = false;
+                    }, 500);
+                });
+            } else {
                 setTimeout(() => {
                     document.getElementById('pullRefresh')?.classList.remove('active');
                     isPulling = false;
                 }, 500);
-            });
+            }
         } else {
             setTimeout(() => {
                 document.getElementById('pullRefresh')?.classList.remove('active');

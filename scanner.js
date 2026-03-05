@@ -3,7 +3,8 @@
 // ==========================================
 
 import { db, auth } from './js/config.js';
-import { escapeHtml, showToast, logger } from './js/utils.js';
+import { escapeHtml, showToast, logger, initErrorMonitor } from './js/utils.js';
+
 import {
     collection,
     query,
@@ -24,6 +25,11 @@ import {
 // STATE
 // ==========================================
 let isProcessing = false;
+let isOnline = navigator.onLine;
+
+// MEJORA D: Cache local de codigos escaneados exitosamente (en memoria)
+const scannedCodesCache = new Map(); // key: code, value: { timestamp, clientName, ticketType }
+const MAX_CACHE_SIZE = 100;
 
 let state = {
     currentUser: null,
@@ -52,9 +58,49 @@ function cleanupListeners() {
 // INITIALIZATION
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
+    // MEJORA 6: Error monitoring
+    initErrorMonitor(db, 'scanner');
     setupLoginListeners();
+    setupConnectionMonitor();
     checkAuth();
 });
+
+// ==========================================
+// MEJORA D: CONNECTION MONITOR
+// ==========================================
+function setupConnectionMonitor() {
+    updateConnectionUI();
+
+    window.addEventListener('online', () => {
+        isOnline = true;
+        updateConnectionUI();
+        showToast('Conexion restablecida', 'success');
+    });
+
+    window.addEventListener('offline', () => {
+        isOnline = false;
+        updateConnectionUI();
+        showToast('Sin conexion a internet', 'error');
+    });
+}
+
+function updateConnectionUI() {
+    const indicator = document.getElementById('connectionIndicator');
+    const banner = document.getElementById('offlineBanner');
+    const dot = indicator?.querySelector('.conn-dot');
+
+    if (indicator) {
+        if (isOnline) {
+            indicator.innerHTML = '<span class="conn-dot online"></span> Online';
+        } else {
+            indicator.innerHTML = '<span class="conn-dot offline"></span> Offline';
+        }
+    }
+
+    if (banner) {
+        banner.classList.toggle('hidden', isOnline);
+    }
+}
 
 // ==========================================
 // AUTHENTICATION
@@ -580,14 +626,40 @@ async function validateCode(code) {
     }
 
     if (isProcessing) return;
+
+    const codeUpper = code.trim().toUpperCase();
+    const codeOriginal = code.trim();
+
+    // MEJORA D: Offline handling
+    if (!isOnline) {
+        if (scannedCodesCache.has(codeOriginal) || scannedCodesCache.has(codeUpper)) {
+            const cached = scannedCodesCache.get(codeOriginal) || scannedCodesCache.get(codeUpper);
+            playBeep('error');
+            showResult('warning', 'Ya escaneado anteriormente', 'Verificado desde cache local (sin conexion)', {
+                name: cached.clientName || '-',
+                dni: '-',
+                type: cached.ticketType || '-',
+                promoter: '-'
+            });
+            addToHistory(cached.clientName || codeOriginal, 'warning', 'Cache offline');
+            state.stats.duplicate++;
+            state.stats.total++;
+            updateStats();
+        } else {
+            playBeep('error');
+            showResult('error', 'Sin conexion', 'No se puede validar este codigo sin internet', {});
+            addToHistory(codeOriginal, 'error', 'Sin conexion');
+            state.stats.total++;
+            updateStats();
+        }
+        return;
+    }
+
     isProcessing = true;
     showLoading(true);
 
     try {
         let snapshot;
-
-        const codeUpper = code.trim().toUpperCase();
-        const codeOriginal = code.trim();
 
         // 1. Buscar por código
         let q = query(
@@ -659,8 +731,12 @@ async function validateCode(code) {
                 ? new Date(ticketData.scanned_at).toLocaleString('es-PE')
                 : 'Desconocido';
 
+            // MEJORA D: Cachear para verificacion offline
+            addToScannedCache(codeOriginal, clientName, ticketType);
+            if (codeUpper !== codeOriginal) addToScannedCache(codeUpper, clientName, ticketType);
+
             playBeep('error');
-            showResult('warning', 'Ya Escaneado', `Ingresó: ${scannedAt}`, clientData);
+            showResult('warning', 'Ya Escaneado', `Ingreso: ${scannedAt}`, clientData);
             addToHistory(clientName, 'warning', 'Duplicado');
             state.stats.duplicate++;
             state.stats.total++;
@@ -705,7 +781,9 @@ async function validateCode(code) {
         }
 
         // ÉXITO - Mostrar para aprobar/rechazar
-        showResult('success', 'Entrada Válida', 'Esperando aprobación', clientData, ticketDoc.id);
+        pendingTicketCode = codeOriginal;
+        pendingTicketCodeUpper = codeUpper;
+        showResult('success', 'Entrada Valida', 'Esperando aprobacion', clientData, ticketDoc.id);
         addToHistory(clientName, 'success', ticketType);
 
     } catch (error) {
@@ -742,6 +820,8 @@ window.validateManual = validateManual;
 // RESULT MODAL
 // ==========================================
 let pendingTicketId = null;
+let pendingTicketCode = null;
+let pendingTicketCodeUpper = null;
 
 function showResult(type, title, subtitle, data, ticketId = null) {
     const overlay = document.getElementById('resultOverlay');
@@ -808,6 +888,12 @@ async function approveEntry() {
             scanned_by: state.currentUser?.email || 'scanner_app'
         });
 
+        // MEJORA D: Cache del codigo escaneado exitosamente
+        const resultName = document.getElementById('resultName')?.textContent || '-';
+        const resultType = document.getElementById('resultType')?.textContent || '-';
+        if (pendingTicketCode) addToScannedCache(pendingTicketCode, resultName, resultType);
+        if (pendingTicketCodeUpper && pendingTicketCodeUpper !== pendingTicketCode) addToScannedCache(pendingTicketCodeUpper, resultName, resultType);
+
         state.stats.success++;
         state.stats.total++;
         updateStats();
@@ -820,12 +906,16 @@ async function approveEntry() {
     } finally {
         isProcessing = false;
         pendingTicketId = null;
+        pendingTicketCode = null;
+        pendingTicketCodeUpper = null;
         closeResult();
     }
 }
 
 function rejectEntry() {
     pendingTicketId = null;
+    pendingTicketCode = null;
+    pendingTicketCodeUpper = null;
     showToast('Entrada rechazada', 'warning');
     closeResult();
 }
@@ -948,6 +1038,23 @@ function playBeep(type = 'success') {
     } catch (e) {
         // Ignorar error de audio
     }
+}
+
+// ==========================================
+// MEJORA D: CACHE DE CODIGOS ESCANEADOS
+// ==========================================
+function addToScannedCache(codeOrId, clientName, ticketType) {
+    // Evitar que el cache crezca indefinidamente
+    if (scannedCodesCache.size >= MAX_CACHE_SIZE) {
+        // Eliminar la entrada mas antigua
+        const oldest = scannedCodesCache.keys().next().value;
+        scannedCodesCache.delete(oldest);
+    }
+    scannedCodesCache.set(codeOrId, {
+        timestamp: Date.now(),
+        clientName,
+        ticketType
+    });
 }
 
 // ==========================================

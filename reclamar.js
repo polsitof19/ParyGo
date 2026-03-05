@@ -5,19 +5,40 @@
 import { db, functions } from './js/config.js';
 import { detectBrandSlug, loadBrandBySlug } from './utils/brand-detector.js';
 import {
-    collection,
     doc,
-    getDoc,
-    getDocs,
-    query,
-    where,
-    updateDoc,
-    addDoc
+    getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
     httpsCallable
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
-import { escapeHtml, showToast, logger } from './js/utils.js';
+import { escapeHtml, showToast, logger, createRateLimiter, initErrorMonitor } from './js/utils.js';
+
+// ==========================================
+// MEJORA 5: Cache de eventos (30s TTL)
+// ==========================================
+const eventCache = new Map();
+const EVENT_CACHE_TTL = 30000;
+
+async function getCachedEvent(eventId) {
+    const cached = eventCache.get(eventId);
+    if (cached && Date.now() - cached.ts < EVENT_CACHE_TTL) return cached.data;
+    try {
+        const eventDoc = await getDoc(doc(db, "events", eventId));
+        if (eventDoc.exists()) {
+            const data = eventDoc.data();
+            eventCache.set(eventId, { data, ts: Date.now() });
+            return data;
+        }
+    } catch (e) { /* no cache */ }
+    return null;
+}
+
+// ==========================================
+// RATE LIMITERS (MEJORA 4)
+// ==========================================
+const validateRateLimit = createRateLimiter(5, 60000);   // max 5 validaciones/min
+const claimRateLimit = createRateLimiter(3, 60000);      // max 3 reclamos/min
+const dniRateLimit = createRateLimiter(5, 60000);        // max 5 consultas DNI/min
 
 // ==========================================
 // UTILIDADES
@@ -69,6 +90,7 @@ let state = {
 // INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
+    initErrorMonitor(db, 'reclamar');
     await loadBrand();
     setupEventListeners();
 });
@@ -84,16 +106,16 @@ async function loadBrand() {
         const brandSlug = detectBrandSlug();
 
         if (!brandSlug) {
-            showToast('No se especificó una marca', 'error');
             showLoading(false);
+            showErrorScreen('Marca no encontrada', 'No se pudo determinar la marca. Verifica la URL.');
             return;
         }
 
         const brand = await loadBrandBySlug(brandSlug);
 
         if (!brand) {
-            showToast('Marca no encontrada', 'error');
             showLoading(false);
+            showErrorScreen('Marca no encontrada', `La marca "${brandSlug}" no existe o no está disponible.`);
             return;
         }
 
@@ -102,7 +124,7 @@ async function loadBrand() {
 
     } catch (error) {
         console.error('Error cargando marca:', error);
-        showToast('Error al cargar la marca', 'error');
+        showErrorScreen('Error de conexion', 'No se pudo conectar con el servidor. Verifica tu conexion a internet.');
     }
 
     showLoading(false);
@@ -174,6 +196,7 @@ function setupEventListeners() {
     
     document.getElementById('btnGetQR')?.addEventListener('click', claimTicket);
     document.getElementById('btnDownloadTicket')?.addEventListener('click', downloadTicket);
+    document.getElementById('btnWhatsApp')?.addEventListener('click', sendToWhatsApp);
 }
 
 // ==========================================
@@ -181,6 +204,11 @@ function setupEventListeners() {
 // ==========================================
 async function validateCode() {
     if (isProcessing) return;
+
+    if (!validateRateLimit()) {
+        showToast('Demasiados intentos. Espera un momento.', 'error');
+        return;
+    }
 
     const codeInput = document.getElementById('inputCode');
     const code = codeInput.value.trim().toUpperCase();
@@ -194,137 +222,54 @@ async function validateCode() {
     showLoading(true);
 
     try {
-        // 1. Buscar en tickets por código
-        const qTickets = query(
-            collection(db, "tickets"),
-            where("code", "==", code)
-        );
-        const snapshotTickets = await getDocs(qTickets);
+        // MEJORA 2: Validar código via Cloud Function (sin exponer PII)
+        const validateFn = httpsCallable(functions, 'validateCode');
+        const result = await validateFn({ code });
+        const codeData = result.data;
 
-        if (!snapshotTickets.empty) {
-            state.codeData = { id: snapshotTickets.docs[0].id, ...snapshotTickets.docs[0].data(), source: 'tickets' };
-        } else {
-            // 2. Buscar en tickets por qr_token
-            const qTicketsQR = query(
-                collection(db, "tickets"),
-                where("qr_token", "==", code)
-            );
-            const snapshotQR = await getDocs(qTicketsQR);
-
-            if (!snapshotQR.empty) {
-                state.codeData = { id: snapshotQR.docs[0].id, ...snapshotQR.docs[0].data(), source: 'tickets' };
-            } else {
-                // 3. Buscar en promotorCodes (nuevo sistema)
-                const qPromotorCodes = query(
-                    collection(db, "promotorCodes"),
-                    where("code", "==", code)
-                );
-                const snapshotPC = await getDocs(qPromotorCodes);
-
-                if (!snapshotPC.empty) {
-                    const pcData = snapshotPC.docs[0].data();
-                    // Verificar estado del código de promotor
-                    if (pcData.status === 'PENDING') {
-                        showToast('Este código está pendiente de aprobación', 'error');
-                        showLoading(false);
-                        isProcessing = false;
-                        return;
-                    }
-                    state.codeData = { id: snapshotPC.docs[0].id, ...pcData, source: 'promotorCodes' };
-                } else {
-                    // 4. Buscar en codes (sistema antiguo de promotores)
-                    const qCodes = query(
-                        collection(db, "codes"),
-                        where("code", "==", code)
-                    );
-                    const snapshotCodes = await getDocs(qCodes);
-
-                    if (!snapshotCodes.empty) {
-                        state.codeData = { id: snapshotCodes.docs[0].id, ...snapshotCodes.docs[0].data(), source: 'codes' };
-                    } else {
-                        showToast('Código no encontrado. Verifica que esté bien escrito', 'error');
-                        showLoading(false);
-                        isProcessing = false;
-                        return;
-                    }
-                }
-            }
+        if (!codeData.success) {
+            showToast('Código no válido', 'error');
+            showLoading(false);
+            isProcessing = false;
+            return;
         }
-        
+
+        // Guardar datos validados (solo datos públicos del evento)
+        state.codeData = {
+            id: codeData.codeId,
+            source: codeData.source,
+            type: codeData.codeType,
+            max_uses: codeData.maxUses,
+            current_uses: codeData.currentUses,
+            ticket_name: codeData.ticketName,
+            ticket_color: codeData.ticketColor,
+            brand_id: codeData.brandId,
+            event_id: codeData.eventId,
+            event_name: codeData.eventName,
+            event_date: codeData.eventDate,
+            event_time: codeData.eventTime,
+            event_venue: codeData.eventVenue
+        };
+
         if (state.brand && state.codeData.brand_id && state.codeData.brand_id !== state.brand.id) {
             showToast(`Este código pertenece a otra marca, no a ${state.brand.name || 'esta'}`, 'error');
             showLoading(false);
+            isProcessing = false;
             return;
         }
-        
-        const codeType = state.codeData.type || "UNIQUE";
-        
-        if (codeType === "UNIQUE") {
-            if (state.codeData.status === 'CLAIMED' || state.codeData.status === 'SCANNED' || state.codeData.current_uses > 0) {
-                showToast('Este código ya fue utilizado', 'error');
-                showLoading(false);
-                return;
-            }
-        } else if (codeType === "SHARED") {
-            const maxUses = state.codeData.max_uses || 1;
-            const currentUses = state.codeData.current_uses || 0;
-            
-            if (currentUses >= maxUses) {
-                showToast(`Este código alcanzó su límite (${currentUses}/${maxUses} usos)`, 'error');
-                showLoading(false);
-                return;
-            }
-        }
-        
-        if (state.codeData.expires_at) {
-            const expiryDate = new Date(state.codeData.expires_at);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
 
-            if (expiryDate < today) {
-                const expStr = expiryDate.toLocaleDateString('es-PE');
-                showToast(`Este código expiró el ${expStr}`, 'error');
-                showLoading(false);
-                return;
-            }
-        }
-        
-        if (state.codeData.event_id) {
-            try {
-                const eventDoc = await getDoc(doc(db, "events", state.codeData.event_id));
-                if (eventDoc.exists()) {
-                    const event = eventDoc.data();
-                    
-                    if (event.status === 'FINISHED' || event.status === 'CANCELLED') {
-                        showToast(`El evento "${event.name || ''}" ya finalizó`, 'error');
-                        showLoading(false);
-                        return;
-                    }
-                    
-                    if (event.date) {
-                        const eventDate = new Date(event.date);
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        eventDate.setHours(23, 59, 59, 999);
-                        
-                        if (eventDate < today) {
-                            showToast('Este evento ya pasó', 'error');
-                            showLoading(false);
-                            return;
-                        }
-                    }
-                }
-            } catch (e) {
-                // No se pudo verificar evento
-            }
-        }
-        
         state.code = code;
         goToStep(2);
         
     } catch (error) {
-        console.error('Error validando código:', error);
-        showToast('Error al validar el código', 'error');
+        const errorMsg = error?.code === 'functions/not-found' ? 'Código no encontrado' :
+                         error?.code === 'functions/already-exists' ? 'Este código ya fue utilizado' :
+                         error?.code === 'functions/failed-precondition' ? 'Este código está pendiente de aprobación' :
+                         error?.code === 'functions/resource-exhausted' ? 'Este código alcanzó su límite de usos' :
+                         error?.code === 'functions/deadline-exceeded' ? 'Este código ha expirado' :
+                         'Error al validar el código';
+        logger.error('Error validando código:', error);
+        showToast(errorMsg, 'error');
     } finally {
         isProcessing = false;
         showLoading(false);
@@ -337,9 +282,14 @@ async function validateCode() {
 async function searchDNI() {
     if (isProcessing) return;
 
+    if (!dniRateLimit()) {
+        showToast('Demasiados intentos. Espera un momento.', 'error');
+        return;
+    }
+
     const idType = document.getElementById('idType').value;
     const dni = document.getElementById('inputDNI').value.trim();
-    
+
     if (!dni) {
         showToast('Ingresa tu identificación', 'error');
         return;
@@ -400,6 +350,11 @@ async function searchDNI() {
 async function claimTicket() {
     if (isProcessing) return;
 
+    if (!claimRateLimit()) {
+        showToast('Demasiados intentos. Espera un momento.', 'error');
+        return;
+    }
+
     if (!state.codeData) {
         showToast('Primero debes ingresar un código válido', 'error');
         goToStep(1);
@@ -440,109 +395,35 @@ async function claimTicket() {
     state.userData.phone = phone;
 
     try {
-        const qrToken = `TKT${generateUUID().replace(/-/g, '').toUpperCase()}`;
-        const source = state.codeData.source || 'tickets';
-        const codeType = state.codeData.type || state.codeData.ticket_type || "UNIQUE";
-
-        // Diferentes flujos según la fuente del código
-        if (source === 'promotorCodes') {
-            // Código de promotor nuevo
-            const codeRef = doc(db, "promotorCodes", state.codeData.id);
-            await updateDoc(codeRef, {
-                status: 'CLAIMED',
-                claimed_at: new Date().toISOString(),
-                qr_token: qrToken,
-                claimed_by: {
-                    name: `${name} ${lastname}`,
-                    dni: state.userData.dni,
-                    email: email,
-                    phone: phone
-                },
-                claimed_name: `${name} ${lastname}`
-            });
-        } else if (source === 'codes') {
-            // Código de promotor antiguo
-            const codeRef = doc(db, "codes", state.codeData.id);
-            await updateDoc(codeRef, {
-                status: 'CLAIMED',
-                claimed_at: new Date().toISOString(),
-                qr_token: qrToken,
-                claimed_by: {
-                    name: `${name} ${lastname}`,
-                    dni: state.userData.dni,
-                    email: email,
-                    phone: phone
-                },
-                claimed_name: `${name} ${lastname}`
-            });
-        } else {
-            // Ticket tradicional
-            const codeRef = doc(db, "tickets", state.codeData.id);
-
-            if (codeType === "UNIQUE") {
-                await updateDoc(codeRef, {
-                    status: 'CLAIMED',
-                    current_uses: 1,
-                    claimed_at: new Date().toISOString(),
-                    client_name: `${name} ${lastname}`,
-                    client_dni: state.userData.dni,
-                    client_email: email,
-                    client_phone: phone,
-                    id_type: state.userData.idType,
-                    qr_token: qrToken,
-                    claimed_by: {
-                        name: `${name} ${lastname}`,
-                        dni: state.userData.dni,
-                        email: email,
-                        phone: phone
-                    }
-                });
-            } else {
-                // Código compartido: incrementar usos
-                const newUses = (state.codeData.current_uses || 0) + 1;
-                const maxUses = state.codeData.max_uses || 1;
-
-                await updateDoc(codeRef, {
-                    current_uses: newUses,
-                    status: newUses >= maxUses ? 'EXHAUSTED' : 'ACTIVE',
-                    last_claimed_at: new Date().toISOString(),
-                    client_name: `${name} ${lastname}`,
-                    client_dni: state.userData.dni,
-                    client_email: email,
-                    client_phone: phone,
-                    id_type: state.userData.idType,
-                    qr_token: qrToken
-                });
-            }
-        }
-
-        await addDoc(collection(db, "accesses"), {
-            brand_id: state.codeData.brand_id || state.brand?.id || "",
-            event_id: state.codeData.event_id || '',
-            event_name: state.codeData.event_name || '',
-            code_id: state.codeData.id,
+        // MEJORA 2: Reclamar via Cloud Function (atómico, sin acceso directo a Firestore)
+        const claimFn = httpsCallable(functions, 'claimCode');
+        const result = await claimFn({
+            codeId: state.codeData.id,
+            source: state.codeData.source,
             code: state.code,
-            code_type: codeType,
-            ticket_id: state.codeData.ticket_id || '',
-            ticket_name: state.codeData.ticket_name || 'General',
-            promoter_id: state.codeData.promoter_id || '',
-            promoter_name: state.codeData.promoter_name || '',
-            client_name: `${name} ${lastname}`,
-            client_dni: state.userData.dni,
-            client_email: email,
-            client_phone: phone,
-            id_type: state.userData.idType,
-            qr_token: qrToken,
-            status: 'CLAIMED',
-            is_free: true,
-            created_at: new Date().toISOString()
+            clientName: name,
+            clientLastname: lastname,
+            clientDni: state.userData.dni,
+            clientEmail: email,
+            clientPhone: phone,
+            idType: state.userData.idType,
+            brandId: state.codeData.brand_id || state.brand?.id || "",
+            eventId: state.codeData.event_id || "",
+            eventName: state.codeData.event_name || "",
+            ticketName: state.codeData.ticket_name || "General",
+            promoterId: state.codeData.promoter_id || "",
+            promoterName: state.codeData.promoter_name || ""
         });
 
+        const qrToken = result.data.qrToken;
         await showTicket(qrToken);
 
     } catch (error) {
-        console.error('Error reclamando ticket:', error);
-        showToast('Error al generar el ticket', 'error');
+        const errorMsg = error?.code === 'functions/already-exists' ? 'Este código ya fue utilizado' :
+                         error?.code === 'functions/resource-exhausted' ? 'Este código alcanzó su límite de usos' :
+                         'Error al generar el ticket';
+        logger.error('Error reclamando ticket:', error);
+        showToast(errorMsg, 'error');
     } finally {
         isProcessing = false;
         showLoading(false);
@@ -562,17 +443,12 @@ async function showTicket(qrToken) {
     let eventTime = '';
     
     if (state.codeData.event_id) {
-        try {
-            const eventDoc = await getDoc(doc(db, "events", state.codeData.event_id));
-            if (eventDoc.exists()) {
-                const event = eventDoc.data();
-                eventName = event.name || 'Evento';
-                eventVenue = event.venue || event.location || event.address || '';
-                eventDate = event.date || '';
-                eventTime = event.time || event.hour || event.hora || event.start_time || '';
-            }
-        } catch (e) {
-            // No se pudo cargar evento
+        const event = await getCachedEvent(state.codeData.event_id);
+        if (event) {
+            eventName = event.name || 'Evento';
+            eventVenue = event.venue || event.location || event.address || '';
+            eventDate = event.date || '';
+            eventTime = event.time || event.hour || event.hora || event.start_time || '';
         }
     }
     
@@ -633,9 +509,6 @@ if (dateEl) {
     goToStep(4);
 }
 
-// ==========================================
-// DESCARGAR TICKET COMO IMAGEN
-// ==========================================
 // ==========================================
 // DESCARGAR TICKET COMO IMAGEN
 // ==========================================
@@ -890,6 +763,48 @@ function showLoading(show) {
 function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+// ==========================================
+// ENVIAR A WHATSAPP
+// ==========================================
+function sendToWhatsApp() {
+    const eventName = document.getElementById('ticketEvent')?.textContent || 'Evento';
+    const venue = document.getElementById('ticketVenue')?.textContent || '';
+    const dateTime = document.getElementById('ticketDate')?.textContent || '';
+    const ticketType = document.getElementById('ticketType')?.textContent || 'GENERAL';
+    const code = state.code || '';
+    const phone = state.userData.phone || '';
+
+    // Build ticket URL for re-access
+    const baseUrl = window.location.origin + window.location.pathname;
+    const ticketURL = `${baseUrl}?code=${encodeURIComponent(code)}`;
+
+    const message = `🎉 ¡Tu entrada para ${eventName}!\n\n${dateTime ? '📅 ' + dateTime + '\n' : ''}${venue ? venue + '\n' : ''}🎫 ${ticketType}\n🔑 Codigo: ${code}\n\n👉 Ver tu entrada: ${ticketURL}`;
+
+    // Format phone: add Peru country code if 9 digits
+    const cleaned = phone.replace(/\D/g, '');
+    const fullPhone = cleaned.length === 9 ? `51${cleaned}` : cleaned;
+
+    const waLink = `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
+    window.open(waLink, '_blank');
+}
+
+// ==========================================
+// PANTALLA DE ERROR AMIGABLE
+// ==========================================
+function showErrorScreen(title, subtitle) {
+    const brandSlug = state.brand?.slug || detectBrandSlug() || '';
+    const homeUrl = brandSlug ? `https://${brandSlug}.parygo.com` : 'https://parygo.com';
+
+    document.body.innerHTML = `
+        <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;background:#0a0a0a;color:#fff;font-family:'Outfit',sans-serif;">
+            <div style="font-size:64px;margin-bottom:16px;">😕</div>
+            <h1 style="font-size:22px;font-weight:700;margin-bottom:8px;">${escapeHtml(title)}</h1>
+            <p style="color:#888;font-size:14px;margin-bottom:24px;max-width:300px;">${escapeHtml(subtitle)}</p>
+            <a href="${escapeHtml(homeUrl)}" style="background:#f43f5e;color:#fff;padding:12px 32px;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px;">Volver al inicio</a>
+        </div>
+    `;
+}
+
 // ==========================================
 // FORMATEAR FECHA DEL EVENTO
 // ==========================================

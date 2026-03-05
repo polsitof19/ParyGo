@@ -30,7 +30,9 @@
       "Bash(npx firebase deploy:*)",
       "Bash(where.exe:*)",
       "Bash(cmd.exe /c \"where firebase\")",
-      "Bash(firebase:*)"
+      "Bash(firebase:*)",
+      "Bash(rm:*)",
+      "Bash(python3:*)"
     ]
   }
 }

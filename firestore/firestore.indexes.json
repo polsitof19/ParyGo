@@ -20,8 +20,7 @@
           "fieldPath": "__name__",
           "order": "DESCENDING"
         }
-      ],
-      "density": "SPARSE_ALL"
+      ]
     },
     {
       "collectionGroup": "staff",
@@ -32,15 +31,14 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "companies",
+          "fieldPath": "allowed_brands",
           "arrayConfig": "CONTAINS"
         },
         {
           "fieldPath": "__name__",
           "order": "ASCENDING"
         }
-      ],
-      "density": "SPARSE_ALL"
+      ]
     },
     {
       "collectionGroup": "staff",
@@ -76,8 +74,7 @@
           "fieldPath": "__name__",
           "order": "DESCENDING"
         }
-      ],
-      "density": "SPARSE_ALL"
+      ]
     }
   ],
   "fieldOverrides": []

@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Scanner - ParyGo</title>
-    <link rel="icon" type="image/png" href="assets/logo.png">
-    <link rel="apple-touch-icon" href="assets/logo.png">
+    <link rel="icon" type="image/png" href="assets/logos/logo.png">
+    <link rel="apple-touch-icon" href="assets/logos/logo.png">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,10 +13,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 
     <!-- QR Scanner Library -->
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" crossorigin="anonymous"></script>
 
     <!-- Styles -->
     <link rel="stylesheet" href="scanner.css">
@@ -74,10 +74,20 @@
                 <span class="event-name-header" id="eventNameHeader"></span>
             </div>
         </div>
-        <button class="btn-logout" id="btnLogout" title="Cerrar sesión">
-            <i class="fa-solid fa-right-from-bracket"></i>
-        </button>
+        <div class="header-right">
+            <span class="connection-indicator" id="connectionIndicator" title="Estado de conexion">
+                <span class="conn-dot online"></span> Online
+            </span>
+            <button class="btn-logout" id="btnLogout" title="Cerrar sesion">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+        </div>
     </header>
+
+    <!-- Offline Banner -->
+    <div class="offline-banner hidden" id="offlineBanner">
+        <i class="fa-solid fa-wifi-slash"></i> Sin conexion - Solo verificacion de codigos ya escaneados
+    </div>
 
     <!-- ==================== MAIN CONTENT ==================== -->
     <main class="scanner-container hidden" id="mainContent">

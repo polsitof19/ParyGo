@@ -3,7 +3,7 @@
 import { db, storage, APP_CONFIG } from './config.js';
 import { state } from './state.js';
 import { Validator, toast, openModal, closeModals, customConfirm, uploadToStorage, logger } from './utils.js';
-import { collection, query, getDocs, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, query, getDocs, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, where, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================
 // CONFIGURACIÓN
@@ -261,12 +261,13 @@ export async function saveBrand() {
  * VERIFICAR si el slug ya existe
  */
 async function checkSlugExists(slug, excludeId = null) {
-    const q = query(collection(db, "brands"));
+    // R20 FIX: Query filtrado en lugar de cargar todas las marcas
+    const q = query(collection(db, "brands"), where("slug", "==", slug), limit(2));
     const snapshot = await getDocs(q);
-    
+
     for (const docSnap of snapshot.docs) {
         if (excludeId && docSnap.id === excludeId) continue;
-        if (docSnap.data().slug === slug) return true;
+        return true;
     }
     return false;
 }

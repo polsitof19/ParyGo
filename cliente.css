@@ -99,7 +99,7 @@
 }
 
 html, body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Outfit', sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100dvh;
@@ -1025,7 +1025,7 @@ input, select, textarea {
     border: 1.5px solid var(--border-strong);
     border-radius: var(--radius-xs);
     color: var(--text);
-    font-family: 'Inter', monospace;
+    font-family: 'Outfit', monospace;
     letter-spacing: 4px;
     text-align: center;
     font-weight: 700;
@@ -1367,6 +1367,63 @@ input, select, textarea {
 
 .ticket-actions button {
     flex: 1;
+}
+
+/* Boton WhatsApp en ticket QR view */
+.btn-whatsapp-ticket {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 340px;
+    margin-top: var(--space-3);
+    padding: 14px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    color: #fff;
+    background: #25D366;
+    border: none;
+    border-radius: var(--radius-lg, 12px);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-whatsapp-ticket:hover {
+    background: #1ebe5d;
+}
+
+.btn-whatsapp-ticket i {
+    font-size: 18px;
+}
+
+/* Boton WhatsApp en modal de compra */
+.btn-whatsapp-small {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 12px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    color: #fff;
+    background: #25D366;
+    border: none;
+    border-radius: var(--radius-lg, 12px);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-whatsapp-small:hover {
+    background: #1ebe5d;
+}
+
+.btn-whatsapp-small i {
+    font-size: 18px;
 }
 
 .brightness-mode .ticket-download-card {
@@ -3165,7 +3222,7 @@ input, select, textarea {
     display: flex;
     align-items: center;
     gap: var(--space-1);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Outfit', sans-serif;
     pointer-events: none;
     border: 1px solid #ffffff;
     white-space: nowrap;
@@ -3274,7 +3331,7 @@ input, select, textarea {
     background: var(--bg-elevated);
     color: var(--text);
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Outfit', sans-serif;
     font-size: var(--text-sm);
     font-weight: 600;
     transition: all var(--duration-base) var(--ease);

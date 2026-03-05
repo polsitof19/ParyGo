@@ -4,12 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Reclamar Entrada</title>
-    <link rel="icon" type="image/png" href="assets/logo.png">
-    <link rel="apple-touch-icon" href="assets/logo.png">
+    <meta property="og:title" content="ParyGo - Reclama tu entrada">
+    <meta property="og:description" content="Ingresa tu codigo y obtiene tu entrada">
+    <meta property="og:image" content="https://parygo.com/assets/logos/logo.png">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <link rel="icon" type="image/png" href="assets/logos/logo.png">
+    <link rel="apple-touch-icon" href="assets/logos/logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
     <link rel="stylesheet" href="reclamar.css">
 </head>
 <body>
@@ -157,10 +162,15 @@
                 </div>
             </div>
             
-            <button class="btn-download" id="btnDownloadTicket">
-                <i class="fa-solid fa-download"></i> Descargar Entrada
-            </button>
-            
+            <div class="ticket-actions-row">
+                <button class="btn-download" id="btnDownloadTicket">
+                    <i class="fa-solid fa-download"></i> Descargar
+                </button>
+                <button class="btn-whatsapp" id="btnWhatsApp">
+                    <i class="fa-brands fa-whatsapp"></i> Enviar a mi WhatsApp
+                </button>
+            </div>
+
             <p class="success-msg">
                 <i class="fa-solid fa-circle-check"></i>
                 La entrada ha sido enviada a tu correo electrónico.
@@ -177,8 +187,8 @@
     <div id="toastContainer" class="toast-container"></div>
 
     <!-- Librerías -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
     <script type="module" src="reclamar.js"></script>
 </body>
 </html>

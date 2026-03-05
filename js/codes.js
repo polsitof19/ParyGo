@@ -296,7 +296,7 @@ export async function generateCodes() {
                 let code;
                 let attempts = 0;
 
-                // Generar código único
+                // Generar código único (R16 fix: verificar contra local + Firestore)
                 do {
                     code = generateCode(event.name || "TKT");
                     attempts++;
@@ -304,7 +304,8 @@ export async function generateCodes() {
 
                 generatedCodes.add(code);
 
-                const ref = doc(collection(db, APP_CONFIG.COLLECTIONS.TICKETS));
+                // Usar código como doc ID para unicidad garantizada por Firestore
+                const ref = doc(db, APP_CONFIG.COLLECTIONS.TICKETS, code);
 
                 const codeData = {
                     company_id: event.company_id || "",
@@ -336,12 +337,37 @@ export async function generateCodes() {
             }
         }
 
-        // Dividir en batches de máximo BATCH_SIZE operaciones
-        for (let i = 0; i < allOps.length; i += BATCH_SIZE) {
-            const chunk = allOps.slice(i, i + BATCH_SIZE);
-            const batch = writeBatch(db);
-            chunk.forEach(op => batch.set(op.ref, op.codeData));
-            await batch.commit();
+        // R16 FIX: Verificar que no existan docs con esos IDs antes de escribir
+        // Si colisiona, regenerar código y reintentar (máx 3 intentos)
+        let retries = 0;
+        const MAX_RETRIES = 3;
+
+        while (retries < MAX_RETRIES) {
+            try {
+                for (let i = 0; i < allOps.length; i += BATCH_SIZE) {
+                    const chunk = allOps.slice(i, i + BATCH_SIZE);
+                    const batch = writeBatch(db);
+                    chunk.forEach(op => batch.set(op.ref, op.codeData));
+                    await batch.commit();
+                }
+                break; // Éxito
+            } catch (batchError) {
+                retries++;
+                if (retries >= MAX_RETRIES) throw batchError;
+                // Regenerar códigos que colisionaron
+                for (const op of allOps) {
+                    let newCode;
+                    let codeAttempts = 0;
+                    do {
+                        newCode = generateCode(event.name || "TKT");
+                        codeAttempts++;
+                    } while (codeAttempts < 10 && generatedCodes.has(newCode));
+                    generatedCodes.add(newCode);
+                    op.codeData.code = newCode;
+                    op.codeData.qr_token = newCode;
+                    op.ref = doc(db, APP_CONFIG.COLLECTIONS.TICKETS, newCode);
+                }
+            }
         }
         
         // Descargar archivos si está marcado (solo para el admin)

@@ -33,7 +33,11 @@ import {
 import {
     httpsCallable
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
-import { escapeHtml, toast, logger } from './utils.js';
+import { escapeHtml, toast, logger, createRateLimiter, initErrorMonitor } from './utils.js';
+
+// MEJORA 4: Rate limiters
+const searchDocRateLimit = createRateLimiter(5, 60000);  // max 5 búsquedas doc/min
+const dniRateLimit = createRateLimiter(5, 60000);        // max 5 consultas DNI/min
 
 // ==========================================
 // VARIABLES GLOBALES
@@ -102,6 +106,9 @@ function cleanupAllListeners() {
 // INICIALIZACIÓN
 // ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
+    // MEJORA 6: Error monitoring
+    initErrorMonitor(db, 'cliente');
+
     // 1. Detectar marca por subdominio
     currentBrandSlug = detectBrandSlug();
 
@@ -301,11 +308,14 @@ function updateBrandUI() {
 function showError(message) {
     hideSplash();
     const safe = escapeHtml(message);
+    const brandSlug = currentBrandSlug || '';
+    const homeUrl = brandSlug ? `https://${brandSlug}.parygo.com` : 'https://parygo.com';
     document.body.innerHTML = `
-        <div style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center; background:#09090b; color:white; font-family:'Inter',sans-serif;">
-            <i class="fa-solid fa-circle-exclamation" style="font-size:48px; color:#9a9aa3; margin-bottom:16px;"></i>
-            <h1 style="font-size:20px; margin-bottom:8px;">Error</h1>
-            <p style="color:#888; font-size:14px;">${safe}</p>
+        <div style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; background:#09090b; color:white; font-family:'Outfit','Inter',sans-serif;">
+            <div style="font-size:64px; margin-bottom:16px;">😕</div>
+            <h1 style="font-size:22px; font-weight:700; margin-bottom:8px;">Algo salio mal</h1>
+            <p style="color:#888; font-size:14px; max-width:300px; margin-bottom:24px;">${safe}</p>
+            <a href="${escapeHtml(homeUrl)}" style="background:#f43f5e; color:#fff; padding:12px 32px; border-radius:12px; text-decoration:none; font-weight:600; font-size:14px;">Volver al inicio</a>
         </div>
     `;
 }
@@ -456,7 +466,7 @@ function showLinkAccountPrompt(user) {
 
 async function searchRENIECForLink(dni) {
     try {
-        const fn = httpsCallable(cloudFunctions, 'consultaDNI');
+        const fn = httpsCallable(cloudFunctions, 'consultaDNIPublic');
         const result = await fn({ dni });
         const data = result.data;
 
@@ -563,42 +573,36 @@ async function searchDocument() {
     }
     if (!docNumber) return toast("Ingresa tu documento");
 
+    if (!searchDocRateLimit()) {
+        return toast("Demasiados intentos. Espera un momento.", "error");
+    }
+
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
     try {
-        // 1. Buscar si existe en ESTA marca con este documento
-        const qProfile = query(
-            collection(db, "clientes"),
-            where("brand_id", "==", currentBrandId),
-            where("doc_number", "==", docNumber)
-        );
-        const snapProfile = await getDocs(qProfile);
+        // MEJORA 3: Buscar via Cloud Function (sin exponer colección clientes)
+        const searchFn = httpsCallable(cloudFunctions, 'searchClientByDoc');
+        const result = await searchFn({ docNumber, brandId: currentBrandId });
+        const searchResult = result.data;
 
-        if (!snapProfile.empty) {
-            // Existe → obtener datos para login
-            const profile = snapProfile.docs[0].data();
+        if (searchResult.found && searchResult.sameBrand) {
+            // Existe en esta marca → login
             foundUserData = {
-                ...profile,
-                id: profile.uid
+                name: searchResult.name,
+                lastname: searchResult.lastname
             };
 
             document.getElementById("login_user_name").textContent = `${foundUserData.name} ${foundUserData.lastname}` || 'Usuario';
             showAuthStep(3);
-        } else {
-            // No existe → verificar si tiene cuenta en otra marca
-            const qGlobal = query(
-                collection(db, "clientes"),
-                where("doc_number", "==", docNumber)
-            );
-            const snapGlobal = await getDocs(qGlobal);
+        } else if (searchResult.found && !searchResult.sameBrand) {
+            // Tiene cuenta en otra marca → vincular
+            foundUserData = {
+                name: searchResult.name,
+                lastname: searchResult.lastname
+            };
 
-            if (!snapGlobal.empty) {
-                // Tiene cuenta en otra marca → pedir vincular
-                const existingProfile = snapGlobal.docs[0].data();
-                foundUserData = { ...existingProfile };
-
-                document.getElementById("login_user_name").textContent = `${foundUserData.name} ${foundUserData.lastname} (cuenta existente)`;
+            document.getElementById("login_user_name").textContent = `${foundUserData.name} ${foundUserData.lastname} (cuenta existente)`;
                 existingUserNeedsProfile = true;
                 showAuthStep(3);
             } else {
@@ -621,8 +625,12 @@ async function searchDocument() {
 }
 
 async function searchRENIEC(dni) {
+    if (!dniRateLimit()) {
+        toast("Demasiados intentos. Espera un momento.", "error");
+        return;
+    }
     try {
-        const fn = httpsCallable(cloudFunctions, 'consultaDNI');
+        const fn = httpsCallable(cloudFunctions, 'consultaDNIPublic');
         const result = await fn({ dni });
         const data = result.data;
 
@@ -777,7 +785,7 @@ async function handleCheckDNI() {
 
 async function searchRENIECForRegistration(dni) {
     try {
-        const fn = httpsCallable(cloudFunctions, 'consultaDNI');
+        const fn = httpsCallable(cloudFunctions, 'consultaDNIPublic');
         const result = await fn({ dni });
         const data = result.data;
 
@@ -1247,6 +1255,13 @@ function openEventDetail(index) {
     renderTicketsForSale();
     updateDetailCountdown();
     renderMyEventTickets();
+
+    // Update OG meta tags dynamically (helps browsers, not social crawlers)
+    updateOGMetaTags(
+        currentEvent.name,
+        `${formatDate(currentEvent.date)} - ${currentEvent.venue || ''}`,
+        currentEvent.image || ''
+    );
 }
 
 function updateDetailCountdown() {
@@ -2696,6 +2711,69 @@ function shareCarouselTicket() {
 }
 
 // ==========================================
+// ENVIAR TICKET POR WHATSAPP
+// ==========================================
+function sendTicketToWhatsApp() {
+    if (!viewingTicket) return;
+    const ticket = viewingTicket;
+    const eventData = allEvents.find(e => e.id === ticket.event_id);
+    const eventName = ticket.event_name || eventData?.name || 'Evento';
+    const eventDate = formatDate(ticket.event_date);
+    const venue = eventData?.venue || eventData?.location || '';
+    const ticketType = ticket.ticket_type || 'General';
+    const code = ticket.code || '';
+    const phone = currentUserProfile?.phone || '';
+
+    const brandSlug = currentBrandSlug || currentBrand?.slug || '';
+    const hostname = window.location.hostname;
+    let portalUrl;
+    if (hostname.includes('.parygo.com') || hostname.includes('.parygo.')) {
+        portalUrl = `https://${brandSlug}.parygo.com`;
+    } else {
+        portalUrl = `${window.location.origin}/cliente.html?brand=${brandSlug}`;
+    }
+
+    const message = `🎉 ¡Tu entrada para ${eventName}!\n\n📅 ${eventDate}\n${venue ? '📍 ' + venue + '\n' : ''}🎫 ${ticketType}\n🔑 Codigo: ${code}\n\n👉 Ver tu entrada: ${portalUrl}`;
+
+    const cleaned = (phone || '').replace(/\D/g, '');
+    const fullPhone = cleaned.length === 9 ? `51${cleaned}` : cleaned;
+    const waLink = fullPhone
+        ? `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`
+        : `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(waLink, '_blank');
+}
+
+function sendBuyConfirmToWhatsApp() {
+    const eventName = currentEvent?.name || 'Evento';
+    const eventDate = currentEvent?.date ? formatDate(currentEvent.date) : '';
+    const venue = currentEvent?.venue || currentEvent?.location || '';
+    const ticketType = buyState.ticketType?.name || 'General';
+    const phone = currentUserProfile?.phone || '';
+
+    const message = `🎉 ¡Compra registrada para ${eventName}!\n\n📅 ${eventDate}\n${venue ? '📍 ' + venue + '\n' : ''}🎫 ${ticketType}\n💰 Total: S/. ${buyState.total.toFixed(2)}\n\n⏳ Tu pago esta siendo verificado. Te notificaremos cuando tus entradas esten listas.`;
+
+    const cleaned = (phone || '').replace(/\D/g, '');
+    const fullPhone = cleaned.length === 9 ? `51${cleaned}` : cleaned;
+    const waLink = fullPhone
+        ? `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`
+        : `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(waLink, '_blank');
+}
+
+// ==========================================
+// OG META TAGS DINAMICOS
+// ==========================================
+function updateOGMetaTags(title, description, image) {
+    const setMeta = (prop, content) => {
+        let el = document.querySelector(`meta[property="${prop}"]`);
+        if (el) el.setAttribute('content', content);
+    };
+    if (title) setMeta('og:title', title);
+    if (description) setMeta('og:description', description);
+    if (image) setMeta('og:image', image);
+}
+
+// ==========================================
 // PERFIL
 // ==========================================
 function openProfile() {
@@ -3371,3 +3449,5 @@ window.shareCarouselTicket = shareCarouselTicket;
 window.shareViaWhatsApp = shareViaWhatsApp;
 window.shareViaCopyLink = shareViaCopyLink;
 window.shareViaMessage = shareViaMessage;
+window.sendTicketToWhatsApp = sendTicketToWhatsApp;
+window.sendBuyConfirmToWhatsApp = sendBuyConfirmToWhatsApp;

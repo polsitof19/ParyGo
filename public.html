@@ -4,15 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Reserva tu entrada - ParyGo</title>
-    <link rel="icon" type="image/png" href="assets/logo.png">
-    <link rel="apple-touch-icon" href="assets/logo.png">
+    <meta property="og:title" content="ParyGo - Reserva tu entrada">
+    <meta property="og:description" content="Compra tus entradas para los mejores eventos">
+    <meta property="og:image" content="https://parygo.com/assets/logos/logo.png">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" type="image/png" href="assets/logos/logo.png">
+    <link rel="apple-touch-icon" href="assets/logos/logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
     <style>
         :root { --bg: #09090b; --surface: #18181b; --border: rgba(255,255,255,0.08); --text: #fafafa; --text-muted: #71717a; --accent: #f43f5e; --accent-soft: rgba(244,63,94,0.1); --success: #22c55e; --radius: 12px; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
         .container { max-width: 600px; margin: 0 auto; padding: 24px; }
         .header { text-align: center; margin-bottom: 32px; }
         .header img { height: 40px; margin-bottom: 16px; }
@@ -145,10 +150,10 @@
         let selectedTicket = null;
         let selectedPayment = null;
         
-        // Cargar datos desde localStorage (en producción sería desde API)
+        // R25 FIX: Usar sessionStorage para datos sensibles (se borra al cerrar pestaña)
         function loadData() {
-            const brands = JSON.parse(localStorage.getItem('brands') || '[]');
-            const events = JSON.parse(localStorage.getItem('events') || '[]');
+            const brands = JSON.parse(sessionStorage.getItem('brands') || localStorage.getItem('brands') || '[]');
+            const events = JSON.parse(sessionStorage.getItem('events') || localStorage.getItem('events') || '[]');
             
             // Buscar marca
             currentBrand = brands.find(b => b.slug === brandSlug) || brands[0];
@@ -169,7 +174,13 @@
             if (currentEvent) {
                 renderEvent();
             } else {
-                document.getElementById('eventSection').innerHTML = '<div class="form-card"><p style="text-align: center;">No hay eventos disponibles</p></div>';
+                document.getElementById('eventSection').innerHTML = `
+                    <div class="form-card" style="text-align:center;padding:60px 24px;">
+                        <div style="font-size:56px;margin-bottom:16px;">😕</div>
+                        <h2 style="font-size:20px;margin-bottom:8px;">Evento no encontrado</h2>
+                        <p style="color:var(--text-muted);margin-bottom:24px;">El evento que buscas no existe o ya no esta disponible.</p>
+                        <a href="https://parygo.com" style="background:var(--accent);color:#fff;padding:12px 32px;border-radius:var(--radius);text-decoration:none;font-weight:600;">Volver al inicio</a>
+                    </div>`;
             }
         }
         
@@ -259,19 +270,8 @@
             }
         });
         
-        // DNI search
-        document.getElementById('clientDni').addEventListener('blur', async (e) => {
-            const dni = e.target.value;
-            if (dni.length === 8) {
-                try {
-                    const res = await fetch(`https://apiperu.dev/api/dni/${dni}`, { headers: { 'Authorization': 'Bearer demo' }});
-                    const data = await res.json();
-                    if (data.success) {
-                        document.getElementById('clientName').value = `${data.data.nombres} ${data.data.apellido_paterno} ${data.data.apellido_materno}`;
-                    }
-                } catch (e) {}
-            }
-        });
+        // R24 FIX: Consulta RENIEC deshabilitada (token demo no funcional)
+        // El campo DNI queda manual - el usuario escribe su nombre
         
         // Form submit
         document.getElementById('reservationForm').addEventListener('submit', async (e) => {
@@ -316,10 +316,12 @@
                 entry.proofImage = proofPreview.src;
             }
             
-            // Guardar en localStorage
-            const entries = JSON.parse(localStorage.getItem('entries') || '[]');
+            // R25 FIX: Usar sessionStorage para PII (se borra al cerrar pestaña)
+            const entries = JSON.parse(sessionStorage.getItem('entries') || '[]');
             entries.push(entry);
-            localStorage.setItem('entries', JSON.stringify(entries));
+            sessionStorage.setItem('entries', JSON.stringify(entries));
+            // Limpiar comprobante base64 del entry después de guardar
+            delete entry.proofImage;
             
             // Mostrar éxito
             document.getElementById('eventSection').classList.add('hidden');

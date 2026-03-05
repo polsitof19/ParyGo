@@ -24,7 +24,10 @@ import {
 import {
     httpsCallable
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
-import { escapeHtml, toast, logger } from './utils.js';
+import { escapeHtml, toast, logger, createRateLimiter, initErrorMonitor } from './utils.js';
+
+// MEJORA 4: Rate limiter para generación de códigos
+const generateCodeRateLimit = createRateLimiter(20, 60000); // max 20 generaciones/min
 window.toast = toast;
 
 // ==========================================
@@ -93,6 +96,9 @@ function generateUniqueCode(eventPrefix) {
 // INICIALIZACIÓN
 // ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
+    // MEJORA 6: Error monitoring
+    initErrorMonitor(db, 'promotor');
+
     // Detectar marca desde subdominio
     const brandSlug = detectBrandSlug();
     if (brandSlug) {
@@ -568,10 +574,13 @@ function processDashboardData() {
     document.getElementById("stat_gratis").textContent = totalGratis;
     document.getElementById("stat_comision").textContent = `S/. ${totalComision.toFixed(2)}`;
 
-    // BUG-4 FIX: Incluir ambas colecciones en el cálculo de cuota
+    // BUG-4 + R15 FIX: Excluir códigos REJECTED y CANCELLED del cálculo de cuota
+    const validStatuses = ['PENDING', 'APPROVED', 'ACTIVE', 'CLAIMED', 'SCANNED', 'USED'];
+    const validOldCodes = myCodes.filter(c => validStatuses.includes(c.status));
+    const validNewCodes = myPromotorCodes.filter(c => validStatuses.includes(c.status));
     const totalAssigned = myQuotas.reduce((sum, q) => sum + (q.assigned || 0), 0);
     const fab = document.getElementById("btnGenerateCode");
-    if (fab) fab.disabled = (totalAssigned - (myCodes.length + myPromotorCodes.length)) <= 0;
+    if (fab) fab.disabled = (totalAssigned - (validOldCodes.length + validNewCodes.length)) <= 0;
 
     // Renderizar secciones
     renderGoals(totalGratis);
@@ -741,9 +750,10 @@ function renderFreeTickets(tickets) {
         if (tk.freeCommission?.other) comms.push(tk.freeCommission.other);
         const commText = comms.length ? comms.join(' + ') : '';
 
-        // Contar códigos generados (ambas colecciones)
-        const generatedOld = myCodes.filter(c => c.ticket_id === tk.id).length;
-        const generatedNew = myPromotorCodes.filter(c => c.ticket_id === tk.id && c.type === 'free').length;
+        // R14+R15 FIX: Contar solo códigos con status válido (excluir REJECTED/CANCELLED)
+        const validSt = ['PENDING', 'APPROVED', 'ACTIVE', 'CLAIMED', 'SCANNED', 'USED'];
+        const generatedOld = myCodes.filter(c => c.ticket_id === tk.id && validSt.includes(c.status)).length;
+        const generatedNew = myPromotorCodes.filter(c => c.ticket_id === tk.id && c.type === 'free' && validSt.includes(c.status)).length;
         const totalGenerated = generatedOld + generatedNew;
 
         // Contar disponibles basado en cuotas
@@ -890,9 +900,10 @@ function fillTicketDropdown() {
         const ticket = currentEvent.tickets?.find(t => t.id === q.ticket_id);
         if (!ticket) return;
         
-        // BUG-4 FIX: Contar códigos de ambas colecciones
-        const generatedOld = myCodes.filter(c => c.ticket_id === q.ticket_id).length;
-        const generatedNew = myPromotorCodes.filter(c => c.ticket_id === q.ticket_id).length;
+        // BUG-4 + R14+R15 FIX: Contar solo códigos válidos por tipo de ticket
+        const validSt = ['PENDING', 'APPROVED', 'ACTIVE', 'CLAIMED', 'SCANNED', 'USED'];
+        const generatedOld = myCodes.filter(c => c.ticket_id === q.ticket_id && validSt.includes(c.status)).length;
+        const generatedNew = myPromotorCodes.filter(c => c.ticket_id === q.ticket_id && validSt.includes(c.status)).length;
         const available = (q.assigned || 0) - (generatedOld + generatedNew);
         
         if (available > 0) {
@@ -913,6 +924,11 @@ function fillTicketDropdown() {
 // ==========================================
 async function handleGenerateCode() {
     if (isProcessing) return;
+
+    if (!generateCodeRateLimit()) {
+        toast("Demasiados intentos. Espera un momento.", "error");
+        return;
+    }
 
     const select = document.getElementById("gen_ticket_type");
     const ticketId = select.value;
@@ -1090,10 +1106,13 @@ window.showHistoryView = () => {
     renderClaimedList();
     fillTicketDropdown();
 
-    // BUG-4 FIX: Incluir ambas colecciones en el cálculo de cuota
+    // BUG-4 + R15 FIX: Excluir códigos REJECTED y CANCELLED del cálculo de cuota
+    const validStatuses = ['PENDING', 'APPROVED', 'ACTIVE', 'CLAIMED', 'SCANNED', 'USED'];
+    const validOldCodes = myCodes.filter(c => validStatuses.includes(c.status));
+    const validNewCodes = myPromotorCodes.filter(c => validStatuses.includes(c.status));
     const totalAssigned = myQuotas.reduce((sum, q) => sum + (q.assigned || 0), 0);
     const fab = document.getElementById("btnGenerateCode");
-    if (fab) fab.disabled = (totalAssigned - (myCodes.length + myPromotorCodes.length)) <= 0;
+    if (fab) fab.disabled = (totalAssigned - (validOldCodes.length + validNewCodes.length)) <= 0;
 };
 
 window.quickGenerate = (ticketId) => {
@@ -1116,9 +1135,16 @@ window.quickGenerate = (ticketId) => {
 
 window.openGenerateModal = () => {
     fillTicketDropdown();
-    document.getElementById("gen_ticket_type").selectedIndex = 0;
-    // BUG-4 FIX: Incluir ambas colecciones
-    const total = myQuotas.reduce((s, q) => s + (q.assigned || 0), 0) - (myCodes.length + myPromotorCodes.length);
+    const select = document.getElementById("gen_ticket_type");
+    select.selectedIndex = 0;
+    // R14 FIX: Mostrar total disponible sumando cuotas por ticket (filtrando status válidos)
+    const validSt = ['PENDING', 'APPROVED', 'ACTIVE', 'CLAIMED', 'SCANNED', 'USED'];
+    let total = 0;
+    myQuotas.forEach(q => {
+        const usedOld = myCodes.filter(c => c.ticket_id === q.ticket_id && validSt.includes(c.status)).length;
+        const usedNew = myPromotorCodes.filter(c => c.ticket_id === q.ticket_id && validSt.includes(c.status)).length;
+        total += Math.max(0, (q.assigned || 0) - usedOld - usedNew);
+    });
     document.getElementById("gen_available_count").textContent = total;
     openModal('modalGenerate');
 };

@@ -144,7 +144,8 @@ async function getUserData(uid, email) {
                 break;
             }
         } catch (error) {
-            // Not found in this collection
+            // R19 FIX: Log para depuración
+            logger.error(`getUserData: Error buscando UID en ${col}:`, error);
         }
     }
 
@@ -154,22 +155,23 @@ async function getUserData(uid, email) {
             try {
                 const q = query(collection(db, col), where("email", "==", email));
                 const snap = await getDocs(q);
-                
+
                 if (!snap.empty) {
                     const docRef = snap.docs[0];
                     userData = { id: docRef.id, ...docRef.data() };
                     collectionName = col;
-                    
+
                     // Migrar: actualizar documento con UID correcto
                     if (docRef.id !== uid) {
                         await setDoc(doc(db, col, uid), { ...userData, uid }, { merge: true });
                         userData.id = uid;
                     }
-                    
+
                     break;
                 }
             } catch (error) {
-                // Error searching in this collection
+                // R19 FIX: Log para depuración
+                logger.error(`getUserData: Error buscando email en ${col}:`, error);
             }
         }
     }

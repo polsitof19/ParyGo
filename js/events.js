@@ -2,7 +2,7 @@
 import { db, storage, APP_CONFIG } from './config.js';
 import { state, resetTemps } from './state.js';
 import { Validator, toast, openModal, closeModals, customConfirm, switchView, uploadToStorage, logger } from './utils.js';
-import { collection, query, where, getDocs, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, onSnapshot, writeBatch, runTransaction, limit, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, query, where, getDocs, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, onSnapshot, writeBatch, runTransaction, limit, orderBy, startAfter } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================
 // 1. CARGAR Y RENDERIZAR EVENTOS
@@ -10,13 +10,33 @@ import { collection, query, where, getDocs, doc, addDoc, setDoc, updateDoc, dele
 
 // Referencia al unsubscribe del listener de eventos
 let eventsUnsubscribe = null;
+// Paginación: último documento del snapshot actual
+let lastEventDoc = null;
+let hasMoreEvents = true;
+let isLoadingMore = false;
 
 /**
  * Procesar snapshot de eventos y actualizar estado + UI
  */
-function processEventsSnapshot(snapshot) {
-    let fetchedEvents = snapshot.docs.map(d => ({id: d.id, ...d.data()}))
-                                     .sort((a, b) => new Date(b.date) - new Date(a.date));
+function processEventsSnapshot(snapshot, append = false) {
+    const newEvents = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+
+    // Guardar último documento para paginación
+    if (snapshot.docs.length > 0) {
+        lastEventDoc = snapshot.docs[snapshot.docs.length - 1];
+    }
+    hasMoreEvents = snapshot.docs.length >= (APP_CONFIG.LIMITS.ITEMS_PER_PAGE || 50);
+
+    let fetchedEvents;
+    if (append) {
+        // Merge: agregar nuevos sin duplicados
+        const existingIds = new Set(state.allEvents.map(e => e.id));
+        const unique = newEvents.filter(e => !existingIds.has(e.id));
+        fetchedEvents = [...state.allEvents, ...unique]
+                          .sort((a, b) => new Date(b.date) - new Date(a.date));
+    } else {
+        fetchedEvents = newEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
 
     const user = state.currentUser;
     if (!user) return;
@@ -69,6 +89,30 @@ export function loadEvents() {
     } catch (error) {
         console.error("Error configurando listener de eventos:", error);
         toast("Error cargando eventos", "error");
+    }
+}
+
+/**
+ * CARGAR MÁS EVENTOS (paginación)
+ */
+export async function loadMoreEvents() {
+    if (!hasMoreEvents || isLoadingMore || !lastEventDoc) return;
+    isLoadingMore = true;
+
+    try {
+        const q = query(
+            collection(db, "events"),
+            orderBy("date", "desc"),
+            startAfter(lastEventDoc),
+            limit(APP_CONFIG.LIMITS.ITEMS_PER_PAGE)
+        );
+        const snapshot = await getDocs(q);
+        processEventsSnapshot(snapshot, true);
+    } catch (error) {
+        console.error("Error cargando más eventos:", error);
+        toast("Error cargando más eventos", "error");
+    } finally {
+        isLoadingMore = false;
     }
 }
 
@@ -149,6 +193,24 @@ export function renderEvents() {
             if (eventId) openEventDetail(eventId);
         });
     });
+
+    // Botón "Cargar más" si hay más eventos
+    const existingBtn = document.getElementById('loadMoreEventsBtn');
+    if (existingBtn) existingBtn.remove();
+
+    if (hasMoreEvents) {
+        const loadMoreBtn = document.createElement('div');
+        loadMoreBtn.id = 'loadMoreEventsBtn';
+        loadMoreBtn.style.cssText = 'grid-column:1/-1; text-align:center; padding:20px;';
+        loadMoreBtn.innerHTML = `<button style="padding:12px 32px; border-radius:8px; border:1px solid var(--border); background:var(--bg-secondary,#1a1a1a); color:var(--text); cursor:pointer; font-family:inherit; font-weight:600;" id="btnLoadMore">Cargar más eventos</button>`;
+        grid.appendChild(loadMoreBtn);
+        document.getElementById('btnLoadMore').addEventListener('click', async () => {
+            const btn = document.getElementById('btnLoadMore');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Cargando...';
+            btn.disabled = true;
+            await loadMoreEvents();
+        });
+    }
 }
 
 /**
@@ -563,17 +625,25 @@ export async function deleteEvent() {
             { name: "accesses", field: "event_id" }
         ];
 
+        // R18 FIX: Paginar eliminación en cascada con limit para no cargar todo en memoria
+        const batchSize = APP_CONFIG.LIMITS.BATCH_LIMIT || 450;
         for (const col of collectionsToClean) {
-            const q = query(collection(db, col.name), where(col.field, "==", eventId));
-            const snap = await getDocs(q);
+            let hasMore = true;
+            while (hasMore) {
+                const q = query(collection(db, col.name), where(col.field, "==", eventId), limit(batchSize));
+                const snap = await getDocs(q);
 
-            // Firestore batch limit es 500
-            const batchSize = APP_CONFIG.LIMITS.BATCH_LIMIT;
-            for (let i = 0; i < snap.docs.length; i += batchSize) {
+                if (snap.empty) {
+                    hasMore = false;
+                    break;
+                }
+
                 const batch = writeBatch(db);
-                const chunk = snap.docs.slice(i, i + batchSize);
-                chunk.forEach(d => batch.delete(d.ref));
+                snap.docs.forEach(d => batch.delete(d.ref));
                 await batch.commit();
+
+                // Si trajo menos que el límite, ya no hay más
+                if (snap.docs.length < batchSize) hasMore = false;
             }
         }
 

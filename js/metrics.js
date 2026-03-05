@@ -515,16 +515,33 @@ export async function confirmApproveSale() {
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Aprobando...'; }
 
     try {
+        // R11 FIX: Pre-generar doc IDs y códigos FUERA de la transacción
+        // para evitar duplicados si Firestore hace retry
+        const saleRef = doc(db, APP_CONFIG.COLLECTIONS.SALES, id);
+        const saleSnap = await getDoc(saleRef);
+        if (!saleSnap.exists()) throw new Error("Venta no encontrada");
+        const sale = saleSnap.data();
+        const quantity = sale.quantity || 1;
+
+        const preGeneratedTickets = [];
+        for (let i = 0; i < quantity; i++) {
+            const code = `TKT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}-${i}`;
+            const ticketRef = doc(db, APP_CONFIG.COLLECTIONS.TICKETS, code);
+            preGeneratedTickets.push({ ticketRef, code });
+        }
+
         await runTransaction(db, async (transaction) => {
-            const saleRef = doc(db, APP_CONFIG.COLLECTIONS.SALES, id);
-            const saleSnap = await transaction.get(saleRef);
+            // Re-leer dentro de la transacción para consistencia
+            const freshSaleSnap = await transaction.get(saleRef);
+            if (!freshSaleSnap.exists()) throw new Error("Venta no encontrada");
+            const freshSale = freshSaleSnap.data();
 
-            if (!saleSnap.exists()) throw new Error("Venta no encontrada");
+            if (freshSale.status === APP_CONFIG.STATUS.APPROVED) {
+                throw new Error("Esta venta ya fue aprobada");
+            }
 
-            const sale = saleSnap.data();
-            const quantity = sale.quantity || 1;
-            const unitPrice = sale.unit_price || (parseFloat(sale.total_price || sale.total || 0) / quantity);
-            const clientName = sale.full_name || sale.client_name || "";
+            const unitPrice = freshSale.unit_price || (parseFloat(freshSale.total_price || freshSale.total || 0) / quantity);
+            const clientName = freshSale.full_name || freshSale.client_name || "";
             const now = new Date().toISOString();
 
             // Actualizar venta como aprobada
@@ -534,27 +551,24 @@ export async function confirmApproveSale() {
                 approved_by: state.currentUser?.id
             });
 
-            // Crear UN TICKET POR CADA ENTRADA comprada
-            for (let i = 0; i < quantity; i++) {
-                const ticketRef = doc(collection(db, APP_CONFIG.COLLECTIONS.TICKETS));
-                const code = `TKT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-
+            // Crear UN TICKET POR CADA ENTRADA con IDs pre-generados
+            for (const { ticketRef, code } of preGeneratedTickets) {
                 const ticketData = {
-                    company_id: sale.company_id || "",
-                    event_id: sale.event_id,
-                    event_name: sale.event_name || "",
-                    event_date: sale.event_date || "",
-                    brand_id: sale.brand_id || "",
-                    user_id: sale.client_id || "",
+                    company_id: freshSale.company_id || "",
+                    event_id: freshSale.event_id,
+                    event_name: freshSale.event_name || "",
+                    event_date: freshSale.event_date || "",
+                    brand_id: freshSale.brand_id || "",
+                    user_id: freshSale.client_id || "",
                     user_name: clientName,
-                    user_doc: sale.client_dni || "",
-                    user_email: sale.client_email || "",
-                    user_phone: sale.client_phone || "",
-                    ticket_id: sale.ticket_id || "",
-                    ticket_name: sale.ticket_name || "",
-                    ticket_type: sale.ticket_name || "",
+                    user_doc: freshSale.client_dni || "",
+                    user_email: freshSale.client_email || "",
+                    user_phone: freshSale.client_phone || "",
+                    ticket_id: freshSale.ticket_id || "",
+                    ticket_name: freshSale.ticket_name || "",
+                    ticket_type: freshSale.ticket_name || "",
                     client_name: clientName,
-                    client_dni: sale.client_dni || "",
+                    client_dni: freshSale.client_dni || "",
                     is_free: false,
                     price_paid: unitPrice,
                     qr_token: code,
@@ -567,9 +581,9 @@ export async function confirmApproveSale() {
                     created_at: now
                 };
 
-                if (sale.promoter_id) {
-                    ticketData.promoter_id = sale.promoter_id;
-                    ticketData.promoter_name = sale.promoter_name || "";
+                if (freshSale.promoter_id) {
+                    ticketData.promoter_id = freshSale.promoter_id;
+                    ticketData.promoter_name = freshSale.promoter_name || "";
                 }
 
                 transaction.set(ticketRef, ticketData);

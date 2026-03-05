@@ -34,10 +34,19 @@ service cloud.firestore {
     // PÚBLICO (sin autenticación)
     // ==========================================
 
-    // Eventos: lectura pública (necesario para portal cliente), escritura solo admins
+    // Eventos: lectura pública (necesario para portal cliente)
+    // Super admin puede crear/editar cualquier evento
+    // Brand admin solo eventos de sus marcas asignadas
     match /events/{eventId} {
       allow read: if true;
-      allow create, update, delete: if isAdminOrSuper();
+      allow create: if isSuperAdmin() ||
+                       (isBrandAdmin() &&
+                        request.resource.data.brand_id in
+                        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.allowed_brands);
+      allow update, delete: if isSuperAdmin() ||
+                               (isBrandAdmin() &&
+                                resource.data.brand_id in
+                                get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.allowed_brands);
     }
 
     // Marcas: lectura pública (necesario para portal cliente y subdominios)
@@ -85,9 +94,11 @@ service cloud.firestore {
       // Crear/eliminar: solo admins
       allow create, delete: if isAdminOrSuper();
 
-      // Actualizar: admins o promotor propietario de la cuota
+      // Actualizar: admins pueden cambiar todo, promotores solo incrementar 'used' en 1
       allow update: if isAdminOrSuper() ||
-                       (isAuthenticated() && resource.data.promoter_id == request.auth.uid);
+                       (isAuthenticated() && resource.data.promoter_id == request.auth.uid &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used']) &&
+                        request.resource.data.used == resource.data.used + 1);
     }
 
     // ==========================================
@@ -195,8 +206,9 @@ service cloud.firestore {
       // Leer: autenticados (necesario para flujo de login)
       allow read: if isAuthenticated();
 
-      // Crear: cualquier usuario autenticado
-      allow create: if isAuthenticated();
+      // Crear: autenticado y solo su propio perfil
+      allow create: if isAuthenticated() &&
+                       request.resource.data.user_id == request.auth.uid;
 
       // Actualizar: el propio usuario o admins
       allow update: if isAuthenticated() &&
@@ -233,8 +245,14 @@ service cloud.firestore {
       // Crear: admins o staff/promotores (promotores generan códigos)
       allow create: if isAdminOrSuper() || isStaff();
 
-      // Actualizar: autenticados (al canjear código)
-      allow update: if isAuthenticated();
+      // Actualizar: admins, promotor dueño, o autenticado solo para reclamar
+      allow update: if isAdminOrSuper() ||
+                       (isStaff() && resource.data.promoter_id == request.auth.uid) ||
+                       (isAuthenticated() &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+                          ['status', 'claimed_at', 'qr_token', 'claimed_by', 'claimed_name',
+                           'claimed_dni', 'claimed_phone']
+                        ));
 
       // Eliminar: solo admins
       allow delete: if isAdminOrSuper();
@@ -245,12 +263,9 @@ service cloud.firestore {
     // ==========================================
 
     match /promotorCodes/{codeId} {
-      // RIESGO CONOCIDO: lectura pública necesaria para reclamar.html
-      // reclamar.html NO usa Firebase Auth, hace query por campo "code"
-      // sin autenticación. Firestore rules no pueden filtrar por query.
-      // TODO: Migrar validación de códigos a Cloud Function para eliminar
-      // lectura pública y proteger datos de clientes (claimed_by).
-      allow read: if true;
+      // MEJORA 2: Lectura pública eliminada. reclamar.html ahora usa
+      // Cloud Functions (validateCode/claimCode) que tienen acceso admin.
+      allow read: if isAdminOrSuper() || isStaff();
 
       // Crear: promotores autenticados (solo sus propios códigos)
       allow create: if isStaff() &&
@@ -264,8 +279,7 @@ service cloud.firestore {
                         request.resource.data.status != 'APPROVED' &&
                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['approved_at', 'approved_by'])) ||
                        (request.resource.data.status == 'CLAIMED' &&
-                        resource.data.status != 'CLAIMED' &&
-                        resource.data.status != 'SCANNED' &&
+                        resource.data.status == 'APPROVED' &&
                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(
                           ['status', 'claimed_at', 'qr_token', 'claimed_by', 'claimed_name']
                         ));
@@ -283,8 +297,9 @@ service cloud.firestore {
       allow read: if isAuthenticated() &&
                      (resource.data.user_id == request.auth.uid || isAdminOrSuper());
 
-      // Crear: cualquier usuario autenticado
-      allow create: if isAuthenticated();
+      // Crear: autenticado y solo sus propias compras
+      allow create: if isAuthenticated() &&
+                       request.resource.data.user_id == request.auth.uid;
 
       // Actualizar: el propio usuario o admins
       allow update: if isAuthenticated() &&
@@ -299,12 +314,11 @@ service cloud.firestore {
     // ==========================================
 
     match /clientes/{clienteId} {
-      // RIESGO CONOCIDO: lectura pública necesaria para cliente.js searchDocument()
-      // El flujo de login busca por doc_number ANTES de que el usuario se autentique.
-      // Firestore rules no pueden restringir por campos del query.
-      // TODO: Migrar searchDocument a Cloud Function para eliminar lectura pública
-      // y proteger PII de clientes (nombre, DNI, email, teléfono).
-      allow read: if true;
+      // MEJORA 3: Lectura pública eliminada. searchDocument() ahora usa
+      // Cloud Function (searchClientByDoc) que tiene acceso admin.
+      // Lectura permitida: propio usuario, admins, o staff
+      allow read: if isAuthenticated() &&
+                     (resource.data.uid == request.auth.uid || isAdminOrSuper() || isStaff());
 
       // Crear: autenticado y el documento le pertenece (uid en datos == auth uid)
       allow create: if isAuthenticated() &&
@@ -318,6 +332,20 @@ service cloud.firestore {
 
       // Eliminar: solo admins
       allow delete: if isAdminOrSuper();
+    }
+
+    // ==========================================
+    // ERRORS (MEJORA 6 - monitoreo de errores)
+    // ==========================================
+
+    match /errors/{errorId} {
+      // Solo crear (desde cliente) con campos limitados, leer solo admins
+      allow create: if request.resource.data.keys().hasOnly([
+        'type', 'message', 'source', 'lineno', 'colno',
+        'page', 'url', 'userAgent', 'timestamp'
+      ]) && request.resource.data.message is string
+        && request.resource.data.message.size() < 500;
+      allow read, update, delete: if isAdminOrSuper();
     }
 
     // ==========================================

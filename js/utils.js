@@ -1,6 +1,7 @@
 // js/utils.js - UTILIDADES GLOBALES
 import { APP_CONFIG } from './config.js';
 import { ref as storageRefFn, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { collection as fsCollection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================
 // 0. LOGGER (solo logea en desarrollo)
@@ -11,6 +12,26 @@ export const logger = {
     error: (...args) => console.error(...args),
     warn: (...args) => isDev && console.warn(...args)
 };
+
+// ==========================================
+// 0.5 RATE LIMITER (MEJORA 4)
+// ==========================================
+/**
+ * Crea un rate limiter client-side como primera barrera.
+ * @param {number} maxCalls - Máximo de llamadas permitidas en la ventana
+ * @param {number} windowMs - Ventana de tiempo en ms
+ * @returns {function} - Retorna true si permitido, false si excede el límite
+ */
+export function createRateLimiter(maxCalls, windowMs) {
+    let calls = [];
+    return function() {
+        const now = Date.now();
+        calls = calls.filter(t => now - t < windowMs);
+        if (calls.length >= maxCalls) return false;
+        calls.push(now);
+        return true;
+    };
+}
 
 // ==========================================
 // 1. VALIDADOR
@@ -483,6 +504,38 @@ export function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// ==========================================
+// 11. ERROR MONITOR (MEJORA 6)
+// ==========================================
+const errorRateLimit = createRateLimiter(10, 60000); // max 10 errores/min al server
+
+export function initErrorMonitor(dbInstance, pageName = 'unknown') {
+    if (!dbInstance) return;
+
+    const sendError = async (errorData) => {
+        if (!errorRateLimit()) return;
+        try {
+            await addDoc(fsCollection(dbInstance, 'errors'), {
+                ...errorData,
+                page: pageName,
+                url: window.location.origin + window.location.pathname,
+                userAgent: navigator.userAgent,
+                timestamp: new Date().toISOString()
+            });
+        } catch (e) {
+            // Silently fail - don't cause more errors
+        }
+    };
+
+    window.onerror = (message, source, lineno, colno) => {
+        sendError({ type: 'error', message: String(message), source, lineno, colno });
+    };
+
+    window.addEventListener('unhandledrejection', (event) => {
+        sendError({ type: 'unhandledrejection', message: String(event.reason) });
+    });
+}
+
 export default {
     Validator,
     toast,
@@ -502,5 +555,7 @@ export default {
     debounce,
     throttle,
     escapeHtml,
-    logger
+    logger,
+    createRateLimiter,
+    initErrorMonitor
 };
