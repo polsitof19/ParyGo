@@ -286,12 +286,14 @@ exports.validateCode = functions.https.onCall(async (data) => {
     }
 
     // Validar estado
-    if (source === 'promotorCodes' && codeDoc.status === 'PENDING') {
-        throw new functions.https.HttpsError("failed-precondition", "Código pendiente de aprobación");
+    if (source === 'promotorCodes' && (codeDoc.status === 'PENDING' || codeDoc.status === 'REJECTED')) {
+        const msg = codeDoc.status === 'PENDING' ? "Código pendiente de aprobación" : "Código rechazado por el administrador";
+        throw new functions.https.HttpsError("failed-precondition", msg);
     }
 
+    const blockedStatuses = ['CLAIMED', 'SCANNED', 'USED', 'CANCELLED'];
     const codeType = codeDoc.type || "UNIQUE";
-    if (codeType === "UNIQUE" && (codeDoc.status === 'CLAIMED' || codeDoc.status === 'SCANNED' || codeDoc.current_uses > 0)) {
+    if (codeType === "UNIQUE" && (blockedStatuses.includes(codeDoc.status) || codeDoc.current_uses > 0)) {
         throw new functions.https.HttpsError("already-exists", "Código ya utilizado");
     }
 
@@ -399,7 +401,8 @@ exports.claimCode = functions.https.onCall(async (data) => {
         const codeType = freshData.type || "UNIQUE";
 
         if (source === 'promotorCodes' || source === 'codes') {
-            if (freshData.status === 'CLAIMED' || freshData.status === 'SCANNED') {
+            const blocked = ['CLAIMED', 'SCANNED', 'USED', 'REJECTED', 'CANCELLED'];
+            if (blocked.includes(freshData.status)) {
                 throw new functions.https.HttpsError("already-exists", "Código ya fue utilizado");
             }
             transaction.update(codeRef, {

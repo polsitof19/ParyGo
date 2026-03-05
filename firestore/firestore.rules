@@ -70,13 +70,17 @@ service cloud.firestore {
       allow read: if isAdminOrSuper() || isStaff() ||
                      (isAuthenticated() && resource.data.user_id == request.auth.uid);
 
-      // Crear: admins, staff, o usuario autenticado (solo sus propios tickets)
+      // Crear: admins, staff, o usuario autenticado (solo sus propios tickets, precio > 0 o tipo FREE validado)
       allow create: if isAdminOrSuper() || isStaff() ||
-                       (isAuthenticated() && request.resource.data.user_id == request.auth.uid);
+                       (isAuthenticated() && request.resource.data.user_id == request.auth.uid &&
+                        request.resource.data.price_paid >= 0);
 
-      // Actualizar: admins, staff, o el cliente dueño del ticket
+      // Actualizar: admins, staff, o el cliente dueño (solo campos permitidos)
       allow update: if isAdminOrSuper() || isStaff() ||
-                       (isAuthenticated() && resource.data.user_id == request.auth.uid);
+                       (isAuthenticated() && resource.data.user_id == request.auth.uid &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+                          ['share_token', 'share_token_created_at', 'claimed_at', 'claimed_by']
+                        ));
 
       // Eliminar: solo admins
       allow delete: if isAdminOrSuper();
@@ -110,9 +114,14 @@ service cloud.firestore {
       allow read: if isAdminOrSuper() || isStaff() ||
                      (isAuthenticated() && resource.data.client_id == request.auth.uid);
 
-      // Crear: autenticados (al generar venta, solo propias)
+      // Crear: autenticados (al generar venta, solo propias, con validaciones de precio)
       allow create: if isAuthenticated() &&
-                       request.resource.data.client_id == request.auth.uid;
+                       request.resource.data.client_id == request.auth.uid &&
+                       request.resource.data.total_price is number &&
+                       request.resource.data.total_price >= 0 &&
+                       request.resource.data.quantity is int &&
+                       request.resource.data.quantity >= 1 &&
+                       request.resource.data.quantity <= 20;
 
       // Actualizar/eliminar: solo admins
       allow update, delete: if isAdminOrSuper();
@@ -263,9 +272,8 @@ service cloud.firestore {
     // ==========================================
 
     match /promotorCodes/{codeId} {
-      // MEJORA 2: Lectura pública eliminada. reclamar.html ahora usa
-      // Cloud Functions (validateCode/claimCode) que tienen acceso admin.
-      allow read: if isAdminOrSuper() || isStaff();
+      // Lectura: admins, staff, y usuarios autenticados (para canjear códigos desde cliente.html)
+      allow read: if isAdminOrSuper() || isStaff() || isAuthenticated();
 
       // Crear: promotores autenticados (solo sus propios códigos)
       allow create: if isStaff() &&
@@ -278,10 +286,12 @@ service cloud.firestore {
                        (isStaff() && resource.data.promoter_id == request.auth.uid &&
                         request.resource.data.status != 'APPROVED' &&
                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['approved_at', 'approved_by'])) ||
-                       (request.resource.data.status == 'CLAIMED' &&
-                        resource.data.status == 'APPROVED' &&
+                       (isAuthenticated() &&
+                        request.resource.data.status == 'CLAIMED' &&
+                        (resource.data.status == 'APPROVED' || resource.data.status == 'FREE' || resource.data.status == 'ACTIVE') &&
                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-                          ['status', 'claimed_at', 'qr_token', 'claimed_by', 'claimed_name']
+                          ['status', 'claimed_at', 'qr_token', 'claimed_by', 'claimed_name',
+                           'claimed_dni', 'claimed_phone']
                         ));
 
       // Eliminar: solo admins

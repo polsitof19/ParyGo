@@ -1037,7 +1037,8 @@ window.copyGeneratedCode = async () => {
 
 window.shareCode = async () => {
     const code = lastGeneratedCode || document.getElementById("generated_code").textContent;
-    const text = `🎫 Tu código de entrada para ${currentEvent.name}:\n\n${code}\n\nCanjéalo en: [TU_URL_DE_CANJE]`;
+    const canjeUrl = `${window.location.origin}/reclamar.html?code=${encodeURIComponent(code)}`;
+    const text = `🎫 Tu código de entrada para ${currentEvent.name}:\n\n${code}\n\nCanjéalo en: ${canjeUrl}`;
     
     if (navigator.share) {
         try {
@@ -1365,8 +1366,9 @@ window.generateFreeCode = async (ticketId) => {
     // Verificar cuota si existe
     const quota = myQuotas.find(q => q.ticket_id === ticketId);
     if (quota) {
-        const generatedOld = myCodes.filter(c => c.ticket_id === ticketId).length;
-        const generatedNew = myPromotorCodes.filter(c => c.ticket_id === ticketId && c.type === 'free').length;
+        const validSt = ['PENDING', 'APPROVED', 'ACTIVE', 'CLAIMED', 'SCANNED', 'USED', 'FREE'];
+        const generatedOld = myCodes.filter(c => c.ticket_id === ticketId && validSt.includes(c.status)).length;
+        const generatedNew = myPromotorCodes.filter(c => c.ticket_id === ticketId && c.type === 'free' && validSt.includes(c.status)).length;
         const totalGenerated = generatedOld + generatedNew;
         if (totalGenerated >= (quota.assigned || 0)) {
             return toast("Ya usaste toda tu cuota para este tipo");

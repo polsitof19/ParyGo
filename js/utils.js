@@ -245,8 +245,8 @@ export function customConfirm(message, title = 'Confirmar') {
                     <div class="confirm-icon">
                         <i class="fa-solid fa-question"></i>
                     </div>
-                    <h3>${title}</h3>
-                    <p>${message}</p>
+                    <h3>${escapeHtml(title)}</h3>
+                    <p>${escapeHtml(message)}</p>
                     <div class="confirm-actions">
                         <button class="btn btn-ghost" id="confirmCancel">Cancelar</button>
                         <button class="btn btn-primary" id="confirmOk">Sí, continuar</button>

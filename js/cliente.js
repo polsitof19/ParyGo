@@ -1561,23 +1561,55 @@ async function redeemCode() {
     if (!currentUserProfile) return toast("Error: perfil no cargado");
 
     try {
-        // Buscar código
-        const q = query(
-            collection(db, "codes"),
+        // Buscar código en promotorCodes (sistema nuevo) y codes (legacy)
+        let codeDoc = null;
+        let codeData = null;
+        let codeSource = null;
+
+        // 1. Buscar en promotorCodes
+        const qNew = query(
+            collection(db, "promotorCodes"),
             where("code", "==", code),
             where("event_id", "==", currentEvent.id)
         );
-        const snap = await getDocs(q);
+        const snapNew = await getDocs(qNew);
+        if (!snapNew.empty) {
+            codeDoc = snapNew.docs[0];
+            codeData = codeDoc.data();
+            codeSource = 'promotorCodes';
+        }
 
-        if (snap.empty) {
+        // 2. Fallback: buscar en codes (legacy)
+        if (!codeDoc) {
+            const qLegacy = query(
+                collection(db, "codes"),
+                where("code", "==", code),
+                where("event_id", "==", currentEvent.id)
+            );
+            const snapLegacy = await getDocs(qLegacy);
+            if (!snapLegacy.empty) {
+                codeDoc = snapLegacy.docs[0];
+                codeData = codeDoc.data();
+                codeSource = 'codes';
+            }
+        }
+
+        if (!codeDoc) {
             return toast("Código no válido");
         }
 
-        const codeDoc = snap.docs[0];
-        const codeData = codeDoc.data();
-
-        if (codeData.status !== 'FREE') {
+        // Validar status
+        const blockedStatuses = ['CLAIMED', 'SCANNED', 'USED', 'REJECTED', 'CANCELLED', 'PENDING'];
+        if (blockedStatuses.includes(codeData.status)) {
+            if (codeData.status === 'PENDING') return toast("Este código está pendiente de aprobación");
+            if (codeData.status === 'REJECTED') return toast("Este código fue rechazado");
             return toast("Este código ya fue usado");
+        }
+
+        // Status válidos: FREE, ACTIVE, APPROVED
+        const validStatuses = ['FREE', 'ACTIVE', 'APPROVED'];
+        if (!validStatuses.includes(codeData.status)) {
+            return toast("Este código no está disponible");
         }
 
         // Guardar datos para confirmar después
@@ -1585,6 +1617,7 @@ async function redeemCode() {
             code,
             codeDocId: codeDoc.id,
             codeData,
+            codeSource,
             event: currentEvent
         };
 
@@ -1609,12 +1642,13 @@ async function confirmRedeem() {
     if (isProcessing) return;
     isProcessing = true;
 
-    const { code, codeDocId, codeData } = pendingRedeemData;
+    const { code, codeDocId, codeData, codeSource } = pendingRedeemData;
 
     try {
         closeModal('modalConfirmRedeem');
 
-        const codeRef = doc(db, "codes", codeDocId);
+        const collectionName = codeSource || 'codes';
+        const codeRef = doc(db, collectionName, codeDocId);
         const fullName = `${currentUserProfile.name || ''} ${currentUserProfile.lastname || ''}`.trim();
 
         // Verificar y canjear atómicamente
@@ -1624,7 +1658,8 @@ async function confirmRedeem() {
                 throw new Error('El código no existe');
             }
             const data = codeDoc.data();
-            if (data.status === 'CLAIMED' || data.status === 'USED') {
+            const blockedSt = ['CLAIMED', 'SCANNED', 'USED', 'REJECTED', 'CANCELLED'];
+            if (blockedSt.includes(data.status)) {
                 throw new Error('Este código ya fue canjeado');
             }
             transaction.update(codeRef, {
@@ -3388,6 +3423,7 @@ window.claimFreeTickets = claimFreeTickets;
 
 // Compra
 window.openBuyModal = openBuyModal;
+window.openBuyModalWithPrice = openBuyModalWithPrice;
 window.changeQty = changeQty;
 window.goToPayment = goToPayment;
 window.backToBuyStep1 = backToBuyStep1;

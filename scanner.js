@@ -13,7 +13,8 @@ import {
     onSnapshot,
     getDoc,
     doc,
-    updateDoc
+    updateDoc,
+    runTransaction
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
     signInWithEmailAndPassword,
@@ -882,10 +883,19 @@ async function approveEntry() {
     isProcessing = true;
 
     try {
-        await updateDoc(doc(db, "tickets", pendingTicketId), {
-            status: 'SCANNED',
-            scanned_at: new Date().toISOString(),
-            scanned_by: state.currentUser?.email || 'scanner_app'
+        const ticketRef = doc(db, "tickets", pendingTicketId);
+        await runTransaction(db, async (transaction) => {
+            const ticketDoc = await transaction.get(ticketRef);
+            if (!ticketDoc.exists()) throw new Error('Ticket no encontrado');
+            const data = ticketDoc.data();
+            if (data.status === 'SCANNED' || data.status === 'SCANNED_IN') {
+                throw new Error('Esta entrada ya fue escaneada');
+            }
+            transaction.update(ticketRef, {
+                status: 'SCANNED',
+                scanned_at: new Date().toISOString(),
+                scanned_by: state.currentUser?.uid || state.currentUser?.email || 'scanner_app'
+            });
         });
 
         // MEJORA D: Cache del codigo escaneado exitosamente
@@ -902,7 +912,21 @@ async function approveEntry() {
         showToast('Entrada aprobada', 'success');
     } catch (error) {
         logger.error('Error aprobando entrada:', error);
-        showToast('Error al aprobar', 'error');
+        if (error.message === 'Esta entrada ya fue escaneada') {
+            playBeep('error');
+            state.stats.duplicate++;
+            state.stats.total++;
+            updateStats();
+            // Mostrar resultado de duplicado sin cerrar overlay
+            showResult('warning', 'Ya Escaneado', 'Aprobada por otro scanner', {});
+            isProcessing = false;
+            pendingTicketId = null;
+            pendingTicketCode = null;
+            pendingTicketCodeUpper = null;
+            return;
+        } else {
+            showToast('Error al aprobar', 'error');
+        }
     } finally {
         isProcessing = false;
         pendingTicketId = null;
