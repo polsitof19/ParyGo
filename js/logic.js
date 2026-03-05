@@ -116,7 +116,9 @@ import {
     cancelAccess,
     filterAccessTable,
     openDrawer,
-    closeDrawer
+    closeDrawer,
+    markPromoterPaid,
+    loadLiquidation
 } from './metrics.js';
 
 import {
@@ -237,6 +239,8 @@ window.rejectPayment = rejectPayment;
 // Métricas y Ventas
 window.loadEventMetrics = loadEventMetrics;
 window.switchMetricTab = switchMetricTab;
+window.markPromoterPaid = markPromoterPaid;
+window.loadLiquidation = loadLiquidation;
 window.loadEventSales = loadEventSales;
 window.loadAllSales = loadAllSales;
 window.filterSalesByStatus = filterSalesByStatus;
@@ -896,6 +900,11 @@ window.initMobile = initMobile;
 // ========== EXPORTAR A EXCEL ==========
 // ========== EXPORTAR REPORTE COMPLETO DE MÉTRICAS ==========
 function exportMetricsReport() {
+    if (typeof XLSX === 'undefined') {
+        toast('Error: librería de Excel no cargada. Recarga la página.', 'error');
+        return;
+    }
+    try {
     const wb = XLSX.utils.book_new();
     const fecha = new Date().toISOString().slice(0,10);
     
@@ -947,6 +956,10 @@ function exportMetricsReport() {
     XLSX.writeFile(wb, `${fileName}.xlsx`);
     
     toast('Reporte completo descargado', 'success');
+    } catch (e) {
+        logger.error('Error exportando reporte:', e);
+        toast('Error al exportar reporte', 'error');
+    }
 }
 
 // Función auxiliar para convertir tabla a hoja

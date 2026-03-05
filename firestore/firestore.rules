@@ -299,6 +299,16 @@ service cloud.firestore {
     }
 
     // ==========================================
+    // PROMOTOR PAYMENTS (liquidaciones de promotores)
+    // ==========================================
+
+    match /promotorPayments/{paymentId} {
+      allow read: if isAdminOrSuper();
+      allow create, update: if isAdminOrSuper();
+      allow delete: if isAdminOrSuper();
+    }
+
+    // ==========================================
     // PURCHASES (compras/reservas)
     // ==========================================
 

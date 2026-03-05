@@ -8,6 +8,35 @@ admin.initializeApp();
 // Configurar con: firebase functions:config:set reniec.token="TU_TOKEN"
 // O con variable de entorno: RENIEC_TOKEN
 const RENIEC_TOKEN = process.env.RENIEC_TOKEN;
+const crypto = require("crypto");
+
+// ==========================================
+// RATE LIMITER EN MEMORIA (per-instance, primera barrera)
+// ==========================================
+const rateLimits = new Map();
+let lastCleanup = Date.now();
+
+function checkRateLimit(key, maxCalls, windowMs) {
+    const now = Date.now();
+
+    // Limpieza lazy cada 2 min (sin setInterval para no mantener instancia viva)
+    if (now - lastCleanup > 120000) {
+        lastCleanup = now;
+        for (const [k, v] of rateLimits.entries()) {
+            const recent = v.filter(t => now - t < 120000);
+            if (recent.length === 0) rateLimits.delete(k);
+            else rateLimits.set(k, recent);
+        }
+    }
+
+    const calls = rateLimits.get(key) || [];
+    const recent = calls.filter(t => now - t < windowMs);
+    if (recent.length >= maxCalls) {
+        throw new functions.https.HttpsError("resource-exhausted", "Demasiados intentos. Espera un momento.");
+    }
+    recent.push(now);
+    rateLimits.set(key, recent);
+}
 
 /**
  * Cloud Function: Consulta DNI en RENIEC
@@ -81,7 +110,9 @@ exports.consultaDNI = functions.https.onCall(async (data, context) => {
  * Cloud Function: Consulta DNI sin autenticación (para reclamar.html)
  * Tiene rate limiting implícito de Firebase Functions
  */
-exports.consultaDNIPublic = functions.https.onCall(async (data) => {
+exports.consultaDNIPublic = functions.https.onCall(async (data, context) => {
+    const ip = context.rawRequest?.ip || 'unknown';
+    checkRateLimit(`dni_${ip}`, 5, 60000); // 5 por minuto por IP
     const { dni } = data;
 
     // Validar formato DNI
@@ -250,7 +281,9 @@ exports.generateShareToken = functions.https.onCall(async (data, context) => {
  * No requiere auth (reclamar.html es público)
  * Retorna solo datos públicos del evento, sin PII de otros clientes
  */
-exports.validateCode = functions.https.onCall(async (data) => {
+exports.validateCode = functions.https.onCall(async (data, context) => {
+    const ip = context.rawRequest?.ip || 'unknown';
+    checkRateLimit(`validate_${ip}`, 10, 60000); // 10 por minuto por IP
     const { code } = data;
 
     if (!code || typeof code !== 'string' || code.length < 3 || code.length > 30) {
@@ -365,7 +398,9 @@ exports.validateCode = functions.https.onCall(async (data) => {
  * Cloud Function: Reclamar un código
  * No requiere auth. Recibe datos del cliente y actualiza el código atómicamente.
  */
-exports.claimCode = functions.https.onCall(async (data) => {
+exports.claimCode = functions.https.onCall(async (data, context) => {
+    const ip = context.rawRequest?.ip || 'unknown';
+    checkRateLimit(`claim_${ip}`, 5, 60000); // 5 por minuto por IP
     const { codeId, source, clientName, clientLastname, clientDni, clientEmail, clientPhone, idType } = data;
 
     if (!codeId || !source || !clientName || !clientLastname || !clientDni) {
@@ -447,21 +482,36 @@ exports.claimCode = functions.https.onCall(async (data) => {
         }
     });
 
-    // Registrar acceso
-    await dbAdmin.collection("accesses").add({
-        brand_id: data.brandId || "",
-        event_id: data.eventId || "",
-        event_name: data.eventName || "",
-        code_id: codeId, code: data.code || "",
-        ticket_name: data.ticketName || "General",
-        promoter_id: data.promoterId || "",
-        promoter_name: data.promoterName || "",
-        client_name: fullName, client_dni: dni,
-        client_email: email, client_phone: phone,
-        id_type: idType || 'DNI', qr_token: qrToken,
-        status: 'CLAIMED', is_free: true,
-        created_at: now
-    });
+    // Registrar acceso (fuera de transacción - el claim es prioritario)
+    let accessRegistered = false;
+    try {
+        await dbAdmin.collection("accesses").add({
+            brand_id: data.brandId || "",
+            event_id: data.eventId || "",
+            event_name: data.eventName || "",
+            code_id: codeId, code: data.code || "",
+            ticket_name: data.ticketName || "General",
+            promoter_id: data.promoterId || "",
+            promoter_name: data.promoterName || "",
+            client_name: fullName, client_dni: dni,
+            client_email: email, client_phone: phone,
+            id_type: idType || 'DNI', qr_token: qrToken,
+            status: 'CLAIMED', is_free: true,
+            created_at: now
+        });
+        accessRegistered = true;
+    } catch (accessErr) {
+        console.error("Error registrando acceso (claim exitoso):", accessErr);
+    }
+
+    // Marcar en el código si el acceso se registró correctamente
+    if (!accessRegistered) {
+        try {
+            await dbAdmin.collection(collectionName).doc(codeId).update({
+                access_registered: false
+            });
+        } catch (_) { /* best effort */ }
+    }
 
     return { success: true, qrToken: qrToken };
 });

@@ -553,6 +553,8 @@ async function downloadTicket() {
 
         await new Promise((resolve) => {
             const qrDiv = document.createElement('div');
+            qrDiv.style.position = 'absolute';
+            qrDiv.style.left = '-9999px';
             document.body.appendChild(qrDiv);
 
             new QRCode(qrDiv, {
@@ -563,35 +565,47 @@ async function downloadTicket() {
                 colorLight: '#ffffff',
                 correctLevel: QRCode.CorrectLevel.H
             });
-            
-            setTimeout(() => {
+
+            // Esperar a que el QR se renderice con polling (max 3s)
+            let attempts = 0;
+            const maxAttempts = 30;
+            const checkQR = () => {
+                attempts++;
                 const qrImg = qrDiv.querySelector('img');
-                if (qrImg) {
+                const qrCanvas = qrDiv.querySelector('canvas');
+
+                const imgReady = qrImg && qrImg.src && qrImg.complete && qrImg.naturalWidth > 0;
+                const canvasReady = qrCanvas && qrCanvas.width > 0;
+
+                if (imgReady || canvasReady) {
+                    const source = imgReady ? qrImg : qrCanvas;
                     const img = new Image();
                     img.onload = () => {
-                        // Dibujar QR centrado
                         const qrX = (width - qrSize) / 2;
                         const qrY = 40;
-                        
-                        // Sombra del QR
                         ctx.shadowColor = 'rgba(0,0,0,0.1)';
                         ctx.shadowBlur = 20;
                         ctx.fillStyle = '#ffffff';
                         ctx.fillRect(qrX - 15, qrY - 15, qrSize + 30, qrSize + 30);
                         ctx.shadowBlur = 0;
-                        
-                        // Dibujar QR
                         ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
-                        
-                        document.body.removeChild(qrDiv);
+                        try { document.body.removeChild(qrDiv); } catch (_) {}
                         resolve();
                     };
-                    img.src = qrImg.src;
+                    img.onerror = () => {
+                        try { document.body.removeChild(qrDiv); } catch (_) {}
+                        resolve();
+                    };
+                    img.src = imgReady ? qrImg.src : qrCanvas.toDataURL();
+                } else if (attempts < maxAttempts) {
+                    setTimeout(checkQR, 100);
                 } else {
-                    document.body.removeChild(qrDiv);
+                    // Max intentos: continuar sin QR
+                    try { document.body.removeChild(qrDiv); } catch (_) {}
                     resolve();
                 }
-            }, 200);
+            };
+            setTimeout(checkQR, 100);
         });
         
         // Texto "Sujeto a capacidad de aforo"

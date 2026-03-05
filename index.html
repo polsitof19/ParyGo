@@ -438,6 +438,7 @@
                                 <button class="met-tab active" id="mt_gen">General</button>
                                 <button class="met-tab" id="mt_pro">Promotores</button>
                                 <button class="met-tab" id="mt_can">Canales</button>
+                                <button class="met-tab" id="mt_liq">Liquidación</button>
                             </div>
                             <button class="btn btn-outline btn-export-metrics" id="btnExportMetrics">
                                 <i class="fa-solid fa-file-excel"></i> <span>Exportar Reporte</span>
@@ -481,6 +482,37 @@
                                         <th>Canal</th>
                                         <th>Cantidad</th>
                                         <th>Porcentaje</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+
+                        <div id="view_met_liq" class="metric-view hidden">
+                            <div id="liquidation_summary" style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+                                <div class="stat-card" style="flex:1; min-width:140px; background:var(--bg-card); padding:16px; border-radius:12px; border:1px solid var(--border);">
+                                    <span style="color:var(--muted); font-size:12px;">Total Recaudado Promotores</span>
+                                    <p id="liq_total_recaudado" style="font-size:20px; font-weight:700; margin-top:4px;">S/. 0.00</p>
+                                </div>
+                                <div class="stat-card" style="flex:1; min-width:140px; background:var(--bg-card); padding:16px; border-radius:12px; border:1px solid var(--border);">
+                                    <span style="color:var(--muted); font-size:12px;">Total Comisiones</span>
+                                    <p id="liq_total_comisiones" style="font-size:20px; font-weight:700; margin-top:4px; color:var(--warning);">S/. 0.00</p>
+                                </div>
+                                <div class="stat-card" style="flex:1; min-width:140px; background:var(--bg-card); padding:16px; border-radius:12px; border:1px solid var(--border);">
+                                    <span style="color:var(--muted); font-size:12px;">Ganancia Neta</span>
+                                    <p id="liq_ganancia_neta" style="font-size:20px; font-weight:700; margin-top:4px; color:var(--success);">S/. 0.00</p>
+                                </div>
+                            </div>
+                            <table id="tblLiquidation" class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Promotor</th>
+                                        <th>Vendidos</th>
+                                        <th>Gratis</th>
+                                        <th>Comisión Ventas</th>
+                                        <th>Comisión Gratis</th>
+                                        <th>Total a Pagar</th>
+                                        <th>Estado</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>

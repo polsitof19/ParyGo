@@ -170,6 +170,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 }
             }
         } else {
+            cleanupAllListeners();
             currentUser = null;
             currentUserProfile = null;
             showView('authView');

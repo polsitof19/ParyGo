@@ -10,6 +10,7 @@ import {
     getDocs,
     doc,
     updateDoc,
+    addDoc,
     runTransaction
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -131,6 +132,187 @@ export async function loadEventMetrics(eid) {
     }
 }
 
+// ==========================================
+// 1.5 LIQUIDACIÓN DE PROMOTORES
+// ==========================================
+
+/**
+ * Cargar datos de liquidación por promotor
+ */
+export async function loadLiquidation(eid) {
+    if (!eid) return;
+
+    try {
+        // Cargar evento, tickets, promotorCodes, codes, y pagos previos
+        const [eventSnap, ticketsSnap, promoCodesSnap, codesSnap, paymentsSnap] = await Promise.all([
+            getDoc(doc(db, "events", eid)),
+            getDocs(query(collection(db, APP_CONFIG.COLLECTIONS.TICKETS), where("event_id", "==", eid))),
+            getDocs(query(collection(db, "promotorCodes"), where("event_id", "==", eid))),
+            getDocs(query(collection(db, "codes"), where("event_id", "==", eid))),
+            getDocs(query(collection(db, "promotorPayments"), where("event_id", "==", eid)))
+        ]);
+
+        if (!eventSnap.exists()) return;
+        const event = eventSnap.data();
+        const ticketTypes = event.tickets || [];
+
+        // Pagos ya realizados
+        const payments = {};
+        paymentsSnap.docs.forEach(d => {
+            const p = d.data();
+            payments[p.promoter_id] = p;
+        });
+
+        // Códigos de promotores (nuevo sistema)
+        const promoCodes = promoCodesSnap.docs.map(d => d.data());
+        // Códigos legacy
+        const legacyCodes = codesSnap.docs.map(d => d.data());
+
+        // Agrupar por promotor
+        const promoterMap = {};
+        const validSt = ['APPROVED', 'CLAIMED', 'SCANNED', 'USED', 'FREE', 'EXHAUSTED'];
+
+        // Procesar promotorCodes
+        promoCodes.forEach(c => {
+            if (!c.promoter_id || !validSt.includes(c.status)) return;
+            if (!promoterMap[c.promoter_id]) {
+                promoterMap[c.promoter_id] = { name: c.promoter_name || 'Sin nombre', sold: 0, free: 0, salesCommission: 0, freeCommission: 0, freeExtras: [] };
+            }
+            const p = promoterMap[c.promoter_id];
+            const tk = ticketTypes.find(t => t.id === c.ticket_id || t.name === c.ticket_type);
+
+            if (c.type === 'sell' || c.type === 'sale') {
+                p.sold++;
+                if (tk?.promotorCommission) {
+                    if (tk.promotorCommission.type === 'percentage') {
+                        p.salesCommission += (Number(tk.price || c.price || 0) * tk.promotorCommission.value / 100);
+                    } else {
+                        p.salesCommission += Number(tk.promotorCommission.value || 0);
+                    }
+                }
+            } else {
+                p.free++;
+                if (tk?.freeCommission?.cash) {
+                    p.freeCommission += Number(tk.freeCommission.cash);
+                }
+                if (tk?.freeCommission?.drinks) {
+                    p.freeExtras.push(`${tk.freeCommission.drinks} trago${tk.freeCommission.drinks > 1 ? 's' : ''}`);
+                }
+                if (tk?.freeCommission?.other) {
+                    p.freeExtras.push(tk.freeCommission.other);
+                }
+            }
+        });
+
+        // Procesar codes legacy
+        legacyCodes.forEach(c => {
+            if (!c.promoter_id || !validSt.includes(c.status)) return;
+            if (!promoterMap[c.promoter_id]) {
+                promoterMap[c.promoter_id] = { name: c.promoter_name || 'Sin nombre', sold: 0, free: 0, salesCommission: 0, freeCommission: 0, freeExtras: [] };
+            }
+            const p = promoterMap[c.promoter_id];
+            const tk = ticketTypes.find(t => t.id === c.ticket_id || t.name === c.ticket_type);
+            p.free++;
+            if (tk?.freeCommission?.cash) {
+                p.freeCommission += Number(tk.freeCommission.cash);
+            }
+        });
+
+        // Renderizar tabla
+        const tbody = document.querySelector("#tblLiquidation tbody");
+        if (!tbody) return;
+
+        const entries = Object.entries(promoterMap);
+        if (entries.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--muted);">No hay promotores con actividad</td></tr>';
+            return;
+        }
+
+        let totalRecaudado = 0;
+        let totalComisiones = 0;
+
+        tbody.innerHTML = entries.map(([pid, p]) => {
+            const total = p.salesCommission + p.freeCommission;
+            totalComisiones += total;
+            // Recaudado por ventas del promotor (entradas vendidas × precio)
+            const ticketsSold = promoCodes.filter(c => c.promoter_id === pid && (c.type === 'sell' || c.type === 'sale') && validSt.includes(c.status));
+            const recaudado = ticketsSold.reduce((sum, c) => sum + Number(c.price || 0), 0);
+            totalRecaudado += recaudado;
+
+            const payment = payments[pid];
+            const isPaid = !!payment;
+            const extras = [...new Set(p.freeExtras)].join(', ');
+            const freeCommText = p.freeCommission > 0
+                ? `S/. ${p.freeCommission.toFixed(2)}${extras ? ` + ${Validator.sanitizeHTML(extras)}` : ''}`
+                : (extras || '-');
+
+            return `
+                <tr>
+                    <td><strong>${Validator.sanitizeHTML(p.name)}</strong></td>
+                    <td style="text-align:center">${p.sold}</td>
+                    <td style="text-align:center">${p.free}</td>
+                    <td style="text-align:center">S/. ${p.salesCommission.toFixed(2)}</td>
+                    <td style="text-align:center">${freeCommText}</td>
+                    <td style="text-align:center; font-weight:bold">S/. ${total.toFixed(2)}</td>
+                    <td style="text-align:center">
+                        ${isPaid
+                            ? `<span style="color:var(--success)">✅ Pagado ${payment.paid_at ? new Date(payment.paid_at).toLocaleDateString('es-PE') : ''}</span>`
+                            : `<button class="btn btn-sm btn-outline btn-liq-pay" data-pid="${Validator.sanitizeHTML(pid)}" data-pname="${Validator.sanitizeHTML(p.name)}" data-amount="${total.toFixed(2)}" data-eid="${Validator.sanitizeHTML(eid)}">Marcar Pagado</button>`
+                        }
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        // Event delegation para botones de pago
+        tbody.querySelectorAll('.btn-liq-pay').forEach(btn => {
+            btn.addEventListener('click', () => {
+                markPromoterPaid(btn.dataset.pid, btn.dataset.pname, btn.dataset.amount, btn.dataset.eid);
+            });
+        });
+
+        // Actualizar resumen
+        const ganancia = totalRecaudado - totalComisiones;
+        const elRecaudado = document.getElementById("liq_total_recaudado");
+        const elComisiones = document.getElementById("liq_total_comisiones");
+        const elGanancia = document.getElementById("liq_ganancia_neta");
+        if (elRecaudado) elRecaudado.textContent = `S/. ${totalRecaudado.toFixed(2)}`;
+        if (elComisiones) elComisiones.textContent = `S/. ${totalComisiones.toFixed(2)}`;
+        if (elGanancia) elGanancia.textContent = `S/. ${ganancia.toFixed(2)}`;
+
+    } catch (error) {
+        logger.error("Error cargando liquidación:", error);
+        toast("Error cargando liquidación", "error");
+    }
+}
+
+/**
+ * Marcar promotor como pagado
+ */
+export async function markPromoterPaid(promoterId, promoterName, amount, eventId) {
+    const confirmed = await customConfirm(
+        `¿Marcar a ${promoterName} como pagado? Total: S/. ${Number(amount).toFixed(2)}`,
+        'Confirmar Liquidación'
+    );
+    if (!confirmed) return;
+
+    try {
+        await addDoc(collection(db, "promotorPayments"), {
+            event_id: eventId,
+            promoter_id: promoterId,
+            promoter_name: promoterName,
+            cash_amount: Number(amount),
+            paid_at: new Date().toISOString(),
+            paid_by: state.currentUser?.email || 'admin'
+        });
+        toast('Promotor marcado como pagado', 'success');
+        loadLiquidation(eventId);
+    } catch (e) {
+        logger.error("Error marcando pago:", e);
+        toast("Error al registrar pago", "error");
+    }
+}
+
 /**
  * Cambiar tab de métricas
  */
@@ -138,9 +320,13 @@ export function switchMetricTab(type) {
     document.querySelectorAll('.metric-view').forEach(t => t.classList.add('hidden'));
     document.querySelectorAll('.met-tab').forEach(t => t.classList.remove('active'));
     
-    const viewMap = { 'gen': 'view_met_gen', 'pro': 'view_met_pro', 'can': 'view_met_can' };
+    const viewMap = { 'gen': 'view_met_gen', 'pro': 'view_met_pro', 'can': 'view_met_can', 'liq': 'view_met_liq' };
     document.getElementById(viewMap[type])?.classList.remove('hidden');
     document.getElementById('mt_' + type)?.classList.add('active');
+
+    if (type === 'liq' && state.activeEventId) {
+        loadLiquidation(state.activeEventId);
+    }
 }
 
 // ==========================================

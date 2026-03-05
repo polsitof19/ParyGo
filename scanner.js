@@ -321,11 +321,16 @@ function loadEvents() {
         renderScannerEvents(eventList, snapshot);
     }, (error) => {
         logger.error('Error listener eventos:', error);
-        eventsUnsubscribe = null; // Permitir reintentar
+        // Limpiar listener correctamente antes de permitir reintentar
+        if (eventsUnsubscribe) {
+            try { eventsUnsubscribe(); } catch (_) {}
+        }
+        eventsUnsubscribe = null;
         eventList.innerHTML = `
             <div class="event-list-empty">
                 <i class="fa-solid fa-triangle-exclamation"></i>
                 <p>Error al cargar eventos</p>
+                <button class="btn-retry" onclick="loadEvents()">Reintentar</button>
             </div>
         `;
     });
@@ -816,6 +821,7 @@ async function validateManual() {
 }
 
 window.validateManual = validateManual;
+window.loadEvents = loadEvents;
 
 // ==========================================
 // RESULT MODAL
