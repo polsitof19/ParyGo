@@ -366,7 +366,8 @@ input[type="checkbox"] { width: auto; margin-right: 8px; }
         top: 0;
         left: 0;
         right: 0;
-        height: 56px;
+        min-height: 56px;
+        height: calc(56px + env(safe-area-inset-top, 0px));
         padding: 0 16px;
         padding-top: env(safe-area-inset-top, 0px);
         background: var(--bg, #09090b);
@@ -733,7 +734,7 @@ input[type="checkbox"] { width: auto; margin-right: 8px; }
     .modal-content {
         width: 100% !important;
         max-width: 100% !important;
-        max-height: 90vh !important;
+        max-height: 90vh;
         margin: 0;
         border-radius: 20px 20px 0 0;
         position: fixed;
@@ -1672,21 +1673,36 @@ select {
     padding: 60px 20px;
     color: var(--text-muted);
 }
-
 .empty-state i {
     font-size: 48px;
     margin-bottom: 16px;
     opacity: 0.5;
 }
-
 .empty-state h3 {
     font-size: 18px;
     margin-bottom: 8px;
     color: var(--text);
 }
-
 .empty-state p {
     font-size: 14px;
+}
+.empty-state .empty-icon {
+    font-size: 48px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    opacity: 0.4;
+}
+.empty-state .empty-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text);
+}
+.empty-state .empty-text {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 20px;
 }
 /* ========== NÚMERO DE OPERACIÓN ========== */
 .operation-number {
@@ -3546,31 +3562,6 @@ select option:hover {
 .skeleton-line.tiny { width: 40%; height: 10px; }
 
 /* ==========================================
-   EMPTY STATE
-   ========================================== */
-.empty-state {
-    text-align: center;
-    padding: 60px 40px;
-}
-.empty-state .empty-icon {
-    font-size: 48px;
-    color: var(--text-muted);
-    margin-bottom: 16px;
-    opacity: 0.4;
-}
-.empty-state .empty-title {
-    font-size: 16px;
-    font-weight: 700;
-    margin-bottom: 6px;
-}
-.empty-state .empty-text {
-    font-size: 13px;
-    color: var(--text-muted);
-    line-height: 1.5;
-    margin-bottom: 20px;
-}
-
-/* ==========================================
    TOAST & CONFIRM - MOBILE OVERRIDES
    ========================================== */
 @media (max-width: 768px) {
@@ -3608,8 +3599,9 @@ select option:hover {
         padding-bottom: calc(24px + env(safe-area-inset-bottom, 8px));
         animation: mobileSlideUp 0.3s ease;
     }
-    @keyframes mobileSlideUp {
-        from { transform: translateY(100%); }
-        to { transform: translateY(0); }
-    }
+}
+
+@keyframes mobileSlideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
 }
