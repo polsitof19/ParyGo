@@ -544,29 +544,29 @@ export async function saveEvent() {
             eventData.image = await uploadToStorage(storage, state.tempImgBase64, storagePath);
         }
         if (id) {
-            // BUG-6 FIX: Optimistic locking con runTransaction
+            // BUG-6 FIX: Optimistic locking con getDoc + updateDoc
+            // (runTransaction causa failed-precondition por conflicto con onSnapshot listener)
             const eventRef = doc(db, "events", id);
-            await runTransaction(db, async (transaction) => {
-                const currentDoc = await transaction.get(eventRef);
-                if (!currentDoc.exists()) throw new Error("El evento ya no existe");
+            const currentDoc = await getDoc(eventRef);
+            if (!currentDoc.exists()) throw new Error("El evento ya no existe");
 
-                const currentData = currentDoc.data();
-                const loadedEvent = state.allEvents.find(x => x.id === id);
-                const loadedUpdatedAt = loadedEvent?.updated_at;
+            const currentData = currentDoc.data();
+            const loadedEvent = state.allEvents.find(x => x.id === id);
+            const loadedUpdatedAt = loadedEvent?.updated_at;
 
-                // Si otro usuario modificó el evento después de que lo cargamos, abortar
-                // Para eventos legacy sin updated_at: si nosotros tenemos timestamp pero
-                // el server no, permitir (primera vez que se guarda con lock)
-                if (loadedUpdatedAt && currentData.updated_at &&
-                    currentData.updated_at !== loadedUpdatedAt) {
-                    throw new Error("CONCURRENT_EDIT");
-                }
+            if (loadedUpdatedAt && currentData.updated_at &&
+                currentData.updated_at !== loadedUpdatedAt) {
+                throw new Error("CONCURRENT_EDIT");
+            }
 
-                // Generar updated_at dentro de la transacción (timestamp fresco)
-                transaction.update(eventRef, {
-                    ...eventData,
-                    updated_at: new Date().toISOString()
-                });
+            // Preservar imagen existente si no se seleccionó una nueva
+            if (!eventData.image && currentData.image) {
+                eventData.image = currentData.image;
+            }
+
+            await updateDoc(eventRef, {
+                ...eventData,
+                updated_at: new Date().toISOString()
             });
             toast("✅ Evento actualizado");
         } else {
