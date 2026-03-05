@@ -1796,13 +1796,18 @@
 
 <!-- Mobile Header -->
 <header class="mobile-header" id="mobileHeader">
-    <div class="mobile-logo">ParyGo<span style="color:#ff4757">.</span></div>
-    <div class="mobile-search" id="mobileSearchBtn">
-        <i class="fa-solid fa-search"></i>
-    </div>
-    <div class="mobile-profile">
-        <span id="mobileUserName"></span>
-        <i class="fa-solid fa-user-circle"></i>
+    <div class="mobile-logo">ParyGo<span style="color:var(--primary)">.</span></div>
+    <div class="mobile-header-actions">
+        <button class="mobile-header-btn" id="mobileSearchBtn">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+        <button class="mobile-header-btn" id="mobileNotifBtn">
+            <i class="fa-solid fa-bell"></i>
+            <span class="notif-dot" id="headerNotifDot"></span>
+        </button>
+        <div class="mobile-avatar" id="mobileAvatarBtn">
+            <span id="mobileAvatarInitial">P</span>
+        </div>
     </div>
 </header>
 
@@ -1825,7 +1830,7 @@
 <!-- Mobile Bottom Navigation -->
 <nav class="mobile-nav" id="mobileNav">
     <button class="nav-item active" data-section="eventos" onclick="mobileGoTo('eventos')">
-        <i class="fa-solid fa-calendar"></i>
+        <i class="fa-solid fa-calendar-days"></i>
         <span>Eventos</span>
     </button>
     <button class="nav-item" data-section="marca" onclick="mobileGoTo('marca')">
@@ -1835,6 +1840,7 @@
     <button class="nav-item" data-section="promo" onclick="mobileGoTo('promo')">
         <i class="fa-solid fa-users"></i>
         <span>Promo</span>
+        <span class="notif-dot" id="promoNotifDot"></span>
     </button>
     <button class="nav-item" data-section="extras" onclick="openExtrasPanel()">
         <i class="fa-solid fa-ellipsis"></i>

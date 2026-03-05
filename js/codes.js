@@ -870,6 +870,11 @@ function renderPendingPaymentsFromSnapshot(snapshot) {
         }
     }
 
+    // Actualizar notif dot en mobile bottom nav
+    if (typeof window.updatePromoNotifDot === 'function') {
+        window.updatePromoNotifDot(count > 0);
+    }
+
     if (snapshot.empty) {
         if (emptyState) emptyState.style.display = '';
         if (table) table.style.display = 'none';

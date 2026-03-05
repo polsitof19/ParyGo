@@ -76,6 +76,9 @@ export function loadEvents() {
         return;
     }
 
+    // Mostrar skeleton mientras se cargan los datos
+    showSkeletonLoading();
+
     try {
         const q = query(collection(db, "events"), orderBy("date", "desc"), limit(APP_CONFIG.LIMITS.ITEMS_PER_PAGE));
         eventsUnsubscribe = onSnapshot(q,
@@ -129,6 +132,35 @@ export function cleanupEventsListener() {
 }
 
 /**
+ * Mostrar skeleton cards mientras cargan los eventos
+ */
+export function showSkeletonLoading() {
+    const grid = document.getElementById("eventsGrid");
+    if (!grid) return;
+    const count = window.innerWidth < 768 ? 3 : 6;
+    grid.innerHTML = Array.from({length: count}, () => `
+        <div class="skeleton-card">
+            <div class="skeleton-img"></div>
+            <div class="skeleton-body">
+                <div class="skeleton-line"></div>
+                <div class="skeleton-line short"></div>
+                <div class="skeleton-line tiny"></div>
+            </div>
+        </div>
+    `).join('');
+}
+
+/**
+ * Ocultar skeleton (se reemplaza al renderizar eventos reales)
+ */
+export function hideSkeletonLoading() {
+    const grid = document.getElementById("eventsGrid");
+    if (!grid) return;
+    const skeletons = grid.querySelectorAll('.skeleton-card');
+    skeletons.forEach(s => s.remove());
+}
+
+/**
  * RENDERIZAR EVENTOS en la grilla
  */
 export function renderEvents() {
@@ -154,12 +186,14 @@ export function renderEvents() {
         }
     }
 
-    // Sin eventos
+    // Sin eventos - empty state
     if (filtered.length === 0) {
         grid.innerHTML = `
-            <div style="grid-column:1/-1; text-align:center; padding:60px; color:var(--muted);">
-                <i class="fa-solid fa-calendar-xmark" style="font-size:48px; margin-bottom:20px; opacity:0.3;"></i>
-                <p>No hay eventos ${state.currentFilter !== 'ALL' ? 'en esta marca' : 'disponibles'}</p>
+            <div class="empty-state" style="grid-column:1/-1;">
+                <div class="empty-icon"><i class="fa-solid fa-calendar-plus"></i></div>
+                <div class="empty-title">No tienes eventos</div>
+                <div class="empty-text">${state.currentFilter !== 'ALL' ? 'No hay eventos en esta marca' : 'Crea tu primer evento y empieza a vender entradas'}</div>
+                <button class="btn btn-primary" onclick="openNewEventModal()"><i class="fa-solid fa-plus"></i> Crear Evento</button>
             </div>
         `;
         return;

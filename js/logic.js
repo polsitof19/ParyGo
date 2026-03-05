@@ -40,7 +40,9 @@ import {
     editCurrentEvent,
     handleFileSelect,
     saveEvent,
-    deleteEvent
+    deleteEvent,
+    showSkeletonLoading,
+    hideSkeletonLoading
 } from './events.js';
 
 import {
@@ -875,9 +877,27 @@ document.addEventListener('touchend', () => {
 // ========================================
 
 function initMobile() {
-    const userName = document.getElementById('mobileUserName');
-    if (userName && state?.currentUser?.name) {
-        userName.textContent = state.currentUser.name;
+    // Set avatar initial
+    const avatarInitial = document.getElementById('mobileAvatarInitial');
+    if (avatarInitial && state?.currentUser?.name) {
+        avatarInitial.textContent = state.currentUser.name.charAt(0).toUpperCase();
+    }
+
+    // Avatar click opens profile
+    const avatarBtn = document.getElementById('mobileAvatarBtn');
+    if (avatarBtn) {
+        avatarBtn.addEventListener('click', () => {
+            const profileModal = document.getElementById('profileModal');
+            if (profileModal) profileModal.classList.remove('hidden');
+        });
+    }
+
+    // Notification bell - same as profile for now
+    const notifBtn = document.getElementById('mobileNotifBtn');
+    if (notifBtn) {
+        notifBtn.addEventListener('click', () => {
+            mobileGoTo('promo');
+        });
     }
 
     // Mostrar opciones de super admin
@@ -891,6 +911,16 @@ if (window.innerWidth <= 768) {
     document.addEventListener('DOMContentLoaded', initMobile);
 }
 
+/**
+ * Actualizar dot de notificación en bottom nav (Promo) y header bell
+ */
+function updatePromoNotifDot(hasPending) {
+    const promoDot = document.getElementById('promoNotifDot');
+    const headerDot = document.getElementById('headerNotifDot');
+    if (promoDot) promoDot.classList.toggle('visible', hasPending);
+    if (headerDot) headerDot.classList.toggle('visible', hasPending);
+}
+
 // Expose functions globally
 window.mobileGoTo = mobileGoTo;
 window.goBack = goBack;
@@ -899,6 +929,7 @@ window.openExtrasPanel = openExtrasPanel;
 window.closeExtrasPanel = closeExtrasPanel;
 window.handleLogout = handleLogout;
 window.initMobile = initMobile;
+window.updatePromoNotifDot = updatePromoNotifDot;
 // ========== EXPORTAR A EXCEL ==========
 // ========== EXPORTAR REPORTE COMPLETO DE MÉTRICAS ==========
 function exportMetricsReport() {
