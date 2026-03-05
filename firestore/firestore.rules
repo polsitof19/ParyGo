@@ -52,7 +52,10 @@ service cloud.firestore {
     // Marcas: lectura pública (necesario para portal cliente y subdominios)
     match /brands/{brandId} {
       allow read: if true;
-      allow create, update, delete: if isAdminOrSuper();
+      allow create, update, delete: if isSuperAdmin() ||
+                                       (isBrandAdmin() &&
+                                        brandId in
+                                        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.allowed_brands);
     }
 
     // Companies: lectura pública (compatibilidad con portal cliente)
@@ -200,8 +203,11 @@ service cloud.firestore {
       // Leer: solo admins y staff
       allow read: if isAdminOrSuper() || isStaff();
 
-      // Crear: público (reclamar.html no usa Firebase Auth)
-      allow create: if true;
+      // Crear: público con validación de esquema
+      allow create: if request.resource.data.keys().hasAll(['event_id', 'code']) &&
+                       request.resource.data.event_id is string &&
+                       request.resource.data.code is string &&
+                       request.resource.data.code.size() < 100;
 
       // Actualizar/eliminar: solo admins
       allow update, delete: if isAdminOrSuper();
@@ -275,9 +281,10 @@ service cloud.firestore {
       // Lectura: admins, staff, y usuarios autenticados (para canjear códigos desde cliente.html)
       allow read: if isAdminOrSuper() || isStaff() || isAuthenticated();
 
-      // Crear: promotores autenticados (solo sus propios códigos)
+      // Crear: promotores autenticados (solo sus propios códigos, campos restringidos)
       allow create: if isStaff() &&
-                       request.resource.data.promoter_id == request.auth.uid;
+                       request.resource.data.promoter_id == request.auth.uid &&
+                       !request.resource.data.keys().hasAny(['approved_at', 'approved_by']);
 
       // SEC-1 FIX: Solo admins pueden aprobar pagos (status APPROVED, approved_at, approved_by)
       // Promotores pueden actualizar sus propios códigos pero NO aprobar

@@ -1011,3 +1011,24 @@ export async function rejectPayment(codeId) {
         toast("Error al rechazar pago", "error");
     }
 }
+
+/**
+ * R-TR2/TR5: Limpiar listeners de stock, pagos y promotores
+ */
+export function cleanupCodesListeners() {
+    if (stockUnsubscribe) {
+        stockUnsubscribe();
+        state.activeListeners = state.activeListeners.filter(fn => fn !== stockUnsubscribe);
+        stockUnsubscribe = null;
+    }
+    if (paymentsUnsubscribe) {
+        paymentsUnsubscribe();
+        state.activeListeners = state.activeListeners.filter(fn => fn !== paymentsUnsubscribe);
+        paymentsUnsubscribe = null;
+    }
+    if (promotersUnsubscribe) {
+        promotersUnsubscribe();
+        state.activeListeners = state.activeListeners.filter(fn => fn !== promotersUnsubscribe);
+        promotersUnsubscribe = null;
+    }
+}

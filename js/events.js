@@ -526,7 +526,7 @@ export async function saveEvent() {
         time: getTimeFromSelects(),
         venue: document.getElementById("ev_venue").value || "",
         company_id: state.currentUser.companyId || "",
-        brand_id: brandId || state.activeBrandId || state.currentUser.companyId || "",
+        brand_id: brandId || state.activeBrandId || state.currentUser.companyId || state.currentUser.allowed_brands?.[0] || "",
         image: state.tempImgBase64 || "",
         payment_config: paymentConfig,
         incentives: incentives,
@@ -622,7 +622,8 @@ export async function deleteEvent() {
             { name: "purchases", field: "event_id" },
             { name: "sales", field: "event_id" },
             { name: "accesos", field: "event_id" },
-            { name: "accesses", field: "event_id" }
+            { name: "accesses", field: "event_id" },
+            { name: "rewards", field: "event_id" }
         ];
 
         // R18 FIX: Paginar eliminación en cascada con limit para no cargar todo en memoria

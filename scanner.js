@@ -578,6 +578,7 @@ async function stopScanner() {
 }
 
 async function switchCamera() {
+    const previousCamera = state.currentCamera;
     try {
         await stopScanner();
         state.currentCamera = state.currentCamera === 'environment' ? 'user' : 'environment';
@@ -585,6 +586,8 @@ async function switchCamera() {
         showToast(`Cámara ${state.currentCamera === 'environment' ? 'trasera' : 'frontal'}`, 'success');
     } catch (error) {
         logger.error('Error cambiando cámara:', error);
+        state.currentCamera = previousCamera;
+        try { await startScanner(); } catch (_) {}
         showToast('Error al cambiar cámara', 'error');
     }
 }
@@ -721,7 +724,7 @@ async function validateCode(code) {
         // Datos del cliente
         const clientName = ticketData.client_name || ticketData.claimed_by?.name || 'Invitado';
         const clientDni = ticketData.client_dni || ticketData.claimed_by?.dni || '-';
-        const ticketType = ticketData.ticket_name || 'General';
+        const ticketType = ticketData.ticket_type || ticketData.ticket_name || 'General';
         const promoterName = ticketData.promoter_name || '-';
 
         const clientData = {
@@ -943,6 +946,13 @@ async function approveEntry() {
 }
 
 function rejectEntry() {
+    // R-S5: Registrar rechazo en historial
+    if (pendingTicketCode) {
+        addToHistory(pendingTicketCode, 'rejected', 'Rechazado por scanner');
+        state.stats.rejected = (state.stats.rejected || 0) + 1;
+        state.stats.total++;
+        updateStats();
+    }
     pendingTicketId = null;
     pendingTicketCode = null;
     pendingTicketCodeUpper = null;
@@ -1021,7 +1031,7 @@ function updateStats() {
 }
 
 function resetStats() {
-    state.stats = { success: 0, duplicate: 0, total: 0 };
+    state.stats = { success: 0, duplicate: 0, total: 0, rejected: 0 };
     state.history = [];
     updateStats();
     renderHistory();

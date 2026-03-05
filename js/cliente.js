@@ -192,7 +192,7 @@ function detectBrandSlug() {
     // Producción: subdominio.parygo.com
     if (hostname.includes('.parygo.com') || hostname.includes('.parygo.')) {
         const parts = hostname.split('.');
-        if (parts.length >= 3) {
+        if (parts.length >= 3 && parts[0] !== 'www') {
             return parts[0].toLowerCase();
         }
     }
@@ -202,12 +202,6 @@ function detectBrandSlug() {
     const brandParam = params.get('brand') || params.get('marca');
     if (brandParam) {
         return brandParam.toLowerCase();
-    }
-
-    // Fallback: primer segmento del path
-    const pathSlug = window.location.pathname.split('/').filter(p => p)[0];
-    if (pathSlug && pathSlug !== 'cliente.html') {
-        return pathSlug.toLowerCase();
     }
 
     return null;
@@ -861,12 +855,13 @@ async function handleRegister() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> CREANDO CUENTA...';
 
+    let cred = null;
     try {
         // Activar flag para evitar que onAuthStateChanged haga signOut
         isRegistering = true;
 
         // 1. Crear usuario en Firebase Auth
-        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        cred = await createUserWithEmailAndPassword(auth, email, password);
         currentUser = cred.user;
 
         // 2. Crear documento con ID compuesto (soporte multi-marca)
@@ -897,6 +892,17 @@ async function handleRegister() {
 
     } catch (e) {
         logger.error("Error en registro:", e);
+
+        // R-CL2: Si Auth se creó pero Firestore falló, eliminar el usuario zombie
+        if (cred?.user && e.code !== 'auth/email-already-in-use' && e.code !== 'auth/weak-password' && e.code !== 'auth/invalid-email') {
+            try {
+                await cred.user.delete();
+                logger.warn("Usuario zombie eliminado tras fallo de Firestore");
+            } catch (delErr) {
+                logger.error("No se pudo eliminar usuario zombie:", delErr);
+            }
+            currentUser = null;
+        }
 
         let errorMsg = "Error al crear cuenta";
         if (e.code === 'auth/email-already-in-use') {
@@ -1043,6 +1049,7 @@ function mergeAndRenderClientEvents() {
     eventsSnap2.forEach(e => map.set(e.id, e));
 
     allEvents = Array.from(map.values())
+        .filter(e => e.status !== 'FINISHED')
         .sort((a, b) => new Date(a.date) - new Date(b.date));
 
     const container = document.getElementById("events_list");
@@ -1746,7 +1753,8 @@ function openFreeTicketModal(ticketIndex) {
 }
 
 function changeFreeQty(delta) {
-    freeTicketState.quantity = Math.max(1, Math.min(10, freeTicketState.quantity + delta));
+    const maxPerPerson = freeTicketState.ticketType?.max_per_person || 10;
+    freeTicketState.quantity = Math.max(1, Math.min(maxPerPerson, freeTicketState.quantity + delta));
     document.getElementById("free_qty").textContent = freeTicketState.quantity;
 }
 

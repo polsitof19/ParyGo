@@ -261,7 +261,7 @@ exports.generateShareToken = functions.https.onCall(async (data, context) => {
     }
 
     // Generar nuevo token
-    const crypto = require('crypto');
+    // crypto ya importado a nivel de módulo
     const token = crypto.randomUUID();
 
     await dbAdmin.collection("tickets").doc(ticketId).update({
@@ -420,7 +420,7 @@ exports.claimCode = functions.https.onCall(async (data, context) => {
     const now = new Date().toISOString();
 
     // Generar QR token
-    const crypto = require('crypto');
+    // crypto ya importado a nivel de módulo
     const qrToken = `TKT${crypto.randomUUID().replace(/-/g, '').toUpperCase()}`;
 
     const collectionName = source === 'promotorCodes' ? 'promotorCodes' :
@@ -474,9 +474,12 @@ exports.claimCode = functions.https.onCall(async (data, context) => {
                     current_uses: newUses,
                     status: newUses >= maxUses ? 'EXHAUSTED' : 'ACTIVE',
                     last_claimed_at: now,
-                    client_name: fullName, client_dni: dni,
-                    client_email: email, client_phone: phone,
-                    id_type: idType || 'DNI', qr_token: qrToken
+                    last_client_name: fullName, last_client_dni: dni,
+                    id_type: idType || 'DNI', qr_token: qrToken,
+                    claimers: admin.firestore.FieldValue.arrayUnion({
+                        name: fullName, dni, email, phone,
+                        claimed_at: now
+                    })
                 });
             }
         }

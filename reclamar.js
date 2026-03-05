@@ -684,7 +684,22 @@ async function downloadTicket() {
         // Dibujar botón redondeado
         ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.roundRect(btnX, btnY, btnWidth, btnHeight, 12);
+        if (ctx.roundRect) {
+            ctx.roundRect(btnX, btnY, btnWidth, btnHeight, 12);
+        } else {
+            // Polyfill for browsers without roundRect
+            const r = 12;
+            ctx.moveTo(btnX + r, btnY);
+            ctx.lineTo(btnX + btnWidth - r, btnY);
+            ctx.quadraticCurveTo(btnX + btnWidth, btnY, btnX + btnWidth, btnY + r);
+            ctx.lineTo(btnX + btnWidth, btnY + btnHeight - r);
+            ctx.quadraticCurveTo(btnX + btnWidth, btnY + btnHeight, btnX + btnWidth - r, btnY + btnHeight);
+            ctx.lineTo(btnX + r, btnY + btnHeight);
+            ctx.quadraticCurveTo(btnX, btnY + btnHeight, btnX, btnY + btnHeight - r);
+            ctx.lineTo(btnX, btnY + r);
+            ctx.quadraticCurveTo(btnX, btnY, btnX + r, btnY);
+            ctx.closePath();
+        }
         ctx.fill();
         
         // Texto del tipo de entrada
@@ -777,9 +792,8 @@ function sendToWhatsApp() {
     const code = state.code || '';
     const phone = state.userData.phone || '';
 
-    // Build ticket URL for re-access
-    const baseUrl = window.location.origin + window.location.pathname;
-    const ticketURL = `${baseUrl}?code=${encodeURIComponent(code)}`;
+    // Build ticket URL - link to event portal (preserves brand subdomain)
+    const ticketURL = window.location.origin;
 
     const message = `🎉 ¡Tu entrada para ${eventName}!\n\n${dateTime ? '📅 ' + dateTime + '\n' : ''}${venue ? venue + '\n' : ''}🎫 ${ticketType}\n🔑 Codigo: ${code}\n\n👉 Ver tu entrada: ${ticketURL}`;
 

@@ -575,7 +575,7 @@ function processDashboardData() {
     document.getElementById("stat_comision").textContent = `S/. ${totalComision.toFixed(2)}`;
 
     // BUG-4 + R15 FIX: Excluir códigos REJECTED y CANCELLED del cálculo de cuota
-    const validStatuses = ['PENDING', 'APPROVED', 'ACTIVE', 'CLAIMED', 'SCANNED', 'USED'];
+    const validStatuses = ['PENDING', 'APPROVED', 'ACTIVE', 'CLAIMED', 'SCANNED', 'USED', 'FREE'];
     const validOldCodes = myCodes.filter(c => validStatuses.includes(c.status));
     const validNewCodes = myPromotorCodes.filter(c => validStatuses.includes(c.status));
     const totalAssigned = myQuotas.reduce((sum, q) => sum + (q.assigned || 0), 0);
@@ -619,9 +619,10 @@ function renderGoals(totalGratis) {
     const tickets = currentEvent.tickets || [];
     const allGoals = [];
     tickets.forEach(tk => {
-        if (tk.freeGoals && tk.freeGoals.length > 0) {
-            tk.freeGoals.forEach(g => {
-                allGoals.push({ ...g, ticketName: tk.name });
+        const goals = (tk.freeGoals?.length ? tk.freeGoals : null) || tk.promoter_goals || [];
+        if (goals.length > 0) {
+            goals.forEach(g => {
+                allGoals.push({ ...g, target: g.target || tk.promoter_goal || 0, ticketName: tk.name });
             });
         }
     });
@@ -699,6 +700,7 @@ function renderSellTickets(tickets) {
 
         // Verificar si hay configuración de pago
         const hasPayment = currentEvent.payment_config?.active === true;
+        const needsPaymentWarning = !hasPayment && Number(tk.price) > 0;
 
         return `
             <div class="ticket-action-card">
@@ -706,6 +708,7 @@ function renderSellTickets(tickets) {
                     <div class="ticket-action-info">
                         <span class="ticket-action-name">${escapeHtml(tk.name)} · S/. ${Number(tk.price).toFixed(2)}</span>
                         ${commText ? `<span class="ticket-action-commission">Tu comisión: ${commText}</span>` : ''}
+                        ${needsPaymentWarning ? `<span class="ticket-action-warning" style="color:#f59e0b;font-size:11px;">⚠ Pago no configurado - contacta al admin</span>` : ''}
                     </div>
                     ${hasPayment
                         ? `<button class="btn-action-buy" onclick="openBuyModal('${escapeHtml(tk.id)}')"><i class="fa-solid fa-shopping-cart"></i> Comprar</button>`
@@ -806,7 +809,7 @@ function renderCodesList() {
         const typeLabel = c.type === 'sell' ? '💰 Venta' : c.type === 'free' ? '🎁 Gratis' : '';
 
         // Determinar si se puede copiar/compartir
-        const canShare = c.status === 'APPROVED' || c.status === 'FREE' || c.status === 'CLAIMED' || c.status === 'SCANNED' || !c.status;
+        const canShare = c.status === 'APPROVED' || c.status === 'FREE' || !c.status;
 
         return `
             <div class="code-card ${statusInfo.class}">
@@ -1108,7 +1111,7 @@ window.showHistoryView = () => {
     fillTicketDropdown();
 
     // BUG-4 + R15 FIX: Excluir códigos REJECTED y CANCELLED del cálculo de cuota
-    const validStatuses = ['PENDING', 'APPROVED', 'ACTIVE', 'CLAIMED', 'SCANNED', 'USED'];
+    const validStatuses = ['PENDING', 'APPROVED', 'ACTIVE', 'CLAIMED', 'SCANNED', 'USED', 'FREE'];
     const validOldCodes = myCodes.filter(c => validStatuses.includes(c.status));
     const validNewCodes = myPromotorCodes.filter(c => validStatuses.includes(c.status));
     const totalAssigned = myQuotas.reduce((sum, q) => sum + (q.assigned || 0), 0);
@@ -1220,6 +1223,10 @@ function getCodeStatusInfo(status) {
             return { class: 'status-claimed', icon: '🎫', text: 'Canjeado' };
         case 'SCANNED':
             return { class: 'status-scanned', icon: '✓', text: 'Escaneado' };
+        case 'REJECTED':
+            return { class: 'status-rejected', icon: '❌', text: 'Rechazado' };
+        case 'CANCELLED':
+            return { class: 'status-cancelled', icon: '🚫', text: 'Cancelado' };
         default:
             return { class: 'status-free', icon: '⚪', text: 'Libre' };
     }

@@ -93,7 +93,8 @@ import {
     downloadCodesAsTxt,
     loadPendingPayments,
     approvePayment,
-    rejectPayment
+    rejectPayment,
+    cleanupCodesListeners
 } from './codes.js';
 import {
     loadEventMetrics,
@@ -176,7 +177,7 @@ window.doLogout = doLogout;
 window.loadEvents = loadEvents;
 window.filterByBrand = filterEvents;
 window.showGlobalEvents = showGlobalEvents;
-window.backToEvents = backToEvents;
+window.backToEvents = () => { cleanupCodesListeners(); backToEvents(); };
 window.openEventDetail = openEventDetail;
 window.openEventModal = openEventModal;
 window.editCurrentEvent = editCurrentEvent;
@@ -407,7 +408,7 @@ function setupGlobalEventListeners() {
     document.getElementById('btnDeleteEvent')?.addEventListener('click', deleteEvent);
     
     // VOLVER A EVENTOS
-    document.getElementById('btnBackEvents')?.addEventListener('click', backToEvents);
+    document.getElementById('btnBackEvents')?.addEventListener('click', () => window.backToEvents());
     
     // CERRAR MODALES - Clicks en overlay
     document.querySelectorAll('.modal').forEach(modal => {
