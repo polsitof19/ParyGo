@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /cliente.html
+Allow: /reclamar.html
+Allow: /ticket.html
+Allow: /public.html
+Disallow: /index.html
+Disallow: /scanner.html
+Disallow: /promotor.html
+Disallow: /create-admin.html
+Disallow: /migrate-admin.html
+Disallow: /migrate-promoter.html
+Disallow: /js/
+Disallow: /functions/
+Disallow: /firestore/

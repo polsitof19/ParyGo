@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="robots" content="noindex, nofollow">
     <title>ParyGo | Promotor</title>
     <link rel="icon" type="image/png" href="assets/logos/logo.png">
     <link rel="apple-touch-icon" href="assets/logos/logo.png">
@@ -50,59 +51,12 @@
             </div>
             
             <div class="login-footer">
-                <p>¿No tienes cuenta? <span onclick="showRegister()">Regístrate aquí</span></p>
+                <p>¿No tienes cuenta? Contacta al administrador</p>
             </div>
         </div>
     </div>
 
-    <!-- ============ REGISTRO ============ -->
-    <div id="registerView" class="view hidden">
-        <div class="login-container">
-            <button class="btn-back" onclick="showLogin()">
-                <i class="fa-solid fa-arrow-left"></i>
-            </button>
-            
-            <h2 class="register-title">Únete al Equipo</h2>
-            <p class="register-subtitle">Empieza a ganar comisiones hoy</p>
-
-            <div id="reg_step1" class="register-step">
-                <label class="input-label">Tu DNI</label>
-                <div class="dni-input-row">
-                    <div class="input-group flex-1">
-                        <i class="fa-solid fa-id-card"></i>
-                        <input id="reg_dni" type="tel" maxlength="8" placeholder="8 dígitos">
-                    </div>
-                    <button class="btn-icon" id="btnCheckDni">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div id="reg_step2" class="register-step hidden">
-                <div class="input-group">
-                    <i class="fa-solid fa-user"></i>
-                    <input id="reg_name" placeholder="Nombre completo" readonly>
-                </div>
-                <div class="input-group">
-                    <i class="fa-solid fa-envelope"></i>
-                    <input id="reg_email" type="email" placeholder="Correo electrónico">
-                </div>
-                <div class="input-group">
-                    <i class="fa-solid fa-phone"></i>
-                    <input id="reg_phone" type="tel" maxlength="9" placeholder="Celular (WhatsApp)">
-                </div>
-                <div class="input-group">
-                    <i class="fa-solid fa-lock"></i>
-                    <input id="reg_pass" type="password" placeholder="Crea una contraseña">
-                </div>
-                
-                <button class="btn-primary" id="btnRegister">
-                    <span>CREAR CUENTA</span>
-                    <i class="fa-solid fa-check"></i>
-                </button>
-            </div>
-        </div>
-    </div>
+    <!-- ============ REGISTRO (deshabilitado - solo admin puede crear promotores) ============ -->
 
     <!-- ============ SELECTOR DE MARCA ============ -->
     <div id="brandView" class="view hidden">
