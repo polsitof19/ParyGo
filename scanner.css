@@ -1412,3 +1412,19 @@ button, .btn, [class*="btn-"] { font-weight: 600; letter-spacing: 0.3px; }
         font-size: 20px;
     }
 }
+
+/* Safe area + mobile fixes */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .result-actions {
+        padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    }
+    .scanner-container {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+}
+
+@media (max-width: 480px) {
+    input, select { font-size: 16px; }
+    .btn-approve, .btn-reject { min-height: 52px; }
+    img { max-width: 100%; height: auto; }
+}

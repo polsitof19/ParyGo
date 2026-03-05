@@ -499,7 +499,7 @@ button, .btn, [class*="btn-"] { font-weight: 600; letter-spacing: 0.3px; }
 /* ========== TOAST ========== */
 .toast-container {
     position: fixed;
-    bottom: 30px;
+    bottom: calc(30px + env(safe-area-inset-bottom));
     left: 50%;
     transform: translateX(-50%);
     z-index: 9999;
@@ -536,48 +536,90 @@ button, .btn, [class*="btn-"] { font-weight: 600; letter-spacing: 0.3px; }
 /* ========== RESPONSIVE ========== */
 @media (max-width: 480px) {
     .screen {
-        padding: 30px 20px;
+        padding: 20px 16px;
+        padding-bottom: calc(20px + env(safe-area-inset-bottom));
     }
-    
+
     .logo-container {
-        margin-bottom: 40px;
+        margin-bottom: 30px;
     }
-    
+
     .brand-logo {
-        height: 55px;
+        height: 50px;
     }
-    
+
     .form-card {
         padding: 24px 20px;
         border-radius: 20px;
     }
-    
+
     .input-group input,
     .input-group select {
         padding: 14px 16px;
         border-radius: 12px;
     }
-    
+
     .btn-primary {
         padding: 14px 24px;
         border-radius: 12px;
+        min-height: 48px;
     }
-    
+
+    .btn-back {
+        min-height: 48px;
+        min-width: 48px;
+    }
+
     .ticket-card {
         border-radius: 20px;
     }
-    
+
     .ticket-top {
-        padding: 28px 24px;
+        padding: 20px 20px;
     }
-    
+
     .ticket-bottom {
-        padding: 24px;
+        padding: 20px;
     }
-    
+
+    .ticket-bottom h2 {
+        font-size: 17px;
+        margin-bottom: 8px;
+    }
+
     .ticket-type-big {
-        font-size: 16px;
-        padding: 10px 24px;
+        font-size: 15px;
+        padding: 10px 20px;
+    }
+
+    .ticket-divider-small {
+        margin: 12px 0;
+    }
+
+    .ticket-actions-row {
+        margin-top: 14px;
+    }
+
+    .btn-download,
+    .btn-whatsapp {
+        padding: 12px 14px;
+        font-size: 13px;
+        min-height: 48px;
+    }
+
+    .qr-container {
+        padding: 12px;
+    }
+
+    /* QR mínimo 200x200 */
+    #qrCanvas {
+        min-width: 200px;
+        min-height: 200px;
+    }
+
+    .success-msg {
+        margin-top: 14px;
+        padding: 12px 16px;
     }
 }
 

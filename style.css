@@ -126,7 +126,7 @@ button, .btn, [class*="btn-"] { font-weight: 600; letter-spacing: 0.3px; }
 .btn-icon:hover { background: rgba(255,255,255,0.1); }
 
 /* INPUTS */
-input, select, textarea { width: 100%; padding: 14px 16px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: inherit; font-size: 14px; transition: var(--transition); }
+input, select, textarea { width: 100%; padding: 14px 16px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: inherit; font-size: 16px; transition: var(--transition); }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(244,63,94,0.15); }
 input::placeholder, textarea::placeholder { color: var(--text-muted); }
 select { cursor: pointer; }
@@ -3423,4 +3423,41 @@ select option:hover {
     padding: 6px 12px;
     font-size: 12px;
     border-radius: 6px;
+}
+
+/* ==========================================
+   MOBILE RESPONSIVE FIXES
+   ========================================== */
+@media (max-width: 768px) {
+    /* Tipografia mobile */
+    .event-info h1 { font-size: 22px; }
+    h2, .modal-content h2 { font-size: 18px; }
+
+    /* Hero del evento: stack vertical */
+    .hero-content { flex-direction: column; align-items: flex-start; gap: 16px; }
+    .event-poster { width: 120px; height: 160px; }
+    .event-hero { height: auto; min-height: 280px; }
+    .hero-actions { flex-direction: column; width: 100%; }
+    .hero-actions .btn { width: 100%; justify-content: center; }
+    .event-meta { flex-wrap: wrap; gap: 12px; }
+
+    /* Tabs: scroll horizontal sin scrollbar */
+    .tabs-nav { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .tabs-nav::-webkit-scrollbar { display: none; }
+    .sub-tab { flex: none; }
+
+    /* Tablas: scroll horizontal */
+    .data-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    /* Modal safe area */
+    .modal-content {
+        max-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 40px);
+        padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Touch targets minimos */
+    .btn, button, .nav-item, .sub-tab { min-height: 44px; }
+
+    /* Imagenes responsive */
+    img { max-width: 100%; height: auto; }
 }

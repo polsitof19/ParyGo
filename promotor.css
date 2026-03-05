@@ -1819,3 +1819,28 @@ button, .btn, [class*="btn-"] { font-weight: 600; letter-spacing: 0.3px; }
 .claimed-card.scanned {
     opacity: 0.7;
 }
+
+/* ==========================================
+   MOBILE FIXES - Safe area, input zoom, touch
+   ========================================== */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .fab {
+        bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    }
+    .modal-content {
+        padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+@media (max-width: 768px) {
+    h1 { font-size: 22px; }
+    h2 { font-size: 18px; }
+    select, .form-group select { font-size: 16px; }
+    .btn, button { min-height: 44px; }
+    .modal-content {
+        max-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 40px);
+    }
+    img { max-width: 100%; height: auto; }
+    .stats-row { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; scrollbar-width: none; }
+    .stats-row::-webkit-scrollbar { display: none; }
+}

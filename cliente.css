@@ -689,12 +689,13 @@ input, select, textarea {
     border-radius: var(--radius) var(--radius) 0 0;
     width: 100%;
     max-width: 500px;
-    max-height: 90vh;
+    max-height: calc(90vh - var(--safe-area-bottom));
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     animation: slideUp var(--duration-slow) var(--ease-out);
     box-shadow: var(--shadow-xl);
+    padding-bottom: var(--safe-area-bottom);
 }
 
 .modal-large {
