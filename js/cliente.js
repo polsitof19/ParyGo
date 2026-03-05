@@ -597,16 +597,15 @@ async function searchDocument() {
             };
 
             document.getElementById("login_user_name").textContent = `${foundUserData.name} ${foundUserData.lastname} (cuenta existente)`;
-                existingUserNeedsProfile = true;
-                showAuthStep(3);
+            existingUserNeedsProfile = true;
+            showAuthStep(3);
+        } else {
+            // Usuario completamente nuevo → Registro
+            if (selectedDocType === 'DNI') {
+                await searchRENIEC(docNumber);
             } else {
-                // Usuario completamente nuevo → Registro
-                if (selectedDocType === 'DNI') {
-                    await searchRENIEC(docNumber);
-                } else {
-                    clearRegisterFields();
-                    showAuthStep(2);
-                }
+                clearRegisterFields();
+                showAuthStep(2);
             }
         }
     } catch (e) {
