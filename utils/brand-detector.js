@@ -73,7 +73,7 @@ export async function loadBrandBySlug(slug) {
 
         return null;
     } catch (e) {
-        console.error("Error cargando marca por slug:", e);
+        // Silently return null - brand not found is an expected scenario
         return null;
     }
 }
