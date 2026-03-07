@@ -14,6 +14,8 @@ let eventsUnsubscribe = null;
 let lastEventDoc = null;
 let hasMoreEvents = true;
 let isLoadingMore = false;
+// Cache for mini stats (mobile)
+const miniStatsCache = new Map();
 
 /**
  * Procesar snapshot de eventos y actualizar estado + UI
@@ -199,34 +201,76 @@ export function renderEvents() {
         return;
     }
 
+    // Detectar mobile (match CSS @media max-width: 768px)
+    const isMobile = window.innerWidth <= 768;
+
     // Renderizar eventos
-    grid.innerHTML = filtered.map(e => {
-        const brand = state.allBrands.find(b => b.id === e.brand_id);
-        const brandName = brand ? Validator.sanitizeHTML(brand.name) : 'Global';
-        
-        return `
-    <div class="card ${e.status === 'PAUSED' ? 'is-paused' : e.status === 'FINISHED' ? 'is-finished' : ''}" data-event-id="${e.id}">
-        ${getEventStatusBadge(e.status)}
-        <img class="card-img" 
-             src="${e.image || ''}" 
-             onerror="this.style.background='#222'; this.style.display='block';"
-             alt="${Validator.sanitizeHTML(e.name)}">
-        <div class="card-badge">${brandName}</div>
-        <div class="card-body">
-            <h3>${Validator.sanitizeHTML(e.name)}</h3>
-            <p>${e.date || 'Fecha TBA'} • ${Validator.sanitizeHTML(e.venue || 'Lugar TBA')}</p>
+    if (isMobile) {
+        grid.classList.add('mobile-cards-grid');
+        grid.innerHTML = filtered.map(e => {
+            const statusPill = getMobileStatusPill(e.status);
+            const cached = miniStatsCache.get(e.id);
+            const ticketCount = cached?.ticketCount || 0;
+            const pendingCount = cached?.pendingCount || 0;
+
+            return `
+        <div class="event-card-mobile" data-event-id="${e.id}">
+            <div class="card-img-wrapper">
+                <img class="card-img"
+                     src="${e.image || ''}"
+                     onerror="this.style.background='#222'; this.style.display='block';"
+                     alt="${Validator.sanitizeHTML(e.name)}">
+                ${statusPill}
+            </div>
+            <div class="card-body">
+                <h3>${Validator.sanitizeHTML(e.name)}</h3>
+                <div class="mini-stats">
+                    <span class="mini-stat"><i class="fa-solid fa-ticket"></i> <span class="num">${ticketCount}</span> entradas</span>
+                    <span class="mini-stat"><i class="fa-solid fa-clock"></i> <span class="num">${pendingCount}</span> pendientes</span>
+                </div>
+                <div class="card-meta">
+                    <i class="fa-regular fa-calendar"></i> ${e.date || 'Fecha TBA'} &bull; ${Validator.sanitizeHTML(e.venue || 'Lugar TBA')}
+                </div>
+            </div>
         </div>
-    </div>
-`;
-    }).join("");
-    
-    // Event listeners
-    grid.querySelectorAll('.card').forEach(card => {
+    `;
+        }).join("");
+    } else {
+        grid.classList.remove('mobile-cards-grid');
+        grid.innerHTML = filtered.map(e => {
+            const brand = state.allBrands.find(b => b.id === e.brand_id);
+            const brandName = brand ? Validator.sanitizeHTML(brand.name) : 'Global';
+
+            return `
+        <div class="card ${e.status === 'PAUSED' ? 'is-paused' : e.status === 'FINISHED' ? 'is-finished' : ''}" data-event-id="${e.id}">
+            ${getEventStatusBadge(e.status)}
+            <img class="card-img"
+                 src="${e.image || ''}"
+                 onerror="this.style.background='#222'; this.style.display='block';"
+                 alt="${Validator.sanitizeHTML(e.name)}">
+            <div class="card-badge">${brandName}</div>
+            <div class="card-body">
+                <h3>${Validator.sanitizeHTML(e.name)}</h3>
+                <p>${e.date || 'Fecha TBA'} • ${Validator.sanitizeHTML(e.venue || 'Lugar TBA')}</p>
+            </div>
+        </div>
+    `;
+        }).join("");
+    }
+
+    // Event listeners (both mobile and desktop cards)
+    const cardSelector = isMobile ? '.event-card-mobile' : '.card';
+    grid.querySelectorAll(cardSelector).forEach(card => {
         card.addEventListener('click', function() {
             const eventId = this.getAttribute('data-event-id');
             if (eventId) openEventDetail(eventId);
         });
     });
+
+    // Fetch mini stats for mobile cards (async, non-blocking)
+    if (isMobile && filtered.length > 0) {
+        fetchMiniStats(filtered);
+    }
 
     // Botón "Cargar más" si hay más eventos
     const existingBtn = document.getElementById('loadMoreEventsBtn');
@@ -255,12 +299,15 @@ export function filterEvents(brandId) {
     state.activeBrandId = brandId;
     renderEvents();
     switchView('view_events');
-    
+
     // Actualizar sidebar
     document.querySelectorAll('.brand-item').forEach(i => i.classList.remove('active'));
     document.querySelector(`[data-brand-id="${brandId}"]`)?.classList.add('active');
     document.getElementById('nav_events')?.classList.remove('active');
-    
+
+    // Sync mobile brand chips
+    syncMobileBrandChips(brandId);
+
     // Mostrar botones de marca en el header
     if (window.updateBrandHeaderActions) {
         window.updateBrandHeaderActions(brandId);
@@ -275,15 +322,28 @@ export function showGlobalEvents() {
     state.activeBrandId = null;
     renderEvents();
     switchView('view_events');
-    
+
     // Actualizar sidebar
     document.querySelectorAll('.brand-item').forEach(i => i.classList.remove('active'));
     document.getElementById('nav_events')?.classList.add('active');
-    
+
+    // Sync mobile brand chips
+    syncMobileBrandChips('ALL');
+
     // Ocultar botones de marca en el header
     if (window.updateBrandHeaderActions) {
         window.updateBrandHeaderActions(null);
     }
+}
+
+/**
+ * Sincronizar chips de marca mobile con filtro actual
+ */
+function syncMobileBrandChips(filter) {
+    const container = document.getElementById('mobileBrandSelector');
+    if (!container) return;
+    container.querySelectorAll('.brand-chip').forEach(c => c.classList.remove('active'));
+    container.querySelector(`[data-brand-filter="${filter}"]`)?.classList.add('active');
 }
 
 /**
@@ -714,6 +774,58 @@ function canEditEvent(event) {
     
     return false;
 }
+// ========== MOBILE STATUS PILL ==========
+function getMobileStatusPill(status) {
+    switch(status) {
+        case 'ACTIVE':
+            return '<div class="status-pill active"><span class="pulse-dot"></span> Activo</div>';
+        case 'PAUSED':
+            return '<div class="status-pill paused">Pausado</div>';
+        case 'FINISHED':
+            return '<div class="status-pill finished">Finalizado</div>';
+        case 'DRAFT':
+            return '<div class="status-pill draft">Borrador</div>';
+        default:
+            return '<div class="status-pill active"><span class="pulse-dot"></span> Activo</div>';
+    }
+}
+
+/**
+ * Fetch ticket counts for mobile mini stats (non-blocking, parallel)
+ */
+async function fetchMiniStats(events) {
+    try {
+        const results = await Promise.all(events.map(async (event) => {
+            // Use cache if available
+            if (miniStatsCache.has(event.id)) {
+                return { eventId: event.id, ...miniStatsCache.get(event.id) };
+            }
+            const ticketsSnap = await getDocs(query(
+                collection(db, "tickets"),
+                where("event_id", "==", event.id),
+                limit(500)
+            ));
+            const tickets = ticketsSnap.docs.map(d => d.data());
+            const ticketCount = tickets.length;
+            const pendingCount = tickets.filter(t => t.status === 'PENDING').length;
+            miniStatsCache.set(event.id, { ticketCount, pendingCount });
+            return { eventId: event.id, ticketCount, pendingCount };
+        }));
+
+        // Batch update DOM
+        for (const r of results) {
+            const card = document.querySelector(`.event-card-mobile[data-event-id="${r.eventId}"]`);
+            if (card) {
+                const nums = card.querySelectorAll('.mini-stat .num');
+                if (nums[0]) nums[0].textContent = r.ticketCount;
+                if (nums[1]) nums[1].textContent = r.pendingCount;
+            }
+        }
+    } catch (e) {
+        logger.warn("Error fetching mini stats:", e);
+    }
+}
+
 // ========== ESTADO DE EVENTOS ==========
 function getEventStatusBadge(status) {
     switch(status) {

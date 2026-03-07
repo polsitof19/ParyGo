@@ -41,6 +41,8 @@ export async function loadBrandsWithLogos() {
 
         // Renderizar en sidebar
         renderBrandsSidebar(isGodMode);
+        // Renderizar selector mobile de marcas
+        renderMobileBrandSelector();
         
     } catch (error) {
         logger.error("Error cargando marcas:", error);
@@ -85,6 +87,45 @@ function renderBrandsSidebar(isGodMode) {
         });
     });
 }
+
+/**
+ * Renderizar selector horizontal de marcas en mobile
+ */
+function renderMobileBrandSelector() {
+    const container = document.getElementById("mobileBrandSelector");
+    if (!container) return;
+
+    const isAll = !state.currentFilter || state.currentFilter === 'ALL';
+    const chips = [`<div class="brand-chip ${isAll ? 'active' : ''}" data-brand-filter="ALL">Todos</div>`];
+    state.allBrands.forEach(b => {
+        const active = state.currentFilter === b.id ? 'active' : '';
+        chips.push(`<div class="brand-chip ${active}" data-brand-filter="${b.id}">${Validator.sanitizeHTML(b.name)}</div>`);
+    });
+    container.innerHTML = chips.join('');
+
+    // Event listeners
+    container.querySelectorAll('.brand-chip').forEach(chip => {
+        chip.addEventListener('click', function() {
+            const filter = this.getAttribute('data-brand-filter');
+            container.querySelectorAll('.brand-chip').forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+            if (filter === 'ALL') {
+                if (window.showGlobalEvents) window.showGlobalEvents();
+            } else {
+                if (window.filterByBrand) window.filterByBrand(filter);
+            }
+        });
+    });
+
+    // Add padding class to main content
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent && window.innerWidth < 768) {
+        mainContent.classList.add('has-brand-selector');
+    }
+}
+
+// Expose for external use
+window.renderMobileBrandSelector = renderMobileBrandSelector;
 
 // ==========================================
 // 2. CREAR MARCA

@@ -329,7 +329,8 @@ input[type="checkbox"] { width: auto; margin-right: 8px; }
 .pull-refresh,
 .fab-button,
 .extras-panel,
-.extras-overlay {
+.extras-overlay,
+.mobile-brand-selector {
     display: none;
 }
 
@@ -508,28 +509,201 @@ input[type="checkbox"] { width: auto; margin-right: 8px; }
     }
 
     /* FAB Button */
-    .fab-button {
+    .fab-button,
+    .mobile-fab {
         display: flex;
         align-items: center;
         justify-content: center;
         position: fixed;
-        bottom: calc(70px + env(safe-area-inset-bottom, 8px) + 16px);
+        bottom: calc(70px + env(safe-area-inset-bottom, 8px));
         right: 20px;
-        width: 56px;
-        height: 56px;
-        background: #ff4757;
+        width: 54px;
+        height: 54px;
+        background: var(--primary);
         border: none;
-        border-radius: 50%;
+        border-radius: 16px;
         color: #fff;
-        font-size: 24px;
-        box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+        font-size: 22px;
+        box-shadow: 0 8px 28px rgba(244,63,94,0.4);
         cursor: pointer;
-        z-index: 100;
+        z-index: 998;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
 
-    .fab-button:active {
-        transform: scale(0.95);
+    .fab-button:active,
+    .mobile-fab:active {
+        transform: scale(0.92);
+    }
+
+    /* Mobile Brand Selector */
+    .mobile-brand-selector {
+        display: flex;
+        gap: 8px;
+        padding: 0 50px 14px 20px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        position: fixed;
+        top: calc(56px + env(safe-area-inset-top, 0px));
+        left: 0;
+        right: 0;
+        background: var(--bg, #09090b);
+        z-index: 999;
+        padding-top: 10px;
+    }
+    .mobile-brand-selector::-webkit-scrollbar { display: none; }
+    .mobile-brand-selector::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 40px;
+        background: linear-gradient(to right, transparent, var(--bg, #09090b));
+        pointer-events: none;
+    }
+    .mobile-brand-selector .brand-chip {
+        flex-shrink: 0;
+        padding: 10px 18px;
+        min-height: 44px;
+        border-radius: 100px;
+        font-size: 13px;
+        font-weight: 600;
+        background: var(--bg-card, #18181b);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        cursor: pointer;
+        white-space: nowrap;
+        font-family: inherit;
+        display: flex;
+        align-items: center;
+    }
+    .mobile-brand-selector .brand-chip.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    /* Adjust main content padding when brand selector visible */
+    .main-content.has-brand-selector {
+        padding-top: calc(56px + env(safe-area-inset-top, 0px) + 50px) !important;
+    }
+
+    /* Hide brand selector when not in events view */
+    .mobile-brand-selector.hidden {
+        display: none !important;
+    }
+
+    /* Mobile Event Cards */
+    .event-card-mobile {
+        background: var(--bg-card, #141414);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    .event-card-mobile:active {
+        transform: scale(0.98);
+    }
+
+    .event-card-mobile .card-img-wrapper {
+        width: 100%;
+        height: 150px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .event-card-mobile .card-img {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        display: block;
+    }
+
+    .event-card-mobile .card-body {
+        padding: 14px 16px;
+    }
+
+    .event-card-mobile .card-body h3 {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: -0.2px;
+        margin-bottom: 8px;
+        line-height: 1.3;
+    }
+
+    .event-card-mobile .mini-stats {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+
+    .mini-stat {
+        font-size: 11px;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .mini-stat i { font-size: 10px; }
+    .mini-stat .num { font-weight: 700; color: var(--text); }
+
+    .event-card-mobile .card-meta {
+        font-size: 12px;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .status-pill {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 5px 12px;
+        border-radius: 100px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        backdrop-filter: blur(8px);
+    }
+    .status-pill.active {
+        background: rgba(34,197,94,0.2);
+        color: #22c55e;
+    }
+    .status-pill .pulse-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #22c55e;
+        animation: mobilePulse 2s infinite;
+    }
+    .status-pill.draft { background: rgba(255,255,255,0.1); color: var(--text-muted); }
+    .status-pill.paused { background: rgba(245,158,11,0.2); color: #f59e0b; }
+    .status-pill.finished { background: rgba(239,68,68,0.2); color: #ef4444; }
+
+    @keyframes mobilePulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.5); }
+    }
+
+    /* Events grid mobile override */
+    #eventsGrid.mobile-cards-grid {
+        display: flex !important;
+        flex-direction: column;
+        gap: 12px;
+        padding: 0;
+        padding-bottom: 80px;
+    }
+
+    /* Hide desktop cards in mobile when using mobile layout */
+    #eventsGrid.mobile-cards-grid > .card {
+        display: none;
     }
 
     /* Mobile Bottom Navigation */
@@ -704,11 +878,15 @@ input[type="checkbox"] { width: auto; margin-right: 8px; }
         min-width: 100%;
     }
 
-    /* View headers responsive */
+    /* View headers responsive - hide create button (FAB replaces it) */
     .view-header {
         flex-direction: column;
         align-items: flex-start !important;
         gap: 15px;
+    }
+
+    .view-header .header-actions {
+        display: none;
     }
 
     .view-header .btn {

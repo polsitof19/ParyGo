@@ -309,12 +309,32 @@ export function switchView(viewId) {
     const targetView = document.getElementById(viewId);
     if (targetView) {
         targetView.classList.remove('hidden');
-        
+
         // Scroll al inicio
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        
+
     } else {
         logger.error(`Vista no encontrada: ${viewId}`);
+    }
+
+    // Mobile: show/hide brand selector and FAB based on view
+    const brandSelector = document.getElementById('mobileBrandSelector');
+    const fab = document.getElementById('fabNewEvent');
+    if (brandSelector) {
+        if (viewId === 'view_events') {
+            brandSelector.classList.remove('hidden');
+            document.querySelector('.main-content')?.classList.add('has-brand-selector');
+        } else {
+            brandSelector.classList.add('hidden');
+            document.querySelector('.main-content')?.classList.remove('has-brand-selector');
+        }
+    }
+    if (fab) {
+        if (viewId === 'view_events') {
+            fab.style.display = '';
+        } else {
+            fab.style.display = 'none';
+        }
     }
 }
 
