@@ -60,7 +60,8 @@ import {
     generateSlug,
     updateBrandHeaderActions,
     editCurrentBrand,
-    copyCurrentBrandLink
+    copyCurrentBrandLink,
+    renderMobileBrandsView
 } from './brands.js';
 
 import {
@@ -367,6 +368,7 @@ function setupGlobalEventListeners() {
     
     // CREAR MARCA
     document.getElementById('btnCreateBrand')?.addEventListener('click', () => window.openBrandModal());
+    document.getElementById('btnNewBrandMobile')?.addEventListener('click', () => window.openBrandModal());
     
     // STAFF - BOTONES DE CREAR
     document.getElementById('btnNewPromoter')?.addEventListener('click', openNewPromoterModal);
@@ -757,7 +759,12 @@ function mobileGoTo(section) {
                 else switchView('view_events');
                 break;
             case 'marca':
-                if (state.isSuperAdmin) {
+                if (window.innerWidth <= 768 && state.isSuperAdmin) {
+                    if (typeof renderMobileBrandsView === 'function') renderMobileBrandsView();
+                    switchView('view_brands_mobile');
+                } else if (window.innerWidth <= 768 && !state.isSuperAdmin) {
+                    if (typeof openMyBrand === 'function') openMyBrand();
+                } else if (state.isSuperAdmin) {
                     if (typeof loadBrandsWithLogos === 'function') loadBrandsWithLogos();
                     else switchView('view_brands');
                 } else {

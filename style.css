@@ -3796,7 +3796,8 @@ select option:hover {
 .mobile-entry-list,
 .mobile-gen-options,
 .mobile-gen-form,
-.mobile-gen-back {
+.mobile-gen-back,
+.tab-badge-dot {
     display: none;
 }
 
@@ -4004,12 +4005,11 @@ select option:hover {
 
     .event-tabs .tabs-nav {
         display: flex;
+        justify-content: space-around;
         gap: 0;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: 0 20px;
+        overflow: visible;
+        padding: 0;
         border-bottom: 1px solid var(--border);
-        scrollbar-width: none;
         position: sticky;
         top: calc(56px + env(safe-area-inset-top, 0px));
         z-index: 50;
@@ -4018,10 +4018,9 @@ select option:hover {
     .event-tabs .tabs-nav::-webkit-scrollbar { display: none; }
 
     .event-tabs .sub-tab {
-        flex-shrink: 0;
-        flex: none;
-        padding: 14px 16px;
-        font-size: 12px;
+        flex: 1;
+        padding: 12px 4px;
+        font-size: 16px;
         font-weight: 600;
         color: var(--text-muted);
         border-bottom: 2px solid transparent;
@@ -4029,8 +4028,10 @@ select option:hover {
         background: transparent;
         white-space: nowrap;
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 5px;
+        gap: 2px;
+        position: relative;
     }
 
     .event-tabs .sub-tab.active {
@@ -4041,6 +4042,35 @@ select option:hover {
 
     .event-tabs .sub-tab:hover {
         background: transparent;
+    }
+
+    /* Hide tab text, show only icon */
+    .event-tabs .sub-tab .tab-text {
+        display: none;
+    }
+
+    /* Show text only on active tab */
+    .event-tabs .sub-tab.active .tab-text {
+        display: block;
+        font-size: 9px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    /* Hide numeric badge on mobile, use dot instead */
+    .event-tabs .sub-tab .tab-badge {
+        display: none !important;
+    }
+
+    /* Badge dot for pending payments */
+    .tab-badge-dot {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 8px;
+        height: 8px;
+        background: var(--primary);
+        border-radius: 50%;
     }
 
     /* Sub content mobile */
@@ -4452,4 +4482,50 @@ select option:hover {
     }
     .mobile-promoter-item .promoter-act:active { background: rgba(255,255,255,0.1); }
     .mobile-promoter-item .promoter-act.danger { color: #ef4444; }
+
+    /* ═══════════════════════════════════════════
+       FIX 2: HIDE DESKTOP METRICS TABLES ON MOBILE
+       ═══════════════════════════════════════════ */
+
+    #tab_metrics .metric-view .data-table {
+        display: none;
+    }
+
+    /* ═══════════════════════════════════════════
+       FIX 3: BRAND CARDS MOBILE
+       ═══════════════════════════════════════════ */
+
+    .brand-card-mobile {
+        background: var(--bg-card, #141414);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        cursor: pointer;
+    }
+    .brand-card-mobile:active { background: rgba(255,255,255,0.03); }
+    .brand-card-mobile .brand-icon-mobile {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: 800;
+        color: white;
+        flex-shrink: 0;
+        overflow: hidden;
+    }
+    .brand-card-mobile .brand-icon-mobile img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .brand-card-mobile .brand-card-info { flex: 1; min-width: 0; }
+    .brand-card-mobile .brand-card-info .bname { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brand-card-mobile .brand-card-info .bsub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 }

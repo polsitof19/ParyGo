@@ -433,25 +433,27 @@
                 <div class="event-tabs">
                     <div class="tabs-nav">
                         <button class="sub-tab active" data-tab="tab_metrics">
-                            <i class="fa-solid fa-chart-simple"></i> Métricas
+                            <i class="fa-solid fa-chart-simple"></i> <span class="tab-text">Metricas</span>
                         </button>
                         <button class="sub-tab" data-tab="tab_tickets">
-                            <i class="fa-solid fa-ticket"></i> Entradas
+                            <i class="fa-solid fa-ticket"></i> <span class="tab-text">Entradas</span>
                         </button>
                         <button class="sub-tab" data-tab="tab_codegen">
-                            <i class="fa-solid fa-qrcode"></i> Generar
+                            <i class="fa-solid fa-qrcode"></i> <span class="tab-text">Generar</span>
                         </button>
                         <button class="sub-tab" data-tab="tab_accesses">
-                            <i class="fa-solid fa-users"></i> Accesos
+                            <i class="fa-solid fa-users"></i> <span class="tab-text">Accesos</span>
                         </button>
                         <button class="sub-tab" data-tab="tab_sales">
-                            <i class="fa-solid fa-money-bill"></i> Ventas
+                            <i class="fa-solid fa-money-bill"></i> <span class="tab-text">Ventas</span>
                         </button>
                         <button class="sub-tab" data-tab="tab_stock">
-                            <i class="fa-solid fa-boxes-stacked"></i> Stock
+                            <i class="fa-solid fa-boxes-stacked"></i> <span class="tab-text">Stock</span>
                         </button>
                         <button class="sub-tab" data-tab="tab_pending_payments">
-                            <i class="fa-solid fa-clock"></i> Pagos <span id="pending_payments_badge" class="tab-badge hidden">0</span>
+                            <i class="fa-solid fa-clock"></i> <span class="tab-text">Pagos</span>
+                            <span id="pending_payments_badge" class="tab-badge hidden">0</span>
+                            <span class="tab-badge-dot" id="paymentsDot" style="display:none;"></span>
                         </button>
                     </div>
                 </div>
@@ -899,6 +901,22 @@
                     </thead>
                     <tbody></tbody>
                 </table>
+            </div>
+
+            <!-- VISTA: MARCAS MOBILE -->
+            <div id="view_brands_mobile" class="view-section hidden">
+                <div class="view-header" style="padding: 0 20px;">
+                    <div class="page-title">
+                        <h1>Tus Marcas</h1>
+                        <p>Gestiona tus marcas y subdominios</p>
+                    </div>
+                </div>
+                <div id="brandsMobileList" style="padding: 0 20px;"></div>
+                <div style="padding: 20px;">
+                    <button class="btn btn-primary btn-block" id="btnNewBrandMobile">
+                        <i class="fa-solid fa-plus"></i> Nueva Marca
+                    </button>
+                </div>
             </div>
 
             <!-- VISTA: SCANNERS -->

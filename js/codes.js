@@ -927,6 +927,10 @@ function renderPendingPaymentsFromSnapshot(snapshot) {
         }
     }
 
+    // Update mobile dot indicator
+    const dot = document.getElementById('paymentsDot');
+    if (dot) dot.style.display = count > 0 ? '' : 'none';
+
     // Actualizar notif dot en mobile bottom nav
     if (typeof window.updatePromoNotifDot === 'function') {
         window.updatePromoNotifDot(count > 0);

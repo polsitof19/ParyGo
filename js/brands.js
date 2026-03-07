@@ -127,6 +127,51 @@ function renderMobileBrandSelector() {
 // Expose for external use
 window.renderMobileBrandSelector = renderMobileBrandSelector;
 
+/**
+ * Renderizar vista mobile de marcas
+ */
+export function renderMobileBrandsView() {
+    const container = document.getElementById('brandsMobileList');
+    if (!container) return;
+
+    const brands = state.allBrands || [];
+    const events = state.allEvents || [];
+
+    if (brands.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:40px 0;">No hay marcas disponibles</div>';
+        return;
+    }
+
+    container.innerHTML = brands.map(b => {
+        const eventCount = events.filter(e => e.brand_id === b.id).length;
+        const initial = (b.name || 'M').charAt(0).toUpperCase();
+        const iconHtml = b.logo
+            ? `<img src="${b.logo}" alt="">`
+            : Validator.sanitizeHTML(initial);
+        const bgColor = b.color || '#f43f5e';
+        const slug = b.slug ? `${Validator.sanitizeHTML(b.slug)}.parygo.com` : '';
+
+        return `
+            <div class="brand-card-mobile" data-brand-id="${b.id}">
+                <div class="brand-icon-mobile" style="background:${/^#[0-9a-fA-F]{3,8}$/.test(bgColor) ? bgColor : '#f43f5e'}">${iconHtml}</div>
+                <div class="brand-card-info">
+                    <div class="bname">${Validator.sanitizeHTML(b.name)}</div>
+                    <div class="bsub">${slug}${eventCount > 0 ? ` &bull; ${eventCount} evento${eventCount !== 1 ? 's' : ''}` : ''}</div>
+                </div>
+                <i class="fa-solid fa-chevron-right" style="color:var(--text-muted); font-size:12px; flex-shrink:0;"></i>
+            </div>
+        `;
+    }).join('');
+
+    // Event listeners
+    container.querySelectorAll('.brand-card-mobile').forEach(card => {
+        card.addEventListener('click', () => {
+            const brandId = card.dataset.brandId;
+            if (brandId && typeof window.editBrand === 'function') window.editBrand(brandId, null);
+        });
+    });
+}
+
 // ==========================================
 // 2. CREAR MARCA
 // ==========================================
