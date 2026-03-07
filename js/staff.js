@@ -96,67 +96,127 @@ async function loadPromotersTable(loadMore = false) {
         
         const brands = state.allBrands || [];
 
-        const newRows = promoters.map(p => {
-            const promoterBrands = (p.allowed_brands || p.companies || []).map(brandId => {
-                const brand = brands.find(b => b.id === brandId);
-                return brand ? `<span class="badge badge-blue" style="margin:2px;">${Validator.sanitizeHTML(brand.name)}</span>` : '';
-            }).filter(Boolean).join('') || '<span style="color:var(--muted);">Sin marcas</span>';
+        const isMobile = window.innerWidth <= 768;
 
-            const statusBadge = p.status === 'ACTIVE'
-                ? '<span class="badge badge-green">Activo</span>'
-                : '<span class="badge" style="background:rgba(239,68,68,0.15); color:#ef4444;">Inactivo</span>';
+        if (isMobile) {
+            // Mobile: render as list
+            let mobileList = document.getElementById('mobilePromotersList');
+            if (!mobileList) {
+                const table = document.getElementById('tblPromoters');
+                mobileList = document.createElement('div');
+                mobileList.id = 'mobilePromotersList';
+                mobileList.className = 'mobile-promoters-list';
+                table.parentNode.insertBefore(mobileList, table.nextSibling);
+            }
 
-            return `
-                <tr>
-                    <td>
-                        <div style="display:flex; align-items:center; gap:12px;">
-                            <div style="width:40px; height:40px; border-radius:50%; background:var(--primary); display:grid; place-items:center; color:#fff; font-weight:700;">
-                                ${(p.name || 'P').charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                                <div style="font-weight:600;">${Validator.sanitizeHTML(p.name || '')} ${Validator.sanitizeHTML(p.lastname || '')}</div>
-                                <div style="font-size:12px; color:var(--muted);">${Validator.sanitizeHTML(p.phone || '-')}</div>
-                            </div>
+            const mobileRows = promoters.map(p => {
+                const initial = (p.name || 'P').charAt(0).toUpperCase();
+                const fullName = `${Validator.sanitizeHTML(p.name || '')} ${Validator.sanitizeHTML(p.lastname || '')}`.trim();
+                const subInfo = p.phone ? Validator.sanitizeHTML(p.phone) : (p.email ? Validator.sanitizeHTML(p.email) : Validator.sanitizeHTML(p.dni || '-'));
+
+                return `
+                    <div class="mobile-promoter-item">
+                        <div class="promoter-avatar">${initial}</div>
+                        <div class="promoter-info">
+                            <div class="name">${fullName}</div>
+                            <div class="sub">${subInfo}</div>
                         </div>
-                    </td>
-                    <td>${Validator.sanitizeHTML(p.email || '-')}</td>
-                    <td style="font-family:monospace;">${Validator.sanitizeHTML(p.dni || '-')}</td>
-                    <td>${promoterBrands}</td>
-                    <td>
-                        <div style="display:flex; gap:8px;">
-                            <button class="btn-icon" onclick="window.editPromoter('${Validator.sanitizeHTML(p.id)}')" title="Editar">
+                        <div class="promoter-actions">
+                            <button class="promoter-act" onclick="window.editPromoter('${Validator.sanitizeHTML(p.id)}')" title="Editar">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
-                            <button class="btn-icon" style="background:rgba(239,68,68,0.15); color:#ef4444;" onclick="window.deletePromoter('${Validator.sanitizeHTML(p.id)}')" title="Eliminar">
+                            <button class="promoter-act danger" onclick="window.deletePromoter('${Validator.sanitizeHTML(p.id)}')" title="Eliminar">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </div>
-                    </td>
-                </tr>
-            `;
-        }).join('');
+                    </div>
+                `;
+            }).join('');
 
-        if (loadMore) {
-            const loadMoreRow = tbody.querySelector('.load-more-row');
-            if (loadMoreRow) loadMoreRow.remove();
-            tbody.insertAdjacentHTML('beforeend', newRows);
-        } else {
-            tbody.innerHTML = newRows;
-        }
+            if (loadMore) {
+                const loadMoreBtn = mobileList.querySelector('.load-more-mobile');
+                if (loadMoreBtn) loadMoreBtn.remove();
+                mobileList.insertAdjacentHTML('beforeend', mobileRows);
+            } else {
+                tbody.innerHTML = '';
+                mobileList.innerHTML = mobileRows;
+            }
 
-        // Botón "Cargar más"
-        const loadMoreRow = tbody.querySelector('.load-more-row');
-        if (loadMoreRow) loadMoreRow.remove();
-        if (snapshot.docs.length >= APP_CONFIG.LIMITS.ITEMS_PER_PAGE) {
-            tbody.insertAdjacentHTML('beforeend', `
-                <tr class="load-more-row">
-                    <td colspan="5" style="text-align:center; padding:15px;">
+            // Botón "Cargar más"
+            const existingMore = mobileList.querySelector('.load-more-mobile');
+            if (existingMore) existingMore.remove();
+            if (snapshot.docs.length >= APP_CONFIG.LIMITS.ITEMS_PER_PAGE) {
+                mobileList.insertAdjacentHTML('beforeend', `
+                    <div class="load-more-mobile" style="text-align:center; padding:15px;">
                         <button class="btn btn-ghost" onclick="window.loadMorePromoters()">
                             <i class="fa-solid fa-arrow-down"></i> Cargar más
                         </button>
-                    </td>
-                </tr>
-            `);
+                    </div>
+                `);
+            }
+        } else {
+            // Desktop: render as table rows
+            const existing = document.getElementById('mobilePromotersList');
+            if (existing) existing.innerHTML = '';
+
+            const newRows = promoters.map(p => {
+                const promoterBrands = (p.allowed_brands || p.companies || []).map(brandId => {
+                    const brand = brands.find(b => b.id === brandId);
+                    return brand ? `<span class="badge badge-blue" style="margin:2px;">${Validator.sanitizeHTML(brand.name)}</span>` : '';
+                }).filter(Boolean).join('') || '<span style="color:var(--muted);">Sin marcas</span>';
+
+                return `
+                    <tr>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div style="width:40px; height:40px; border-radius:50%; background:var(--primary); display:grid; place-items:center; color:#fff; font-weight:700;">
+                                    ${(p.name || 'P').charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <div style="font-weight:600;">${Validator.sanitizeHTML(p.name || '')} ${Validator.sanitizeHTML(p.lastname || '')}</div>
+                                    <div style="font-size:12px; color:var(--muted);">${Validator.sanitizeHTML(p.phone || '-')}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${Validator.sanitizeHTML(p.email || '-')}</td>
+                        <td style="font-family:monospace;">${Validator.sanitizeHTML(p.dni || '-')}</td>
+                        <td>${promoterBrands}</td>
+                        <td>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn-icon" onclick="window.editPromoter('${Validator.sanitizeHTML(p.id)}')" title="Editar">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button class="btn-icon" style="background:rgba(239,68,68,0.15); color:#ef4444;" onclick="window.deletePromoter('${Validator.sanitizeHTML(p.id)}')" title="Eliminar">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            if (loadMore) {
+                const loadMoreRow = tbody.querySelector('.load-more-row');
+                if (loadMoreRow) loadMoreRow.remove();
+                tbody.insertAdjacentHTML('beforeend', newRows);
+            } else {
+                tbody.innerHTML = newRows;
+            }
+
+            // Botón "Cargar más"
+            const loadMoreRow = tbody.querySelector('.load-more-row');
+            if (loadMoreRow) loadMoreRow.remove();
+            if (snapshot.docs.length >= APP_CONFIG.LIMITS.ITEMS_PER_PAGE) {
+                tbody.insertAdjacentHTML('beforeend', `
+                    <tr class="load-more-row">
+                        <td colspan="5" style="text-align:center; padding:15px;">
+                            <button class="btn btn-ghost" onclick="window.loadMorePromoters()">
+                                <i class="fa-solid fa-arrow-down"></i> Cargar más
+                            </button>
+                        </td>
+                    </tr>
+                `);
+            }
         }
 
     } catch (error) {

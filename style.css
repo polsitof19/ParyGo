@@ -3793,7 +3793,10 @@ select option:hover {
 .mobile-actions-row,
 .mobile-stats-scroll,
 .mini-chart,
-.mobile-entry-list {
+.mobile-entry-list,
+.mobile-gen-options,
+.mobile-gen-form,
+.mobile-gen-back {
     display: none;
 }
 
@@ -4109,4 +4112,344 @@ select option:hover {
     .metrics-header {
         display: none;
     }
+
+    /* ═══════════════════════════════════════════
+       PART 4A: ENTRIES AS MOBILE CARDS
+       ═══════════════════════════════════════════ */
+
+    #tab_tickets .data-table { display: none; }
+    #tab_tickets .section-header { padding: 0 20px; }
+
+    .mobile-entries-list { padding: 0 20px; }
+
+    .mobile-entry-card {
+        background: var(--bg-card, #141414);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px 16px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .mobile-entry-card .entry-color {
+        width: 4px;
+        height: 44px;
+        border-radius: 2px;
+        flex-shrink: 0;
+    }
+
+    .mobile-entry-card .entry-info { flex: 1; min-width: 0; }
+    .mobile-entry-card .entry-info h4 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+    .mobile-entry-card .entry-info .price { font-size: 13px; color: var(--primary); font-weight: 600; }
+    .mobile-entry-card .entry-info .detail { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    .mobile-entry-card .entry-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .mobile-entry-card .entry-act {
+        width: 44px; height: 44px; border-radius: 8px;
+        background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+        display: flex; align-items: center; justify-content: center;
+        color: var(--text-muted); font-size: 12px; cursor: pointer;
+    }
+    .mobile-entry-card .entry-act:active { background: rgba(255,255,255,0.1); }
+
+    /* ═══════════════════════════════════════════
+       PART 4B: CODEGEN MOBILE OPTIONS
+       ═══════════════════════════════════════════ */
+
+    .mobile-gen-options { padding: 0 20px; }
+
+    .mobile-gen-option {
+        background: var(--bg-card, #141414);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        cursor: pointer;
+    }
+    .mobile-gen-option:active { background: rgba(255,255,255,0.03); }
+
+    .mobile-gen-option .gen-icon {
+        width: 44px; height: 44px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px; flex-shrink: 0;
+    }
+
+    .mobile-gen-option .gen-info { flex: 1; }
+    .mobile-gen-option .gen-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+    .mobile-gen-option .gen-info p { font-size: 12px; color: var(--text-muted); margin: 0; }
+
+    #tab_codegen .codegen-card { display: none; }
+    .mobile-gen-options { display: block; }
+    .mobile-gen-back { display: none; }
+    .mobile-gen-form { display: none; padding: 0 20px; }
+    .mobile-gen-form.active { display: block; }
+    .mobile-gen-form .codegen-form { padding: 0; }
+    .mobile-gen-back {
+        display: flex; align-items: center; gap: 6px;
+        font-size: 13px; color: var(--text-muted); background: none; border: none;
+        font-family: inherit; cursor: pointer; padding: 0 20px 12px;
+        min-height: 44px;
+    }
+
+    /* ═══════════════════════════════════════════
+       PART 4C: ACCESS FILTERS MOBILE
+       ═══════════════════════════════════════════ */
+
+    #tab_accesses .section-header { flex-direction: column; padding: 0 20px; gap: 10px; }
+    #tab_accesses .data-table { display: none; }
+    #tab_accesses .table-footer { padding: 0 20px; }
+
+    .mobile-access-search {
+        margin: 0 20px 14px;
+        padding: 12px 16px;
+        border-radius: 10px;
+        background: var(--bg-card, #141414);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text-muted);
+        font-size: 14px;
+        min-height: 48px;
+    }
+    .mobile-access-search input {
+        background: none; border: none; color: #fff; font-size: 14px;
+        font-family: inherit; flex: 1; outline: none;
+    }
+
+    .mobile-filter-row {
+        display: flex;
+        gap: 6px;
+        padding: 0 20px 12px;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+    .mobile-filter-row::-webkit-scrollbar { display: none; }
+
+    .filter-chip {
+        flex-shrink: 0;
+        padding: 10px 14px;
+        border-radius: 100px;
+        font-size: 12px;
+        font-weight: 600;
+        background: var(--bg-card, #141414);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        cursor: pointer;
+        font-family: inherit;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+    .filter-chip.active {
+        background: rgba(244,63,94,0.1);
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+
+    .mobile-access-list { padding: 0 20px; }
+
+    .mobile-access-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.03);
+        cursor: pointer;
+    }
+    .mobile-access-item:active { background: rgba(255,255,255,0.03); }
+    .mobile-access-item .access-avatar {
+        width: 40px; height: 40px; border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 12px; font-weight: 700; flex-shrink: 0;
+        background: rgba(244,63,94,0.1); color: var(--primary);
+    }
+    .mobile-access-item .access-info { flex: 1; min-width: 0; }
+    .mobile-access-item .access-info .name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mobile-access-item .access-info .sub { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+    .mobile-access-item .access-status { flex-shrink: 0; }
+    .access-badge {
+        font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 100px;
+    }
+    .access-badge.active { background: rgba(59,130,246,0.1); color: #3b82f6; }
+    .access-badge.claimed { background: rgba(34,197,94,0.1); color: #22c55e; }
+    .access-badge.expired { background: rgba(113,113,122,0.1); color: #71717a; }
+    .access-badge.cancelled { background: rgba(239,68,68,0.1); color: #ef4444; }
+
+    /* ═══════════════════════════════════════════
+       PART 4D: PAYMENT CARDS MOBILE
+       ═══════════════════════════════════════════ */
+
+    #tab_pending_payments .data-table { display: none !important; }
+    #tab_pending_payments .section-header { padding: 0 20px; }
+
+    .mobile-payments-list { padding: 0 20px; }
+
+    .mobile-payment-card {
+        background: var(--bg-card, #141414);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 10px;
+    }
+
+    .mobile-payment-card .payment-top {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+    .mobile-payment-card .payment-top .name { font-size: 14px; font-weight: 600; }
+    .mobile-payment-card .payment-top .time { font-size: 11px; color: var(--text-muted); }
+
+    .mobile-payment-card .payment-detail {
+        display: flex; flex-direction: column; gap: 4px;
+        font-size: 12px; color: var(--text-muted); margin-bottom: 12px;
+    }
+    .mobile-payment-card .payment-detail span strong { color: #fff; font-weight: 600; }
+
+    .mobile-payment-card .payment-btns { display: flex; gap: 8px; }
+    .mobile-payment-card .payment-btns button {
+        flex: 1; padding: 11px; border-radius: 10px; border: none;
+        font-family: inherit; font-size: 13px; font-weight: 600;
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+        cursor: pointer; min-height: 44px;
+    }
+    .mobile-payment-card .btn-approve { background: rgba(34,197,94,0.1); color: #22c55e; }
+    .mobile-payment-card .btn-approve:active { background: rgba(34,197,94,0.2); }
+    .mobile-payment-card .btn-reject { background: rgba(239,68,68,0.1); color: #ef4444; }
+    .mobile-payment-card .btn-reject:active { background: rgba(239,68,68,0.2); }
+
+    /* ═══════════════════════════════════════════
+       PART 4E: STOCK WITH PROGRESS BARS
+       ═══════════════════════════════════════════ */
+
+    #tab_stock .data-table { display: none; }
+    #tab_stock .section-header { padding: 0 20px; }
+
+    .mobile-stock-list { padding: 0 20px; }
+
+    .mobile-stock-item {
+        background: var(--bg-card, #141414);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px 16px;
+        margin-bottom: 10px;
+    }
+
+    .mobile-stock-item .stock-top {
+        display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center;
+    }
+    .mobile-stock-item .stock-name { font-size: 14px; font-weight: 600; }
+    .mobile-stock-item .stock-type { font-size: 11px; color: var(--text-muted); }
+
+    .mobile-stock-item .stock-numbers {
+        display: flex; gap: 16px; margin-bottom: 8px;
+    }
+    .mobile-stock-item .stock-num { text-align: center; flex: 1; }
+    .mobile-stock-item .stock-num .val { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .mobile-stock-item .stock-num .lbl { font-size: 11px; color: var(--text-muted); }
+
+    .progress-bar {
+        height: 6px; border-radius: 3px; background: var(--border); overflow: hidden;
+    }
+    .progress-fill {
+        height: 100%; border-radius: 3px; transition: width 0.5s ease;
+    }
+
+    /* ═══════════════════════════════════════════
+       PART 4F: LIQUIDATION MOBILE CARDS
+       ═══════════════════════════════════════════ */
+
+    #view_met_liq .data-table { display: none; }
+    #liquidation_summary { flex-direction: column; padding: 0; }
+    #liquidation_summary .stat-card { min-width: unset !important; }
+
+    .mobile-liquid-list { padding: 0 20px; }
+
+    .mobile-liquid-card {
+        background: var(--bg-card, #141414);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        margin-bottom: 10px;
+        overflow: hidden;
+    }
+
+    .mobile-liquid-card .liquid-header {
+        padding: 14px 16px;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .mobile-liquid-card .liquid-header .name { font-size: 14px; font-weight: 700; }
+
+    .liquid-status {
+        font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 100px;
+    }
+    .liquid-status.pending { background: rgba(245,158,11,0.1); color: #f59e0b; }
+    .liquid-status.paid { background: rgba(34,197,94,0.1); color: #22c55e; }
+
+    .mobile-liquid-card .liquid-body { padding: 0 16px 14px; }
+    .mobile-liquid-card .liquid-row {
+        display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;
+    }
+    .mobile-liquid-card .liquid-row .label { color: var(--text-muted); }
+    .mobile-liquid-card .liquid-row .value { font-weight: 600; }
+
+    .mobile-liquid-card .liquid-total {
+        border-top: 1px solid var(--border);
+        padding: 10px 16px;
+        display: flex; justify-content: space-between;
+        font-size: 14px; font-weight: 700;
+    }
+
+    .mobile-liquid-card .liquid-action { padding: 0 16px 14px; }
+    .btn-pay {
+        width: 100%; padding: 11px; border-radius: 10px; border: none;
+        font-family: inherit; font-size: 13px; font-weight: 600;
+        background: rgba(34,197,94,0.1); color: #22c55e;
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+        cursor: pointer; min-height: 44px;
+    }
+    .btn-pay:active { background: rgba(34,197,94,0.2); }
+
+    /* ═══════════════════════════════════════════
+       PART 4G: PROMOTERS MOBILE LIST
+       ═══════════════════════════════════════════ */
+
+    #view_promoters .data-table { display: none; }
+    #view_promoters .view-header { padding: 0 20px; }
+
+    .mobile-promoters-list { padding: 0 20px; }
+
+    .mobile-promoter-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+
+    .mobile-promoter-item .promoter-avatar {
+        width: 44px; height: 44px; border-radius: 50%;
+        background: var(--primary); color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 16px; flex-shrink: 0;
+    }
+
+    .mobile-promoter-item .promoter-info { flex: 1; min-width: 0; }
+    .mobile-promoter-item .promoter-info .name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mobile-promoter-item .promoter-info .sub { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+
+    .mobile-promoter-item .promoter-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .mobile-promoter-item .promoter-act {
+        width: 44px; height: 44px; border-radius: 8px;
+        background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+        display: flex; align-items: center; justify-content: center;
+        color: var(--text-muted); font-size: 12px; cursor: pointer;
+    }
+    .mobile-promoter-item .promoter-act:active { background: rgba(255,255,255,0.1); }
+    .mobile-promoter-item .promoter-act.danger { color: #ef4444; }
 }

@@ -518,6 +518,91 @@ function setupGlobalEventListeners() {
         });
     }
     
+    // MOBILE CODEGEN OPTIONS (Part 4B)
+    document.querySelectorAll('.mobile-gen-option').forEach(opt => {
+        opt.addEventListener('click', () => {
+            const target = opt.dataset.target;
+            const genOptions = document.getElementById('mobileGenOptions');
+            const genForm = document.getElementById('mobileGenForm');
+            const genBack = document.getElementById('mobileGenBack');
+            const promoterGroup = document.getElementById('gen_promoter_group_mobile');
+
+            if (genOptions) genOptions.style.display = 'none';
+            if (genForm) genForm.classList.add('active');
+            if (genBack) genBack.style.display = '';
+
+            // Sync ticket selector from desktop
+            const desktopSel = document.getElementById('gen_tk_sel');
+            const mobileSel = document.getElementById('gen_tk_sel_mobile');
+            if (desktopSel && mobileSel) mobileSel.innerHTML = desktopSel.innerHTML;
+
+            // Show/hide promoter field
+            if (promoterGroup) promoterGroup.style.display = target === 'PROMOTER' ? '' : 'none';
+
+            // Store target for generate
+            genForm.dataset.target = target;
+        });
+    });
+
+    document.getElementById('mobileGenBack')?.addEventListener('click', () => {
+        const genOptions = document.getElementById('mobileGenOptions');
+        const genForm = document.getElementById('mobileGenForm');
+        const genBack = document.getElementById('mobileGenBack');
+        if (genOptions) genOptions.style.display = '';
+        if (genForm) genForm.classList.remove('active');
+        if (genBack) genBack.style.display = 'none';
+    });
+
+    document.getElementById('btnGenCodesMobile')?.addEventListener('click', () => {
+        const genForm = document.getElementById('mobileGenForm');
+        const target = genForm?.dataset.target || 'SELF';
+        // Sync values to desktop fields
+        const desktopTarget = document.getElementById('gen_target');
+        const desktopQty = document.getElementById('gen_qty');
+        const desktopTicket = document.getElementById('gen_tk_sel');
+        const mobileTicket = document.getElementById('gen_tk_sel_mobile');
+        const mobileQty = document.getElementById('gen_qty_mobile');
+
+        if (desktopTarget) desktopTarget.value = target;
+        if (desktopTicket && mobileTicket) desktopTicket.value = mobileTicket.value;
+        if (desktopQty && mobileQty) desktopQty.value = mobileQty.value;
+
+        // For PROMOTER target, sync promoter search
+        if (target === 'PROMOTER') {
+            const mobileSearch = document.getElementById('gen_search_mobile');
+            const desktopSearch = document.getElementById('gen_search');
+            if (mobileSearch && desktopSearch) {
+                desktopSearch.value = mobileSearch.value;
+                desktopSearch.dataset.pid = mobileSearch.dataset.pid || '';
+            }
+        }
+
+        if (typeof window.togglePromoterField === 'function') window.togglePromoterField();
+        generateCodes();
+    });
+
+    // MOBILE ACCESS SEARCH (Part 4C)
+    const mobileSearchAccess = document.getElementById('mobileSearchAccess');
+    if (mobileSearchAccess) {
+        mobileSearchAccess.addEventListener('input', debounce(() => {
+            const desktopSearch = document.getElementById('searchAccess');
+            if (desktopSearch) desktopSearch.value = mobileSearchAccess.value;
+            if (window.applyAccessFilters) window.applyAccessFilters();
+        }, 300));
+    }
+
+    // MOBILE ACCESS FILTER CHIPS (Part 4C)
+    document.querySelectorAll('#mobileAccessFilters .filter-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            document.querySelectorAll('#mobileAccessFilters .filter-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            const status = chip.dataset.status;
+            const filterSelect = document.getElementById('filterAccessStatus');
+            if (filterSelect) filterSelect.value = status;
+            if (window.applyAccessFilters) window.applyAccessFilters();
+        });
+    });
+
     // TOGGLE PAYMENT FIELDS
     const hasPaymentChk = document.getElementById('ev_has_payment');
     if (hasPaymentChk) {

@@ -574,6 +574,48 @@
                     <!-- TAB: GENERADOR DE CÓDIGOS -->
                    <!-- TAB: GENERADOR DE CÓDIGOS -->
 <div id="tab_codegen" class="sub-content hidden">
+    <!-- Mobile codegen options -->
+    <div class="mobile-gen-options" id="mobileGenOptions">
+        <div class="mobile-gen-option" data-target="SELF">
+            <div class="gen-icon" style="background:rgba(244,63,94,0.1); color:#f43f5e;"><i class="fa-solid fa-download"></i></div>
+            <div class="gen-info"><h4>Para mi</h4><p>Descarga directa de codigos</p></div>
+            <i class="fa-solid fa-chevron-right" style="color:var(--text-muted); font-size:12px;"></i>
+        </div>
+        <div class="mobile-gen-option" data-target="PROMOTER">
+            <div class="gen-icon" style="background:rgba(59,130,246,0.1); color:#3b82f6;"><i class="fa-solid fa-user"></i></div>
+            <div class="gen-info"><h4>Para un promotor</h4><p>Asignar codigos a un promotor</p></div>
+            <i class="fa-solid fa-chevron-right" style="color:var(--text-muted); font-size:12px;"></i>
+        </div>
+        <div class="mobile-gen-option" data-target="ALL">
+            <div class="gen-icon" style="background:rgba(34,197,94,0.1); color:#22c55e;"><i class="fa-solid fa-users"></i></div>
+            <div class="gen-info"><h4>Para todos</h4><p>Generar para todos los promotores</p></div>
+            <i class="fa-solid fa-chevron-right" style="color:var(--text-muted); font-size:12px;"></i>
+        </div>
+    </div>
+    <button class="mobile-gen-back" id="mobileGenBack" style="display:none;"><i class="fa-solid fa-arrow-left"></i> Volver</button>
+    <div class="mobile-gen-form" id="mobileGenForm">
+        <div class="codegen-form">
+            <div class="form-group">
+                <label>Tipo de Entrada</label>
+                <select id="gen_tk_sel_mobile"></select>
+            </div>
+            <div class="form-group" id="gen_promoter_group_mobile" style="display:none;">
+                <label>Promotor</label>
+                <div class="dropdown-wrapper">
+                    <input type="text" id="gen_search_mobile" placeholder="Buscar promotor..." autocomplete="off">
+                    <div id="promoters_dropdown_mobile" class="custom-dropdown"></div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Cantidad</label>
+                <input type="number" id="gen_qty_mobile" placeholder="10" min="1" max="1000" value="10">
+            </div>
+            <button class="btn btn-primary btn-block" id="btnGenCodesMobile">
+                <i class="fa-solid fa-bolt"></i> GENERAR CODIGOS
+            </button>
+        </div>
+    </div>
+    <!-- Desktop codegen card -->
     <div class="codegen-card">
         <h3><i class="fa-solid fa-wand-magic-sparkles"></i> Generar Códigos QR</h3>
         <div class="codegen-form">
@@ -583,7 +625,7 @@
                     <option value="">Selecciona un tipo</option>
                 </select>
             </div>
-            
+
             <div class="form-group">
                 <label>¿Para quién?</label>
                 <select id="gen_target" onchange="togglePromoterField()">
@@ -592,7 +634,7 @@
                     <option value="ALL">Para todos los promotores</option>
                 </select>
             </div>
-            
+
             <div class="form-group" id="gen_promoter_group" style="display:none;">
                 <label>Promotor</label>
                 <div class="dropdown-wrapper">
@@ -600,12 +642,12 @@
                     <div id="promoters_dropdown" class="custom-dropdown"></div>
                 </div>
             </div>
-            
+
             <div class="form-group">
                 <label>Cantidad</label>
                 <input type="number" id="gen_qty" placeholder="10" min="1" max="1000" value="10">
             </div>
-            
+
             <div class="form-group" id="gen_delivery_options">
                 <label>Opciones de entrega</label>
                 <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
@@ -652,7 +694,20 @@
                                 <i class="fa-solid fa-file-excel"></i> <span>Exportar</span>
                             </button>
                         </div>
-                        
+                        <!-- Mobile access search & filters -->
+                        <div class="mobile-access-search" id="mobileAccessSearch" style="display:none;">
+                            <i class="fa-solid fa-search"></i>
+                            <input type="text" id="mobileSearchAccess" placeholder="Buscar por nombre o DNI...">
+                        </div>
+                        <div class="mobile-filter-row" id="mobileAccessFilters" style="display:none;">
+                            <button class="filter-chip active" data-status="ALL">Todos</button>
+                            <button class="filter-chip" data-status="ACTIVE">Sin utilizar</button>
+                            <button class="filter-chip" data-status="CLAIMED">Utilizada</button>
+                            <button class="filter-chip" data-status="EXPIRED">Expirada</button>
+                            <button class="filter-chip" data-status="CANCELLED">Anulado</button>
+                        </div>
+                        <div class="mobile-access-list" id="mobileAccessList" style="display:none;"></div>
+
                         <table id="tblAccesses" class="data-table">
                             <thead>
                                 <tr>

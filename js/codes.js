@@ -457,37 +457,92 @@ function renderStockFromSnapshot(snapshot) {
     const tbody = document.querySelector("#tblStock tbody");
     if (!tbody) return;
 
+    const isMobile = window.innerWidth <= 768;
+
     if (snapshot.empty) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" style="text-align:center; padding:40px; color:var(--muted);">
-                    No hay stock asignado para este evento
-                </td>
-            </tr>
-        `;
+        const emptyMsg = 'No hay stock asignado para este evento';
+        if (isMobile) {
+            tbody.innerHTML = '';
+            let mobileList = document.getElementById('mobileStockList');
+            if (!mobileList) {
+                const table = document.getElementById('tblStock');
+                mobileList = document.createElement('div');
+                mobileList.id = 'mobileStockList';
+                mobileList.className = 'mobile-stock-list';
+                table.parentNode.insertBefore(mobileList, table.nextSibling);
+            }
+            mobileList.innerHTML = `<div style="text-align:center; padding:40px 0; color:var(--text-muted);">${emptyMsg}</div>`;
+        } else {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:40px; color:var(--muted);">${emptyMsg}</td></tr>`;
+        }
         return;
     }
 
-    tbody.innerHTML = snapshot.docs.map(d => {
-        const q = d.data();
-        const promoter = state.allPromotersData?.find(p => p.id === q.promoter_id);
-        const disponible = (q.assigned || 0) - (q.used || 0);
+    if (isMobile) {
+        tbody.innerHTML = '';
+        let mobileList = document.getElementById('mobileStockList');
+        if (!mobileList) {
+            const table = document.getElementById('tblStock');
+            mobileList = document.createElement('div');
+            mobileList.id = 'mobileStockList';
+            mobileList.className = 'mobile-stock-list';
+            table.parentNode.insertBefore(mobileList, table.nextSibling);
+        }
 
-        return `
-            <tr>
-                <td>${Validator.sanitizeHTML(promoter?.name || 'Desconocido')}</td>
-                <td>${Validator.sanitizeHTML(q.ticket_name || '-')}</td>
-                <td style="text-align:center;">${q.assigned || 0}</td>
-                <td style="text-align:center;">${q.used || 0}</td>
-                <td style="text-align:center; font-weight:700; color:${disponible > 0 ? 'var(--success)' : 'var(--danger)'};">${disponible}</td>
-                <td>
-                    <button class="btn-icon" onclick="window.editStock('${Validator.sanitizeHTML(d.id)}')" title="Editar">
-                        <i class="fa-solid fa-pen"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-    }).join("");
+        mobileList.innerHTML = snapshot.docs.map(d => {
+            const q = d.data();
+            const promoter = state.allPromotersData?.find(p => p.id === q.promoter_id);
+            const assigned = q.assigned || 0;
+            const used = q.used || 0;
+            const disponible = assigned - used;
+            const pct = assigned > 0 ? Math.round((used / assigned) * 100) : 0;
+            const barColor = disponible > 0 ? '#22c55e' : '#ef4444';
+
+            return `
+                <div class="mobile-stock-item">
+                    <div class="stock-top">
+                        <span class="stock-name">${Validator.sanitizeHTML(promoter?.name || 'Desconocido')}</span>
+                        <span class="stock-type">${Validator.sanitizeHTML(q.ticket_name || '-')}</span>
+                    </div>
+                    <div class="stock-numbers">
+                        <div class="stock-num"><div class="val">${assigned}</div><div class="lbl">Asignado</div></div>
+                        <div class="stock-num"><div class="val">${used}</div><div class="lbl">Usado</div></div>
+                        <div class="stock-num"><div class="val" style="color:${barColor}">${disponible}</div><div class="lbl">Disponible</div></div>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%; background:${barColor};"></div></div>
+                    <div style="margin-top:10px; text-align:right;">
+                        <button class="btn-icon" onclick="window.editStock('${Validator.sanitizeHTML(d.id)}')" title="Editar" style="min-height:44px; min-width:44px;">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } else {
+        const existing = document.getElementById('mobileStockList');
+        if (existing) existing.innerHTML = '';
+
+        tbody.innerHTML = snapshot.docs.map(d => {
+            const q = d.data();
+            const promoter = state.allPromotersData?.find(p => p.id === q.promoter_id);
+            const disponible = (q.assigned || 0) - (q.used || 0);
+
+            return `
+                <tr>
+                    <td>${Validator.sanitizeHTML(promoter?.name || 'Desconocido')}</td>
+                    <td>${Validator.sanitizeHTML(q.ticket_name || '-')}</td>
+                    <td style="text-align:center;">${q.assigned || 0}</td>
+                    <td style="text-align:center;">${q.used || 0}</td>
+                    <td style="text-align:center; font-weight:700; color:${disponible > 0 ? 'var(--success)' : 'var(--danger)'};">${disponible}</td>
+                    <td>
+                        <button class="btn-icon" onclick="window.editStock('${Validator.sanitizeHTML(d.id)}')" title="Editar">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
 }
 
 /**
@@ -859,6 +914,8 @@ function renderPendingPaymentsFromSnapshot(snapshot) {
 
     if (!tbody) return;
 
+    const isMobile = window.innerWidth <= 768;
+
     // Actualizar badge
     const count = snapshot.docs.length;
     if (badge) {
@@ -878,41 +935,90 @@ function renderPendingPaymentsFromSnapshot(snapshot) {
     if (snapshot.empty) {
         if (emptyState) emptyState.style.display = '';
         if (table) table.style.display = 'none';
+        if (isMobile) {
+            const mobileList = document.getElementById('mobilePaymentsList');
+            if (mobileList) mobileList.innerHTML = '';
+        }
         return;
     }
 
     if (emptyState) emptyState.style.display = 'none';
     if (table) table.style.display = '';
 
-    tbody.innerHTML = snapshot.docs.map(d => {
-        const pc = d.data();
-        const formattedDate = pc.created_at
-            ? new Date(pc.created_at).toLocaleDateString('es-PE', {
-                day: '2-digit',
-                month: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-            })
-            : '---';
+    if (isMobile) {
+        tbody.innerHTML = '';
+        let mobileList = document.getElementById('mobilePaymentsList');
+        if (!mobileList) {
+            mobileList = document.createElement('div');
+            mobileList.id = 'mobilePaymentsList';
+            mobileList.className = 'mobile-payments-list';
+            table.parentNode.insertBefore(mobileList, table.nextSibling);
+        }
 
-        return `
-            <tr data-code-id="${d.id}">
-                <td><code style="font-family:monospace; font-weight:600;">${Validator.sanitizeHTML(pc.code)}</code></td>
-                <td>${Validator.sanitizeHTML(pc.promoter_name || 'Desconocido')}</td>
-                <td>${Validator.sanitizeHTML(pc.ticket_name || '-')}</td>
-                <td style="font-weight:600;">S/. ${Number(pc.payment_amount || 0).toFixed(2)}</td>
-                <td>${formattedDate}</td>
-                <td>
-                    <button class="btn btn-sm btn-success" onclick="window.approvePayment('${d.id}')" title="Aprobar pago">
-                        <i class="fa-solid fa-check"></i> Aprobar
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="window.rejectPayment('${d.id}')" title="Rechazar">
-                        <i class="fa-solid fa-times"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-    }).join("");
+        mobileList.innerHTML = snapshot.docs.map(d => {
+            const pc = d.data();
+            const formattedDate = pc.created_at
+                ? new Date(pc.created_at).toLocaleDateString('es-PE', {
+                    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                })
+                : '---';
+
+            return `
+                <div class="mobile-payment-card">
+                    <div class="payment-top">
+                        <span class="name">${Validator.sanitizeHTML(pc.promoter_name || 'Desconocido')}</span>
+                        <span class="time">${formattedDate}</span>
+                    </div>
+                    <div class="payment-detail">
+                        <span>Codigo: <strong>${Validator.sanitizeHTML(pc.code)}</strong></span>
+                        <span>Entrada: <strong>${Validator.sanitizeHTML(pc.ticket_name || '-')}</strong></span>
+                        <span>Monto: <strong>S/. ${Number(pc.payment_amount || 0).toFixed(2)}</strong></span>
+                    </div>
+                    <div class="payment-btns">
+                        <button class="btn-approve" onclick="window.approvePayment('${d.id}')">
+                            <i class="fa-solid fa-check"></i> Aprobar
+                        </button>
+                        <button class="btn-reject" onclick="window.rejectPayment('${d.id}')">
+                            <i class="fa-solid fa-times"></i> Rechazar
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } else {
+        const existing = document.getElementById('mobilePaymentsList');
+        if (existing) existing.innerHTML = '';
+
+        tbody.innerHTML = snapshot.docs.map(d => {
+            const pc = d.data();
+            const formattedDate = pc.created_at
+                ? new Date(pc.created_at).toLocaleDateString('es-PE', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })
+                : '---';
+
+            return `
+                <tr data-code-id="${d.id}">
+                    <td><code style="font-family:monospace; font-weight:600;">${Validator.sanitizeHTML(pc.code)}</code></td>
+                    <td>${Validator.sanitizeHTML(pc.promoter_name || 'Desconocido')}</td>
+                    <td>${Validator.sanitizeHTML(pc.ticket_name || '-')}</td>
+                    <td style="font-weight:600;">S/. ${Number(pc.payment_amount || 0).toFixed(2)}</td>
+                    <td>${formattedDate}</td>
+                    <td>
+                        <button class="btn btn-sm btn-success" onclick="window.approvePayment('${d.id}')" title="Aprobar pago">
+                            <i class="fa-solid fa-check"></i> Aprobar
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="window.rejectPayment('${d.id}')" title="Rechazar">
+                            <i class="fa-solid fa-times"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
 }
 
 /**

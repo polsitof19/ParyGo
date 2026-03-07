@@ -16,53 +16,116 @@ export function renderTicketTable(event) {
     if (!tbody) return;
 
     const tickets = event?.tickets || [];
+    const isMobile = window.innerWidth <= 768;
 
     if (tickets.length === 0) {
-        tbody.innerHTML = `
-            <tr>
+        const emptyHTML = isMobile
+            ? `<div style="text-align:center; color:var(--text-muted); padding:40px 20px;">
+                    <i class="fa-solid fa-ticket" style="font-size:32px; opacity:0.2; display:block; margin-bottom:12px;"></i>
+                    No hay tipos de entrada creados
+                </div>`
+            : `<tr>
                 <td colspan="7" style="text-align:center; color:var(--text-muted); padding:50px;">
                     <i class="fa-solid fa-ticket" style="font-size:40px; opacity:0.2; display:block; margin-bottom:15px;"></i>
                     No hay tipos de entrada creados
                     <br><small style="opacity:0.7;">Crea tu primer tipo de entrada para comenzar</small>
                 </td>
-            </tr>
-        `;
+            </tr>`;
+
+        if (isMobile) {
+            tbody.innerHTML = '';
+            let mobileList = document.getElementById('mobileEntriesList');
+            if (!mobileList) {
+                mobileList = document.createElement('div');
+                mobileList.id = 'mobileEntriesList';
+                mobileList.className = 'mobile-entries-list';
+                table.parentNode.insertBefore(mobileList, table.nextSibling);
+            }
+            mobileList.innerHTML = emptyHTML;
+        } else {
+            const existing = document.getElementById('mobileEntriesList');
+            if (existing) existing.innerHTML = '';
+            tbody.innerHTML = emptyHTML;
+        }
         return;
     }
 
-    tbody.innerHTML = tickets.map((tk, index) => `
-        <tr>
-            <td>
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <div style="width:8px; height:30px; border-radius:4px; background:${tk.color || 'var(--primary)'};"></div>
-                    <div>
-                        <strong>${Validator.sanitizeHTML(tk.name)}</strong>
-                        ${tk.description ? `<br><small style="color:var(--text-muted);">${Validator.sanitizeHTML(tk.description)}</small>` : ''}
+    if (isMobile) {
+        tbody.innerHTML = '';
+        let mobileList = document.getElementById('mobileEntriesList');
+        if (!mobileList) {
+            mobileList = document.createElement('div');
+            mobileList.id = 'mobileEntriesList';
+            mobileList.className = 'mobile-entries-list';
+            table.parentNode.insertBefore(mobileList, table.nextSibling);
+        }
+
+        mobileList.innerHTML = tickets.map((tk, index) => {
+            const priceText = tk.priceMode === 'PHASES'
+                ? `Preventa S/ ${Number(tk.price).toFixed(2)}`
+                : tk.price > 0 ? `S/ ${Number(tk.price).toFixed(2)}` : 'GRATIS';
+            const detailText = (tk.claim_until || tk.buy_until)
+                ? `Hasta ${formatDate(tk.claim_until || tk.buy_until)}`
+                : (tk.valid_until ? `Escanear hasta ${formatDate(tk.valid_until)}` : '');
+
+            const safeColor = /^#[0-9a-fA-F]{3,8}$/.test(tk.color) ? tk.color : 'var(--primary)';
+            return `
+                <div class="mobile-entry-card">
+                    <div class="entry-color" style="background:${safeColor}"></div>
+                    <div class="entry-info">
+                        <h4>${Validator.sanitizeHTML(tk.name)}</h4>
+                        <div class="price">${priceText}</div>
+                        ${detailText ? `<div class="detail">${detailText}</div>` : ''}
+                    </div>
+                    <div class="entry-actions">
+                        <button class="entry-act" onclick="window.editTicket('${tk.id || index}')" title="Editar">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="entry-act" onclick="window.deleteTicket('${tk.id || index}')" title="Eliminar" style="color:#ef4444;">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
                     </div>
                 </div>
-            </td>
-            <td style="font-weight:700; ${tk.price > 0 ? 'color:#10b981;' : 'color:var(--primary);'}">
-                ${tk.priceMode === 'PHASES'
-                    ? `<span style="color:#a78bfa;">Preventa</span> <small style="opacity:0.6;">S/ ${Number(tk.price).toFixed(2)}</small>`
-                    : tk.price > 0 ? 'S/ ' + Number(tk.price).toFixed(2) : 'GRATIS'}
-            </td>
-            <td>${(tk.claim_until || tk.buy_until) ? formatDate(tk.claim_until || tk.buy_until) : (tk.priceMode === 'PHASES' ? '<span style="color:var(--text-muted);">Por fases</span>' : '-')}</td>
-            <td>${tk.valid_until ? formatDate(tk.valid_until) : '-'}</td>
-            <td>
-                <div style="width:28px; height:28px; border-radius:50%; background:${tk.color || 'var(--primary)'}; border:2px solid var(--border);"></div>
-            </td>
-            <td>
-                <div style="display:flex; gap:8px;">
-                    <button class="btn-icon" onclick="window.editTicket('${tk.id || index}')" title="Editar">
-                        <i class="fa-solid fa-pen"></i>
-                    </button>
-                    <button class="btn-icon" style="background:rgba(239,68,68,0.15); color:#ef4444;" onclick="window.deleteTicket('${tk.id || index}')" title="Eliminar">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join("");
+            `;
+        }).join('');
+    } else {
+        const existing = document.getElementById('mobileEntriesList');
+        if (existing) existing.innerHTML = '';
+
+        tbody.innerHTML = tickets.map((tk, index) => `
+            <tr>
+                <td>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:8px; height:30px; border-radius:4px; background:${tk.color || 'var(--primary)'};"></div>
+                        <div>
+                            <strong>${Validator.sanitizeHTML(tk.name)}</strong>
+                            ${tk.description ? `<br><small style="color:var(--text-muted);">${Validator.sanitizeHTML(tk.description)}</small>` : ''}
+                        </div>
+                    </div>
+                </td>
+                <td style="font-weight:700; ${tk.price > 0 ? 'color:#10b981;' : 'color:var(--primary);'}">
+                    ${tk.priceMode === 'PHASES'
+                        ? `<span style="color:#a78bfa;">Preventa</span> <small style="opacity:0.6;">S/ ${Number(tk.price).toFixed(2)}</small>`
+                        : tk.price > 0 ? 'S/ ' + Number(tk.price).toFixed(2) : 'GRATIS'}
+                </td>
+                <td>${(tk.claim_until || tk.buy_until) ? formatDate(tk.claim_until || tk.buy_until) : (tk.priceMode === 'PHASES' ? '<span style="color:var(--text-muted);">Por fases</span>' : '-')}</td>
+                <td>${tk.valid_until ? formatDate(tk.valid_until) : '-'}</td>
+                <td>
+                    <div style="width:28px; height:28px; border-radius:50%; background:${tk.color || 'var(--primary)'}; border:2px solid var(--border);"></div>
+                </td>
+                <td>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn-icon" onclick="window.editTicket('${tk.id || index}')" title="Editar">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="btn-icon" style="background:rgba(239,68,68,0.15); color:#ef4444;" onclick="window.deleteTicket('${tk.id || index}')" title="Eliminar">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join("");
+    }
 }
 
 // ==========================================

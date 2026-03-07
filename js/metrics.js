@@ -379,6 +379,66 @@ export async function loadLiquidation(eid) {
         if (elComisiones) elComisiones.textContent = `S/. ${totalComisiones.toFixed(2)}`;
         if (elGanancia) elGanancia.textContent = `S/. ${ganancia.toFixed(2)}`;
 
+        // Mobile liquidation cards
+        if (window.innerWidth <= 768) {
+            const liqView = document.getElementById('view_met_liq');
+            let mobileList = document.getElementById('mobileLiquidList');
+            if (!mobileList && liqView) {
+                mobileList = document.createElement('div');
+                mobileList.id = 'mobileLiquidList';
+                mobileList.className = 'mobile-liquid-list';
+                liqView.appendChild(mobileList);
+            }
+            if (mobileList) {
+                if (entries.length === 0) {
+                    mobileList.innerHTML = '<div style="text-align:center; padding:30px 0; color:var(--text-muted);">No hay promotores con actividad</div>';
+                } else {
+                    mobileList.innerHTML = entries.map(([pid, p]) => {
+                        const total = p.salesCommission + p.freeCommission;
+                        const payment = payments[pid];
+                        const isPaid = !!payment;
+                        const extras = [...new Set(p.freeExtras)].join(', ');
+                        const freeCommText = p.freeCommission > 0
+                            ? `S/. ${p.freeCommission.toFixed(2)}${extras ? ` + ${Validator.sanitizeHTML(extras)}` : ''}`
+                            : (extras ? Validator.sanitizeHTML(extras) : '-');
+
+                        return `
+                            <div class="mobile-liquid-card">
+                                <div class="liquid-header">
+                                    <span class="name">${Validator.sanitizeHTML(p.name)}</span>
+                                    <span class="liquid-status ${isPaid ? 'paid' : 'pending'}">${isPaid ? 'Pagado' : 'Pendiente'}</span>
+                                </div>
+                                <div class="liquid-body">
+                                    <div class="liquid-row"><span class="label">Vendidos</span><span class="value">${p.sold}</span></div>
+                                    <div class="liquid-row"><span class="label">Gratis</span><span class="value">${p.free}</span></div>
+                                    <div class="liquid-row"><span class="label">Comision Ventas</span><span class="value">S/. ${p.salesCommission.toFixed(2)}</span></div>
+                                    <div class="liquid-row"><span class="label">Comision Gratis</span><span class="value">${freeCommText}</span></div>
+                                </div>
+                                <div class="liquid-total">
+                                    <span>Total a Pagar</span>
+                                    <span>S/. ${total.toFixed(2)}</span>
+                                </div>
+                                ${!isPaid ? `
+                                    <div class="liquid-action">
+                                        <button class="btn-pay" data-pid="${Validator.sanitizeHTML(pid)}" data-pname="${Validator.sanitizeHTML(p.name)}" data-amount="${total.toFixed(2)}" data-eid="${Validator.sanitizeHTML(eid)}">
+                                            <i class="fa-solid fa-check"></i> Marcar Pagado
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }).join('');
+
+                    // Event delegation for mobile pay buttons
+                    mobileList.querySelectorAll('.btn-pay').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            markPromoterPaid(btn.dataset.pid, btn.dataset.pname, btn.dataset.amount, btn.dataset.eid);
+                        });
+                    });
+                }
+            }
+        }
+
     } catch (error) {
         logger.error("Error cargando liquidación:", error);
         toast("Error cargando liquidación", "error");
@@ -1028,84 +1088,118 @@ export function filterAccessTable() {
 function renderAccessTable() {
     const tbody = document.querySelector("#tblAccesses tbody");
     if (!tbody) return;
-    
+
+    const isMobile = window.innerWidth <= 768;
+    const mobileList = document.getElementById('mobileAccessList');
+    const mobileSearch = document.getElementById('mobileAccessSearch');
+    const mobileFilters = document.getElementById('mobileAccessFilters');
+
+    // Show/hide mobile elements
+    if (isMobile) {
+        if (mobileSearch) mobileSearch.style.display = '';
+        if (mobileFilters) mobileFilters.style.display = '';
+        if (mobileList) mobileList.style.display = '';
+    }
+
     if (filteredAccessData.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="4" style="text-align:center; color:var(--muted); padding:50px;">
-                    <i class="fa-solid fa-ticket" style="font-size:32px; opacity:0.2; display:block; margin-bottom:10px;"></i>
-                    No se encontraron accesos
-                </td>
-            </tr>
-        `;
+        const emptyMsg = 'No se encontraron accesos';
+        if (isMobile && mobileList) {
+            tbody.innerHTML = '';
+            mobileList.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:40px 0;">
+                <i class="fa-solid fa-ticket" style="font-size:32px; opacity:0.2; display:block; margin-bottom:10px;"></i>
+                ${emptyMsg}</div>`;
+        } else {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--muted); padding:50px;">
+                <i class="fa-solid fa-ticket" style="font-size:32px; opacity:0.2; display:block; margin-bottom:10px;"></i>
+                ${emptyMsg}</td></tr>`;
+        }
         const pagination = document.getElementById("txtPagination");
         if (pagination) pagination.textContent = "0 registros";
         return;
     }
-    
-    tbody.innerHTML = filteredAccessData.slice(0, 100).map(a => {
-        // Obtener iniciales
-        const name = a.client_name || a.claimed_by?.name || 'Invitado';
-        const initials = name.split(' ').map(n => n.charAt(0).toUpperCase()).slice(0, 2).join('');
-        
-        // Estado y clase
-        let statusText, statusClass;
-        switch (a._realStatus) {
-            case 'CLAIMED':
-                statusText = 'Utilizada';
-                statusClass = 'status-claimed';
-                break;
-            case 'EXPIRED':
-                statusText = 'Expirada';
-                statusClass = 'status-expired';
-                break;
-            case 'CANCELLED':
-                statusText = 'Anulado';
-                statusClass = 'status-cancelled';
-                break;
-            default:
-                statusText = 'Sin utilizar';
-                statusClass = 'status-active';
-        }
-        
-        const idType = a.id_type || 'DNI';
-        const idNumber = a.client_dni || a.claimed_by?.dni || '-';
-        
-        return `
-            <tr data-access-id="${Validator.sanitizeHTML(a.id)}" style="cursor: pointer;" onclick="window.openDrawer('${Validator.sanitizeHTML(a.id)}')">
-                <td>
-                    <div class="table-name-cell">
-                        <div class="table-avatar" style="background: ${a.ticket_color || 'var(--primary)'};">${initials}</div>
-                        <span style="font-weight: 600; text-transform: uppercase;">${Validator.sanitizeHTML(name)}</span>
+
+    if (isMobile && mobileList) {
+        tbody.innerHTML = '';
+        mobileList.innerHTML = filteredAccessData.slice(0, 100).map(a => {
+            const name = a.client_name || a.claimed_by?.name || 'Invitado';
+            const initials = name.split(' ').map(n => n.charAt(0).toUpperCase()).slice(0, 2).join('');
+            const idNumber = a.client_dni || a.claimed_by?.dni || '-';
+
+            let statusText, badgeClass;
+            switch (a._realStatus) {
+                case 'CLAIMED': statusText = 'Utilizada'; badgeClass = 'claimed'; break;
+                case 'EXPIRED': statusText = 'Expirada'; badgeClass = 'expired'; break;
+                case 'CANCELLED': statusText = 'Anulado'; badgeClass = 'cancelled'; break;
+                default: statusText = 'Sin utilizar'; badgeClass = 'active';
+            }
+
+            return `
+                <div class="mobile-access-item" onclick="window.openDrawer('${Validator.sanitizeHTML(a.id)}')">
+                    <div class="access-avatar" style="background:${a.ticket_color ? Validator.sanitizeHTML(a.ticket_color) + '20' : 'rgba(244,63,94,0.1)'}; color:${a.ticket_color ? Validator.sanitizeHTML(a.ticket_color) : 'var(--primary)'}">${initials}</div>
+                    <div class="access-info">
+                        <div class="name">${Validator.sanitizeHTML(name)}</div>
+                        <div class="sub">${Validator.sanitizeHTML(a.ticket_name || '-')} &bull; ${Validator.sanitizeHTML(idNumber)}</div>
                     </div>
-                </td>
-                <td>
-                    <span style="color: var(--muted); font-size: 12px;">${idType}</span><br>
-                    <span style="font-weight: 600;">${Validator.sanitizeHTML(idNumber)}</span>
-                </td>
-                <td>${Validator.sanitizeHTML(a.ticket_name || '-')}</td>
-                <td>
-                    <div class="action-btns">
-                        ${a._realStatus !== 'CANCELLED' ? `
-                            <button class="btn-cancel" onclick="window.cancelAccess('${Validator.sanitizeHTML(a.id)}')" title="Anular entrada">
-                                <i class="fa-solid fa-times"></i>
-                            </button>
-                            <button class="btn-favorite" onclick="window.openDrawer('${Validator.sanitizeHTML(a.id)}')" title="Ver detalles">
-                                <i class="fa-regular fa-heart"></i>
-                            </button>
-                        ` : `
-                            <span class="${statusClass}" style="padding: 8px 12px; font-weight: 600;">${statusText}</span>
-                        `}
+                    <div class="access-status">
+                        <span class="access-badge ${badgeClass}">${statusText}</span>
                     </div>
-                </td>
-            </tr>
-        `;
-    }).join("");
-    
+                </div>
+            `;
+        }).join('');
+    } else {
+        if (mobileList) mobileList.innerHTML = '';
+
+        tbody.innerHTML = filteredAccessData.slice(0, 100).map(a => {
+            const name = a.client_name || a.claimed_by?.name || 'Invitado';
+            const initials = name.split(' ').map(n => n.charAt(0).toUpperCase()).slice(0, 2).join('');
+
+            let statusText, statusClass;
+            switch (a._realStatus) {
+                case 'CLAIMED': statusText = 'Utilizada'; statusClass = 'status-claimed'; break;
+                case 'EXPIRED': statusText = 'Expirada'; statusClass = 'status-expired'; break;
+                case 'CANCELLED': statusText = 'Anulado'; statusClass = 'status-cancelled'; break;
+                default: statusText = 'Sin utilizar'; statusClass = 'status-active';
+            }
+
+            const idType = a.id_type || 'DNI';
+            const idNumber = a.client_dni || a.claimed_by?.dni || '-';
+
+            return `
+                <tr data-access-id="${Validator.sanitizeHTML(a.id)}" style="cursor: pointer;" onclick="window.openDrawer('${Validator.sanitizeHTML(a.id)}')">
+                    <td>
+                        <div class="table-name-cell">
+                            <div class="table-avatar" style="background: ${a.ticket_color || 'var(--primary)'};">${initials}</div>
+                            <span style="font-weight: 600; text-transform: uppercase;">${Validator.sanitizeHTML(name)}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span style="color: var(--muted); font-size: 12px;">${idType}</span><br>
+                        <span style="font-weight: 600;">${Validator.sanitizeHTML(idNumber)}</span>
+                    </td>
+                    <td>${Validator.sanitizeHTML(a.ticket_name || '-')}</td>
+                    <td>
+                        <div class="action-btns">
+                            ${a._realStatus !== 'CANCELLED' ? `
+                                <button class="btn-cancel" onclick="window.cancelAccess('${Validator.sanitizeHTML(a.id)}')" title="Anular entrada">
+                                    <i class="fa-solid fa-times"></i>
+                                </button>
+                                <button class="btn-favorite" onclick="window.openDrawer('${Validator.sanitizeHTML(a.id)}')" title="Ver detalles">
+                                    <i class="fa-regular fa-heart"></i>
+                                </button>
+                            ` : `
+                                <span class="${statusClass}" style="padding: 8px 12px; font-weight: 600;">${statusText}</span>
+                            `}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
+
     const pagination = document.getElementById("txtPagination");
     if (pagination) {
-        pagination.textContent = filteredAccessData.length > 100 
-            ? `Mostrando 100 de ${filteredAccessData.length} registros` 
+        pagination.textContent = filteredAccessData.length > 100
+            ? `Mostrando 100 de ${filteredAccessData.length} registros`
             : `${filteredAccessData.length} registros`;
     }
 }
