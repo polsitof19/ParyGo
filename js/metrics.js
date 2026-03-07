@@ -126,9 +126,108 @@ export async function loadEventMetrics(eid) {
             }
         }
 
+        // MOBILE: Stats, Chart, Entry List
+        if (window.innerWidth <= 768) {
+            renderMobileMetrics(tickets, typeStats);
+        }
+
     } catch (error) {
         logger.error("Error cargando métricas:", error);
         toast("Error cargando métricas", "error");
+    }
+}
+
+/**
+ * Renderizar metricas mobile: stats scroll, mini chart, entry list
+ */
+function renderMobileMetrics(tickets, typeStats) {
+    // Totals
+    const totalGen = tickets.length;
+    const totalClaimed = tickets.filter(t => t.status === 'CLAIMED' || t.client_name).length;
+    const totalAvailable = totalGen - totalClaimed;
+    const totalScanned = tickets.filter(t => t.status === 'SCANNED' || t.status === 'SCANNED_IN').length;
+
+    // 3B: Stats scroll
+    const statsEl = document.getElementById('mobileStatsScroll');
+    if (statsEl) {
+        statsEl.innerHTML = `
+            <div class="mobile-stat-card">
+                <div class="stat-icon pink"><i class="fa-solid fa-ticket"></i></div>
+                <div class="stat-value">${totalGen}</div>
+                <div class="stat-label">Generados</div>
+            </div>
+            <div class="mobile-stat-card">
+                <div class="stat-icon green"><i class="fa-solid fa-check"></i></div>
+                <div class="stat-value">${totalClaimed}</div>
+                <div class="stat-label">Reclamados</div>
+            </div>
+            <div class="mobile-stat-card">
+                <div class="stat-icon blue"><i class="fa-solid fa-box-open"></i></div>
+                <div class="stat-value">${totalAvailable}</div>
+                <div class="stat-label">Disponibles</div>
+            </div>
+            <div class="mobile-stat-card">
+                <div class="stat-icon yellow"><i class="fa-solid fa-qrcode"></i></div>
+                <div class="stat-value">${totalScanned}</div>
+                <div class="stat-label">Escaneados</div>
+            </div>
+        `;
+    }
+
+    // 3D: Mini chart - ventas/claims por dia ultimos 7 dias
+    const chartEl = document.getElementById('miniChart');
+    if (chartEl) {
+        const dayCounts = {};
+        const now = new Date();
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(now);
+            d.setDate(d.getDate() - i);
+            dayCounts[d.toISOString().split('T')[0]] = 0;
+        }
+        tickets.forEach(t => {
+            const raw = t.claimed_at || t.created_at || '';
+            let date = '';
+            if (typeof raw === 'string') date = raw.split('T')[0];
+            else if (raw && raw.toDate) date = raw.toDate().toISOString().split('T')[0];
+            else if (raw) try { date = new Date(raw).toISOString().split('T')[0]; } catch(e) {}
+            if (date in dayCounts) dayCounts[date]++;
+        });
+        const values = Object.values(dayCounts);
+        const max = Math.max(...values, 1);
+        const maxIdx = values.indexOf(max);
+        chartEl.innerHTML = values.map((v, i) => {
+            const h = Math.max(3, (v / max) * 40);
+            const isMax = i === maxIdx && v > 0;
+            return `<div class="chart-bar${isMax ? ' highlight' : ''}" style="height:${h}px"></div>`;
+        }).join('');
+    }
+
+    // 3E: Entry list by type
+    const listEl = document.getElementById('mobileEntryList');
+    if (listEl) {
+        const types = Object.entries(typeStats);
+        if (types.length === 0) {
+            listEl.innerHTML = '';
+        } else {
+            const colors = ['#f43f5e', '#a855f7', '#3b82f6', '#22c55e', '#eab308', '#06b6d4'];
+            listEl.innerHTML = types.map(([name, s], i) => {
+                const color = colors[i % colors.length];
+                const initial = name.charAt(0).toUpperCase();
+                return `
+                    <div class="entry-item">
+                        <div class="entry-avatar" style="background:${color}20; color:${color}">${Validator.sanitizeHTML(initial)}</div>
+                        <div class="entry-info">
+                            <div class="name">${Validator.sanitizeHTML(name)}</div>
+                            <div class="sub">${s.claimed} reclamados &bull; ${s.scanned} escaneados</div>
+                        </div>
+                        <div class="entry-value">
+                            <div class="number">${s.gen}</div>
+                            <div class="label">generados</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
     }
 }
 

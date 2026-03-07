@@ -3783,3 +3783,330 @@ select option:hover {
     from { transform: translateY(100%); }
     to { transform: translateY(0); }
 }
+
+/* ==========================================
+   MOBILE PART 3 - Hero, Stats, Tabs, Chart, Entry List
+   ========================================== */
+
+/* Desktop: hide mobile-only elements */
+.mobile-hero-wrapper,
+.mobile-actions-row,
+.mobile-stats-scroll,
+.mini-chart,
+.mobile-entry-list {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    /* 3A: HERO COMPACTO */
+    .event-hero {
+        position: relative;
+        min-height: auto !important;
+        height: auto !important;
+        padding: 0;
+        border-radius: 0;
+        margin-bottom: 0;
+        overflow: hidden;
+    }
+    .event-hero > .hero-overlay {
+        display: none;
+    }
+
+    .mobile-hero-wrapper {
+        display: block;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-bg-mobile {
+        position: absolute;
+        inset: 0;
+        background-size: cover;
+        background-position: center;
+        filter: blur(40px) brightness(0.3);
+        transform: scale(1.3);
+    }
+
+    .hero-overlay-mobile {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(10,10,10,0.3) 0%, var(--bg) 100%);
+    }
+
+    .hero-content-mobile {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        gap: 14px;
+        align-items: flex-end;
+        padding: calc(env(safe-area-inset-top, 0px) + 48px) 20px 14px;
+    }
+
+    .hero-poster-mobile {
+        width: 85px;
+        height: 115px;
+        border-radius: 10px;
+        object-fit: cover;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        flex-shrink: 0;
+    }
+
+    .hero-info-mobile h1 {
+        font-size: 17px;
+        font-weight: 800;
+        letter-spacing: -0.3px;
+        line-height: 1.2;
+        margin-bottom: 6px;
+    }
+
+    .hero-meta-mobile {
+        font-size: 11px;
+        color: var(--text-muted);
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .hero-meta-mobile span {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .hero-meta-mobile i {
+        color: var(--primary);
+        width: 13px;
+        text-align: center;
+        font-size: 10px;
+    }
+
+    .mobile-actions-row {
+        display: flex;
+        gap: 8px;
+        padding: 0 20px 14px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .mobile-action-btn {
+        flex: 1;
+        padding: 11px;
+        border-radius: 10px;
+        border: none;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        cursor: pointer;
+        min-height: 44px;
+    }
+
+    .mobile-action-btn.primary {
+        background: var(--primary);
+        color: white;
+    }
+
+    .mobile-action-btn.ghost {
+        background: var(--bg-card, #18181b);
+        color: var(--text-muted);
+        border: 1px solid var(--border);
+    }
+
+    .mobile-action-btn:active {
+        transform: scale(0.97);
+    }
+
+    /* Mobile back button in hero */
+    .mobile-back-btn {
+        position: absolute;
+        top: calc(env(safe-area-inset-top, 0px) + 8px);
+        left: 12px;
+        z-index: 2;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: rgba(0,0,0,0.4);
+        backdrop-filter: blur(8px);
+        border: none;
+        color: white;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+
+    /* 3B: STATS SCROLL HORIZONTAL */
+    .mobile-stats-scroll {
+        display: flex;
+        gap: 10px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 14px 20px;
+        scrollbar-width: none;
+        scroll-snap-type: x mandatory;
+    }
+    .mobile-stats-scroll::-webkit-scrollbar { display: none; }
+
+    .mobile-stat-card {
+        flex-shrink: 0;
+        width: 120px;
+        scroll-snap-align: start;
+        background: var(--bg-card, #18181b);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px;
+    }
+
+    .mobile-stat-card .stat-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        margin-bottom: 10px;
+    }
+
+    .mobile-stat-card .stat-icon.pink { background: rgba(244,63,94,0.1); color: var(--primary); }
+    .mobile-stat-card .stat-icon.green { background: rgba(34,197,94,0.1); color: #22c55e; }
+    .mobile-stat-card .stat-icon.blue { background: rgba(59,130,246,0.1); color: #3b82f6; }
+    .mobile-stat-card .stat-icon.yellow { background: rgba(245,158,11,0.1); color: #f59e0b; }
+
+    .mobile-stat-card .stat-value {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .mobile-stat-card .stat-label {
+        font-size: 11px;
+        color: var(--text-muted);
+        font-weight: 500;
+        margin-top: 2px;
+    }
+
+    /* 3C: TABS SCROLL MEJORADOS */
+    .event-tabs {
+        background: transparent;
+        padding: 0;
+        margin-bottom: 0;
+        border-radius: 0;
+    }
+
+    .event-tabs .tabs-nav {
+        display: flex;
+        gap: 0;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 0 20px;
+        border-bottom: 1px solid var(--border);
+        scrollbar-width: none;
+        position: sticky;
+        top: calc(56px + env(safe-area-inset-top, 0px));
+        z-index: 50;
+        background: var(--bg);
+    }
+    .event-tabs .tabs-nav::-webkit-scrollbar { display: none; }
+
+    .event-tabs .sub-tab {
+        flex-shrink: 0;
+        flex: none;
+        padding: 14px 16px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-muted);
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        background: transparent;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .event-tabs .sub-tab.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+        background: transparent;
+    }
+
+    .event-tabs .sub-tab:hover {
+        background: transparent;
+    }
+
+    /* Sub content mobile */
+    .sub-content {
+        border-radius: 0;
+        padding: 0;
+        background: transparent;
+    }
+
+    /* 3D: MINI CHART */
+    .mini-chart {
+        display: flex;
+        align-items: flex-end;
+        gap: 3px;
+        height: 40px;
+        padding: 0 20px 16px;
+    }
+    .chart-bar {
+        flex: 1;
+        border-radius: 3px 3px 0 0;
+        background: rgba(244,63,94,0.15);
+        transition: height 0.3s ease;
+        min-height: 3px;
+    }
+    .chart-bar.highlight {
+        background: var(--primary);
+    }
+
+    /* 3E: LISTA POR TIPO DE ENTRADA */
+    .mobile-entry-list {
+        display: block;
+    }
+
+    .mobile-entry-list .entry-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .mobile-entry-list .entry-item:active { background: var(--bg-card); }
+
+    .mobile-entry-list .entry-item .entry-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    .mobile-entry-list .entry-item .entry-info { flex: 1; min-width: 0; }
+    .mobile-entry-list .entry-item .entry-info .name {
+        font-size: 14px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .mobile-entry-list .entry-item .entry-info .sub { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+    .mobile-entry-list .entry-item .entry-value { text-align: right; flex-shrink: 0; }
+    .mobile-entry-list .entry-item .entry-value .number { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .mobile-entry-list .entry-item .entry-value .label { font-size: 11px; color: var(--text-muted); }
+
+    /* Hide desktop metrics header and export on mobile (mobile stats replace them) */
+    .metrics-header {
+        display: none;
+    }
+}

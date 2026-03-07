@@ -365,32 +365,44 @@ export function backToEvents() {
 export function openEventDetail(eid) {
     state.activeEventId = eid;
     switchView('view_event_detail');
-    
+
     const event = state.allEvents.find(x => x.id === eid);
     if (!event) return;
 
-    // Actualizar UI
+    // Actualizar UI desktop
     const imgEl = document.getElementById("dEvImg");
     if (imgEl) imgEl.src = event.image || '';
-    
+
     const bgEl = document.getElementById("heroBg");
     if (bgEl) bgEl.style.backgroundImage = `url(${event.image || ''})`;
-    
+
     const nameEl = document.getElementById("dEvName");
     if (nameEl) nameEl.textContent = event.name;
-    
+
     const dateEl = document.getElementById("dEvDate");
     if (dateEl) dateEl.textContent = event.date || 'Fecha TBA';
-    
+
     const venueEl = document.getElementById("dEvVenue");
     if (venueEl) venueEl.textContent = event.venue || 'Lugar TBA';
-    
+
     const brandEl = document.getElementById("dEvBrand");
     if (brandEl) {
         const brand = state.allBrands.find(b => b.id === event.brand_id);
         brandEl.textContent = brand ? brand.name : 'GLOBAL';
     }
-    
+
+    // Actualizar UI mobile hero
+    const mobileBg = document.getElementById("heroBgMobile");
+    if (mobileBg) mobileBg.style.backgroundImage = `url(${event.image || ''})`;
+    const mobilePoster = document.getElementById("mobilePoster");
+    if (mobilePoster) mobilePoster.src = event.image || '';
+    const mobileEvName = document.getElementById("mobileEvName");
+    if (mobileEvName) mobileEvName.textContent = event.name;
+    const mobileEvDate = document.getElementById("mobileEvDate");
+    if (mobileEvDate) mobileEvDate.textContent = event.date || 'Fecha TBA';
+    const mobileEvVenue = document.getElementById("mobileEvVenue");
+    if (mobileEvVenue) mobileEvVenue.textContent = event.venue || 'Lugar TBA';
+
     // Activar primera pestaña
     const firstTab = document.querySelector('.sub-tab[data-tab="tab_metrics"]');
     if (firstTab) {
@@ -410,9 +422,6 @@ if (window.fillCodeGen) {
   // Al final de openEventDetail, antes del cierre
 if (window.loadEventMetrics) window.loadEventMetrics(event.id);
 if (window.loadAccesses) window.loadAccesses(event.id);
-
-// Cargar datos del evento (importados de otros módulos)
-    // Estos se llamarán desde logic.js al importar metrics.js, tickets.js, etc.
 }
 
 // ==========================================

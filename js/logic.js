@@ -412,6 +412,14 @@ function setupGlobalEventListeners() {
     
     // VOLVER A EVENTOS
     document.getElementById('btnBackEvents')?.addEventListener('click', () => window.backToEvents());
+    document.getElementById('mobileBackBtn')?.addEventListener('click', () => window.backToEvents());
+
+    // MOBILE ACTION BUTTONS
+    document.getElementById('mobileEditBtn')?.addEventListener('click', editCurrentEvent);
+    document.getElementById('mobileDeleteBtn')?.addEventListener('click', deleteEvent);
+    document.getElementById('mobileLinkBtn')?.addEventListener('click', () => {
+        if (window.copyCurrentBrandLink) window.copyCurrentBrandLink();
+    });
     
     // CERRAR MODALES - Clicks en overlay
     document.querySelectorAll('.modal').forEach(modal => {
