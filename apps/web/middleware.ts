@@ -7,14 +7,23 @@ import { createServerClient } from '@supabase/ssr';
 // Hosts we handle:
 //   - app.parygo.com         → super admin + auth pages (default app surface)
 //   - <slug>.parygo.com      → brand-scoped public site (event pages, /t/[uuid])
+//   - parygo-app.pages.dev   → canonical Pages URL, behaves like app host
 //   - localhost:3001         → dev convenience: query param ?brand=code
 //
 // Strategy:
-//   1. Resolve subdomain → set x-parygo-brand-slug header (consumed by RSC)
+//   1. Resolve brand slug. Order of preference:
+//        a) x-parygo-brand-slug — explicit hint from the CF Worker proxy that
+//           sits in front of *.parygo.com (the worker rewrites Host to
+//           parygo-app.pages.dev, so without this header the Pages app would
+//           never see the real subdomain).
+//        b) x-forwarded-host    — fallback if the worker forwards the original
+//           host but not a slug.
+//        c) Host header         — direct hit on app.parygo.com or pages.dev.
+//        d) ?brand=… on localhost — local dev.
 //   2. Rewrite path:
-//        - app.* and apex  → /(app)/<orig path>
-//        - brand subdomain → /(brand)/<orig path>
-//   3. Call Supabase SSR to refresh cookies (mandatory for Server Actions)
+//        - app.* / pages.dev / apex → /(app)/<orig path>
+//        - brand                    → /(brand)/<orig path>
+//   3. Call Supabase SSR to refresh cookies (mandatory for Server Actions).
 //
 // IMPORTANT: middleware runs in the Edge runtime — no Node APIs.
 
@@ -49,6 +58,9 @@ function extractSubdomain(host: string): string | null {
   if (!cleanHost) return null;
   // Vercel preview deployments: <project>-<branch>-<owner>.vercel.app — no brand
   if (cleanHost.endsWith('.vercel.app')) return null;
+  // Cloudflare Pages canonical hosts: parygo-app.pages.dev, <hash>.parygo-app.pages.dev.
+  // These are infra surfaces, never a brand.
+  if (cleanHost.endsWith('.pages.dev')) return null;
   // Local dev override via query param handled in handler
   if (cleanHost === 'localhost' || cleanHost === '127.0.0.1') return null;
   const parts = cleanHost.split('.');
@@ -59,23 +71,56 @@ function extractSubdomain(host: string): string | null {
   return sub;
 }
 
+function isPagesDevHost(rawHost: string): boolean {
+  return (rawHost.split(':')[0]?.toLowerCase() ?? '').endsWith('.pages.dev');
+}
+
+// Decide whether the request should render the app surface (super admin /
+// login / etc.) instead of a brand-scoped page. Treat the canonical Pages
+// hostnames like an app host so direct hits to parygo-app.pages.dev still
+// work for debugging.
+function isAppSurfaceHost(rawHost: string, effectiveHost: string): boolean {
+  if (APP_HOSTS.has(effectiveHost.toLowerCase())) return true;
+  if (APP_HOSTS.has((effectiveHost.split(':')[0] ?? '').toLowerCase())) return true;
+  if (isPagesDevHost(rawHost)) return true;
+  return false;
+}
+
 export async function middleware(req: NextRequest) {
-  const host = req.headers.get('host') ?? '';
-  const cleanHost = host.split(':')[0]?.toLowerCase() ?? '';
+  // Hints injected by the CF Worker proxy in front of *.parygo.com.
+  // The worker forwards traffic to parygo-app.pages.dev with the original
+  // host rewritten, so we can't derive the brand from `req.headers.host`
+  // alone — that field would be 'parygo-app.pages.dev' for every brand.
+  const workerSlug = req.headers.get('x-parygo-brand-slug')?.trim() || null;
+  const forwardedHost = req.headers.get('x-forwarded-host') ?? null;
+  const rawHost = req.headers.get('host') ?? '';
+  const effectiveHost = forwardedHost || rawHost;
+  const cleanEffectiveHost = effectiveHost.split(':')[0]?.toLowerCase() ?? '';
   const url = req.nextUrl.clone();
 
   // ---- 1. Resolve brand slug ----
-  let brandSlug: string | null = extractSubdomain(host);
+  // Order: explicit worker header → derive from the original host → dev override.
+  let brandSlug: string | null =
+    workerSlug || extractSubdomain(effectiveHost);
 
   // Dev convenience: ?brand=code on localhost lets us test brand routing
-  if (!brandSlug && (cleanHost === 'localhost' || cleanHost === '127.0.0.1')) {
+  if (
+    !brandSlug &&
+    (cleanEffectiveHost === 'localhost' || cleanEffectiveHost === '127.0.0.1')
+  ) {
     const devBrand = url.searchParams.get('brand');
     if (devBrand) brandSlug = devBrand;
   }
 
+  // Defense in depth: never treat a reserved subdomain as a brand even if a
+  // misconfigured worker tells us to.
+  if (brandSlug && RESERVED_SUBDOMAINS.has(brandSlug)) {
+    brandSlug = null;
+  }
+
   // ---- 2. Rewrite path into route group ----
   const path = url.pathname;
-  const isAppHost = APP_HOSTS.has(host.toLowerCase()) && !brandSlug;
+  const isAppHost = !brandSlug && isAppSurfaceHost(rawHost, effectiveHost);
   const isApiOrInternal =
     path.startsWith('/api/') ||
     path.startsWith('/_next/') ||
