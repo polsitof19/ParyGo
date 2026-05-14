@@ -5,7 +5,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  trailingSlash: false,
+  trailingSlash: true,
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
   experimental: {

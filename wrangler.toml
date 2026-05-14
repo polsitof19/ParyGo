@@ -1,3 +1,9 @@
 name = "parygo"
-compatibility_date = "2025-05-13"
+compatibility_date = "2024-01-01"
 pages_build_output_dir = "out"
+
+# NOTE: Cloudflare Pages does NOT read [build] sections from wrangler.toml — the
+# build command must be configured in the Pages dashboard under Settings →
+# Builds & deployments. This block is kept here as documentation only.
+[build]
+command = "npm run build"
