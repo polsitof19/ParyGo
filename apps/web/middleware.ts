@@ -91,9 +91,10 @@ export async function middleware(req: NextRequest) {
   if (!isApiOrInternal) {
     if (brandSlug) {
       res.headers.set('x-parygo-brand-slug', brandSlug);
-      // Rewrite to (brand) route group, prefixing path with brand slug
+      // Rewrite internally to /b/<slug>/<path>. Browser URL stays unchanged.
+      // Folder uses a non-underscored prefix so Next.js routes it.
       const rewritten = new URL(req.url);
-      rewritten.pathname = `/_brand/${brandSlug}${path === '/' ? '' : path}`;
+      rewritten.pathname = `/b/${brandSlug}${path === '/' ? '' : path}`;
       const rewriteRes = NextResponse.rewrite(rewritten, {
         request: { headers: new Headers(req.headers) },
       });

@@ -9,8 +9,9 @@ const serverSchema = z.object({
   BRAND_CREDS_ENCRYPTION_KEY: z
     .string()
     .regex(/^[0-9a-f]{64}$/i, 'Must be 32-byte hex (64 chars)'),
-  RESEND_API_KEY: z.string().min(1),
-  RESEND_FROM_EMAIL: z.string().email(),
+  // Resend is optional during early development; gated at call site.
+  RESEND_API_KEY: z.string().min(1).optional(),
+  RESEND_FROM_EMAIL: z.string().email().optional(),
   SUPER_ADMIN_EMAIL: z.string().email(),
   SENTRY_DSN: z.string().url().optional(),
 });
