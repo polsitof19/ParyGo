@@ -9,8 +9,6 @@ export const dynamic = 'force-dynamic';
 const NAV = [
   { href: '/admin', label: 'Resumen' },
   { href: '/admin/yape', label: 'Yape pending' },
-  { href: '/admin/buyers', label: 'Compradores' },
-  { href: '/admin/event', label: 'Mi evento' },
 ] as const;
 
 export default async function AdminLayout({

@@ -163,16 +163,6 @@ export default async function AdminHomePage() {
                 </CardHeader>
               </Card>
             </Link>
-            <Link href="/admin/buyers">
-              <Card className="h-full transition-colors hover:border-primary/50">
-                <CardHeader>
-                  <CardTitle>Lista de compradores</CardTitle>
-                  <CardDescription>
-                    Ver y exportar todos los compradores con sus tickets.
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
           </section>
         </>
       )}
