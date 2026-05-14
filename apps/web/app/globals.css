@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* shadcn tokens — Light mode (not used; we ship dark by default) */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 4%;
+    --primary: 326 100% 56%;          /* magenta */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 188 100% 50%;        /* cyan */
+    --secondary-foreground: 240 10% 4%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
+    --accent: 240 5% 96%;
+    --accent-foreground: 240 6% 10%;
+    --destructive: 350 100% 64%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 326 100% 56%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* shadcn tokens — Dark (default for the SaaS app) */
+    --background: 247 25% 4%;         /* #050508 */
+    --foreground: 0 0% 100%;
+    --card: 240 17% 9%;               /* #14141C */
+    --card-foreground: 0 0% 100%;
+    --popover: 240 16% 6%;            /* #0D0D14 */
+    --popover-foreground: 0 0% 100%;
+    --primary: 326 100% 56%;          /* magenta #FF1F8F */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 188 100% 50%;        /* cyan #00E5FF */
+    --secondary-foreground: 240 17% 9%;
+    --muted: 240 17% 14%;             /* #1F1F2A */
+    --muted-foreground: 240 6% 72%;   /* #B4B4C0 */
+    --accent: 240 17% 14%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 350 100% 64%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 14% 19%;            /* #2A2A38 */
+    --input: 240 14% 19%;
+    --ring: 326 100% 56%;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'rlig' 1, 'calt' 1, 'ss01' 1;
+  }
+
+  ::selection {
+    background: hsl(var(--primary));
+    color: white;
+  }
+
+  /* Native form controls — dark friendly */
+  input,
+  textarea,
+  select {
+    color-scheme: dark;
+  }
+}
+
+@layer components {
+  .container-narrow {
+    @apply mx-auto w-full max-w-3xl px-4 sm:px-6;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #ff1f8f 0%, #b921ff 50%, #00e5ff 100%);
+  }
+
+  .gradient-border {
+    position: relative;
+  }
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, #ff1f8f 0%, #00e5ff 100%);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
