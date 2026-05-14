@@ -16,7 +16,7 @@ export function Garantia() {
   return (
     <section
       id="garantia"
-      data-screen-label="07 Garantía"
+      data-screen-label="08 Garantía"
       className="section-y"
       style={{
         background: 'var(--surface)',
@@ -92,7 +92,7 @@ export function Garantia() {
         <div>
           <Reveal>
             <span className="eyebrow mb-5 inline-flex">
-              <span className="bracket">[</span> 07 — TU CONFIANZA{' '}
+              <span className="bracket">[</span> 08 — TU CONFIANZA{' '}
               <span className="bracket">]</span>
             </span>
           </Reveal>

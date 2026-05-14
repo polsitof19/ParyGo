@@ -5,7 +5,9 @@ import { Demo } from '@/components/sections/Demo';
 import { Proceso } from '@/components/sections/Proceso';
 import { Features } from '@/components/sections/Features';
 import { Precios } from '@/components/sections/Precios';
+import { Testimonios } from '@/components/sections/Testimonios';
 import { Garantia } from '@/components/sections/Garantia';
+import { Fundador } from '@/components/sections/Fundador';
 import { CtaFinal } from '@/components/sections/CtaFinal';
 import { Footer } from '@/components/sections/Footer';
 import { StructuredData } from '@/components/seo/StructuredData';
@@ -22,7 +24,9 @@ export default function Home() {
         <Proceso />
         <Features />
         <Precios />
+        <Testimonios />
         <Garantia />
+        <Fundador />
         <CtaFinal />
       </main>
       <Footer />

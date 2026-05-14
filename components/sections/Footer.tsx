@@ -13,7 +13,7 @@ export function Footer() {
         paddingBottom: 48,
         borderTop: '1px dashed var(--border)',
       }}
-      data-screen-label="09 Footer"
+      data-screen-label="11 Footer"
     >
       <div className="wrap">
         <div className="grid gap-7 sm:gap-10 md:gap-14 grid-cols-1 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr]">
@@ -35,7 +35,7 @@ export function Footer() {
             </p>
             <div className="mono mt-4 inline-flex items-center gap-2.5 normal-case">
               <span className="pg-dot" />
-              Atendiendo ahora — Lun-Dom 9am-11pm
+              Aceptando primeros clientes — Lun-Dom 9am-11pm
             </div>
             <Waveform
               bars={15}

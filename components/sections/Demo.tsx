@@ -100,8 +100,8 @@ export function Demo() {
                 }}
               >
                 <span className="text-green mr-1.5">●</span>
-                clubfoso.parygo.pe
-                <span className="text-fg">/density-04</span>
+                tumarca.parygo.pe
+                <span className="text-fg">/tu-evento</span>
               </span>
             </header>
             <div className="flex flex-col gap-5 px-6 py-6 sm:px-10">
@@ -112,9 +112,9 @@ export function Demo() {
                     style={{ background: 'var(--grad)' }}
                     aria-hidden="true"
                   />
-                  CLUB FOSO
+                  TU MARCA
                 </span>
-                <span>SAB 24 MAY · 2026</span>
+                <span>TU FECHA · 2026</span>
               </div>
 
               <div
@@ -137,7 +137,7 @@ export function Demo() {
                   }}
                 >
                   <span className="pg-dot pg-dot--c" />
-                  Vendiendo ahora
+                  Página live
                 </span>
                 <span
                   className="font-display text-center uppercase leading-[0.9]"
@@ -148,15 +148,15 @@ export function Demo() {
                     letterSpacing: '0.02em',
                   }}
                 >
-                  Density
+                  Tu evento
                   <br />
-                  Noche 04
+                  aquí
                 </span>
                 <span
                   className="absolute bottom-4 left-5 mono normal-case"
                   style={{ color: 'rgba(255,255,255,0.85)' }}
                 >
-                  DJ Headliner · Club Foso · Lima
+                  Tu artista · Tu venue · Lima
                 </span>
               </div>
 
@@ -164,37 +164,37 @@ export function Demo() {
                 className="h3-big"
                 style={{ fontSize: 'clamp(28px, 3vw, 48px)' }}
               >
-                Density · Noche 04
+                Tu evento · Edición 01
               </h3>
               <span className="mono normal-case">
-                DJ Headliner · Club Foso · Sáb 24 May · 22:00
+                Tu artista · Tu venue · Tu fecha · Tu hora
               </span>
 
               <div className="mt-2 flex flex-col gap-3">
                 {[
                   {
                     name: 'General',
-                    price: '— S/40',
-                    pct: 84,
-                    left: '47 / 300',
+                    price: '— S/—',
+                    pct: 70,
+                    left: 'TU PRECIO',
                     cyan: false,
                     sold: false,
                   },
                   {
                     name: 'VIP',
-                    price: '— S/80',
-                    pct: 64,
-                    left: '18 / 50',
+                    price: '— S/—',
+                    pct: 45,
+                    left: 'TU PRECIO',
                     cyan: true,
                     sold: false,
                   },
                   {
-                    name: 'Zona VIP',
-                    price: '— Agotado',
-                    pct: 100,
-                    left: '0 / 20',
+                    name: 'Box / Mesa',
+                    price: '— S/—',
+                    pct: 30,
+                    left: 'TU PRECIO',
                     cyan: false,
-                    sold: true,
+                    sold: false,
                   },
                 ].map((r) => (
                   <div
@@ -263,9 +263,9 @@ export function Demo() {
                   className="mono normal-case"
                   style={{ letterSpacing: '0.12em', color: 'var(--fg)' }}
                 >
-                  FALTAN{' '}
+                  COUNTDOWN A{' '}
                   <strong style={{ color: 'var(--cyan)' }}>
-                    04D 12H 38M
+                    TU PRÓXIMO EVENTO
                   </strong>
                 </span>
               </div>

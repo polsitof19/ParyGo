@@ -3,7 +3,7 @@ import { SplitWords, type Word } from '@/components/anim/SplitWords';
 import { Magnet } from '@/components/anim/Magnet';
 import { LiveClock } from '@/components/chrome/LiveClock';
 import { Waveform } from '@/components/chrome/Waveform';
-import { HeroTicket3DLazy } from '@/components/three/HeroTicket3DLazy';
+import { PhoneMockup } from '@/components/decorative/PhoneMockup';
 import { CTA } from '@/lib/cta';
 
 const TITLE: Word[] = [
@@ -125,16 +125,16 @@ export function Hero() {
               as="div"
             >
               <span style={{ borderTop: '1px solid var(--border)', position: 'absolute' }} className="hidden" />
-              <span>5 MIN · SETUP COMPLETO</span>
+              <span>24H · SETUP COMPLETO</span>
               <span className="text-fg-3">/</span>
               <span>0% · COMISIÓN POR ENTRADA</span>
               <span className="text-fg-3">/</span>
-              <span>24/7 · PLATAFORMA ACTIVA</span>
+              <span>2026 · ACEPTANDO PRIMEROS CLIENTES</span>
             </Reveal>
           </div>
 
           <div className="relative">
-            <HeroTicket3DLazy />
+            <PhoneMockup />
             <Waveform
               bars={32}
               minH={12}
@@ -156,7 +156,7 @@ export function Hero() {
             <span className="animate-bob inline-block text-cyan">↓</span> SCROLL TO
             EXPLORE
           </span>
-          <span>N° 01 / 09</span>
+          <span>N° 01 / 10</span>
         </div>
       </div>
     </section>

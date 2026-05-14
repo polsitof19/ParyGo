@@ -12,17 +12,17 @@ const TITLE: Word[] = [
 ];
 
 const STATS = [
-  { v: '5 MIN', l: 'Setup' },
-  { v: '24/7', l: 'Soporte' },
-  { v: '48H', l: 'Liquidación' },
+  { v: '24H', l: 'Setup completo' },
+  { v: '0%', l: 'Comisión por venta' },
   { v: '7 DÍAS', l: 'Garantía' },
+  { v: 'WHATSAPP', l: 'Línea directa' },
 ];
 
 export function CtaFinal() {
   return (
     <section
       id="contacto"
-      data-screen-label="08 CTA Final"
+      data-screen-label="10 CTA Final"
       className="relative overflow-hidden border-t border-dashed border-border"
       style={{ paddingTop: 180, paddingBottom: 180 }}
     >
@@ -66,7 +66,7 @@ export function CtaFinal() {
       <div className="wrap relative z-[1]" style={{ maxWidth: 1100 }}>
         <Reveal>
           <span className="eyebrow">
-            <span className="bracket">[</span> 08 — TU PRÓXIMO EVENTO{' '}
+            <span className="bracket">[</span> 10 — TU PRÓXIMO EVENTO{' '}
             <span className="bracket">]</span>
           </span>
         </Reveal>
@@ -75,8 +75,8 @@ export function CtaFinal() {
           className="h2 my-7 max-w-[18ch]"
         />
         <Reveal as="p" className="body-lg max-w-[56ch] mb-12">
-          Conversemos por WhatsApp. Te respondemos en menos de 1 hora dentro de
-          horario operativo. Sin formularios, sin demos eternas.
+          Conversemos por WhatsApp. Respondemos dentro de horario operativo, sin
+          formularios eternos ni demos genéricas. Si encajamos, arrancamos.
         </Reveal>
         <Reveal className="flex flex-wrap items-center gap-6">
           <Magnet>
@@ -95,7 +95,7 @@ export function CtaFinal() {
         <Reveal className="mt-8">
           <span className="mono inline-flex items-center gap-2.5 normal-case">
             <span className="pg-dot" />
-            Atendiendo ahora · Lun-Dom 9am — 11pm
+            Aceptando primeros clientes · Lun-Dom 9am — 11pm
           </span>
         </Reveal>
 
