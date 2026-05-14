@@ -5,65 +5,111 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: '#FAFAF8',
-        'bg-cream': '#F5F2EB',
-        'bg-cream-deep': '#EFEAE0',
-        fg: '#0A0A0A',
-        'fg-muted': '#6B6B68',
-        'fg-dim': '#8A8A85',
+        bg: '#050508',
+        surface: '#0D0D14',
+        card: '#14141C',
+        hover: '#1F1F2A',
         border: {
-          DEFAULT: '#E8E6E0',
-          dark: '#1F1F1D',
+          DEFAULT: '#2A2A38',
+          strong: '#4A4A5C',
         },
-        accent: {
-          terra: '#E85D3C',
-          blue: '#2E5BFF',
-          green: '#1F8A5B',
+        fg: {
+          DEFAULT: '#FFFFFF',
+          2: '#B4B4C0',
+          3: '#6B6B7A',
         },
-        'bg-dark': '#0A0A0A',
-        'fg-dark': '#FAFAF8',
+        magenta: {
+          DEFAULT: '#FF1F8F',
+          dim: 'rgba(255,31,143,0.45)',
+        },
+        cyan: {
+          DEFAULT: '#00E5FF',
+          dim: 'rgba(0,229,255,0.4)',
+        },
+        green: '#00FF88',
+        yellow: '#FFE600',
+        red: '#FF4566',
       },
       fontFamily: {
-        sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-anton)', 'Bebas Neue', 'Impact', 'sans-serif'],
         serif: ['var(--font-instrument-serif)', 'Times New Roman', 'serif'],
         mono: ['var(--font-jetbrains-mono)', 'JetBrains Mono', 'monospace'],
       },
-      fontSize: {
-        eyebrow: ['11px', { lineHeight: '1', letterSpacing: '0.18em' }],
-      },
-      letterSpacing: {
-        tightest: '-0.045em',
-        tighter: '-0.035em',
-        tightish: '-0.02em',
-        wider: '0.18em',
-      },
       maxWidth: {
-        wrap: '1440px',
+        wrap: '1320px',
       },
       transitionTimingFunction: {
-        editorial: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
+        editorial: 'cubic-bezier(0.16, 1, 0.3, 1)',
+        bounce: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
       keyframes: {
-        pulse: {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.35' },
+        'pulse-g': {
+          '0%': {
+            boxShadow:
+              '0 0 0 0 rgba(0,255,136,0.5), 0 0 10px #00FF88',
+          },
+          '70%': {
+            boxShadow:
+              '0 0 0 10px rgba(0,255,136,0), 0 0 10px #00FF88',
+          },
+          '100%': {
+            boxShadow:
+              '0 0 0 0 rgba(0,255,136,0), 0 0 10px #00FF88',
+          },
+        },
+        'pulse-m': {
+          '0%': {
+            boxShadow:
+              '0 0 0 0 rgba(255,31,143,0.6), 0 0 10px #FF1F8F',
+          },
+          '70%': {
+            boxShadow:
+              '0 0 0 10px rgba(255,31,143,0), 0 0 10px #FF1F8F',
+          },
+          '100%': {
+            boxShadow:
+              '0 0 0 0 rgba(255,31,143,0), 0 0 10px #FF1F8F',
+          },
+        },
+        'pulse-c': {
+          '0%': {
+            boxShadow:
+              '0 0 0 0 rgba(0,229,255,0.6), 0 0 10px #00E5FF',
+          },
+          '70%': {
+            boxShadow:
+              '0 0 0 10px rgba(0,229,255,0), 0 0 10px #00E5FF',
+          },
+          '100%': {
+            boxShadow:
+              '0 0 0 0 rgba(0,229,255,0), 0 0 10px #00E5FF',
+          },
+        },
+        bar: {
+          '0%': { transform: 'scaleY(0.3)' },
+          '100%': { transform: 'scaleY(1)' },
         },
         bob: {
           '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(4px)' },
+          '50%': { transform: 'translateY(3px)' },
+        },
+        'mesh-drift': {
+          '0%, 100%': { transform: 'translate(0,0) scale(1)' },
+          '50%': { transform: 'translate(2%, -2%) scale(1.04)' },
         },
         spin: {
           to: { transform: 'rotate(360deg)' },
         },
-        'spin-reverse': {
-          to: { transform: 'rotate(-360deg)' },
-        },
       },
       animation: {
-        'soft-pulse': 'pulse 2.4s ease-in-out infinite',
-        bob: 'bob 2.6s ease-in-out infinite',
-        'spin-slow': 'spin 24s linear infinite',
-        'spin-reverse-slow': 'spin-reverse 24s linear infinite',
+        'pulse-g': 'pulse-g 2.2s cubic-bezier(0.16,1,0.3,1) infinite',
+        'pulse-m': 'pulse-m 2.4s cubic-bezier(0.16,1,0.3,1) infinite',
+        'pulse-c': 'pulse-c 2.4s cubic-bezier(0.16,1,0.3,1) infinite',
+        bar: 'bar 1.2s ease-in-out infinite alternate',
+        bob: 'bob 2.4s ease-in-out infinite',
+        'mesh-drift': 'mesh-drift 180s linear infinite',
+        'spin-slow': 'spin 14s linear infinite',
       },
     },
   },

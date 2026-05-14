@@ -1,45 +1,135 @@
-import { Reveal } from '@/components/animations/Reveal';
+import { Reveal } from '@/components/anim/Reveal';
+import { SplitWords, type Word } from '@/components/anim/SplitWords';
+import { CTA } from '@/lib/cta';
+
+const TITLE: Word[] = [
+  { t: '7' },
+  { t: 'días' },
+  { t: 'para' },
+  { t: 'confirmar' },
+  { t: 'que' },
+  { br: true },
+  { t: 'encajamos.', italic: true },
+];
 
 export function Garantia() {
   return (
-    <section className="bg-bg-cream section-y">
-      <div className="wrap">
-        <div className="mb-14">
+    <section
+      id="garantia"
+      data-screen-label="07 Garantía"
+      className="section-y"
+      style={{
+        background: 'var(--surface)',
+        borderTop: '1px dashed var(--border)',
+        borderBottom: '1px dashed var(--border)',
+      }}
+    >
+      <div className="wrap grid items-center gap-10 md:grid-cols-[220px_1fr] md:gap-24">
+        <div>
           <Reveal>
-            <div className="mono">[ 08 — NUESTRA PROMESA ]</div>
+            <div className="relative w-[200px] h-[200px] seal" aria-hidden="true">
+              <svg viewBox="0 0 200 200" width="100%" height="100%">
+                <defs>
+                  <path
+                    id="sealPath2"
+                    d="M 100,100 m -78,0 a 78,78 0 1,1 156,0 a 78,78 0 1,1 -156,0"
+                    fill="none"
+                  />
+                </defs>
+                <g className="seal-ring">
+                  <text
+                    fill="#B4B4C0"
+                    fontFamily="JetBrains Mono, monospace"
+                    fontSize="9"
+                    letterSpacing="3.5"
+                  >
+                    <textPath href="#sealPath2" startOffset="0">
+                      GARANTÍA PARYGO · 7 DÍAS · DEVOLUCIÓN 100% · GARANTÍA PARYGO · 7 DÍAS · DEVOLUCIÓN 100% ·{' '}
+                    </textPath>
+                  </text>
+                </g>
+                <circle
+                  cx="100"
+                  cy="100"
+                  r="62"
+                  fill="none"
+                  stroke="#2A2A38"
+                  strokeWidth="1"
+                />
+                <circle
+                  cx="100"
+                  cy="100"
+                  r="40"
+                  fill="none"
+                  stroke="#FF1F8F"
+                  strokeOpacity="0.5"
+                  strokeWidth="1"
+                  strokeDasharray="2 6"
+                />
+              </svg>
+              <div
+                className="absolute inset-0 grid place-items-center serif-plain"
+                style={{
+                  fontSize: 56,
+                  color: 'var(--magenta)',
+                  textShadow: '0 0 16px rgba(255,31,143,0.6)',
+                }}
+              >
+                ↻
+              </div>
+            </div>
+          </Reveal>
+          <Reveal>
+            <div
+              className="mt-2 text-center mono"
+              style={{ fontSize: 10, letterSpacing: '0.18em', color: 'var(--fg-3)' }}
+            >
+              ID / GARANTIA-2026
+            </div>
           </Reveal>
         </div>
 
-        <div className="grid items-end gap-12 md:grid-cols-[1.3fr_1fr] md:gap-20">
-          <Reveal as="h2" className="text-[56px] leading-none -tracking-[0.04em] sm:text-[72px] md:text-[96px] lg:text-[128px]">
-            <span className="serif-i">7 días</span><br />
-            o devolución total.
+        <div>
+          <Reveal>
+            <span className="eyebrow mb-5 inline-flex">
+              <span className="bracket">[</span> 07 — TU CONFIANZA{' '}
+              <span className="bracket">]</span>
+            </span>
           </Reveal>
-          <div>
-            <Reveal as="p" delay={0.08} className="mb-8 max-w-[36ch] text-[18px] leading-[1.45] md:text-[22px]">
-              Si en los primeros 7 días no quedas conforme con la plataforma,
-              te devolvemos el 100% del pack. Sin preguntas, sin trabas, sin
-              letras chicas.
-            </Reveal>
-            <Reveal delay={0.16}>
-              <div className="mono inline-flex items-center gap-3.5 normal-case tracking-[0.05em] text-fg-muted">
-                <span className="relative inline-flex h-[72px] w-[72px] animate-spin-slow items-center justify-center rounded-full border border-fg">
-                  <span className="serif-i animate-spin-reverse-slow text-[24px] text-fg">
-                    ↻
-                  </span>
-                </span>
-                <span>
-                  <span className="mono normal-case tracking-[0.16em] text-fg-muted">
-                    Garantía ParyGo
-                  </span>
-                  <br />
-                  <span className="text-fg">— Devolución completa</span>
-                </span>
-              </div>
-            </Reveal>
-          </div>
+          <SplitWords
+            words={TITLE}
+            className="h2"
+          />
+          <Reveal
+            as="p"
+            className="mt-7 max-w-[50ch] text-[17px] leading-[1.55] md:text-[20px] text-fg"
+          >
+            Si después de tu primer evento sientes que la plataforma no se adapta a
+            cómo operas, devolvemos el 100% del pack completo. Sin preguntas. Sin
+            trabas. Sin letra chica.
+          </Reveal>
+          <Reveal as="p" className="mt-6 mono normal-case text-fg-3">
+            Garantía sobre el pack completo · No solo el primer evento
+          </Reveal>
+          <Reveal>
+            <a
+              href={CTA.final}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-cursor="hover"
+              className="btn btn-outline mt-8"
+            >
+              Empezar sin riesgo <span className="arrow">→</span>
+            </a>
+          </Reveal>
         </div>
       </div>
+
+      <style>{`
+        .seal:hover .seal-ring { animation-duration: 5s !important; }
+        .seal-ring { transform-origin: center; animation: spin 14s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </section>
   );
 }

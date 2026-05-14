@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <rect width="32" height="32" fill="#FAFAF8"/>
-  <text x="16" y="22" text-anchor="middle" font-family="Times New Roman, serif" font-style="italic" font-size="22" fill="#0A0A0A">p</text>
-  <circle cx="24" cy="22" r="2.4" fill="#E85D3C"/>
+  <rect width="32" height="32" fill="#050508"/>
+  <text x="16" y="22" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="20" font-weight="700" fill="#FFFFFF" letter-spacing="0.5">P</text>
+  <circle cx="24" cy="22" r="2.6" fill="#FF1F8F"/>
 </svg>

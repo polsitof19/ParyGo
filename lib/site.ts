@@ -16,7 +16,7 @@ export const SITE = {
   locale: 'es_PE',
   whatsappNumber: '56932881230',
   whatsappDisplay: '+56 9 3288 1230',
-  themeColor: '#FAFAF8',
+  themeColor: '#050508',
   // TODO: replace with rasterized PNG (1200x630) for Facebook/Twitter card support.
   // Most social crawlers do not accept SVG for OG images.
   ogImage: '/og.svg',

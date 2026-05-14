@@ -1,14 +1,13 @@
 import { Header } from '@/components/Header';
 import { Hero } from '@/components/sections/Hero';
-import { Manifiesto } from '@/components/sections/Manifiesto';
-import { Problemas } from '@/components/sections/Problemas';
-import { Solucion } from '@/components/sections/Solucion';
-import { Packs } from '@/components/sections/Packs';
+import { PorQueExistimos } from '@/components/sections/PorQueExistimos';
+import { Demo } from '@/components/sections/Demo';
 import { Proceso } from '@/components/sections/Proceso';
-import { CasosUso } from '@/components/sections/CasosUso';
-import { Faq } from '@/components/sections/Faq';
+import { Features } from '@/components/sections/Features';
+import { Precios } from '@/components/sections/Precios';
 import { Garantia } from '@/components/sections/Garantia';
-import { CtaFooter } from '@/components/sections/CtaFooter';
+import { CtaFinal } from '@/components/sections/CtaFinal';
+import { Footer } from '@/components/sections/Footer';
 import { StructuredData } from '@/components/seo/StructuredData';
 
 export default function Home() {
@@ -18,16 +17,15 @@ export default function Home() {
       <Header />
       <main>
         <Hero />
-        <Manifiesto />
-        <Problemas />
-        <Solucion />
-        <Packs />
+        <PorQueExistimos />
+        <Demo />
         <Proceso />
-        <CasosUso />
+        <Features />
+        <Precios />
         <Garantia />
-        <Faq />
-        <CtaFooter />
+        <CtaFinal />
       </main>
+      <Footer />
     </>
   );
 }

@@ -1,12 +1,11 @@
 import { SITE } from '@/lib/site';
-import { FAQ_ITEMS } from '@/lib/faq';
 
 const organization = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
   name: SITE.name,
   url: SITE.url,
-  logo: `${SITE.url}/og.png`,
+  logo: `${SITE.url}/og.svg`,
   description: SITE.description,
   contactPoint: [
     {
@@ -34,51 +33,38 @@ const service = {
     itemListElement: [
       {
         '@type': 'Offer',
-        name: 'Pack 1 — 1 evento',
+        name: 'Party — 1 evento',
         price: '200',
         priceCurrency: 'PEN',
-        url: `${SITE.url}#packs`,
-        itemOffered: { '@type': 'Service', name: 'Pack 1 evento' },
+        url: `${SITE.url}#precios`,
+        itemOffered: { '@type': 'Service', name: 'Party · 1 evento' },
       },
       {
         '@type': 'Offer',
-        name: 'Pack 3 — 3 eventos',
+        name: 'Regular — 3 eventos',
         price: '540',
         priceCurrency: 'PEN',
-        url: `${SITE.url}#packs`,
-        itemOffered: { '@type': 'Service', name: 'Pack 3 eventos' },
+        url: `${SITE.url}#precios`,
+        itemOffered: { '@type': 'Service', name: 'Regular · 3 eventos' },
       },
       {
         '@type': 'Offer',
-        name: 'Pack 5 — 5 eventos',
+        name: 'Pro — 5 eventos',
         price: '850',
         priceCurrency: 'PEN',
-        url: `${SITE.url}#packs`,
-        itemOffered: { '@type': 'Service', name: 'Pack 5 eventos' },
+        url: `${SITE.url}#precios`,
+        itemOffered: { '@type': 'Service', name: 'Pro · 5 eventos' },
       },
       {
         '@type': 'Offer',
-        name: 'Pack 10 — 10 eventos',
+        name: 'Frequency — 10 eventos',
         price: '1500',
         priceCurrency: 'PEN',
-        url: `${SITE.url}#packs`,
-        itemOffered: { '@type': 'Service', name: 'Pack 10 eventos' },
+        url: `${SITE.url}#precios`,
+        itemOffered: { '@type': 'Service', name: 'Frequency · 10 eventos' },
       },
     ],
   },
-};
-
-const faq = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: FAQ_ITEMS.map((item) => ({
-    '@type': 'Question',
-    name: item.q,
-    acceptedAnswer: {
-      '@type': 'Answer',
-      text: item.a,
-    },
-  })),
 };
 
 const website = {
@@ -99,10 +85,6 @@ export function StructuredData() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(service) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faq) }}
       />
       <script
         type="application/ld+json"

@@ -1,9 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { cn } from '@/lib/utils';
 import { CTA } from '@/lib/cta';
+
+const NAV = [
+  { href: '#servicio', label: 'Servicio' },
+  { href: '#demo', label: 'Demo' },
+  { href: '#precios', label: 'Precios' },
+  { href: '#contacto', label: 'Contacto' },
+];
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -17,46 +22,86 @@ export function Header() {
 
   return (
     <header
-      className={cn(
-        'fixed inset-x-0 top-0 z-50 grid items-center transition-all duration-[400ms]',
-        'grid-cols-[1fr_auto_1fr] border-b border-transparent',
-        scrolled
-          ? 'bg-bg/[0.72] backdrop-blur-md backdrop-saturate-150 border-border py-3.5'
-          : 'py-5'
-      )}
-      style={{ paddingLeft: 'var(--pad-x)', paddingRight: 'var(--pad-x)' }}
+      className="fixed inset-x-0 top-0 z-[90] flex items-center"
+      style={{
+        height: 68,
+        background: scrolled ? 'rgba(5,5,8,0.8)' : 'transparent',
+        backdropFilter: scrolled ? 'saturate(170%) blur(20px)' : 'none',
+        WebkitBackdropFilter: scrolled ? 'saturate(170%) blur(20px)' : 'none',
+        borderBottom: scrolled
+          ? '1px solid var(--border)'
+          : '1px solid transparent',
+        transition:
+          'background-color 280ms ease, border-color 280ms ease, backdrop-filter 280ms ease',
+      }}
     >
-      <Link href="#top" className="inline-flex items-center gap-2 text-[18px] font-medium -tracking-[0.03em]">
-        <span>parygo</span>
-        <span className="inline-block h-[6px] w-[6px] -translate-y-[1px] rounded-full bg-accent-terra" />
-      </Link>
-
-      <nav className="hidden justify-center gap-9 text-sm -tracking-[0.005em] md:flex">
-        <Link href="#plataforma" className="link-u text-fg-muted transition-colors hover:text-fg">
-          plataforma
-        </Link>
-        <Link href="#packs" className="link-u text-fg-muted transition-colors hover:text-fg">
-          packs
-        </Link>
-        <Link href="#proceso" className="link-u text-fg-muted transition-colors hover:text-fg">
-          cómo funciona
-        </Link>
-        <Link href="#contacto" className="link-u text-fg-muted transition-colors hover:text-fg">
-          contacto
-        </Link>
-      </nav>
-
-      <a
-        href={CTA.hero}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={cn(
-          'justify-self-end inline-flex items-center gap-2 rounded-full border border-border px-[18px] py-2.5 text-sm',
-          'transition-colors duration-[400ms] hover:bg-fg hover:text-bg hover:border-fg'
-        )}
+      <div
+        className="wrap grid w-full items-center gap-4"
+        style={{ gridTemplateColumns: '1fr auto 1fr' }}
       >
-        empezar <span className="arrow">→</span>
-      </a>
+        <div className="flex items-center gap-[18px]">
+          <a
+            href="#top"
+            aria-label="ParyGo"
+            className="font-display text-[22px] uppercase tracking-[0.01em] text-fg inline-flex items-center gap-1.5"
+          >
+            <span>PARYGO</span>
+            <span
+              className="inline-block w-[7px] h-[7px] rounded-full bg-magenta animate-pulse-m"
+              style={{ boxShadow: '0 0 10px var(--magenta)' }}
+              aria-hidden="true"
+            />
+          </a>
+          <span className="hidden md:inline-flex items-center gap-2 mono normal-case tracking-[0.18em] text-green text-[10px]">
+            <span className="pg-dot" />
+            LIVE
+          </span>
+        </div>
+
+        <nav
+          className="hidden md:flex items-center gap-1.5 mono"
+          aria-label="primary"
+          style={{ fontSize: 12, letterSpacing: '0.18em', color: 'var(--fg-2)' }}
+        >
+          {NAV.map((item, i) => (
+            <span key={item.href} className="contents">
+              <a
+                href={item.href}
+                data-cursor="hover"
+                className="relative px-3.5 py-1.5 transition-colors hover:text-fg"
+                style={{ color: 'var(--fg-2)' }}
+              >
+                {item.label}
+                <span
+                  className="pointer-events-none absolute left-[14px] right-[14px] bottom-[2px] h-px origin-left scale-x-0 transition-transform duration-[400ms] hover-line"
+                  style={{ background: 'var(--fg)' }}
+                />
+              </a>
+              {i < NAV.length - 1 && (
+                <span className="text-fg-3" aria-hidden="true">
+                  ·
+                </span>
+              )}
+            </span>
+          ))}
+        </nav>
+
+        <div className="flex items-center justify-end gap-3.5">
+          <a
+            href={CTA.hero}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-cursor="hover"
+            className="btn btn-grad btn-sm"
+          >
+            Empezar <span className="arrow">→</span>
+          </a>
+        </div>
+      </div>
+
+      <style>{`
+        header nav a:hover .hover-line { transform: scaleX(1); }
+      `}</style>
     </header>
   );
 }
