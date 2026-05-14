@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv } from '@/lib/env';
 
+export const runtime = 'edge';
+
 // Magic-link callback. Supabase OTP redirects here with ?code=...
 // We exchange it for a session cookie and bounce to ?next= by role.
 // Reject anything that isn't a server-relative path. Blocks open redirect

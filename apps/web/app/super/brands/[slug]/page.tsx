@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { InviteBrandAdmin } from './InviteBrandAdmin';
 import { publicEnv } from '@/lib/env';
 
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 export default async function BrandDetailPage({

@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 // Brand root: redirect to the most recent published event, or render

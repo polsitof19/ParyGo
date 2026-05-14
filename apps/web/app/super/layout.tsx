@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { LogOut } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 const NAV = [

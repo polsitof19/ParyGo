@@ -4,6 +4,7 @@ import { LogOut } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 const NAV = [

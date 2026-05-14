@@ -4,6 +4,7 @@ import { ChevronLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { NewEventForm } from './NewEventForm';
 
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Nuevo evento' };
 

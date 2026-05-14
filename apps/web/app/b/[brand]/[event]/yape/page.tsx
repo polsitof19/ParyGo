@@ -4,6 +4,7 @@ import { formatPEN } from '@/lib/utils';
 import { YapeUploadForm } from './YapeUploadForm';
 import { publicEnv } from '@/lib/env';
 
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {

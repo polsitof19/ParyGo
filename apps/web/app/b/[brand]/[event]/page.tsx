@@ -6,6 +6,7 @@ import { formatPEN } from '@/lib/utils';
 import { EventCheckoutPanel } from './EventCheckoutPanel';
 import { EventStructuredData } from './EventStructuredData';
 
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 type Props = {

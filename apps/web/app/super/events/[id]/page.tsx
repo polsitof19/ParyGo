@@ -8,6 +8,7 @@ import { publicEnv } from '@/lib/env';
 import { TicketTypesEditor } from './TicketTypesEditor';
 import { TogglePublishedButton } from './TogglePublishedButton';
 
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 export default async function EventDetailPage({ params }: { params: { id: string } }) {

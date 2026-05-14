@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { NewBrandForm } from './NewBrandForm';
 
+export const runtime = 'edge';
+
 export const metadata = {
   title: 'Nueva marca',
 };

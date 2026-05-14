@@ -1,5 +1,7 @@
 import { LoginForm } from './LoginForm';
 
+export const runtime = 'edge';
+
 export const metadata = {
   title: 'Iniciar sesión',
 };

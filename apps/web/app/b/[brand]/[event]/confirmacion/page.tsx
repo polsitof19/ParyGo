@@ -6,6 +6,7 @@ import { formatPEN, formatEventDate, whatsappLink } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ConfirmationPoller } from './ConfirmationPoller';
 
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 export default async function ConfirmationPage({
