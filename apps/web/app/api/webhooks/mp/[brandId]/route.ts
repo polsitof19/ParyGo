@@ -1,11 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import crypto from 'node:crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv } from '@/lib/env';
 import { fetchMercadoPagoPayment } from '@/lib/mercadopago';
 import { issueTicketsForOrder, markOrderPaid } from '@/lib/tickets';
 
-export const runtime = 'nodejs';
+// Runs on the Cloudflare Pages edge (Workers). We use Web Crypto for the
+// HMAC verification — no node:crypto.
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 // =============================================================
@@ -56,7 +57,7 @@ export async function POST(
     if (!xSignature || !dataId || !xRequestId) {
       return NextResponse.json({ error: 'missing_signature' }, { status: 401 });
     }
-    const verified = verifyMpSignature({
+    const verified = await verifyMpSignature({
       header: xSignature,
       secret: brand.mp_webhook_secret,
       dataId,
@@ -170,11 +171,11 @@ export async function POST(
 }
 
 // =============================================================
-// MP signature verification
+// MP signature verification (Web Crypto / edge-runtime compatible)
 // Header format: "ts=<ts>,v1=<hex_hmac>"
 // HMAC string: `id:<data_id>;request-id:<x_request_id>;ts:<ts>;`
 // =============================================================
-function verifyMpSignature({
+async function verifyMpSignature({
   header,
   secret,
   dataId,
@@ -184,7 +185,7 @@ function verifyMpSignature({
   secret: string;
   dataId: string;
   requestId: string;
-}): boolean {
+}): Promise<boolean> {
   const parts = Object.fromEntries(
     header.split(',').map((p) => {
       const [k, v] = p.split('=');
@@ -195,12 +196,39 @@ function verifyMpSignature({
   const v1 = parts.v1;
   if (!ts || !v1) return false;
   const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`;
-  const computed = crypto.createHmac('sha256', secret).update(manifest).digest('hex');
-  try {
-    return crypto.timingSafeEqual(Buffer.from(computed, 'hex'), Buffer.from(v1, 'hex'));
-  } catch {
-    return false;
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sigBuf = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    new TextEncoder().encode(manifest)
+  );
+  const computed = bufferToHex(sigBuf);
+  return timingSafeHexEqual(computed, v1);
+}
+
+function bufferToHex(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  let s = '';
+  for (let i = 0; i < bytes.length; i++) {
+    s += bytes[i]!.toString(16).padStart(2, '0');
   }
+  return s;
+}
+
+// Constant-time string compare. Inputs must be lowercase hex.
+function timingSafeHexEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
 }
 
 // Also allow GET for MP's webhook test endpoint

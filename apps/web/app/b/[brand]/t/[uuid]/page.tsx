@@ -2,9 +2,12 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { MapPin, Calendar } from 'lucide-react';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { generateQrDataUrl } from '@/lib/qr';
+import { generateQrSvg } from '@/lib/qr';
 import { formatEventDate, whatsappLink } from '@/lib/utils';
 
+// SVG QR generation has no Node-only dependencies (no pngjs/Buffer), so this
+// route runs fine on Cloudflare Pages edge runtime.
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -84,7 +87,7 @@ export default async function TicketPage({ params }: Props) {
     );
   }
 
-  const qrDataUrl = await generateQrDataUrl(t.qr_code);
+  const qrSvg = await generateQrSvg(t.qr_code);
   const ticketUrl = `https://${brand?.slug}.parygo.com/t/${t.qr_code}`;
   const accent = brand?.theme_json?.primary_color || '#FF1F8F';
 
@@ -151,10 +154,11 @@ export default async function TicketPage({ params }: Props) {
           </div>
           {/* Right: QR */}
           <div className="flex flex-col items-center justify-center gap-2 border-l border-dashed border-border bg-background/40 p-4">
-            <img
-              src={qrDataUrl}
-              alt="QR de la entrada"
-              className="h-40 w-40 rounded-md bg-white p-2"
+            <div
+              role="img"
+              aria-label="QR de la entrada"
+              className="h-40 w-40 rounded-md bg-white p-2 [&_svg]:h-full [&_svg]:w-full"
+              dangerouslySetInnerHTML={{ __html: qrSvg }}
             />
             <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
               ESCANEAR EN PUERTA
