@@ -42,7 +42,7 @@ export default async function BrandHomePage({
         Próximamente
       </h1>
       <p className="max-w-md text-muted-foreground">
-        Estamos preparando el siguiente evento. Volvé en unos días o seguinos
+        Estamos preparando el siguiente evento. Vuelve en unos días o síguenos
         en redes para no perdértelo.
       </p>
     </main>

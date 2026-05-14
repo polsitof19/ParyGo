@@ -96,7 +96,7 @@ export default async function BrandDetailPage({
           <CardContent>
             {!events || events.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                Sin eventos todavía. Creá el primero con el botón de arriba.
+                Sin eventos todavía. Créa el primero con el botón de arriba.
               </p>
             ) : (
               <ul className="space-y-2">
@@ -139,7 +139,7 @@ export default async function BrandDetailPage({
           <CardHeader>
             <CardTitle>Brand admin</CardTitle>
             <CardDescription>
-              Invitá al promotor por email para que pueda editar este evento y
+              Invita al promotor por email para que pueda editar este evento y
               ver sus ventas. Recibe un link mágico de acceso.
             </CardDescription>
           </CardHeader>

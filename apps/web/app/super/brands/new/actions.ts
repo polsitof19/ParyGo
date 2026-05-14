@@ -60,7 +60,7 @@ export async function createBrandAction(
     }
     return {
       ok: false,
-      message: 'Revisá los campos marcados.',
+      message: 'Revisa los campos marcados.',
       fieldErrors,
     };
   }
@@ -105,10 +105,13 @@ export async function createBrandAction(
 
   // Step 2: store MP credentials encrypted (if provided)
   if (parsed.data.mp_access_token || parsed.data.mp_public_key) {
+    // The generated types declare the RPC args as non-null strings, but the
+    // underlying plpgsql function treats null as "clear the credential".
+    // Cast through unknown to keep the null semantic without lying about it.
     const { error: rpcErr } = await admin.rpc('set_brand_mp_credentials', {
       p_brand_id: brand.id,
-      p_access_token: parsed.data.mp_access_token || null,
-      p_public_key: parsed.data.mp_public_key || null,
+      p_access_token: parsed.data.mp_access_token || (null as unknown as string),
+      p_public_key: parsed.data.mp_public_key || (null as unknown as string),
       p_encryption_key: serverEnv.BRAND_CREDS_ENCRYPTION_KEY,
     });
     if (rpcErr) {
@@ -116,7 +119,7 @@ export async function createBrandAction(
       revalidatePath('/super/brands');
       return {
         ok: false,
-        message: `Marca creada pero las credenciales MP fallaron: ${rpcErr.message}. Probá guardarlas desde la página de la marca.`,
+        message: `Marca creada pero las credenciales MP fallaron: ${rpcErr.message}. Prueba guardarlas desde la página de la marca.`,
       };
     }
   }

@@ -5,10 +5,20 @@ import { serverEnv } from '@/lib/env';
 
 // Magic-link callback. Supabase OTP redirects here with ?code=...
 // We exchange it for a session cookie and bounce to ?next= by role.
+// Reject anything that isn't a server-relative path. Blocks open redirect
+// via `?next=//evil.com` (which `new URL(..., base)` would resolve to an
+// off-host target).
+function sanitizeNext(raw: string | null): string {
+  if (!raw) return '';
+  if (!raw.startsWith('/')) return '';
+  if (raw.startsWith('//')) return '';
+  return raw;
+}
+
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const code = url.searchParams.get('code');
-  const next = url.searchParams.get('next') ?? '';
+  const next = sanitizeNext(url.searchParams.get('next'));
 
   if (!code) {
     return NextResponse.redirect(
@@ -41,10 +51,12 @@ export async function GET(req: NextRequest) {
   }
 
   // Bootstrap super admin: if the logged-in email matches SUPER_ADMIN_EMAIL,
-  // promote the profile (idempotent). This avoids having to run manual SQL
-  // after the first login.
+  // promote the profile (idempotent). Only promote on emails that Supabase
+  // has actually verified — otherwise an attacker who learns the configured
+  // super-admin address could register it before the real owner does.
   if (
     user.email &&
+    user.email_confirmed_at &&
     user.email.toLowerCase() === serverEnv.SUPER_ADMIN_EMAIL.toLowerCase()
   ) {
     const admin = createAdminClient();

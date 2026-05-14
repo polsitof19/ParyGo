@@ -36,7 +36,8 @@ export default async function EventDetailPage({ params }: { params: { id: string
     supabase
       .from('orders')
       .select('id, status, total_cents', { count: 'exact' })
-      .eq('event_id', event.id),
+      .eq('event_id', event.id)
+      .limit(5000),
   ]);
 
   const paidOrders = orders?.filter((o) => o.status === 'paid') ?? [];

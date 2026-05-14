@@ -1,13 +1,26 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Minus, Plus, Loader2 } from 'lucide-react';
+import { Minus, Plus, Loader2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatPEN } from '@/lib/utils';
 import { startCheckout, type CheckoutInput } from './actions';
+import { reserveStock } from '@/lib/reservations';
+
+const SESSION_STORAGE_KEY = 'parygo-checkout-session';
+
+function readOrCreateSessionId(): string {
+  if (typeof window === 'undefined') return '';
+  let id = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
+  if (!id) {
+    id = (window.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)) + '-' + Date.now().toString(36);
+    window.sessionStorage.setItem(SESSION_STORAGE_KEY, id);
+  }
+  return id;
+}
 
 type Brand = {
   id: string;
@@ -61,6 +74,55 @@ export function EventCheckoutPanel({
   );
   const [isPending, startTransition] = useTransition();
 
+  // Stock reservation: session id is created on first interaction and persists
+  // for the tab. The first reservation sets the countdown; every successful
+  // refresh extends it.
+  const sessionIdRef = useRef<string>('');
+  const [reservationExpiresAt, setReservationExpiresAt] = useState<number | null>(null);
+  const [now, setNow] = useState<number>(() => Date.now());
+  // We re-trigger the server reserve when qty changes — debounced so quick
+  // clicks on +/- don't flood the RPC.
+  const lastReserved = useRef<Record<string, number>>({});
+  useEffect(() => {
+    sessionIdRef.current = readOrCreateSessionId();
+  }, []);
+  useEffect(() => {
+    if (reservationExpiresAt === null) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [reservationExpiresAt]);
+  useEffect(() => {
+    const sid = sessionIdRef.current;
+    if (!sid) return;
+    const timer = setTimeout(() => {
+      // Compute diff vs last known reserved state and push changes.
+      const next = { ...lastReserved.current };
+      const ids = new Set([...Object.keys(qty), ...Object.keys(lastReserved.current)]);
+      ids.forEach(async (ticketTypeId) => {
+        const want = qty[ticketTypeId] ?? 0;
+        const have = lastReserved.current[ticketTypeId] ?? 0;
+        if (want === have) return;
+        const res = await reserveStock(sid, ticketTypeId, want);
+        if (!res.ok) {
+          toast.error(res.message);
+          if (typeof res.available === 'number') {
+            // Snap quantity to the actual maximum so the UI doesn't lie.
+            setQty((q) => ({ ...q, [ticketTypeId]: res.available! }));
+            next[ticketTypeId] = res.available!;
+          }
+          return;
+        }
+        next[ticketTypeId] = want;
+        if (want === 0) delete next[ticketTypeId];
+        if (res.expiresAt) {
+          setReservationExpiresAt(new Date(res.expiresAt).getTime());
+        }
+      });
+      lastReserved.current = next;
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [qty]);
+
   const totalCents = useMemo(
     () =>
       sorted.reduce(
@@ -93,6 +155,23 @@ export function EventCheckoutPanel({
     setQty({ ...qty, [t.id]: current - 1 });
   }
 
+  // Countdown derived state.
+  const secondsLeft =
+    reservationExpiresAt === null
+      ? null
+      : Math.max(0, Math.floor((reservationExpiresAt - now) / 1000));
+  const countdownLabel = secondsLeft === null
+    ? null
+    : `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`;
+  // When time runs out, force a reload so the user starts over with fresh stock.
+  useEffect(() => {
+    if (secondsLeft === 0 && totalItems > 0) {
+      toast.error('Tu reserva expiró. Recargando…');
+      const t = setTimeout(() => window.location.reload(), 1500);
+      return () => clearTimeout(t);
+    }
+  }, [secondsLeft, totalItems]);
+
   if (sorted.length === 0) {
     return (
       <section className="container mt-12">
@@ -105,16 +184,32 @@ export function EventCheckoutPanel({
 
   return (
     <section id="entradas" className="container mt-12 space-y-6">
-      {/* Progress */}
-      <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-        <Dot active />
-        <span>Entradas</span>
-        <span className="mx-1 h-px w-6 bg-border" />
-        <Dot active={step >= 2} />
-        <span>Datos + pago</span>
-        <span className="mx-1 h-px w-6 bg-border" />
-        <Dot />
-        <span>Confirmación</span>
+      {/* Progress + countdown */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          <Dot active />
+          <span>Entradas</span>
+          <span className="mx-1 h-px w-6 bg-border" />
+          <Dot active={step >= 2} />
+          <span>Datos + pago</span>
+          <span className="mx-1 h-px w-6 bg-border" />
+          <Dot />
+          <span>Confirmación</span>
+        </div>
+        {countdownLabel && totalItems > 0 && (
+          <div
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] ${
+              secondsLeft !== null && secondsLeft < 60
+                ? 'border-destructive/60 text-destructive'
+                : 'border-secondary/40 text-secondary'
+            }`}
+            aria-live="polite"
+            aria-label={`Tu reserva vence en ${countdownLabel}`}
+          >
+            <Clock className="h-3 w-3" />
+            Reserva · {countdownLabel}
+          </div>
+        )}
       </div>
 
       {step === 1 ? (
@@ -140,7 +235,10 @@ export function EventCheckoutPanel({
           onBack={() => setStep(1)}
           onSubmit={(input) => {
             startTransition(async () => {
-              const res = await startCheckout(input);
+              const res = await startCheckout({
+                ...input,
+                sessionId: sessionIdRef.current,
+              });
               if (!res.ok) {
                 toast.error(res.message ?? 'Error en el checkout');
                 return;
@@ -325,7 +423,7 @@ function Step2({
   setMethod: (m: 'yape_manual' | 'mercadopago') => void;
   isPending: boolean;
   onBack: () => void;
-  onSubmit: (input: CheckoutInput) => void;
+  onSubmit: (input: Omit<CheckoutInput, 'sessionId'>) => void;
 }) {
   return (
     <form
@@ -334,7 +432,7 @@ function Step2({
         const fd = new FormData(e.currentTarget);
         const ageOk = fd.get('age_ok') === '1';
         if (!ageOk) {
-          toast.error(`Tenés que confirmar que sos +${event.min_age}`);
+          toast.error(`Tienes que confirmar que eres mayor de ${event.min_age} años`);
           return;
         }
         onSubmit({
@@ -380,7 +478,7 @@ function Step2({
               placeholder="tu@email.com"
             />
             <p className="text-xs text-muted-foreground">
-              Acá te llega tu QR al instante.
+              Aquí te llega tu QR al instante.
             </p>
           </div>
           <div className="space-y-2">
@@ -391,10 +489,14 @@ function Step2({
               type="tel"
               autoComplete="tel"
               required
+              minLength={9}
+              maxLength={20}
+              inputMode="tel"
+              pattern="^[+\d][\d\s\-()]{7,19}$"
               placeholder="+51 999 999 999"
             />
             <p className="text-xs text-muted-foreground">
-              También te lo enviamos por acá.
+              También te lo enviamos por aquí.
             </p>
           </div>
           <label className="flex items-start gap-2 text-sm">
@@ -429,22 +531,24 @@ function Step2({
             [ MÉTODO DE PAGO ]
           </h2>
 
-          {brand.yape_number && (
+          <div role="radiogroup" aria-label="Método de pago" className="space-y-3">
+            {brand.yape_number && (
+              <PaymentOption
+                selected={method === 'yape_manual'}
+                onClick={() => setMethod('yape_manual')}
+                title="Yape"
+                subtitle="Pago manual · validación en 5–15 min"
+                note={`Yapeas a ${brand.yape_holder ?? brand.name} y nos envías la captura.`}
+              />
+            )}
             <PaymentOption
-              selected={method === 'yape_manual'}
-              onClick={() => setMethod('yape_manual')}
-              title="Yape"
-              subtitle="Pago manual · validación en 5–15 min"
-              note={`Yapeás a ${brand.yape_holder ?? brand.name} y nos pasás la captura.`}
+              selected={method === 'mercadopago'}
+              onClick={() => setMethod('mercadopago')}
+              title="Tarjeta · MercadoPago"
+              subtitle="Visa · Mastercard · AMEX · Transferencia BCP/BBVA"
+              note="Procesado por MercadoPago. Tu QR llega al instante."
             />
-          )}
-          <PaymentOption
-            selected={method === 'mercadopago'}
-            onClick={() => setMethod('mercadopago')}
-            title="Tarjeta · MercadoPago"
-            subtitle="Visa · Mastercard · AMEX · Transferencia BCP/BBVA"
-            note="Procesado por MercadoPago. Tu QR llega al instante."
-          />
+          </div>
         </section>
       </div>
 
@@ -512,7 +616,7 @@ function Step2({
         </button>
 
         <p className="text-center text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          🔒 Pago seguro · Tu data está protegida
+          🔒 Pago seguro · Tus datos están protegidos
         </p>
       </aside>
     </form>
@@ -535,6 +639,9 @@ function PaymentOption({
   return (
     <button
       type="button"
+      role="radio"
+      aria-checked={selected}
+      aria-label={`${title}. ${subtitle}`}
       onClick={onClick}
       className={`block w-full rounded-md border p-4 text-left transition-colors ${
         selected
@@ -545,6 +652,7 @@ function PaymentOption({
       <div className="flex items-center justify-between">
         <span className="font-medium">{title}</span>
         <span
+          aria-hidden
           className={`h-4 w-4 rounded-full border-2 ${
             selected ? 'border-secondary bg-secondary' : 'border-border'
           }`}

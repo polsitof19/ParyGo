@@ -4,6 +4,7 @@ import { Check } from 'lucide-react';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN, formatEventDate, whatsappLink } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { ConfirmationPoller } from './ConfirmationPoller';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,7 +70,7 @@ export default async function ConfirmationPage({
         </h1>
         <p className="mx-auto max-w-md text-muted-foreground">
           Esto suele tardar menos de 1 minuto. Esta página se actualiza sola.
-          Si pasan más de 5 minutos sin novedad, escribinos por WhatsApp.
+          Si pasan más de 5 minutos sin novedad, escríbenos por WhatsApp.
         </p>
         {brand?.whatsapp_e164 && (
           <a
@@ -81,7 +82,7 @@ export default async function ConfirmationPage({
             WhatsApp soporte
           </a>
         )}
-        <meta httpEquiv="refresh" content="5" />
+        <ConfirmationPoller />
       </main>
     );
   }
@@ -147,7 +148,7 @@ export default async function ConfirmationPage({
       {ticketUrl && (
         <div className="space-y-4">
           <p className="text-center font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            Tu link permanente (guardalo en favoritos)
+            Tu link permanente (guárdalo en favoritos)
           </p>
           <div className="mx-auto flex max-w-md items-center justify-between gap-3 rounded-full border border-border bg-card px-5 py-3">
             <span className="truncate font-mono text-sm">
@@ -181,17 +182,18 @@ export default async function ConfirmationPage({
       </section>
 
       <section className="flex flex-wrap items-center justify-center gap-3">
-        {firstTicket && brand && (
+        {firstTicket && brand?.whatsapp_e164 && (
           <a
             href={whatsappLink(
-              brand.whatsapp_e164?.replace(/[^\d]/g, '') ?? '56932881230',
+              brand.whatsapp_e164.replace(/[^\d]/g, ''),
               `Hola, te paso mi entrada para ${event?.name}: https://${brand.slug}.parygo.com/t/${firstTicket.qr_code}`
             )}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-border px-6 text-sm font-medium transition-colors hover:bg-muted"
           >
-            📲 Enviarme a WhatsApp
+            <span aria-hidden>📲</span>
+            Enviarme a WhatsApp
           </a>
         )}
         {ticketUrl && (
@@ -203,7 +205,7 @@ export default async function ConfirmationPage({
 
       <p className="text-center text-xs text-muted-foreground">
         También te enviamos el QR a {order.buyer_email}. Si no llega en 5 min,
-        revisá spam o usá el link permanente.
+        revisa spam o usa el link permanente.
       </p>
     </main>
   );

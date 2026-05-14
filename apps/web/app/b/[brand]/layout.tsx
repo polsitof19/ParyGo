@@ -22,7 +22,11 @@ export default async function BrandLayout({
 
   if (!brand) notFound();
 
-  const theme = brand.theme_json ?? {};
+  const theme = (brand.theme_json ?? {}) as {
+    primary_color?: string;
+    secondary_color?: string;
+    logo_url?: string | null;
+  };
   const primary = theme.primary_color || '#FF1F8F';
   const secondary = theme.secondary_color || '#00E5FF';
 

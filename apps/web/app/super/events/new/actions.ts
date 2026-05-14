@@ -51,7 +51,7 @@ export async function createEventAction(
       const path = err.path.join('.');
       if (path) fieldErrors[path] = err.message;
     }
-    return { ok: false, message: 'Revisá los campos marcados.', fieldErrors };
+    return { ok: false, message: 'Revisa los campos marcados.', fieldErrors };
   }
 
   const admin = createAdminClient();

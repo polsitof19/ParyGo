@@ -31,7 +31,7 @@ export default async function EventsListPage() {
       {!events || events.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Sin eventos todavía. Creá una marca primero, después un evento.
+            Sin eventos todavía. Crea una marca primero, después un evento.
           </CardContent>
         </Card>
       ) : (

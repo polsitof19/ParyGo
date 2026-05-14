@@ -16,6 +16,7 @@ export type CheckoutInput = {
   marketingOptIn: boolean;
   method: 'yape_manual' | 'mercadopago';
   items: { ticketTypeId: string; quantity: number }[];
+  sessionId: string;
 };
 
 export type CheckoutResult =
@@ -39,6 +40,7 @@ const schema = z.object({
       })
     )
     .min(1),
+  sessionId: z.string().min(8).max(64),
 });
 
 export async function startCheckout(input: CheckoutInput): Promise<CheckoutResult> {
@@ -162,6 +164,14 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     return { ok: false, message: orderErr?.message ?? 'No se pudo crear la orden.' };
   }
 
+  // Bind this session's existing reservations to the new order so they aren't
+  // swept while payment is in flight. If there were no live reservations
+  // (e.g. user reloaded with quantities), this is a no-op.
+  await admin.rpc('attach_reservation_to_order', {
+    p_session_id: parsed.data.sessionId,
+    p_order_id: order.id,
+  });
+
   const { error: itemsErr } = await admin.from('order_items').insert(
     resolved.map((r) => ({
       order_id: order.id,
@@ -221,8 +231,9 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
       return { ok: true, redirectUrl: pref.initPoint };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'MercadoPago no disponible';
-      // Cancel the order so stock isn't held forever
+      // Cancel the order and free the held stock so other buyers can take it.
       await admin.from('orders').update({ status: 'failed' }).eq('id', order.id);
+      await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
       return { ok: false, message };
     }
   }

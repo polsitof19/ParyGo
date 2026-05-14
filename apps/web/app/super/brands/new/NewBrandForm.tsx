@@ -75,8 +75,8 @@ export function NewBrandForm() {
           [ MERCADOPAGO · OPCIONAL ]
         </h2>
         <p className="text-xs text-muted-foreground">
-          Las credenciales se cifran en la base de datos. Si no las tenés
-          todavía, podés crear la marca sin ellas y añadirlas después.
+          Las credenciales se cifran en la base de datos. Si no las tienes
+          todavía, puedes crear la marca sin ellas y añadirlas después.
         </p>
         <Field id="mp_access_token" label="Access Token (producción)" error={state.fieldErrors?.mp_access_token}>
           <Input

@@ -83,7 +83,7 @@ export default async function EventPage({ params }: Props) {
   const totalCapacity = ticketTypes.reduce((acc, t) => acc + t.capacity, 0);
   const totalSold = ticketTypes.reduce((acc, t) => acc + t.sold, 0);
 
-  const theme = brand.theme_json ?? {};
+  const theme = (brand.theme_json ?? {}) as { primary_color?: string };
   const primary = theme.primary_color || '#FF1F8F';
 
   return (

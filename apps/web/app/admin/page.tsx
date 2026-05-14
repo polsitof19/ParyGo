@@ -157,8 +157,8 @@ export default async function AdminHomePage() {
                 <CardHeader>
                   <CardTitle>Revisar pagos Yape</CardTitle>
                   <CardDescription>
-                    Verificá comprobantes pendientes contra tu app Yape y aprobá
-                    o rechazá. {stats.pendingYape > 0 && `(${stats.pendingYape} esperando)`}
+                    Verifica comprobantes pendientes contra tu app Yape y aprueba
+                    o rechaza. {stats.pendingYape > 0 && `(${stats.pendingYape} esperando)`}
                   </CardDescription>
                 </CardHeader>
               </Card>

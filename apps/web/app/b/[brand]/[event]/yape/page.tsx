@@ -71,14 +71,14 @@ export default async function YapeUploadPage({
           Yapea {formatPEN(order.total_cents)} a {order.brand.yape_holder ?? order.brand.name}
         </h1>
         <p className="mx-auto max-w-md text-muted-foreground">
-          Hacé el yape al número de abajo y después subí los datos del
-          comprobante. Te enviamos tu QR cuando el promotor confirme.
+          Yapea al número de abajo y después sube los datos del comprobante.
+          Te enviamos tu QR cuando el promotor confirme.
         </p>
       </header>
 
       <section className="space-y-4 rounded-lg border border-border bg-card p-6">
         <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
-          [ 1 · YAPEÁ A ESTE NÚMERO ]
+          [ 1 · YAPEA A ESTE NÚMERO ]
         </h2>
         <div className="space-y-2">
           <p className="font-display text-4xl tabular-nums tracking-tight text-foreground md:text-5xl">
@@ -93,18 +93,18 @@ export default async function YapeUploadPage({
           </p>
         </div>
         <p className="rounded-md border border-yellow/30 bg-yellow/5 px-4 py-3 text-xs text-yellow">
-          ⚠️ Yapeá el monto exacto. Si yapeás de menos o de más, el promotor
+          ⚠️ Yapea el monto exacto. Si yapeas de menos o de más, el promotor
           puede rechazar el comprobante.
         </p>
       </section>
 
       <section className="space-y-4 rounded-lg border border-border bg-card p-6">
         <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
-          [ 2 · SUBÍ LOS DATOS DEL COMPROBANTE ]
+          [ 2 · SUBE LOS DATOS DEL COMPROBANTE ]
         </h2>
         <p className="text-sm text-muted-foreground">
-          Después de yapear, abrí "Movimientos" en tu app Yape, abrí esta
-          transferencia y copiá los datos. También adjuntá la captura.
+          Después de yapear, abre &quot;Movimientos&quot; en tu app Yape, abre esta
+          transferencia y copia los datos. También adjunta la captura.
         </p>
         <YapeUploadForm
           orderId={order.id}

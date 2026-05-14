@@ -111,8 +111,8 @@ export function YapeReviewRow({
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Abrí tu Yape → Movimientos → buscá esta transferencia y verificá los
-          4 campos. Si todo matchea, aprobá.
+          Abre tu Yape → Movimientos → busca esta transferencia y verifica los
+          4 campos. Si todo coincide, aprueba.
         </p>
 
         {showReject ? (

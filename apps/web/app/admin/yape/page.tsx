@@ -68,7 +68,7 @@ export default async function YapeReviewPage() {
           Comprobantes por revisar
         </h1>
         <p className="text-muted-foreground">
-          Verificá cada uno contra tu app Yape antes de aprobar. Una vez aprobado,
+          Verifica cada uno contra tu app Yape antes de aprobar. Una vez aprobado,
           el sistema genera los QR y le envía la entrada al comprador.
         </p>
       </header>

@@ -93,7 +93,7 @@ export async function issueTicketsForOrder(
     return { ok: false, error: insertErr?.message ?? 'No se pudieron crear tickets' };
   }
 
-  // 5. Log + audit.
+  // 5. Log + audit + release any held stock reservations (safe-noop if none).
   await admin.from('events_log').insert({
     brand_id: order.brand_id,
     event_id: order.event_id,
@@ -101,6 +101,7 @@ export async function issueTicketsForOrder(
     type: input.reason === 'mp_paid' ? 'tickets_issued_mp' : 'tickets_issued_yape',
     payload: { count: created.length },
   });
+  await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
 
   return {
     ok: true,

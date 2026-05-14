@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,10 @@ export function YapeUploadForm({ orderId, expectedAmountCents, buyerName }: Prop
     const f = e.target.files?.[0] ?? null;
     if (!f) {
       setFile(null);
-      setPreviewUrl(null);
+      setPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
       return;
     }
     if (f.size > 5 * 1024 * 1024) {
@@ -34,15 +37,26 @@ export function YapeUploadForm({ orderId, expectedAmountCents, buyerName }: Prop
       return;
     }
     setFile(f);
-    setPreviewUrl(URL.createObjectURL(f));
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(f);
+    });
   }
+
+  // Revoke the blob URL on unmount to avoid the memory leak when the
+  // component remounts after submit/navigate.
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
         if (!file) {
-          toast.error('Subí la captura del comprobante');
+          toast.error('Sube la captura del comprobante');
           return;
         }
         const form = new FormData(e.currentTarget);
@@ -98,7 +112,7 @@ export function YapeUploadForm({ orderId, expectedAmountCents, buyerName }: Prop
           placeholder="María López"
         />
         <p className="text-xs text-muted-foreground">
-          Debe matchear con el nombre que figura en tu comprobante.
+          Debe coincidir con el nombre que figura en tu comprobante.
         </p>
       </div>
 

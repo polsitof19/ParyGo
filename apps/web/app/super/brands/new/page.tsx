@@ -24,7 +24,7 @@ export default function NewBrandPage() {
           Crear promotor
         </h1>
         <p className="text-muted-foreground">
-          Setup inicial. Luego invitás al brand admin por email para que pueda
+          Setup inicial. Luego invitas al brand admin por email para que pueda
           editar su evento.
         </p>
       </header>

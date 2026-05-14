@@ -18,12 +18,12 @@ export function LoginForm({ next }: { next?: string }) {
           [ LINK ENVIADO ]
         </p>
         <p className="text-foreground">
-          Revisá tu bandeja en{' '}
+          Revisa tu bandeja en{' '}
           <strong className="font-mono">{state.message}</strong>. El link expira
           en 1 hora.
         </p>
         <p className="text-xs text-muted-foreground">
-          ¿No te llegó? Mirá spam. Si igual no aparece, contactá soporte.
+          ¿No te llegó? Revisa spam. Si igual no aparece, contacta a soporte.
         </p>
       </div>
     );
@@ -50,7 +50,7 @@ export function LoginForm({ next }: { next?: string }) {
       )}
       <SubmitButton />
       <p className="text-center text-xs text-muted-foreground">
-        Al continuar aceptás los Términos y la Política de Privacidad.
+        Al continuar aceptas los Términos y la Política de Privacidad.
       </p>
     </form>
   );

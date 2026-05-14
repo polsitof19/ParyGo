@@ -10,6 +10,13 @@ const initial: FormState = { ok: false, message: null, fieldErrors: {} };
 
 type Brand = { id: string; slug: string; name: string };
 
+// "YYYY-MM-DDTHH:mm" for use as a datetime-local min value.
+function nowLocalInput(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function NewEventForm({
   brands,
   preselectedSlug,
@@ -19,6 +26,7 @@ export function NewEventForm({
 }) {
   const [state, action] = useFormState(createEventAction, initial);
   const preselected = brands.find((b) => b.slug === preselectedSlug);
+  const minDateTime = nowLocalInput();
 
   return (
     <form action={action} className="space-y-6">
@@ -35,7 +43,7 @@ export function NewEventForm({
             className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="" disabled>
-              Elegí marca
+              Elige marca
             </option>
             {brands.map((b) => (
               <option key={b.id} value={b.id}>
@@ -73,10 +81,10 @@ export function NewEventForm({
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="starts_at" label="Inicio" required error={state.fieldErrors?.starts_at}>
-            <Input id="starts_at" name="starts_at" type="datetime-local" required />
+            <Input id="starts_at" name="starts_at" type="datetime-local" min={minDateTime} required />
           </Field>
           <Field id="ends_at" label="Fin estimado">
-            <Input id="ends_at" name="ends_at" type="datetime-local" />
+            <Input id="ends_at" name="ends_at" type="datetime-local" min={minDateTime} />
           </Field>
         </div>
       </section>

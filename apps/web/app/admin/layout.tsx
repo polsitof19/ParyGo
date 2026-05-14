@@ -21,7 +21,7 @@ export default async function AdminLayout({
   if (user.isSuperAdmin) redirect('/super');
   const brandMembership = user.brandMemberships.find((m) => m.role === 'brand_admin');
   if (!brandMembership) {
-    redirect('/login?error=' + encodeURIComponent('No tenés acceso de promotor.'));
+    redirect('/login?error=' + encodeURIComponent('No tienes acceso de promotor.'));
   }
 
   const supabase = createClient();

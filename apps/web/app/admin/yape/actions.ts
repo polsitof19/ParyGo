@@ -28,7 +28,7 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
     user.brandMemberships.some(
       (m) => m.brandId === proof.brand_id && m.role === 'brand_admin'
     );
-  if (!canAct) return { ok: false, message: 'No tenés permiso.' };
+  if (!canAct) return { ok: false, message: 'No tienes permiso.' };
 
   // Atomic state transition: only flip if still pending. Prevents double-approve
   // if two admin tabs hit it at the same time.
@@ -113,12 +113,13 @@ export async function rejectYapeProof(proofId: string, reason: string): Promise<
     return { ok: false, message: 'Ya procesado.' };
   }
 
-  // Mark order failed
+  // Mark order failed and release the held reservation so the stock returns.
   await admin
     .from('orders')
     .update({ status: 'failed' })
     .eq('id', proof.order_id)
     .eq('status', 'pending_yape_review');
+  await admin.rpc('release_stock_reservations_for_order', { p_order_id: proof.order_id });
 
   await admin.from('events_log').insert({
     brand_id: proof.brand_id,

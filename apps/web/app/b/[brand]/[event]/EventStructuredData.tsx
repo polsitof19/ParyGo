@@ -43,7 +43,10 @@ export function EventStructuredData({ brand, event, ticketTypes }: Props) {
       priceCurrency: 'PEN',
       availability,
       url,
-      validFrom: new Date().toISOString(),
+      // Don't emit a fresh validFrom on every render — Google's crawl will
+      // see it changing constantly. Tie validity to the event window.
+      validFrom: event.starts_at,
+      priceValidUntil: event.ends_at ?? event.starts_at,
     };
   });
 

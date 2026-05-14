@@ -76,7 +76,7 @@ export function TicketTypesEditor({
       {types.length === 0 && !creating && (
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Sin tipos de entrada todavía. Agregá uno para empezar.
+            Sin tipos de entrada todavía. Agrega uno para empezar.
           </CardContent>
         </Card>
       )}

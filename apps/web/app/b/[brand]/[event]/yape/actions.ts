@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import { headers } from 'next/headers';
 import { nanoid } from 'nanoid';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { solesToCents } from '@/lib/utils';
@@ -18,6 +19,7 @@ const schema = z.object({
 });
 
 export async function submitYapeProof(formData: FormData): Promise<Result> {
+  const brandSlugFromHost = headers().get('x-parygo-brand-slug');
   const parsed = schema.safeParse({
     order_id: formData.get('order_id'),
     amount_soles: formData.get('amount_soles'),
@@ -42,7 +44,10 @@ export async function submitYapeProof(formData: FormData): Promise<Result> {
   // 1. Verify order exists and is in expected state.
   const { data: order, error: orderErr } = await admin
     .from('orders')
-    .select('id, event_id, brand_id, total_cents, status, payment_method')
+    .select(`
+      id, event_id, brand_id, total_cents, status, payment_method,
+      brand:brands ( slug )
+    `)
     .eq('id', parsed.data.order_id)
     .single();
   if (orderErr || !order) {
@@ -53,6 +58,13 @@ export async function submitYapeProof(formData: FormData): Promise<Result> {
   }
   if (order.status !== 'pending_yape_review') {
     return { ok: false, message: 'Esta orden ya fue procesada.' };
+  }
+  // Cross-brand guard: the order must belong to the brand subdomain the
+  // request came from. Prevents someone submitting yape proofs against
+  // another brand's order queue.
+  const orderBrand = Array.isArray(order.brand) ? order.brand[0] : order.brand;
+  if (brandSlugFromHost && orderBrand?.slug && orderBrand.slug !== brandSlugFromHost) {
+    return { ok: false, message: 'Orden no pertenece a esta marca.' };
   }
 
   // 2. Compute amount and warn if mismatched (but still accept; promoter can reject).

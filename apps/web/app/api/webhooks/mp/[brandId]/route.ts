@@ -18,11 +18,18 @@ export const dynamic = 'force-dynamic';
 //   3. Idempotency: orders.mp_payment_id UNIQUE prevents double-processing
 //   4. Quick 200 OK on duplicates so MP stops retrying
 
+const UUID_V4_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function POST(
   req: NextRequest,
   { params }: { params: { brandId: string } }
 ) {
   const admin = createAdminClient();
+
+  if (!UUID_V4_RE.test(params.brandId)) {
+    return NextResponse.json({ error: 'invalid_brand_id' }, { status: 400 });
+  }
 
   // 1. Load brand + webhook secret
   const { data: brand } = await admin
@@ -40,22 +47,26 @@ export async function POST(
   const url = new URL(req.url);
   const dataId = url.searchParams.get('data.id') ?? url.searchParams.get('id');
 
-  // Optional: in development we can disable signature check if no secret set yet.
-  // In production, signature is mandatory.
   const isProduction = process.env.NODE_ENV === 'production';
 
-  if (xSignature && brand.mp_webhook_secret && dataId && xRequestId) {
+  // Signature is mandatory whenever the brand has a secret configured —
+  // not only in production. Dev bypass only applies if the brand hasn't
+  // been wired up yet (no secret stored).
+  if (brand.mp_webhook_secret) {
+    if (!xSignature || !dataId || !xRequestId) {
+      return NextResponse.json({ error: 'missing_signature' }, { status: 401 });
+    }
     const verified = verifyMpSignature({
       header: xSignature,
       secret: brand.mp_webhook_secret,
       dataId,
       requestId: xRequestId,
     });
-    if (!verified && isProduction) {
+    if (!verified) {
       return NextResponse.json({ error: 'invalid_signature' }, { status: 401 });
     }
   } else if (isProduction) {
-    return NextResponse.json({ error: 'missing_signature' }, { status: 401 });
+    return NextResponse.json({ error: 'webhook_secret_missing' }, { status: 401 });
   }
 
   // 3. Parse body — MP sends { type, data: { id } }
@@ -87,7 +98,8 @@ export async function POST(
   const externalRef = payment?.external_reference; // = orderId
   const status = payment?.status; // 'approved' | 'pending' | 'in_process' | 'rejected' | ...
 
-  if (!externalRef) {
+  if (!externalRef || !UUID_V4_RE.test(externalRef)) {
+    // Don't let MP retry on a malformed external_reference; ack and ignore.
     return NextResponse.json({ ok: true, ignored: 'no_external_reference' });
   }
 
@@ -111,11 +123,16 @@ export async function POST(
         .update({ status: 'failed', mp_payment_status: status })
         .eq('id', externalRef)
         .eq('status', 'pending_payment');
+      // Free the held stock so other buyers can grab it.
+      await admin.rpc('release_stock_reservations_for_order', { p_order_id: externalRef });
     } else if (status === 'refunded' || status === 'charged_back') {
+      // Only flip orders that were already paid; never resurrect a failed
+      // order into refunded state from a stray webhook.
       await admin
         .from('orders')
         .update({ status: 'refunded', mp_payment_status: status })
-        .eq('id', externalRef);
+        .eq('id', externalRef)
+        .eq('status', 'paid');
     }
     return NextResponse.json({ ok: true, status });
   }

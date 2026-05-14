@@ -31,7 +31,7 @@ export default async function BrandsListPage() {
       {!brands || brands.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Todavía no hay marcas. Creá la primera para arrancar.
+            Todavía no hay marcas. Crea la primera para arrancar.
           </CardContent>
         </Card>
       ) : (

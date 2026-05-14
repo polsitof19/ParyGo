@@ -78,7 +78,7 @@ export default async function TicketPage({ params }: Props) {
           Esta entrada ya no es válida
         </h1>
         <p className="text-muted-foreground">
-          Fue devuelta o cancelada. Contactá al promotor si crees que es un error.
+          Fue devuelta o cancelada. Contacta al promotor si crees que es un error.
         </p>
       </main>
     );
@@ -172,24 +172,27 @@ export default async function TicketPage({ params }: Props) {
         />
       </article>
 
-      <section className="space-y-3 text-center">
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
-          ¿Vas con amigos? Compartí esta página
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <a
-            href={whatsappLink(
-              brand?.whatsapp_e164?.replace(/[^\d]/g, '') ?? '56932881230',
-              `Mi entrada para ${event?.name}: ${ticketUrl}`
-            )}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-card px-5 text-sm hover:bg-muted"
-          >
-            📲 Enviarme a WhatsApp
-          </a>
-        </div>
-      </section>
+      {brand?.whatsapp_e164 && (
+        <section className="space-y-3 text-center">
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            ¿Vas con amigos? Comparte esta página
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <a
+              href={whatsappLink(
+                brand.whatsapp_e164.replace(/[^\d]/g, ''),
+                `Mi entrada para ${event?.name}: ${ticketUrl}`
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-card px-5 text-sm hover:bg-muted"
+            >
+              <span aria-hidden>📲</span>
+              Enviarme a WhatsApp
+            </a>
+          </div>
+        </section>
+      )}
 
       {brand?.whatsapp_e164 && (
         <p className="text-center font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">

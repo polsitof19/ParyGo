@@ -14,8 +14,8 @@ export default function AppRootPage() {
           Acceso al <span className="gradient-text">panel</span>
         </h1>
         <p className="mx-auto max-w-md text-muted-foreground">
-          Si sos promotor de un evento creado en ParyGo, iniciá sesión con el
-          email que registramos para vos.
+          Si eres promotor de un evento creado en ParyGo, inicia sesión con el
+          email que registramos para ti.
         </p>
       </div>
 
@@ -27,7 +27,7 @@ export default function AppRootPage() {
           Iniciar sesión →
         </Link>
         <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
-          ¿Querés tu propia plataforma?{' '}
+          ¿Quieres tu propia plataforma?{' '}
           <a
             href="https://parygo.pages.dev#packs"
             className="underline-offset-4 hover:underline"
