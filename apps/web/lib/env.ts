@@ -22,7 +22,10 @@ const publicSchema = z.object({
   NEXT_PUBLIC_SITE_NAME: z.string().min(1),
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-  NEXT_PUBLIC_SUPPORT_WHATSAPP: z.string().regex(/^\d+$/),
+  // E.164 international format: optional '+' followed by 7-15 digits.
+  // Stored as the canonical contact number — we strip the '+' at call sites
+  // that need a wa.me URL.
+  NEXT_PUBLIC_SUPPORT_WHATSAPP: z.string().regex(/^\+?\d{7,15}$/),
 });
 
 function parseServer() {

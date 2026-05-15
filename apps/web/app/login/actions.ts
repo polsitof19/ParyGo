@@ -86,13 +86,18 @@ export async function sendMagicLink(
     return { ok: true, message: parsed.data.email };
   } catch (err) {
     const description = describeError(err);
+    // Keep the structured log for Pages Functions; show the user just the
+    // underlying message so the banner stays clean now that the bug surfaced.
     console.error('[login] sendMagicLink threw', {
       stage,
       error: description,
     });
     return {
       ok: false,
-      message: `Error en ${stage}: ${description}`,
+      message:
+        err instanceof Error
+          ? err.message
+          : 'No pudimos enviar el link. Intentá de nuevo.',
     };
   }
 }
