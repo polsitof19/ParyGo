@@ -17,12 +17,28 @@ function sanitizeNext(raw: string | null): string {
   return raw;
 }
 
+// Magic links default to the token_hash flow (verifyOtp). It works across
+// browsers/devices because it doesn't depend on a PKCE cookie. The legacy
+// `?code=` branch is retained so links generated before the template switch
+// (in-flight emails, ~1h TTL) still resolve when clicked from the same
+// browser that submitted /login.
+type EmailOtpType = 'email' | 'magiclink' | 'recovery' | 'invite' | 'signup';
+const ALLOWED_OTP_TYPES: ReadonlySet<EmailOtpType> = new Set([
+  'email',
+  'magiclink',
+  'recovery',
+  'invite',
+  'signup',
+]);
+
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const code = url.searchParams.get('code');
+  const tokenHash = url.searchParams.get('token_hash');
+  const rawType = url.searchParams.get('type');
   const next = sanitizeNext(url.searchParams.get('next'));
 
-  if (!code) {
+  if (!code && !tokenHash) {
     return NextResponse.redirect(
       new URL(
         `/login?error=${encodeURIComponent('Link inválido o expirado.')}`,
@@ -32,11 +48,30 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = createClient();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-  if (error) {
+  let exchangeError: { message: string } | null = null;
+  if (tokenHash) {
+    if (!rawType || !ALLOWED_OTP_TYPES.has(rawType as EmailOtpType)) {
+      return NextResponse.redirect(
+        new URL(
+          `/login?error=${encodeURIComponent('Link inválido o expirado.')}`,
+          req.url
+        )
+      );
+    }
+    const { error } = await supabase.auth.verifyOtp({
+      type: rawType as EmailOtpType,
+      token_hash: tokenHash,
+    });
+    exchangeError = error;
+  } else if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    exchangeError = error;
+  }
+
+  if (exchangeError) {
     return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(error.message)}`, req.url)
+      new URL(`/login?error=${encodeURIComponent(exchangeError.message)}`, req.url)
     );
   }
 
