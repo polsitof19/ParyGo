@@ -20,7 +20,7 @@ export type SendTicketEmailResult =
   | { ok: true; status: 'sent'; resendId: string }
   | { ok: true; status: 'already_sent' }
   | { ok: true; status: 'skipped'; reason: 'no_api_key' | 'no_tickets' | 'no_buyer_email' }
-  | { ok: false; status: 'error'; reason: string };
+  | { ok: false; status: 'error'; reason: string; detail?: string };
 
 type OrderWithJoins = {
   id: string;
@@ -150,8 +150,15 @@ export async function sendTicketEmail(orderId: string): Promise<SendTicketEmailR
         order_id: orderId,
         status: resp.status,
         body: bodyText.slice(0, 500),
+        key_len: apiKey.length,
+        key_prefix: apiKey.slice(0, 5),
       });
-      return { ok: false, status: 'error', reason: `resend_${resp.status}` };
+      return {
+        ok: false,
+        status: 'error',
+        reason: `resend_${resp.status}`,
+        detail: bodyText.slice(0, 500),
+      };
     }
     const data = (await resp.json().catch(() => null)) as { id?: string } | null;
     resendId = data?.id ?? null;
