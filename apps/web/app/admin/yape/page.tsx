@@ -39,7 +39,7 @@ export default async function YapeReviewPage() {
     .select(`
       id, amount_cents, operation_number, payer_name, security_code,
       receipt_url, created_at,
-      order:orders (
+      order:orders!yape_proofs_order_id_fkey (
         id, buyer_name, buyer_email, buyer_phone, total_cents,
         event:events ( name )
       )
