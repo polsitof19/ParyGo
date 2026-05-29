@@ -9,6 +9,7 @@ const NAV = [
   { href: '/super', label: 'Resumen' },
   { href: '/super/brands', label: 'Marcas' },
   { href: '/super/events', label: 'Eventos' },
+  { href: '/super/yape', label: 'Yape pending' },
 ] as const;
 
 export default async function SuperLayout({

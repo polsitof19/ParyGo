@@ -72,6 +72,7 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
 
   revalidatePath('/admin/yape');
   revalidatePath('/admin');
+  revalidatePath('/super/yape');
   return {
     ok: true,
     ticketsIssued: issue.ticketIds.length,
@@ -132,5 +133,6 @@ export async function rejectYapeProof(proofId: string, reason: string): Promise<
   // TODO(emails): notify buyer of rejection
 
   revalidatePath('/admin/yape');
+  revalidatePath('/super/yape');
   return { ok: true };
 }

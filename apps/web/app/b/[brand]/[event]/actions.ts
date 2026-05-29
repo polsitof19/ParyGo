@@ -51,7 +51,14 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
 
   const admin = createAdminClient();
   const reqHeaders = headers();
-  const host = reqHeaders.get('host') ?? '';
+  // For absolute URLs (MP back_urls / webhook), trust x-forwarded-host first
+  // because the CF Worker proxy rewrites `host` to the canonical Pages host
+  // (parygo-app.pages.dev). The middleware uses the same precedence.
+  // For in-app redirects we prefer relative paths — they survive any future
+  // proxy reconfiguration and are the canonical pattern used elsewhere.
+  const forwardedHost = reqHeaders.get('x-forwarded-host');
+  const rawHost = reqHeaders.get('host') ?? '';
+  const host = forwardedHost || rawHost;
   const proto = reqHeaders.get('x-forwarded-proto') ?? 'https';
 
   // 1. Verify event + ticket types in one query (server-trusted).
@@ -195,8 +202,12 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   });
 
   // 5. Branch by method.
+  // MercadoPago requires absolute URLs in back_urls/notificationUrl — relative
+  // paths are not accepted by MP's API. For everything else, return a relative
+  // path so the browser stays on whatever host it already is on (immune to CF
+  // Worker host-rewrite surprises).
   const baseUrl = `${proto}://${host}`;
-  const eventBase = `${baseUrl}/${event.slug}`;
+  const eventBase = `/${event.slug}`;
 
   if (parsed.data.method === 'mercadopago') {
     try {
@@ -216,9 +227,9 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
           phone: parsed.data.buyerPhone,
         },
         backUrls: {
-          success: `${eventBase}/confirmacion?order=${order.id}`,
-          failure: `${eventBase}?pago=fallido`,
-          pending: `${eventBase}/confirmacion?order=${order.id}&pendiente=1`,
+          success: `${baseUrl}${eventBase}/confirmacion?order=${order.id}`,
+          failure: `${baseUrl}${eventBase}?pago=fallido`,
+          pending: `${baseUrl}${eventBase}/confirmacion?order=${order.id}&pendiente=1`,
         },
         notificationUrl: `${baseUrl}/api/webhooks/mp/${event.brand_id}`,
         externalReference: order.id,
@@ -238,6 +249,6 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     }
   }
 
-  // Yape manual → bounce to Yape upload screen
+  // Yape manual → relative redirect keeps the brand subdomain intact.
   return { ok: true, redirectUrl: `${eventBase}/yape?order=${order.id}` };
 }

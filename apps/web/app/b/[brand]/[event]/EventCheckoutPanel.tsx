@@ -492,7 +492,7 @@ function Step2({
               minLength={9}
               maxLength={20}
               inputMode="tel"
-              pattern="^[+\d][\d\s\-()]{7,19}$"
+              pattern="^[+\d][\d\s()-]{7,19}$"
               placeholder="+51 999 999 999"
             />
             <p className="text-xs text-muted-foreground">
