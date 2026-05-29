@@ -29,7 +29,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: 'unauthorized' }, { status: 401 });
   }
 
-  const body = await req.json().catch(() => ({})) as { orderId?: string; force?: boolean };
+  const body = await req.json().catch(() => ({})) as { orderId?: string; force?: boolean; probe?: boolean };
+
+  // Diagnostic probe: returns whether RESEND_API_KEY is loaded (and its
+  // shape) without sending. Only super_admins can probe.
+  if (body.probe) {
+    if (!user.isSuperAdmin) {
+      return NextResponse.json({ ok: false, reason: 'forbidden' }, { status: 403 });
+    }
+    const raw = process.env.RESEND_API_KEY;
+    return NextResponse.json({
+      ok: true,
+      status: 'probe',
+      has_key: Boolean(raw),
+      key_len: raw ? raw.length : 0,
+      key_prefix: raw ? raw.slice(0, 5) : null,
+      key_suffix: raw ? raw.slice(-3) : null,
+      key_has_whitespace: raw ? /\s/.test(raw) : false,
+      from_email: process.env.RESEND_FROM_EMAIL ?? null,
+    });
+  }
+
   const orderId = body.orderId;
   if (!orderId || typeof orderId !== 'string') {
     return NextResponse.json({ ok: false, reason: 'invalid_order_id' }, { status: 400 });
