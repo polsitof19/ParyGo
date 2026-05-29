@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { issueTicketsForOrder, markOrderPaid } from '@/lib/tickets';
+import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
 
 type ApproveResult =
   | { ok: true; ticketsIssued: number; alreadyIssued: boolean }
@@ -68,7 +69,17 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
     payload: { proof_id: proofId, tickets_issued: issue.ticketIds.length },
   });
 
-  // TODO(emails): enqueue email to buyer with their QR + WhatsApp link
+  // Fire the ticket delivery email. Failures here MUST NOT roll back the
+  // approval — the order is already paid and the tickets already exist;
+  // sendTicketEmail logs structured and leaves email_sent_at null so the
+  // operator can retry.
+  const emailResult = await sendTicketEmail(proof.order_id);
+  if (!emailResult.ok) {
+    console.error('[approveYapeProof] sendTicketEmail failed', {
+      order_id: proof.order_id,
+      reason: emailResult.reason,
+    });
+  }
 
   revalidatePath('/admin/yape');
   revalidatePath('/admin');

@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv } from '@/lib/env';
 import { fetchMercadoPagoPayment } from '@/lib/mercadopago';
 import { issueTicketsForOrder, markOrderPaid } from '@/lib/tickets';
+import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
 
 // Runs on the Cloudflare Pages edge (Workers). We use Web Crypto for the
 // HMAC verification — no node:crypto.
@@ -160,13 +161,24 @@ export async function POST(
     return NextResponse.json({ ok: false, error: issue.error }, { status: 500 });
   }
 
-  // TODO(emails): when Resend key is configured, enqueue email send here.
+  // Fire ticket delivery email. Webhook MUST still 200 even if email fails
+  // — MP will keep retrying otherwise, and the payment is already
+  // recorded. sendTicketEmail logs structured on any failure and leaves
+  // email_sent_at null for manual re-trigger.
+  const emailResult = await sendTicketEmail(externalRef);
+  if (!emailResult.ok) {
+    console.error('[mp-webhook] sendTicketEmail failed', {
+      order_id: externalRef,
+      reason: emailResult.reason,
+    });
+  }
 
   return NextResponse.json({
     ok: true,
     alreadyPaid,
     issued: issue.ticketIds.length,
     alreadyIssued: issue.alreadyIssued,
+    email: emailResult.status,
   });
 }
 

@@ -284,6 +284,7 @@ export type Database = {
           buyer_name: string
           buyer_phone: string
           created_at: string
+          email_sent_at: string | null
           event_id: string
           expires_at: string
           id: string
@@ -314,6 +315,7 @@ export type Database = {
           buyer_name: string
           buyer_phone: string
           created_at?: string
+          email_sent_at?: string | null
           event_id: string
           expires_at?: string
           id?: string
@@ -344,6 +346,7 @@ export type Database = {
           buyer_name?: string
           buyer_phone?: string
           created_at?: string
+          email_sent_at?: string | null
           event_id?: string
           expires_at?: string
           id?: string
