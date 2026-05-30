@@ -20,10 +20,14 @@ const fredoka = Fredoka({
   display: 'swap',
 });
 
+// Mono is only used for `[ ## ]` markers and ticket codes — never the LCP
+// element. Skip the preload so it doesn't fight the two display/body fonts
+// for critical-path bandwidth on mobile.
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
   display: 'swap',
+  preload: false,
 });
 
 export const viewport: Viewport = {
