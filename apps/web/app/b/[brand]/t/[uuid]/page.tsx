@@ -115,10 +115,16 @@ export default async function TicketPage({ params }: Props) {
       {/* Brand identity: logo first, name as fallback. Mobile-first sizing. */}
       <header className="flex flex-col items-center gap-3 text-center">
         {logoUrl ? (
+          // LCP element on the ticket page — keep the browser priority high
+          // so it beats the rest of the page for bandwidth on mobile.
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={logoUrl}
             alt={brand?.name ?? 'Brand'}
             className="h-12 w-auto max-w-[180px] object-contain"
+            // @ts-expect-error fetchPriority is a valid HTML attr; @types/react may lag.
+            fetchpriority="high"
+            decoding="async"
           />
         ) : (
           <p
