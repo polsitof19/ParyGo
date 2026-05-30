@@ -15,6 +15,13 @@ type Props = {
   params: { brand: string; uuid: string };
 };
 
+type BrandTheme = {
+  primary_color?: string;
+  secondary_color?: string;
+  logo_url?: string | null;
+  cover_url?: string | null;
+};
+
 type TicketView = {
   id: string;
   qr_code: string;
@@ -28,7 +35,7 @@ type TicketView = {
     slug: string;
     name: string;
     whatsapp_e164: string | null;
-    theme_json: { primary_color?: string };
+    theme_json: BrandTheme;
   } | null;
 };
 
@@ -89,127 +96,163 @@ export default async function TicketPage({ params }: Props) {
 
   const qrSvg = await generateQrSvg(t.qr_code);
   const ticketUrl = `https://${brand?.slug}.parygo.com/t/${t.qr_code}`;
-  const accent = brand?.theme_json?.primary_color || '#FF1F8F';
+  const theme = brand?.theme_json ?? {};
+  const primary = theme.primary_color || '#FF1F8F';
+  const secondary = theme.secondary_color || '#00E5FF';
+  const logoUrl = theme.logo_url ?? null;
 
   return (
-    <main className="container-narrow space-y-8 py-12">
-      <header className="text-center">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-secondary">
-          [ ENTRADA · {brand?.slug?.toUpperCase()} ]
+    <main
+      className="mx-auto w-full max-w-md space-y-6 px-4 py-6 sm:py-10"
+      // Brand tokens scoped to the ticket page subtree.
+      style={
+        {
+          '--primary-hex': primary,
+          '--secondary-hex': secondary,
+        } as React.CSSProperties
+      }
+    >
+      {/* Brand identity: logo first, name as fallback. Mobile-first sizing. */}
+      <header className="flex flex-col items-center gap-3 text-center">
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt={brand?.name ?? 'Brand'}
+            className="h-12 w-auto max-w-[180px] object-contain"
+          />
+        ) : (
+          <p
+            className="font-display text-lg font-semibold uppercase tracking-tight"
+            style={{ color: primary }}
+          >
+            {brand?.name}
+          </p>
+        )}
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+          [ Entrada digital ]
         </p>
-        <h1 className="mt-2 font-display text-3xl uppercase leading-none tracking-tight md:text-4xl">
-          {event?.name}
-        </h1>
         {t.validated_at && (
-          <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-green/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-green">
+          <p className="inline-flex items-center gap-2 rounded-full bg-green/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-green">
             ✓ Validada · {new Date(t.validated_at).toLocaleString('es-PE')}
           </p>
         )}
       </header>
 
-      {/* The actual ticket */}
+      {/* Ticket card — branded accents on a neutral card. */}
       <article
-        className="relative mx-auto max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
-        style={{ boxShadow: `0 30px 80px -30px ${accent}40` }}
+        className="relative overflow-hidden rounded-3xl border border-border bg-card"
+        style={{
+          // Soft brand glow around the ticket.
+          boxShadow: `0 24px 60px -24px ${primary}55, 0 0 0 1px ${secondary}22 inset`,
+        }}
       >
-        <div className="grid grid-cols-[1fr_auto]">
-          {/* Left: info */}
-          <div className="space-y-4 p-6">
-            <div className="space-y-1">
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                ASISTENTE
-              </p>
-              <p className="font-medium">{t.attendee_name ?? '—'}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                TIPO
-              </p>
-              <p style={{ color: accent }} className="font-display text-2xl uppercase">
-                {t.ticket_type_name}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                CÓDIGO
-              </p>
-              <p className="font-mono text-sm">{t.ticket_number}</p>
-            </div>
-            {event && (
-              <div className="space-y-2 border-t border-dashed border-border pt-4 text-xs">
-                {event.starts_at && (
-                  <p className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="h-3.5 w-3.5" />
-                    {formatEventDate(event.starts_at)}
-                  </p>
-                )}
-                {event.venue_name && (
-                  <p className="flex items-center gap-2 text-muted-foreground">
-                    <MapPin className="h-3.5 w-3.5" />
-                    {event.venue_name}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-          {/* Right: QR */}
-          <div className="flex flex-col items-center justify-center gap-2 border-l border-dashed border-border bg-background/40 p-4">
-            <div
-              role="img"
-              aria-label="QR de la entrada"
-              className="h-40 w-40 rounded-md bg-white p-2 [&_svg]:h-full [&_svg]:w-full"
-              dangerouslySetInnerHTML={{ __html: qrSvg }}
-            />
-            <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
-              ESCANEAR EN PUERTA
+        {/* Top color band — primary→secondary gradient, brand identity. */}
+        <div
+          aria-hidden
+          className="h-1.5 w-full"
+          style={{ background: `linear-gradient(90deg, ${primary}, ${secondary})` }}
+        />
+
+        {/* Event hero */}
+        <div className="space-y-1 px-6 pt-6">
+          <p
+            className="font-mono text-[10px] uppercase tracking-[0.2em]"
+            style={{ color: secondary }}
+          >
+            {t.ticket_type_name}
+          </p>
+          <h1 className="font-display text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-[26px]">
+            {event?.name}
+          </h1>
+          {event?.starts_at && (
+            <p className="flex items-center gap-1.5 pt-1 text-sm text-muted-foreground">
+              <Calendar className="h-3.5 w-3.5" aria-hidden />
+              {formatEventDate(event.starts_at)}
             </p>
+          )}
+          {event?.venue_name && (
+            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" aria-hidden />
+              {event.venue_name}
+            </p>
+          )}
+        </div>
+
+        {/* Attendee + code */}
+        <div className="space-y-3 px-6 pt-5">
+          <div className="space-y-0.5">
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              Asistente
+            </p>
+            <p className="text-base font-semibold">{t.attendee_name ?? '—'}</p>
+          </div>
+          <div className="space-y-0.5">
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              Código
+            </p>
+            <p className="font-mono text-sm tracking-wider">{t.ticket_number}</p>
           </div>
         </div>
-        {/* perforation cuts */}
-        <span
-          aria-hidden
-          className="absolute -left-2 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-background"
-        />
-        <span
-          aria-hidden
-          className="absolute -right-2 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-background"
-        />
+
+        {/* Perforation separator */}
+        <div className="relative mt-6">
+          <div className="border-t border-dashed border-border/80" />
+          <span
+            aria-hidden
+            className="absolute -left-3 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-background"
+          />
+          <span
+            aria-hidden
+            className="absolute -right-3 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-background"
+          />
+        </div>
+
+        {/* QR — full-width on mobile, generous padding */}
+        <div className="flex flex-col items-center gap-2 px-6 py-6">
+          <div
+            role="img"
+            aria-label="QR de la entrada"
+            className="h-48 w-48 rounded-xl bg-white p-3 [&_svg]:h-full [&_svg]:w-full"
+            style={{ boxShadow: `0 0 0 1px ${primary}22` }}
+            dangerouslySetInnerHTML={{ __html: qrSvg }}
+          />
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            Escanear en puerta
+          </p>
+        </div>
       </article>
 
+      {/* Share / support — full-width buttons, mobile-first */}
       {brand?.whatsapp_e164 && (
-        <section className="space-y-3 text-center">
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            ¿Vas con amigos? Comparte esta página
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <a
-              href={whatsappLink(
-                brand.whatsapp_e164.replace(/[^\d]/g, ''),
-                `Mi entrada para ${event?.name}: ${ticketUrl}`
-              )}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-card px-5 text-sm hover:bg-muted"
-            >
-              <span aria-hidden>📲</span>
-              Enviarme a WhatsApp
-            </a>
-          </div>
-        </section>
-      )}
-
-      {brand?.whatsapp_e164 && (
-        <p className="text-center font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          ¿Problema?{' '}
+        <section className="space-y-2">
           <a
-            href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`}
+            href={whatsappLink(
+              brand.whatsapp_e164.replace(/[^\d]/g, ''),
+              `Mi entrada para ${event?.name}: ${ticketUrl}`
+            )}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-secondary underline-offset-4 hover:underline"
+            className="flex h-11 items-center justify-center gap-2 rounded-full text-sm font-medium text-white transition-opacity hover:opacity-90"
+            style={{
+              background: `linear-gradient(135deg, ${primary}, ${secondary})`,
+            }}
           >
-            WhatsApp soporte
+            <span aria-hidden>📲</span>
+            Enviarme por WhatsApp
           </a>
-        </p>
+          <p className="text-center text-xs text-muted-foreground">
+            ¿Problema?{' '}
+            <a
+              href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline-offset-4 hover:underline"
+              style={{ color: secondary }}
+            >
+              WhatsApp soporte
+            </a>
+          </p>
+        </section>
       )}
     </main>
   );

@@ -1,24 +1,28 @@
 import type { Metadata, Viewport } from 'next';
-import { Anton, Inter, JetBrains_Mono } from 'next/font/google';
+import { Fredoka, Nunito, JetBrains_Mono } from 'next/font/google';
 import { Toaster } from 'sonner';
 import './globals.css';
 
-const inter = Inter({
+// Body font. Nunito is a variable font (weights 200-1000); next/font picks
+// up the full range. Self-hosted, latin subset, ~24 KB gzipped over the
+// wire after subsetting.
+const nunito = Nunito({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-sans',
   display: 'swap',
 });
 
-const anton = Anton({
-  weight: '400',
+// Display font. Fredoka is a variable font (weights 300-700) with a
+// rounded, friendly silhouette. ~22 KB gzipped.
+const fredoka = Fredoka({
   subsets: ['latin'],
-  variable: '--font-anton',
+  variable: '--font-display',
   display: 'swap',
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
-  variable: '--font-jetbrains-mono',
+  variable: '--font-mono',
   display: 'swap',
 });
 
@@ -50,7 +54,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`dark ${inter.variable} ${anton.variable} ${jetbrainsMono.variable}`}
+      className={`dark ${nunito.variable} ${fredoka.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-screen font-sans">
