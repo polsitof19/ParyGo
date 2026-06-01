@@ -791,6 +791,15 @@ export type Database = {
         Args: { p_brand_id: string; p_actor_user_id: string; p_event: Json }
         Returns: string
       }
+      create_brand_event: {
+        Args: {
+          p_brand_id: string
+          p_actor_user_id: string
+          p_event: Json
+          p_ticket_types: Json
+        }
+        Returns: string
+      }
       load_event_pack: {
         Args: {
           p_brand_id: string

@@ -48,11 +48,20 @@ export default async function AdminHomePage() {
             Tus eventos
           </h1>
         </div>
-        {/* Create event — enabled only with balance. Real flow lands in a later step. */}
-        <Button variant="gradient" disabled={!canCreate} title={canCreate ? undefined : 'Sin saldo de eventos'}>
-          <Plus className="h-4 w-4" />
-          Crear evento
-        </Button>
+        {/* Create event — enabled only with balance; the RPC is the hard guard. */}
+        {canCreate ? (
+          <Link href="/admin/events/new">
+            <Button variant="gradient">
+              <Plus className="h-4 w-4" />
+              Crear evento
+            </Button>
+          </Link>
+        ) : (
+          <Button variant="gradient" disabled title="Sin saldo de eventos">
+            <Plus className="h-4 w-4" />
+            Crear evento
+          </Button>
+        )}
       </header>
 
       <div className="grid gap-6 lg:grid-cols-3">
