@@ -10,7 +10,7 @@ export default async function BrandsListPage() {
   const supabase = createClient();
   const { data: brands } = await supabase
     .from('brands')
-    .select('id, slug, name, contact_email, created_at')
+    .select('id, slug, name, contact_email, created_at, event_balance')
     .order('created_at', { ascending: false });
 
   return (
@@ -48,8 +48,11 @@ export default async function BrandsListPage() {
                     {b.slug}.parygo.com
                   </p>
                 </CardHeader>
-                <CardContent className="text-sm text-muted-foreground">
-                  {b.contact_email ?? <span className="italic">Sin email</span>}
+                <CardContent className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
+                  <span>{b.contact_email ?? <span className="italic">Sin email</span>}</span>
+                  <span className="shrink-0 rounded-full border border-border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em]">
+                    Saldo: {b.event_balance}
+                  </span>
                 </CardContent>
               </Card>
             </Link>

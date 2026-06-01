@@ -53,6 +53,7 @@ export type Database = {
         Row: {
           contact_email: string | null
           created_at: string
+          event_balance: number
           id: string
           mp_access_token_enc: string | null
           mp_public_key_enc: string | null
@@ -68,6 +69,7 @@ export type Database = {
         Insert: {
           contact_email?: string | null
           created_at?: string
+          event_balance?: number
           id?: string
           mp_access_token_enc?: string | null
           mp_public_key_enc?: string | null
@@ -83,6 +85,7 @@ export type Database = {
         Update: {
           contact_email?: string | null
           created_at?: string
+          event_balance?: number
           id?: string
           mp_access_token_enc?: string | null
           mp_public_key_enc?: string | null
@@ -783,6 +786,20 @@ export type Database = {
           next_price_cents: number | null
           next_starts_at: string | null
         }[]
+      }
+      consume_event_balance: {
+        Args: { p_brand_id: string; p_actor_user_id: string; p_event: Json }
+        Returns: string
+      }
+      load_event_pack: {
+        Args: {
+          p_brand_id: string
+          p_pack: number
+          p_added: number
+          p_price_soles: number
+          p_actor_user_id: string
+        }
+        Returns: number
       }
       is_super_admin: { Args: never; Returns: boolean }
       recompute_ticket_type_sold: {

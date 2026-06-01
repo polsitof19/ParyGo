@@ -41,7 +41,7 @@ export async function createEventAction(
   _prev: FormState,
   formData: FormData
 ): Promise<FormState> {
-  await requireSession({ superAdmin: true });
+  const user = await requireSession({ superAdmin: true });
 
   const raw = Object.fromEntries(formData.entries());
   const parsed = schema.safeParse(raw);
@@ -65,10 +65,14 @@ export async function createEventAction(
     return { ok: false, message: 'Fecha de fin inválida.', fieldErrors: { ends_at: 'Inválida' } };
   }
 
-  const { data: event, error } = await admin
-    .from('events')
-    .insert({
-      brand_id: parsed.data.brand_id,
+  // Creating an event consumes 1 from the brand's event balance. The RPC does
+  // the atomic decrement (race-safe, blocks at 0), the event insert and the
+  // consumption log in a single transaction — if the insert fails the balance
+  // is not spent. Balance 0 → INSUFFICIENT_BALANCE.
+  const { data: newEventId, error } = await admin.rpc('consume_event_balance', {
+    p_brand_id: parsed.data.brand_id,
+    p_actor_user_id: user.id,
+    p_event: {
       slug: parsed.data.slug,
       name: parsed.data.name,
       description: parsed.data.description || null,
@@ -80,12 +84,16 @@ export async function createEventAction(
       venue_lng: maybeFloat(parsed.data.venue_lng),
       min_age: parsed.data.min_age ? parseInt(parsed.data.min_age, 10) : 18,
       refund_policy: parsed.data.refund_policy || null,
-      is_published: false,
-    })
-    .select('id, slug, brand_id')
-    .single();
+    },
+  });
 
-  if (error || !event) {
+  if (error || !newEventId) {
+    if (error?.message?.includes('INSUFFICIENT_BALANCE')) {
+      return {
+        ok: false,
+        message: 'Esta marca no tiene saldo de eventos. Carga un pack desde la página de la marca para poder crear.',
+      };
+    }
     if (error?.code === '23505') {
       return { ok: false, message: 'Ya existe un evento con ese slug en esta marca.', fieldErrors: { slug: 'En uso' } };
     }
@@ -93,12 +101,12 @@ export async function createEventAction(
   }
 
   await admin.from('events_log').insert({
-    brand_id: event.brand_id,
-    event_id: event.id,
+    brand_id: parsed.data.brand_id,
+    event_id: newEventId,
     type: 'event_created',
-    payload: { slug: event.slug, name: parsed.data.name },
+    payload: { slug: parsed.data.slug, name: parsed.data.name },
   });
 
   revalidatePath('/super/events');
-  redirect(`/super/events/${event.id}`);
+  redirect(`/super/events/${newEventId}`);
 }

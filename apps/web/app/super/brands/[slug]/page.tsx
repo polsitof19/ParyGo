@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { InviteBrandAdmin } from './InviteBrandAdmin';
+import { LoadPackForm } from './LoadPackForm';
 import { publicEnv } from '@/lib/env';
 
 export const runtime = 'edge';
@@ -18,7 +19,7 @@ export default async function BrandDetailPage({
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
-    .select('id, slug, name, contact_email, whatsapp_e164, yape_number, yape_holder, theme_json, created_at')
+    .select('id, slug, name, contact_email, whatsapp_e164, yape_number, yape_holder, theme_json, created_at, event_balance')
     .eq('slug', params.slug)
     .maybeSingle();
 
@@ -74,6 +75,28 @@ export default async function BrandDetailPage({
       </header>
 
       <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Saldo de eventos</CardTitle>
+            <CardDescription>
+              Eventos disponibles para crear. Cada evento creado consume 1. En 0
+              no se puede crear hasta cargar un pack.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-baseline gap-3">
+              <span className="font-display text-5xl leading-none tabular-nums text-foreground">
+                {brand.event_balance}
+              </span>
+              <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                evento{brand.event_balance === 1 ? '' : 's'} disponible
+                {brand.event_balance === 1 ? '' : 's'}
+              </span>
+            </div>
+            <LoadPackForm brandId={brand.id} slug={brand.slug} />
+          </CardContent>
+        </Card>
+
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Contacto</CardTitle>
