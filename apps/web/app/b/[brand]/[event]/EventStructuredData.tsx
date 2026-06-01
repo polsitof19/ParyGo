@@ -19,7 +19,7 @@ type Props = {
   };
   ticketTypes: {
     name: string;
-    price_cents: number;
+    active_price_cents: number;
     capacity: number;
     sold: number;
   }[];
@@ -39,7 +39,7 @@ export function EventStructuredData({ brand, event, ticketTypes }: Props) {
     return {
       '@type': 'Offer',
       name: t.name,
-      price: (t.price_cents / 100).toFixed(2),
+      price: (t.active_price_cents / 100).toFixed(2),
       priceCurrency: 'PEN',
       availability,
       url,

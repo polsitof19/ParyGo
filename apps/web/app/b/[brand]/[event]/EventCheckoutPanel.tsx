@@ -41,11 +41,27 @@ type TicketType = {
   name: string;
   description: string | null;
   price_cents: number;
+  // Active price phase (server-resolved). Display + estimate only — the
+  // server re-resolves the authoritative price at checkout.
+  active_price_cents: number;
+  next_price_cents: number | null;
+  next_starts_at: string | null;
   capacity: number;
   sold: number;
   sort_order: number;
   color_hex: string | null;
 };
+
+// Urgency hook: "sube a S/40 el 5 jun". Shows the LAST day at the current
+// price (the instant just before the next phase begins), in Lima time.
+function formatRiseDate(nextStartsAt: string): string {
+  const lastMoment = new Date(new Date(nextStartsAt).getTime() - 60_000);
+  return new Intl.DateTimeFormat('es-PE', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'America/Lima',
+  }).format(lastMoment);
+}
 
 export function EventCheckoutPanel({
   brand,
@@ -62,7 +78,7 @@ export function EventCheckoutPanel({
     () =>
       [...ticketTypes].sort(
         (a, b) =>
-          b.price_cents - a.price_cents || a.sort_order - b.sort_order
+          b.active_price_cents - a.active_price_cents || a.sort_order - b.sort_order
       ),
     [ticketTypes]
   );
@@ -126,7 +142,7 @@ export function EventCheckoutPanel({
   const totalCents = useMemo(
     () =>
       sorted.reduce(
-        (acc, t) => acc + (qty[t.id] ?? 0) * t.price_cents,
+        (acc, t) => acc + (qty[t.id] ?? 0) * t.active_price_cents,
         0
       ),
     [qty, sorted]
@@ -313,7 +329,7 @@ function Step1({
                     className="font-mono text-xs"
                     style={{ color: accent }}
                   >
-                    {formatPEN(t.price_cents)}
+                    {formatPEN(t.active_price_cents)}
                   </span>
                 </div>
                 {perks.length > 0 && (
@@ -322,6 +338,12 @@ function Step1({
                       <li key={i}>· {p}</li>
                     ))}
                   </ul>
+                )}
+                {t.next_price_cents != null && t.next_starts_at && !soldOut && (
+                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-yellow">
+                    ↑ Sube a {formatPEN(t.next_price_cents)} el{' '}
+                    {formatRiseDate(t.next_starts_at)}
+                  </p>
                 )}
                 <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                   {soldOut ? (
@@ -573,7 +595,7 @@ function Step2({
                       {q}× {t.name}
                     </span>
                     <span className="font-mono tabular-nums">
-                      {formatPEN(q * t.price_cents)}
+                      {formatPEN(q * t.active_price_cents)}
                     </span>
                   </li>
                 );

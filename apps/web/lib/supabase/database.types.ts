@@ -438,6 +438,50 @@ export type Database = {
           },
         ]
       }
+      ticket_type_price_phases: {
+        Row: {
+          created_at: string
+          ends_at: string | null
+          id: string
+          name: string | null
+          price_cents: number
+          sort_order: number
+          starts_at: string | null
+          ticket_type_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          name?: string | null
+          price_cents: number
+          sort_order?: number
+          starts_at?: string | null
+          ticket_type_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          name?: string | null
+          price_cents?: number
+          sort_order?: number
+          starts_at?: string | null
+          ticket_type_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_type_price_phases_ticket_type_id_fkey"
+            columns: ["ticket_type_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_types: {
         Row: {
           capacity: number
@@ -726,6 +770,15 @@ export type Database = {
         Returns: {
           access_token: string
           public_key: string
+        }[]
+      }
+      get_event_active_prices: {
+        Args: { p_event_id: string }
+        Returns: {
+          ticket_type_id: string
+          active_price_cents: number
+          next_price_cents: number | null
+          next_starts_at: string | null
         }[]
       }
       is_super_admin: { Args: never; Returns: boolean }

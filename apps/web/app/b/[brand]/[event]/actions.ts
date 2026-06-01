@@ -83,6 +83,16 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     return { ok: false, message: 'Tipo de entrada inválido.' };
   }
 
+  // Resolve the ACTIVE price phase server-side (single source of truth). The
+  // client-sent price is never trusted; we charge the phase active right now.
+  // Falls back to ticket_types.price_cents for types without phases.
+  const { data: activePrices } = await admin.rpc('get_event_active_prices', {
+    p_event_id: event.id,
+  });
+  const activePriceByType = new Map(
+    (activePrices ?? []).map((r) => [r.ticket_type_id, r.active_price_cents])
+  );
+
   // 2. Validate stock + compute total server-side.
   let totalCents = 0;
   type Resolved = {
@@ -104,11 +114,13 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
         message: `Stock insuficiente para ${tt.name}. Quedan ${remaining}.`,
       };
     }
-    totalCents += tt.price_cents * item.quantity;
+    // Active-phase price (fallback to base price_cents if no phase rows).
+    const unitPrice = activePriceByType.get(tt.id) ?? tt.price_cents;
+    totalCents += unitPrice * item.quantity;
     resolved.push({
       id: tt.id,
       name: tt.name,
-      price_cents: tt.price_cents,
+      price_cents: unitPrice,
       quantity: item.quantity,
     });
   }

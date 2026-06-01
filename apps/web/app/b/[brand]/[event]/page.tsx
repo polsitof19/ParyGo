@@ -44,7 +44,25 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
     // Display order: HIGHEST price first (anchoring). After fetching by
     // sort_order, we resort client-side to allow promoters to override.
     ;
-  return { brand, event, ticketTypes: ticketTypes ?? [] };
+
+  // Resolve the ACTIVE price phase per ticket type (single source of truth in
+  // SQL). Falls back to ticket_types.price_cents for types without phases.
+  const { data: activePrices } = await supabase.rpc('get_event_active_prices', {
+    p_event_id: event.id,
+  });
+  const priceByType = new Map(
+    (activePrices ?? []).map((r) => [r.ticket_type_id, r])
+  );
+  const ticketTypesWithPhase = (ticketTypes ?? []).map((t) => {
+    const ap = priceByType.get(t.id);
+    return {
+      ...t,
+      active_price_cents: ap?.active_price_cents ?? t.price_cents,
+      next_price_cents: ap?.next_price_cents ?? null,
+      next_starts_at: ap?.next_starts_at ?? null,
+    };
+  });
+  return { brand, event, ticketTypes: ticketTypesWithPhase };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -232,7 +250,7 @@ export default async function EventPage({ params }: Props) {
         {/* Display info that may be expected in PEN amounts */}
         <p className="sr-only">
           Entradas desde {formatPEN(
-            Math.min(...(ticketTypes.length ? ticketTypes.map((t) => t.price_cents) : [0]))
+            Math.min(...(ticketTypes.length ? ticketTypes.map((t) => t.active_price_cents) : [0]))
           )}
           .
         </p>
