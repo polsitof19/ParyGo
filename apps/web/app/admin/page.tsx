@@ -2,9 +2,11 @@ import Link from 'next/link';
 import { Calendar, Plus, ScanLine, Settings } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { InviteValidator } from './InviteValidator';
+import { GateCodes } from './GateCodes';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -29,6 +31,14 @@ export default async function AdminHomePage() {
     .select('id, slug, name, starts_at, is_published')
     .eq('brand_id', brand.id)
     .order('starts_at', { ascending: false });
+
+  // Active door codes (service-role; scoped to this brand).
+  const { data: gateCodes } = await createAdminClient()
+    .from('validator_codes')
+    .select('id, code, device_label, expires_at, use_count, max_uses')
+    .eq('brand_id', brand.id)
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false });
 
   const theme = (brand.theme_json ?? {}) as {
     logo_url?: string | null;
@@ -188,8 +198,19 @@ export default async function AdminHomePage() {
               </Button>
             </Link>
           </CardHeader>
-          <CardContent>
-            <InviteValidator />
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Código de puerta (rápido · sin email)
+              </p>
+              <GateCodes codes={gateCodes ?? []} />
+            </div>
+            <div className="space-y-2 border-t border-border pt-5">
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Invitar por email (magic link)
+              </p>
+              <InviteValidator />
+            </div>
           </CardContent>
         </Card>
       </section>

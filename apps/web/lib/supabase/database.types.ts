@@ -662,8 +662,12 @@ export type Database = {
           brand_id: string
           code: string
           created_at: string
+          created_by: string | null
+          device_label: string | null
           expires_at: string
           id: string
+          max_uses: number
+          use_count: number
           used_at: string | null
           user_id: string
         }
@@ -671,8 +675,12 @@ export type Database = {
           brand_id: string
           code: string
           created_at?: string
+          created_by?: string | null
+          device_label?: string | null
           expires_at: string
           id?: string
+          max_uses?: number
+          use_count?: number
           used_at?: string | null
           user_id: string
         }
@@ -680,8 +688,12 @@ export type Database = {
           brand_id?: string
           code?: string
           created_at?: string
+          created_by?: string | null
+          device_label?: string | null
           expires_at?: string
           id?: string
+          max_uses?: number
+          use_count?: number
           used_at?: string | null
           user_id?: string
         }
@@ -819,6 +831,19 @@ export type Database = {
         }
         Returns: number
       }
+      generate_validator_code: {
+        Args: {
+          p_brand_id: string
+          p_user_id: string
+          p_device_label: string
+          p_created_by: string
+          p_ttl_minutes?: number
+          p_max_uses?: number
+        }
+        Returns: Json
+      }
+      redeem_validator_code: { Args: { p_code: string }; Returns: Json }
+      revoke_validator_code: { Args: { p_id: string; p_brand_id: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       recompute_ticket_type_sold: {
         Args: { p_ticket_type_id: string }
