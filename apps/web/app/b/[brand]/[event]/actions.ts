@@ -77,7 +77,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   const ticketTypeIds = parsed.data.items.map((i) => i.ticketTypeId);
   const { data: tts } = await admin
     .from('ticket_types')
-    .select('id, name, price_cents, capacity, sold, is_active, event_id')
+    .select('id, name, price_cents, capacity, sold, is_active, is_unlimited, event_id')
     .in('id', ticketTypeIds);
   if (!tts || tts.length !== ticketTypeIds.length) {
     return { ok: false, message: 'Tipo de entrada inválido.' };
@@ -107,12 +107,15 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     if (!tt || !tt.is_active || tt.event_id !== event.id) {
       return { ok: false, message: 'Tipo de entrada no disponible.' };
     }
-    const remaining = tt.capacity - tt.sold;
-    if (remaining < item.quantity) {
-      return {
-        ok: false,
-        message: `Stock insuficiente para ${tt.name}. Quedan ${remaining}.`,
-      };
+    // Unlimited types never block on stock; limited types keep anti-oversell.
+    if (!tt.is_unlimited) {
+      const remaining = tt.capacity - tt.sold;
+      if (remaining < item.quantity) {
+        return {
+          ok: false,
+          message: `Stock insuficiente para ${tt.name}. Quedan ${remaining}.`,
+        };
+      }
     }
     // Active-phase price (fallback to base price_cents if no phase rows).
     const unitPrice = activePriceByType.get(tt.id) ?? tt.price_cents;

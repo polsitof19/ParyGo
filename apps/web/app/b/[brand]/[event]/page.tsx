@@ -37,7 +37,7 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
 
   const { data: ticketTypes } = await supabase
     .from('ticket_types')
-    .select('id, name, description, price_cents, capacity, sold, sort_order, color_hex, is_active')
+    .select('id, name, description, price_cents, capacity, sold, sort_order, color_hex, is_active, is_unlimited')
     .eq('event_id', event.id)
     .eq('is_active', true)
     .order('sort_order')
@@ -99,8 +99,11 @@ export default async function EventPage({ params }: Props) {
   const { brand, event, ticketTypes } = data;
 
   const startsAt = new Date(event.starts_at);
-  const totalCapacity = ticketTypes.reduce((acc, t) => acc + t.capacity, 0);
-  const totalSold = ticketTypes.reduce((acc, t) => acc + t.sold, 0);
+  // Capacity meter is meaningful only for LIMITED types; unlimited types are
+  // excluded so the bar doesn't show a fake "X / 0".
+  const limitedTypes = ticketTypes.filter((t) => !t.is_unlimited);
+  const totalCapacity = limitedTypes.reduce((acc, t) => acc + t.capacity, 0);
+  const totalSold = limitedTypes.reduce((acc, t) => acc + t.sold, 0);
 
   const theme = (brand.theme_json ?? {}) as { primary_color?: string };
   const primary = theme.primary_color || '#FF1F8F';

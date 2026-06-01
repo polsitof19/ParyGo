@@ -22,6 +22,7 @@ type Props = {
     active_price_cents: number;
     capacity: number;
     sold: number;
+    is_unlimited: boolean;
   }[];
 };
 
@@ -30,8 +31,9 @@ export function EventStructuredData({ brand, event, ticketTypes }: Props) {
 
   const offers = ticketTypes.map((t) => {
     const remaining = t.capacity - t.sold;
-    const availability =
-      remaining <= 0
+    const availability = t.is_unlimited
+      ? 'https://schema.org/InStock'
+      : remaining <= 0
         ? 'https://schema.org/SoldOut'
         : remaining < t.capacity * 0.2
           ? 'https://schema.org/LimitedAvailability'

@@ -48,6 +48,7 @@ type TicketType = {
   next_starts_at: string | null;
   capacity: number;
   sold: number;
+  is_unlimited: boolean;
   sort_order: number;
   color_hex: string | null;
 };
@@ -155,7 +156,7 @@ export function EventCheckoutPanel({
   function inc(t: TicketType) {
     const remaining = t.capacity - t.sold;
     const current = qty[t.id] ?? 0;
-    if (current >= remaining) {
+    if (!t.is_unlimited && current >= remaining) {
       toast.error(`Solo quedan ${remaining} disponibles`);
       return;
     }
@@ -308,8 +309,9 @@ function Step1({
       <div className="space-y-3">
         {sorted.map((t) => {
           const remaining = t.capacity - t.sold;
-          const soldOut = remaining <= 0;
-          const lowStock = !soldOut && remaining < t.capacity * 0.2;
+          // Unlimited types never sell out and have no scarcity meter.
+          const soldOut = !t.is_unlimited && remaining <= 0;
+          const lowStock = !t.is_unlimited && !soldOut && remaining < t.capacity * 0.2;
           const accent = t.color_hex || 'var(--primary-hex,#FF1F8F)';
           const cur = qty[t.id] ?? 0;
           const perks = (t.description ?? '').split('\n').filter(Boolean);
@@ -345,19 +347,21 @@ function Step1({
                     {formatRiseDate(t.next_starts_at)}
                   </p>
                 )}
-                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                  {soldOut ? (
-                    <span className="text-destructive">Agotado</span>
-                  ) : lowStock ? (
-                    <span style={{ color: accent }}>
-                      Quedan pocas · {remaining} de {t.capacity}
-                    </span>
-                  ) : (
-                    <>
-                      Disponibles · {remaining} de {t.capacity}
-                    </>
-                  )}
-                </p>
+                {!t.is_unlimited && (
+                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {soldOut ? (
+                      <span className="text-destructive">Agotado</span>
+                    ) : lowStock ? (
+                      <span style={{ color: accent }}>
+                        Quedan pocas · {remaining} de {t.capacity}
+                      </span>
+                    ) : (
+                      <>
+                        Disponibles · {remaining} de {t.capacity}
+                      </>
+                    )}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center gap-3 justify-self-end">

@@ -491,6 +491,7 @@ export type Database = {
           event_id: string
           id: string
           is_active: boolean
+          is_unlimited: boolean
           name: string
           perks: Json
           price_cents: number
@@ -507,6 +508,7 @@ export type Database = {
           event_id: string
           id?: string
           is_active?: boolean
+          is_unlimited?: boolean
           name: string
           perks?: Json
           price_cents: number
@@ -523,6 +525,7 @@ export type Database = {
           event_id?: string
           id?: string
           is_active?: boolean
+          is_unlimited?: boolean
           name?: string
           perks?: Json
           price_cents?: number
