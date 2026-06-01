@@ -78,10 +78,12 @@ export default async function AdminHomePage() {
               <CardTitle>Configuración de la marca</CardTitle>
               <CardDescription>Datos públicos y de cobro de {brand.name}.</CardDescription>
             </div>
-            <Button variant="outline" size="sm" disabled title="Disponible pronto">
-              <Settings className="h-4 w-4" />
-              Editar
-            </Button>
+            <Link href="/admin/settings">
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4" />
+                Editar
+              </Button>
+            </Link>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
             <Field label="Email">{brand.contact_email ?? '—'}</Field>
