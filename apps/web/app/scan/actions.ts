@@ -12,7 +12,9 @@ export type ScanResult = {
     | 'NOT_AUTHORIZED'
     | 'NOT_FOUND'
     | 'INVALIDATED'
-    | 'ERROR';
+    | 'ERROR'
+    | 'OFFLINE_UNKNOWN'; // client-only: offline cache miss → verify manually
+
   attendee_name?: string | null;
   ticket_type_name?: string | null;
   scan_count?: number;

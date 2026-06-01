@@ -28,6 +28,10 @@ const PALETTE: Record<string, { bg: string; label: string }> = {
   NOT_AUTHORIZED: { bg: '#dc2626', label: 'NO AUTORIZADO' },
   INVALIDATED: { bg: '#dc2626', label: 'ENTRADA ANULADA' },
   ERROR: { bg: '#dc2626', label: 'ERROR · REINTENTÁ' },
+  // Offline and the QR wasn't in the preloaded list → don't hard-deny a
+  // possibly-valid ticket at the door; flag it for manual review. It still
+  // gets queued and the server decides the truth on sync.
+  OFFLINE_UNKNOWN: { bg: '#d97706', label: 'VERIFICAR MANUAL' },
 };
 
 export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: string }) {
@@ -108,7 +112,9 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
       const csid = crypto.randomUUID();
       await enqueueScan({ client_scan_id: csid, qr_code: qr, scanned_at: new Date().toISOString(), device_id: deviceId.current, synced: false });
       if (!cached) {
-        setResult({ ok: false, status: 'NOT_FOUND', offline: true });
+        // Not in the offline cache — could be a valid ticket issued after the
+        // preload or the wrong event. Flag for manual review, don't deny.
+        setResult({ ok: false, status: 'OFFLINE_UNKNOWN', offline: true });
       } else {
         const can = cached.max_scans === null || cached.scan_count < cached.max_scans;
         if (can) {
@@ -169,6 +175,9 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
           <p className="font-display text-4xl uppercase leading-none tracking-tight">{pal.label}</p>
           {result?.attendee_name && <p className="mt-2 text-2xl font-semibold">{result.attendee_name}</p>}
           {result?.ticket_type_name && <p className="text-lg opacity-90">{result.ticket_type_name}</p>}
+          {result?.status === 'OFFLINE_UNKNOWN' && (
+            <p className="mt-2 text-base">No estaba en la lista precargada. Revisá el ticket a mano.</p>
+          )}
           {result?.status === 'REENTRY' && result.max_scans != null && (
             <p className="mt-1 font-mono text-sm">re-entrada {result.scan_count} / {result.max_scans}</p>
           )}
