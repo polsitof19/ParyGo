@@ -8,8 +8,7 @@ export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 const NAV = [
-  { href: '/admin', label: 'Resumen' },
-  { href: '/admin/yape', label: 'Yape pending' },
+  { href: '/admin', label: 'Inicio' },
 ] as const;
 
 export default async function AdminLayout({

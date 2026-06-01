@@ -1,8 +1,9 @@
 import Link from 'next/link';
+import { Calendar, Plus, Settings } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatPEN } from '@/lib/utils';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -15,158 +16,166 @@ export default async function AdminHomePage() {
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
-    .select('id, slug, name')
+    .select(
+      'id, slug, name, contact_email, whatsapp_e164, yape_number, yape_holder, theme_json, event_balance'
+    )
     .eq('id', brandMembership.brandId)
     .single();
-
   if (!brand) return null;
 
-  // Latest event for this brand
   const { data: events } = await supabase
     .from('events')
     .select('id, slug, name, starts_at, is_published')
     .eq('brand_id', brand.id)
     .order('starts_at', { ascending: false });
 
-  const activeEvent = events?.find((e) => new Date(e.starts_at) > new Date(Date.now() - 24 * 3600_000)) ?? events?.[0];
-
-  let stats = {
-    paidCents: 0,
-    paidOrders: 0,
-    pendingYape: 0,
-    ticketsIssued: 0,
+  const theme = (brand.theme_json ?? {}) as {
+    logo_url?: string | null;
+    primary_color?: string;
+    secondary_color?: string;
   };
-
-  if (activeEvent) {
-    const [{ data: paid }, { count: pendingCount }, { count: ticketCount }] =
-      await Promise.all([
-        supabase
-          .from('orders')
-          .select('total_cents')
-          .eq('event_id', activeEvent.id)
-          .eq('status', 'paid'),
-        supabase
-          .from('orders')
-          .select('id', { count: 'exact', head: true })
-          .eq('event_id', activeEvent.id)
-          .eq('status', 'pending_yape_review'),
-        supabase
-          .from('tickets')
-          .select('id', { count: 'exact', head: true })
-          .eq('event_id', activeEvent.id)
-          .is('invalidated_at', null),
-      ]);
-    stats = {
-      paidCents: (paid ?? []).reduce((acc, o) => acc + (o.total_cents ?? 0), 0),
-      paidOrders: paid?.length ?? 0,
-      pendingYape: pendingCount ?? 0,
-      ticketsIssued: ticketCount ?? 0,
-    };
-  }
+  const balance = brand.event_balance ?? 0;
+  const canCreate = balance > 0;
 
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-secondary">
-          [ {brand.name} · TU PANEL ]
-        </p>
-        <h1 className="font-display text-4xl uppercase leading-none tracking-tight">
-          {activeEvent ? activeEvent.name : 'Tu próximo evento'}
-        </h1>
-        {activeEvent && (
-          <p className="text-sm text-muted-foreground">
-            {new Date(activeEvent.starts_at).toLocaleString('es-PE', {
-              weekday: 'long',
-              day: '2-digit',
-              month: 'long',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}{' '}
-            ·{' '}
-            <span className={activeEvent.is_published ? 'text-green' : 'text-yellow'}>
-              {activeEvent.is_published ? 'Publicado' : 'Borrador'}
-            </span>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-2">
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-secondary">
+            [ {brand.name} · TU PANEL ]
           </p>
-        )}
+          <h1 className="font-display text-4xl uppercase leading-none tracking-tight">
+            Tus eventos
+          </h1>
+        </div>
+        {/* Create event — enabled only with balance. Real flow lands in a later step. */}
+        <Button variant="gradient" disabled={!canCreate} title={canCreate ? undefined : 'Sin saldo de eventos'}>
+          <Plus className="h-4 w-4" />
+          Crear evento
+        </Button>
       </header>
 
-      {!activeEvent ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            Todavía no te creamos tu evento. Te avisamos cuando esté listo —
-            estimamos 24h desde que mandaste la info.
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Balance */}
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardDescription className="font-mono text-[10px] uppercase tracking-[0.18em]">
+              Saldo de eventos
+            </CardDescription>
+            <CardTitle className="font-display text-5xl tabular-nums">{balance}</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            {canCreate
+              ? `Podés crear ${balance} evento${balance === 1 ? '' : 's'} más.`
+              : 'Sin saldo. Contactá a ParyGo para cargar un pack.'}
           </CardContent>
         </Card>
-      ) : (
-        <>
-          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader>
-                <CardDescription className="font-mono text-[10px] uppercase tracking-[0.18em]">
-                  Ventas pagadas
-                </CardDescription>
-                <CardTitle className="font-display text-3xl">
-                  {formatPEN(stats.paidCents)}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardDescription className="font-mono text-[10px] uppercase tracking-[0.18em]">
-                  Órdenes pagadas
-                </CardDescription>
-                <CardTitle className="font-display text-3xl">
-                  {stats.paidOrders}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardDescription className="font-mono text-[10px] uppercase tracking-[0.18em]">
-                  Yape pending
-                </CardDescription>
-                <CardTitle className="font-display text-3xl">
-                  {stats.pendingYape}
-                </CardTitle>
-              </CardHeader>
-              {stats.pendingYape > 0 && (
-                <CardContent>
-                  <Link
-                    href="/admin/yape"
-                    className="font-mono text-[10px] uppercase tracking-[0.18em] text-secondary underline-offset-4 hover:underline"
-                  >
-                    Revisar →
-                  </Link>
-                </CardContent>
-              )}
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardDescription className="font-mono text-[10px] uppercase tracking-[0.18em]">
-                  Tickets emitidos
-                </CardDescription>
-                <CardTitle className="font-display text-3xl">
-                  {stats.ticketsIssued}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-          </section>
 
-          <section className="grid gap-4 sm:grid-cols-2">
-            <Link href="/admin/yape">
-              <Card className="h-full transition-colors hover:border-primary/50">
-                <CardHeader>
-                  <CardTitle>Revisar pagos Yape</CardTitle>
-                  <CardDescription>
-                    Verifica comprobantes pendientes contra tu app Yape y aprueba
-                    o rechaza. {stats.pendingYape > 0 && `(${stats.pendingYape} esperando)`}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
-          </section>
-        </>
-      )}
+        {/* Brand config (display; edit lands in /admin/settings) */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
+            <div>
+              <CardTitle>Configuración de la marca</CardTitle>
+              <CardDescription>Datos públicos y de cobro de {brand.name}.</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" disabled title="Disponible pronto">
+              <Settings className="h-4 w-4" />
+              Editar
+            </Button>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <Field label="Email">{brand.contact_email ?? '—'}</Field>
+            <Field label="WhatsApp">{brand.whatsapp_e164 ?? '—'}</Field>
+            <Field label="Yape número">{brand.yape_number ?? '—'}</Field>
+            <Field label="Yape titular">{brand.yape_holder ?? '—'}</Field>
+            <Field label="Logo">
+              {theme.logo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={theme.logo_url} alt="" className="h-6 w-6 rounded-full object-cover" />
+              ) : (
+                '—'
+              )}
+            </Field>
+            <Field label="Colores">
+              <span className="inline-flex items-center gap-1.5">
+                <Swatch hex={theme.primary_color} />
+                <Swatch hex={theme.secondary_color} />
+              </span>
+            </Field>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Events list */}
+      <section className="space-y-3">
+        <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
+          [ EVENTOS ]
+        </h2>
+        {!events || events.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center text-sm text-muted-foreground">
+              {canCreate
+                ? 'Todavía no creaste ningún evento. Usá “Crear evento” para arrancar.'
+                : 'No tenés eventos. Cuando ParyGo te cargue saldo vas a poder crear el primero.'}
+            </CardContent>
+          </Card>
+        ) : (
+          <ul className="space-y-2">
+            {events.map((e) => (
+              <li key={e.id}>
+                <Link href={`/admin/events/${e.id}`}>
+                  <Card className="transition-colors hover:border-primary/50">
+                    <CardContent className="flex items-center justify-between gap-3 py-4">
+                      <div className="space-y-1">
+                        <p className="font-display text-xl uppercase leading-none">{e.name}</p>
+                        <p className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(e.starts_at).toLocaleString('es-PE', {
+                            weekday: 'short',
+                            day: '2-digit',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] ${
+                          e.is_published ? 'bg-green/10 text-green' : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {e.is_published ? 'Publicado' : 'Borrador'}
+                      </span>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-2 text-sm">
+      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        {label}
+      </span>
+      <span className="text-right">{children}</span>
+    </div>
+  );
+}
+
+function Swatch({ hex }: { hex?: string }) {
+  if (!hex) return <span className="text-muted-foreground">—</span>;
+  return (
+    <span
+      className="inline-block h-4 w-4 rounded-full border border-border"
+      style={{ background: hex }}
+      title={hex}
+    />
   );
 }
