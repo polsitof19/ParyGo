@@ -1,9 +1,10 @@
 import Link from 'next/link';
-import { Calendar, Plus, Settings } from 'lucide-react';
+import { Calendar, Plus, ScanLine, Settings } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { InviteValidator } from './InviteValidator';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -164,6 +165,33 @@ export default async function AdminHomePage() {
             ))}
           </ul>
         )}
+      </section>
+
+      {/* Staff de puerta (validadores) */}
+      <section className="space-y-3">
+        <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
+          [ STAFF DE PUERTA ]
+        </h2>
+        <Card>
+          <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
+            <div>
+              <CardTitle>Validadores</CardTitle>
+              <CardDescription>
+                Invitá a tu staff a validar entradas en la puerta. Solo ven el
+                escáner, nada más de tu panel.
+              </CardDescription>
+            </div>
+            <Link href="/scan">
+              <Button variant="default" size="sm">
+                <ScanLine className="h-4 w-4" />
+                Abrir escáner
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            <InviteValidator />
+          </CardContent>
+        </Card>
       </section>
     </div>
   );

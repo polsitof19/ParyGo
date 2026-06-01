@@ -21,6 +21,8 @@ export default async function AdminLayout({
   if (user.isSuperAdmin) redirect('/super');
   const brandMembership = user.brandMemberships.find((m) => m.role === 'brand_admin');
   if (!brandMembership) {
+    // A pure validator only gets the door scanner — nothing else in the panel.
+    if (user.brandMemberships.some((m) => m.role === 'validator')) redirect('/scan');
     redirect('/login?error=' + encodeURIComponent('No tienes acceso de promotor.'));
   }
 

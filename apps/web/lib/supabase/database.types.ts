@@ -495,6 +495,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_unlimited: boolean
+          max_scans: number | null
           name: string
           perks: Json
           price_cents: number
@@ -512,6 +513,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_unlimited?: boolean
+          max_scans?: number | null
           name: string
           perks?: Json
           price_cents: number
@@ -529,6 +531,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_unlimited?: boolean
+          max_scans?: number | null
           name?: string
           perks?: Json
           price_cents?: number
@@ -555,8 +558,10 @@ export type Database = {
           event_id: string
           id: string
           invalidated_at: string | null
+          max_scans: number | null
           order_id: string
           qr_code: string
+          scan_count: number
           ticket_number: string
           ticket_type_id: string
           ticket_type_name: string
@@ -571,8 +576,10 @@ export type Database = {
           event_id: string
           id?: string
           invalidated_at?: string | null
+          max_scans?: number | null
           order_id: string
           qr_code?: string
+          scan_count?: number
           ticket_number: string
           ticket_type_id: string
           ticket_type_name: string
@@ -587,8 +594,10 @@ export type Database = {
           event_id?: string
           id?: string
           invalidated_at?: string | null
+          max_scans?: number | null
           order_id?: string
           qr_code?: string
+          scan_count?: number
           ticket_number?: string
           ticket_type_id?: string
           ticket_type_name?: string
@@ -831,6 +840,17 @@ export type Database = {
       user_brands: {
         Args: { p_role?: Database["public"]["Enums"]["user_role"] }
         Returns: string[]
+      }
+      validate_ticket: {
+        Args: {
+          p_qr_code: string
+          p_validator_user_id: string
+          p_offline?: boolean
+          p_scanned_at?: string | null
+          p_device_id?: string | null
+          p_client_scan_id?: string | null
+        }
+        Returns: Json
       }
       user_is_brand_member: {
         Args: {
