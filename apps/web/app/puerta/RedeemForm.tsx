@@ -13,13 +13,12 @@ export function RedeemForm() {
     <form action={action} className="space-y-4">
       <Input
         name="code"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        maxLength={6}
+        maxLength={8}
         autoFocus
         autoComplete="one-time-code"
-        placeholder="••••••"
-        className="h-16 text-center font-display text-4xl tracking-[0.4em]"
+        autoCapitalize="characters"
+        placeholder="••••••••"
+        className="h-16 text-center font-display text-3xl uppercase tracking-[0.3em]"
       />
       {state.message && !state.ok && (
         <p className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive">

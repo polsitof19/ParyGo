@@ -4,12 +4,12 @@ import { useFormState, useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { sendMagicLink, type LoginState } from './actions';
+import { loginAction, type LoginState } from './actions';
 
 const initialState: LoginState = { ok: false, message: null };
 
 export function LoginForm({ next }: { next?: string }) {
-  const [state, formAction] = useFormState(sendMagicLink, initialState);
+  const [state, formAction] = useFormState(loginAction, initialState);
 
   if (state.ok) {
     return (
@@ -43,6 +43,19 @@ export function LoginForm({ next }: { next?: string }) {
           placeholder="tu@email.com"
         />
       </div>
+      <div className="space-y-2">
+        <Label htmlFor="password">Contraseña</Label>
+        <Input
+          id="password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          placeholder="••••••••"
+        />
+        <p className="text-xs text-muted-foreground">
+          Los organizadores entran con email + contraseña. El admin de ParyGo recibe un link mágico (dejá la contraseña vacía).
+        </p>
+      </div>
       {state.message && !state.ok && (
         <p className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive">
           {state.message}
@@ -66,7 +79,7 @@ function SubmitButton() {
       className="w-full"
       disabled={pending}
     >
-      {pending ? 'Enviando…' : 'Enviar link mágico →'}
+      {pending ? 'Entrando…' : 'Entrar →'}
     </Button>
   );
 }

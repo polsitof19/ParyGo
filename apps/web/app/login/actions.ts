@@ -2,8 +2,11 @@
 
 import { z } from 'zod';
 import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { publicEnv } from '@/lib/env';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { destinationForUser } from '@/lib/auth';
+import { publicEnv, serverEnv } from '@/lib/env';
 
 export type LoginState = {
   ok: boolean;
@@ -100,4 +103,50 @@ export async function sendMagicLink(
           : 'No pudimos enviar el link. Intentá de nuevo.',
     };
   }
+}
+
+function clientIp(): string {
+  const h = headers();
+  return (
+    h.get('cf-connecting-ip') ||
+    h.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    h.get('x-real-ip') ||
+    'unknown'
+  );
+}
+
+const GENERIC_LOGIN_ERROR = 'Email o contraseña incorrectos.';
+
+// Single login entry: the super admin uses magic link; brand_admin/validator
+// use email+password. Generic error (anti-enumeration) + rate limit.
+export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
+  const email = String(formData.get('email') ?? '').trim().toLowerCase();
+  const password = String(formData.get('password') ?? '');
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return { ok: false, message: 'Email inválido.' };
+  }
+
+  // Super admin keeps magic link (password ignored). Untouched flow.
+  if (email === serverEnv.SUPER_ADMIN_EMAIL.toLowerCase()) {
+    return sendMagicLink(_prev, formData);
+  }
+
+  const admin = createAdminClient();
+  const { data: rl } = await admin.rpc('check_and_record_auth_attempt', {
+    p_kind: 'login', p_identifier: email, p_ip: clientIp(),
+    p_max_per_id: 5, p_max_per_ip: 5, p_window_minutes: 15,
+  });
+  if ((rl as { blocked?: boolean } | null)?.blocked) {
+    return { ok: false, message: 'Demasiados intentos. Esperá unos minutos e intentá de nuevo.' };
+  }
+  if (!password) return { ok: false, message: GENERIC_LOGIN_ERROR };
+
+  const supabase = createClient();
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error || !data.user) {
+    return { ok: false, message: GENERIC_LOGIN_ERROR };
+  }
+
+  await admin.rpc('clear_auth_attempts', { p_kind: 'login', p_identifier: email });
+  redirect(await destinationForUser(supabase, data.user.id));
 }

@@ -844,6 +844,18 @@ export type Database = {
       }
       redeem_validator_code: { Args: { p_code: string }; Returns: Json }
       revoke_validator_code: { Args: { p_id: string; p_brand_id: string }; Returns: boolean }
+      check_and_record_auth_attempt: {
+        Args: {
+          p_kind: string
+          p_identifier: string | null
+          p_ip: string
+          p_max_per_id?: number
+          p_max_per_ip?: number
+          p_window_minutes?: number
+        }
+        Returns: Json
+      }
+      clear_auth_attempts: { Args: { p_kind: string; p_identifier: string }; Returns: undefined }
       is_super_admin: { Args: never; Returns: boolean }
       recompute_ticket_type_sold: {
         Args: { p_ticket_type_id: string }

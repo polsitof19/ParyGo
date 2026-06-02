@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { InviteBrandAdmin } from './InviteBrandAdmin';
+import { SetBrandAdminPassword } from './SetBrandAdminPassword';
 import { LoadPackForm } from './LoadPackForm';
 import { publicEnv } from '@/lib/env';
 
@@ -175,12 +176,15 @@ export default async function BrandDetailPage({
                   .map((m) => (
                     <li
                       key={m.id}
-                      className="flex items-center justify-between rounded-md border border-border p-3 text-sm"
+                      className="space-y-3 rounded-md border border-border p-3 text-sm"
                     >
-                      <span>{m.display_name ?? 'Brand admin'}</span>
-                      <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                        Activo
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span>{m.display_name ?? 'Brand admin'}</span>
+                        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                          Activo
+                        </span>
+                      </div>
+                      <SetBrandAdminPassword brandId={brand.id} userId={m.user_id} slug={brand.slug} />
                     </li>
                   ))}
               </ul>

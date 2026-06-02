@@ -60,6 +60,29 @@ export async function requireSession(opts?: {
   return user;
 }
 
+// Where a freshly-authenticated user should land, by role. Mirrors the
+// role-redirect in /auth/callback so password login and magic link agree.
+export async function destinationForUser(
+  supabase: ReturnType<typeof createClient>,
+  userId: string
+): Promise<string> {
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('is_super_admin')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (profile?.is_super_admin) return '/super';
+  const { data: membership } = await supabase
+    .from('brand_members')
+    .select('role')
+    .eq('user_id', userId)
+    .limit(1)
+    .maybeSingle();
+  if (membership?.role === 'brand_admin') return '/admin';
+  if (membership?.role === 'validator') return '/scan';
+  return '/';
+}
+
 export function whatsappNumberForSupport(): string {
   return process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? '56932881230';
 }

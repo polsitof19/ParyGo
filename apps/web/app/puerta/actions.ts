@@ -1,19 +1,39 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export type RedeemState = { ok: boolean; message: string | null };
 
+function clientIp(): string {
+  const h = headers();
+  return (
+    h.get('cf-connecting-ip') ||
+    h.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    h.get('x-real-ip') ||
+    'unknown'
+  );
+}
+
 export async function redeemGateCodeAction(
   _prev: RedeemState,
   formData: FormData
 ): Promise<RedeemState> {
-  const code = String(formData.get('code') ?? '').replace(/\D/g, '').slice(0, 6);
-  if (code.length !== 6) return { ok: false, message: 'Ingresá el código de 6 dígitos.' };
+  const code = String(formData.get('code') ?? '').toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 8);
+  if (code.length !== 8) return { ok: false, message: 'Ingresá el código de 8 caracteres.' };
 
   const admin = createAdminClient();
+
+  // Rate-limit redemption by IP (brute-force of the code space).
+  const { data: rl } = await admin.rpc('check_and_record_auth_attempt', {
+    p_kind: 'redeem', p_identifier: null, p_ip: clientIp(),
+    p_max_per_id: 999, p_max_per_ip: 10, p_window_minutes: 15,
+  });
+  if ((rl as { blocked?: boolean } | null)?.blocked) {
+    return { ok: false, message: 'Demasiados intentos. Esperá unos minutos.' };
+  }
 
   // 1) Atomic redeem (validates + bumps use_count). The code IS the credential.
   const { data, error } = await admin.rpc('redeem_validator_code', { p_code: code });

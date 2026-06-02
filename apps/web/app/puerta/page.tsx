@@ -18,7 +18,7 @@ export default function PuertaPage() {
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-secondary">[ PUERTA ]</p>
           <h1 className="font-display text-3xl uppercase leading-none tracking-tight">Acceso de staff</h1>
           <p className="text-sm text-muted-foreground">
-            Ingresá el código de 6 dígitos que te dio el organizador.
+            Ingresá tu código personal de 8 caracteres.
           </p>
         </div>
         <RedeemForm />

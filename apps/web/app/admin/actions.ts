@@ -8,6 +8,68 @@ import { publicEnv } from '@/lib/env';
 
 export type InviteValidatorState = { ok: boolean; message: string | null };
 export type GateCodeState = { ok: boolean; message: string | null; code?: string; label?: string };
+export type SetPwdState = { ok: boolean; message: string | null };
+
+// brand_admin sets the password of one of THEIR validators (brand from session).
+export async function setValidatorPasswordAction(
+  _prev: SetPwdState,
+  formData: FormData
+): Promise<SetPwdState> {
+  const user = await requireSession();
+  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
+  if (!membership) return { ok: false, message: 'No autorizado.' };
+  const userId = String(formData.get('user_id') ?? '');
+  const password = String(formData.get('password') ?? '');
+  if (password.length < 8) return { ok: false, message: 'Mínimo 8 caracteres.' };
+
+  const admin = createAdminClient();
+  // Target MUST be a validator of THIS brand.
+  const { data: m } = await admin
+    .from('brand_members')
+    .select('id').eq('brand_id', membership.brandId).eq('user_id', userId).eq('role', 'validator')
+    .maybeSingle();
+  if (!m) return { ok: false, message: 'Ese validador no es de tu marca.' };
+
+  const { error } = await admin.auth.admin.updateUserById(userId, { password, email_confirm: true });
+  if (error) return { ok: false, message: 'No se pudo actualizar la contraseña.' };
+  revalidatePath('/admin');
+  return { ok: true, message: 'Contraseña actualizada.' };
+}
+
+// brand_admin generates a PERSONAL door code for one of THEIR validators (a
+// real account), one active code at a time → traceability per person.
+export async function generatePersonalCodeAction(
+  _prev: GateCodeState,
+  formData: FormData
+): Promise<GateCodeState> {
+  const user = await requireSession();
+  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
+  if (!membership) return { ok: false, message: 'No autorizado.' };
+  const brandId = membership.brandId;
+  const userId = String(formData.get('user_id') ?? '');
+
+  const admin = createAdminClient();
+  const { data: m } = await admin
+    .from('brand_members')
+    .select('display_name').eq('brand_id', brandId).eq('user_id', userId).eq('role', 'validator')
+    .maybeSingle();
+  if (!m) return { ok: false, message: 'Ese validador no es de tu marca.' };
+
+  // One active code per validator: revoke any previous active one.
+  await admin
+    .from('validator_codes')
+    .update({ expires_at: new Date().toISOString() })
+    .eq('brand_id', brandId).eq('user_id', userId).gt('expires_at', new Date().toISOString());
+
+  const { data, error } = await admin.rpc('generate_validator_code', {
+    p_brand_id: brandId, p_user_id: userId, p_device_label: m.display_name ?? 'Validador',
+    p_created_by: user.id, p_ttl_minutes: 720, p_max_uses: 500,
+  });
+  const res = data as { ok?: boolean; code?: string } | null;
+  if (error || !res?.ok || !res.code) return { ok: false, message: 'No se pudo generar el código.' };
+  revalidatePath('/admin');
+  return { ok: true, code: res.code, label: m.display_name ?? 'Validador', message: '' };
+}
 
 const schema = z.object({ email: z.string().email() });
 

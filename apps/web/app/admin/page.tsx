@@ -6,7 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { InviteValidator } from './InviteValidator';
-import { GateCodes } from './GateCodes';
+import { ValidatorManager } from './ValidatorManager';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -32,13 +32,23 @@ export default async function AdminHomePage() {
     .eq('brand_id', brand.id)
     .order('starts_at', { ascending: false });
 
-  // Active door codes (service-role; scoped to this brand).
-  const { data: gateCodes } = await createAdminClient()
-    .from('validator_codes')
-    .select('id, code, device_label, expires_at, use_count, max_uses')
-    .eq('brand_id', brand.id)
-    .gt('expires_at', new Date().toISOString())
-    .order('created_at', { ascending: false });
+  // Validators of this brand + their active personal door code (service-role).
+  const adminCli = createAdminClient();
+  const nowIso = new Date().toISOString();
+  const [{ data: members }, { data: codes }] = await Promise.all([
+    adminCli.from('brand_members').select('user_id, display_name').eq('brand_id', brand.id).eq('role', 'validator'),
+    adminCli.from('validator_codes').select('id, user_id, code, expires_at').eq('brand_id', brand.id).gt('expires_at', nowIso),
+  ]);
+  const validators = (members ?? []).map((m) => {
+    const c = (codes ?? []).find((x) => x.user_id === m.user_id);
+    return {
+      user_id: m.user_id,
+      display_name: m.display_name,
+      code: c?.code ?? null,
+      code_id: c?.id ?? null,
+      expires_at: c?.expires_at ?? null,
+    };
+  });
 
   const theme = (brand.theme_json ?? {}) as {
     logo_url?: string | null;
@@ -199,15 +209,15 @@ export default async function AdminHomePage() {
             </Link>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
+            <div className="space-y-3">
               <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                Código de puerta (rápido · sin email)
+                Tus validadores · contraseña + código personal de puerta
               </p>
-              <GateCodes codes={gateCodes ?? []} />
+              <ValidatorManager validators={validators} />
             </div>
             <div className="space-y-2 border-t border-border pt-5">
               <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                Invitar por email (magic link)
+                Invitar nuevo validador (por email)
               </p>
               <InviteValidator />
             </div>

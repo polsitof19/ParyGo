@@ -11,6 +11,44 @@ export type InviteState = {
   message: string | null;
 };
 
+export type SetBrandPwdState = { ok: boolean; message: string | null };
+
+const setPwdSchema = z.object({
+  brand_id: z.string().uuid(),
+  user_id: z.string().uuid(),
+  password: z.string().min(8, 'Mínimo 8 caracteres.'),
+});
+
+// Super admin sets a brand_admin's password (target must be brand_admin of
+// that brand). Super admin itself stays on magic link (never gets a password).
+export async function setBrandAdminPasswordAction(
+  _prev: SetBrandPwdState,
+  formData: FormData
+): Promise<SetBrandPwdState> {
+  await requireSession({ superAdmin: true });
+  const parsed = setPwdSchema.safeParse({
+    brand_id: formData.get('brand_id'),
+    user_id: formData.get('user_id'),
+    password: formData.get('password'),
+  });
+  if (!parsed.success) return { ok: false, message: parsed.error.errors[0]?.message ?? 'Datos inválidos.' };
+
+  const admin = createAdminClient();
+  const { data: m } = await admin
+    .from('brand_members')
+    .select('id').eq('brand_id', parsed.data.brand_id).eq('user_id', parsed.data.user_id).eq('role', 'brand_admin')
+    .maybeSingle();
+  if (!m) return { ok: false, message: 'Ese usuario no es admin de esta marca.' };
+
+  const { error } = await admin.auth.admin.updateUserById(parsed.data.user_id, {
+    password: parsed.data.password, email_confirm: true,
+  });
+  if (error) return { ok: false, message: 'No se pudo actualizar la contraseña.' };
+
+  revalidatePath(`/super/brands/${formData.get('slug') ?? ''}`);
+  return { ok: true, message: 'Contraseña actualizada.' };
+}
+
 export type PackState = {
   ok: boolean;
   message: string | null;
