@@ -18,10 +18,10 @@ export default function LoginPage({
           [ PARYGO · ACCESO ]
         </p>
         <h1 className="font-display text-4xl uppercase leading-none tracking-tight md:text-5xl">
-          Inicia sesión con tu email
+          Iniciá sesión
         </h1>
         <p className="mx-auto max-w-md text-muted-foreground">
-          Te enviamos un link mágico al email. Click y entrás. Sin contraseñas.
+          Organizadores y staff: email + contraseña.
         </p>
       </header>
 
