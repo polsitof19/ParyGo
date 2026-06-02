@@ -5,6 +5,8 @@ import { headers } from 'next/headers';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv } from '@/lib/env';
 import { createMercadoPagoPreference } from '@/lib/mercadopago';
+import { issueTicketsForOrder, markOrderPaid } from '@/lib/tickets';
+import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
 
 export type CheckoutInput = {
   eventId: string;
@@ -17,7 +19,20 @@ export type CheckoutInput = {
   method: 'yape_manual' | 'mercadopago';
   items: { ticketTypeId: string; quantity: number }[];
   sessionId: string;
+  promoCode?: string;
 };
+
+const PROMO_ERRORS: Record<string, string> = {
+  PROMO_NOT_FOUND: 'Código promocional inválido.',
+  PROMO_EXPIRED: 'Ese código ya venció.',
+  PROMO_EXHAUSTED: 'Ese código ya alcanzó su límite de usos.',
+  PROMO_EMAIL_LIMIT: 'Ya usaste ese código con este email.',
+  PROMO_NOT_APPLICABLE: 'El código no aplica a las entradas elegidas.',
+};
+function mapPromoError(msg: string): string {
+  for (const key of Object.keys(PROMO_ERRORS)) if (msg.includes(key)) return PROMO_ERRORS[key]!;
+  return 'No se pudo aplicar el código.';
+}
 
 export type CheckoutResult =
   | { ok: true; redirectUrl: string }
@@ -41,6 +56,7 @@ const schema = z.object({
     )
     .min(1),
   sessionId: z.string().min(8).max(64),
+  promoCode: z.string().min(2).max(32).optional().or(z.literal('')),
 });
 
 export async function startCheckout(input: CheckoutInput): Promise<CheckoutResult> {
@@ -208,12 +224,41 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     return { ok: false, message: itemsErr.message };
   }
 
+  // Promo code: validate + apply ATOMICALLY (rewrites order_items + order to
+  // the discounted price over the active phase, frozen). The client never
+  // dictates the amount; the RPC recomputes it server-side.
+  const promoCode = (parsed.data.promoCode ?? '').trim();
+  let isFree = false;
+  if (promoCode) {
+    const { data: applyRes, error: applyErr } = await admin.rpc('apply_promo_to_order', {
+      p_order_id: order.id,
+      p_event_id: event.id,
+      p_code: promoCode,
+      p_email: parsed.data.buyerEmail.toLowerCase(),
+      p_items: resolved.map((r) => ({ ticket_type_id: r.id, quantity: r.quantity })),
+    });
+    if (applyErr || !applyRes) {
+      await admin.from('orders').update({ status: 'failed' }).eq('id', order.id);
+      await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
+      return { ok: false, message: mapPromoError(applyErr?.message ?? '') };
+    }
+    const promo = applyRes as {
+      is_free?: boolean;
+      total_final_cents?: number;
+      breakdown?: { ticket_type_id: string; final_cents: number }[];
+    };
+    isFree = promo.is_free === true;
+    totalCents = promo.total_final_cents ?? totalCents;
+    const finalByType = new Map((promo.breakdown ?? []).map((b) => [b.ticket_type_id, b.final_cents]));
+    for (const r of resolved) r.price_cents = finalByType.get(r.id) ?? r.price_cents;
+  }
+
   await admin.from('events_log').insert({
     brand_id: event.brand_id,
     event_id: event.id,
     order_id: order.id,
     type: 'order_created',
-    payload: { method: parsed.data.method, total_cents: totalCents },
+    payload: { method: parsed.data.method, total_cents: totalCents, promo: promoCode || null },
   });
 
   // 5. Branch by method.
@@ -223,6 +268,28 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // Worker host-rewrite surprises).
   const baseUrl = `${proto}://${host}`;
   const eventBase = `/${event.slug}`;
+
+  // Free order (100% off promo): mark paid, issue tickets + email, skip payment.
+  if (isFree) {
+    await markOrderPaid(order.id);
+    await admin.rpc('mark_promo_redemption_consumed', { p_order_id: order.id });
+    const issue = await issueTicketsForOrder({ orderId: order.id, reason: 'yape_approved' });
+    if (issue.ok) {
+      await sendTicketEmail(order.id);
+    } else {
+      // Order is paid (free) but ticket issuance failed — log loudly for manual
+      // re-issue. The confirmation page polls, so the buyer keeps refreshing.
+      await admin.from('events_log').insert({
+        brand_id: event.brand_id,
+        event_id: event.id,
+        order_id: order.id,
+        type: 'tickets_issue_failed',
+        payload: { error: issue.error, flow: 'free_promo' },
+      });
+    }
+    await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
+    return { ok: true, redirectUrl: `${eventBase}/confirmacion?order=${order.id}` };
+  }
 
   if (parsed.data.method === 'mercadopago') {
     try {
@@ -260,10 +327,48 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
       // Cancel the order and free the held stock so other buyers can take it.
       await admin.from('orders').update({ status: 'failed' }).eq('id', order.id);
       await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
+      await admin.rpc('release_promo_redemption_for_order', { p_order_id: order.id });
       return { ok: false, message };
     }
   }
 
   // Yape manual → relative redirect keeps the brand subdomain intact.
   return { ok: true, redirectUrl: `${eventBase}/yape?order=${order.id}` };
+}
+
+export type PromoPreview =
+  | { ok: true; isFree: boolean; totalFinalCents: number; totalDiscountCents: number }
+  | { ok: false; reason: string };
+
+// Read-only promo preview for the checkout UI. Never consumes; the authoritative
+// amount is computed by apply_promo_to_order at checkout. Discount is server-side.
+export async function previewPromo(input: {
+  eventId: string;
+  code: string;
+  email: string;
+  items: { ticketTypeId: string; quantity: number }[];
+}): Promise<PromoPreview> {
+  const code = (input.code ?? '').trim();
+  if (code.length < 2) return { ok: false, reason: 'NOT_FOUND' };
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(input.email ?? '')) return { ok: false, reason: 'NEED_EMAIL' };
+  if (!Array.isArray(input.items) || input.items.length === 0) return { ok: false, reason: 'NO_ITEMS' };
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc('preview_promo', {
+    p_event_id: input.eventId,
+    p_code: code,
+    p_email: input.email.toLowerCase(),
+    p_items: input.items.map((i) => ({ ticket_type_id: i.ticketTypeId, quantity: i.quantity })),
+  });
+  if (error || !data) return { ok: false, reason: 'ERROR' };
+  const r = data as {
+    ok?: boolean; reason?: string; is_free?: boolean; total_final_cents?: number; total_discount_cents?: number;
+  };
+  if (!r.ok) return { ok: false, reason: r.reason ?? 'ERROR' };
+  return {
+    ok: true,
+    isFree: r.is_free === true,
+    totalFinalCents: r.total_final_cents ?? 0,
+    totalDiscountCents: r.total_discount_cents ?? 0,
+  };
 }

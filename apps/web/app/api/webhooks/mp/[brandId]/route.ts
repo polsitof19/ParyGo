@@ -127,6 +127,7 @@ export async function POST(
         .eq('status', 'pending_payment');
       // Free the held stock so other buyers can grab it.
       await admin.rpc('release_stock_reservations_for_order', { p_order_id: externalRef });
+      await admin.rpc('release_promo_redemption_for_order', { p_order_id: externalRef });
     } else if (status === 'refunded' || status === 'charged_back') {
       // Only flip orders that were already paid; never resurrect a failed
       // order into refunded state from a stray webhook.
@@ -144,6 +145,8 @@ export async function POST(
     mpPaymentId: String(paymentId),
     mpPaymentStatus: status,
   });
+  // Confirm any promo redemption for this order (held → consumed).
+  await admin.rpc('mark_promo_redemption_consumed', { p_order_id: externalRef });
 
   const issue = await issueTicketsForOrder({
     orderId: externalRef,

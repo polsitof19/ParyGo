@@ -53,6 +53,8 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
 
   // Mark order paid + issue tickets (both idempotent).
   await markOrderPaid(proof.order_id);
+  // If the order used a promo code, confirm its redemption (held → consumed).
+  await admin.rpc('mark_promo_redemption_consumed', { p_order_id: proof.order_id });
   const issue = await issueTicketsForOrder({
     orderId: proof.order_id,
     reason: 'yape_approved',
@@ -132,6 +134,7 @@ export async function rejectYapeProof(proofId: string, reason: string): Promise<
     .eq('id', proof.order_id)
     .eq('status', 'pending_yape_review');
   await admin.rpc('release_stock_reservations_for_order', { p_order_id: proof.order_id });
+  await admin.rpc('release_promo_redemption_for_order', { p_order_id: proof.order_id });
 
   await admin.from('events_log').insert({
     brand_id: proof.brand_id,

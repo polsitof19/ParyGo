@@ -296,6 +296,8 @@ export type Database = {
           mp_payment_id: string | null
           mp_payment_status: string | null
           mp_preference_id: string | null
+          promo_code_id: string | null
+          discount_cents: number
           paid_at: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           status: Database["public"]["Enums"]["order_status"]
@@ -440,6 +442,86 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      promo_codes: {
+        Row: {
+          id: string
+          event_id: string
+          brand_id: string
+          code: string
+          label: string | null
+          discount_type: 'percent' | 'fixed' | 'free'
+          discount_value: number
+          max_uses: number | null
+          use_count: number
+          per_email_limit: number
+          applies_to_all: boolean
+          expires_at: string | null
+          is_active: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          brand_id: string
+          code: string
+          label?: string | null
+          discount_type: 'percent' | 'fixed' | 'free'
+          discount_value: number
+          max_uses?: number | null
+          use_count?: number
+          per_email_limit?: number
+          applies_to_all?: boolean
+          expires_at?: string | null
+          is_active?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          label?: string | null
+          is_active?: boolean
+          max_uses?: number | null
+          expires_at?: string | null
+          use_count?: number
+        }
+        Relationships: []
+      }
+      promo_code_ticket_types: {
+        Row: { promo_code_id: string; ticket_type_id: string }
+        Insert: { promo_code_id: string; ticket_type_id: string }
+        Update: { promo_code_id?: string; ticket_type_id?: string }
+        Relationships: []
+      }
+      promo_redemptions: {
+        Row: {
+          id: string
+          promo_code_id: string
+          order_id: string
+          event_id: string
+          brand_id: string
+          email: string
+          amount_discount_cents: number
+          status: 'held' | 'consumed' | 'released'
+          breakdown: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          promo_code_id: string
+          order_id: string
+          event_id: string
+          brand_id: string
+          email: string
+          amount_discount_cents: number
+          status?: 'held' | 'consumed' | 'released'
+          breakdown?: Json
+        }
+        Update: { status?: 'held' | 'consumed' | 'released' }
+        Relationships: []
       }
       ticket_type_price_phases: {
         Row: {
@@ -856,6 +938,33 @@ export type Database = {
         Returns: Json
       }
       clear_auth_attempts: { Args: { p_kind: string; p_identifier: string }; Returns: undefined }
+      preview_promo: {
+        Args: { p_event_id: string; p_code: string; p_email: string; p_items: Json }
+        Returns: Json
+      }
+      apply_promo_to_order: {
+        Args: { p_order_id: string; p_event_id: string; p_code: string; p_email: string; p_items: Json }
+        Returns: Json
+      }
+      mark_promo_redemption_consumed: { Args: { p_order_id: string }; Returns: undefined }
+      release_promo_redemption_for_order: { Args: { p_order_id: string }; Returns: undefined }
+      create_promo_code: {
+        Args: {
+          p_event_id: string
+          p_brand_id: string
+          p_code: string
+          p_label: string
+          p_discount_type: 'percent' | 'fixed' | 'free'
+          p_discount_value: number
+          p_max_uses: number | null
+          p_per_email_limit: number
+          p_applies_to_all: boolean
+          p_ticket_type_ids: string[] | null
+          p_expires_at: string | null
+          p_created_by: string
+        }
+        Returns: string
+      }
       is_super_admin: { Args: never; Returns: boolean }
       recompute_ticket_type_sold: {
         Args: { p_ticket_type_id: string }

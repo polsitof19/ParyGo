@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { formatPEN } from '@/lib/utils';
 import { publicEnv } from '@/lib/env';
 import { YapeReviewRow } from '../../yape/YapeReviewRow';
+import { PromoCodeManager, type PromoCodeRow, type PromoSales } from './PromoCodeManager';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -66,6 +67,58 @@ export default async function AdminEventDetailPage({
 
   const paidCents = (paid ?? []).reduce((acc, o) => acc + (o.total_cents ?? 0), 0);
   const paidOrders = paid?.length ?? 0;
+
+  // ---- Promo codes + sales-by-code (tracking por RRPP) ----
+  const [{ data: promoCodes }, { data: promoOrders }] = await Promise.all([
+    admin
+      .from('promo_codes')
+      .select(
+        'id, code, label, discount_type, discount_value, max_uses, use_count, per_email_limit, applies_to_all, expires_at, is_active, created_at'
+      )
+      .eq('event_id', event.id)
+      .order('created_at', { ascending: false }),
+    // Paid orders that used a promo code — basis for "entradas vendidas" and "S/ movidos".
+    admin
+      .from('orders')
+      .select('id, promo_code_id, total_cents, discount_cents')
+      .eq('event_id', event.id)
+      .eq('status', 'paid')
+      .not('promo_code_id', 'is', null),
+  ]);
+
+  const promoOrderRows = (promoOrders ?? []) as {
+    id: string;
+    promo_code_id: string | null;
+    total_cents: number | null;
+    discount_cents: number | null;
+  }[];
+
+  // Count issued (non-invalidated) tickets per promo order to get "entradas".
+  const promoOrderIds = promoOrderRows.map((o) => o.id);
+  const ticketsPerOrder = new Map<string, number>();
+  if (promoOrderIds.length > 0) {
+    const { data: promoTickets } = await admin
+      .from('tickets')
+      .select('order_id')
+      .eq('event_id', event.id)
+      .is('invalidated_at', null)
+      .in('order_id', promoOrderIds);
+    for (const t of (promoTickets ?? []) as { order_id: string }[]) {
+      ticketsPerOrder.set(t.order_id, (ticketsPerOrder.get(t.order_id) ?? 0) + 1);
+    }
+  }
+
+  const promoSales: PromoSales = {};
+  for (const o of promoOrderRows) {
+    if (!o.promo_code_id) continue;
+    const agg = promoSales[o.promo_code_id] ?? { entries: 0, soldCents: 0, discountCents: 0 };
+    agg.entries += ticketsPerOrder.get(o.id) ?? 0;
+    agg.soldCents += o.total_cents ?? 0;
+    agg.discountCents += o.discount_cents ?? 0;
+    promoSales[o.promo_code_id] = agg;
+  }
+
+  const promoTicketTypes = (ticketTypes ?? []).map((t) => ({ id: t.id, name: t.name }));
 
   type ProofRow = {
     id: string;
@@ -192,6 +245,19 @@ export default async function AdminEventDetailPage({
             ))}
           </ul>
         )}
+      </section>
+
+      {/* Promo codes (tracking por RRPP) */}
+      <section className="space-y-3">
+        <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
+          [ CÓDIGOS PROMOCIONALES ]
+        </h2>
+        <PromoCodeManager
+          eventId={event.id}
+          ticketTypes={promoTicketTypes}
+          codes={(promoCodes ?? []) as PromoCodeRow[]}
+          sales={promoSales}
+        />
       </section>
 
       {/* Yape review for THIS event */}

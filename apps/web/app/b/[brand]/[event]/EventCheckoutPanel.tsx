@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatPEN } from '@/lib/utils';
-import { startCheckout, type CheckoutInput } from './actions';
+import { startCheckout, previewPromo, type CheckoutInput } from './actions';
 import { reserveStock } from '@/lib/reservations';
 
 const SESSION_STORAGE_KEY = 'parygo-checkout-session';
@@ -451,6 +451,38 @@ function Step2({
   onBack: () => void;
   onSubmit: (input: Omit<CheckoutInput, 'sessionId'>) => void;
 }) {
+  const [promoInput, setPromoInput] = useState('');
+  const [applied, setApplied] = useState<null | { code: string; finalCents: number; discountCents: number; isFree: boolean }>(null);
+  const [checking, setChecking] = useState(false);
+
+  const itemsForPromo = Object.entries(qty)
+    .filter(([, q]) => q > 0)
+    .map(([ticketTypeId, quantity]) => ({ ticketTypeId, quantity }));
+
+  async function applyPromo() {
+    const code = promoInput.trim();
+    if (!code) return;
+    const email = (document.getElementById('buyer_email') as HTMLInputElement | null)?.value?.trim() ?? '';
+    if (!email) { toast.error('Ingresá tu email antes de aplicar el código.'); return; }
+    setChecking(true);
+    const res = await previewPromo({ eventId: event.id, code, email, items: itemsForPromo });
+    setChecking(false);
+    if (!res.ok) {
+      const msgs: Record<string, string> = {
+        NOT_FOUND: 'Código inválido.', EXPIRED: 'Código vencido.', EXHAUSTED: 'Código agotado.',
+        EMAIL_LIMIT: 'Ya usaste ese código con este email.', NOT_APPLICABLE: 'No aplica a estas entradas.',
+        NEED_EMAIL: 'Ingresá tu email primero.', BAD_TICKET_TYPE: 'Entrada inválida.',
+      };
+      setApplied(null);
+      toast.error(msgs[res.reason] ?? 'No se pudo aplicar el código.');
+      return;
+    }
+    setApplied({ code, finalCents: res.totalFinalCents, discountCents: res.totalDiscountCents, isFree: res.isFree });
+    toast.success(res.isFree ? '¡Entrada gratis con el código!' : `Código aplicado: -${formatPEN(res.totalDiscountCents)}`);
+  }
+
+  const finalTotal = applied ? applied.finalCents : totalCents;
+
   return (
     <form
       onSubmit={(e) => {
@@ -470,9 +502,8 @@ function Step2({
           ageOk,
           marketingOptIn: fd.get('marketing_opt_in') === '1',
           method,
-          items: Object.entries(qty)
-            .filter(([, q]) => q > 0)
-            .map(([ticketTypeId, quantity]) => ({ ticketTypeId, quantity })),
+          items: itemsForPromo,
+          promoCode: applied?.code,
         });
       }}
       className="grid gap-6 md:grid-cols-[1fr_360px]"
@@ -552,7 +583,11 @@ function Step2({
           </label>
         </section>
 
-        <section className="space-y-4 rounded-lg border border-border bg-card p-6">
+        <section
+          className={`space-y-4 rounded-lg border border-border bg-card p-6 ${
+            applied?.isFree ? 'hidden' : ''
+          }`}
+        >
           <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
             [ MÉTODO DE PAGO ]
           </h2>
@@ -575,6 +610,58 @@ function Step2({
               note="Procesado por MercadoPago. Tu QR llega al instante."
             />
           </div>
+        </section>
+
+        <section className="space-y-3 rounded-lg border border-border bg-card p-6">
+          <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
+            [ CÓDIGO PROMOCIONAL ]
+          </h2>
+          {applied ? (
+            <div className="flex items-center justify-between rounded-md border border-secondary bg-secondary/10 p-3">
+              <div className="text-sm">
+                <span className="font-mono uppercase tracking-[0.12em] text-secondary">
+                  {applied.code}
+                </span>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {applied.isFree
+                    ? '¡Entrada gratis!'
+                    : `Descuento aplicado: -${formatPEN(applied.discountCents)}`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setApplied(null);
+                  setPromoInput('');
+                }}
+                className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
+              >
+                Quitar
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                value={promoInput}
+                onChange={(e) => setPromoInput(e.target.value)}
+                placeholder="Ingresá tu código"
+                className="uppercase"
+                autoCapitalize="characters"
+                maxLength={32}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={applyPromo}
+                disabled={checking || promoInput.trim().length < 2}
+              >
+                {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
+              </Button>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Si un RRPP te dio un código, ingresalo antes de pagar.
+          </p>
         </section>
       </div>
 
@@ -605,9 +692,19 @@ function Step2({
                 );
               })}
           </ul>
+          {applied && (
+            <div className="mt-4 flex items-baseline justify-between text-sm text-secondary">
+              <span className="uppercase tracking-tight">
+                Código {applied.code}
+              </span>
+              <span className="font-mono tabular-nums">
+                −{formatPEN(applied.discountCents)}
+              </span>
+            </div>
+          )}
           <div className="mt-4 flex items-baseline justify-between border-t border-border pt-4 font-display text-xl">
             <span className="text-sm uppercase tracking-tight">Total</span>
-            <span className="tabular-nums">{formatPEN(totalCents)}</span>
+            <span className="tabular-nums">{formatPEN(finalTotal)}</span>
           </div>
           <p className="mt-1 text-right text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
             IGV incluido
@@ -626,8 +723,10 @@ function Step2({
               <Loader2 className="h-4 w-4 animate-spin" />
               Procesando…
             </>
+          ) : applied?.isFree ? (
+            <>Obtener entrada gratis →</>
           ) : method === 'mercadopago' ? (
-            <>Pagar {formatPEN(totalCents)} →</>
+            <>Pagar {formatPEN(finalTotal)} →</>
           ) : (
             <>Continuar con Yape →</>
           )}
