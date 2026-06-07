@@ -888,6 +888,10 @@ export type Database = {
           has_public_key: boolean
         }[]
       }
+      get_brand_mp_public_key: {
+        Args: { p_brand_id: string; p_encryption_key: string }
+        Returns: string
+      }
       get_event_active_prices: {
         Args: { p_event_id: string }
         Returns: {

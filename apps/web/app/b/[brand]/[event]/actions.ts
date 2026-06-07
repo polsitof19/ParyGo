@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { headers } from 'next/headers';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { serverEnv } from '@/lib/env';
+import { serverEnv, publicEnv } from '@/lib/env';
 import { createMercadoPagoPreference } from '@/lib/mercadopago';
 import { issueTicketsForOrder, markOrderPaid } from '@/lib/tickets';
 import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
@@ -36,6 +36,9 @@ function mapPromoError(msg: string): string {
 
 export type CheckoutResult =
   | { ok: true; redirectUrl: string }
+  // MercadoPago: instead of an immediate redirect, the client renders the MP
+  // Wallet Brick (MP.js + public_key) bound to this server-created preference.
+  | { ok: true; mp: { preferenceId: string; initPoint: string } }
   | { ok: false; message: string };
 
 const schema = z.object({
@@ -316,7 +319,12 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
           failure: `${baseUrl}${eventBase}?pago=fallido`,
           pending: `${baseUrl}${eventBase}/confirmacion?order=${order.id}&pendiente=1`,
         },
-        notificationUrl: `${baseUrl}/api/webhooks/mp/${event.brand_id}`,
+        // SECURITY: the webhook URL MUST come from a TRUSTED host, never from
+        // the request's x-forwarded-host (attacker-controllable → MP would send
+        // payment webhooks to an arbitrary domain). back_urls keep the request
+        // host so the buyer returns to the brand subdomain; the webhook is the
+        // canonical app host.
+        notificationUrl: `${publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')}/api/webhooks/mp/${event.brand_id}`,
         externalReference: order.id,
         encryptionKey: serverEnv.BRAND_CREDS_ENCRYPTION_KEY,
       });
@@ -324,7 +332,9 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
         .from('orders')
         .update({ mp_preference_id: pref.id })
         .eq('id', order.id);
-      return { ok: true, redirectUrl: pref.initPoint };
+      // The order stays PENDING. The ticket is emitted only when the MP webhook
+      // (2.3) confirms the approved payment — never here.
+      return { ok: true, mp: { preferenceId: pref.id, initPoint: pref.initPoint } };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'MercadoPago no disponible';
       // Cancel the order and free the held stock so other buyers can take it.

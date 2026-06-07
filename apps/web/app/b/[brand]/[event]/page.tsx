@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Calendar, MapPin, ShieldCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { serverEnv } from '@/lib/env';
 import { formatPEN } from '@/lib/utils';
 import { EventCheckoutPanel } from './EventCheckoutPanel';
 import { EventStructuredData } from './EventStructuredData';
@@ -62,7 +64,35 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
       next_starts_at: ap?.next_starts_at ?? null,
     };
   });
-  return { brand, event, ticketTypes: ticketTypesWithPhase };
+
+  // MercadoPago: the card option only shows if THIS brand configured MP creds.
+  // The public_key (inherently public) is read server-side and handed to the
+  // browser for the Wallet Brick; the access_token never leaves the server.
+  // Brands without MP (e.g. Almighty/Yape-only) get yape-only checkout, unchanged.
+  const admin = createAdminClient();
+  const { data: mpStatus } = await admin.rpc('get_brand_mp_status', { p_brand_id: brand.id });
+  const status = Array.isArray(mpStatus) ? mpStatus[0] : null;
+  const mpConfigured = Boolean(status?.has_access_token && status?.has_public_key);
+  let mpPublicKey: string | null = null;
+  if (mpConfigured) {
+    const { data: pk, error: pkErr } = await admin.rpc('get_brand_mp_public_key', {
+      p_brand_id: brand.id,
+      p_encryption_key: serverEnv.BRAND_CREDS_ENCRYPTION_KEY,
+    });
+    // Degrade gracefully (MP option hidden) but log so a transient failure that
+    // silently drops the card option for a configured brand is traceable.
+    if (pkErr) console.error('get_brand_mp_public_key failed', { brandId: brand.id, error: pkErr.message });
+    mpPublicKey = typeof pk === 'string' && pk.length > 0 ? pk : null;
+  }
+
+  return {
+    brand,
+    event,
+    ticketTypes: ticketTypesWithPhase,
+    // MP is only really usable if BOTH the creds and the decrypted public_key are present.
+    mpConfigured: mpConfigured && Boolean(mpPublicKey),
+    mpPublicKey,
+  };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -96,7 +126,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function EventPage({ params }: Props) {
   const data = await loadEvent(params.brand, params.event);
   if (!data) notFound();
-  const { brand, event, ticketTypes } = data;
+  const { brand, event, ticketTypes, mpConfigured, mpPublicKey } = data;
 
   const startsAt = new Date(event.starts_at);
   // Capacity meter is meaningful only for LIMITED types; unlimited types are
@@ -200,6 +230,8 @@ export default async function EventPage({ params }: Props) {
           brand={brand}
           event={event}
           ticketTypes={ticketTypes}
+          mpConfigured={mpConfigured}
+          mpPublicKey={mpPublicKey}
         />
 
         {/* VENUE + REFUND POLICY */}

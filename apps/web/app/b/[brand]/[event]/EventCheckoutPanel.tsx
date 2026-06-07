@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { formatPEN } from '@/lib/utils';
 import { startCheckout, previewPromo, type CheckoutInput } from './actions';
 import { reserveStock } from '@/lib/reservations';
+import { MercadoPagoWallet } from './MercadoPagoWallet';
 
 const SESSION_STORAGE_KEY = 'parygo-checkout-session';
 
@@ -68,10 +69,14 @@ export function EventCheckoutPanel({
   brand,
   event,
   ticketTypes,
+  mpConfigured,
+  mpPublicKey,
 }: {
   brand: Brand;
   event: Event;
   ticketTypes: TicketType[];
+  mpConfigured: boolean;
+  mpPublicKey: string | null;
 }) {
   // Anchoring: sort by price descending so highest tier shows first.
   // (Promoter's sort_order is a tiebreaker.)
@@ -86,9 +91,14 @@ export function EventCheckoutPanel({
 
   const [qty, setQty] = useState<Record<string, number>>({});
   const [step, setStep] = useState<1 | 2>(1);
+  // Default to Yape when the brand has it; only default to MercadoPago when MP
+  // is actually configured. (Almighty = Yape-only → never defaults to MP.)
   const [method, setMethod] = useState<'yape_manual' | 'mercadopago'>(
-    brand.yape_number ? 'yape_manual' : 'mercadopago'
+    brand.yape_number ? 'yape_manual' : mpConfigured ? 'mercadopago' : 'yape_manual'
   );
+  // Once MP checkout starts we have a server-created preference; we swap the
+  // form for the MercadoPago Wallet Brick (the order is already PENDING).
+  const [mpCheckout, setMpCheckout] = useState<{ preferenceId: string; initPoint: string } | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // Stock reservation: session id is created on first interaction and persists
@@ -229,7 +239,13 @@ export function EventCheckoutPanel({
         )}
       </div>
 
-      {step === 1 ? (
+      {mpCheckout && mpPublicKey ? (
+        <MercadoPagoWallet
+          publicKey={mpPublicKey}
+          preferenceId={mpCheckout.preferenceId}
+          initPoint={mpCheckout.initPoint}
+        />
+      ) : step === 1 ? (
         <Step1
           sorted={sorted}
           qty={qty}
@@ -248,6 +264,7 @@ export function EventCheckoutPanel({
           totalCents={totalCents}
           method={method}
           setMethod={setMethod}
+          mpConfigured={mpConfigured}
           isPending={isPending}
           onBack={() => setStep(1)}
           onSubmit={(input) => {
@@ -260,7 +277,15 @@ export function EventCheckoutPanel({
                 toast.error(res.message ?? 'Error en el checkout');
                 return;
               }
-              if (res.redirectUrl) {
+              // MercadoPago: render the Wallet Brick with the server preference.
+              // (Fallback to a direct redirect if the public_key didn't load.)
+              if ('mp' in res) {
+                if (mpPublicKey) setMpCheckout(res.mp);
+                else window.location.href = res.mp.initPoint;
+                return;
+              }
+              // Yape / free promo: relative redirect.
+              if ('redirectUrl' in res) {
                 window.location.href = res.redirectUrl;
               }
             });
@@ -436,6 +461,7 @@ function Step2({
   totalCents,
   method,
   setMethod,
+  mpConfigured,
   isPending,
   onBack,
   onSubmit,
@@ -447,6 +473,7 @@ function Step2({
   totalCents: number;
   method: 'yape_manual' | 'mercadopago';
   setMethod: (m: 'yape_manual' | 'mercadopago') => void;
+  mpConfigured: boolean;
   isPending: boolean;
   onBack: () => void;
   onSubmit: (input: Omit<CheckoutInput, 'sessionId'>) => void;
@@ -602,13 +629,15 @@ function Step2({
                 note={`Yapeas a ${brand.yape_holder ?? brand.name} y nos envías la captura.`}
               />
             )}
-            <PaymentOption
-              selected={method === 'mercadopago'}
-              onClick={() => setMethod('mercadopago')}
-              title="Tarjeta · MercadoPago"
-              subtitle="Visa · Mastercard · AMEX · Transferencia BCP/BBVA"
-              note="Procesado por MercadoPago. Tu QR llega al instante."
-            />
+            {mpConfigured && (
+              <PaymentOption
+                selected={method === 'mercadopago'}
+                onClick={() => setMethod('mercadopago')}
+                title="Tarjeta · MercadoPago"
+                subtitle="Visa · Mastercard · AMEX · Transferencia BCP/BBVA"
+                note="Procesado por MercadoPago. Tu QR llega al instante."
+              />
+            )}
           </div>
         </section>
 
