@@ -3,10 +3,6 @@
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Plus, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
 import { formatPEN } from '@/lib/utils';
 import {
   upsertTicketTypeAction,
@@ -72,13 +68,9 @@ export function TicketTypesEditor({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="s-stack" style={{ gap: 14 }}>
       {types.length === 0 && !creating && (
-        <Card>
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Sin tipos de entrada todavía. Agrega uno para empezar.
-          </CardContent>
-        </Card>
+        <div className="s-card"><p className="s-empty">Sin tipos de entrada todavía. Agregá uno para empezar.</p></div>
       )}
 
       {types.map((t) => (
@@ -100,20 +92,13 @@ export function TicketTypesEditor({
           isPending={isPending}
         />
       ) : (
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setCreating(true)}
-          className="w-full"
-        >
-          <Plus className="h-4 w-4" />
-          Agregar tipo de entrada
-        </Button>
+        <button type="button" className="s-btn s-btn--soft s-btn--block" onClick={() => setCreating(true)}>
+          <Plus className="h-4 w-4" /> Agregar tipo de entrada
+        </button>
       )}
 
-      <p className="text-xs text-muted-foreground">
-        Orden recomendado: el más caro primero (VIP / Box arriba) para anclar
-        precio. La página pública respeta el campo "orden".
+      <p className="s-hint">
+        Orden recomendado: el más caro primero (VIP / Box arriba) para anclar precio. La página pública respeta el campo "orden".
       </p>
     </div>
   );
@@ -135,117 +120,64 @@ function TicketTypeRow({
   isPending: boolean;
 }) {
   return (
-    <form
-      action={onSave}
-      className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-card p-4 md:grid-cols-12"
-    >
+    <form action={onSave} className="s-card grid grid-cols-1 gap-3 md:grid-cols-12">
       <input type="hidden" name="event_id" value={eventId} />
       {type && <input type="hidden" name="id" value={type.id} />}
 
       <div className="md:col-span-3">
-        <Label htmlFor={`name-${type?.id ?? 'new'}`}>Nombre</Label>
-        <Input
-          id={`name-${type?.id ?? 'new'}`}
-          name="name"
-          defaultValue={type?.name ?? ''}
-          placeholder="General"
-          required
-        />
+        <label htmlFor={`name-${type?.id ?? 'new'}`} className="s-label">Nombre</label>
+        <input id={`name-${type?.id ?? 'new'}`} name="name" className="s-input" defaultValue={type?.name ?? ''} placeholder="General" required />
       </div>
       <div className="md:col-span-2">
-        <Label htmlFor={`price-${type?.id ?? 'new'}`}>Precio (S/)</Label>
-        <Input
-          id={`price-${type?.id ?? 'new'}`}
-          name="price_soles"
-          type="number"
-          min={0}
-          step="0.5"
-          defaultValue={type ? type.price_cents / 100 : ''}
-          required
-        />
+        <label htmlFor={`price-${type?.id ?? 'new'}`} className="s-label">Precio (S/)</label>
+        <input id={`price-${type?.id ?? 'new'}`} name="price_soles" type="number" min={0} step="0.5" className="s-input" defaultValue={type ? type.price_cents / 100 : ''} required />
       </div>
       <div className="md:col-span-2">
-        <Label htmlFor={`capacity-${type?.id ?? 'new'}`}>Capacidad</Label>
-        <Input
-          id={`capacity-${type?.id ?? 'new'}`}
-          name="capacity"
-          type="number"
-          min={0}
-          defaultValue={type?.capacity ?? ''}
-          required
-        />
+        <label htmlFor={`capacity-${type?.id ?? 'new'}`} className="s-label">Capacidad</label>
+        <input id={`capacity-${type?.id ?? 'new'}`} name="capacity" type="number" min={0} className="s-input" defaultValue={type?.capacity ?? ''} required />
       </div>
       <div className="md:col-span-2">
-        <Label htmlFor={`order-${type?.id ?? 'new'}`}>Orden</Label>
-        <Input
-          id={`order-${type?.id ?? 'new'}`}
-          name="sort_order"
-          type="number"
-          defaultValue={type?.sort_order ?? 0}
-        />
+        <label htmlFor={`order-${type?.id ?? 'new'}`} className="s-label">Orden</label>
+        <input id={`order-${type?.id ?? 'new'}`} name="sort_order" type="number" className="s-input" defaultValue={type?.sort_order ?? 0} />
       </div>
       <div className="md:col-span-3 md:col-start-1">
-        <Label htmlFor={`desc-${type?.id ?? 'new'}`}>Beneficios (uno por línea)</Label>
-        <textarea
-          id={`desc-${type?.id ?? 'new'}`}
-          name="description"
-          rows={2}
-          defaultValue={type?.description ?? ''}
-          placeholder={'Acceso completo\nCortesía bebida'}
-          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-        />
+        <label htmlFor={`desc-${type?.id ?? 'new'}`} className="s-label">Beneficios (uno por línea)</label>
+        <textarea id={`desc-${type?.id ?? 'new'}`} name="description" rows={2} className="s-input" defaultValue={type?.description ?? ''} placeholder={'Acceso completo\nCortesía bebida'} />
       </div>
       <div className="md:col-span-2">
-        <Label htmlFor={`color-${type?.id ?? 'new'}`}>Color (hex)</Label>
-        <Input
-          id={`color-${type?.id ?? 'new'}`}
-          name="color_hex"
-          defaultValue={type?.color_hex ?? '#FF1F8F'}
-          pattern="^#[0-9A-Fa-f]{6}$"
-        />
+        <label htmlFor={`color-${type?.id ?? 'new'}`} className="s-label">Color (hex)</label>
+        <input id={`color-${type?.id ?? 'new'}`} name="color_hex" className="s-input" defaultValue={type?.color_hex ?? '#FF1F8F'} pattern="^#[0-9A-Fa-f]{6}$" />
       </div>
-      <div className="md:col-span-2 flex items-end gap-2">
-        <label className="inline-flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            name="is_active"
-            defaultChecked={type?.is_active ?? true}
-            value="1"
-          />
+      <div className="md:col-span-2 flex items-end">
+        <label className="inline-flex items-center gap-2 text-sm" style={{ paddingBottom: 10 }}>
+          <input type="checkbox" name="is_active" defaultChecked={type?.is_active ?? true} value="1" />
           Activo
         </label>
       </div>
       {type && (
-        <div className="md:col-span-5 flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="font-mono uppercase tracking-[0.18em]">
-            Vendidas: {type.sold} / {type.capacity}
-          </span>
-          <span className="font-mono uppercase tracking-[0.18em]">
-            Ingreso pot.: {formatPEN(type.price_cents * type.capacity)}
-          </span>
+        <div className="md:col-span-5 flex items-center gap-4 s-hint" style={{ marginTop: 0 }}>
+          <span>Vendidas: {type.sold} / {type.capacity}</span>
+          <span>Ingreso pot.: {formatPEN(type.price_cents * type.capacity)}</span>
         </div>
       )}
       <div className="md:col-span-12 flex justify-end gap-2">
         {onCancel && (
-          <Button type="button" variant="ghost" onClick={onCancel}>
-            Cancelar
-          </Button>
+          <button type="button" className="s-btn s-btn--ghost" onClick={onCancel}>Cancelar</button>
         )}
         {type && onDelete && (
-          <Button
+          <button
             type="button"
-            variant="ghost"
+            className="s-btn s-btn--ghost"
             onClick={() => onDelete(type.id)}
             disabled={isPending || type.sold > 0}
             title={type.sold > 0 ? 'No se puede borrar: ya tiene ventas' : undefined}
           >
-            <Trash2 className="h-4 w-4" />
-            Borrar
-          </Button>
+            <Trash2 className="h-4 w-4" /> Borrar
+          </button>
         )}
-        <Button type="submit" disabled={isPending}>
+        <button type="submit" className="s-btn s-btn--primary" disabled={isPending}>
           {type ? 'Guardar' : 'Crear'}
-        </Button>
+        </button>
       </div>
     </form>
   );

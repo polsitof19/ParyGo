@@ -1,6 +1,5 @@
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { Card, CardContent } from '@/components/ui/card';
 import { formatPEN } from '@/lib/utils';
 // Reuse the same row component and approve/reject actions that brand admins
 // use. approveYapeProof already permits super_admin in its permission check.
@@ -59,33 +58,26 @@ export default async function SuperYapeReviewPage() {
   );
 
   return (
-    <div className="space-y-8">
-      <header className="space-y-2">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-secondary">
-          [ YAPE · PENDING · TODAS LAS MARCAS ]
-        </p>
-        <h1 className="font-display text-4xl uppercase leading-none tracking-tight">
-          Comprobantes por revisar
-        </h1>
-        <p className="text-muted-foreground">
-          Vista de super admin: ves los pendientes de cada marca. Las marcas
-          también pueden aprobar/rechazar desde su propio panel.
-        </p>
-      </header>
+    <>
+      <div className="s-pagehead">
+        <div>
+          <span className="eyebrow">Soporte · Yape</span>
+          <h1 className="s-h1" style={{ marginTop: 4 }}>Comprobantes por revisar</h1>
+          <p className="s-card__desc">
+            Ves los pendientes de cada marca. Las marcas también aprueban/rechazan desde su propio panel.
+          </p>
+        </div>
+      </div>
 
       {withUrls.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            No hay comprobantes pendientes en ninguna marca.
-          </CardContent>
-        </Card>
+        <div className="s-card"><p className="s-empty">No hay comprobantes pendientes en ninguna marca.</p></div>
       ) : (
-        <div className="space-y-4">
+        <div className="s-stack">
           {withUrls.map((p) => (
-            <div key={p.id} className="space-y-2">
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-secondary">
-                [ {p.brand?.name ?? 'Sin marca'} · {p.brand?.slug ?? '—'} ]
-              </p>
+            <div key={p.id} className="s-field">
+              <span className="eyebrow" style={{ display: 'block', marginBottom: 8 }}>
+                {p.brand?.name ?? 'Sin marca'} · {p.brand?.slug ?? '—'}
+              </span>
               <YapeReviewRow
                 proofId={p.id}
                 receiptUrl={p.signedReceiptUrl}
@@ -106,6 +98,6 @@ export default async function SuperYapeReviewPage() {
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }

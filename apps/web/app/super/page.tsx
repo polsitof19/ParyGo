@@ -1,94 +1,150 @@
 import Link from 'next/link';
+import { Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-export default async function SuperDashboardPage() {
+const AVATAR_BG = ['#FF6A3D', '#5B6CFF', '#E8552A', '#2E9E6B', '#C7791A', '#8A5BFF'];
+const bgFor = (s: string) => AVATAR_BG[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_BG.length];
+const initialOf = (name: string) => (name.trim()[0] ?? '?').toUpperCase();
+
+type BrandRow = {
+  id: string;
+  slug: string;
+  name: string;
+  event_balance: number;
+  owner: string | null;
+  eventsTotal: number;
+  eventsPublished: number;
+};
+
+export default async function SuperHome() {
   const supabase = createClient();
-  const [
-    { count: brandCount },
-    { count: eventCount },
-    { count: publishedEventCount },
-    { count: paidOrderCount },
-  ] = await Promise.all([
-    // count via a non-sensitive column: authenticated no longer has table-wide
-    // SELECT on brands (mp_* secret columns are service_role-only since 0023).
-    supabase.from('brands').select('id', { count: 'exact', head: true }),
-    supabase.from('events').select('*', { count: 'exact', head: true }),
-    supabase
-      .from('events')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_published', true),
-    supabase
-      .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'paid'),
+
+  const [{ data: brands }, { data: members }, { data: events }] = await Promise.all([
+    supabase.from('brands').select('id, slug, name, event_balance').order('created_at', { ascending: false }),
+    supabase.from('brand_members').select('brand_id, display_name, role').eq('role', 'brand_admin'),
+    supabase.from('events').select('brand_id, is_published'),
   ]);
 
-  const stats = [
-    { label: 'Marcas', value: brandCount ?? 0, href: '/super/brands' },
-    { label: 'Eventos', value: eventCount ?? 0, href: '/super/events' },
-    { label: 'Publicados', value: publishedEventCount ?? 0, href: '/super/events' },
-    { label: 'Compras pagadas', value: paidOrderCount ?? 0, href: '/super/events' },
-  ];
+  const ownerByBrand = new Map<string, string>();
+  for (const m of members ?? []) if (!ownerByBrand.has(m.brand_id)) ownerByBrand.set(m.brand_id, m.display_name ?? '');
+  const evByBrand = new Map<string, { total: number; pub: number }>();
+  for (const e of events ?? []) {
+    const cur = evByBrand.get(e.brand_id) ?? { total: 0, pub: 0 };
+    cur.total += 1;
+    if (e.is_published) cur.pub += 1;
+    evByBrand.set(e.brand_id, cur);
+  }
+
+  const rows: BrandRow[] = (brands ?? []).map((b) => ({
+    id: b.id,
+    slug: b.slug,
+    name: b.name,
+    event_balance: b.event_balance ?? 0,
+    owner: ownerByBrand.get(b.id) || null,
+    eventsTotal: evByBrand.get(b.id)?.total ?? 0,
+    eventsPublished: evByBrand.get(b.id)?.pub ?? 0,
+  }));
+
+  const noOwner = rows.filter((r) => !r.owner).length;
+  const noSaldo = rows.filter((r) => r.event_balance === 0).length;
+  const isAlert = (r: BrandRow) => !r.owner || r.event_balance === 0;
 
   return (
-    <div className="space-y-8">
-      <header className="space-y-2">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-secondary">
-          [ RESUMEN ]
-        </p>
-        <h1 className="font-display text-4xl uppercase leading-none tracking-tight">
-          Panel de control
-        </h1>
-      </header>
-
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((s) => (
-          <Link key={s.label} href={s.href}>
-            <Card className="transition-colors hover:border-secondary/50">
-              <CardHeader>
-                <CardDescription className="font-mono text-[10px] uppercase tracking-[0.18em]">
-                  {s.label}
-                </CardDescription>
-                <CardTitle className="font-display text-4xl">{s.value}</CardTitle>
-              </CardHeader>
-            </Card>
-          </Link>
-        ))}
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          [ ACCIONES RÁPIDAS ]
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Link href="/super/brands/new">
-            <Card className="h-full transition-colors hover:border-primary/50">
-              <CardHeader>
-                <CardTitle>+ Crear nueva marca</CardTitle>
-                <CardDescription>
-                  Setup inicial de un promotor nuevo. Define slug, logo,
-                  colores, número Yape, credenciales MercadoPago.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-          <Link href="/super/events/new">
-            <Card className="h-full transition-colors hover:border-primary/50">
-              <CardHeader>
-                <CardTitle>+ Crear nuevo evento</CardTitle>
-                <CardDescription>
-                  Asignar evento a una marca existente. Configura fecha, venue,
-                  cover, tipos de entrada.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
+    <>
+      <div className="s-pagehead">
+        <div>
+          <span className="eyebrow">Plataforma</span>
+          <h1 className="s-h1" style={{ marginTop: 4 }}>Marcas</h1>
+          <p className="s-card__desc">
+            {rows.length} marca{rows.length === 1 ? '' : 's'}
+            {noOwner > 0 && <> · <span style={{ color: 'var(--alert)' }}>{noOwner} sin dueño</span></>}
+            {noSaldo > 0 && <> · <span style={{ color: 'var(--alert)' }}>{noSaldo} sin saldo</span></>}
+          </p>
         </div>
-      </section>
-    </div>
+        <Link href="/super/brands/new" className="s-btn s-btn--primary">
+          <Plus className="h-4 w-4" /> Crear marca
+        </Link>
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="s-card"><p className="s-empty">Todavía no hay marcas. Creá la primera.</p></div>
+      ) : (
+        <>
+          {/* Desktop: tabla densa */}
+          <div className="s-table-wrap">
+            <div className="s-card s-card--flush">
+              <table className="s-table">
+                <thead>
+                  <tr>
+                    <th>Marca</th>
+                    <th className="num">Saldo</th>
+                    <th>Eventos</th>
+                    <th>Dueño</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id} className={isAlert(r) ? 's-row--alert' : undefined}>
+                      <td>
+                        <Link href={`/super/brands/${r.slug}`} className="s-cell-brand s-rowlink" aria-label={`Abrir ${r.name}`}>
+                          <span className="s-avatar" style={{ background: bgFor(r.slug) }}>{initialOf(r.name)}</span>
+                          <span>
+                            <span className="nm" style={{ display: 'block' }}>{r.name}</span>
+                            <span className="sl">{r.slug}.parygo.com</span>
+                          </span>
+                        </Link>
+                      </td>
+                      <td className="num">
+                        {r.event_balance === 0
+                          ? <span className="s-badge s-badge--alert">0</span>
+                          : <span className="s-saldo-num" style={r.event_balance === 1 ? { color: 'var(--warn)' } : undefined}>{r.event_balance}</span>}
+                      </td>
+                      <td>
+                        {r.eventsTotal === 0
+                          ? <span className="s-muted-3">Sin eventos</span>
+                          : <span>{r.eventsTotal} <span className="s-muted-3">({r.eventsPublished} publ.)</span></span>}
+                      </td>
+                      <td>
+                        {r.owner ? <span className="s-muted">{r.owner}</span> : <span className="s-badge s-badge--alert">Sin dueño</span>}
+                      </td>
+                      <td>
+                        {r.eventsPublished > 0
+                          ? <span className="s-badge s-badge--ok">Vendiendo</span>
+                          : <span className="s-badge s-badge--draft">Sin publicar</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Móvil: cards */}
+          <div className="s-brandcards">
+            {rows.map((r) => (
+              <Link key={r.id} href={`/super/brands/${r.slug}`} className={`s-brandcard${isAlert(r) ? ' s-brandcard--alert' : ''}`}>
+                <span className="s-avatar" style={{ background: bgFor(r.slug) }}>{initialOf(r.name)}</span>
+                <span style={{ minWidth: 0 }}>
+                  <span className="nm" style={{ display: 'block' }}>{r.name}</span>
+                  <span className="meta">
+                    {r.slug}.parygo.com · Saldo {r.event_balance} · {r.eventsTotal} evento{r.eventsTotal === 1 ? '' : 's'}
+                  </span>
+                  <span className="meta">{r.owner ?? 'Sin dueño asignado'}</span>
+                </span>
+                <span>
+                  {r.eventsPublished > 0
+                    ? <span className="s-badge s-badge--ok">Vendiendo</span>
+                    : <span className="s-badge s-badge--draft">Sin publicar</span>}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+    </>
   );
 }

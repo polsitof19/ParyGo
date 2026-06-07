@@ -1,71 +1,41 @@
-import Link from 'next/link';
-import { LogOut } from 'lucide-react';
+import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { requireSession } from '@/lib/auth';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { SuperTopbar } from './SuperTopbar';
+import './super.css';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-const NAV = [
-  { href: '/super', label: 'Resumen' },
-  { href: '/super/brands', label: 'Marcas' },
-  { href: '/super/events', label: 'Eventos' },
-  { href: '/super/yape', label: 'Yape pending' },
-] as const;
+// Warm v7 type system, scoped to the super panel via the .super-shell wrapper
+// (does not affect the brand admin / scan / public app).
+const bricolage = Bricolage_Grotesque({
+  weight: ['600', '700', '800'],
+  subsets: ['latin'],
+  variable: '--font-bricolage',
+  display: 'swap',
+});
+const hanken = Hanken_Grotesk({
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-hanken',
+  display: 'swap',
+});
 
-export default async function SuperLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function SuperLayout({ children }: { children: React.ReactNode }) {
   const user = await requireSession({ superAdmin: true });
 
+  // Discreet pending-Yape counter for the support link (read-only).
+  const admin = createAdminClient();
+  const { count } = await admin
+    .from('yape_proofs')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending_review');
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur">
-        <div className="container flex h-16 items-center justify-between gap-6">
-          <div className="flex items-center gap-6">
-            <Link
-              href="/super"
-              className="font-display text-xl uppercase tracking-tight"
-            >
-              ParyGo
-              <span
-                className="ml-1 inline-block h-1.5 w-1.5 -translate-y-1 rounded-full bg-primary align-middle"
-                style={{ boxShadow: '0 0 8px hsl(var(--primary))' }}
-              />
-            </Link>
-            <span className="hidden font-mono text-[10px] uppercase tracking-[0.18em] text-secondary md:inline">
-              [ SUPER ADMIN ]
-            </span>
-          </div>
-          <nav className="hidden items-center gap-6 font-mono text-xs uppercase tracking-[0.18em] md:flex">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="flex items-center gap-3">
-            <span className="hidden font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground md:inline">
-              {user.email}
-            </span>
-            <form action="/auth/logout" method="post">
-              <button
-                type="submit"
-                aria-label="Cerrar sesión"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
-      <main className="container flex-1 py-8">{children}</main>
+    <div className={`super-shell ${bricolage.variable} ${hanken.variable}`}>
+      <SuperTopbar email={user.email} yapeCount={count ?? 0} />
+      <main className="s-wrap">{children}</main>
     </div>
   );
 }

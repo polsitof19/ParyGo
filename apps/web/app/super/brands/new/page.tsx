@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
-import { NewBrandForm } from './NewBrandForm';
+import { CreateBrandForm } from './CreateBrandForm';
 
 export const runtime = 'edge';
 
@@ -10,27 +10,20 @@ export const metadata = {
 
 export default function NewBrandPage() {
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <Link
-        href="/super/brands"
-        className="inline-flex items-center gap-1 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="h-3 w-3" />
-        Volver a marcas
+    <div style={{ maxWidth: 560, margin: '0 auto' }}>
+      <Link href="/super" className="s-back">
+        <ChevronLeft className="h-3.5 w-3.5" /> Marcas
       </Link>
-      <header className="space-y-2">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-secondary">
-          [ NUEVA MARCA ]
-        </p>
-        <h1 className="font-display text-4xl uppercase leading-none tracking-tight">
-          Crear promotor
-        </h1>
-        <p className="text-muted-foreground">
-          Setup inicial. Luego invitas al brand admin por email para que pueda
-          editar su evento.
+
+      <header style={{ marginBottom: 22 }}>
+        <span className="eyebrow">Nueva marca</span>
+        <h1 className="s-h1" style={{ marginTop: 4 }}>Crear marca y dueño</h1>
+        <p className="s-card__desc">
+          En un paso: la marca, su subdominio y el dueño con su acceso. El saldo se carga después con un clic.
         </p>
       </header>
-      <NewBrandForm />
+
+      <CreateBrandForm />
     </div>
   );
 }

@@ -134,3 +134,146 @@ export async function createBrandAction(
   revalidatePath('/super/brands');
   redirect(`/super/brands/${brand.slug}`);
 }
+
+// ============================================================================
+// Orquestación marca + dueño (un solo paso). NO toca saldo/dinero: el saldo se
+// carga aparte con load_event_pack desde la vista de la marca.
+//
+// Seguridad (blindado a propósito):
+//  - Lockdown: SOLO super admin (requireSession superAdmin). Mismo gate que el
+//    resto de acciones de /super.
+//  - El dueño se crea con el rol correcto SOLO vía brand_members (role
+//    'brand_admin') para ESTA marca. Nunca toca user_profiles.is_super_admin
+//    (no escala a super admin) ni inserta membresías de otras marcas (no escala
+//    lateralmente).
+//  - Si el email ya existe NO seteamos su contraseña (evita pisar la cuenta de
+//    un super admin u otro dueño): se rechaza y se deriva al flujo de la marca.
+//  - Rollback all-or-nothing: si falla crear usuario o membresía, se borra lo
+//    creado para no dejar marca huérfana ni usuario sin marca.
+// ============================================================================
+const ownerSchema = z.object({
+  name: z.string().min(2).max(60),
+  slug: z
+    .string()
+    .min(2)
+    .max(32)
+    .regex(/^[a-z0-9][a-z0-9-]{0,30}[a-z0-9]$/, 'Solo minúsculas, números y guiones'),
+  owner_email: z.string().email('Email inválido.'),
+  owner_password: z.string().min(8, 'Mínimo 8 caracteres.').max(72),
+});
+
+export async function createBrandWithOwnerAction(
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
+  // Lockdown: solo super admin puede orquestar marca + dueño.
+  await requireSession({ superAdmin: true });
+
+  const parsed = ownerSchema.safeParse({
+    name: formData.get('name'),
+    slug: formData.get('slug'),
+    owner_email: formData.get('owner_email'),
+    owner_password: formData.get('owner_password'),
+  });
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const err of parsed.error.errors) {
+      const path = err.path.join('.');
+      if (path) fieldErrors[path] = err.message;
+    }
+    return { ok: false, message: 'Revisa los campos marcados.', fieldErrors };
+  }
+
+  if (RESERVED.has(parsed.data.slug)) {
+    return { ok: false, message: 'Ese slug está reservado.', fieldErrors: { slug: 'Reservado' } };
+  }
+
+  const admin = createAdminClient();
+  const email = parsed.data.owner_email.trim().toLowerCase();
+
+  // Rollback helper con chequeo: un rollback fallido NO debe ser silencioso
+  // (la garantía all-or-nothing tiene que ser visible si se rompe).
+  async function rollback(userId: string | null, brandId: string | null) {
+    if (userId) {
+      const { error } = await admin.auth.admin.deleteUser(userId);
+      if (error) console.error('[createBrandWithOwner] rollback deleteUser falló', userId, error.message);
+    }
+    if (brandId) {
+      const { error } = await admin.from('brands').delete().eq('id', brandId);
+      if (error) console.error('[createBrandWithOwner] rollback delete brand falló', brandId, error.message);
+    }
+  }
+
+  // Paso 1: crear el usuario dueño CON contraseña (confirmado, sin magic link).
+  // createUser es la guardia ATÓMICA de unicidad de email: si ya existe, falla
+  // acá (no lo creamos de nuevo ni pisamos su contraseña). Lo hacemos PRIMERO
+  // para que, ante un email repetido, no haya que rollbackear una marca.
+  const { data: created, error: userErr } = await admin.auth.admin.createUser({
+    email,
+    password: parsed.data.owner_password,
+    email_confirm: true,
+  });
+  if (userErr || !created?.user) {
+    const raw = userErr?.message?.toLowerCase() ?? '';
+    if (raw.includes('already') || raw.includes('registered') || raw.includes('exist')) {
+      return {
+        ok: false,
+        message: 'Ya existe un usuario con ese email. Creá la marca y asignalo como dueño desde la vista de la marca.',
+        fieldErrors: { owner_email: 'Email ya registrado' },
+      };
+    }
+    console.error('[createBrandWithOwner] createUser falló', userErr?.message);
+    return { ok: false, message: 'No se pudo crear el usuario dueño.' };
+  }
+
+  const webhookSecret = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
+  const themeJson = { primary_color: '#FF1F8F', secondary_color: '#00E5FF' };
+
+  // Paso 2: insertar la marca.
+  const { data: brand, error: insertErr } = await admin
+    .from('brands')
+    .insert({
+      slug: parsed.data.slug,
+      name: parsed.data.name,
+      contact_email: email,
+      theme_json: themeJson,
+      mp_webhook_secret: webhookSecret,
+    })
+    .select('id, slug')
+    .single();
+
+  if (insertErr || !brand) {
+    // Rollback: borrar el usuario recién creado (todavía no hay marca).
+    await rollback(created.user.id, null);
+    if (insertErr?.code === '23505') {
+      return { ok: false, message: 'Ya existe una marca con ese slug.', fieldErrors: { slug: 'En uso' } };
+    }
+    console.error('[createBrandWithOwner] insert brand falló', insertErr?.message);
+    return { ok: false, message: 'No se pudo crear la marca.' };
+  }
+
+  // Paso 3: asignar membresía brand_admin SOLO para esta marca.
+  const { error: memberErr } = await admin.from('brand_members').insert({
+    brand_id: brand.id,
+    user_id: created.user.id,
+    role: 'brand_admin',
+    display_name: email,
+  });
+  if (memberErr) {
+    // Rollback total: borrar usuario y marca.
+    await rollback(created.user.id, brand.id);
+    console.error('[createBrandWithOwner] insert membership falló', memberErr.message);
+    return { ok: false, message: 'No se pudo asignar el dueño a la marca.' };
+  }
+
+  // Paso 4: auditoría (best-effort, no bloquea el alta).
+  const { error: logErr } = await admin.from('events_log').insert([
+    { brand_id: brand.id, type: 'brand_created', payload: { slug: brand.slug, name: parsed.data.name } },
+    { brand_id: brand.id, actor_user_id: created.user.id, type: 'brand_admin_created', payload: { email } },
+  ]);
+  if (logErr) console.error('[createBrandWithOwner] events_log falló', logErr.message);
+
+  revalidatePath('/super');
+  revalidatePath('/super/brands');
+  redirect(`/super/brands/${brand.slug}`);
+}

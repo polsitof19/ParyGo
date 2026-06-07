@@ -1,9 +1,6 @@
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { inviteBrandAdminAction, type InviteState } from './actions';
 
 const initial: InviteState = { ok: false, message: null };
@@ -12,21 +9,20 @@ export function InviteBrandAdmin({ brandId, brandName }: { brandId: string; bran
   const [state, action] = useFormState(inviteBrandAdminAction, initial);
 
   return (
-    <form action={action} className="flex flex-col gap-3 rounded-md border border-dashed border-border p-4 sm:flex-row sm:items-end">
+    <form action={action} className="s-form-row">
       <input type="hidden" name="brand_id" value={brandId} />
-      <div className="flex-1 space-y-2">
-        <Label htmlFor="invite-email">Invitar a {brandName}</Label>
-        <Input
+      <div className="s-form-row__field">
+        <label htmlFor="invite-email" className="s-label">Invitar dueño a {brandName}</label>
+        <input
           id="invite-email"
           name="email"
           type="email"
           placeholder="promotor@code.com.pe"
           required
+          className="s-input"
         />
         {state.message && (
-          <p className={`text-xs ${state.ok ? 'text-green' : 'text-destructive'}`}>
-            {state.message}
-          </p>
+          <p className={state.ok ? 's-hint s-hint--ok' : 's-err'}>{state.message}</p>
         )}
       </div>
       <SubmitButton />
@@ -37,8 +33,8 @@ export function InviteBrandAdmin({ brandId, brandName }: { brandId: string; bran
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant="outline" disabled={pending}>
-      {pending ? 'Enviando…' : 'Invitar →'}
-    </Button>
+    <button type="submit" className="s-btn s-btn--soft" disabled={pending}>
+      {pending ? 'Enviando…' : 'Invitar'}
+    </button>
   );
 }

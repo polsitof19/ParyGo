@@ -2,7 +2,6 @@
 
 import { useTransition } from 'react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
 import { setEventPublishedAction } from './actions';
 
 export function TogglePublishedButton({
@@ -14,9 +13,9 @@ export function TogglePublishedButton({
 }) {
   const [pending, start] = useTransition();
   return (
-    <Button
+    <button
       type="button"
-      variant={isPublished ? 'outline' : 'gradient'}
+      className={`s-btn ${isPublished ? 's-btn--soft' : 's-btn--primary'}`}
       disabled={pending}
       onClick={() => {
         start(async () => {
@@ -29,7 +28,7 @@ export function TogglePublishedButton({
         });
       }}
     >
-      {isPublished ? 'Despublicar' : 'Publicar evento'}
-    </Button>
+      {pending ? '…' : isPublished ? 'Despublicar' : 'Publicar evento'}
+    </button>
   );
 }

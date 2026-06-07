@@ -24,24 +24,15 @@ export default async function NewEventPage({
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
-      <Link
-        href="/super/events"
-        className="inline-flex items-center gap-1 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="h-3 w-3" />
-        Volver a eventos
+    <div style={{ maxWidth: 720, margin: '0 auto' }}>
+      <Link href="/super/events" className="s-back">
+        <ChevronLeft className="h-3.5 w-3.5" /> Eventos
       </Link>
-      <header className="space-y-2">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-secondary">
-          [ NUEVO EVENTO ]
-        </p>
-        <h1 className="font-display text-4xl uppercase leading-none tracking-tight">
-          Crear evento
-        </h1>
-        <p className="text-muted-foreground">
-          Solo super admin puede crear eventos. El brand admin después edita
-          contenido y tipos de entrada.
+      <header style={{ marginBottom: 22 }}>
+        <span className="eyebrow">Nuevo evento</span>
+        <h1 className="s-h1" style={{ marginTop: 4 }}>Crear evento</h1>
+        <p className="s-card__desc">
+          Solo super admin crea eventos. El dueño después edita contenido y tipos de entrada.
         </p>
       </header>
       <NewEventForm brands={brands} preselectedSlug={searchParams.brand ?? null} />
