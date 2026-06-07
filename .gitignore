@@ -40,6 +40,11 @@ Thumbs.db
 *.swp
 *.swo
 
+# Claude Code — config personal/local (NO debe viajar al repo).
+# settings.json (committeable, con hooks) SÍ se trackea; solo el .local sale.
+.claude/settings.local.json
+.claude/settings.local.json.bak-*
+
 # coverage
 coverage/
 
