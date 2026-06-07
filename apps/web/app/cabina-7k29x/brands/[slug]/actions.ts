@@ -20,7 +20,8 @@ const setPwdSchema = z.object({
 });
 
 // Super admin sets a brand_admin's password (target must be brand_admin of
-// that brand). Super admin itself stays on magic link (never gets a password).
+// that brand). El super admin también entra con email+contraseña; su password
+// se gestiona desde el dashboard de Supabase, no desde acá.
 export async function setBrandAdminPasswordAction(
   _prev: SetBrandPwdState,
   formData: FormData

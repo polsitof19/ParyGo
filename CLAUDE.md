@@ -47,7 +47,11 @@ cuando haya venta en curso: patrón two-phase (schema → deploy → canary → 
 para no romper la app vieja desplegada.
 
 ## Auth (modelo final)
-- Super admin (Paul, paulsebastian439@gmail.com): magic link. NO TOCAR.
+- Super admin (Paul, paulsebastian439@gmail.com): email + contraseña (antes
+  magic link; cambiado a pedido de Paul en rama feat/super-admin-redesign). El
+  panel super vive en un slug oculto (no /super). Recuperación de password vía
+  dashboard de Supabase. El guard real es server-side (requireSession superAdmin),
+  no el slug.
 - brand_admin + validator: email + password (Paul/brand_admin setean la fija).
 - Cada validator tiene su código PERSONAL de puerta (8 alfanum CSPRNG) →
   trazabilidad por persona en ticket_scans.validator_user_id.
