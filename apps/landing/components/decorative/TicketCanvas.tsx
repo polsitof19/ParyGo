@@ -28,7 +28,8 @@ export function TicketCanvas({ mountId }: { mountId: string }) {
       let THREE: typeof import('three');
       try {
         THREE = await import('three');
-      } catch {
+      } catch (err) {
+        console.warn('[TicketCanvas] three import failed → static fallback', err);
         return; // bundle failed → keep fallback
       }
       if (disposed || !mount) return;
@@ -51,7 +52,8 @@ export function TicketCanvas({ mountId }: { mountId: string }) {
       let renderer: import('three').WebGLRenderer;
       try {
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-      } catch {
+      } catch (err) {
+        console.warn('[TicketCanvas] WebGL unavailable → static fallback', err);
         return; // no WebGL → keep fallback
       }
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.8));
@@ -266,9 +268,13 @@ export function TicketCanvas({ mountId }: { mountId: string }) {
       (entries) => {
         for (const e of entries) {
           if (e.isIntersecting) {
-            const ric = (window as Window & { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback;
-            if (typeof ric === 'function') ric(() => start());
-            else window.setTimeout(() => start(), 80);
+            // Schedule reliably on ALL browsers. We deliberately DON'T use
+            // requestIdleCallback here: on desktop Chrome the hero's continuous
+            // CSS animations starve the idle queue, so start() never fired and
+            // the 3D stayed on the fallback — while mobile Safari (no rIC) hit
+            // the timer path and worked. A plain timer mounts on both. The 3D
+            // is already off the critical path (lazy dynamic import + this IO).
+            window.setTimeout(() => start(), 50);
           } else {
             cleanupRef.current();
             cleanupRef.current = () => {};

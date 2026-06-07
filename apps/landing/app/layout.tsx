@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { SITE } from '@/lib/site';
 import { JsOn } from '@/components/chrome/JsOn';
 import { RevealObserver } from '@/components/chrome/RevealObserver';
+import { Loader } from '@/components/chrome/Loader';
 import './globals.css';
 
 // v7 type system: Bricolage Grotesque (display) + Hanken Grotesk (body).
@@ -74,6 +75,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" className={`${bricolage.variable} ${hanken.variable}`}>
       <body>
         <JsOn />
+        <Loader />
         <RevealObserver />
         {children}
       </body>

@@ -70,17 +70,21 @@ h1, h2, h3, h4, p { margin: 0; }
 .h1 {
   font-family: var(--display);
   font-weight: 800;
-  font-size: clamp(52px, 9vw, 124px);
-  line-height: 0.92;
-  letter-spacing: -0.035em;
+  /* Floor de 40px (no 52) para que el título gigante NO desborde en celulares
+     de 320–390px; escala fluido con el viewport hasta 124px en desktop. */
+  font-size: clamp(40px, 11vw, 124px);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  overflow-wrap: break-word;
 }
 .h2 {
   font-family: var(--display);
   font-weight: 800;
-  font-size: clamp(38px, 6vw, 80px);
-  line-height: 0.98;
+  font-size: clamp(34px, 6.4vw, 80px);
+  line-height: 1.0;
   letter-spacing: -0.03em;
   text-wrap: balance;
+  overflow-wrap: break-word;
 }
 .h3 {
   font-family: var(--display);
@@ -270,6 +274,47 @@ h1, h2, h3, h4, p { margin: 0; }
   transition-delay: calc(var(--w, 0) * 90ms);
 }
 .js-on .hero__title.in .word { opacity: 1; transform: none; }
+
+/* ============================================================
+   INTRO / LOADER — apertura corta y elegante (estilo v7)
+   ============================================================ */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--cream);
+  display: grid;
+  place-items: center;
+  transition: opacity 360ms var(--ease), transform 420ms var(--ease);
+}
+.intro--out { opacity: 0; transform: translateY(-10px); pointer-events: none; }
+.intro__mark { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.intro__logo {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(40px, 9vw, 76px);
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  opacity: 0;
+  transform: translateY(14px);
+  animation: introLogo 560ms var(--ease) forwards;
+}
+.intro__logo .dot { color: var(--tangerine); }
+.intro__bar {
+  width: 0;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--tangerine);
+  animation: introBar 820ms var(--ease) 120ms forwards;
+}
+@keyframes introLogo { to { opacity: 1; transform: none; } }
+@keyframes introBar { from { width: 0; } to { width: 132px; } }
+
+/* títulos del hero — orden y aire en celular muy chico */
+@media (max-width: 560px) {
+  .hero__title { margin: 16px 0 22px; }
+  .hero__sub { margin-bottom: 28px; }
+}
 
 /* blobs */
 .blob {
@@ -1014,4 +1059,7 @@ h1, h2, h3, h4, p { margin: 0; }
   }
   .js-on .reveal, .js-on .reveal-stagger > *,
   .js-on .hero__title .word { opacity: 1 !important; transform: none !important; }
+  /* intro: sin animación de apertura en reduced-motion (el componente además
+     no la monta; esto es red de seguridad). */
+  .intro { display: none !important; }
 }
