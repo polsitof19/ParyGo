@@ -1,51 +1,63 @@
+import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { LoginForm } from './LoginForm';
+import './login.css';
 
 export const runtime = 'edge';
 
 export const metadata = {
-  title: 'Iniciar sesión',
+  title: 'Iniciar sesión · parygo',
 };
+
+// Misma identidad cálida que los paneles, scopeada bajo .auth-shell.
+const bricolage = Bricolage_Grotesque({
+  weight: ['700', '800'],
+  subsets: ['latin'],
+  variable: '--font-bricolage',
+  display: 'swap',
+});
+const hanken = Hanken_Grotesk({
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-hanken',
+  display: 'swap',
+});
 
 export default function LoginPage({
   searchParams,
 }: {
   searchParams: { error?: string; next?: string };
 }) {
+  const support = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP;
+
   return (
-    <main className="container-narrow flex min-h-screen flex-col justify-center gap-10 py-20">
-      <header className="space-y-3 text-center">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-secondary">
-          [ PARYGO · ACCESO ]
-        </p>
-        <h1 className="font-display text-4xl uppercase leading-none tracking-tight md:text-5xl">
-          Iniciá sesión
-        </h1>
-        <p className="mx-auto max-w-md text-muted-foreground">
-          Organizadores y staff: email + contraseña.
-        </p>
-      </header>
+    <main className={`auth-shell ${bricolage.variable} ${hanken.variable}`}>
+      <div className="auth-wrap">
+        <div className="auth-brand">
+          parygo<span className="dot">.</span>
+        </div>
 
-      <LoginForm next={searchParams.next} />
+        <div className="auth-card">
+          <p className="auth-eyebrow">Acceso</p>
+          <h1 className="auth-h1">Iniciá sesión</h1>
+          <p className="auth-sub">Organizadores y staff entran con su email y contraseña.</p>
 
-      {searchParams.error && (
-        <p className="mx-auto max-w-md rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-center text-sm text-destructive">
-          {decodeURIComponent(searchParams.error)}
-        </p>
-      )}
+          <LoginForm next={searchParams.next} />
 
-      {process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP && (
-        <p className="text-center font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
-          ¿Eres comprador buscando tu entrada?{' '}
-          <a
-            href={`https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-secondary underline-offset-4 hover:underline"
-          >
-            Soporte WhatsApp
-          </a>
-        </p>
-      )}
+          {searchParams.error && (
+            <p className="auth-banner">{decodeURIComponent(searchParams.error)}</p>
+          )}
+        </div>
+
+        {support && (
+          <p className="auth-foot">
+            ¿Comprás una entrada y necesitás ayuda?{' '}
+            <a href={`https://wa.me/${support}`} target="_blank" rel="noopener noreferrer">
+              Soporte por WhatsApp
+            </a>
+          </p>
+        )}
+        <p className="auth-legal">Al continuar aceptás los Términos y la Política de Privacidad.</p>
+      </div>
     </main>
   );
 }

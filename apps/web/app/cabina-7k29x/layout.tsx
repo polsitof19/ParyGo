@@ -1,6 +1,5 @@
 import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { requireSession } from '@/lib/auth';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { SuperTopbar } from './SuperTopbar';
 import './super.css';
 
@@ -25,16 +24,9 @@ const hanken = Hanken_Grotesk({
 export default async function SuperLayout({ children }: { children: React.ReactNode }) {
   const user = await requireSession({ superAdmin: true });
 
-  // Discreet pending-Yape counter for the support link (read-only).
-  const admin = createAdminClient();
-  const { count } = await admin
-    .from('yape_proofs')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'pending_review');
-
   return (
     <div className={`super-shell ${bricolage.variable} ${hanken.variable}`}>
-      <SuperTopbar email={user.email} yapeCount={count ?? 0} />
+      <SuperTopbar email={user.email} />
       <main className="s-wrap">{children}</main>
     </div>
   );

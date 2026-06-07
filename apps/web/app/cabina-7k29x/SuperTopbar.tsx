@@ -14,7 +14,7 @@ function isActive(pathname: string, href: string): boolean {
   return pathname.startsWith(href);
 }
 
-export function SuperTopbar({ email, yapeCount }: { email: string; yapeCount: number }) {
+export function SuperTopbar({ email }: { email: string }) {
   const pathname = usePathname() ?? '';
 
   return (
@@ -38,10 +38,6 @@ export function SuperTopbar({ email, yapeCount }: { email: string; yapeCount: nu
         </nav>
 
         <div className="s-topbar__right">
-          <Link href="/cabina-7k29x/yape" className="s-support-link" aria-current={pathname.startsWith('/cabina-7k29x/yape') ? 'page' : undefined}>
-            Yape pendientes
-            {yapeCount > 0 && <span className="count">{yapeCount}</span>}
-          </Link>
           <span className="s-email">{email}</span>
           <form action="/auth/logout" method="post">
             <button type="submit" aria-label="Cerrar sesión" className="s-iconbtn">

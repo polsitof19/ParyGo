@@ -1,70 +1,58 @@
 'use client';
 
+import { useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Eye, EyeOff } from 'lucide-react';
 import { loginAction, type LoginState } from './actions';
 
 const initialState: LoginState = { ok: false, message: null };
 
 export function LoginForm({ next }: { next?: string }) {
   const [state, formAction] = useFormState(loginAction, initialState);
-
-  if (state.ok) {
-    return (
-      <div className="mx-auto max-w-md space-y-4 rounded-lg border border-secondary/40 bg-secondary/5 px-6 py-8 text-center">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-secondary">
-          [ LINK ENVIADO ]
-        </p>
-        <p className="text-foreground">
-          Revisa tu bandeja en{' '}
-          <strong className="font-mono">{state.message}</strong>. El link expira
-          en 1 hora.
-        </p>
-        <p className="text-xs text-muted-foreground">
-          ¿No te llegó? Revisa spam. Si igual no aparece, contacta a soporte.
-        </p>
-      </div>
-    );
-  }
+  const [showPwd, setShowPwd] = useState(false);
 
   return (
-    <form action={formAction} className="mx-auto w-full max-w-md space-y-4">
+    <form action={formAction}>
       <input type="hidden" name="next" value={next ?? ''} />
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
+
+      <div className="auth-field">
+        <label htmlFor="email" className="auth-label">Email</label>
+        <input
           id="email"
           name="email"
           type="email"
           autoComplete="email"
           required
           placeholder="tu@email.com"
+          className="auth-input"
         />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="password">Contraseña</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          placeholder="••••••••"
-        />
-        <p className="text-xs text-muted-foreground">
-          Entrá con tu email y contraseña.
-        </p>
+
+      <div className="auth-field">
+        <label htmlFor="password" className="auth-label">Contraseña</label>
+        <div className="auth-pwrap">
+          <input
+            id="password"
+            name="password"
+            type={showPwd ? 'text' : 'password'}
+            autoComplete="current-password"
+            placeholder="••••••••"
+            className="auth-input"
+          />
+          <button
+            type="button"
+            className="auth-peek"
+            onClick={() => setShowPwd((v) => !v)}
+            aria-label={showPwd ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+          >
+            {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
-      {state.message && !state.ok && (
-        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive">
-          {state.message}
-        </p>
-      )}
+
+      {state.message && !state.ok && <p className="auth-banner">{state.message}</p>}
+
       <SubmitButton />
-      <p className="text-center text-xs text-muted-foreground">
-        Al continuar aceptas los Términos y la Política de Privacidad.
-      </p>
     </form>
   );
 }
@@ -72,14 +60,8 @@ export function LoginForm({ next }: { next?: string }) {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button
-      type="submit"
-      variant="gradient"
-      size="lg"
-      className="w-full"
-      disabled={pending}
-    >
-      {pending ? 'Entrando…' : 'Entrar →'}
-    </Button>
+    <button type="submit" className="auth-btn" disabled={pending}>
+      {pending ? 'Entrando…' : 'Entrar'}
+    </button>
   );
 }
