@@ -276,7 +276,9 @@ h1, h2, h3, h4, p { margin: 0; }
 .js-on .hero__title.in .word { opacity: 1; transform: none; }
 
 /* ============================================================
-   INTRO / LOADER — apertura corta y elegante (estilo v7)
+   INTRO / LOADER — apertura premium "Bloom" (estilo v7)
+   wipe del logo por máscara + punto tangerina con rebote/halo +
+   salida con cortina curva (clip-path). Solo transform/opacity/clip-path.
    ============================================================ */
 .intro {
   position: fixed;
@@ -285,30 +287,94 @@ h1, h2, h3, h4, p { margin: 0; }
   background: var(--cream);
   display: grid;
   place-items: center;
-  transition: opacity 360ms var(--ease), transform 420ms var(--ease);
+  overflow: hidden;
+  transition:
+    clip-path 420ms var(--ease),
+    transform 420ms var(--ease),
+    opacity 300ms var(--ease) 120ms;
+  clip-path: inset(0 0 0 0 round 0 0 0 0);
+  will-change: clip-path, transform;
 }
-.intro--out { opacity: 0; transform: translateY(-10px); pointer-events: none; }
-.intro__mark { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+/* salida: la cortina crema sube y su borde inferior se curva (gota blanda) */
+.intro--out {
+  clip-path: inset(0 0 100% 0 round 0 0 46% 46%);
+  transform: translateY(-2%);
+  opacity: 0;
+  pointer-events: none;
+}
+.intro__blob {
+  position: absolute;
+  width: min(78vw, 560px);
+  aspect-ratio: 1;
+  border-radius: 47% 53% 44% 56% / 55% 46% 54% 45%;
+  background: radial-gradient(120% 120% at 30% 30%, var(--cream-2), var(--cream-3));
+  opacity: 0.55;
+  transform: scale(0.92);
+  animation: introBlob 1200ms var(--ease) forwards;
+  filter: blur(0.5px);
+}
+.intro__mark { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .intro__logo {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
   font-family: var(--display);
   font-weight: 800;
   font-size: clamp(40px, 9vw, 76px);
   letter-spacing: -0.04em;
   color: var(--ink);
-  opacity: 0;
-  transform: translateY(14px);
-  animation: introLogo 560ms var(--ease) forwards;
+  line-height: 1;
 }
-.intro__logo .dot { color: var(--tangerine); }
+.intro__word {
+  display: inline-block;
+  clip-path: inset(0 100% 0 0);
+  transform: translateY(8px);
+  animation: introWord 540ms var(--ease) 90ms forwards;
+  will-change: clip-path, transform;
+}
+.intro__dot {
+  position: relative;
+  display: inline-block;
+  color: var(--tangerine);
+  opacity: 0;
+  transform: scale(0.2);
+  transform-origin: 50% 90%;
+  animation: introDot 360ms var(--bounce) 480ms forwards;
+}
+.intro__halo {
+  position: absolute;
+  left: 50%;
+  bottom: 0.18em;
+  width: 0.42em;
+  height: 0.42em;
+  margin: 0 0 0 -0.21em;
+  border-radius: 50%;
+  background: var(--tangerine);
+  opacity: 0;
+  transform: scale(0.4);
+  animation: introHalo 620ms var(--ease) 540ms forwards;
+  pointer-events: none;
+}
 .intro__bar {
   width: 0;
-  height: 3px;
-  border-radius: 3px;
-  background: var(--tangerine);
-  animation: introBar 820ms var(--ease) 120ms forwards;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--tangerine), var(--tangerine-deep));
+  animation: introBar 560ms var(--ease) 560ms forwards;
 }
-@keyframes introLogo { to { opacity: 1; transform: none; } }
-@keyframes introBar { from { width: 0; } to { width: 132px; } }
+@keyframes introBlob {
+  0%   { transform: scale(0.92); opacity: 0.42; }
+  60%  { transform: scale(1.04); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 0.5; }
+}
+@keyframes introWord { to { clip-path: inset(0 0 0 0); transform: none; } }
+@keyframes introDot { 0% { opacity: 0; transform: scale(0.2); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes introHalo {
+  0%   { opacity: 0.5; transform: scale(0.4); }
+  70%  { opacity: 0.18; }
+  100% { opacity: 0; transform: scale(3.4); }
+}
+@keyframes introBar { from { width: 0; } to { width: 88px; } }
 
 /* títulos del hero — orden y aire en celular muy chico */
 @media (max-width: 560px) {

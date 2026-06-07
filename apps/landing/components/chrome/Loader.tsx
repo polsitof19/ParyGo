@@ -38,9 +38,17 @@ export function Loader() {
 
   return (
     <div className={`intro intro--${phase}`} aria-hidden="true">
+      {/* blob orgánico cálido de fondo que respira (profundidad) */}
+      <span className="intro__blob" aria-hidden="true" />
+
       <div className="intro__mark">
         <span className="intro__logo">
-          parygo<span className="dot">.</span>
+          {/* "parygo" se descubre con un wipe por máscara; el punto rebota aparte */}
+          <span className="intro__word">parygo</span>
+          <span className="intro__dot">
+            .
+            <span className="intro__halo" aria-hidden="true" />
+          </span>
         </span>
         <span className="intro__bar" />
       </div>

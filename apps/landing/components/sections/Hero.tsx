@@ -3,18 +3,22 @@ import { TicketCanvas } from '@/components/decorative/TicketCanvas';
 
 // Splits a phrase into <span.word> with a sequential --w index so the CSS can
 // reveal each word in turn (refinamiento 2). `start` keeps the index running
-// across the whole title.
+// across the whole title. The space between words is emitted as a SEPARATE text
+// node (not inside the span): `.word` is display:inline-block, which collapses
+// whitespace at its edges — putting the space inside ran the words together
+// ("tudinero"). A sibling text node renders the gap correctly.
 function words(text: string, start: number) {
   const parts = text.split(' ');
-  return {
-    next: start + parts.length,
-    nodes: parts.map((p, i) => (
+  const nodes: React.ReactNode[] = [];
+  parts.forEach((p, i) => {
+    nodes.push(
       <span className="word" style={{ ['--w' as string]: start + i }} key={`${start}-${i}`}>
         {p}
-        {i < parts.length - 1 ? ' ' : ''}
       </span>
-    )),
-  };
+    );
+    if (i < parts.length - 1) nodes.push(' ');
+  });
+  return { next: start + parts.length, nodes };
 }
 
 // 01 — Hero

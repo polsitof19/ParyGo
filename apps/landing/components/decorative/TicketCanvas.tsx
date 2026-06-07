@@ -16,8 +16,12 @@ export function TicketCanvas({ mountId }: { mountId: string }) {
   useEffect(() => {
     const mount = document.getElementById(mountId);
     if (!mount) return;
+    // We do NOT bail on reduced-motion anymore. Instead the 3D mounts but is
+    // rendered STATIC (one frame, no auto-animation, no pointer/scroll
+    // listeners) — see below. That honors the motion preference while still
+    // showing the real 3D ticket. The flat SVG fallback now only appears when
+    // WebGL is genuinely unavailable.
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduced) return; // fallback SVG remains visible
 
     let disposed = false;
     let started = false;
@@ -215,32 +219,42 @@ export function TicketCanvas({ mountId }: { mountId: string }) {
         camera.aspect = nW / nH;
         camera.updateProjectionMatrix();
         renderer.setSize(nW, nH, false);
+        renderer.render(scene, camera); // keep the frame crisp on resize (also covers the static path)
       };
-      window.addEventListener('mousemove', onMove, { passive: true });
-      window.addEventListener('scroll', onScroll, { passive: true });
       window.addEventListener('resize', onResize);
-      mount.addEventListener('pointerenter', onEnter);
-      mount.addEventListener('pointerleave', onLeave);
-      onScroll();
 
       let animId = 0;
-      const animate = (t: number) => {
-        if (disposed) return;
-        const time = t * 0.001;
-        hover += (hoverTarget - hover) * 0.08;
-        // base float + mouse parallax
-        group.position.y = Math.sin(time * 0.9) * 0.12 + hover * 0.12;
-        // refinamiento 3: el scroll gira y acerca suave el ticket
-        group.rotation.y += (mx * 0.5 + scrollT * 0.6 - group.rotation.y) * 0.05 + 0.0015;
-        group.rotation.x += ((my * 0.3 - 0.04) - group.rotation.x) * 0.05;
-        group.rotation.z = Math.sin(time * 0.6) * 0.02;
-        // refinamiento 4: "se despega" al hover (+ leve acercamiento al scroll)
-        const s = 1 + hover * 0.05 + scrollT * 0.06;
-        group.scale.setScalar(s);
+      if (reduced) {
+        // STATIC render: nice 3/4 resting pose, one frame, no auto-motion and no
+        // pointer/scroll listeners → fully honors prefers-reduced-motion, but the
+        // user still sees the real 3D ticket instead of the flat SVG.
+        group.rotation.set(-0.05, 0.32, 0.02);
+        group.position.y = 0.02;
         renderer.render(scene, camera);
+      } else {
+        window.addEventListener('mousemove', onMove, { passive: true });
+        window.addEventListener('scroll', onScroll, { passive: true });
+        mount.addEventListener('pointerenter', onEnter);
+        mount.addEventListener('pointerleave', onLeave);
+        onScroll();
+        const animate = (t: number) => {
+          if (disposed) return;
+          const time = t * 0.001;
+          hover += (hoverTarget - hover) * 0.08;
+          // base float + mouse parallax
+          group.position.y = Math.sin(time * 0.9) * 0.12 + hover * 0.12;
+          // refinamiento 3: el scroll gira y acerca suave el ticket
+          group.rotation.y += (mx * 0.5 + scrollT * 0.6 - group.rotation.y) * 0.05 + 0.0015;
+          group.rotation.x += ((my * 0.3 - 0.04) - group.rotation.x) * 0.05;
+          group.rotation.z = Math.sin(time * 0.6) * 0.02;
+          // refinamiento 4: "se despega" al hover (+ leve acercamiento al scroll)
+          const s = 1 + hover * 0.05 + scrollT * 0.06;
+          group.scale.setScalar(s);
+          renderer.render(scene, camera);
+          animId = requestAnimationFrame(animate);
+        };
         animId = requestAnimationFrame(animate);
-      };
-      animId = requestAnimationFrame(animate);
+      }
 
       cleanupRef.current = () => {
         cancelAnimationFrame(animId);
