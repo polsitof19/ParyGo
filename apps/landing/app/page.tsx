@@ -1,14 +1,12 @@
 import { Header } from '@/components/Header';
 import { Hero } from '@/components/sections/Hero';
-import { PorQueExistimos } from '@/components/sections/PorQueExistimos';
+import { Uses } from '@/components/sections/Uses';
+import { How } from '@/components/sections/How';
+import { Includes } from '@/components/sections/Includes';
 import { Demo } from '@/components/sections/Demo';
-import { Proceso } from '@/components/sections/Proceso';
-import { Features } from '@/components/sections/Features';
-import { Precios } from '@/components/sections/Precios';
-import { Testimonios } from '@/components/sections/Testimonios';
-import { Garantia } from '@/components/sections/Garantia';
-import { Fundador } from '@/components/sections/Fundador';
-import { CtaFinal } from '@/components/sections/CtaFinal';
+import { Pricing } from '@/components/sections/Pricing';
+import { Proof } from '@/components/sections/Proof';
+import { Final } from '@/components/sections/Final';
 import { Footer } from '@/components/sections/Footer';
 import { StructuredData } from '@/components/seo/StructuredData';
 
@@ -17,17 +15,15 @@ export default function Home() {
     <>
       <StructuredData />
       <Header />
-      <main>
+      <main id="top">
         <Hero />
-        <PorQueExistimos />
+        <Uses />
+        <How />
+        <Includes />
         <Demo />
-        <Proceso />
-        <Features />
-        <Precios />
-        <Testimonios />
-        <Garantia />
-        <Fundador />
-        <CtaFinal />
+        <Pricing />
+        <Proof />
+        <Final />
       </main>
       <Footer />
     </>

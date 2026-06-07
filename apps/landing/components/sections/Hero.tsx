@@ -1,162 +1,86 @@
-import { Reveal } from '@/components/anim/Reveal';
-import { SplitWords, type Word } from '@/components/anim/SplitWords';
-import { Magnet } from '@/components/anim/Magnet';
-import { LiveClock } from '@/components/chrome/LiveClock';
-import { Waveform } from '@/components/chrome/Waveform';
-import { PhoneMockup } from '@/components/decorative/PhoneMockup';
 import { CTA } from '@/lib/cta';
+import { TicketCanvas } from '@/components/decorative/TicketCanvas';
 
-const TITLE: Word[] = [
-  { t: 'El' },
-  { t: 'ticketing' },
-  { br: true },
-  { t: 'que' },
-  { t: 'tu' },
-  { t: 'marca' },
-  { br: true },
-  { t: 'merece.', italic: true },
-];
+// Splits a phrase into <span.word> with a sequential --w index so the CSS can
+// reveal each word in turn (refinamiento 2). `start` keeps the index running
+// across the whole title.
+function words(text: string, start: number) {
+  const parts = text.split(' ');
+  return {
+    next: start + parts.length,
+    nodes: parts.map((p, i) => (
+      <span className="word" style={{ ['--w' as string]: start + i }} key={`${start}-${i}`}>
+        {p}
+        {i < parts.length - 1 ? ' ' : ''}
+      </span>
+    )),
+  };
+}
 
+// 01 — Hero
 export function Hero() {
+  const l1 = words('Tus eventos,', 0);
+  const l2 = words('tus entradas,', l1.next);
+  const l3 = words('tu dinero', l2.next);
+
   return (
-    <section
-      id="top"
-      data-screen-label="01 Hero"
-      className="section-y relative overflow-hidden pt-[140px] pb-24"
-    >
-      <div className="absolute inset-0 z-0 pointer-events-none" aria-hidden="true">
-        <div
-          className="absolute"
-          style={{
-            inset: '-10%',
-            background:
-              'radial-gradient(circle at 75% 25%, rgba(255,31,143,0.18), transparent 50%), radial-gradient(circle at 20% 80%, rgba(0,229,255,0.10), transparent 55%), radial-gradient(circle at 50% 50%, rgba(185,33,255,0.08), transparent 60%)',
-            filter: 'blur(20px)',
-            animation: 'mesh-drift 180s linear infinite',
-          }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage:
-              'linear-gradient(to right, rgba(42,42,56,0.4) 1px, transparent 1px), linear-gradient(to bottom, rgba(42,42,56,0.4) 1px, transparent 1px)',
-            backgroundSize: '60px 60px',
-            maskImage:
-              'radial-gradient(ellipse at 50% 45%, #000 0%, transparent 70%)',
-            WebkitMaskImage:
-              'radial-gradient(ellipse at 50% 45%, #000 0%, transparent 70%)',
-          }}
-        />
+    <section className="section hero" aria-labelledby="hero-title">
+      <div className="hero__blobs" aria-hidden="true">
+        <div className="b1" />
+        <div className="b2" />
+        <div className="b3" />
       </div>
 
-      <div className="wrap relative z-[1]">
-        <div className="mb-16 grid items-start gap-6 md:grid-cols-[auto_1fr_auto]">
-          <Reveal>
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full mono font-bold"
-              style={{
-                background: 'var(--yellow)',
-                color: '#000',
-                padding: '6px 12px',
-                fontSize: 10,
-                transform: 'rotate(-3deg)',
-              }}
-            >
-              ★ Disponible en Lima
-            </span>
-          </Reveal>
-          <span aria-hidden="true" />
-          <Reveal>
-            <div className="mono flex flex-col items-start gap-1 leading-[1.7] md:items-end md:text-right">
-              <span className="inline-flex items-center gap-2">
-                <span className="pg-dot" />
-                LIMA, PE — LIVE <LiveClock />
-              </span>
-              <span>−12.0464° S · −77.0428° W</span>
-              <span>Ticketing urbano · v1.0</span>
-            </div>
-          </Reveal>
-        </div>
-
-        <div className="grid items-center gap-8 md:grid-cols-[minmax(0,1.35fr)_minmax(260px,0.8fr)] md:gap-16">
+      <div className="container hero__inner">
+        <div className="hero__grid">
           <div>
-            <Reveal className="mb-8 inline-flex">
-              <span className="eyebrow">
-                <span className="bracket">[</span> TICKETING URBANO · LIMA + LATAM{' '}
-                <span className="bracket">]</span>
-              </span>
-            </Reveal>
-
-            <SplitWords
-              as="h1"
-              className="h1 relative z-[2] mb-9"
-              words={TITLE}
-            />
-
-            <Reveal className="body-lg max-w-[50ch] mb-10">
-              Plataforma con tu identidad, tu URL, tu control. Página dedicada,
-              QR único por entrada, validación en vivo en puerta. S/200 por
-              evento. Sin comisiones por venta.
-            </Reveal>
-
-            <Reveal className="flex flex-wrap items-center gap-6 mb-16">
-              <Magnet>
-                <a
-                  href={CTA.hero}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  data-cursor="hover"
-                  className="btn btn-grad btn-xl"
-                >
-                  Empezar ahora <span className="arrow">→</span>
-                </a>
-              </Magnet>
-              <a
-                href="#funciona"
-                data-cursor="hover"
-                className="btn btn-ghost"
-              >
-                Ver cómo funciona ↓
+            <span className="eyebrow reveal">Vende entradas en Perú</span>
+            <h1 className="h1 hero__title" id="hero-title">
+              <span className="ink">{l1.nodes}</span>
+              <br />
+              {l2.nodes}
+              <br />
+              <span className="squiggle accent">{l3.nodes}</span>
+              <span className="word" style={{ ['--w' as string]: l3.next }}>.</span>
+            </h1>
+            <p className="lede hero__sub reveal">
+              Discotecas, conciertos, fiestas, cumpleaños. Vende entradas, cobra directo y controla quién entra.
+            </p>
+            <div className="hero__ctas reveal">
+              <a href={CTA.hero} className="btn btn-primary btn-lg" target="_blank" rel="noopener noreferrer">
+                Empezar <span className="arrow" aria-hidden="true">→</span>
               </a>
-            </Reveal>
-
-            <Reveal
-              className="flex flex-wrap items-center gap-6 pt-7 mono"
-              as="div"
-            >
-              <span style={{ borderTop: '1px solid var(--border)', position: 'absolute' }} className="hidden" />
-              <span>24H · SETUP COMPLETO</span>
-              <span className="text-fg-3">/</span>
-              <span>0% · COMISIÓN POR ENTRADA</span>
-              <span className="text-fg-3">/</span>
-              <span>2026 · ACEPTANDO PRIMEROS CLIENTES</span>
-            </Reveal>
+              <a href="#como" className="btn btn-ghost">
+                <span className="ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="6 4 20 12 6 20 6 4" fill="currentColor" stroke="none" /></svg>
+                </span>
+                Ver cómo funciona
+              </a>
+            </div>
+            <div className="hero__chips reveal">
+              <span className="chip"><span className="tick" aria-hidden="true">✓</span> Pagos directo a ti</span>
+              <span className="chip"><span className="tick" aria-hidden="true">✓</span> Yape y tarjeta</span>
+              <span className="chip"><span className="tick" aria-hidden="true">✓</span> Cero comisión por entrada</span>
+            </div>
           </div>
 
-          <div className="relative">
-            <PhoneMockup />
-            <Waveform
-              bars={32}
-              minH={12}
-              maxH={36}
-              className="absolute right-0 -bottom-8 z-[2] opacity-50"
-            />
+          <div className="hero__visual reveal" id="heroVisual">
+            <div className="blob-back" aria-hidden="true" />
+            <span className="hero__spark s1" aria-hidden="true">✦</span>
+            <span className="hero__spark s2" aria-hidden="true">✦</span>
+            {/* Static fallback (reduced-motion / no-WebGL / pre-load). Hidden once .has3d. */}
+            <div className="fallback" aria-hidden="true">
+              <svg viewBox="0 0 240 150" width="80%" xmlns="http://www.w3.org/2000/svg">
+                <rect x="6" y="14" width="228" height="122" rx="18" fill="#fff" />
+                <line x1="160" y1="14" x2="160" y2="136" stroke="#EFE6D6" strokeWidth="2" strokeDasharray="5 5" />
+                <text x="30" y="52" fontFamily="var(--display)" fontWeight="800" fontSize="22" fill="#231C17">PARYGO</text>
+                <text x="30" y="80" fontFamily="var(--body)" fontSize="11" fill="#6B5F54">ADMIT ONE</text>
+                <rect x="30" y="94" width="90" height="8" rx="4" fill="#FF6A3D" />
+                <rect x="178" y="44" width="40" height="40" rx="8" fill="#231C17" />
+              </svg>
+            </div>
+            <TicketCanvas mountId="heroVisual" />
           </div>
-        </div>
-
-        <div
-          className="mt-14 flex flex-col items-start justify-between gap-4 pt-7 md:flex-row md:items-center mono"
-          style={{
-            borderTop: '1px dashed var(--border)',
-            color: 'var(--fg-3)',
-            letterSpacing: '0.16em',
-          }}
-        >
-          <span>
-            <span className="animate-bob inline-block text-cyan">↓</span> SCROLL TO
-            EXPLORE
-          </span>
-          <span>N° 01 / 10</span>
         </div>
       </div>
     </section>

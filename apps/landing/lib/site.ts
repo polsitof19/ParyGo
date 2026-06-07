@@ -2,9 +2,9 @@ export const SITE = {
   name: 'ParyGo',
   domain: 'parygo.pages.dev',
   url: 'https://parygo.pages.dev',
-  title: 'ParyGo · Ticketing premium para promotores de eventos',
+  title: 'ParyGo — Vende las entradas de tu evento sin complicarte',
   description:
-    'Plataforma de ticketing con tu marca propia. Página dedicada, QR único por entrada, validación en vivo. Desde S/200 por evento, sin comisiones.',
+    'Discotecas, conciertos, fiestas, cumpleaños. Vende entradas con tu marca, cobra directo por Yape y tarjeta (cero comisión por entrada) y controla quién entra con QR. Desde S/200 por evento.',
   keywords: [
     'ticketing peru',
     'entradas eventos discoteca',
@@ -16,7 +16,7 @@ export const SITE = {
   locale: 'es_PE',
   whatsappNumber: '56932881230',
   whatsappDisplay: '+56 9 3288 1230',
-  themeColor: '#050508',
+  themeColor: '#FBF7F0',
   // TODO: replace with rasterized PNG (1200x630) for Facebook/Twitter card support.
   // Most social crawlers do not accept SVG for OG images.
   ogImage: '/og.svg',

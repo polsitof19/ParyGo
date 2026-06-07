@@ -1,39 +1,23 @@
 import type { Metadata, Viewport } from 'next';
-import { Anton, Inter, Instrument_Serif, JetBrains_Mono } from 'next/font/google';
+import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { SITE } from '@/lib/site';
-import { Loader } from '@/components/chrome/Loader';
-import { Cursor } from '@/components/chrome/Cursor';
-import { ScrollProgress } from '@/components/chrome/ScrollProgress';
-import { ChromeDecor } from '@/components/chrome/ChromeDecor';
 import { JsOn } from '@/components/chrome/JsOn';
+import { RevealObserver } from '@/components/chrome/RevealObserver';
 import './globals.css';
 
-const anton = Anton({
-  weight: '400',
+// v7 type system: Bricolage Grotesque (display) + Hanken Grotesk (body).
+// Loaded via next/font (self-hosted, no render-blocking external request).
+const bricolage = Bricolage_Grotesque({
+  weight: ['400', '700', '800'],
   subsets: ['latin'],
-  variable: '--font-anton',
+  variable: '--font-bricolage',
   display: 'swap',
 });
 
-const inter = Inter({
-  weight: ['400', '500', '600'],
+const hanken = Hanken_Grotesk({
+  weight: ['400', '500', '600', '700'],
   subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-});
-
-const instrumentSerif = Instrument_Serif({
-  weight: '400',
-  style: 'italic',
-  subsets: ['latin'],
-  variable: '--font-instrument-serif',
-  display: 'swap',
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  weight: '400',
-  subsets: ['latin'],
-  variable: '--font-jetbrains-mono',
+  variable: '--font-hanken',
   display: 'swap',
 });
 
@@ -55,9 +39,7 @@ export const metadata: Metadata = {
   authors: [{ name: SITE.name }],
   creator: SITE.name,
   publisher: SITE.name,
-  alternates: {
-    canonical: '/',
-  },
+  alternates: { canonical: '/' },
   openGraph: {
     type: 'website',
     locale: SITE.locale,
@@ -65,14 +47,7 @@ export const metadata: Metadata = {
     siteName: SITE.name,
     title: SITE.title,
     description: SITE.description,
-    images: [
-      {
-        url: SITE.ogImage,
-        width: 1200,
-        height: 630,
-        alt: SITE.title,
-      },
-    ],
+    images: [{ url: SITE.ogImage, width: 1200, height: 630, alt: SITE.title }],
   },
   twitter: {
     card: 'summary_large_image',
@@ -94,22 +69,12 @@ export const metadata: Metadata = {
   category: 'technology',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="es"
-      className={`${anton.variable} ${inter.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable}`}
-    >
-      <body className="font-sans">
+    <html lang="es" className={`${bricolage.variable} ${hanken.variable}`}>
+      <body>
         <JsOn />
-        <Loader />
-        <Cursor />
-        <ScrollProgress />
-        <ChromeDecor />
+        <RevealObserver />
         {children}
       </body>
     </html>
