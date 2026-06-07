@@ -45,7 +45,7 @@ export async function setBrandAdminPasswordAction(
   });
   if (error) return { ok: false, message: 'No se pudo actualizar la contraseña.' };
 
-  revalidatePath(`/super/brands/${formData.get('slug') ?? ''}`);
+  revalidatePath(`/cabina-7k29x/brands/${formData.get('slug') ?? ''}`);
   return { ok: true, message: 'Contraseña actualizada.' };
 }
 
@@ -87,8 +87,8 @@ export async function loadPackAction(
     return { ok: false, message: error?.message ?? 'No se pudo cargar el pack.' };
   }
 
-  revalidatePath('/super/brands');
-  revalidatePath(`/super/brands/${formData.get('slug') ?? ''}`);
+  revalidatePath('/cabina-7k29x/brands');
+  revalidatePath(`/cabina-7k29x/brands/${formData.get('slug') ?? ''}`);
   return {
     ok: true,
     message: `Pack ${pack} cargado (+${cfg.added}). Nuevo saldo: ${newBalance} evento${newBalance === 1 ? '' : 's'}.`,
@@ -167,6 +167,6 @@ async function attach(
     type: 'brand_admin_invited',
     payload: { email },
   });
-  revalidatePath(`/super/brands`);
+  revalidatePath(`/cabina-7k29x/brands`);
   return { ok: true, message: `Invitación enviada a ${email}.` };
 }

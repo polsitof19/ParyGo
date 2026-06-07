@@ -64,7 +64,7 @@ export default async function SuperHome() {
             {noSaldo > 0 && <> · <span style={{ color: 'var(--alert)' }}>{noSaldo} sin saldo</span></>}
           </p>
         </div>
-        <Link href="/super/brands/new" className="s-btn s-btn--primary">
+        <Link href="/cabina-7k29x/brands/new" className="s-btn s-btn--primary">
           <Plus className="h-4 w-4" /> Crear marca
         </Link>
       </div>
@@ -90,7 +90,7 @@ export default async function SuperHome() {
                   {rows.map((r) => (
                     <tr key={r.id} className={isAlert(r) ? 's-row--alert' : undefined}>
                       <td>
-                        <Link href={`/super/brands/${r.slug}`} className="s-cell-brand s-rowlink" aria-label={`Abrir ${r.name}`}>
+                        <Link href={`/cabina-7k29x/brands/${r.slug}`} className="s-cell-brand s-rowlink" aria-label={`Abrir ${r.name}`}>
                           <span className="s-avatar" style={{ background: bgFor(r.slug) }}>{initialOf(r.name)}</span>
                           <span>
                             <span className="nm" style={{ display: 'block' }}>{r.name}</span>
@@ -126,7 +126,7 @@ export default async function SuperHome() {
           {/* Móvil: cards */}
           <div className="s-brandcards">
             {rows.map((r) => (
-              <Link key={r.id} href={`/super/brands/${r.slug}`} className={`s-brandcard${isAlert(r) ? ' s-brandcard--alert' : ''}`}>
+              <Link key={r.id} href={`/cabina-7k29x/brands/${r.slug}`} className={`s-brandcard${isAlert(r) ? ' s-brandcard--alert' : ''}`}>
                 <span className="s-avatar" style={{ background: bgFor(r.slug) }}>{initialOf(r.name)}</span>
                 <span style={{ minWidth: 0 }}>
                   <span className="nm" style={{ display: 'block' }}>{r.name}</span>

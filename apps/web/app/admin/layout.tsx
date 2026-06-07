@@ -18,7 +18,7 @@ export default async function AdminLayout({
 }) {
   const user = await requireSession();
   // Super admin bypasses this layout (goes to /super); brand_admin uses it.
-  if (user.isSuperAdmin) redirect('/super');
+  if (user.isSuperAdmin) redirect('/cabina-7k29x');
   const brandMembership = user.brandMemberships.find((m) => m.role === 'brand_admin');
   if (!brandMembership) {
     // A pure validator only gets the door scanner — nothing else in the panel.

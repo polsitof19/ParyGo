@@ -76,7 +76,7 @@ export async function upsertTicketTypeAction(formData: FormData): Promise<Upsert
       .select('id, name, description, price_cents, capacity, sold, sort_order, color_hex, is_active')
       .single();
     if (error || !data) return { ok: false, message: error?.message ?? 'No se pudo actualizar' };
-    revalidatePath(`/super/events/${parsed.data.event_id}`);
+    revalidatePath(`/cabina-7k29x/events/${parsed.data.event_id}`);
     return { ok: true, message: 'Tipo actualizado', ticketType: data as TicketTypeRow };
   } else {
     // Insert
@@ -86,7 +86,7 @@ export async function upsertTicketTypeAction(formData: FormData): Promise<Upsert
       .select('id, name, description, price_cents, capacity, sold, sort_order, color_hex, is_active')
       .single();
     if (error || !data) return { ok: false, message: error?.message ?? 'No se pudo crear' };
-    revalidatePath(`/super/events/${parsed.data.event_id}`);
+    revalidatePath(`/cabina-7k29x/events/${parsed.data.event_id}`);
     return { ok: true, message: 'Tipo creado', ticketType: data as TicketTypeRow };
   }
 }
@@ -110,7 +110,7 @@ export async function deleteTicketTypeAction(
 
   const { error } = await admin.from('ticket_types').delete().eq('id', id);
   if (error) return { ok: false, message: error.message };
-  revalidatePath(`/super/events/${tt.event_id}`);
+  revalidatePath(`/cabina-7k29x/events/${tt.event_id}`);
   return { ok: true };
 }
 
@@ -145,7 +145,7 @@ export async function setEventPublishedAction(
     payload: {},
   });
 
-  revalidatePath(`/super/events/${eventId}`);
-  revalidatePath('/super/events');
+  revalidatePath(`/cabina-7k29x/events/${eventId}`);
+  revalidatePath('/cabina-7k29x/events');
   return { ok: true };
 }

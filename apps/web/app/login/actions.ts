@@ -117,8 +117,10 @@ function clientIp(): string {
 
 const GENERIC_LOGIN_ERROR = 'Email o contraseña incorrectos.';
 
-// Single login entry: the super admin uses magic link; brand_admin/validator
-// use email+password. Generic error (anti-enumeration) + rate limit.
+// Login unificado: TODOS los roles entran con email + contraseña, incluido el
+// super admin (antes magic link). Si el super admin deja la contraseña vacía,
+// conserva el magic link SOLO como recuperación de acceso (va únicamente a su
+// casilla). Error genérico (anti-enumeración) + rate limit para todos.
 export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const password = String(formData.get('password') ?? '');
@@ -126,10 +128,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     return { ok: false, message: 'Email inválido.' };
   }
 
-  // Super admin keeps magic link (password ignored). Untouched flow.
-  if (email === serverEnv.SUPER_ADMIN_EMAIL.toLowerCase()) {
-    return sendMagicLink(_prev, formData);
-  }
+  const isSuperAdmin = email === serverEnv.SUPER_ADMIN_EMAIL.toLowerCase();
 
   const admin = createAdminClient();
   const { data: rl } = await admin.rpc('check_and_record_auth_attempt', {
@@ -139,7 +138,13 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   if ((rl as { blocked?: boolean } | null)?.blocked) {
     return { ok: false, message: 'Demasiados intentos. Esperá unos minutos e intentá de nuevo.' };
   }
-  if (!password) return { ok: false, message: GENERIC_LOGIN_ERROR };
+
+  // Sin contraseña: el super admin recupera acceso por magic link; el resto
+  // de roles requiere contraseña.
+  if (!password) {
+    if (isSuperAdmin) return sendMagicLink(_prev, formData);
+    return { ok: false, message: GENERIC_LOGIN_ERROR };
+  }
 
   const supabase = createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });

@@ -11,7 +11,7 @@ export const metadata = {
 export default function NewBrandPage() {
   return (
     <div style={{ maxWidth: 560, margin: '0 auto' }}>
-      <Link href="/super" className="s-back">
+      <Link href="/cabina-7k29x" className="s-back">
         <ChevronLeft className="h-3.5 w-3.5" /> Marcas
       </Link>
 

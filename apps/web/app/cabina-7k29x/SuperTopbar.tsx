@@ -5,12 +5,12 @@ import { usePathname } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 
 const NAV = [
-  { href: '/super', label: 'Marcas' },
-  { href: '/super/events', label: 'Eventos' },
+  { href: '/cabina-7k29x', label: 'Marcas' },
+  { href: '/cabina-7k29x/events', label: 'Eventos' },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
-  if (href === '/super') return pathname === '/super' || pathname.startsWith('/super/brands');
+  if (href === '/cabina-7k29x') return pathname === '/cabina-7k29x' || pathname.startsWith('/cabina-7k29x/brands');
   return pathname.startsWith(href);
 }
 
@@ -20,7 +20,7 @@ export function SuperTopbar({ email, yapeCount }: { email: string; yapeCount: nu
   return (
     <header className="s-topbar">
       <div className="s-topbar__inner">
-        <Link href="/super" className="s-logo">
+        <Link href="/cabina-7k29x" className="s-logo">
           parygo<span className="dot">.</span>
           <span className="tag">Super</span>
         </Link>
@@ -38,7 +38,7 @@ export function SuperTopbar({ email, yapeCount }: { email: string; yapeCount: nu
         </nav>
 
         <div className="s-topbar__right">
-          <Link href="/super/yape" className="s-support-link" aria-current={pathname.startsWith('/super/yape') ? 'page' : undefined}>
+          <Link href="/cabina-7k29x/yape" className="s-support-link" aria-current={pathname.startsWith('/cabina-7k29x/yape') ? 'page' : undefined}>
             Yape pendientes
             {yapeCount > 0 && <span className="count">{yapeCount}</span>}
           </Link>

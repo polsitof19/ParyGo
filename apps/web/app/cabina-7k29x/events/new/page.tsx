@@ -20,12 +20,12 @@ export default async function NewEventPage({
     .order('name');
 
   if (!brands || brands.length === 0) {
-    redirect('/super/brands/new');
+    redirect('/cabina-7k29x/brands/new');
   }
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto' }}>
-      <Link href="/super/events" className="s-back">
+      <Link href="/cabina-7k29x/events" className="s-back">
         <ChevronLeft className="h-3.5 w-3.5" /> Eventos
       </Link>
       <header style={{ marginBottom: 22 }}>

@@ -71,7 +71,7 @@ export async function destinationForUser(
     .select('is_super_admin')
     .eq('user_id', userId)
     .maybeSingle();
-  if (profile?.is_super_admin) return '/super';
+  if (profile?.is_super_admin) return '/cabina-7k29x';
   const { data: membership } = await supabase
     .from('brand_members')
     .select('role')

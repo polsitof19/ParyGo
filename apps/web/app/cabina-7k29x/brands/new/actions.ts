@@ -116,7 +116,7 @@ export async function createBrandAction(
     });
     if (rpcErr) {
       // Brand was created but creds failed — surface the issue, brand still usable for Yape.
-      revalidatePath('/super/brands');
+      revalidatePath('/cabina-7k29x/brands');
       return {
         ok: false,
         message: `Marca creada pero las credenciales MP fallaron: ${rpcErr.message}. Prueba guardarlas desde la página de la marca.`,
@@ -131,8 +131,8 @@ export async function createBrandAction(
     payload: { slug: brand.slug, name: parsed.data.name },
   });
 
-  revalidatePath('/super/brands');
-  redirect(`/super/brands/${brand.slug}`);
+  revalidatePath('/cabina-7k29x/brands');
+  redirect(`/cabina-7k29x/brands/${brand.slug}`);
 }
 
 // ============================================================================
@@ -273,7 +273,7 @@ export async function createBrandWithOwnerAction(
   ]);
   if (logErr) console.error('[createBrandWithOwner] events_log falló', logErr.message);
 
-  revalidatePath('/super');
-  revalidatePath('/super/brands');
-  redirect(`/super/brands/${brand.slug}`);
+  revalidatePath('/cabina-7k29x');
+  revalidatePath('/cabina-7k29x/brands');
+  redirect(`/cabina-7k29x/brands/${brand.slug}`);
 }

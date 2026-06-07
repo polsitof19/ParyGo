@@ -12,7 +12,7 @@ export default async function ScanPage() {
   const membership = user.brandMemberships.find(
     (m) => m.role === 'validator' || m.role === 'brand_admin'
   );
-  if (!membership) redirect(user.isSuperAdmin ? '/super' : '/login');
+  if (!membership) redirect(user.isSuperAdmin ? '/cabina-7k29x' : '/login');
 
   const supabase = createClient();
   const { data: brand } = await supabase

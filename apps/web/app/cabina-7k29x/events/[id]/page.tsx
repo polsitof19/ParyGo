@@ -46,7 +46,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
 
   return (
     <>
-      <Link href="/super/events" className="s-back">
+      <Link href="/cabina-7k29x/events" className="s-back">
         <ChevronLeft className="h-3.5 w-3.5" /> Eventos
       </Link>
 

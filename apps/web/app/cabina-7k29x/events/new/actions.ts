@@ -107,6 +107,6 @@ export async function createEventAction(
     payload: { slug: parsed.data.slug, name: parsed.data.name },
   });
 
-  revalidatePath('/super/events');
-  redirect(`/super/events/${newEventId}`);
+  revalidatePath('/cabina-7k29x/events');
+  redirect(`/cabina-7k29x/events/${newEventId}`);
 }

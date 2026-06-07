@@ -53,7 +53,7 @@ export function LoginForm({ next }: { next?: string }) {
           placeholder="••••••••"
         />
         <p className="text-xs text-muted-foreground">
-          Los organizadores entran con email + contraseña. El admin de ParyGo recibe un link mágico (dejá la contraseña vacía).
+          Entrá con tu email y contraseña.
         </p>
       </div>
       {state.message && !state.ok && (

@@ -118,7 +118,7 @@ export async function GET(req: NextRequest) {
       .eq('user_id', user.id)
       .maybeSingle();
     if (profile?.is_super_admin) {
-      destination = '/super';
+      destination = '/cabina-7k29x';
     } else {
       const { data: membership } = await supabase
         .from('brand_members')

@@ -12,7 +12,7 @@ export default async function ScanLayout({ children }: { children: React.ReactNo
     (m) => m.role === 'validator' || m.role === 'brand_admin'
   );
   if (!membership) {
-    redirect(user.isSuperAdmin ? '/super' : '/login?error=' + encodeURIComponent('Acceso solo para staff de puerta.'));
+    redirect(user.isSuperAdmin ? '/cabina-7k29x' : '/login?error=' + encodeURIComponent('Acceso solo para staff de puerta.'));
   }
 
   const supabase = createClient();

@@ -20,7 +20,7 @@ export default async function EventsListPage() {
           <h1 className="s-h1" style={{ marginTop: 4 }}>Eventos</h1>
           <p className="s-card__desc">{events?.length ?? 0} evento{events?.length === 1 ? '' : 's'} en todas las marcas.</p>
         </div>
-        <Link href="/super/events/new" className="s-btn s-btn--primary">
+        <Link href="/cabina-7k29x/events/new" className="s-btn s-btn--primary">
           <Plus className="h-4 w-4" /> Nuevo evento
         </Link>
       </div>
@@ -34,7 +34,7 @@ export default async function EventsListPage() {
               const brand = Array.isArray(e.brand) ? e.brand[0] : e.brand;
               return (
                 <li key={e.id} className="s-event-row">
-                  <Link href={`/super/events/${e.id}`} className="s-event-row__main">
+                  <Link href={`/cabina-7k29x/events/${e.id}`} className="s-event-row__main">
                     <span className="s-event-row__name">{e.name}</span>
                     <span className="s-event-row__date">
                       {brand?.name ?? '—'} · {new Date(e.starts_at).toLocaleString('es-PE', {
@@ -45,7 +45,7 @@ export default async function EventsListPage() {
                   <span className={`s-badge ${e.is_published ? 's-badge--ok' : 's-badge--draft'}`}>
                     {e.is_published ? 'Publicado' : 'Borrador'}
                   </span>
-                  <Link href={`/super/events/${e.id}`} className="s-event-row__go" aria-label={`Abrir ${e.name}`}>
+                  <Link href={`/cabina-7k29x/events/${e.id}`} className="s-event-row__go" aria-label={`Abrir ${e.name}`}>
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </li>
