@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { nanoid } from 'nanoid';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { serverEnv } from '@/lib/env';
+import { validateMercadoPagoToken } from '@/lib/mercadopago';
 
 export type SettingsState = {
   ok: boolean;
@@ -130,4 +132,104 @@ export async function updateBrandSettingsAction(
   revalidatePath('/admin');
   revalidatePath('/admin/settings');
   return { ok: true, message: 'Configuración guardada. Los cambios ya están en vivo.' };
+}
+
+// =============================================================
+// MercadoPago credentials (self-service del brand_admin)
+// =============================================================
+// Los tokens NUNCA viajan al cliente: se reciben del form, se validan contra MP
+// y se guardan ENCRIPTADOS vía set_brand_mp_credentials (pgp_sym_encrypt,
+// service_role-only). El brand_id SIEMPRE sale de la sesión, nunca del form, así
+// que un brand_admin solo puede tocar SUS propias credenciales.
+
+// Las credenciales de MercadoPago siempre empiezan con APP_USR- (producción) o
+// TEST- (sandbox). El prefijo atrapa typos y campos cruzados antes de pegarle a
+// MP; el access_token además se valida CONTRA MP abajo (la verdad real).
+const MP_CRED_RE = /^(APP_USR-|TEST-)/;
+const mpSchema = z.object({
+  mp_access_token: z
+    .string()
+    .trim()
+    .min(10, 'Access token demasiado corto')
+    .max(400)
+    .regex(MP_CRED_RE, 'El access token debe empezar con APP_USR- o TEST-'),
+  mp_public_key: z
+    .string()
+    .trim()
+    .min(10, 'Public key demasiado corta')
+    .max(400)
+    .regex(MP_CRED_RE, 'La public key debe empezar con APP_USR- o TEST-'),
+});
+
+export async function updateMpCredentialsAction(
+  _prev: SettingsState,
+  formData: FormData
+): Promise<SettingsState> {
+  const user = await requireSession();
+  // ENFORCEMENT: el brand sale de la sesión, NUNCA del form.
+  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
+  if (!membership) {
+    return { ok: false, message: 'No tenés acceso de promotor.' };
+  }
+  const brandId = membership.brandId;
+  const admin = createAdminClient();
+  const intent = String(formData.get('intent') ?? 'save');
+
+  // Quitar credenciales (volver a Yape-only).
+  if (intent === 'remove') {
+    const { error } = await admin.rpc('set_brand_mp_credentials', {
+      p_brand_id: brandId,
+      p_access_token: null as unknown as string,
+      p_public_key: null as unknown as string,
+      p_encryption_key: serverEnv.BRAND_CREDS_ENCRYPTION_KEY,
+    });
+    if (error) return { ok: false, message: error.message };
+    await admin.from('events_log').insert({
+      brand_id: brandId,
+      actor_user_id: user.id,
+      type: 'brand_mp_credentials_removed',
+      payload: {},
+    });
+    revalidatePath('/admin/settings');
+    return { ok: true, message: 'Credenciales de MercadoPago eliminadas. Tu checkout vuelve a solo Yape.' };
+  }
+
+  // Guardar / actualizar.
+  const parsed = mpSchema.safeParse({
+    mp_access_token: formData.get('mp_access_token') ?? '',
+    mp_public_key: formData.get('mp_public_key') ?? '',
+  });
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const e of parsed.error.errors) {
+      const p = e.path.join('.');
+      if (p) fieldErrors[p] = e.message;
+    }
+    return { ok: false, message: 'Revisá las credenciales.', fieldErrors };
+  }
+
+  // Validación REAL contra MercadoPago antes de persistir (evita guardar un
+  // token con typo / revocado que rompería el checkout más tarde).
+  const check = await validateMercadoPagoToken(parsed.data.mp_access_token);
+  if (!check.ok) {
+    return { ok: false, message: check.error ?? 'El access token no es válido.', fieldErrors: { mp_access_token: 'Inválido' } };
+  }
+
+  const { error } = await admin.rpc('set_brand_mp_credentials', {
+    p_brand_id: brandId,
+    p_access_token: parsed.data.mp_access_token,
+    p_public_key: parsed.data.mp_public_key,
+    p_encryption_key: serverEnv.BRAND_CREDS_ENCRYPTION_KEY,
+  });
+  if (error) return { ok: false, message: error.message };
+
+  await admin.from('events_log').insert({
+    brand_id: brandId,
+    actor_user_id: user.id,
+    type: 'brand_mp_credentials_updated',
+    payload: {}, // NUNCA logueamos el token
+  });
+
+  revalidatePath('/admin/settings');
+  return { ok: true, message: 'Credenciales de MercadoPago validadas y guardadas. Ya podés cobrar con tarjeta.' };
 }

@@ -2,7 +2,9 @@ import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { SettingsForm } from './SettingsForm';
+import { MpCredentialsForm } from './MpCredentialsForm';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -19,6 +21,16 @@ export default async function AdminSettingsPage() {
     .eq('id', membership.brandId)
     .single();
   if (!brand) return null;
+
+  // MP credentials status (service_role; never decrypts, returns only booleans).
+  const admin = createAdminClient();
+  const { data: mpStatus } = await admin.rpc('get_brand_mp_status', {
+    p_brand_id: membership.brandId,
+  });
+  const mp = (Array.isArray(mpStatus) ? mpStatus[0] : null) ?? {
+    has_access_token: false,
+    has_public_key: false,
+  };
 
   const theme = (brand.theme_json ?? {}) as {
     logo_url?: string | null;
@@ -56,6 +68,11 @@ export default async function AdminSettingsPage() {
         primaryColor={theme.primary_color ?? '#FF1F8F'}
         secondaryColor={theme.secondary_color ?? '#00E5FF'}
         logoUrl={theme.logo_url ?? null}
+      />
+
+      <MpCredentialsForm
+        hasAccessToken={Boolean(mp.has_access_token)}
+        hasPublicKey={Boolean(mp.has_public_key)}
       />
     </div>
   );

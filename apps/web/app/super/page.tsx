@@ -13,7 +13,9 @@ export default async function SuperDashboardPage() {
     { count: publishedEventCount },
     { count: paidOrderCount },
   ] = await Promise.all([
-    supabase.from('brands').select('*', { count: 'exact', head: true }),
+    // count via a non-sensitive column: authenticated no longer has table-wide
+    // SELECT on brands (mp_* secret columns are service_role-only since 0023).
+    supabase.from('brands').select('id', { count: 'exact', head: true }),
     supabase.from('events').select('*', { count: 'exact', head: true }),
     supabase
       .from('events')

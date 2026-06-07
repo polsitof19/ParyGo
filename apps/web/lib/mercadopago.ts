@@ -100,6 +100,26 @@ export async function createMercadoPagoPreference(
   return { id: result.id, initPoint: result.init_point };
 }
 
+// Validate an access token by hitting MP's /users/me. Used at save-time so a
+// promoter can't store a typo'd / revoked token that would silently break
+// checkout later. Returns { ok } on 200, a friendly error otherwise.
+export async function validateMercadoPagoToken(
+  accessToken: string
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch('https://api.mercadopago.com/users/me', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (res.ok) return { ok: true };
+    if (res.status === 401 || res.status === 403) {
+      return { ok: false, error: 'El access token no es válido o fue revocado por MercadoPago.' };
+    }
+    return { ok: false, error: `MercadoPago rechazó la validación (HTTP ${res.status}).` };
+  } catch {
+    return { ok: false, error: 'No se pudo contactar a MercadoPago para validar el token.' };
+  }
+}
+
 export async function fetchMercadoPagoPayment(
   brandId: string,
   paymentId: string,

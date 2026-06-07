@@ -881,6 +881,13 @@ export type Database = {
           public_key: string
         }[]
       }
+      get_brand_mp_status: {
+        Args: { p_brand_id: string }
+        Returns: {
+          has_access_token: boolean
+          has_public_key: boolean
+        }[]
+      }
       get_event_active_prices: {
         Args: { p_event_id: string }
         Returns: {
