@@ -227,6 +227,9 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // Promo code: validate + apply ATOMICALLY (rewrites order_items + order to
   // the discounted price over the active phase, frozen). The client never
   // dictates the amount; the RPC recomputes it server-side.
+  // M1 (0020): apply_promo_to_order ya NO confía en p_items — deriva las líneas
+  // (tipo/cantidad/base) de order_items congelados. p_items quedó vestigial
+  // (se sigue mandando por compat two-phase; el RPC lo ignora).
   const promoCode = (parsed.data.promoCode ?? '').trim();
   let isFree = false;
   if (promoCode) {
