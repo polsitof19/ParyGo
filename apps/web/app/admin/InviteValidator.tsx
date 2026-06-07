@@ -1,8 +1,6 @@
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { inviteValidatorAction, type InviteValidatorState } from './actions';
 
 const initial: InviteValidatorState = { ok: false, message: null };
@@ -10,11 +8,11 @@ const initial: InviteValidatorState = { ok: false, message: null };
 export function InviteValidator() {
   const [state, action] = useFormState(inviteValidatorAction, initial);
   return (
-    <form action={action} className="flex flex-col gap-3 sm:flex-row sm:items-end">
-      <div className="flex-1 space-y-2">
-        <Input name="email" type="email" placeholder="staff@tumarca.com" required />
+    <form action={action} className="s-form-row">
+      <div className="s-form-row__field">
+        <input name="email" type="email" placeholder="staff@tumarca.com" required className="s-input" />
         {state.message && (
-          <p className={`text-xs ${state.ok ? 'text-green' : 'text-destructive'}`}>{state.message}</p>
+          <p className={state.ok ? 's-hint s-hint--ok' : 's-err'}>{state.message}</p>
         )}
       </div>
       <SubmitButton />
@@ -25,8 +23,8 @@ export function InviteValidator() {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant="outline" disabled={pending}>
-      {pending ? 'Invitando…' : 'Invitar validador →'}
-    </Button>
+    <button type="submit" className="s-btn s-btn--soft" disabled={pending}>
+      {pending ? 'Invitando…' : 'Invitar validador'}
+    </button>
   );
 }

@@ -3,8 +3,6 @@
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Check, X, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { formatPEN } from '@/lib/utils';
 import { approveYapeProof, rejectYapeProof } from './actions';
 
@@ -48,85 +46,68 @@ export function YapeReviewRow({
 
   if (done === 'approved') {
     return (
-      <article className="rounded-lg border border-green/40 bg-green/5 px-6 py-4 text-sm">
-        <span className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-green">
-          <Check className="h-4 w-4" />
-          Aprobado · QR enviado a {buyerEmail}
-        </span>
-      </article>
+      <p className="s-banner s-banner--ok" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        <Check className="h-4 w-4" /> Aprobado · QR enviado a {buyerEmail}
+      </p>
     );
   }
   if (done === 'rejected') {
     return (
-      <article className="rounded-lg border border-destructive/40 bg-destructive/5 px-6 py-4 text-sm">
-        <span className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-destructive">
-          <X className="h-4 w-4" />
-          Rechazado · {buyerEmail} fue notificado
-        </span>
-      </article>
+      <p className="s-banner s-banner--err" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        <X className="h-4 w-4" /> Rechazado · {buyerEmail} fue notificado
+      </p>
     );
   }
 
   return (
-    <article className="grid gap-6 rounded-lg border border-border bg-card p-6 md:grid-cols-[280px_1fr]">
-      {/* Receipt image */}
-      <div className="space-y-2">
+    <div className="a-yape">
+      {/* Comprobante */}
+      <div>
         {receiptUrl ? (
           <a href={receiptUrl} target="_blank" rel="noopener noreferrer">
-            <img
-              src={receiptUrl}
-              alt="Comprobante Yape"
-              className="w-full rounded-md border border-border"
-            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={receiptUrl} alt="Comprobante Yape" className="a-receipt" />
           </a>
         ) : (
-          <div className="grid h-48 place-items-center rounded-md border border-dashed border-border text-xs text-muted-foreground">
-            Sin captura
-          </div>
+          <div className="a-receipt a-receipt--empty">Sin captura</div>
         )}
-        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="s-hint" style={{ marginTop: 6 }}>
           Subido {new Date(createdAt).toLocaleString('es-PE')}
         </p>
       </div>
 
-      {/* Data to verify against Yape app */}
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <p className="font-display text-xl uppercase">{eventName}</p>
-          <p className="text-sm text-muted-foreground">
-            {buyerName} · {buyerEmail} · {buyerPhone}
-          </p>
+      {/* Datos a verificar contra la app de Yape */}
+      <div>
+        <div style={{ marginBottom: 12 }}>
+          <p className="a-evrow__name" style={{ fontSize: 17 }}>{eventName}</p>
+          <p className="s-card__desc">{buyerName} · {buyerEmail} · {buyerPhone}</p>
         </div>
 
-        <div className="space-y-2 rounded-md border border-border bg-background p-4 text-sm">
-          <Verify
-            label="MONTO"
-            value={formatPEN(amountCents)}
-            expected={formatPEN(expectedAmountCents)}
-            ok={amountMatches}
-          />
-          <Verify label="N° OPERACIÓN" value={operationNumber} />
-          <Verify label="NOMBRE PAGADOR" value={payerName} />
-          <Verify label="CÓDIGO SEGURIDAD" value={securityCode} />
+        <div className="a-verify-box">
+          <Verify label="Monto" value={formatPEN(amountCents)} expected={formatPEN(expectedAmountCents)} ok={amountMatches} />
+          <Verify label="N° operación" value={operationNumber} />
+          <Verify label="Nombre pagador" value={payerName} />
+          <Verify label="Código seguridad" value={securityCode} />
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          Abre tu Yape → Movimientos → busca esta transferencia y verifica los
-          4 campos. Si todo coincide, aprueba.
+        <p className="s-hint" style={{ marginTop: 10 }}>
+          Abrí tu Yape → Movimientos → buscá esta transferencia y verificá los 4 campos. Si todo coincide, aprobá.
         </p>
 
         {showReject ? (
-          <div className="space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-4">
-            <p className="text-sm font-medium">Motivo del rechazo</p>
-            <Input
+          <div className="s-card" style={{ marginTop: 14, borderColor: 'var(--alert)', background: 'var(--alert-bg)' }}>
+            <label className="s-label">Motivo del rechazo</label>
+            <input
+              className="s-input"
               placeholder="Ej: monto no coincide / no encuentro el comprobante / nombre distinto"
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
             />
-            <div className="flex gap-2">
-              <Button
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button
                 type="button"
-                variant="destructive"
+                className="s-btn s-btn--primary"
+                style={{ background: 'var(--alert)', boxShadow: 'none' }}
                 disabled={pending}
                 onClick={() => {
                   start(async () => {
@@ -142,21 +123,17 @@ export function YapeReviewRow({
               >
                 {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 Confirmar rechazo
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setShowReject(false)}
-              >
+              </button>
+              <button type="button" className="s-btn s-btn--ghost" onClick={() => setShowReject(false)}>
                 Cancelar
-              </Button>
+              </button>
             </div>
           </div>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            <Button
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 16 }}>
+            <button
               type="button"
-              variant="gradient"
+              className="s-btn s-btn--primary"
               disabled={pending}
               onClick={() => {
                 if (!confirm(`Aprobar y enviar ${total} en entradas a ${buyerEmail}?`)) return;
@@ -171,22 +148,15 @@ export function YapeReviewRow({
                 });
               }}
             >
-              <Check className="h-4 w-4" />
-              Aprobar y emitir QR
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={pending}
-              onClick={() => setShowReject(true)}
-            >
-              <X className="h-4 w-4" />
-              Rechazar
-            </Button>
+              <Check className="h-4 w-4" /> Aprobar y emitir QR
+            </button>
+            <button type="button" className="s-btn s-btn--soft" disabled={pending} onClick={() => setShowReject(true)}>
+              <X className="h-4 w-4" /> Rechazar
+            </button>
           </div>
         )}
       </div>
-    </article>
+    </div>
   );
 }
 
@@ -202,19 +172,11 @@ function Verify({
   ok?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 text-sm">
-      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-        {label}
-      </span>
-      <span className="flex items-center gap-2 text-right">
-        <span className={ok === false ? 'text-destructive' : ok === true ? 'text-green' : ''}>
-          {value}
-        </span>
-        {ok === false && expected && (
-          <span className="font-mono text-[10px] text-destructive">
-            (esperado {expected})
-          </span>
-        )}
+    <div className="a-verify">
+      <span className="a-verify__k">{label}</span>
+      <span className="a-verify__v">
+        <span className={ok === false ? 'a-verify__v--bad' : ok === true ? 'a-verify__v--ok' : undefined}>{value}</span>
+        {ok === false && expected && <span className="a-verify__exp">(esperado {expected})</span>}
       </span>
     </div>
   );

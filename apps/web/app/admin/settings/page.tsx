@@ -39,25 +39,15 @@ export default async function AdminSettingsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <Link
-        href="/admin"
-        className="inline-flex items-center gap-1 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="h-3 w-3" />
-        Volver
+    <div style={{ maxWidth: 680, margin: '0 auto' }}>
+      <Link href="/admin" className="s-back">
+        <ChevronLeft className="h-3.5 w-3.5" /> Tu panel
       </Link>
 
-      <header className="space-y-2">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-secondary">
-          [ CONFIGURACIÓN · {brand.name} ]
-        </p>
-        <h1 className="font-display text-4xl uppercase leading-none tracking-tight">
-          Tu marca
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Editá tus datos públicos y de cobro. Los cambios se aplican al instante.
-        </p>
+      <header style={{ marginBottom: 22 }}>
+        <span className="eyebrow">Configuración · {brand.name}</span>
+        <h1 className="s-h1" style={{ marginTop: 4 }}>Tu marca</h1>
+        <p className="s-card__desc">Editá tus datos públicos y de cobro. Los cambios se aplican al instante.</p>
       </header>
 
       <SettingsForm
@@ -70,10 +60,12 @@ export default async function AdminSettingsPage() {
         logoUrl={theme.logo_url ?? null}
       />
 
-      <MpCredentialsForm
-        hasAccessToken={Boolean(mp.has_access_token)}
-        hasPublicKey={Boolean(mp.has_public_key)}
-      />
+      <div style={{ marginTop: 16 }}>
+        <MpCredentialsForm
+          hasAccessToken={Boolean(mp.has_access_token)}
+          hasPublicKey={Boolean(mp.has_public_key)}
+        />
+      </div>
     </div>
   );
 }

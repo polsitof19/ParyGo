@@ -1,15 +1,26 @@
-import Link from 'next/link';
+import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { redirect } from 'next/navigation';
-import { LogOut } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
+import { AdminTopbar } from './AdminTopbar';
+import './admin.css';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-const NAV = [
-  { href: '/admin', label: 'Inicio' },
-] as const;
+// Identidad cálida parygo, scopeada bajo .admin-shell (no afecta cabina/scan/landing).
+const bricolage = Bricolage_Grotesque({
+  weight: ['600', '700', '800'],
+  subsets: ['latin'],
+  variable: '--font-bricolage',
+  display: 'swap',
+});
+const hanken = Hanken_Grotesk({
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-hanken',
+  display: 'swap',
+});
 
 export default async function AdminLayout({
   children,
@@ -17,11 +28,11 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const user = await requireSession();
-  // Super admin bypasses this layout (goes to /super); brand_admin uses it.
+  // Super admin bypasses this layout (va a su panel); brand_admin lo usa.
   if (user.isSuperAdmin) redirect('/cabina-7k29x');
   const brandMembership = user.brandMemberships.find((m) => m.role === 'brand_admin');
   if (!brandMembership) {
-    // A pure validator only gets the door scanner — nothing else in the panel.
+    // Un validator puro solo accede al escáner.
     if (user.brandMemberships.some((m) => m.role === 'validator')) redirect('/scan');
     redirect('/login?error=' + encodeURIComponent('No tienes acceso de promotor.'));
   }
@@ -34,52 +45,9 @@ export default async function AdminLayout({
     .maybeSingle();
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur">
-        <div className="container flex h-16 items-center justify-between gap-6">
-          <div className="flex items-center gap-6">
-            <Link
-              href="/admin"
-              className="font-display text-xl uppercase tracking-tight"
-            >
-              {brand?.name ?? 'Admin'}
-              <span
-                className="ml-1 inline-block h-1.5 w-1.5 -translate-y-1 rounded-full bg-primary align-middle"
-                style={{ boxShadow: '0 0 8px hsl(var(--primary))' }}
-              />
-            </Link>
-            <span className="hidden font-mono text-[10px] uppercase tracking-[0.18em] text-secondary md:inline">
-              [ BRAND ADMIN ]
-            </span>
-          </div>
-          <nav className="hidden items-center gap-6 font-mono text-xs uppercase tracking-[0.18em] md:flex">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="flex items-center gap-3">
-            <span className="hidden font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground md:inline">
-              {user.email}
-            </span>
-            <form action="/auth/logout" method="post">
-              <button
-                type="submit"
-                aria-label="Cerrar sesión"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
-      <main className="container flex-1 py-8">{children}</main>
+    <div className={`admin-shell ${bricolage.variable} ${hanken.variable}`}>
+      <AdminTopbar brandName={brand?.name ?? 'Tu marca'} email={user.email} />
+      <main className="s-wrap">{children}</main>
     </div>
   );
 }

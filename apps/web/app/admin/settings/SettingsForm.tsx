@@ -2,9 +2,6 @@
 
 import { useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { updateBrandSettingsAction, type SettingsState } from './actions';
 
 const initial: SettingsState = { ok: false, message: null };
@@ -26,86 +23,81 @@ export function SettingsForm(props: Props) {
   const err = state.fieldErrors ?? {};
 
   return (
-    <form action={action} className="space-y-8">
-      <section className="space-y-4 rounded-lg border border-border bg-card p-6">
-        <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">[ CONTACTO ]</h2>
+    <form action={action} className="s-stack" style={{ gap: 16 }}>
+      <section className="s-card">
+        <p className="s-section-lead" style={{ marginBottom: 14 }}>Contacto</p>
         <Field label="Email de contacto" htmlFor="contact_email" error={err.contact_email}>
-          <Input id="contact_email" name="contact_email" type="email" defaultValue={props.contactEmail} placeholder="contacto@tumarca.com" />
+          <input id="contact_email" name="contact_email" type="email" defaultValue={props.contactEmail} placeholder="contacto@tumarca.com" className="s-input" />
         </Field>
-        <Field label="WhatsApp (formato +51999000111)" htmlFor="whatsapp_e164" error={err.whatsapp_e164}>
-          <Input id="whatsapp_e164" name="whatsapp_e164" type="tel" inputMode="tel" pattern="^\+\d{8,15}$" defaultValue={props.whatsapp} placeholder="+51999000111" />
-        </Field>
+        <div className="s-field">
+          <Field label="WhatsApp (formato +51999000111)" htmlFor="whatsapp_e164" error={err.whatsapp_e164}>
+            <input id="whatsapp_e164" name="whatsapp_e164" type="tel" inputMode="tel" pattern="^\+\d{8,15}$" defaultValue={props.whatsapp} placeholder="+51999000111" className="s-input" />
+          </Field>
+        </div>
       </section>
 
-      <section className="space-y-4 rounded-lg border border-border bg-card p-6">
-        <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">[ COBRO YAPE ]</h2>
-        <p className="text-xs text-muted-foreground">Estos datos los ven tus compradores al pagar. Cambian al instante en tu página pública.</p>
+      <section className="s-card">
+        <p className="s-section-lead" style={{ marginBottom: 6 }}>Cobro Yape</p>
+        <p className="s-card__desc" style={{ marginBottom: 14 }}>Estos datos los ven tus compradores al pagar. Cambian al instante en tu página pública.</p>
         <Field label="Número de Yape" htmlFor="yape_number" error={err.yape_number}>
-          <Input id="yape_number" name="yape_number" defaultValue={props.yapeNumber} placeholder="999000111" />
+          <input id="yape_number" name="yape_number" defaultValue={props.yapeNumber} placeholder="999000111" className="s-input" />
         </Field>
-        <Field label="Titular de la cuenta" htmlFor="yape_holder" error={err.yape_holder}>
-          <Input id="yape_holder" name="yape_holder" defaultValue={props.yapeHolder} placeholder="Tu Marca SAC" />
-        </Field>
+        <div className="s-field">
+          <Field label="Titular de la cuenta" htmlFor="yape_holder" error={err.yape_holder}>
+            <input id="yape_holder" name="yape_holder" defaultValue={props.yapeHolder} placeholder="Tu Marca SAC" className="s-input" />
+          </Field>
+        </div>
       </section>
 
-      <section className="space-y-4 rounded-lg border border-border bg-card p-6">
-        <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">[ MARCA VISUAL ]</h2>
+      <section className="s-card">
+        <p className="s-section-lead" style={{ marginBottom: 14 }}>Marca visual</p>
         <Field label="Logo (PNG, JPG, WEBP o SVG · máx 2MB)" htmlFor="logo" error={err.logo}>
-          <div className="flex items-center gap-3">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {props.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={props.logoUrl} alt="logo actual" className="h-12 w-12 rounded-full border border-border object-cover" />
+              <img src={props.logoUrl} alt="logo actual" style={{ height: 48, width: 48, borderRadius: '50%', border: '1px solid var(--cream-3)', objectFit: 'cover' }} />
             ) : (
-              <span className="flex h-12 w-12 items-center justify-center rounded-full border border-dashed border-border text-[10px] text-muted-foreground">sin logo</span>
+              <span className="s-avatar" style={{ background: 'var(--cream-2)', color: 'var(--ink-3)', fontSize: 10 }}>—</span>
             )}
-            <input
-              id="logo"
-              name="logo"
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/svg+xml"
-              className="block w-full text-sm file:mr-4 file:rounded-full file:border-0 file:bg-secondary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-secondary-foreground hover:file:bg-secondary/80"
-            />
+            <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="s-input" style={{ paddingTop: 9 }} />
           </div>
         </Field>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="s-form-grid s-field">
           <Field label="Color primario" htmlFor="primary_color" error={err.primary_color}>
-            <div className="flex items-center gap-2">
-              <input type="color" name="primary_color" id="primary_color" value={primary} onChange={(e) => setPrimary(e.target.value)} className="h-10 w-14 cursor-pointer rounded border border-border bg-transparent" />
-              <span className="font-mono text-xs uppercase text-muted-foreground">{primary}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input type="color" name="primary_color" id="primary_color" value={primary} onChange={(e) => setPrimary(e.target.value)} style={{ height: 40, width: 56, cursor: 'pointer', borderRadius: 8, border: '1px solid var(--cream-3)', background: 'transparent' }} />
+              <span className="s-muted" style={{ fontSize: 13 }}>{primary}</span>
             </div>
           </Field>
           <Field label="Color secundario" htmlFor="secondary_color" error={err.secondary_color}>
-            <div className="flex items-center gap-2">
-              <input type="color" name="secondary_color" id="secondary_color" value={secondary} onChange={(e) => setSecondary(e.target.value)} className="h-10 w-14 cursor-pointer rounded border border-border bg-transparent" />
-              <span className="font-mono text-xs uppercase text-muted-foreground">{secondary}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input type="color" name="secondary_color" id="secondary_color" value={secondary} onChange={(e) => setSecondary(e.target.value)} style={{ height: 40, width: 56, cursor: 'pointer', borderRadius: 8, border: '1px solid var(--cream-3)', background: 'transparent' }} />
+              <span className="s-muted" style={{ fontSize: 13 }}>{secondary}</span>
             </div>
           </Field>
         </div>
 
-        {/* Live preview */}
-        <div className="space-y-2">
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Vista previa</p>
-          <div className="h-12 rounded-lg" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }} />
+        <div className="s-field">
+          <p className="s-label">Vista previa</p>
+          <div className="a-color-prev" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }} />
         </div>
       </section>
 
-      {state.message && (
-        <p className={`rounded-md border px-4 py-2 text-sm ${state.ok ? 'border-green/40 bg-green/10 text-green' : 'border-destructive/40 bg-destructive/10 text-destructive'}`}>
-          {state.message}
-        </p>
-      )}
-      <SubmitButton />
+      {state.message && <p className={state.ok ? 's-banner s-banner--ok' : 's-banner s-banner--err'}>{state.message}</p>}
+      <div className="s-form-actions">
+        <SubmitButton />
+      </div>
     </form>
   );
 }
 
 function Field({ label, htmlFor, error, children }: { label: string; htmlFor: string; error?: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-2">
-      <Label htmlFor={htmlFor}>{label}</Label>
+    <div>
+      <label htmlFor={htmlFor} className="s-label">{label}</label>
       {children}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="s-err">{error}</p>}
     </div>
   );
 }
@@ -113,8 +105,8 @@ function Field({ label, htmlFor, error, children }: { label: string; htmlFor: st
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant="gradient" size="lg" disabled={pending}>
+    <button type="submit" className="s-btn s-btn--primary s-btn--lg" disabled={pending}>
       {pending ? 'Guardando…' : 'Guardar configuración'}
-    </Button>
+    </button>
   );
 }

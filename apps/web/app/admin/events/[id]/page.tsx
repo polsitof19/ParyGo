@@ -4,7 +4,6 @@ import { ChevronLeft, ExternalLink } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatPEN } from '@/lib/utils';
 import { publicEnv } from '@/lib/env';
 import { YapeReviewRow } from '../../yape/YapeReviewRow';
@@ -77,7 +76,6 @@ export default async function AdminEventDetailPage({
       )
       .eq('event_id', event.id)
       .order('created_at', { ascending: false }),
-    // Paid orders that used a promo code — basis for "entradas vendidas" and "S/ movidos".
     admin
       .from('orders')
       .select('id, promo_code_id, total_cents, discount_cents')
@@ -93,7 +91,6 @@ export default async function AdminEventDetailPage({
     discount_cents: number | null;
   }[];
 
-  // Count issued (non-invalidated) tickets per promo order to get "entradas".
   const promoOrderIds = promoOrderRows.map((o) => o.id);
   const ticketsPerOrder = new Map<string, number>();
   if (promoOrderIds.length > 0) {
@@ -138,7 +135,6 @@ export default async function AdminEventDetailPage({
       event: { name: string } | null;
     } | null;
   };
-  // Only this event's pending proofs.
   const proofs = ((proofsRes.data as unknown as ProofRow[] | null) ?? []).filter(
     (p) => p.order?.event_id === event.id
   );
@@ -155,103 +151,136 @@ export default async function AdminEventDetailPage({
     ? `https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${event.slug}`
     : null;
 
+  // Read-only: capacidad agregada (excluye tipos ilimitados) para el resumen.
+  const capped = (ticketTypes ?? []).filter((t) => !t.is_unlimited);
+  const soldCapped = capped.reduce((a, t) => a + (t.sold ?? 0), 0);
+  const capTotal = capped.reduce((a, t) => a + (t.capacity ?? 0), 0);
+  const hasUnlimited = (ticketTypes ?? []).some((t) => t.is_unlimited);
+
   return (
-    <div className="space-y-8">
-      <Link
-        href="/admin"
-        className="inline-flex items-center gap-1 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="h-3 w-3" />
-        Volver a tus eventos
+    <>
+      <Link href="/admin" className="s-back">
+        <ChevronLeft className="h-3.5 w-3.5" /> Tus eventos
       </Link>
 
-      <header className="space-y-2">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-secondary">
-          [ EVENTO ]
-        </p>
-        <h1 className="font-display text-4xl uppercase leading-none tracking-tight">
-          {event.name}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {new Date(event.starts_at).toLocaleString('es-PE', {
-            weekday: 'long',
-            day: '2-digit',
-            month: 'long',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}{' '}
-          ·{' '}
-          <span className={event.is_published ? 'text-green' : 'text-yellow'}>
-            {event.is_published ? 'Publicado' : 'Borrador'}
+      <header className="s-pagehead">
+        <div>
+          <span className="eyebrow">
+            Evento
+            <span className={`s-badge ${event.is_published ? 's-badge--ok' : 's-badge--draft'}`} style={{ marginLeft: 10, verticalAlign: 'middle' }}>
+              {event.is_published ? 'Publicado' : 'Borrador'}
+            </span>
           </span>
+          <h1 className="s-h1" style={{ marginTop: 6 }}>{event.name}</h1>
+          <p className="s-card__desc">
+            {new Date(event.starts_at).toLocaleString('es-PE', {
+              weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit',
+            })}
+            {event.venue_name && <> · {event.venue_name}</>}
+          </p>
           {brandUrl && event.is_published && (
-            <>
-              {' · '}
-              <a
-                href={brandUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-secondary underline-offset-4 hover:underline"
-              >
-                Ver página pública <ExternalLink className="h-3 w-3" />
-              </a>
-            </>
+            <a href={brandUrl} target="_blank" rel="noopener noreferrer" className="s-brandhead__url" style={{ marginTop: 6 }}>
+              Ver página pública <ExternalLink className="h-3 w-3" />
+            </a>
           )}
-        </p>
+        </div>
       </header>
 
-      {/* KPIs of THIS event */}
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Ventas pagadas" value={formatPEN(paidCents)} />
-        <Kpi label="Órdenes pagadas" value={String(paidOrders)} />
-        <Kpi label="Yape pendientes" value={String(withUrls.length)} />
-        <Kpi label="Tickets emitidos" value={String(ticketCount ?? 0)} />
-      </section>
+      {/* KPIs del evento */}
+      <div className="s-stats-4">
+        <div className="s-stat">
+          <span className="s-stat__label">Ventas pagadas</span>
+          <span className="s-stat__value" style={{ fontSize: 26 }}>{formatPEN(paidCents)}</span>
+          <span className="s-stat__sub">{paidOrders} orden{paidOrders === 1 ? '' : 'es'}</span>
+        </div>
+        <div className={`s-stat${withUrls.length > 0 ? ' s-stat--alert' : ''}`}>
+          <span className="s-stat__label">Yape pendientes</span>
+          <span className="s-stat__value">{withUrls.length}</span>
+          <span className="s-stat__sub">{withUrls.length > 0 ? 'por aprobar abajo' : 'todo al día'}</span>
+        </div>
+        <div className="s-stat">
+          <span className="s-stat__label">Tickets emitidos</span>
+          <span className="s-stat__value">{ticketCount ?? 0}</span>
+          <span className="s-stat__sub">válidos (no anulados)</span>
+        </div>
+        <div className="s-stat">
+          <span className="s-stat__label">Cupos vendidos</span>
+          <span className="s-stat__value">{capTotal > 0 ? `${soldCapped}/${capTotal}` : (hasUnlimited ? '∞' : '—')}</span>
+          <span className="s-stat__sub">{hasUnlimited ? 'hay stock ilimitado' : 'capacidad con cupo'}</span>
+        </div>
+      </div>
 
-      {/* Ticket types (display) */}
-      <section className="space-y-3">
-        <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
-          [ TIPOS DE ENTRADA ]
+      {/* Yape por revisar — PRIMERO: es la acción de plata urgente */}
+      <section style={{ marginTop: 24 }}>
+        <h2 className="s-h2" style={{ marginBottom: 12 }}>
+          Yape por revisar
+          {withUrls.length > 0 && <span className="s-badge s-badge--alert" style={{ marginLeft: 10 }}>{withUrls.length}</span>}
         </h2>
-        {!ticketTypes || ticketTypes.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center text-sm text-muted-foreground">
-              Este evento no tiene tipos de entrada todavía.
-            </CardContent>
-          </Card>
+        {withUrls.length === 0 ? (
+          <div className="s-card"><p className="s-empty">No hay comprobantes pendientes de este evento. 🎉</p></div>
         ) : (
-          <ul className="space-y-2">
-            {ticketTypes.map((t) => (
-              <li key={t.id}>
-                <Card>
-                  <CardContent className="flex items-center justify-between gap-3 py-4">
-                    <div>
-                      <p className="font-display text-lg uppercase leading-none">
-                        {t.name}{' '}
-                        {!t.is_active && (
-                          <span className="font-mono text-[10px] text-muted-foreground">(inactivo)</span>
-                        )}
-                      </p>
-                      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                        {t.is_unlimited
-                          ? 'Stock ilimitado'
-                          : `${t.sold} / ${t.capacity} vendidas`}
-                      </p>
-                    </div>
-                    <span className="font-mono text-sm tabular-nums">{formatPEN(t.price_cents)}</span>
-                  </CardContent>
-                </Card>
-              </li>
+          <div className="s-stack" style={{ gap: 14 }}>
+            {withUrls.map((p) => (
+              <div key={p.id} className="s-card">
+                <YapeReviewRow
+                  proofId={p.id}
+                  receiptUrl={p.signedReceiptUrl}
+                  amountCents={p.amount_cents}
+                  expectedAmountCents={p.order?.total_cents ?? 0}
+                  amountMatches={p.amount_cents === p.order?.total_cents}
+                  operationNumber={p.operation_number}
+                  payerName={p.payer_name}
+                  securityCode={p.security_code}
+                  buyerName={p.order?.buyer_name ?? ''}
+                  buyerEmail={p.order?.buyer_email ?? ''}
+                  buyerPhone={p.order?.buyer_phone ?? ''}
+                  eventName={p.order?.event?.name ?? ''}
+                  createdAt={p.created_at}
+                  total={formatPEN(p.order?.total_cents ?? 0)}
+                />
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </section>
 
-      {/* Promo codes (tracking por RRPP) */}
-      <section className="space-y-3">
-        <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
-          [ CÓDIGOS PROMOCIONALES ]
-        </h2>
+      {/* Tipos de entrada con barra de progreso */}
+      <section style={{ marginTop: 24 }}>
+        <h2 className="s-h2" style={{ marginBottom: 12 }}>Tipos de entrada</h2>
+        {!ticketTypes || ticketTypes.length === 0 ? (
+          <div className="s-card"><p className="s-empty">Este evento no tiene tipos de entrada todavía.</p></div>
+        ) : (
+          <div className="s-stack" style={{ gap: 10 }}>
+            {ticketTypes.map((t) => {
+              const pct = !t.is_unlimited && t.capacity > 0 ? Math.min(100, Math.round((t.sold / t.capacity) * 100)) : 0;
+              const full = !t.is_unlimited && t.capacity > 0 && t.sold >= t.capacity;
+              return (
+                <div key={t.id} className="s-card" style={{ padding: '16px 18px' }}>
+                  <div className="s-card__head" style={{ marginBottom: t.is_unlimited ? 0 : 8 }}>
+                    <div>
+                      <span className="a-evrow__name" style={{ fontSize: 16 }}>
+                        {t.name}{' '}
+                        {!t.is_active && <span className="s-badge s-badge--draft" style={{ marginLeft: 4 }}>inactivo</span>}
+                      </span>
+                      <div className="s-card__desc" style={{ marginTop: 2 }}>
+                        {t.is_unlimited ? 'Stock ilimitado' : `${t.sold} / ${t.capacity} vendidas`}
+                      </div>
+                    </div>
+                    <span className="s-saldo-num" style={{ fontSize: 18 }}>{formatPEN(t.price_cents)}</span>
+                  </div>
+                  {!t.is_unlimited && t.capacity > 0 && (
+                    <div className="a-bar"><div className={`a-bar__fill${full ? ' a-bar__fill--full' : ''}`} style={{ width: `${pct}%` }} /></div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Códigos promocionales (tracking por RRPP) */}
+      <section style={{ marginTop: 24 }}>
+        <h2 className="s-h2" style={{ marginBottom: 12 }}>Códigos promocionales</h2>
         <PromoCodeManager
           eventId={event.id}
           ticketTypes={promoTicketTypes}
@@ -259,55 +288,6 @@ export default async function AdminEventDetailPage({
           sales={promoSales}
         />
       </section>
-
-      {/* Yape review for THIS event */}
-      <section className="space-y-3">
-        <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
-          [ YAPE · POR REVISAR ]
-        </h2>
-        {withUrls.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center text-sm text-muted-foreground">
-              No hay comprobantes pendientes de este evento.
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {withUrls.map((p) => (
-              <YapeReviewRow
-                key={p.id}
-                proofId={p.id}
-                receiptUrl={p.signedReceiptUrl}
-                amountCents={p.amount_cents}
-                expectedAmountCents={p.order?.total_cents ?? 0}
-                amountMatches={p.amount_cents === p.order?.total_cents}
-                operationNumber={p.operation_number}
-                payerName={p.payer_name}
-                securityCode={p.security_code}
-                buyerName={p.order?.buyer_name ?? ''}
-                buyerEmail={p.order?.buyer_email ?? ''}
-                buyerPhone={p.order?.buyer_phone ?? ''}
-                eventName={p.order?.event?.name ?? ''}
-                createdAt={p.created_at}
-                total={formatPEN(p.order?.total_cents ?? 0)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function Kpi({ label, value }: { label: string; value: string }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardDescription className="font-mono text-[10px] uppercase tracking-[0.18em]">
-          {label}
-        </CardDescription>
-        <CardTitle className="font-display text-3xl">{value}</CardTitle>
-      </CardHeader>
-    </Card>
+    </>
   );
 }

@@ -1,8 +1,6 @@
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   generatePersonalCodeAction,
   revokeGateCodeAction,
@@ -25,13 +23,13 @@ const pwdInit: SetPwdState = { ok: false, message: null };
 export function ValidatorManager({ validators }: { validators: Validator[] }) {
   if (validators.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p className="s-card__desc">
         Todavía no invitaste validadores. Usá el campo de abajo para invitar al primero por email.
       </p>
     );
   }
   return (
-    <ul className="space-y-3">
+    <ul className="s-owner-list">
       {validators.map((v) => (
         <ValidatorRow key={v.user_id} v={v} />
       ))}
@@ -44,18 +42,17 @@ function ValidatorRow({ v }: { v: Validator }) {
   const [, revokeAction] = useFormState(revokeGateCodeAction, codeInit);
   const [pwdState, pwdAction] = useFormState(setValidatorPasswordAction, pwdInit);
 
-  // After generating, show the fresh code; else the existing active one.
   const shownCode = codeState.ok ? codeState.code : v.code;
 
   return (
-    <li className="space-y-3 rounded-md border border-border p-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="text-sm font-medium">{v.display_name ?? 'Validador'}</span>
-        <div className="flex items-center gap-2">
+    <li className="s-owner-row">
+      <div className="s-owner-row__id" style={{ flexWrap: 'wrap', justifyContent: 'space-between' }}>
+        <span className="s-owner-row__email" style={{ fontSize: 15 }}>{v.display_name ?? 'Validador'}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           {shownCode ? (
-            <span className="font-mono text-lg tracking-[0.25em] text-green">{shownCode}</span>
+            <span className="a-code">{shownCode}</span>
           ) : (
-            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">sin código</span>
+            <span className="s-muted-3" style={{ fontSize: 12.5 }}>sin código</span>
           )}
           <form action={codeAction}>
             <input type="hidden" name="user_id" value={v.user_id} />
@@ -64,24 +61,24 @@ function ValidatorRow({ v }: { v: Validator }) {
           {v.code_id && (
             <form action={revokeAction}>
               <input type="hidden" name="code_id" value={v.code_id} />
-              <Button type="submit" variant="ghost" size="sm">Revocar</Button>
+              <button type="submit" className="s-btn s-btn--ghost s-btn--sm">Revocar</button>
             </form>
           )}
         </div>
       </div>
-      {codeState.message && !codeState.ok && <p className="text-xs text-destructive">{codeState.message}</p>}
+      {codeState.message && !codeState.ok && <p className="s-err">{codeState.message}</p>}
 
-      {/* Set password */}
-      <form action={pwdAction} className="flex items-end gap-2">
+      {/* Setear contraseña */}
+      <form action={pwdAction} className="s-form-row">
         <input type="hidden" name="user_id" value={v.user_id} />
-        <div className="flex-1 space-y-1">
-          <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Contraseña (login por email)</label>
-          <Input name="password" type="password" placeholder="mín. 8 caracteres" autoComplete="new-password" />
+        <div className="s-form-row__field">
+          <label className="s-label">Contraseña (login por email)</label>
+          <input name="password" type="password" placeholder="mín. 8 caracteres" autoComplete="new-password" className="s-input" />
         </div>
         <PwdBtn />
       </form>
       {pwdState.message && (
-        <p className={`text-xs ${pwdState.ok ? 'text-green' : 'text-destructive'}`}>{pwdState.message}</p>
+        <p className={pwdState.ok ? 's-hint s-hint--ok' : 's-err'}>{pwdState.message}</p>
       )}
     </li>
   );
@@ -90,17 +87,17 @@ function ValidatorRow({ v }: { v: Validator }) {
 function CodeBtn({ has }: { has: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant="default" size="sm" disabled={pending}>
+    <button type="submit" className="s-btn s-btn--soft s-btn--sm" disabled={pending}>
       {pending ? '…' : has ? 'Regenerar' : 'Generar código'}
-    </Button>
+    </button>
   );
 }
 
 function PwdBtn() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant="outline" size="sm" disabled={pending}>
+    <button type="submit" className="s-btn s-btn--ghost s-btn--sm" disabled={pending}>
       {pending ? 'Guardando…' : 'Setear contraseña'}
-    </Button>
+    </button>
   );
 }

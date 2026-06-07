@@ -21,27 +21,19 @@ export default async function NewBrandEventPage() {
     .single();
   if (!brand) redirect('/admin');
 
-  // Hard gate (UX): no balance → can't reach the form. The RPC is the real
-  // server-side guard, but we also keep the form unreachable at 0.
+  // Hard gate (UX): sin saldo → no llega al form. El RPC es el guard real.
   if ((brand.event_balance ?? 0) <= 0) redirect('/admin');
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <Link
-        href="/admin"
-        className="inline-flex items-center gap-1 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="h-3 w-3" />
-        Volver
+    <div style={{ maxWidth: 680, margin: '0 auto' }}>
+      <Link href="/admin" className="s-back">
+        <ChevronLeft className="h-3.5 w-3.5" /> Tu panel
       </Link>
-      <header className="space-y-2">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-secondary">
-          [ NUEVO EVENTO · {brand.name} ]
-        </p>
-        <h1 className="font-display text-4xl uppercase leading-none tracking-tight">Crear evento</h1>
-        <p className="text-sm text-muted-foreground">
-          Consume 1 de tu saldo ({brand.event_balance} disponible
-          {brand.event_balance === 1 ? '' : 's'}). El evento se crea en borrador; lo publicás cuando esté listo.
+      <header style={{ marginBottom: 22 }}>
+        <span className="eyebrow">Nuevo evento · {brand.name}</span>
+        <h1 className="s-h1" style={{ marginTop: 4 }}>Crear evento</h1>
+        <p className="s-card__desc">
+          Consume 1 de tu saldo ({brand.event_balance} disponible{brand.event_balance === 1 ? '' : 's'}). El evento se crea en borrador; lo publicás cuando esté listo.
         </p>
       </header>
       <EventBuilder />
