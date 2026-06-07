@@ -146,12 +146,12 @@ export async function sendTicketEmail(orderId: string): Promise<SendTicketEmailR
     });
     if (!resp.ok) {
       const bodyText = await resp.text().catch(() => '');
+      // NEVER log any part of the API key (not even a prefix/length) — edge
+      // logs may be visible to operators and the prefix identifies the token.
       console.error('[sendTicketEmail] resend rejected', {
         order_id: orderId,
         status: resp.status,
         body: bodyText.slice(0, 500),
-        key_len: apiKey.length,
-        key_prefix: apiKey.slice(0, 5),
       });
       return {
         ok: false,

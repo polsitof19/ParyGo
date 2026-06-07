@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv } from '@/lib/env';
 import { fetchMercadoPagoPayment } from '@/lib/mercadopago';
-import { issueTicketsForOrder, markOrderPaid } from '@/lib/tickets';
 import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
 
 // Runs on the Cloudflare Pages edge (Workers). We use Web Crypto for the
@@ -43,32 +42,29 @@ export async function POST(
     return NextResponse.json({ error: 'brand_not_found' }, { status: 404 });
   }
 
-  // 2. Verify MP signature header
+  // 2. Verify MP signature — MANDATORY, no exceptions. There is NO environment
+  // bypass: a brand without a webhook secret cannot be verified, so we reject
+  // (never process an unsigned/unverifiable webhook → that would let anyone
+  // forge a "payment approved" and mint free tickets).
   const xSignature = req.headers.get('x-signature');
   const xRequestId = req.headers.get('x-request-id');
   const url = new URL(req.url);
   const dataId = url.searchParams.get('data.id') ?? url.searchParams.get('id');
 
-  const isProduction = process.env.NODE_ENV === 'production';
-
-  // Signature is mandatory whenever the brand has a secret configured —
-  // not only in production. Dev bypass only applies if the brand hasn't
-  // been wired up yet (no secret stored).
-  if (brand.mp_webhook_secret) {
-    if (!xSignature || !dataId || !xRequestId) {
-      return NextResponse.json({ error: 'missing_signature' }, { status: 401 });
-    }
-    const verified = await verifyMpSignature({
-      header: xSignature,
-      secret: brand.mp_webhook_secret,
-      dataId,
-      requestId: xRequestId,
-    });
-    if (!verified) {
-      return NextResponse.json({ error: 'invalid_signature' }, { status: 401 });
-    }
-  } else if (isProduction) {
+  if (!brand.mp_webhook_secret) {
     return NextResponse.json({ error: 'webhook_secret_missing' }, { status: 401 });
+  }
+  if (!xSignature || !dataId || !xRequestId) {
+    return NextResponse.json({ error: 'missing_signature' }, { status: 401 });
+  }
+  const verified = await verifyMpSignature({
+    header: xSignature,
+    secret: brand.mp_webhook_secret,
+    dataId,
+    requestId: xRequestId,
+  });
+  if (!verified) {
+    return NextResponse.json({ error: 'invalid_signature' }, { status: 401 });
   }
 
   // 3. Parse body — MP sends { type, data: { id } }
@@ -103,6 +99,14 @@ export async function POST(
   if (!externalRef || !UUID_V4_RE.test(externalRef)) {
     // Don't let MP retry on a malformed external_reference; ack and ignore.
     return NextResponse.json({ ok: true, ignored: 'no_external_reference' });
+  }
+
+  // Defense-in-depth: the preference stamps metadata.brand_id (createMercadoPago
+  // Preference). If the re-fetched payment belongs to a different brand, ignore.
+  // (settle_mp_payment already enforces tenancy via brand_id; this is a belt.)
+  const metaBrandId = (payment as { metadata?: { brand_id?: string } } | null)?.metadata?.brand_id;
+  if (metaBrandId && metaBrandId !== brand.id) {
+    return NextResponse.json({ ok: true, ignored: 'brand_mismatch' });
   }
 
   // Log every webhook receipt for forensics
@@ -140,34 +144,84 @@ export async function POST(
     return NextResponse.json({ ok: true, status });
   }
 
-  // 5. Mark order paid + issue tickets (both idempotent)
-  const { alreadyPaid } = await markOrderPaid(externalRef, {
-    mpPaymentId: String(paymentId),
-    mpPaymentStatus: status,
-  });
-  // Confirm any promo redemption for this order (held → consumed).
-  await admin.rpc('mark_promo_redemption_consumed', { p_order_id: externalRef });
+  // 5. APPROVED → settle ATOMICALLY. The RPC holds SELECT ... FOR UPDATE on the
+  // order and, in one transaction: contrasts the paid amount vs the server-side
+  // frozen total, flips the order to paid, consumes the promo redemption, and
+  // issues the tickets. Concurrency-safe (a single FOR UPDATE winner) and
+  // idempotent (re-runs return 'already_issued' without duplicating tickets).
+  // The webhook NEVER trusts the payload amount — it passes MP's authoritative
+  // transaction_amount and the RPC compares it server-side.
+  const txAmount = (payment as { transaction_amount?: number } | null)?.transaction_amount;
+  const paidCents = typeof txAmount === 'number' ? Math.round(txAmount * 100) : null;
+  if (paidCents === null) {
+    await admin.from('events_log').insert({
+      brand_id: brand.id,
+      order_id: externalRef,
+      type: 'mp_amount_missing',
+      payload: { payment_id: String(paymentId) },
+    });
+    return NextResponse.json({ ok: true, ignored: 'no_amount' });
+  }
 
-  const issue = await issueTicketsForOrder({
-    orderId: externalRef,
-    reason: 'mp_paid',
+  const { data: settleData, error: settleErr } = await admin.rpc('settle_mp_payment', {
+    p_order_id: externalRef,
+    p_brand_id: brand.id,
+    p_payment_id: String(paymentId),
+    p_status: status,
+    p_paid_amount_cents: paidCents,
   });
 
-  if (!issue.ok) {
-    // Critical: payment received but tickets failed. Log loudly.
+  if (settleErr) {
+    // DB error mid-settlement → forensic + 500 so MP retries (the RPC is
+    // transactional, so a failure leaves the order un-flipped and un-issued).
     await admin.from('events_log').insert({
       brand_id: brand.id,
       order_id: externalRef,
       type: 'tickets_issue_failed',
-      payload: { error: issue.error, payment_id: String(paymentId) },
+      payload: { error: settleErr.message, payment_id: String(paymentId), stage: 'settle_mp_payment' },
     });
-    return NextResponse.json({ ok: false, error: issue.error }, { status: 500 });
+    return NextResponse.json({ ok: false, error: 'settle_failed' }, { status: 500 });
   }
 
-  // Fire ticket delivery email. Webhook MUST still 200 even if email fails
-  // — MP will keep retrying otherwise, and the payment is already
-  // recorded. sendTicketEmail logs structured on any failure and leaves
-  // email_sent_at null for manual re-trigger.
+  const result = (settleData ?? {}) as {
+    ok?: boolean;
+    action?: string;
+    ticket_count?: number;
+    expected_cents?: number;
+    paid_cents?: number;
+  };
+
+  // Amount mismatch: the buyer paid an amount that doesn't equal the order
+  // total. NEVER emit. Log loudly for forensics; ack 200 so MP stops retrying.
+  // The order stays pending (swept later) and the promoter refunds manually.
+  if (result.action === 'amount_mismatch') {
+    await admin.from('events_log').insert({
+      brand_id: brand.id,
+      order_id: externalRef,
+      type: 'mp_amount_mismatch',
+      payload: {
+        payment_id: String(paymentId),
+        expected_cents: result.expected_cents,
+        paid_cents: result.paid_cents,
+      },
+    });
+    return NextResponse.json({ ok: true, ignored: 'amount_mismatch' });
+  }
+
+  // Not settleable (order not found / not MP / wrong state / no items). Log + ack.
+  if (!result.ok) {
+    await admin.from('events_log').insert({
+      brand_id: brand.id,
+      order_id: externalRef,
+      type: 'mp_settle_skipped',
+      payload: { payment_id: String(paymentId), action: result.action ?? 'unknown' },
+    });
+    return NextResponse.json({ ok: true, ignored: result.action ?? 'not_settleable' });
+  }
+
+  // Settled (issued | already_issued). Deliver the ticket email — idempotent via
+  // email_sent_at, so a webhook retry never double-sends and a prior email
+  // failure recovers on the next retry. Webhook still 200s even if email fails.
   const emailResult = await sendTicketEmail(externalRef);
   if (!emailResult.ok) {
     console.error('[mp-webhook] sendTicketEmail failed', {
@@ -178,9 +232,8 @@ export async function POST(
 
   return NextResponse.json({
     ok: true,
-    alreadyPaid,
-    issued: issue.ticketIds.length,
-    alreadyIssued: issue.alreadyIssued,
+    action: result.action,
+    issued: result.ticket_count ?? 0,
     email: emailResult.status,
   });
 }

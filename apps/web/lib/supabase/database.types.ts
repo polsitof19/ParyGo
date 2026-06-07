@@ -994,6 +994,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      settle_mp_payment: {
+        Args: {
+          p_order_id: string
+          p_brand_id: string
+          p_payment_id: string
+          p_status: string
+          p_paid_amount_cents: number
+        }
+        Returns: Json
+      }
       user_brands: {
         Args: { p_role?: Database["public"]["Enums"]["user_role"] }
         Returns: string[]
