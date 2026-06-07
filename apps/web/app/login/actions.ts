@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { destinationForUser } from '@/lib/auth';
-import { publicEnv, serverEnv } from '@/lib/env';
+import { publicEnv } from '@/lib/env';
 
 export type LoginState = {
   ok: boolean;
@@ -118,17 +118,15 @@ function clientIp(): string {
 const GENERIC_LOGIN_ERROR = 'Email o contraseña incorrectos.';
 
 // Login unificado: TODOS los roles entran con email + contraseña, incluido el
-// super admin (antes magic link). Si el super admin deja la contraseña vacía,
-// conserva el magic link SOLO como recuperación de acceso (va únicamente a su
-// casilla). Error genérico (anti-enumeración) + rate limit para todos.
+// super admin (antes usaba magic link). Sin ramas por rol → mismo error
+// genérico para todos (anti-enumeración) + rate limit. La recuperación de
+// contraseña se hace desde el dashboard de Supabase, no por magic link.
 export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const password = String(formData.get('password') ?? '');
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return { ok: false, message: 'Email inválido.' };
   }
-
-  const isSuperAdmin = email === serverEnv.SUPER_ADMIN_EMAIL.toLowerCase();
 
   const admin = createAdminClient();
   const { data: rl } = await admin.rpc('check_and_record_auth_attempt', {
@@ -139,12 +137,10 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     return { ok: false, message: 'Demasiados intentos. Esperá unos minutos e intentá de nuevo.' };
   }
 
-  // Sin contraseña: el super admin recupera acceso por magic link; el resto
-  // de roles requiere contraseña.
-  if (!password) {
-    if (isSuperAdmin) return sendMagicLink(_prev, formData);
-    return { ok: false, message: GENERIC_LOGIN_ERROR };
-  }
+  // Contraseña obligatoria para TODOS los roles, incluido el super admin. Sin
+  // contraseña → mismo error genérico (no se filtra cuál email es el super
+  // admin). La recuperación de acceso se hace desde el dashboard de Supabase.
+  if (!password) return { ok: false, message: GENERIC_LOGIN_ERROR };
 
   const supabase = createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
