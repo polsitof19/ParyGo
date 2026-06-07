@@ -51,3 +51,6 @@ coverage/
 # Supabase local
 **/supabase/.branches
 **/supabase/.temp
+
+# Smoke test evidence
+tmp/
