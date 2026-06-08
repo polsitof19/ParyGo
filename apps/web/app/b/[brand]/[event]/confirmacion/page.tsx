@@ -61,10 +61,10 @@ export default async function ConfirmationPage({
         <span className="c-eyebrow">Procesando pago</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>Estamos confirmando tu pago</h1>
         <p className="c-muted" style={{ marginTop: 10 }}>
-          Suele tardar menos de 1 minuto. Esta página se actualiza sola. Si pasan más de 5 minutos sin novedad, escribinos por WhatsApp.
+          Suele tardar menos de 1 minuto. Esta página se actualiza sola. Si pasan más de 5 minutos sin novedad, escríbenos por WhatsApp.
         </p>
         {brand?.whatsapp_e164 && (
-          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand)', fontWeight: 600 }}>WhatsApp soporte</a>
+          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand-ink)', fontWeight: 600 }}>WhatsApp soporte</a>
         )}
         <ConfirmationPoller />
       </main>
@@ -81,7 +81,7 @@ export default async function ConfirmationPage({
           {brand?.name ?? 'El promotor'} está revisando tu comprobante. Te avisamos por email + WhatsApp apenas se apruebe. Suele tomar 5–15 minutos en horario operativo.
         </p>
         {brand?.whatsapp_e164 && (
-          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand)', fontWeight: 600 }}>¿Pasó algo? WhatsApp soporte</a>
+          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand-ink)', fontWeight: 600 }}>¿Pasó algo? WhatsApp soporte</a>
         )}
       </main>
     );

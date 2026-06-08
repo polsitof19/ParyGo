@@ -199,7 +199,7 @@ export default async function EventPage({ params }: Props) {
                 <p className="c-h2">{event.venue_name}</p>
                 <p className="c-muted" style={{ marginTop: 4 }}>{event.venue_address}</p>
                 {event.venue_lat && event.venue_lng && (
-                  <a href={`https://www.google.com/maps/search/?api=1&query=${event.venue_lat},${event.venue_lng}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 12, color: 'var(--brand)', fontWeight: 600, fontSize: 14 }}>
+                  <a href={`https://www.google.com/maps/search/?api=1&query=${event.venue_lat},${event.venue_lng}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 12, color: 'var(--brand-ink)', fontWeight: 600, fontSize: 14 }}>
                     Ver en Google Maps <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 )}
@@ -218,7 +218,7 @@ export default async function EventPage({ params }: Props) {
         {brand.whatsapp_e164 && (
           <p className="c-foot">
             ¿Problema con tu compra?{' '}
-            <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand)', fontWeight: 600 }}>
+            <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>
               WhatsApp soporte
             </a>
           </p>

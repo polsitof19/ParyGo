@@ -137,7 +137,7 @@ export function EventCheckoutPanel({
           <span className="c-step"><b>3</b> ¡Listo!</span>
         </div>
         {countdownLabel && totalItems > 0 && (
-          <span className="c-chip" style={secondsLeft !== null && secondsLeft < 60 ? { color: 'var(--alert)', borderColor: 'var(--alert)' } : { color: 'var(--brand)', borderColor: 'var(--brand)' }} aria-live="polite">
+          <span className="c-chip" style={secondsLeft !== null && secondsLeft < 60 ? { color: 'var(--alert)', borderColor: 'var(--alert)' } : { color: 'var(--brand-ink)', borderColor: 'var(--brand)' }} aria-live="polite">
             <Clock className="h-3.5 w-3.5" /> Reserva · {countdownLabel}
           </span>
         )}
@@ -190,7 +190,7 @@ function Step1({
                   <span className="c-tt__price">{formatPEN(t.active_price_cents)}</span>
                 </div>
                 {perks.length > 0 && (
-                  <ul className="c-tt__perks">{perks.map((p, i) => <li key={i}><span style={{ color: 'var(--brand)' }}>·</span> {p}</li>)}</ul>
+                  <ul className="c-tt__perks">{perks.map((p, i) => <li key={i}><span style={{ color: 'var(--brand-ink)'}}>·</span> {p}</li>)}</ul>
                 )}
                 {t.next_price_cents != null && t.next_starts_at && !soldOut && (
                   <p className="c-rise"><TrendingUp className="h-3.5 w-3.5" /> Sube a {formatPEN(t.next_price_cents)} el {formatRiseDate(t.next_starts_at)}</p>
@@ -355,7 +355,7 @@ function Step2({
           {applied ? (
             <div className="c-promo-on">
               <div>
-                <span style={{ fontWeight: 700, color: 'var(--brand)' }}>{applied.code}</span>
+                <span style={{ fontWeight: 700, color: 'var(--brand-ink)'}}>{applied.code}</span>
                 <p className="c-muted" style={{ fontSize: 12.5, marginTop: 2 }}>{applied.isFree ? '¡Entrada gratis!' : `Descuento: -${formatPEN(applied.discountCents)}`}</p>
               </div>
               <button type="button" className="c-btn c-btn--ghost" onClick={() => { setApplied(null); setPromoInput(''); }}>Quitar</button>
@@ -397,7 +397,7 @@ function Step2({
             : <>Continuar con Yape</>}
         </button>
 
-        <p className="c-reassure"><Mail className="h-4 w-4" style={{ color: 'var(--brand)' }} /> Recibís tu entrada con QR al instante por email.</p>
+        <p className="c-reassure"><Mail className="h-4 w-4" style={{ color: 'var(--brand-ink)'}} /> Recibes tu entrada con QR al instante por email.</p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
           <span className="c-seal"><ShieldCheck className="h-4 w-4" /> Pago seguro</span>
           <span className="c-seal"><Lock className="h-4 w-4" /> Tus datos protegidos</span>

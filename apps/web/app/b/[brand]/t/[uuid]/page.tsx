@@ -134,7 +134,7 @@ export default async function TicketPage({ params }: Props) {
             📲 Enviarme por WhatsApp
           </a>
           <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginTop: 10 }}>
-            ¿Problema? <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand)', fontWeight: 600 }}>WhatsApp soporte</a>
+            ¿Problema? <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>WhatsApp soporte</a>
           </p>
         </div>
       )}

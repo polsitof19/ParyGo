@@ -50,7 +50,7 @@ export default function LoginPage({
 
         {support && (
           <p className="auth-foot">
-            ¿Comprás una entrada y necesitás ayuda?{' '}
+            ¿Eres organizador y necesitas ayuda?{' '}
             <a href={`https://wa.me/${support}`} target="_blank" rel="noopener noreferrer">
               Soporte por WhatsApp
             </a>

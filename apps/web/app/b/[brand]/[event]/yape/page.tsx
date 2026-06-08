@@ -74,7 +74,7 @@ export default async function YapeUploadPage({
 
       <div className="c-card" style={{ marginTop: 22 }}>
         <p className="c-card__title">1 · Yapeá a este número</p>
-        <p style={{ fontFamily: 'var(--display)', fontWeight: 800, fontSize: 'clamp(34px,9vw,46px)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', color: 'var(--brand)' }}>{order.brand.yape_number}</p>
+        <p style={{ fontFamily: 'var(--display)', fontWeight: 800, fontSize: 'clamp(34px,9vw,46px)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', color: 'var(--brand-ink)' }}>{order.brand.yape_number}</p>
         <p className="c-muted" style={{ marginTop: 6 }}>Titular: <strong style={{ color: 'var(--ink)' }}>{order.brand.yape_holder ?? order.brand.name}</strong></p>
         <p className="c-muted">Monto exacto: <strong style={{ color: 'var(--ink)' }}>{formatPEN(order.total_cents)}</strong></p>
         <p style={{ marginTop: 12, borderRadius: 'var(--r-ctl)', background: 'var(--warn-bg)', color: 'var(--warn)', padding: '11px 14px', fontSize: 13, fontWeight: 500 }}>
@@ -96,7 +96,7 @@ export default async function YapeUploadPage({
 
       {order.brand.whatsapp_e164 && (
         <p className="c-foot">
-          ¿Algún problema? <a href={`https://wa.me/${order.brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand)', fontWeight: 600 }}>WhatsApp soporte</a>
+          ¿Algún problema? <a href={`https://wa.me/${order.brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>WhatsApp soporte</a>
         </p>
       )}
     </main>

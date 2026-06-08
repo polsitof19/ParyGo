@@ -140,7 +140,7 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
       {/* Footer con contacto de la marca */}
       <p className="c-foot">
         {brand.whatsapp_e164 ? (
-          <>¿Consultas? <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand)', fontWeight: 600 }}>WhatsApp {brand.name}</a></>
+          <>¿Consultas? <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>WhatsApp {brand.name}</a></>
         ) : (
           <>{brand.name}</>
         )}

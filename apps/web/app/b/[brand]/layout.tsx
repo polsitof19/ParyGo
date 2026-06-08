@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { createClient } from '@/lib/supabase/server';
-import { brandColor, contrastOn, withAlpha } from './brandTheme';
+import { brandColor, brandInk, contrastOn, withAlpha } from './brandTheme';
 import './client.css';
 
 export const runtime = 'edge';
@@ -33,6 +33,9 @@ export default async function BrandLayout({
   const primary = brandColor(theme.primary_color);
   const onBrand = contrastOn(primary);
   const brandSoft = withAlpha(primary, 0.12);
+  // Variante legible del color de marca para texto/acento sobre crema (oscurece
+  // los colores muy claros como el amarillo; deja intactos los medios/oscuros).
+  const brandTextInk = brandInk(theme.primary_color);
   const logoUrl = theme.logo_url ?? null;
 
   return (
@@ -43,6 +46,7 @@ export default async function BrandLayout({
           '--brand': primary,
           '--on-brand': onBrand,
           '--brand-soft': brandSoft,
+          '--brand-ink': brandTextInk,
         } as React.CSSProperties
       }
     >
