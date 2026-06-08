@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { Plus, Trash2 } from 'lucide-react';
 import { createBrandEventAction, type FormState } from './actions';
@@ -22,7 +22,16 @@ const newTT = (): TT => ({ name: '', unlimited: false, capacity: '100', phases: 
 export function EventBuilder() {
   const [state, action] = useFormState(createBrandEventAction, initial);
   const [tts, setTts] = useState<TT[]>([newTT()]);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverName, setCoverName] = useState<string | null>(null);
   const min = nowLocalInput();
+
+  function onCover(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0] ?? null;
+    setCoverPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return f ? URL.createObjectURL(f) : null; });
+    setCoverName(f?.name ?? null);
+  }
+  useEffect(() => () => { if (coverPreview) URL.revokeObjectURL(coverPreview); }, [coverPreview]);
 
   const serialized = useMemo(
     () =>
@@ -67,6 +76,20 @@ export function EventBuilder() {
         <div className="s-field">
           <FieldRow id="description" label="Descripción corta">
             <textarea id="description" name="description" rows={2} className="s-input" placeholder="DJ Headliner · Club Foso · Lima" />
+          </FieldRow>
+        </div>
+        <div className="s-field">
+          <FieldRow id="cover" label="Flyer del evento (opcional)" hint="PNG, JPG o WEBP · vertical o cuadrado · máx 10 MB. Se ve grande en la portada y en tu página de marca." error={state.fieldErrors?.cover}>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+              {coverPreview && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={coverPreview} alt="" style={{ width: 90, height: 120, objectFit: 'cover', borderRadius: 'var(--r-ctl)', border: '1px solid var(--cream-3)', flexShrink: 0 }} />
+              )}
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <input id="cover" name="cover" type="file" accept="image/png,image/jpeg,image/webp" onChange={onCover} className="s-input" style={{ paddingTop: 9 }} />
+                {coverName && <p className="s-hint">{coverName}</p>}
+              </div>
+            </div>
           </FieldRow>
         </div>
         <div className="s-form-grid s-field">

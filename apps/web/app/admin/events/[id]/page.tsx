@@ -8,6 +8,7 @@ import { formatPEN } from '@/lib/utils';
 import { publicEnv } from '@/lib/env';
 import { YapeReviewRow } from '../../yape/YapeReviewRow';
 import { PromoCodeManager, type PromoCodeRow, type PromoSales } from './PromoCodeManager';
+import { EventCoverUploader } from './EventCoverUploader';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -26,7 +27,7 @@ export default async function AdminEventDetailPage({
 
   const { data: event } = await supabase
     .from('events')
-    .select('id, brand_id, slug, name, starts_at, is_published, venue_name, description, min_age')
+    .select('id, brand_id, slug, name, starts_at, is_published, venue_name, description, min_age, cover_url')
     .eq('id', params.id)
     .maybeSingle();
 
@@ -209,6 +210,14 @@ export default async function AdminEventDetailPage({
           <span className="s-stat__sub">{hasUnlimited ? 'hay stock ilimitado' : 'capacidad con cupo'}</span>
         </div>
       </div>
+
+      {/* Flyer del evento */}
+      <section style={{ marginTop: 24 }}>
+        <h2 className="s-h2" style={{ marginBottom: 12 }}>Flyer del evento</h2>
+        <div className="s-card">
+          <EventCoverUploader eventId={event.id} currentUrl={event.cover_url} />
+        </div>
+      </section>
 
       {/* Yape por revisar — PRIMERO: es la acción de plata urgente */}
       <section style={{ marginTop: 24 }}>

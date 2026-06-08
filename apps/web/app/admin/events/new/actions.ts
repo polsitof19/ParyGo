@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { uploadEventCover } from '@/lib/brandAssets';
 
 export type FormState = {
   ok: boolean;
@@ -84,6 +85,18 @@ export async function createBrandEventAction(
   }
 
   const admin = createAdminClient();
+
+  // Flyer opcional: subir a brand-assets bajo el prefijo de la marca de la
+  // sesión (la RLS exige <slug>/...). El slug sale de la sesión, nunca del form.
+  let coverUrl: string | null = null;
+  const coverFile = formData.get('cover');
+  if (coverFile instanceof File && coverFile.size > 0) {
+    const { data: b } = await admin.from('brands').select('slug').eq('id', brandId).single();
+    const up = await uploadEventCover(admin, b!.slug, coverFile);
+    if (!up.ok) return { ok: false, message: up.message, fieldErrors: { cover: up.message } };
+    coverUrl = up.url;
+  }
+
   const { data: newEventId, error } = await admin.rpc('create_brand_event', {
     p_brand_id: brandId, // from session
     p_actor_user_id: user.id,
@@ -95,6 +108,7 @@ export async function createBrandEventAction(
       ends_at: endsAt?.toISOString() ?? null,
       venue_name: parsedEvent.data.venue_name || null,
       venue_address: parsedEvent.data.venue_address || null,
+      cover_url: coverUrl,
       min_age: parsedEvent.data.min_age ? parseInt(parsedEvent.data.min_age, 10) : 18,
       refund_policy: parsedEvent.data.refund_policy || null,
     },
