@@ -1,10 +1,16 @@
 import { redirect } from 'next/navigation';
 import { LogOut, ScanLine } from 'lucide-react';
+import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { requireSession } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
+import { ScanServiceWorker } from './ScanServiceWorker';
+import './scan.css';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
+
+const bricolage = Bricolage_Grotesque({ weight: ['700', '800'], subsets: ['latin'], variable: '--font-bricolage', display: 'swap' });
+const hanken = Hanken_Grotesk({ weight: ['400', '500', '600', '700'], subsets: ['latin'], variable: '--font-hanken', display: 'swap' });
 
 export default async function ScanLayout({ children }: { children: React.ReactNode }) {
   const user = await requireSession();
@@ -23,22 +29,21 @@ export default async function ScanLayout({ children }: { children: React.ReactNo
     .maybeSingle();
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
-        <div className="container flex h-14 items-center justify-between gap-4">
-          <span className="inline-flex items-center gap-2 font-display text-lg uppercase tracking-tight">
-            <ScanLine className="h-5 w-5 text-secondary" />
+    <div className={`scan-shell ${bricolage.variable} ${hanken.variable}`}>
+      <ScanServiceWorker />
+      <header className="k-header">
+        <div className="k-header__in">
+          <span className="k-brand">
+            <ScanLine className="h-5 w-5" />
             {brand?.name ?? 'Puerta'}
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-secondary">[ PUERTA ]</span>
+            <span className="k-tag">Puerta</span>
           </span>
           <form action="/auth/logout" method="post">
-            <button type="submit" aria-label="Cerrar sesión" className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-muted hover:text-foreground">
-              <LogOut className="h-4 w-4" />
-            </button>
+            <button type="submit" aria-label="Cerrar sesión" className="k-logout"><LogOut className="h-4 w-4" /></button>
           </form>
         </div>
       </header>
-      <main className="container max-w-lg flex-1 py-6">{children}</main>
+      <main className="k-wrap">{children}</main>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { Card, CardContent } from '@/components/ui/card';
 import { Scanner } from './Scanner';
 
 export const runtime = 'edge';
@@ -29,18 +28,14 @@ export default async function ScanPage() {
     .order('starts_at', { ascending: false });
 
   return (
-    <div className="space-y-5">
-      <header className="space-y-1">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-secondary">[ VALIDADOR ]</p>
-        <h1 className="font-display text-3xl uppercase leading-none tracking-tight">Escanear entradas</h1>
-      </header>
+    <div className="k-stack">
+      <div>
+        <span className="k-eyebrow">Validador</span>
+        <h1 className="k-h1" style={{ marginTop: 2 }}>Escanear entradas</h1>
+      </div>
 
       {!events || events.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Esta marca no tiene eventos para validar todavía.
-          </CardContent>
-        </Card>
+        <div className="k-empty">Esta marca no tiene eventos para validar todavía.</div>
       ) : (
         <Scanner events={events} brandName={brand.name} />
       )}

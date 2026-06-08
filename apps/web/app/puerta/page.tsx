@@ -1,5 +1,7 @@
 import { ScanLine } from 'lucide-react';
+import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { RedeemForm } from './RedeemForm';
+import '../scan/scan.css';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -9,23 +11,24 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
+const bricolage = Bricolage_Grotesque({ weight: ['700', '800'], subsets: ['latin'], variable: '--font-bricolage', display: 'swap' });
+const hanken = Hanken_Grotesk({ weight: ['400', '500', '600', '700'], subsets: ['latin'], variable: '--font-hanken', display: 'swap' });
+
 export default function PuertaPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
-      <div className="w-full max-w-sm space-y-6 text-center">
-        <div className="space-y-2">
-          <ScanLine className="mx-auto h-8 w-8 text-secondary" />
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-secondary">[ PUERTA ]</p>
-          <h1 className="font-display text-3xl uppercase leading-none tracking-tight">Acceso de staff</h1>
-          <p className="text-sm text-muted-foreground">
-            Ingresá tu código personal de 8 caracteres.
+    <div className={`scan-shell ${bricolage.variable} ${hanken.variable}`}>
+      <main className="k-gate">
+        <div className="k-gate__card">
+          <div className="k-gate__badge"><ScanLine className="h-7 w-7" /></div>
+          <span className="k-eyebrow">Puerta</span>
+          <h1 className="k-h1" style={{ marginTop: 4 }}>Acceso de staff</h1>
+          <p className="k-muted" style={{ marginTop: 6, marginBottom: 20 }}>Ingresá tu código personal de 8 caracteres.</p>
+          <RedeemForm />
+          <p className="k-muted" style={{ marginTop: 18, fontSize: 12.5 }}>
+            ¿Sos organizador? <a href="/login" style={{ color: 'var(--tangerine)', fontWeight: 600 }}>Entrá por email</a>
           </p>
         </div>
-        <RedeemForm />
-        <p className="text-center text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          ¿Sos organizador? <a href="/login" className="text-secondary underline-offset-4 hover:underline">Entrá por email</a>
-        </p>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

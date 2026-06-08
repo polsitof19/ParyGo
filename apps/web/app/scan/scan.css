@@ -1,0 +1,81 @@
+/* ============================================================
+   Puerta (/scan y /puerta) — base cálida parygo + resultado de
+   altísima legibilidad para la puerta. Scopeado bajo .scan-shell.
+   ============================================================ */
+.scan-shell {
+  --cream: #FBF7F0; --cream-2: #F4EDE1; --cream-3: #EFE6D6; --white: #FFFFFF;
+  --ink: #231C17; --ink-2: #6B5F54; --ink-3: #A89B8C;
+  --tangerine: #FF6A3D; --tangerine-deep: #E8552A; --peri: #5B6CFF;
+  --ok: #15a34a; --deny: #dc2626; --warn: #d97706;
+  --display: var(--font-bricolage), "Bricolage Grotesque", system-ui, sans-serif;
+  --body: var(--font-hanken), "Hanken Grotesk", system-ui, sans-serif;
+  --r-card: 16px; --r-ctl: 12px; --r-pill: 999px;
+  min-height: 100vh; background: var(--cream); color: var(--ink);
+  font-family: var(--body); font-size: 15px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+}
+.scan-shell *, .scan-shell *::before, .scan-shell *::after { box-sizing: border-box; }
+.scan-shell a { color: inherit; text-decoration: none; }
+.scan-shell button { font: inherit; }
+
+/* header del validador */
+.scan-shell .k-header { position: sticky; top: 0; z-index: 30; background: rgba(251,247,240,.9); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--cream-3); }
+.scan-shell .k-header__in { max-width: 720px; margin: 0 auto; height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; }
+.scan-shell .k-brand { display: inline-flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 800; font-size: 17px; letter-spacing: -0.01em; }
+.scan-shell .k-brand svg { color: var(--tangerine); }
+.scan-shell .k-tag { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.scan-shell .k-logout { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; border: 1.5px solid var(--cream-3); background: var(--white); color: var(--ink-2); cursor: pointer; }
+
+.scan-shell .k-wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
+.scan-shell .k-h1 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spacing: -0.02em; }
+.scan-shell .k-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tangerine); }
+.scan-shell .k-stack { display: flex; flex-direction: column; gap: 14px; }
+.scan-shell .k-muted { color: var(--ink-2); font-size: 13px; }
+.scan-shell .k-empty { text-align: center; color: var(--ink-2); padding: 32px 12px; background: var(--white); border: 1px solid var(--cream-3); border-radius: var(--r-card); }
+
+/* barra superior */
+.scan-shell .k-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.scan-shell .k-select { height: 44px; max-width: 60%; padding: 0 12px; border-radius: var(--r-ctl); border: 1.5px solid var(--cream-3); background: var(--white); font: inherit; font-weight: 600; color: var(--ink); }
+.scan-shell .k-status { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 700; }
+.scan-shell .k-dot--on { color: var(--ok); } .scan-shell .k-dot--off { color: var(--warn); }
+.scan-shell .k-pend { color: var(--warn); }
+.scan-shell .k-count { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.scan-shell .k-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; border: 1.5px solid var(--cream-3); background: var(--white); color: var(--ink-2); cursor: pointer; }
+
+/* RESULTADO gigante — legibilidad sobre estética. Color por tono. */
+.scan-shell .k-result { border-radius: 22px; padding: 28px 20px; text-align: center; color: #fff; box-shadow: 0 18px 44px -20px rgba(0,0,0,.35); animation: k-pop .22s cubic-bezier(.22,1,.36,1); }
+@keyframes k-pop { from { transform: scale(.96); opacity: .4 } to { transform: scale(1); opacity: 1 } }
+.scan-shell .k-result--ok { background: var(--ok); }
+.scan-shell .k-result--deny { background: var(--deny); }
+.scan-shell .k-result--warn { background: var(--warn); }
+.scan-shell .k-result__icon { width: 72px; height: 72px; margin: 0 auto 10px; border-radius: 50%; background: rgba(255,255,255,.22); display: grid; place-items: center; }
+.scan-shell .k-result__icon svg { width: 44px; height: 44px; stroke-width: 3; }
+.scan-shell .k-result__label { font-family: var(--display); font-weight: 800; font-size: clamp(34px, 9vw, 52px); line-height: 1; letter-spacing: -0.02em; }
+.scan-shell .k-result__name { font-weight: 800; font-size: clamp(22px, 6vw, 30px); margin-top: 12px; line-height: 1.1; }
+.scan-shell .k-result__doc { font-weight: 700; font-size: clamp(18px, 5vw, 24px); margin-top: 6px; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.scan-shell .k-result__type { font-size: 17px; font-weight: 600; opacity: .92; margin-top: 4px; }
+.scan-shell .k-result__sub { font-size: 14px; opacity: .9; margin-top: 8px; }
+.scan-shell .k-result__off { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; opacity: .85; margin-top: 10px; }
+
+/* cámara */
+.scan-shell .k-cam { overflow: hidden; border-radius: var(--r-card); border: 1px solid var(--cream-3); background: #000; }
+.scan-shell .k-cam__off { height: 200px; display: grid; place-items: center; color: #fff; opacity: .6; font-size: 14px; }
+
+/* controles */
+.scan-shell .k-row { display: flex; align-items: center; gap: 10px; }
+.scan-shell .k-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 46px; padding: 0 18px; border-radius: var(--r-pill); border: 1.5px solid transparent; font-weight: 700; font-size: 15px; cursor: pointer; }
+.scan-shell .k-btn--brand { background: var(--tangerine); color: #fff; }
+.scan-shell .k-btn--brand:active { transform: scale(.98); }
+.scan-shell .k-btn--soft { background: var(--white); color: var(--ink); border-color: var(--cream-3); }
+.scan-shell .k-label { display: block; font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
+.scan-shell .k-input { width: 100%; height: 46px; padding: 0 14px; background: var(--white); border: 1.5px solid var(--cream-3); border-radius: var(--r-ctl); font: inherit; font-size: 16px; color: var(--ink); }
+.scan-shell .k-input:focus { outline: none; border-color: var(--tangerine); box-shadow: 0 0 0 3px rgba(255,106,61,.16); }
+.scan-shell .k-foot { text-align: center; font-size: 12px; color: var(--ink-3); padding: 8px 0 24px; }
+
+/* /puerta — login por código */
+.scan-shell .k-gate { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.scan-shell .k-gate__card { width: 100%; max-width: 380px; text-align: center; }
+.scan-shell .k-gate__badge { width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 50%; background: rgba(255,106,61,.12); color: var(--tangerine); display: grid; place-items: center; }
+.scan-shell .k-codeinput { width: 100%; height: 56px; text-align: center; font-family: var(--display); font-weight: 800; font-size: 24px; letter-spacing: 0.3em; text-transform: uppercase; background: var(--white); border: 1.5px solid var(--cream-3); border-radius: var(--r-ctl); color: var(--ink); }
+.scan-shell .k-codeinput:focus { outline: none; border-color: var(--tangerine); box-shadow: 0 0 0 3px rgba(255,106,61,.16); }
+
+@media (prefers-reduced-motion: reduce) { .scan-shell * { animation: none !important; } }

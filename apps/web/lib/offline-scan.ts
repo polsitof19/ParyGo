@@ -9,6 +9,8 @@ export type CachedTicket = {
   ticket_type_name: string;
   max_scans: number | null;
   scan_count: number;
+  buyer_dni?: string | null;
+  buyer_doc_type?: string | null;
 };
 
 export type QueuedScan = {
