@@ -1,7 +1,7 @@
 export const SITE = {
   name: 'ParyGo',
-  domain: 'parygo.pages.dev',
-  url: 'https://parygo.pages.dev',
+  domain: 'parygo.com',
+  url: 'https://parygo.com',
   title: 'ParyGo — Vende las entradas de tu evento sin complicarte',
   description:
     'Discotecas, conciertos, fiestas, cumpleaños. Vende entradas con tu marca, cobra directo por Yape y tarjeta (cero comisión por entrada) y controla quién entra con QR. Desde S/200 por evento.',

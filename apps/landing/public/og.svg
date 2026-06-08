@@ -36,6 +36,6 @@
   <text x="80" y="440" font-family="monospace" font-size="20" fill="#B4B4C0" letter-spacing="3">TICKETING PREMIUM · LIMA + LATAM</text>
   <text x="80" y="475" font-family="monospace" font-size="20" fill="#B4B4C0" letter-spacing="3">S/200 POR EVENTO · 0% COMISIÓN · QR ÚNICO</text>
   <line x1="80" y1="560" x2="1120" y2="560" stroke="#2A2A38" stroke-width="1"/>
-  <text x="80" y="595" font-family="monospace" font-size="16" fill="#6B6B7A" letter-spacing="3">PARYGO.PAGES.DEV · BASED IN LIMA, PE</text>
+  <text x="80" y="595" font-family="monospace" font-size="16" fill="#6B6B7A" letter-spacing="3">PARYGO.COM · BASED IN LIMA, PE</text>
   <text x="1120" y="595" text-anchor="end" font-family="monospace" font-size="16" fill="#00E5FF" letter-spacing="3">v1.0 / 2026</text>
 </svg>
