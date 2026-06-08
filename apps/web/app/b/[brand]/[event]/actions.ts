@@ -14,6 +14,8 @@ export type CheckoutInput = {
   buyerName: string;
   buyerEmail: string;
   buyerPhone: string;
+  buyerDocType: 'dni' | 'ce' | 'passport';
+  buyerDni: string;
   ageOk: boolean;
   marketingOptIn: boolean;
   method: 'yape_manual' | 'mercadopago';
@@ -47,6 +49,8 @@ const schema = z.object({
   buyerName: z.string().min(2).max(120),
   buyerEmail: z.string().email(),
   buyerPhone: z.string().min(7).max(20),
+  buyerDocType: z.enum(['dni', 'ce', 'passport']),
+  buyerDni: z.string().trim().min(6).max(20),
   ageOk: z.literal(true),
   marketingOptIn: z.boolean(),
   method: z.enum(['yape_manual', 'mercadopago']),
@@ -60,6 +64,15 @@ const schema = z.object({
     .min(1),
   sessionId: z.string().min(8).max(64),
   promoCode: z.string().min(2).max(32).optional().or(z.literal('')),
+}).superRefine((d, ctx) => {
+  // DNI peruano = exactamente 8 dígitos. CE/pasaporte = alfanumérico 6-15.
+  if (d.buyerDocType === 'dni') {
+    if (!/^\d{8}$/.test(d.buyerDni)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['buyerDni'], message: 'El DNI debe tener 8 dígitos.' });
+    }
+  } else if (!/^[A-Za-z0-9]{6,15}$/.test(d.buyerDni)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['buyerDni'], message: 'Documento inválido.' });
+  }
 });
 
 export async function startCheckout(input: CheckoutInput): Promise<CheckoutResult> {
@@ -185,6 +198,8 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
       buyer_name: parsed.data.buyerName,
       buyer_email: parsed.data.buyerEmail.toLowerCase(),
       buyer_phone: parsed.data.buyerPhone,
+      buyer_dni: parsed.data.buyerDni,
+      buyer_doc_type: parsed.data.buyerDocType,
       buyer_age_ok: true,
       marketing_opt_in: parsed.data.marketingOptIn,
       payment_method: parsed.data.method,

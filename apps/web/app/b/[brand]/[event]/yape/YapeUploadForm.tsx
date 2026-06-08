@@ -3,9 +3,6 @@
 import { useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Loader2, Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { formatPEN } from '@/lib/utils';
 import { submitYapeProof } from './actions';
 
@@ -26,152 +23,71 @@ export function YapeUploadForm({ orderId, expectedAmountCents, buyerName }: Prop
     const f = e.target.files?.[0] ?? null;
     if (!f) {
       setFile(null);
-      setPreviewUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return null;
-      });
+      setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
       return;
     }
-    if (f.size > 5 * 1024 * 1024) {
-      toast.error('La captura debe pesar menos de 5 MB');
-      return;
-    }
+    if (f.size > 5 * 1024 * 1024) { toast.error('La captura debe pesar menos de 5 MB'); return; }
     setFile(f);
-    setPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return URL.createObjectURL(f);
-    });
+    setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(f); });
   }
 
-  // Revoke the blob URL on unmount to avoid the memory leak when the
-  // component remounts after submit/navigate.
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (!file) {
-          toast.error('Sube la captura del comprobante');
-          return;
-        }
+        if (!file) { toast.error('Subí la captura del comprobante'); return; }
         const form = new FormData(e.currentTarget);
         form.set('order_id', orderId);
         form.set('receipt_file', file);
         start(async () => {
           const res = await submitYapeProof(form);
-          if (!res.ok) {
-            toast.error(res.message ?? 'Error al subir');
-            return;
-          }
+          if (!res.ok) { toast.error(res.message ?? 'Error al subir'); return; }
           window.location.href = res.redirectUrl;
         });
       }}
-      className="space-y-4"
+      style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
     >
-      <div className="space-y-2">
-        <Label htmlFor="amount">Monto que yapeaste (S/)</Label>
-        <Input
-          id="amount"
-          name="amount_soles"
-          type="number"
-          step="0.01"
-          required
-          defaultValue={(expectedAmountCents / 100).toFixed(2)}
-        />
-        <p className="text-xs text-muted-foreground">
-          Debe ser exactamente {formatPEN(expectedAmountCents)}
-        </p>
+      <div className="c-field">
+        <label htmlFor="amount" className="c-label">Monto que yapeaste (S/)</label>
+        <input id="amount" name="amount_soles" type="number" step="0.01" required defaultValue={(expectedAmountCents / 100).toFixed(2)} className="c-input" inputMode="decimal" />
+        <p className="c-help">Debe ser exactamente {formatPEN(expectedAmountCents)}</p>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="operation_number">N° de operación</Label>
-        <Input
-          id="operation_number"
-          name="operation_number"
-          required
-          placeholder="00012345"
-          maxLength={20}
-        />
-        <p className="text-xs text-muted-foreground">
-          Aparece en tu app Yape como "N° de operación".
-        </p>
+      <div className="c-field">
+        <label htmlFor="operation_number" className="c-label">N° de operación</label>
+        <input id="operation_number" name="operation_number" required placeholder="00012345" maxLength={20} className="c-input" inputMode="numeric" />
+        <p className="c-help">Aparece en tu app Yape como &quot;N° de operación&quot;.</p>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="payer_name">Tu nombre completo (como en Yape)</Label>
-        <Input
-          id="payer_name"
-          name="payer_name"
-          required
-          defaultValue={buyerName}
-          placeholder="María López"
-        />
-        <p className="text-xs text-muted-foreground">
-          Debe coincidir con el nombre que figura en tu comprobante.
-        </p>
+      <div className="c-field">
+        <label htmlFor="payer_name" className="c-label">Tu nombre completo (como en Yape)</label>
+        <input id="payer_name" name="payer_name" required defaultValue={buyerName} placeholder="María López" className="c-input" />
+        <p className="c-help">Debe coincidir con el nombre del comprobante.</p>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="security_code">Código de seguridad</Label>
-        <Input
-          id="security_code"
-          name="security_code"
-          required
-          placeholder="123 o ABC456"
-          maxLength={20}
-        />
-        <p className="text-xs text-muted-foreground">
-          El código de 3-4 caracteres que figura en el comprobante.
-        </p>
+      <div className="c-field">
+        <label htmlFor="security_code" className="c-label">Código de seguridad</label>
+        <input id="security_code" name="security_code" required placeholder="123 o ABC456" maxLength={20} className="c-input" />
+        <p className="c-help">El código de 3-4 caracteres que figura en el comprobante.</p>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="receipt">Captura del comprobante</Label>
-        <input
-          id="receipt"
-          type="file"
-          accept="image/png,image/jpeg,image/webp,image/heic,image/heif"
-          required
-          onChange={handleFile}
-          className="block w-full text-sm file:mr-4 file:rounded-full file:border-0 file:bg-secondary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-secondary-foreground hover:file:bg-secondary/80"
-        />
+      <div className="c-field">
+        <label htmlFor="receipt" className="c-label">Captura del comprobante</label>
+        <input id="receipt" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif" required onChange={handleFile} className="c-input" style={{ paddingTop: 11 }} />
         {previewUrl && (
-          <img
-            src={previewUrl}
-            alt=""
-            className="mt-2 max-h-64 rounded-md border border-border"
-          />
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={previewUrl} alt="" style={{ marginTop: 10, maxHeight: 240, borderRadius: 'var(--r-ctl)', border: '1px solid var(--cream-3)' }} />
         )}
       </div>
 
-      <Button
-        type="submit"
-        variant="gradient"
-        size="lg"
-        className="w-full"
-        disabled={pending || !file}
-      >
-        {pending ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Subiendo…
-          </>
-        ) : (
-          <>
-            <Upload className="h-4 w-4" />
-            Enviar comprobante
-          </>
-        )}
-      </Button>
+      <button type="submit" className="c-btn c-btn--brand c-btn--block c-btn--lg" disabled={pending || !file}>
+        {pending ? <><Loader2 className="h-4 w-4 animate-spin" /> Subiendo…</> : <><Upload className="h-4 w-4" /> Enviar comprobante</>}
+      </button>
 
-      <p className="text-center text-xs text-muted-foreground">
-        Tu pago queda en revisión. El promotor valida en 5-15 min en horario
-        operativo y te llega un email + WhatsApp con tu QR.
+      <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5 }}>
+        Tu pago queda en revisión. El promotor valida en 5-15 min en horario operativo y te llega un email + WhatsApp con tu QR.
       </p>
     </form>
   );

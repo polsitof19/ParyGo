@@ -84,27 +84,19 @@ export function MercadoPagoWallet({
   }, [publicKey, preferenceId]);
 
   return (
-    <div className="space-y-4 rounded-lg border border-border bg-card p-6">
-      <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
-        [ PAGÁ CON MERCADOPAGO ]
-      </h2>
+    <div className="c-card" style={{ maxWidth: 520, margin: '0 auto' }}>
+      <p className="c-card__title">Pagá con MercadoPago</p>
       {!failed && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          Cargando el botón seguro de MercadoPago…
+        <div className="c-muted" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Cargando el botón seguro de MercadoPago…
         </div>
       )}
       {/* MP injects the Wallet button here */}
-      <div id={CONTAINER_ID} ref={containerRef} />
-      <a
-        href={initPoint}
-        className="block text-center font-mono text-xs uppercase tracking-[0.18em] text-secondary underline-offset-4 hover:underline"
-      >
+      <div id={CONTAINER_ID} ref={containerRef} style={{ marginTop: 12 }} />
+      <a href={initPoint} style={{ display: 'block', textAlign: 'center', marginTop: 12, color: 'var(--brand)', fontWeight: 600, fontSize: 13.5 }}>
         {failed ? 'Continuar en MercadoPago →' : '¿No ves el botón? Continuar en MercadoPago →'}
       </a>
-      <p className="text-center text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-        🔒 El pago se procesa en MercadoPago · tu QR llega al confirmar
-      </p>
+      <p className="c-reassure" style={{ marginTop: 12 }}>🔒 El pago se procesa en MercadoPago · tu QR llega al confirmar</p>
     </div>
   );
 }

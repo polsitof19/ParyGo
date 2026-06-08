@@ -283,6 +283,7 @@ export type Database = {
           brand_id: string
           buyer_age_ok: boolean
           buyer_dni: string | null
+          buyer_doc_type: string
           buyer_email: string
           buyer_name: string
           buyer_phone: string
@@ -316,6 +317,7 @@ export type Database = {
           brand_id: string
           buyer_age_ok: boolean
           buyer_dni?: string | null
+          buyer_doc_type?: string
           buyer_email: string
           buyer_name: string
           buyer_phone: string
@@ -347,6 +349,7 @@ export type Database = {
           brand_id?: string
           buyer_age_ok?: boolean
           buyer_dni?: string | null
+          buyer_doc_type?: string
           buyer_email?: string
           buyer_name?: string
           buyer_phone?: string

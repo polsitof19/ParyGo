@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { Calendar, MapPin, ShieldCheck } from 'lucide-react';
+import { Calendar, MapPin, ShieldCheck, ExternalLink } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv } from '@/lib/env';
@@ -135,97 +135,53 @@ export default async function EventPage({ params }: Props) {
   const totalCapacity = limitedTypes.reduce((acc, t) => acc + t.capacity, 0);
   const totalSold = limitedTypes.reduce((acc, t) => acc + t.sold, 0);
 
-  const theme = (brand.theme_json ?? {}) as { primary_color?: string };
-  const primary = theme.primary_color || '#FF1F8F';
+  const dateLabel = new Intl.DateTimeFormat('es-PE', {
+    weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+  }).format(startsAt);
+  const hasCover = Boolean(event.cover_url);
 
   return (
     <>
       <EventStructuredData brand={brand} event={event} ticketTypes={ticketTypes} />
 
-      <article className="pb-32">
-        {/* COVER */}
-        <section
-          className="relative isolate overflow-hidden"
-          style={{
-            background: event.cover_url
-              ? undefined
-              : `radial-gradient(circle at 70% 30%, ${primary}55, transparent 50%), radial-gradient(circle at 30% 70%, var(--secondary-hex,#00E5FF)44, transparent 55%), linear-gradient(135deg,#2a0f3a,#0d1b2e)`,
-          }}
-        >
-          {event.cover_url && (
-            <img
-              src={event.cover_url}
-              alt=""
-              className="absolute inset-0 -z-10 h-full w-full object-cover opacity-70"
-            />
-          )}
-          <div className="absolute inset-0 -z-10 bg-gradient-to-t from-background via-background/60 to-background/10" />
-
-          <div className="container py-16 md:py-28">
-            <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-white/80">
-              <span
-                className="inline-block h-1.5 w-1.5 rounded-full"
-                style={{ background: primary, boxShadow: `0 0 10px ${primary}` }}
-              />
-              VENDIENDO AHORA
-            </div>
-            <h1 className="mt-4 max-w-4xl font-display text-5xl uppercase leading-none tracking-tight md:text-7xl lg:text-8xl">
-              {event.name}
-            </h1>
-            {event.description && (
-              <p className="mt-6 max-w-2xl text-base text-white/85 md:text-lg">
-                {event.description}
-              </p>
+      <article style={{ paddingBottom: 64 }}>
+        {/* HERO / PORTADA */}
+        <section className={`c-hero ${hasCover ? 'c-hero--img' : 'c-hero--tint'}`}>
+          <div className="c-hero__bg">
+            {hasCover && (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={event.cover_url!} alt="" className="c-hero__img" />
+                <div className="c-hero__veil" style={{ background: 'linear-gradient(180deg, rgba(20,14,10,.25), rgba(20,14,10,.72))' }} />
+              </>
             )}
-            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 font-mono text-xs uppercase tracking-[0.16em] text-white/80 md:text-sm">
-              <span className="inline-flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                {new Intl.DateTimeFormat('es-PE', {
-                  weekday: 'short',
-                  day: '2-digit',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                }).format(startsAt)}
-              </span>
-              {event.venue_name && (
-                <span className="inline-flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  {event.venue_name}
-                </span>
-              )}
-              {event.min_age > 0 && (
-                <span className="inline-flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4" />
-                  +{event.min_age}
-                </span>
-              )}
+          </div>
+          <div className="c-hero__inner">
+            <span className="c-live"><span className="dot" /> Vendiendo ahora</span>
+            <h1>{event.name}</h1>
+            {event.description && <p className="c-hero__desc">{event.description}</p>}
+            <div className="c-chips">
+              <span className="c-chip"><Calendar className="h-4 w-4" /> {dateLabel}</span>
+              {event.venue_name && <span className="c-chip"><MapPin className="h-4 w-4" /> {event.venue_name}</span>}
+              {event.min_age > 0 && <span className="c-chip"><ShieldCheck className="h-4 w-4" /> +{event.min_age}</span>}
             </div>
           </div>
         </section>
 
-        {/* CAPACITY METER */}
+        {/* MEDIDOR DE CAPACIDAD */}
         {totalCapacity > 0 && (
-          <section className="border-y border-border bg-card/40">
-            <div className="container flex flex-wrap items-center justify-between gap-3 py-3 font-mono text-[10px] uppercase tracking-[0.18em]">
-              <span className="text-muted-foreground">
-                Capacidad · {totalSold} / {totalCapacity}
-              </span>
-              <div className="flex h-1 w-full max-w-md gap-px overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full transition-all"
-                  style={{
-                    width: `${Math.min(100, (totalSold / totalCapacity) * 100)}%`,
-                    background: `linear-gradient(90deg, ${primary}, var(--secondary-hex,#00E5FF))`,
-                  }}
-                />
+          <div className="c-meter">
+            <div className="c-meter__inner">
+              <span className="c-muted">Capacidad · {totalSold}/{totalCapacity}</span>
+              <div className="c-meter__bar">
+                <div className="c-meter__fill" style={{ width: `${Math.min(100, (totalSold / totalCapacity) * 100)}%` }} />
               </div>
-              <span className="text-secondary">EN VIVO</span>
+              <span className="c-eyebrow">En vivo</span>
             </div>
-          </section>
+          </div>
         )}
 
-        {/* CHECKOUT PANEL */}
+        {/* PANEL DE CHECKOUT */}
         <EventCheckoutPanel
           brand={brand}
           event={event}
@@ -234,60 +190,42 @@ export default async function EventPage({ params }: Props) {
           mpPublicKey={mpPublicKey}
         />
 
-        {/* VENUE + REFUND POLICY */}
-        <section className="container mt-16 grid gap-8 md:grid-cols-2">
-          {event.venue_address && (
-            <div className="space-y-3 rounded-lg border border-border bg-card p-6">
-              <h3 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
-                [ DÓNDE ]
-              </h3>
-              <p className="font-display text-xl uppercase">{event.venue_name}</p>
-              <p className="text-sm text-muted-foreground">{event.venue_address}</p>
-              {event.venue_lat && event.venue_lng && (
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${event.venue_lat},${event.venue_lng}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm text-secondary underline-offset-4 hover:underline"
-                >
-                  Ver en Google Maps →
-                </a>
-              )}
-            </div>
-          )}
-          {event.refund_policy && (
-            <div className="space-y-3 rounded-lg border border-border bg-card p-6">
-              <h3 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
-                [ DEVOLUCIONES ]
-              </h3>
-              <p className="text-sm text-muted-foreground">{event.refund_policy}</p>
-            </div>
-          )}
-        </section>
-
-        {/* SUPPORT */}
-        {brand.whatsapp_e164 && (
-          <section className="container mt-10">
-            <p className="text-center font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
-              ¿Problema con tu compra?{' '}
-              <a
-                href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-secondary underline-offset-4 hover:underline"
-              >
-                WhatsApp soporte
-              </a>
-            </p>
+        {/* DÓNDE + DEVOLUCIONES */}
+        {(event.venue_address || event.refund_policy) && (
+          <section className="c-wrap" style={{ marginTop: 40, display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+            {event.venue_address && (
+              <div className="c-card">
+                <p className="c-card__title">Dónde</p>
+                <p className="c-h2">{event.venue_name}</p>
+                <p className="c-muted" style={{ marginTop: 4 }}>{event.venue_address}</p>
+                {event.venue_lat && event.venue_lng && (
+                  <a href={`https://www.google.com/maps/search/?api=1&query=${event.venue_lat},${event.venue_lng}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 12, color: 'var(--brand)', fontWeight: 600, fontSize: 14 }}>
+                    Ver en Google Maps <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                )}
+              </div>
+            )}
+            {event.refund_policy && (
+              <div className="c-card">
+                <p className="c-card__title">Devoluciones</p>
+                <p className="c-muted">{event.refund_policy}</p>
+              </div>
+            )}
           </section>
         )}
 
-        {/* Display info that may be expected in PEN amounts */}
+        {/* SOPORTE */}
+        {brand.whatsapp_e164 && (
+          <p className="c-foot">
+            ¿Problema con tu compra?{' '}
+            <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand)', fontWeight: 600 }}>
+              WhatsApp soporte
+            </a>
+          </p>
+        )}
+
         <p className="sr-only">
-          Entradas desde {formatPEN(
-            Math.min(...(ticketTypes.length ? ticketTypes.map((t) => t.active_price_cents) : [0]))
-          )}
-          .
+          Entradas desde {formatPEN(Math.min(...(ticketTypes.length ? ticketTypes.map((t) => t.active_price_cents) : [0])))}.
         </p>
       </article>
     </>

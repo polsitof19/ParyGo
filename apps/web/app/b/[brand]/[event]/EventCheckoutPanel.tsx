@@ -2,10 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Minus, Plus, Loader2, Clock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Minus, Plus, Loader2, Clock, ShieldCheck, Lock, Mail, ArrowRight, TrendingUp } from 'lucide-react';
 import { formatPEN } from '@/lib/utils';
 import { startCheckout, previewPromo, type CheckoutInput } from './actions';
 import { reserveStock } from '@/lib/reservations';
@@ -23,96 +20,42 @@ function readOrCreateSessionId(): string {
   return id;
 }
 
-type Brand = {
-  id: string;
-  slug: string;
-  name: string;
-  yape_number: string | null;
-  yape_holder: string | null;
-};
-type Event = {
-  id: string;
-  slug: string;
-  name: string;
-  min_age: number;
-  starts_at: string;
-};
+type Brand = { id: string; slug: string; name: string; yape_number: string | null; yape_holder: string | null };
+type Event = { id: string; slug: string; name: string; min_age: number; starts_at: string };
 type TicketType = {
-  id: string;
-  name: string;
-  description: string | null;
-  price_cents: number;
-  // Active price phase (server-resolved). Display + estimate only — the
-  // server re-resolves the authoritative price at checkout.
-  active_price_cents: number;
-  next_price_cents: number | null;
-  next_starts_at: string | null;
-  capacity: number;
-  sold: number;
-  is_unlimited: boolean;
-  sort_order: number;
-  color_hex: string | null;
+  id: string; name: string; description: string | null; price_cents: number;
+  active_price_cents: number; next_price_cents: number | null; next_starts_at: string | null;
+  capacity: number; sold: number; is_unlimited: boolean; sort_order: number; color_hex: string | null;
 };
 
-// Urgency hook: "sube a S/40 el 5 jun". Shows the LAST day at the current
-// price (the instant just before the next phase begins), in Lima time.
 function formatRiseDate(nextStartsAt: string): string {
   const lastMoment = new Date(new Date(nextStartsAt).getTime() - 60_000);
-  return new Intl.DateTimeFormat('es-PE', {
-    day: 'numeric',
-    month: 'short',
-    timeZone: 'America/Lima',
-  }).format(lastMoment);
+  return new Intl.DateTimeFormat('es-PE', { day: 'numeric', month: 'short', timeZone: 'America/Lima' }).format(lastMoment);
 }
 
 export function EventCheckoutPanel({
-  brand,
-  event,
-  ticketTypes,
-  mpConfigured,
-  mpPublicKey,
+  brand, event, ticketTypes, mpConfigured, mpPublicKey,
 }: {
-  brand: Brand;
-  event: Event;
-  ticketTypes: TicketType[];
-  mpConfigured: boolean;
-  mpPublicKey: string | null;
+  brand: Brand; event: Event; ticketTypes: TicketType[]; mpConfigured: boolean; mpPublicKey: string | null;
 }) {
-  // Anchoring: sort by price descending so highest tier shows first.
-  // (Promoter's sort_order is a tiebreaker.)
   const sorted = useMemo(
-    () =>
-      [...ticketTypes].sort(
-        (a, b) =>
-          b.active_price_cents - a.active_price_cents || a.sort_order - b.sort_order
-      ),
+    () => [...ticketTypes].sort((a, b) => b.active_price_cents - a.active_price_cents || a.sort_order - b.sort_order),
     [ticketTypes]
   );
 
   const [qty, setQty] = useState<Record<string, number>>({});
   const [step, setStep] = useState<1 | 2>(1);
-  // Default to Yape when the brand has it; only default to MercadoPago when MP
-  // is actually configured. (Almighty = Yape-only → never defaults to MP.)
   const [method, setMethod] = useState<'yape_manual' | 'mercadopago'>(
     brand.yape_number ? 'yape_manual' : mpConfigured ? 'mercadopago' : 'yape_manual'
   );
-  // Once MP checkout starts we have a server-created preference; we swap the
-  // form for the MercadoPago Wallet Brick (the order is already PENDING).
   const [mpCheckout, setMpCheckout] = useState<{ preferenceId: string; initPoint: string } | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // Stock reservation: session id is created on first interaction and persists
-  // for the tab. The first reservation sets the countdown; every successful
-  // refresh extends it.
   const sessionIdRef = useRef<string>('');
   const [reservationExpiresAt, setReservationExpiresAt] = useState<number | null>(null);
   const [now, setNow] = useState<number>(() => Date.now());
-  // We re-trigger the server reserve when qty changes — debounced so quick
-  // clicks on +/- don't flood the RPC.
   const lastReserved = useRef<Record<string, number>>({});
-  useEffect(() => {
-    sessionIdRef.current = readOrCreateSessionId();
-  }, []);
+  useEffect(() => { sessionIdRef.current = readOrCreateSessionId(); }, []);
   useEffect(() => {
     if (reservationExpiresAt === null) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -122,7 +65,6 @@ export function EventCheckoutPanel({
     const sid = sessionIdRef.current;
     if (!sid) return;
     const timer = setTimeout(() => {
-      // Compute diff vs last known reserved state and push changes.
       const next = { ...lastReserved.current };
       const ids = new Set([...Object.keys(qty), ...Object.keys(lastReserved.current)]);
       ids.forEach(async (ticketTypeId) => {
@@ -133,7 +75,6 @@ export function EventCheckoutPanel({
         if (!res.ok) {
           toast.error(res.message);
           if (typeof res.available === 'number') {
-            // Snap quantity to the actual maximum so the UI doesn't lie.
             setQty((q) => ({ ...q, [ticketTypeId]: res.available! }));
             next[ticketTypeId] = res.available!;
           }
@@ -141,39 +82,21 @@ export function EventCheckoutPanel({
         }
         next[ticketTypeId] = want;
         if (want === 0) delete next[ticketTypeId];
-        if (res.expiresAt) {
-          setReservationExpiresAt(new Date(res.expiresAt).getTime());
-        }
+        if (res.expiresAt) setReservationExpiresAt(new Date(res.expiresAt).getTime());
       });
       lastReserved.current = next;
     }, 400);
     return () => clearTimeout(timer);
   }, [qty]);
 
-  const totalCents = useMemo(
-    () =>
-      sorted.reduce(
-        (acc, t) => acc + (qty[t.id] ?? 0) * t.active_price_cents,
-        0
-      ),
-    [qty, sorted]
-  );
-  const totalItems = useMemo(
-    () => Object.values(qty).reduce((a, b) => a + b, 0),
-    [qty]
-  );
+  const totalCents = useMemo(() => sorted.reduce((acc, t) => acc + (qty[t.id] ?? 0) * t.active_price_cents, 0), [qty, sorted]);
+  const totalItems = useMemo(() => Object.values(qty).reduce((a, b) => a + b, 0), [qty]);
 
   function inc(t: TicketType) {
     const remaining = t.capacity - t.sold;
     const current = qty[t.id] ?? 0;
-    if (!t.is_unlimited && current >= remaining) {
-      toast.error(`Solo quedan ${remaining} disponibles`);
-      return;
-    }
-    if (current >= 10) {
-      toast.error('Máximo 10 por compra');
-      return;
-    }
+    if (!t.is_unlimited && current >= remaining) { toast.error(`Solo quedan ${remaining} disponibles`); return; }
+    if (current >= 10) { toast.error('Máximo 10 por compra'); return; }
     setQty({ ...qty, [t.id]: current + 1 });
   }
   function dec(t: TicketType) {
@@ -182,15 +105,8 @@ export function EventCheckoutPanel({
     setQty({ ...qty, [t.id]: current - 1 });
   }
 
-  // Countdown derived state.
-  const secondsLeft =
-    reservationExpiresAt === null
-      ? null
-      : Math.max(0, Math.floor((reservationExpiresAt - now) / 1000));
-  const countdownLabel = secondsLeft === null
-    ? null
-    : `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`;
-  // When time runs out, force a reload so the user starts over with fresh stock.
+  const secondsLeft = reservationExpiresAt === null ? null : Math.max(0, Math.floor((reservationExpiresAt - now) / 1000));
+  const countdownLabel = secondsLeft === null ? null : `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`;
   useEffect(() => {
     if (secondsLeft === 0 && totalItems > 0) {
       toast.error('Tu reserva expiró. Recargando…');
@@ -201,93 +117,47 @@ export function EventCheckoutPanel({
 
   if (sorted.length === 0) {
     return (
-      <section className="container mt-12">
-        <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
-          Las entradas estarán disponibles pronto.
-        </div>
+      <section className="c-wrap" style={{ marginTop: 40 }}>
+        <div className="c-card" style={{ textAlign: 'center', color: 'var(--ink-2)' }}>Las entradas estarán disponibles pronto.</div>
       </section>
     );
   }
 
+  const activeStep = mpCheckout ? 2 : step;
+
   return (
-    <section id="entradas" className="container mt-12 space-y-6">
-      {/* Progress + countdown */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          <Dot active />
-          <span>Entradas</span>
-          <span className="mx-1 h-px w-6 bg-border" />
-          <Dot active={step >= 2} />
-          <span>Datos + pago</span>
-          <span className="mx-1 h-px w-6 bg-border" />
-          <Dot />
-          <span>Confirmación</span>
+    <section id="entradas" className="c-wrap" style={{ marginTop: 32 }}>
+      {/* Progreso (goal-gradient) + countdown */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
+        <div className="c-steps">
+          <span className={`c-step ${activeStep >= 1 ? 'c-step--on' : ''}`}><b>1</b> Entradas</span>
+          <span className="c-step__line" />
+          <span className={`c-step ${activeStep >= 2 ? 'c-step--on' : ''}`}><b>2</b> Datos + pago</span>
+          <span className="c-step__line" />
+          <span className="c-step"><b>3</b> ¡Listo!</span>
         </div>
         {countdownLabel && totalItems > 0 && (
-          <div
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] ${
-              secondsLeft !== null && secondsLeft < 60
-                ? 'border-destructive/60 text-destructive'
-                : 'border-secondary/40 text-secondary'
-            }`}
-            aria-live="polite"
-            aria-label={`Tu reserva vence en ${countdownLabel}`}
-          >
-            <Clock className="h-3 w-3" />
-            Reserva · {countdownLabel}
-          </div>
+          <span className="c-chip" style={secondsLeft !== null && secondsLeft < 60 ? { color: 'var(--alert)', borderColor: 'var(--alert)' } : { color: 'var(--brand)', borderColor: 'var(--brand)' }} aria-live="polite">
+            <Clock className="h-3.5 w-3.5" /> Reserva · {countdownLabel}
+          </span>
         )}
       </div>
 
       {mpCheckout && mpPublicKey ? (
-        <MercadoPagoWallet
-          publicKey={mpPublicKey}
-          preferenceId={mpCheckout.preferenceId}
-          initPoint={mpCheckout.initPoint}
-        />
+        <MercadoPagoWallet publicKey={mpPublicKey} preferenceId={mpCheckout.preferenceId} initPoint={mpCheckout.initPoint} />
       ) : step === 1 ? (
-        <Step1
-          sorted={sorted}
-          qty={qty}
-          inc={inc}
-          dec={dec}
-          totalCents={totalCents}
-          totalItems={totalItems}
-          onContinue={() => setStep(2)}
-        />
+        <Step1 sorted={sorted} qty={qty} inc={inc} dec={dec} totalCents={totalCents} totalItems={totalItems} onContinue={() => setStep(2)} />
       ) : (
         <Step2
-          brand={brand}
-          event={event}
-          sorted={sorted}
-          qty={qty}
-          totalCents={totalCents}
-          method={method}
-          setMethod={setMethod}
-          mpConfigured={mpConfigured}
-          isPending={isPending}
+          brand={brand} event={event} sorted={sorted} qty={qty} totalCents={totalCents}
+          method={method} setMethod={setMethod} mpConfigured={mpConfigured} isPending={isPending}
           onBack={() => setStep(1)}
           onSubmit={(input) => {
             startTransition(async () => {
-              const res = await startCheckout({
-                ...input,
-                sessionId: sessionIdRef.current,
-              });
-              if (!res.ok) {
-                toast.error(res.message ?? 'Error en el checkout');
-                return;
-              }
-              // MercadoPago: render the Wallet Brick with the server preference.
-              // (Fallback to a direct redirect if the public_key didn't load.)
-              if ('mp' in res) {
-                if (mpPublicKey) setMpCheckout(res.mp);
-                else window.location.href = res.mp.initPoint;
-                return;
-              }
-              // Yape / free promo: relative redirect.
-              if ('redirectUrl' in res) {
-                window.location.href = res.redirectUrl;
-              }
+              const res = await startCheckout({ ...input, sessionId: sessionIdRef.current });
+              if (!res.ok) { toast.error(res.message ?? 'Error en el checkout'); return; }
+              if ('mp' in res) { if (mpPublicKey) setMpCheckout(res.mp); else window.location.href = res.mp.initPoint; return; }
+              if ('redirectUrl' in res) window.location.href = res.redirectUrl;
             });
           }}
         />
@@ -296,195 +166,79 @@ export function EventCheckoutPanel({
   );
 }
 
-function Dot({ active }: { active?: boolean }) {
-  return (
-    <span
-      className={`inline-block h-2 w-2 rounded-full ${active ? 'bg-secondary' : 'bg-muted'}`}
-      style={
-        active
-          ? { boxShadow: '0 0 6px hsl(var(--secondary))' }
-          : undefined
-      }
-    />
-  );
-}
-
-// =============================================================
-// Step 1 — Pick tickets
-// =============================================================
+// ============================ Paso 1 — Elegir entradas ============================
 function Step1({
-  sorted,
-  qty,
-  inc,
-  dec,
-  totalCents,
-  totalItems,
-  onContinue,
+  sorted, qty, inc, dec, totalCents, totalItems, onContinue,
 }: {
-  sorted: TicketType[];
-  qty: Record<string, number>;
-  inc: (t: TicketType) => void;
-  dec: (t: TicketType) => void;
-  totalCents: number;
-  totalItems: number;
-  onContinue: () => void;
+  sorted: TicketType[]; qty: Record<string, number>; inc: (t: TicketType) => void; dec: (t: TicketType) => void;
+  totalCents: number; totalItems: number; onContinue: () => void;
 }) {
   return (
     <>
-      <div className="space-y-3">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {sorted.map((t) => {
           const remaining = t.capacity - t.sold;
-          // Unlimited types never sell out and have no scarcity meter.
           const soldOut = !t.is_unlimited && remaining <= 0;
           const lowStock = !t.is_unlimited && !soldOut && remaining < t.capacity * 0.2;
-          const accent = t.color_hex || 'var(--primary-hex,#FF1F8F)';
           const cur = qty[t.id] ?? 0;
           const perks = (t.description ?? '').split('\n').filter(Boolean);
           return (
-            <article
-              key={t.id}
-              className={`relative grid gap-4 rounded-lg border bg-card p-5 transition-colors md:grid-cols-[1fr_auto] md:items-center md:gap-8 md:p-6 ${
-                soldOut ? 'border-border opacity-60' : 'border-border hover:border-foreground/30'
-              }`}
-            >
-              <div className="space-y-1">
-                <div className="flex items-baseline gap-2">
-                  <h3 className="font-display text-2xl uppercase leading-none tracking-tight md:text-3xl">
-                    {t.name}
-                  </h3>
-                  <span
-                    className="font-mono text-xs"
-                    style={{ color: accent }}
-                  >
-                    {formatPEN(t.active_price_cents)}
-                  </span>
+            <article key={t.id} className={`c-tt ${cur > 0 ? 'c-tt--active' : ''} ${soldOut ? 'c-tt--out' : ''}`}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                  <h3 className="c-tt__name">{t.name}</h3>
+                  <span className="c-tt__price">{formatPEN(t.active_price_cents)}</span>
                 </div>
                 {perks.length > 0 && (
-                  <ul className="space-y-0.5 text-sm text-muted-foreground">
-                    {perks.map((p, i) => (
-                      <li key={i}>· {p}</li>
-                    ))}
-                  </ul>
+                  <ul className="c-tt__perks">{perks.map((p, i) => <li key={i}><span style={{ color: 'var(--brand)' }}>·</span> {p}</li>)}</ul>
                 )}
                 {t.next_price_cents != null && t.next_starts_at && !soldOut && (
-                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-yellow">
-                    ↑ Sube a {formatPEN(t.next_price_cents)} el{' '}
-                    {formatRiseDate(t.next_starts_at)}
-                  </p>
+                  <p className="c-rise"><TrendingUp className="h-3.5 w-3.5" /> Sube a {formatPEN(t.next_price_cents)} el {formatRiseDate(t.next_starts_at)}</p>
                 )}
                 {!t.is_unlimited && (
-                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {soldOut ? (
-                      <span className="text-destructive">Agotado</span>
-                    ) : lowStock ? (
-                      <span style={{ color: accent }}>
-                        Quedan pocas · {remaining} de {t.capacity}
-                      </span>
-                    ) : (
-                      <>
-                        Disponibles · {remaining} de {t.capacity}
-                      </>
-                    )}
+                  <p className={`c-stock ${soldOut ? 'c-stock--out' : lowStock ? 'c-stock--low' : ''}`}>
+                    {soldOut ? 'Agotado' : lowStock ? `¡Quedan pocas! · ${remaining} de ${t.capacity}` : `Disponibles · ${remaining} de ${t.capacity}`}
                   </p>
                 )}
               </div>
-
-              <div className="flex items-center gap-3 justify-self-end">
-                <button
-                  type="button"
-                  onClick={() => dec(t)}
-                  disabled={cur === 0 || soldOut}
-                  aria-label={`Restar ${t.name}`}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted disabled:opacity-30"
-                >
-                  <Minus className="h-4 w-4" />
-                </button>
-                <span className="w-8 text-center font-mono text-lg tabular-nums">
-                  {cur}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => inc(t)}
-                  disabled={soldOut}
-                  aria-label={`Sumar ${t.name}`}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full text-white transition-all disabled:opacity-30"
-                  style={{
-                    background: soldOut ? 'hsl(var(--muted))' : accent,
-                    boxShadow: soldOut ? 'none' : `0 0 14px -4px ${accent}`,
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
+              <div className="c-qty">
+                <button type="button" onClick={() => dec(t)} disabled={cur === 0 || soldOut} aria-label={`Restar ${t.name}`} className="c-qbtn"><Minus className="h-4 w-4" /></button>
+                <span className="c-qval">{cur}</span>
+                <button type="button" onClick={() => inc(t)} disabled={soldOut} aria-label={`Sumar ${t.name}`} className="c-qbtn c-qbtn--add"><Plus className="h-4 w-4" /></button>
               </div>
             </article>
           );
         })}
       </div>
 
-      {/* Sticky bottom CTA on mobile, inline on desktop */}
-      <div
-        className={`sticky bottom-4 z-20 flex items-center justify-between gap-4 rounded-full border border-border bg-card/90 p-2 pl-5 backdrop-blur transition-opacity ${
-          totalItems > 0 ? 'opacity-100' : 'pointer-events-none opacity-50'
-        }`}
-      >
-        <div className="flex flex-col font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          <span>
-            {totalItems} entrada{totalItems === 1 ? '' : 's'}
-          </span>
-          <span className="font-display text-xl normal-case tracking-normal text-foreground">
-            {formatPEN(totalCents)}
-            <span className="ml-1 text-[10px] text-muted-foreground">IGV inc.</span>
-          </span>
+      <div className={`c-stickybar ${totalItems === 0 ? 'c-stickybar--off' : ''}`} style={{ marginTop: 20 }}>
+        <div className="c-stickybar__t">
+          <span className="n">{totalItems} entrada{totalItems === 1 ? '' : 's'}</span>
+          <span className="v">{formatPEN(totalCents)} <span style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 500 }}>IGV inc.</span></span>
         </div>
-        <Button
-          type="button"
-          variant="gradient"
-          size="lg"
-          disabled={totalItems === 0}
-          onClick={onContinue}
-        >
-          Continuar al pago →
-        </Button>
+        <button type="button" className="c-btn c-btn--brand" disabled={totalItems === 0} onClick={onContinue}>
+          Continuar <ArrowRight className="h-4 w-4" />
+        </button>
       </div>
     </>
   );
 }
 
-// =============================================================
-// Step 2 — Buyer data + payment method
-// =============================================================
+// ============================ Paso 2 — Datos + pago ============================
 function Step2({
-  brand,
-  event,
-  sorted,
-  qty,
-  totalCents,
-  method,
-  setMethod,
-  mpConfigured,
-  isPending,
-  onBack,
-  onSubmit,
+  brand, event, sorted, qty, totalCents, method, setMethod, mpConfigured, isPending, onBack, onSubmit,
 }: {
-  brand: Brand;
-  event: Event;
-  sorted: TicketType[];
-  qty: Record<string, number>;
-  totalCents: number;
-  method: 'yape_manual' | 'mercadopago';
-  setMethod: (m: 'yape_manual' | 'mercadopago') => void;
-  mpConfigured: boolean;
-  isPending: boolean;
-  onBack: () => void;
+  brand: Brand; event: Event; sorted: TicketType[]; qty: Record<string, number>; totalCents: number;
+  method: 'yape_manual' | 'mercadopago'; setMethod: (m: 'yape_manual' | 'mercadopago') => void;
+  mpConfigured: boolean; isPending: boolean; onBack: () => void;
   onSubmit: (input: Omit<CheckoutInput, 'sessionId'>) => void;
 }) {
   const [promoInput, setPromoInput] = useState('');
   const [applied, setApplied] = useState<null | { code: string; finalCents: number; discountCents: number; isFree: boolean }>(null);
   const [checking, setChecking] = useState(false);
+  const [docType, setDocType] = useState<'dni' | 'ce' | 'passport'>('dni');
 
-  const itemsForPromo = Object.entries(qty)
-    .filter(([, q]) => q > 0)
-    .map(([ticketTypeId, quantity]) => ({ ticketTypeId, quantity }));
+  const itemsForPromo = Object.entries(qty).filter(([, q]) => q > 0).map(([ticketTypeId, quantity]) => ({ ticketTypeId, quantity }));
 
   async function applyPromo() {
     const code = promoInput.trim();
@@ -509,6 +263,7 @@ function Step2({
   }
 
   const finalTotal = applied ? applied.finalCents : totalCents;
+  const docLabel = docType === 'dni' ? 'DNI' : docType === 'ce' ? 'Carné ext.' : 'Pasaporte';
 
   return (
     <form
@@ -516,304 +271,152 @@ function Step2({
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
         const ageOk = fd.get('age_ok') === '1';
-        if (!ageOk) {
-          toast.error(`Tienes que confirmar que eres mayor de ${event.min_age} años`);
-          return;
-        }
+        if (!ageOk) { toast.error(`Tenés que confirmar que sos mayor de ${event.min_age} años`); return; }
         onSubmit({
-          eventId: event.id,
-          brandId: brand.id,
+          eventId: event.id, brandId: brand.id,
           buyerName: String(fd.get('buyer_name') ?? '').trim(),
           buyerEmail: String(fd.get('buyer_email') ?? '').trim(),
           buyerPhone: String(fd.get('buyer_phone') ?? '').trim(),
-          ageOk,
-          marketingOptIn: fd.get('marketing_opt_in') === '1',
-          method,
-          items: itemsForPromo,
-          promoCode: applied?.code,
+          buyerDocType: docType,
+          buyerDni: String(fd.get('buyer_dni') ?? '').trim(),
+          ageOk, marketingOptIn: fd.get('marketing_opt_in') === '1',
+          method, items: itemsForPromo, promoCode: applied?.code,
         });
       }}
-      className="grid gap-6 md:grid-cols-[1fr_360px]"
+      style={{ display: 'grid', gap: 20, gridTemplateColumns: 'minmax(0,1fr) 360px', alignItems: 'start' }}
+      className="c-checkout-grid"
     >
-      {/* Form column */}
-      <div className="space-y-6">
-        <section className="space-y-4 rounded-lg border border-border bg-card p-6">
-          <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
-            [ DATOS DEL COMPRADOR ]
-          </h2>
-          <div className="space-y-2">
-            <Label htmlFor="buyer_name">Nombre y apellido</Label>
-            <Input
-              id="buyer_name"
-              name="buyer_name"
-              autoComplete="name"
-              required
-              placeholder="María López"
-            />
+      {/* Columna form */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="c-card">
+          <p className="c-card__title">Tus datos</p>
+          <div className="c-field">
+            <label htmlFor="buyer_name" className="c-label">Nombre y apellido</label>
+            <input id="buyer_name" name="buyer_name" autoComplete="name" required placeholder="María López" className="c-input" />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="buyer_email">Email</Label>
-            <Input
-              id="buyer_email"
-              name="buyer_email"
-              type="email"
-              autoComplete="email"
-              required
-              placeholder="tu@email.com"
-            />
-            <p className="text-xs text-muted-foreground">
-              Aquí te llega tu QR al instante.
-            </p>
+          <div className="c-field">
+            <label htmlFor="buyer_email" className="c-label">Email</label>
+            <input id="buyer_email" name="buyer_email" type="email" autoComplete="email" required placeholder="tu@email.com" className="c-input" inputMode="email" />
+            <p className="c-help">Acá te llega tu QR al instante.</p>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="buyer_phone">WhatsApp</Label>
-            <Input
-              id="buyer_phone"
-              name="buyer_phone"
-              type="tel"
-              autoComplete="tel"
-              required
-              minLength={9}
-              maxLength={20}
-              inputMode="tel"
-              pattern="^[+\d][\d\s\(\)\-]{7,19}$"
-              placeholder="+51 999 999 999"
-            />
-            <p className="text-xs text-muted-foreground">
-              También te lo enviamos por aquí.
-            </p>
+          <div className="c-field">
+            <label htmlFor="buyer_phone" className="c-label">WhatsApp</label>
+            <input id="buyer_phone" name="buyer_phone" type="tel" autoComplete="tel" required minLength={9} maxLength={20} inputMode="tel" pattern="^[+\d][\d\s\(\)\-]{7,19}$" placeholder="+51 999 999 999" className="c-input" />
           </div>
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="age_ok"
-              value="1"
-              required
-              className="mt-1"
-            />
-            <span>
-              Confirmo que soy mayor de {event.min_age} años (requerido para
-              ingresar al evento)
-            </span>
-          </label>
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="marketing_opt_in"
-              value="1"
-              defaultChecked
-              className="mt-1"
-            />
-            <span>
-              Quiero recibir info de los próximos eventos de {brand.name}
-            </span>
-          </label>
-        </section>
-
-        <section
-          className={`space-y-4 rounded-lg border border-border bg-card p-6 ${
-            applied?.isFree ? 'hidden' : ''
-          }`}
-        >
-          <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
-            [ MÉTODO DE PAGO ]
-          </h2>
-
-          <div role="radiogroup" aria-label="Método de pago" className="space-y-3">
-            {brand.yape_number && (
-              <PaymentOption
-                selected={method === 'yape_manual'}
-                onClick={() => setMethod('yape_manual')}
-                title="Yape"
-                subtitle="Pago manual · validación en 5–15 min"
-                note={`Yapeas a ${brand.yape_holder ?? brand.name} y nos envías la captura.`}
+          <div className="c-field">
+            <label htmlFor="buyer_dni" className="c-label">Documento de identidad</label>
+            <div className="c-doc">
+              <select aria-label="Tipo de documento" value={docType} onChange={(e) => setDocType(e.target.value as 'dni' | 'ce' | 'passport')} className="c-input">
+                <option value="dni">DNI</option>
+                <option value="ce">CE</option>
+                <option value="passport">Pasaporte</option>
+              </select>
+              <input
+                id="buyer_dni" name="buyer_dni" required
+                inputMode={docType === 'dni' ? 'numeric' : 'text'}
+                maxLength={docType === 'dni' ? 8 : 15}
+                pattern={docType === 'dni' ? '\\d{8}' : '[A-Za-z0-9]{6,15}'}
+                placeholder={docType === 'dni' ? '8 dígitos' : `Número de ${docLabel.toLowerCase()}`}
+                autoComplete="off" className="c-input"
               />
-            )}
-            {mpConfigured && (
-              <PaymentOption
-                selected={method === 'mercadopago'}
-                onClick={() => setMethod('mercadopago')}
-                title="Tarjeta · MercadoPago"
-                subtitle="Visa · Mastercard · AMEX · Transferencia BCP/BBVA"
-                note="Procesado por MercadoPago. Tu QR llega al instante."
-              />
-            )}
+            </div>
+            <p className="c-help">Para validar tu identidad en la puerta. No lo compartimos.</p>
           </div>
-        </section>
-
-        <section className="space-y-3 rounded-lg border border-border bg-card p-6">
-          <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
-            [ CÓDIGO PROMOCIONAL ]
-          </h2>
-          {applied ? (
-            <div className="flex items-center justify-between rounded-md border border-secondary bg-secondary/10 p-3">
-              <div className="text-sm">
-                <span className="font-mono uppercase tracking-[0.12em] text-secondary">
-                  {applied.code}
-                </span>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {applied.isFree
-                    ? '¡Entrada gratis!'
-                    : `Descuento aplicado: -${formatPEN(applied.discountCents)}`}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setApplied(null);
-                  setPromoInput('');
-                }}
-                className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
-              >
-                Quitar
-              </button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <Input
-                value={promoInput}
-                onChange={(e) => setPromoInput(e.target.value)}
-                placeholder="Ingresá tu código"
-                className="uppercase"
-                autoCapitalize="characters"
-                maxLength={32}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={applyPromo}
-                disabled={checking || promoInput.trim().length < 2}
-              >
-                {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
-              </Button>
-            </div>
-          )}
-          <p className="text-xs text-muted-foreground">
-            Si un RRPP te dio un código, ingresalo antes de pagar.
-          </p>
-        </section>
-      </div>
-
-      {/* Summary column */}
-      <aside className="space-y-4">
-        <div className="rounded-lg border border-border bg-card p-6">
-          <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
-            [ RESUMEN ]
-          </h2>
-          <p className="mt-3 font-display text-xl uppercase">{event.name}</p>
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-            {new Date(event.starts_at).toLocaleString('es-PE')}
-          </p>
-          <ul className="mt-4 space-y-2 text-sm">
-            {sorted
-              .filter((t) => (qty[t.id] ?? 0) > 0)
-              .map((t) => {
-                const q = qty[t.id]!;
-                return (
-                  <li key={t.id} className="flex items-baseline justify-between">
-                    <span>
-                      {q}× {t.name}
-                    </span>
-                    <span className="font-mono tabular-nums">
-                      {formatPEN(q * t.active_price_cents)}
-                    </span>
-                  </li>
-                );
-              })}
-          </ul>
-          {applied && (
-            <div className="mt-4 flex items-baseline justify-between text-sm text-secondary">
-              <span className="uppercase tracking-tight">
-                Código {applied.code}
-              </span>
-              <span className="font-mono tabular-nums">
-                −{formatPEN(applied.discountCents)}
-              </span>
-            </div>
-          )}
-          <div className="mt-4 flex items-baseline justify-between border-t border-border pt-4 font-display text-xl">
-            <span className="text-sm uppercase tracking-tight">Total</span>
-            <span className="tabular-nums">{formatPEN(finalTotal)}</span>
+          <div className="c-field">
+            <label className="c-check">
+              <input type="checkbox" name="age_ok" value="1" required />
+              <span>Confirmo que soy mayor de {event.min_age} años (requerido para ingresar).</span>
+            </label>
           </div>
-          <p className="mt-1 text-right text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-            IGV incluido
-          </p>
+          <div className="c-field">
+            <label className="c-check">
+              <input type="checkbox" name="marketing_opt_in" value="1" defaultChecked />
+              <span>Quiero recibir info de los próximos eventos de {brand.name}.</span>
+            </label>
+          </div>
         </div>
 
-        <Button
-          type="submit"
-          variant="gradient"
-          size="lg"
-          className="w-full"
-          disabled={isPending}
-        >
-          {isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Procesando…
-            </>
-          ) : applied?.isFree ? (
-            <>Obtener entrada gratis →</>
-          ) : method === 'mercadopago' ? (
-            <>Pagar {formatPEN(finalTotal)} →</>
-          ) : (
-            <>Continuar con Yape →</>
-          )}
-        </Button>
+        {!applied?.isFree && (
+          <div className="c-card">
+            <p className="c-card__title">Cómo pagás</p>
+            <div role="radiogroup" aria-label="Método de pago" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {brand.yape_number && (
+                <PayOption selected={method === 'yape_manual'} onClick={() => setMethod('yape_manual')} title="Yape" sub="Validación en 5–15 min" note={`Yapeás a ${brand.yape_holder ?? brand.name} y nos mandás la captura.`} />
+              )}
+              {mpConfigured && (
+                <PayOption selected={method === 'mercadopago'} onClick={() => setMethod('mercadopago')} title="Tarjeta · MercadoPago" sub="Visa · Mastercard · AMEX" note="Tu QR llega al instante." />
+              )}
+            </div>
+          </div>
+        )}
 
-        <button
-          type="button"
-          onClick={onBack}
-          className="block w-full text-center font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
-        >
-          ← Editar entradas
+        <div className="c-card">
+          <p className="c-card__title">¿Tenés un código?</p>
+          {applied ? (
+            <div className="c-promo-on">
+              <div>
+                <span style={{ fontWeight: 700, color: 'var(--brand)' }}>{applied.code}</span>
+                <p className="c-muted" style={{ fontSize: 12.5, marginTop: 2 }}>{applied.isFree ? '¡Entrada gratis!' : `Descuento: -${formatPEN(applied.discountCents)}`}</p>
+              </div>
+              <button type="button" className="c-btn c-btn--ghost" onClick={() => { setApplied(null); setPromoInput(''); }}>Quitar</button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input value={promoInput} onChange={(e) => setPromoInput(e.target.value)} placeholder="Código de RRPP" autoCapitalize="characters" maxLength={32} className="c-input" style={{ textTransform: 'uppercase' }} />
+              <button type="button" className="c-btn c-btn--soft" onClick={applyPromo} disabled={checking || promoInput.trim().length < 2}>
+                {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Columna resumen (confianza) */}
+      <aside style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 76 }}>
+        <div className="c-card">
+          <p className="c-card__title">Tu compra</p>
+          <p className="c-h2">{event.name}</p>
+          <p className="c-muted-3" style={{ fontSize: 13, marginTop: 2 }}>{new Date(event.starts_at).toLocaleString('es-PE')}</p>
+          <div style={{ marginTop: 14 }}>
+            {sorted.filter((t) => (qty[t.id] ?? 0) > 0).map((t) => {
+              const q = qty[t.id]!;
+              return (
+                <div key={t.id} className="c-sum__row"><span>{q}× {t.name}</span><span className="v">{formatPEN(q * t.active_price_cents)}</span></div>
+              );
+            })}
+            {applied && <div className="c-sum__row c-sum__discount"><span>Código {applied.code}</span><span className="v">−{formatPEN(applied.discountCents)}</span></div>}
+          </div>
+          <div className="c-sum__total"><span className="l">Total</span><span className="v">{formatPEN(finalTotal)}</span></div>
+          <p className="c-muted-3" style={{ fontSize: 11.5, textAlign: 'right', marginTop: 2 }}>IGV incluido · sin costos ocultos</p>
+        </div>
+
+        <button type="submit" className="c-btn c-btn--brand c-btn--block c-btn--lg" disabled={isPending}>
+          {isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Procesando…</>
+            : applied?.isFree ? <>Obtener entrada gratis</>
+            : method === 'mercadopago' ? <><Lock className="h-4 w-4" /> Pagar {formatPEN(finalTotal)}</>
+            : <>Continuar con Yape</>}
         </button>
 
-        <p className="text-center text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          🔒 Pago seguro · Tus datos están protegidos
-        </p>
+        <p className="c-reassure"><Mail className="h-4 w-4" style={{ color: 'var(--brand)' }} /> Recibís tu entrada con QR al instante por email.</p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <span className="c-seal"><ShieldCheck className="h-4 w-4" /> Pago seguro</span>
+          <span className="c-seal"><Lock className="h-4 w-4" /> Tus datos protegidos</span>
+        </div>
+        <button type="button" onClick={onBack} className="c-btn c-btn--ghost" style={{ margin: '0 auto' }}>← Editar entradas</button>
       </aside>
     </form>
   );
 }
 
-function PaymentOption({
-  selected,
-  onClick,
-  title,
-  subtitle,
-  note,
-}: {
-  selected: boolean;
-  onClick: () => void;
-  title: string;
-  subtitle: string;
-  note: string;
-}) {
+function PayOption({ selected, onClick, title, sub, note }: { selected: boolean; onClick: () => void; title: string; sub: string; note: string }) {
   return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      aria-label={`${title}. ${subtitle}`}
-      onClick={onClick}
-      className={`block w-full rounded-md border p-4 text-left transition-colors ${
-        selected
-          ? 'border-secondary bg-secondary/10'
-          : 'border-border hover:border-foreground/30'
-      }`}
-    >
-      <div className="flex items-center justify-between">
-        <span className="font-medium">{title}</span>
-        <span
-          aria-hidden
-          className={`h-4 w-4 rounded-full border-2 ${
-            selected ? 'border-secondary bg-secondary' : 'border-border'
-          }`}
-        />
+    <button type="button" role="radio" aria-checked={selected} aria-label={`${title}. ${sub}`} onClick={onClick} className={`c-pay ${selected ? 'c-pay--on' : ''}`}>
+      <div className="c-pay__top">
+        <span className="c-pay__title">{title}</span>
+        <span aria-hidden className="c-pay__radio" />
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
-      <p className="mt-2 text-xs text-foreground/70">{note}</p>
+      <p className="c-pay__sub">{sub}</p>
+      <p className="c-pay__note">{note}</p>
     </button>
   );
 }

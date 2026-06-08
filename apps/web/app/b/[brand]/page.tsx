@@ -35,16 +35,11 @@ export default async function BrandHomePage({
   }
 
   return (
-    <main className="container-narrow flex min-h-[80vh] flex-col items-center justify-center gap-6 py-20 text-center">
-      <p className="font-mono text-xs uppercase tracking-[0.2em] text-secondary">
-        [ {brand.name} · {params.brand} ]
-      </p>
-      <h1 className="font-display text-5xl uppercase leading-none tracking-tight md:text-6xl">
-        Próximamente
-      </h1>
-      <p className="max-w-md text-muted-foreground">
-        Estamos preparando el siguiente evento. Vuelve en unos días o síguenos
-        en redes para no perdértelo.
+    <main className="c-state" style={{ minHeight: '72vh', display: 'grid', placeContent: 'center' }}>
+      <span className="c-eyebrow">{brand.name}</span>
+      <h1 className="c-h1" style={{ fontSize: 'clamp(40px,10vw,64px)', marginTop: 10 }}>Próximamente</h1>
+      <p className="c-muted" style={{ marginTop: 12 }}>
+        Estamos preparando el siguiente evento. Volvé en unos días o seguinos en redes para no perdértelo.
       </p>
     </main>
   );
