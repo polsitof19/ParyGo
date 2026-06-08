@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { publicEnv } from '@/lib/env';
+import { uploadBrandLogo, LOGO_ACCEPTED_MIME } from '@/lib/brandAssets';
 
 export type InviteState = {
   ok: boolean;
@@ -94,6 +95,99 @@ export async function loadPackAction(
     ok: true,
     message: `Pack ${pack} cargado (+${cfg.added}). Nuevo saldo: ${newBalance} evento${newBalance === 1 ? '' : 's'}.`,
   };
+}
+
+// ============================================================================
+// Branding de una marca existente (super admin). Potestad total: puede editar el
+// branding de CUALQUIER marca. Seguridad:
+//  - Lockdown: SOLO super admin (requireSession superAdmin).
+//  - El slug del path de storage sale del ROW cargado por brand_id (DB,
+//    server-trusted), NUNCA del form → no inyectable a otra marca.
+//  - Logo: tipo/tamaño validados + nombre server-generado (uploadBrandLogo).
+//  - Solo toca theme_json (branding). NO toca saldo/dinero/eventos.
+//  - El dueño CONSERVA su capacidad de editar su branding desde /admin.
+// ============================================================================
+export type BrandingState = {
+  ok: boolean;
+  message: string | null;
+  fieldErrors?: Partial<Record<string, string>>;
+};
+
+const LOGO_MAX = 10 * 1024 * 1024;
+
+const brandingSchema = z.object({
+  brand_id: z.string().uuid(),
+  primary_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Color inválido'),
+});
+
+export async function updateBrandBrandingAction(
+  _prev: BrandingState,
+  formData: FormData
+): Promise<BrandingState> {
+  await requireSession({ superAdmin: true });
+
+  const parsed = brandingSchema.safeParse({
+    brand_id: formData.get('brand_id'),
+    primary_color: formData.get('primary_color') ?? '',
+  });
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const e of parsed.error.errors) {
+      const p = e.path.join('.');
+      if (p) fieldErrors[p] = e.message;
+    }
+    return { ok: false, message: 'Revisá los campos marcados.', fieldErrors };
+  }
+
+  const admin = createAdminClient();
+
+  // El slug viene del ROW (no del form) → el path de storage no es inyectable.
+  const { data: brand, error: brandErr } = await admin
+    .from('brands')
+    .select('id, slug, theme_json')
+    .eq('id', parsed.data.brand_id)
+    .single();
+  if (brandErr || !brand) {
+    return { ok: false, message: 'No se encontró la marca.' };
+  }
+
+  const theme = (brand.theme_json ?? {}) as Record<string, unknown>;
+  let logoUrl = (theme.logo_url as string | undefined) ?? null;
+
+  // Logo opcional: validar tipo/tamaño y subir bajo el prefijo de ESTA marca.
+  const logoFile = formData.get('logo');
+  if (logoFile instanceof File && logoFile.size > 0) {
+    if (!LOGO_ACCEPTED_MIME.includes(logoFile.type)) {
+      return { ok: false, message: 'El logo debe ser PNG, JPG o WEBP.', fieldErrors: { logo: 'Tipo no permitido' } };
+    }
+    if (logoFile.size > LOGO_MAX) {
+      return { ok: false, message: 'El logo supera 10 MB.', fieldErrors: { logo: 'Muy grande' } };
+    }
+    const up = await uploadBrandLogo(admin, brand.slug, logoFile);
+    if (!up.ok) return { ok: false, message: up.message };
+    logoUrl = up.url;
+  }
+
+  const nextTheme = {
+    ...theme,
+    primary_color: parsed.data.primary_color,
+    logo_url: logoUrl,
+  };
+
+  const { error: updErr } = await admin
+    .from('brands')
+    .update({ theme_json: nextTheme })
+    .eq('id', brand.id);
+  if (updErr) return { ok: false, message: updErr.message };
+
+  await admin.from('events_log').insert({
+    brand_id: brand.id,
+    type: 'brand_branding_updated',
+    payload: { by: 'super_admin', slug: brand.slug, logo_changed: Boolean(logoFile instanceof File && logoFile.size > 0), primary_color: parsed.data.primary_color },
+  });
+
+  revalidatePath(`/cabina-7k29x/brands/${brand.slug}`);
+  return { ok: true, message: 'Branding actualizado. Ya está en vivo en la página de la marca.' };
 }
 
 const schema = z.object({

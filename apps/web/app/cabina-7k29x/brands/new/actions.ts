@@ -6,6 +6,10 @@ import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv } from '@/lib/env';
+import { uploadBrandLogo, LOGO_ACCEPTED_MIME } from '@/lib/brandAssets';
+
+// Validación temprana del logo (una sola fuente de verdad: LOGO_ACCEPTED_MIME).
+const LOGO_MAX = 10 * 1024 * 1024;
 
 export type FormState = {
   ok: boolean;
@@ -160,6 +164,12 @@ const ownerSchema = z.object({
     .regex(/^[a-z0-9][a-z0-9-]{0,30}[a-z0-9]$/, 'Solo minúsculas, números y guiones'),
   owner_email: z.string().email('Email inválido.'),
   owner_password: z.string().min(8, 'Mínimo 8 caracteres.').max(72),
+  // Branding opcional: si Paul no elige color, usa el default.
+  primary_color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, 'Color inválido')
+    .optional()
+    .or(z.literal('')),
 });
 
 export async function createBrandWithOwnerAction(
@@ -174,6 +184,7 @@ export async function createBrandWithOwnerAction(
     slug: formData.get('slug'),
     owner_email: formData.get('owner_email'),
     owner_password: formData.get('owner_password'),
+    primary_color: formData.get('primary_color') ?? '',
   });
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -186,6 +197,20 @@ export async function createBrandWithOwnerAction(
 
   if (RESERVED.has(parsed.data.slug)) {
     return { ok: false, message: 'Ese slug está reservado.', fieldErrors: { slug: 'Reservado' } };
+  }
+
+  // Validación TEMPRANA del logo (tipo/tamaño) antes de crear usuario/marca, para
+  // no dejar nada huérfano si el archivo es inválido. La subida real va después
+  // del alta (necesita el slug ya confirmado).
+  const logoRaw = formData.get('logo');
+  const logoFile = logoRaw instanceof File && logoRaw.size > 0 ? logoRaw : null;
+  if (logoFile) {
+    if (!LOGO_ACCEPTED_MIME.includes(logoFile.type)) {
+      return { ok: false, message: 'El logo debe ser PNG, JPG o WEBP.', fieldErrors: { logo: 'Tipo no permitido' } };
+    }
+    if (logoFile.size > LOGO_MAX) {
+      return { ok: false, message: 'El logo supera 10 MB.', fieldErrors: { logo: 'Muy grande' } };
+    }
   }
 
   const admin = createAdminClient();
@@ -227,7 +252,10 @@ export async function createBrandWithOwnerAction(
   }
 
   const webhookSecret = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
-  const themeJson = { primary_color: '#FF1F8F', secondary_color: '#00E5FF' };
+  const themeJson = {
+    primary_color: parsed.data.primary_color || '#FF1F8F',
+    secondary_color: '#00E5FF',
+  };
 
   // Paso 2: insertar la marca.
   const { data: brand, error: insertErr } = await admin
@@ -264,6 +292,23 @@ export async function createBrandWithOwnerAction(
     await rollback(created.user.id, brand.id);
     console.error('[createBrandWithOwner] insert membership falló', memberErr.message);
     return { ok: false, message: 'No se pudo asignar el dueño a la marca.' };
+  }
+
+  // Paso 3.5: logo opcional. La marca ya existe → el slug es server-trusted
+  // (sale del row insertado, no del form). Si falla la subida NO se hace
+  // rollback: la marca es usable y el logo se puede cargar luego desde la vista
+  // de la marca.
+  if (logoFile) {
+    const up = await uploadBrandLogo(admin, brand.slug, logoFile);
+    if (up.ok) {
+      const { error: themeErr } = await admin
+        .from('brands')
+        .update({ theme_json: { ...themeJson, logo_url: up.url } })
+        .eq('id', brand.id);
+      if (themeErr) console.error('[createBrandWithOwner] update logo theme falló', themeErr.message);
+    } else {
+      console.error('[createBrandWithOwner] logo upload falló', up.message);
+    }
   }
 
   // Paso 4: auditoría (best-effort, no bloquea el alta).

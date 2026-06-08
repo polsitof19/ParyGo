@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server';
 import { InviteBrandAdmin } from './InviteBrandAdmin';
 import { SetBrandAdminPassword } from './SetBrandAdminPassword';
 import { LoadPackForm } from './LoadPackForm';
+import { EditBrandingForm } from './EditBrandingForm';
+import { brandColor } from '@/lib/brandColors';
 import { publicEnv } from '@/lib/env';
 
 export const runtime = 'edge';
@@ -45,6 +47,9 @@ export default async function BrandDetailPage({
   const owner = admins[0]?.display_name ?? null;
   const balance = brand.event_balance ?? 0;
   const published = (events ?? []).filter((e) => e.is_published).length;
+  const theme = (brand.theme_json ?? {}) as { primary_color?: string; logo_url?: string | null };
+  const primaryColor = brandColor(theme.primary_color);
+  const logoUrl = theme.logo_url ?? null;
 
   return (
     <>
@@ -128,6 +133,29 @@ export default async function BrandDetailPage({
             <Row label="Yape número">{brand.yape_number ?? '—'}</Row>
             <Row label="Yape titular">{brand.yape_holder ?? '—'}</Row>
           </dl>
+        </div>
+      </div>
+
+      {/* Marca visual — logo + color (super admin) */}
+      <div className="s-card">
+        <div className="s-card__head">
+          <div>
+            <h2 className="s-h2">Marca visual</h2>
+            <p className="s-card__desc">
+              Logo y color de la marca. Cambian al instante en su página pública. El dueño también puede editarlos desde su panel.
+            </p>
+          </div>
+          <span className="s-avatar" style={{ background: logoUrl ? 'var(--white)' : primaryColor, color: '#fff', overflow: 'hidden' }}>
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt={`logo de ${brand.name}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              initialOf(brand.name)
+            )}
+          </span>
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <EditBrandingForm brandId={brand.id} primaryColor={primaryColor} logoUrl={logoUrl} />
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { createBrandWithOwnerAction, type FormState } from './actions';
+import { BrandingFields } from '../BrandingFields';
 
 const initial: FormState = { ok: false, message: null, fieldErrors: {} };
 
@@ -113,6 +114,15 @@ export function CreateBrandForm() {
         <p className="s-hint">La fijás vos y se la pasás al promotor.</p>
         {state.fieldErrors?.owner_password && <p className="s-err">{state.fieldErrors.owner_password}</p>}
       </div>
+
+      <div className="s-divider" />
+      <p className="s-section-lead">Marca visual (opcional)</p>
+      <p className="s-hint" style={{ marginTop: 2, marginBottom: 12 }}>
+        Si no cargás logo ni color, la marca usa los valores por defecto (los puede cambiar después el dueño o vos).
+      </p>
+      <BrandingFields defaultColor="#FF1F8F" />
+      {state.fieldErrors?.logo && <p className="s-err">{state.fieldErrors.logo}</p>}
+      {state.fieldErrors?.primary_color && <p className="s-err">{state.fieldErrors.primary_color}</p>}
 
       {state.message && !state.ok && <p className="s-banner s-banner--err" style={{ marginTop: 18 }}>{state.message}</p>}
 
