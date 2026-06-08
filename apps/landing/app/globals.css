@@ -246,9 +246,27 @@ h1, h2, h3, h4, p { margin: 0; }
   transition: transform 300ms var(--ease);
 }
 .nav a:hover::after { transform: scaleX(1); }
-.header__cta { display: flex; align-items: center; gap: 14px; }
+.header__cta { display: flex; align-items: center; gap: 12px; }
+.header__login-hint {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.header__login { gap: 7px; }
+.header__login-ico { width: 15px; height: 15px; flex-shrink: 0; }
 @media (max-width: 820px) {
   .nav { display: none; }
+}
+/* En móvil ocultamos el texto de ayuda; el ícono de login + "Ingresar" ya
+   distinguen el acceso de organizadores del CTA principal "Empezar". */
+@media (max-width: 640px) {
+  .header__login-hint { display: none; }
+  .header__cta { gap: 9px; }
+}
+@media (max-width: 380px) {
+  .header__login-ico { display: none; }
+  .btn--sm { padding: 10px 16px; }
 }
 
 /* reveal */

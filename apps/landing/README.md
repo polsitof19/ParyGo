@@ -86,6 +86,34 @@ Todos los CTAs apuntan a WhatsApp `+56 9 3288 1230` con mensaje pre-llenado. Las
 - `sitemap.xml`, `robots.txt`, `manifest.webmanifest` generados automáticamente por Next.js
 - Theme color y meta tags en `app/layout.tsx`
 
+## Verificar Google Search Console
+
+Dos formas (ambas funcionan con `output: export` en Cloudflare Pages). Elegí UNA:
+
+**Opción A — Meta tag (recomendada, "pegar y deployar"):**
+1. En Search Console → *Agregar propiedad* (prefijo de URL `https://parygo.com`) →
+   método *Etiqueta HTML*. Google te da algo como
+   `<meta name="google-site-verification" content="AbC123..." />`.
+2. Copiá SOLO el valor de `content` y pegalo en `lib/site.ts`:
+   `googleSiteVerification: 'AbC123...'`.
+3. Re-deploy a prod (ver más abajo). Next emite el `<meta>` en el `<head>` de
+   todas las páginas. Verificá en Search Console.
+
+**Opción B — Archivo HTML:**
+1. Search Console te da un archivo `googleXXXXXXXX.html`.
+2. Ponelo en `public/googleXXXXXXXX.html` (todo lo de `public/` se sirve en la
+   raíz → quedará en `https://parygo.com/googleXXXXXXXX.html`).
+3. Re-deploy. Verificá en Search Console.
+
+**Deploy a prod del landing:**
+```bash
+npm run build
+npx wrangler pages deploy out --project-name parygo --branch main --commit-dirty=true
+```
+
+Sitemap y robots ya responden con el dominio canónico:
+`https://parygo.com/sitemap.xml` y `https://parygo.com/robots.txt`.
+
 ## Performance
 
 - `output: 'export'` → HTML estático servido directo desde CDN

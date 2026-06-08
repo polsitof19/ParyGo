@@ -41,6 +41,11 @@ export const metadata: Metadata = {
   creator: SITE.name,
   publisher: SITE.name,
   alternates: { canonical: '/' },
+  // Search Console: si SITE.googleSiteVerification tiene valor, Next emite
+  // <meta name="google-site-verification" content="..."> en el <head>.
+  ...(SITE.googleSiteVerification
+    ? { verification: { google: SITE.googleSiteVerification } }
+    : {}),
   openGraph: {
     type: 'website',
     locale: SITE.locale,
