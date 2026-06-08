@@ -48,11 +48,34 @@ export default async function ConfirmationPage({
   const event = order.event;
   const brand = order.brand;
 
+  // Pago MP que terminó RECHAZADO/cancelado: no es "pendiente" → mostramos error
+  // accionable en vez de un spinner eterno.
+  const isFailed =
+    order.payment_method === 'mercadopago' &&
+    ['failed', 'rejected', 'cancelled'].includes(order.status);
   const isPending =
-    searchParams.pendiente === '1' ||
-    (order.status !== 'paid' && order.payment_method === 'mercadopago');
+    !isFailed &&
+    (searchParams.pendiente === '1' ||
+      (order.status !== 'paid' && order.payment_method === 'mercadopago'));
   const isYapeReview =
     order.status === 'pending_yape_review' && order.payment_method === 'yape_manual';
+
+  if (isFailed) {
+    return (
+      <main className="c-state">
+        <div className="c-confirm__badge" style={{ background: 'var(--alert-bg, rgba(220,38,38,.1))', color: 'var(--alert, #dc2626)' }}><Mail className="h-8 w-8" /></div>
+        <span className="c-eyebrow" style={{ color: 'var(--alert, #dc2626)', marginTop: 16, display: 'block' }}>Pago no aprobado</span>
+        <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>No pudimos confirmar tu pago</h1>
+        <p className="c-muted" style={{ marginTop: 10 }}>
+          MercadoPago no aprobó el pago. No se generó ningún cargo definitivo. Podés intentar de nuevo con otro método o tarjeta.
+        </p>
+        <a href="/" className="c-btn c-btn--brand" style={{ marginTop: 18 }}>Volver a intentar</a>
+        {brand?.whatsapp_e164 && (
+          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 14, color: 'var(--brand-ink)', fontWeight: 600 }}>¿Necesitas ayuda? WhatsApp soporte</a>
+        )}
+      </main>
+    );
+  }
 
   if (isPending) {
     return (

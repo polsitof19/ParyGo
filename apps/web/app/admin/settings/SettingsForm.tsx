@@ -51,7 +51,7 @@ export function SettingsForm(props: Props) {
 
       <section className="s-card">
         <p className="s-section-lead" style={{ marginBottom: 14 }}>Marca visual</p>
-        <Field label="Logo (PNG, JPG, WEBP o SVG · máx 2MB)" htmlFor="logo" error={err.logo}>
+        <Field label="Logo (PNG, JPG o WEBP · máx 2MB)" htmlFor="logo" error={err.logo}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {props.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -59,7 +59,7 @@ export function SettingsForm(props: Props) {
             ) : (
               <span className="s-avatar" style={{ background: 'var(--cream-2)', color: 'var(--ink-3)', fontSize: 10 }}>—</span>
             )}
-            <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="s-input" style={{ paddingTop: 9 }} />
+            <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp" className="s-input" style={{ paddingTop: 9 }} />
           </div>
         </Field>
 

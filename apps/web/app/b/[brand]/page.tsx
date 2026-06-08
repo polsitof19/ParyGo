@@ -12,12 +12,18 @@ type EvRow = { id: string; slug: string; name: string; starts_at: string; venue_
 const fmtDate = (iso: string) =>
   new Intl.DateTimeFormat('es-PE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' }).format(new Date(iso));
 
-function Flyer({ url, name }: { url: string | null; name: string }) {
+function Flyer({ url, name, priority = false }: { url: string | null; name: string; priority?: boolean }) {
   return (
     <div className="c-flyer">
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt={`Flyer ${name}`} loading="lazy" />
+        <img
+          src={url}
+          alt={`Flyer ${name}`}
+          loading={priority ? 'eager' : 'lazy'}
+          fetchPriority={priority ? 'high' : 'auto'}
+          decoding="async"
+        />
       ) : (
         <div className="c-flyer__fallback"><span>{name}</span></div>
       )}
@@ -93,7 +99,7 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
       {featured ? (
         <section className="c-brandhead">
           <div className="c-feat">
-            <Link href={`/${featured.slug}`}><Flyer url={featured.cover_url} name={featured.name} /></Link>
+            <Link href={`/${featured.slug}`}><Flyer url={featured.cover_url} name={featured.name} priority /></Link>
             <div>
               <span className="c-eyebrow c-feat__eyebrow">Próximo evento · {brand.name}</span>
               <h2>{featured.name}</h2>

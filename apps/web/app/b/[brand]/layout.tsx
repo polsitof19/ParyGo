@@ -55,7 +55,7 @@ export default async function BrandLayout({
           <Link href="/" aria-label={brand.name}>
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt={brand.name} className="c-logo" />
+              <img src={logoUrl} alt={brand.name} className="c-logo" height={34} loading="eager" decoding="async" />
             ) : (
               <span className="c-logo-text">{brand.name}</span>
             )}

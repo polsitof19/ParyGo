@@ -35,7 +35,7 @@ export default async function ScanPage() {
       </div>
 
       {!events || events.length === 0 ? (
-        <div className="k-empty">Esta marca no tiene eventos para validar todavía.</div>
+        <div className="k-empty">No hay eventos cargados para validar. Pedile al promotor que publique el evento.</div>
       ) : (
         <Scanner events={events} brandName={brand.name} />
       )}

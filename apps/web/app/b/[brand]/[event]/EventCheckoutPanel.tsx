@@ -30,6 +30,7 @@ type TicketType = {
 
 function formatRiseDate(nextStartsAt: string): string {
   const lastMoment = new Date(new Date(nextStartsAt).getTime() - 60_000);
+  if (Number.isNaN(lastMoment.getTime())) return ''; // fecha inválida → no romper el render
   return new Intl.DateTimeFormat('es-PE', { day: 'numeric', month: 'short', timeZone: 'America/Lima' }).format(lastMoment);
 }
 
@@ -93,7 +94,7 @@ export function EventCheckoutPanel({
   const totalItems = useMemo(() => Object.values(qty).reduce((a, b) => a + b, 0), [qty]);
 
   function inc(t: TicketType) {
-    const remaining = t.capacity - t.sold;
+    const remaining = Math.max(0, t.capacity - t.sold);
     const current = qty[t.id] ?? 0;
     if (!t.is_unlimited && current >= remaining) { toast.error(`Solo quedan ${remaining} disponibles`); return; }
     if (current >= 10) { toast.error('Máximo 10 por compra'); return; }
@@ -129,13 +130,13 @@ export function EventCheckoutPanel({
     <section id="entradas" className="c-wrap" style={{ marginTop: 32 }}>
       {/* Progreso (goal-gradient) + countdown */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
-        <div className="c-steps">
-          <span className={`c-step ${activeStep >= 1 ? 'c-step--on' : ''}`}><b>1</b> Entradas</span>
-          <span className="c-step__line" />
-          <span className={`c-step ${activeStep >= 2 ? 'c-step--on' : ''}`}><b>2</b> Datos + pago</span>
-          <span className="c-step__line" />
-          <span className="c-step"><b>3</b> ¡Listo!</span>
-        </div>
+        <ol className="c-steps" aria-label="Pasos de la compra">
+          <li role="listitem" aria-current={activeStep === 1 ? 'step' : undefined} className={`c-step ${activeStep >= 1 ? 'c-step--on' : ''}`}><b>1</b> Entradas</li>
+          <span className="c-step__line" aria-hidden="true" />
+          <li role="listitem" aria-current={activeStep === 2 ? 'step' : undefined} className={`c-step ${activeStep >= 2 ? 'c-step--on' : ''}`}><b>2</b> Datos + pago</li>
+          <span className="c-step__line" aria-hidden="true" />
+          <li role="listitem" className="c-step"><b>3</b> ¡Listo!</li>
+        </ol>
         {countdownLabel && totalItems > 0 && (
           <span className="c-chip" style={secondsLeft !== null && secondsLeft < 60 ? { color: 'var(--alert)', borderColor: 'var(--alert)' } : { color: 'var(--brand-ink)', borderColor: 'var(--brand)' }} aria-live="polite">
             <Clock className="h-3.5 w-3.5" /> Reserva · {countdownLabel}
@@ -246,20 +247,25 @@ function Step2({
     const email = (document.getElementById('buyer_email') as HTMLInputElement | null)?.value?.trim() ?? '';
     if (!email) { toast.error('Ingresá tu email antes de aplicar el código.'); return; }
     setChecking(true);
-    const res = await previewPromo({ eventId: event.id, code, email, items: itemsForPromo });
-    setChecking(false);
-    if (!res.ok) {
-      const msgs: Record<string, string> = {
-        NOT_FOUND: 'Código inválido.', EXPIRED: 'Código vencido.', EXHAUSTED: 'Código agotado.',
-        EMAIL_LIMIT: 'Ya usaste ese código con este email.', NOT_APPLICABLE: 'No aplica a estas entradas.',
-        NEED_EMAIL: 'Ingresá tu email primero.', BAD_TICKET_TYPE: 'Entrada inválida.',
-      };
-      setApplied(null);
-      toast.error(msgs[res.reason] ?? 'No se pudo aplicar el código.');
-      return;
+    try {
+      const res = await previewPromo({ eventId: event.id, code, email, items: itemsForPromo });
+      if (!res.ok) {
+        const msgs: Record<string, string> = {
+          NOT_FOUND: 'Código inválido.', EXPIRED: 'Código vencido.', EXHAUSTED: 'Código agotado.',
+          EMAIL_LIMIT: 'Ya usaste ese código con este email.', NOT_APPLICABLE: 'No aplica a estas entradas.',
+          NEED_EMAIL: 'Ingresá tu email primero.', BAD_TICKET_TYPE: 'Entrada inválida.',
+        };
+        setApplied(null);
+        toast.error(msgs[res.reason] ?? 'No se pudo aplicar el código.');
+        return;
+      }
+      setApplied({ code, finalCents: res.totalFinalCents, discountCents: res.totalDiscountCents, isFree: res.isFree });
+      toast.success(res.isFree ? '¡Entrada gratis con el código!' : `Código aplicado: -${formatPEN(res.totalDiscountCents)}`);
+    } catch {
+      toast.error('No se pudo verificar el código (red). Intentá de nuevo.');
+    } finally {
+      setChecking(false);
     }
-    setApplied({ code, finalCents: res.totalFinalCents, discountCents: res.totalDiscountCents, isFree: res.isFree });
-    toast.success(res.isFree ? '¡Entrada gratis con el código!' : `Código aplicado: -${formatPEN(res.totalDiscountCents)}`);
   }
 
   const finalTotal = applied ? applied.finalCents : totalCents;

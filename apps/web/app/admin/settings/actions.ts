@@ -27,11 +27,12 @@ const schema = z.object({
   secondary_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Color inválido'),
 });
 
+// Solo rasterizados (sin SVG): el bucket es público y un SVG con <script> sería
+// XSS stored si se abre su URL directa (mismo criterio que lib/brandAssets.ts).
 const LOGO_TYPES: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
   'image/webp': 'webp',
-  'image/svg+xml': 'svg',
 };
 
 export async function updateBrandSettingsAction(
@@ -84,7 +85,7 @@ export async function updateBrandSettingsAction(
   if (file instanceof File && file.size > 0) {
     const ext = LOGO_TYPES[file.type];
     if (!ext) {
-      return { ok: false, message: 'Logo: usá PNG, JPG, WEBP o SVG.', fieldErrors: { logo: 'Tipo no permitido' } };
+      return { ok: false, message: 'Logo: usá PNG, JPG o WEBP.', fieldErrors: { logo: 'Tipo no permitido' } };
     }
     if (file.size > 2 * 1024 * 1024) {
       return { ok: false, message: 'El logo supera 2 MB.', fieldErrors: { logo: 'Muy grande' } };

@@ -151,7 +151,7 @@ export default async function EventPage({ params }: Props) {
             {hasCover && (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={event.cover_url!} alt="" className="c-hero__img" />
+                <img src={event.cover_url!} alt="" className="c-hero__img" fetchPriority="high" decoding="async" />
                 <div className="c-hero__veil" style={{ background: 'linear-gradient(180deg, rgba(20,14,10,.25), rgba(20,14,10,.72))' }} />
               </>
             )}
@@ -173,7 +173,7 @@ export default async function EventPage({ params }: Props) {
           <div className="c-meter">
             <div className="c-meter__inner">
               <span className="c-muted">Capacidad · {totalSold}/{totalCapacity}</span>
-              <div className="c-meter__bar">
+              <div className="c-meter__bar" role="progressbar" aria-valuenow={totalSold} aria-valuemin={0} aria-valuemax={totalCapacity} aria-label={`Capacidad: ${totalSold} de ${totalCapacity}`}>
                 <div className="c-meter__fill" style={{ width: `${Math.min(100, (totalSold / totalCapacity) * 100)}%` }} />
               </div>
               <span className="c-eyebrow">En vivo</span>

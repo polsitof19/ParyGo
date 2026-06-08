@@ -76,7 +76,7 @@
 .client-shell .c-meter__fill { height: 100%; border-radius: 999px; background: var(--brand); transition: width .5s var(--ease); }
 
 /* steps / progress (goal-gradient) */
-.client-shell .c-steps { display: flex; align-items: center; gap: 10px; }
+.client-shell .c-steps { display: flex; align-items: center; gap: 10px; list-style: none; margin: 0; padding: 0; }
 .client-shell .c-step { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
 .client-shell .c-step b { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--cream-2); color: var(--ink-3); font-size: 11px; font-weight: 800; }
 .client-shell .c-step--on { color: var(--ink); }
@@ -103,7 +103,7 @@
 
 /* qty stepper */
 .client-shell .c-qty { display: inline-flex; align-items: center; gap: 12px; }
-.client-shell .c-qbtn { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; border: 1.5px solid var(--cream-3); background: var(--white); color: var(--ink); cursor: pointer; transition: border-color .15s, background-color .15s, transform .12s; }
+.client-shell .c-qbtn { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; border: 1.5px solid var(--cream-3); background: var(--white); color: var(--ink); cursor: pointer; transition: border-color .15s, background-color .15s, transform .12s; }
 .client-shell .c-qbtn:hover:not(:disabled) { border-color: var(--ink); }
 .client-shell .c-qbtn:active:not(:disabled) { transform: scale(.92); }
 .client-shell .c-qbtn:disabled { opacity: .3; cursor: not-allowed; }
@@ -125,8 +125,9 @@
 .client-shell .c-btn--brand:active:not(:disabled) { transform: translateY(0) scale(.99); }
 .client-shell .c-btn--soft { background: var(--white); color: var(--ink); border-color: var(--cream-3); }
 .client-shell .c-btn--soft:hover:not(:disabled) { border-color: var(--ink); }
-.client-shell .c-btn--ghost { background: transparent; color: var(--ink-2); height: auto; padding: 6px; }
+.client-shell .c-btn--ghost { background: transparent; color: var(--ink-2); height: auto; min-height: 44px; padding: 8px 12px; }
 .client-shell .c-btn--ghost:hover { color: var(--ink); }
+.client-shell .c-btn:focus-visible, .client-shell .c-pay:focus-visible, .client-shell .c-tt:focus-visible, .client-shell .c-qbtn:focus-visible, .client-shell .c-input:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
 .client-shell .c-btn--block { width: 100%; }
 .client-shell .c-btn--lg { height: 54px; font-size: 16px; }
 

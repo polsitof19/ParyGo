@@ -38,6 +38,7 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
   const [manual, setManual] = useState('');
   const [busy, setBusy] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const lastScan = useRef<{ qr: string; ts: number }>({ qr: '', ts: 0 });
   const deviceId = useRef('');
   const audioRef = useRef<AudioContext | null>(null);
@@ -202,11 +203,21 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
       {/* Cámara */}
       <div className="k-cam">
         {cameraOn ? (
-          <QrScanner onScan={onDetect} onError={() => {}} formats={['qr_code']} scanDelay={400} components={{ finder: true }} styles={{ container: { width: '100%' } }} />
+          <QrScanner
+            onScan={(codes) => { setCameraError(null); onDetect(codes); }}
+            onError={(e) => setCameraError(e instanceof Error ? e.message : 'No se pudo abrir la cámara')}
+            formats={['qr_code']}
+            scanDelay={400}
+            components={{ finder: true }}
+            styles={{ container: { width: '100%' } }}
+          />
         ) : (
           <div className="k-cam__off">Cámara pausada</div>
         )}
       </div>
+      {cameraError && cameraOn && (
+        <p className="k-camerr" role="alert">No se pudo usar la cámara ({cameraError}). Usá el código manual abajo.</p>
+      )}
 
       <div className="k-row">
         <button type="button" className="k-btn k-btn--soft" onClick={() => setCameraOn((v) => !v)}>
@@ -218,10 +229,10 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
       {/* Fallback manual */}
       <form onSubmit={submitManual} className="k-row" style={{ alignItems: 'flex-end' }}>
         <div style={{ flex: 1 }}>
-          <label className="k-label">Código manual (si la cámara falla)</label>
-          <input value={manual} onChange={(e) => setManual(e.target.value)} placeholder="UUID del ticket" className="k-input" />
+          <label htmlFor="manual-scan" className="k-label">Código manual (si la cámara falla)</label>
+          <input id="manual-scan" value={manual} onChange={(e) => setManual(e.target.value)} placeholder="UUID del ticket" className="k-input" />
         </div>
-        <button type="submit" className="k-btn k-btn--brand">Validar</button>
+        <button type="submit" className="k-btn k-btn--brand" disabled={busy}>Validar</button>
       </form>
 
       <p className="k-foot">Puerta de {brandName}</p>

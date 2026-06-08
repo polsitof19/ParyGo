@@ -5,7 +5,7 @@ const organization = {
   '@type': 'Organization',
   name: SITE.name,
   url: SITE.url,
-  logo: `${SITE.url}/og.svg`,
+  logo: `${SITE.url}/og.png`,
   description: SITE.description,
   contactPoint: [
     {
