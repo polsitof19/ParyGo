@@ -14,7 +14,7 @@
    Así no interfiere con la compra del cliente, los paneles, APIs ni server
    actions (POST nunca se intercepta).
    ============================================================ */
-const CACHE = 'parygo-scan-v1';
+const CACHE = 'parygo-scan-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -32,11 +32,10 @@ self.addEventListener('activate', (event) => {
 });
 
 function isImmutableAsset(url) {
-  return (
-    url.pathname.startsWith('/_next/static/') ||
-    url.pathname.startsWith('/_next/image') ||
-    /\.(woff2?|ttf|otf|png|jpg|jpeg|webp|svg|ico|css|js)$/i.test(url.pathname)
-  );
+  // Solo assets de Next (hasheados/inmutables): chunks JS/CSS + fuentes
+  // (/_next/static/media) + imágenes optimizadas. NO cachea assets sueltos de
+  // otras rutas (acota la superficie del cache; hardening del review).
+  return url.pathname.startsWith('/_next/');
 }
 
 self.addEventListener('fetch', (event) => {
