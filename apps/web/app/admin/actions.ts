@@ -4,9 +4,69 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { issueTicketsForOrder } from '@/lib/tickets';
+import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
 import { publicEnv } from '@/lib/env';
 
 export type InviteValidatorState = { ok: boolean; message: string | null };
+export type ReissueState = { ok: boolean; message: string | null };
+
+// =============================================================
+// Recuperación: re-emitir tickets de una orden PAGADA sin tickets.
+// Red de seguridad para el flujo Yape (no atómico): si el proceso muere entre
+// "orden pagada" y "tickets emitidos", el dueño la recupera con un clic.
+// Seguridad: brand_admin de SU marca (el brand sale de la sesión, y se verifica
+// que la orden pertenezca a esa marca). issueTicketsForOrder es idempotente
+// (si ya hay tickets, no duplica). NO marca la orden pagada (solo emite sobre
+// órdenes que YA están 'paid') → no crea dinero.
+// =============================================================
+export async function reissueTicketsAction(
+  _prev: ReissueState,
+  formData: FormData
+): Promise<ReissueState> {
+  const user = await requireSession();
+  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
+  if (!membership) return { ok: false, message: 'No autorizado.' };
+
+  const orderId = String(formData.get('order_id') ?? '');
+  if (!orderId) return { ok: false, message: 'Orden inválida.' };
+
+  const admin = createAdminClient();
+  // Tenancy + estado: la orden debe ser de ESTA marca y estar pagada.
+  const { data: order } = await admin
+    .from('orders')
+    .select('id, brand_id, status')
+    .eq('id', orderId)
+    .maybeSingle();
+  if (!order || order.brand_id !== membership.brandId) {
+    return { ok: false, message: 'Esa orden no es de tu marca.' };
+  }
+  if (order.status !== 'paid') {
+    return { ok: false, message: 'Solo se pueden re-emitir tickets de órdenes pagadas.' };
+  }
+
+  const res = await issueTicketsForOrder({ orderId, reason: 'yape_approved' });
+  if (!res.ok) return { ok: false, message: `No se pudieron re-emitir: ${res.error}` };
+
+  // Mandar el email con el QR (best-effort: si falla, los tickets ya existen).
+  try { await sendTicketEmail(orderId); } catch { /* el dueño puede reenviar aparte */ }
+
+  await admin.from('events_log').insert({
+    brand_id: membership.brandId,
+    order_id: orderId,
+    actor_user_id: user.id,
+    type: 'tickets_reissued_recovery',
+    payload: { already_existed: res.alreadyIssued, count: res.ticketIds.length },
+  });
+
+  revalidatePath('/admin');
+  return {
+    ok: true,
+    message: res.alreadyIssued
+      ? 'Esa orden ya tenía tickets. Reenviamos el email con el QR.'
+      : `Tickets re-emitidos (${res.ticketIds.length}) y email enviado.`,
+  };
+}
 export type GateCodeState = { ok: boolean; message: string | null; code?: string; label?: string };
 export type SetPwdState = { ok: boolean; message: string | null };
 

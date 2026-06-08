@@ -256,13 +256,25 @@ async function verifyMpSignature({
 }): Promise<boolean> {
   const parts = Object.fromEntries(
     header.split(',').map((p) => {
-      const [k, v] = p.split('=');
-      return [k?.trim() ?? '', v?.trim() ?? ''];
+      // split SOLO en el primer '=' (un valor podría contener '=', p. ej. base64).
+      const idx = p.indexOf('=');
+      const k = idx === -1 ? p : p.slice(0, idx);
+      const v = idx === -1 ? '' : p.slice(idx + 1);
+      return [k.trim(), v.trim()];
     })
   );
   const ts = parts.ts;
   const v1 = parts.v1;
   if (!ts || !v1) return false;
+  // Anti-replay: rechazar firmas viejas (> 5 min de skew). La idempotencia de
+  // settle_mp_payment (mp_payment_id único) ya evita duplicados; esto agrega
+  // defensa contra el replay de una firma HMAC capturada. MP firma CADA intento
+  // de notificación con su propio ts, así que los reintentos legítimos traen un
+  // ts fresco y NO se rechazan — solo se descarta un payload viejo reenviado.
+  const tsNum = parseInt(ts, 10);
+  if (!Number.isFinite(tsNum)) return false;
+  const tsMs = tsNum > 1e12 ? tsNum : tsNum * 1000; // MP usa segundos (a veces ms)
+  if (Math.abs(Date.now() - tsMs) > 300_000) return false;
   const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`;
   const key = await crypto.subtle.importKey(
     'raw',

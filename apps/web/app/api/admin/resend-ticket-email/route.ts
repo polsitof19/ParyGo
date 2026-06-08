@@ -55,18 +55,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: 'invalid_order_id' }, { status: 400 });
   }
 
-  // Super admin can resend for any order; brand admins must own the brand.
-  if (!user.isSuperAdmin && user.brandMemberships.every((m) => m.role !== 'brand_admin')) {
-    return NextResponse.json({ ok: false, reason: 'forbidden' }, { status: 403 });
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const admin = createAdminClient();
+
+  // Cargamos la marca de la orden desde la DB (server-trusted) para (a) el guard
+  // de tenancy y (b) acotar el force-clear por brand_id (defensa en profundidad).
+  const { data: ord, error: ordErr } = await admin
+    .from('orders')
+    .select('brand_id')
+    .eq('id', orderId)
+    .maybeSingle();
+  if (ordErr) {
+    return NextResponse.json({ ok: false, reason: 'lookup_failed' }, { status: 500 });
+  }
+
+  // TENANCY: el super admin puede reenviar cualquier orden; un brand_admin SOLO
+  // las de SU marca. Antes solo se exigía ser brand_admin de ALGUNA marca → un
+  // brand_admin de la marca A podía reenviar / limpiar email_sent_at de órdenes
+  // de la marca B. Mismo 403 para "no es tuya" y "no existe" (no filtra existencia).
+  if (!user.isSuperAdmin) {
+    const ownsBrand =
+      !!ord && user.brandMemberships.some((m) => m.role === 'brand_admin' && m.brandId === ord.brand_id);
+    if (!ownsBrand) {
+      return NextResponse.json({ ok: false, reason: 'forbidden' }, { status: 403 });
+    }
   }
 
   if (body.force) {
-    const { createAdminClient } = await import('@/lib/supabase/admin');
-    const admin = createAdminClient();
-    const { error: clearErr } = await admin
-      .from('orders')
-      .update({ email_sent_at: null })
-      .eq('id', orderId);
+    let clearQuery = admin.from('orders').update({ email_sent_at: null }).eq('id', orderId);
+    if (ord?.brand_id) clearQuery = clearQuery.eq('brand_id', ord.brand_id); // auto-contenido
+    const { error: clearErr } = await clearQuery;
     if (clearErr) {
       return NextResponse.json({ ok: false, reason: `clear_failed:${clearErr.message}` }, { status: 500 });
     }

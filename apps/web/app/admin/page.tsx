@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
 import { InviteValidator } from './InviteValidator';
 import { ValidatorManager } from './ValidatorManager';
+import { TicketRecovery } from './TicketRecovery';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -75,6 +76,18 @@ export default async function AdminHomePage() {
     };
   });
 
+  // Recuperación: órdenes PAGADAS sin tickets (red de seguridad del flujo Yape no
+  // atómico). Scopeado por brand.id con service-role. Normalmente vacío.
+  const eventNameById = new Map((events ?? []).map((e) => [e.id, e.name] as const));
+  const [{ data: paidRows }, { data: ticketOrderRows }] = await Promise.all([
+    adminCli.from('orders').select('id, buyer_name, total_cents, created_at, event_id').eq('brand_id', brand.id).eq('status', 'paid'),
+    adminCli.from('tickets').select('order_id').eq('brand_id', brand.id),
+  ]);
+  const ordersWithTickets = new Set((ticketOrderRows ?? []).map((t) => t.order_id as string));
+  const stuckOrders = ((paidRows ?? []) as { id: string; buyer_name: string | null; total_cents: number | null; created_at: string; event_id: string }[])
+    .filter((o) => !ordersWithTickets.has(o.id))
+    .map((o) => ({ id: o.id, buyerName: o.buyer_name, totalCents: o.total_cents ?? 0, createdAt: o.created_at, eventName: eventNameById.get(o.event_id) ?? 'Evento' }));
+
   const theme = (brand.theme_json ?? {}) as { logo_url?: string | null; primary_color?: string; secondary_color?: string };
   const balance = brand.event_balance ?? 0;
   const canCreate = balance > 0;
@@ -126,6 +139,9 @@ export default async function AdminHomePage() {
           <span className="s-stat__sub">acumulado de la marca</span>
         </div>
       </div>
+
+      {/* Recuperación de tickets — solo aparece si hay órdenes pagadas sin tickets */}
+      {stuckOrders.length > 0 && <TicketRecovery orders={stuckOrders} />}
 
       {/* Eventos */}
       {!events || events.length === 0 ? (
