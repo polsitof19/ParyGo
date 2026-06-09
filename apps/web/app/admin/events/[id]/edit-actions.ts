@@ -11,7 +11,7 @@ export type EditState = { ok: boolean; message: string | null };
 async function authEvent(eventId: string, userId: string, isSuper: boolean, memberships: { brandId: string; role: string }[]) {
   const admin = createAdminClient();
   const { data: ev } = await admin.from('events').select('id, brand_id').eq('id', eventId).maybeSingle();
-  if (!ev) return null;
+  if (!ev || !ev.brand_id) return null; // brand_id nulo (huérfano) → rechazar explícito
   const ok = isSuper || memberships.some((m) => m.brandId === ev.brand_id && m.role === 'brand_admin');
   return ok ? (ev.brand_id as string) : null;
 }
@@ -67,6 +67,48 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
   return { ok: true, message: 'Evento actualizado.' };
+}
+
+// ===== 1.b) Publicar / despublicar el evento (brand_admin de SU evento) =====
+// Espeja la lógica ya revisada del panel super admin (setEventPublishedAction en
+// cabina-7k29x), pero autorizada por la membership brand_admin del evento. NO
+// cambia la semántica de is_published ni RLS: solo agrega un escritor autorizado
+// (el dueño de la marca) y scopea el update por brand_id (defensa en profundidad).
+export async function setEventPublishedAction(
+  eventId: string,
+  publish: boolean
+): Promise<{ ok: boolean; message?: string }> {
+  const user = await requireSession();
+  const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
+  if (!brandId) return { ok: false, message: 'No tenés permiso sobre este evento.' };
+
+  const admin = createAdminClient();
+  // Guard: no publicar un evento sin al menos un tipo de entrada activo.
+  if (publish) {
+    const { count } = await admin
+      .from('ticket_types')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .eq('is_active', true);
+    if (!count || count === 0) {
+      return { ok: false, message: 'Agregá al menos un tipo de entrada activo antes de publicar.' };
+    }
+  }
+
+  const { error } = await admin
+    .from('events')
+    .update({ is_published: publish })
+    .eq('id', eventId)
+    .eq('brand_id', brandId); // scoped a la marca del dueño
+  if (error) return { ok: false, message: error.message };
+
+  await admin.from('events_log').insert({
+    brand_id: brandId, event_id: eventId, actor_user_id: user.id,
+    type: publish ? 'event_published' : 'event_unpublished', payload: {},
+  });
+  revalidatePath(`/admin/events/${eventId}`);
+  revalidatePath('/admin');
+  return { ok: true };
 }
 
 // ===== 2) Editar un tipo de entrada (con la REGLA SEGURA) =====

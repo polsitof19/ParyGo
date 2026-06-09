@@ -5,6 +5,7 @@ import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { publicEnv } from '@/lib/env';
 import { EventTabs } from './EventTabs';
+import { PublishControl } from './PublishControl';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -67,6 +68,7 @@ export default async function EventLayout({
           )}
         </div>
       </header>
+      <PublishControl eventId={event.id} isPublished={!!event.is_published} />
       <EventTabs eventId={event.id} yapePending={yapePending} />
       <div style={{ marginTop: 18 }}>{children}</div>
     </>

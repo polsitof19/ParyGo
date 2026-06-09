@@ -359,6 +359,25 @@
 .admin-shell .a-alert--warn { background: #FFF3E6; color: #C7791A; }
 .admin-shell .a-alert--info { background: var(--info-bg); color: var(--info); }
 
+/* Aviso de Yape pendiente — prioridad arriba del resumen */
+.admin-shell .a-yapebanner { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 14px 18px; margin-bottom: 18px; border-radius: var(--r-card); background: linear-gradient(100deg, #FFF1E6, #FFE3D2); border: 1px solid #F3C9A8; box-shadow: 0 8px 20px -14px rgba(255,106,61,.5); text-decoration: none; color: var(--ink); transition: transform .12s ease, box-shadow .12s ease; }
+.admin-shell .a-yapebanner:hover { transform: translateY(-1px); box-shadow: 0 12px 26px -14px rgba(255,106,61,.6); }
+.admin-shell .a-yapebanner__main { display: inline-flex; align-items: center; gap: 12px; min-width: 0; }
+.admin-shell .a-yapebanner__bell { color: var(--tangerine); flex-shrink: 0; }
+.admin-shell .a-yapebanner__main strong { display: block; font-size: 15.5px; font-weight: 800; }
+.admin-shell .a-yapebanner__sub { display: block; font-size: 13px; color: var(--ink-2); margin-top: 1px; }
+.admin-shell .a-yapebanner__cta { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; background: var(--tangerine); color: #fff; font-weight: 700; font-size: 14px; padding: 9px 16px; border-radius: var(--r-pill); box-shadow: 0 6px 16px -8px rgba(255,106,61,.55); }
+
+/* Control de estado Borrador / Publicado */
+.admin-shell .a-publish { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 13px 16px; margin: 4px 0 18px; border-radius: var(--r-card); border: 1px solid var(--cream-3); }
+.admin-shell .a-publish__txt { display: inline-flex; align-items: center; gap: 11px; min-width: 0; font-size: 14px; }
+.admin-shell .a-publish__txt strong { font-weight: 800; }
+.admin-shell .a-publish__sub { display: block; font-size: 13px; color: var(--ink-2); margin-top: 1px; }
+.admin-shell .a-publish--draft { background: #FFF3E6; border-color: #F3D9B8; }
+.admin-shell .a-publish--draft .a-publish__txt > svg { color: #C7791A; flex-shrink: 0; }
+.admin-shell .a-publish--live { background: var(--ok-bg); border-color: #BFE6CF; }
+.admin-shell .a-publish--live .a-publish__txt > svg { color: var(--ok); flex-shrink: 0; }
+
 /* Cuadre de dinero */
 .admin-shell .a-money { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .admin-shell .a-money__cell { background: var(--cream-2); border-radius: var(--r-ctl); padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }

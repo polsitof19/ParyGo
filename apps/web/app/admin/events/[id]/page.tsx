@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Bell, ArrowRight } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
@@ -17,9 +18,8 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
   const { data: event } = await admin.from('events').select('id, brand_id').eq('id', params.id).maybeSingle();
   if (!event || event.brand_id !== membership.brandId) notFound();
 
-  const [{ data: paid }, { count: ticketCount }, { data: ticketTypes }] = await Promise.all([
+  const [{ data: paid }, { data: ticketTypes }] = await Promise.all([
     admin.from('orders').select('id, total_cents, payment_method, created_at').eq('event_id', event.id).eq('status', 'paid'),
-    admin.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', event.id).is('invalidated_at', null),
     admin.from('ticket_types').select('id, name, price_cents, capacity, sold, is_unlimited, is_active, sort_order').eq('event_id', event.id).order('sort_order'),
   ]);
 
@@ -143,13 +143,19 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
 
   return (
     <>
-      {/* KPIs */}
-      <div className="s-stats-4">
-        <div className="s-stat"><span className="s-stat__label">Recaudación confirmada</span><span className="s-stat__value" style={{ fontSize: 26 }}>{formatPEN(confirmedCents)}</span><span className="s-stat__sub">{paidRows.length} orden{paidRows.length === 1 ? '' : 'es'} pagadas</span></div>
-        <div className="s-stat"><span className="s-stat__label">Entradas vendidas</span><span className="s-stat__value">{totalSold}</span><span className="s-stat__sub">{ticketCount ?? 0} tickets válidos</span></div>
-        <div className="s-stat"><span className="s-stat__label">Escaneados</span><span className="s-stat__value">{totalScanned}</span><span className="s-stat__sub">{totalSold > 0 ? `${Math.round((totalScanned / totalSold) * 100)}% entraron` : 'aún nadie entró'}</span></div>
-        <div className="s-stat"><span className="s-stat__label">Cupos</span><span className="s-stat__value">{capTotal > 0 ? `${soldCapped}/${capTotal}` : (hasUnlimited ? '∞' : '—')}</span><span className="s-stat__sub">{hasUnlimited ? 'hay stock ilimitado' : 'vendidos / capacidad'}</span></div>
-      </div>
+      {/* Yape pendiente — lo más urgente, arriba de todo. Solo si hay pendientes. */}
+      {pendingCount > 0 && (
+        <Link href={`/admin/events/${event.id}/yape`} className="a-yapebanner">
+          <span className="a-yapebanner__main">
+            <Bell className="h-5 w-5 a-yapebanner__bell" />
+            <span>
+              <strong>Tenés {pendingCount} Yape{pendingCount === 1 ? '' : 's'} esperando revisión</strong>
+              <span className="a-yapebanner__sub">{formatPEN(pendingCents)} · hay gente esperando su QR</span>
+            </span>
+          </span>
+          <span className="a-yapebanner__cta">Revisar ahora <ArrowRight className="h-4 w-4" /></span>
+        </Link>
+      )}
 
       {/* Alertas visuales */}
       {alerts.length > 0 && (
