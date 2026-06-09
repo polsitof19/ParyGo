@@ -340,3 +340,14 @@
 .admin-shell .a-evcard__foot { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 8px; }
 .admin-shell .a-evcard__sales { font-family: var(--display); font-weight: 800; font-size: 15px; }
 .admin-shell .a-evcard__go { margin-left: auto; color: var(--ink-3); }
+
+/* Pestañas de un evento */
+.admin-shell .a-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; border-bottom: 1px solid var(--cream-3); -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.admin-shell .a-tabs::-webkit-scrollbar { display: none; }
+.admin-shell .a-tab { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; padding: 10px 14px; border-radius: 12px 12px 0 0; font-size: 14px; font-weight: 600; color: var(--ink-2); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .15s, background-color .15s; }
+.admin-shell .a-tab:hover { color: var(--ink); background: var(--cream-2); }
+.admin-shell .a-tab--on { color: var(--tangerine); border-bottom-color: var(--tangerine); }
+.admin-shell .a-tab__badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--alert); color: #fff; font-size: 11px; font-weight: 700; }
+.admin-shell .a-live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.admin-shell .a-live__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px rgba(46,158,107,.18); animation: a-pulse 2s ease-in-out infinite; }
+@keyframes a-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }

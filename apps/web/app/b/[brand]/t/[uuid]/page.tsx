@@ -4,6 +4,7 @@ import { MapPin, Calendar, Check } from 'lucide-react';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateQrSvg } from '@/lib/qr';
 import { formatEventDate, whatsappLink } from '@/lib/utils';
+import { DownloadQrButton } from '../../DownloadQrButton';
 
 // SVG QR generation has no Node-only dependencies (no pngjs/Buffer), so this
 // route runs fine on Cloudflare Pages edge runtime.
@@ -125,6 +126,7 @@ export default async function TicketPage({ params }: Props) {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '20px 24px 26px' }}>
           <div className="c-qr" role="img" aria-label="QR de la entrada" dangerouslySetInnerHTML={{ __html: qrSvg }} />
           <p className="c-muted-3" style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Escanear en puerta</p>
+          <DownloadQrButton qrCode={t.qr_code} fileName={t.ticket_number} />
         </div>
       </article>
 

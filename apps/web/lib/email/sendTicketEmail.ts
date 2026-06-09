@@ -88,9 +88,10 @@ export async function sendTicketEmail(orderId: string): Promise<SendTicketEmailR
 
   const brand = order.brand;
   const event = order.event;
-  const firstQr = order.tickets[0]!.qr_code;
   const subdomain = brand?.slug ? `https://${brand.slug}.parygo.com` : 'https://app.parygo.com';
-  const ticketUrl = `${subdomain}/t/${firstQr}`;
+  // Linkea a la página del PEDIDO (muestra TODOS los QR de la orden, no solo el
+  // primero). /t/<uuid> individual sigue existiendo para escaneo en puerta.
+  const ticketUrl = `${subdomain}/pedido/${order.id}`;
   const eventName = event?.name ?? 'tu evento';
   const eventDate = event?.starts_at ? formatEventDate(event.starts_at) : '';
   const venue = event?.venue_name ?? '';
@@ -300,7 +301,7 @@ function renderHtml(p: {
           )}, tu pago fue aprobado. Esta es tu entrada &mdash; guard&aacute; este email o abr&iacute; tu entrada con el bot&oacute;n.</p>
           <a href="${
             p.ticketUrl
-          }" style="display:inline-block;padding:15px 28px;background:${p.primary};color:${p.onBrand};text-decoration:none;font-family:${FONT};font-weight:700;font-size:15px;border-radius:999px">Ver mi entrada con QR &rarr;</a>
+          }" style="display:inline-block;padding:15px 28px;background:${p.primary};color:${p.onBrand};text-decoration:none;font-family:${FONT};font-weight:700;font-size:15px;border-radius:999px">${p.tickets.length > 1 ? 'Ver mis entradas con QR' : 'Ver mi entrada con QR'} &rarr;</a>
           <p style="margin:12px 0 0;font-family:${FONT};font-size:12px;line-height:1.4;color:${INK3}">Tu link permanente: <a href="${
             p.ticketUrl
           }" style="color:${p.ink};text-decoration:none">${escapeHtml(p.ticketUrl)}</a></p>

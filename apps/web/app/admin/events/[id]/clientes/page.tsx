@@ -1,6 +1,4 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronLeft } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ClientsTable, type ClientRow } from './ClientsTable';
@@ -57,16 +55,11 @@ export default async function EventClientsPage({ params }: { params: { id: strin
 
   return (
     <>
-      <Link href={`/admin/events/${event.id}`} className="s-back">
-        <ChevronLeft className="h-3.5 w-3.5" /> {event.name}
-      </Link>
-      <header className="s-pagehead">
-        <div>
-          <span className="eyebrow">Clientes</span>
-          <h1 className="s-h1" style={{ marginTop: 4 }}>Compradores</h1>
-          <p className="s-card__desc">{rows.length} comprador{rows.length === 1 ? '' : 'es'} pagados · datos privados de tu marca.</p>
-        </div>
-      </header>
+      <div style={{ marginBottom: 14 }}>
+        <span className="eyebrow">Clientes</span>
+        <h2 className="s-h2" style={{ marginTop: 2 }}>Compradores</h2>
+        <p className="s-card__desc">{rows.length} comprador{rows.length === 1 ? '' : 'es'} pagados · datos privados de tu marca.</p>
+      </div>
       <ClientsTable rows={rows} eventName={event.name} />
     </>
   );

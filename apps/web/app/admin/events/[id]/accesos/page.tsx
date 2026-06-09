@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronLeft, DoorOpen } from 'lucide-react';
+import { DoorOpen } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { LiveRefresh } from '../LiveRefresh';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -44,16 +44,14 @@ export default async function EventAccessPage({ params }: { params: { id: string
 
   return (
     <>
-      <Link href={`/admin/events/${event.id}`} className="s-back">
-        <ChevronLeft className="h-3.5 w-3.5" /> {event.name}
-      </Link>
-      <header className="s-pagehead">
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
         <div>
           <span className="eyebrow">Puerta</span>
-          <h1 className="s-h1" style={{ marginTop: 4 }}>Accesos en vivo</h1>
+          <h2 className="s-h2" style={{ marginTop: 2 }}>Accesos en vivo</h2>
           <p className="s-card__desc">Quién ya ingresó y quién falta. Solo entradas válidas (no anuladas).</p>
         </div>
-      </header>
+        <LiveRefresh seconds={12} />
+      </div>
 
       <div className="s-stats-4" style={{ marginBottom: 18 }}>
         <div className="s-stat">
