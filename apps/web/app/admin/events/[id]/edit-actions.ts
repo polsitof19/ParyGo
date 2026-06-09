@@ -57,7 +57,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
       starts_at: startsIso,
       venue_name: parsed.data.venue_name || null,
       venue_address: parsed.data.venue_address || null,
-      min_age: parsed.data.min_age ? parseInt(parsed.data.min_age, 10) : 18,
+      min_age: parsed.data.min_age ? Math.min(99, Math.max(0, parseInt(parsed.data.min_age, 10) || 18)) : 18,
     })
     .eq('id', eventId)
     .eq('brand_id', brandId); // scoped

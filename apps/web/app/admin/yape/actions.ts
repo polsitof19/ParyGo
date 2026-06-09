@@ -96,6 +96,7 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
 export async function rejectYapeProof(proofId: string, reason: string): Promise<RejectResult> {
   const user = await requireSession();
   const admin = createAdminClient();
+  reason = (reason ?? '').slice(0, 300); // límite de longitud (defensa)
 
   const { data: proof } = await admin
     .from('yape_proofs')

@@ -51,7 +51,7 @@ export function renderWarmEmail(o: WarmEmailOpts): { html: string } {
     : '';
 
   const button = o.button
-    ? `<a href="${o.button.url}" style="display:inline-block;padding:15px 28px;background:${primary};color:${onBrand};text-decoration:none;font-family:${FONT};font-weight:700;font-size:15px;border-radius:999px">${escapeHtml(o.button.label)}</a>`
+    ? `<a href="${escapeHtml(o.button.url)}" style="display:inline-block;padding:15px 28px;background:${primary};color:${onBrand};text-decoration:none;font-family:${FONT};font-weight:700;font-size:15px;border-radius:999px">${escapeHtml(o.button.label)}</a>`
     : '';
 
   return {
