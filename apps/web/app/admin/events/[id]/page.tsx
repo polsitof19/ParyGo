@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronLeft, ExternalLink, Users, DoorOpen } from 'lucide-react';
+import { ChevronLeft, ExternalLink, Users, DoorOpen, Pencil } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -183,6 +183,17 @@ export default async function AdminEventDetailPage({
     })
   );
 
+  // Yapes RECHAZADOS de este evento (solo lectura).
+  const { data: rejected } = await admin
+    .from('yape_proofs')
+    .select('id, amount_cents, reject_reason, reviewed_at, created_at, order:orders!yape_proofs_order_id_fkey ( buyer_name, buyer_email, event_id )')
+    .eq('brand_id', event.brand_id)
+    .eq('status', 'rejected')
+    .order('reviewed_at', { ascending: false })
+    .limit(50);
+  const rejectedRows = ((rejected ?? []) as unknown as { id: string; amount_cents: number; reject_reason: string | null; reviewed_at: string | null; order: { buyer_name: string; buyer_email: string; event_id: string } | null }[])
+    .filter((r) => r.order?.event_id === event.id);
+
   const brandUrl = brand?.slug
     ? `https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${event.slug}`
     : null;
@@ -250,6 +261,7 @@ export default async function AdminEventDetailPage({
       <div className="s-actionbar" style={{ marginTop: 18 }}>
         <span className="s-actionbar__lead">Gestión</span>
         <div className="s-actionbar__btns">
+          <Link href={`/admin/events/${event.id}/editar`} className="s-btn s-btn--soft s-btn--sm"><Pencil className="h-4 w-4" /> Editar evento</Link>
           <Link href={`/admin/events/${event.id}/clientes`} className="s-btn s-btn--soft s-btn--sm"><Users className="h-4 w-4" /> Clientes</Link>
           <Link href={`/admin/events/${event.id}/accesos`} className="s-btn s-btn--soft s-btn--sm"><DoorOpen className="h-4 w-4" /> Accesos en vivo</Link>
         </div>
@@ -330,6 +342,30 @@ export default async function AdminEventDetailPage({
           </div>
         )}
       </section>
+
+      {/* Yapes rechazados (lectura) */}
+      {rejectedRows.length > 0 && (
+        <section style={{ marginTop: 24 }}>
+          <h2 className="s-h2" style={{ marginBottom: 12 }}>Yapes rechazados <span className="s-badge s-badge--draft" style={{ marginLeft: 8 }}>{rejectedRows.length}</span></h2>
+          <div className="s-card" style={{ padding: 0 }}>
+            <ul className="s-stack" style={{ gap: 0, listStyle: 'none', margin: 0, padding: 0 }}>
+              {rejectedRows.map((r) => (
+                <li key={r.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', padding: '12px 16px', borderTop: '1px solid var(--cream-3)' }}>
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ fontWeight: 600 }}>{r.order?.buyer_name ?? '—'}</span>
+                    <span className="s-muted" style={{ fontSize: 13 }}> · {r.order?.buyer_email}</span>
+                    {r.reject_reason && <div className="s-muted" style={{ fontSize: 12.5 }}>Motivo: {r.reject_reason}</div>}
+                  </span>
+                  <span className="s-muted" style={{ fontSize: 12.5, textAlign: 'right', flexShrink: 0 }}>
+                    {formatPEN(r.amount_cents)}<br />{r.reviewed_at && new Date(r.reviewed_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 8 }}>Al rechazar un Yape, el comprador recibe un email avisándole. La devolución del dinero (si yapeó de más) la gestionás vos por tu Yape.</p>
+        </section>
+      )}
 
       {/* Tipos de entrada con barra de progreso */}
       <section style={{ marginTop: 24 }}>

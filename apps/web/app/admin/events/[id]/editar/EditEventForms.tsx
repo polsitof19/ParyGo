@@ -1,0 +1,98 @@
+'use client';
+
+import { useFormState, useFormStatus } from 'react-dom';
+import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, type EditState } from '../edit-actions';
+
+export type TtRow = { id: string; name: string; priceCents: number; capacity: number; sold: number; isUnlimited: boolean; isActive: boolean };
+
+const initial: EditState = { ok: false, message: null };
+
+function Banner({ state }: { state: EditState }) {
+  if (!state.message) return null;
+  return <p className={state.ok ? 's-banner s-banner--ok' : 's-banner s-banner--err'} style={{ marginTop: 12 }}>{state.message}</p>;
+}
+function Submit({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+  return <button type="submit" className="s-btn s-btn--primary s-btn--sm" disabled={pending}>{pending ? 'Guardando…' : label}</button>;
+}
+
+export function EditEventForm(p: { eventId: string; name: string; description: string; startsLocal: string; venueName: string; venueAddress: string; minAge: number }) {
+  const [state, action] = useFormState(updateEventAction, initial);
+  return (
+    <form action={action} className="s-stack" style={{ gap: 12 }}>
+      <input type="hidden" name="event_id" value={p.eventId} />
+      <div className="s-field"><label className="s-label" htmlFor="ev-name">Nombre</label>
+        <input id="ev-name" name="name" defaultValue={p.name} className="s-input" required /></div>
+      <div className="s-field"><label className="s-label" htmlFor="ev-desc">Descripción</label>
+        <textarea id="ev-desc" name="description" defaultValue={p.description} className="s-input" rows={3} style={{ resize: 'vertical' }} /></div>
+      <div className="s-form-grid">
+        <div className="s-field"><label className="s-label" htmlFor="ev-date">Fecha y hora</label>
+          <input id="ev-date" name="starts_at" type="datetime-local" defaultValue={p.startsLocal} className="s-input" required /></div>
+        <div className="s-field"><label className="s-label" htmlFor="ev-age">Edad mínima</label>
+          <input id="ev-age" name="min_age" type="number" min={0} max={99} defaultValue={p.minAge} className="s-input" /></div>
+      </div>
+      <div className="s-field"><label className="s-label" htmlFor="ev-vname">Lugar (nombre)</label>
+        <input id="ev-vname" name="venue_name" defaultValue={p.venueName} className="s-input" /></div>
+      <div className="s-field"><label className="s-label" htmlFor="ev-vaddr">Dirección</label>
+        <input id="ev-vaddr" name="venue_address" defaultValue={p.venueAddress} className="s-input" /></div>
+      <Banner state={state} />
+      <div className="s-form-actions"><Submit label="Guardar evento" /></div>
+    </form>
+  );
+}
+
+export function TicketTypeEditor({ eventId, tt }: { eventId: string; tt: TtRow }) {
+  const [state, action] = useFormState(updateTicketTypeAction, initial);
+  const hasSales = tt.sold > 0;
+  return (
+    <form action={action}>
+      <input type="hidden" name="event_id" value={eventId} />
+      <input type="hidden" name="ticket_type_id" value={tt.id} />
+      <div className="s-card__head" style={{ marginBottom: 10 }}>
+        <span className="a-evrow__name" style={{ fontSize: 16 }}>{tt.name}</span>
+        <span className="s-muted" style={{ fontSize: 13 }}>{tt.isUnlimited ? 'Ilimitado' : `${tt.sold}/${tt.capacity} vendidas`}</span>
+      </div>
+      <div className="s-form-grid">
+        <div className="s-field"><label className="s-label">Nombre</label>
+          <input name="name" defaultValue={tt.name} className="s-input" /></div>
+        <div className="s-field">
+          <label className="s-label">Precio (S/){hasSales && <span className="s-muted" style={{ fontWeight: 500 }}> · congelado, hay ventas</span>}</label>
+          <input name="price_soles" type="number" step="0.5" min={0} defaultValue={(tt.priceCents / 100).toFixed(2)} className="s-input" disabled={hasSales} title={hasSales ? 'No editable: ya tiene ventas' : undefined} />
+        </div>
+      </div>
+      <div className="s-form-grid s-field">
+        <div className="s-field">
+          <label className="s-label">Capacidad{!tt.isUnlimited && tt.sold > 0 && <span className="s-muted" style={{ fontWeight: 500 }}> · mín. {tt.sold} (vendidas)</span>}</label>
+          <input name="capacity" type="number" min={Math.max(1, tt.sold)} defaultValue={tt.capacity || ''} className="s-input" disabled={tt.isUnlimited} />
+        </div>
+        <div className="s-field" style={{ display: 'flex', gap: 16, alignItems: 'flex-end', paddingBottom: 6 }}>
+          <label className="s-check" style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}><input type="checkbox" name="is_unlimited" defaultChecked={tt.isUnlimited} /> Ilimitado</label>
+          <label className="s-check" style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}><input type="checkbox" name="is_active" defaultChecked={tt.isActive} /> Activo</label>
+        </div>
+      </div>
+      <Banner state={state} />
+      <div className="s-form-actions"><Submit label="Guardar tipo" /></div>
+    </form>
+  );
+}
+
+export function NewTicketTypeForm({ eventId }: { eventId: string }) {
+  const [state, action] = useFormState(createTicketTypeAction, initial);
+  return (
+    <form action={action} className="s-stack" style={{ gap: 12 }} key={state.ok ? Math.random() : 'f'}>
+      <input type="hidden" name="event_id" value={eventId} />
+      <div className="s-form-grid">
+        <div className="s-field"><label className="s-label">Nombre</label><input name="name" placeholder="VIP" className="s-input" required /></div>
+        <div className="s-field"><label className="s-label">Precio (S/)</label><input name="price_soles" type="number" step="0.5" min={0} placeholder="50" className="s-input" required /></div>
+      </div>
+      <div className="s-form-grid">
+        <div className="s-field"><label className="s-label">Capacidad</label><input name="capacity" type="number" min={1} placeholder="100" className="s-input" /></div>
+        <div className="s-field" style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 8 }}>
+          <label className="s-check" style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}><input type="checkbox" name="is_unlimited" /> Stock ilimitado</label>
+        </div>
+      </div>
+      <Banner state={state} />
+      <div className="s-form-actions"><Submit label="Crear tipo" /></div>
+    </form>
+  );
+}

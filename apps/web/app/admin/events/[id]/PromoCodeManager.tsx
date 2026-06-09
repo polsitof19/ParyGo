@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2, Send } from 'lucide-react';
 import { formatPEN } from '@/lib/utils';
-import { createPromoCode, revokePromoCode } from './promo-actions';
+import { createPromoCode, revokePromoCode, sendPromoCodeByEmailAction } from './promo-actions';
 
 export type PromoCodeRow = {
   id: string;
@@ -105,6 +105,16 @@ export function PromoCodeManager({
         return;
       }
       toast.success('Código desactivado.');
+    });
+  }
+
+  function onSendEmail(id: string, codeName: string) {
+    const email = window.prompt(`Enviar el código ${codeName} por email a tu promotor.\n\nEmail del promotor:`);
+    if (!email) return;
+    startTransition(async () => {
+      const res = await sendPromoCodeByEmailAction(id, eventId, email.trim());
+      if (!res.ok) { toast.error(res.message || 'No se pudo enviar.'); return; }
+      toast.success(res.message);
     });
   }
 
@@ -227,6 +237,9 @@ export function PromoCodeManager({
                       <td className="num">{formatPEN(s.soldCents)}</td>
                       <td>{c.is_active ? <span className="s-badge s-badge--ok">Activo</span> : <span className="s-badge s-badge--draft">Inactivo</span>}</td>
                       <td className="num">
+                        <button type="button" onClick={() => onSendEmail(c.id, c.code)} disabled={pending} className="s-btn s-btn--ghost s-btn--sm">
+                          <Send className="h-3.5 w-3.5" /> Enviar
+                        </button>
                         {c.is_active && (
                           <button type="button" onClick={() => onRevoke(c.id, c.code)} disabled={pending} className="s-btn s-btn--ghost s-btn--sm">
                             <Trash2 className="h-3.5 w-3.5" /> Desactivar

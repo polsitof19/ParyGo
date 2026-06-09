@@ -3,9 +3,51 @@
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { sendPromoCodeEmail } from '@/lib/email/sendPromoCodeEmail';
 
 type CreateResult = { ok: true; id: string } | { ok: false; message: string };
 type RevokeResult = { ok: boolean; message?: string };
+export type SendCodeResult = { ok: boolean; message: string };
+
+// Enviar un código de promotor por email. Brand-scoped: el código debe ser de
+// un evento de la marca del brand_admin (autorización por sesión, no por form).
+export async function sendPromoCodeByEmailAction(
+  promoCodeId: string,
+  eventId: string,
+  email: string
+): Promise<SendCodeResult> {
+  const user = await requireSession();
+  const brandId = await authorizeEventBrandAdmin(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
+  if (!brandId) return { ok: false, message: 'No tenés permiso sobre este evento.' };
+
+  const to = (email ?? '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { ok: false, message: 'Email inválido.' };
+
+  const admin = createAdminClient();
+  // El código debe pertenecer a ESTE evento (que ya verificamos es de la marca).
+  const { data: code } = await admin
+    .from('promo_codes')
+    .select('id, code, event_id')
+    .eq('id', promoCodeId)
+    .maybeSingle();
+  if (!code || code.event_id !== eventId) {
+    return { ok: false, message: 'Ese código no es de este evento.' };
+  }
+
+  const res = await sendPromoCodeEmail(promoCodeId, to);
+  if (!res.ok) return { ok: false, message: 'No se pudo enviar el email. Probá de nuevo.' };
+  if (res.status === 'skipped') return { ok: false, message: 'El email no está configurado.' };
+
+  await admin.from('events_log').insert({
+    brand_id: brandId,
+    event_id: eventId,
+    actor_user_id: user.id,
+    type: 'promo_code_emailed',
+    payload: { code: code.code, to },
+  });
+
+  return { ok: true, message: `Código ${code.code} enviado a ${to}.` };
+}
 
 export type CreatePromoInput = {
   eventId: string;

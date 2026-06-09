@@ -5,6 +5,7 @@ import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { issueTicketsForOrder, markOrderPaid } from '@/lib/tickets';
 import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
+import { sendYapeRejectedEmail } from '@/lib/email/sendYapeRejectedEmail';
 
 type ApproveResult =
   | { ok: true; ticketsIssued: number; alreadyIssued: boolean }
@@ -143,7 +144,12 @@ export async function rejectYapeProof(proofId: string, reason: string): Promise<
     payload: { proof_id: proofId, reason },
   });
 
-  // TODO(emails): notify buyer of rejection
+  // Avisar al comprador del rechazo (best-effort: si el email falla NO revierte
+  // el rechazo; la orden ya quedó 'failed' y el stock liberado).
+  const emailRes = await sendYapeRejectedEmail(proof.order_id, reason || null);
+  if (!emailRes.ok) {
+    console.error('[rejectYapeProof] sendYapeRejectedEmail failed', { order_id: proof.order_id, reason: emailRes.reason });
+  }
 
   revalidatePath('/admin/yape');
   return { ok: true };
