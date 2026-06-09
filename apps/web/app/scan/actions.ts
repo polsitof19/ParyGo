@@ -113,18 +113,17 @@ export async function previewScanAction(input: { qr: string }): Promise<ScanResu
   if (!isUuid(qr)) return { ok: false, status: 'NOT_FOUND' };
 
   const admin = createAdminClient();
-  const { data: tk } = await admin
+  let q = admin
     .from('tickets')
     .select('brand_id, attendee_name, ticket_type_name, max_scans, scan_count, invalidated_at, validated_at, order:orders ( buyer_dni, buyer_doc_type )')
-    .eq('qr_code', qr)
-    .maybeSingle();
+    .eq('qr_code', qr);
+  // Defensa en profundidad: un validador no-super SOLO puede leer tickets de SUS
+  // marcas (filtro en el query → mismo response/timing para "no existe" y "no es
+  // de tu marca", sin oracle de existencia cross-tenant, y nunca se carga la PII
+  // de otra marca).
+  if (!user.isSuperAdmin) q = q.in('brand_id', validatableBrandIds(user));
+  const { data: tk } = await q.maybeSingle();
   if (!tk) return { ok: false, status: 'NOT_FOUND' };
-
-  // El validador debe pertenecer a la marca del ticket (defensa: no filtrar PII
-  // de otra marca). Mismo criterio que el RPC.
-  if (!user.isSuperAdmin && !validatableBrandIds(user).includes(tk.brand_id)) {
-    return { ok: false, status: 'NOT_AUTHORIZED' };
-  }
 
   const ord = Array.isArray(tk.order) ? tk.order[0] : tk.order;
   const base: Partial<ScanResult> = {
