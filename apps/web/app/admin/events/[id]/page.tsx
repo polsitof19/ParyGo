@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -72,6 +73,47 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
   const capTotal = capped.reduce((a, t) => a + (t.capacity ?? 0), 0);
   const hasUnlimited = types.some((t) => t.is_unlimited);
 
+  // Escaneados (entraron por puerta) por tipo + total — tickets ya validados.
+  const scannedByType = new Map<string, number>();
+  let totalScanned = 0;
+  {
+    const { data: scanned } = await admin.from('tickets').select('ticket_type_id').eq('event_id', event.id).is('invalidated_at', null).not('validated_at', 'is', null);
+    for (const t of (scanned ?? []) as { ticket_type_id: string }[]) { scannedByType.set(t.ticket_type_id, (scannedByType.get(t.ticket_type_id) ?? 0) + 1); totalScanned++; }
+  }
+  // Yape PENDIENTE de aprobar (NO suma al confirmado hasta aprobarse).
+  let pendingCents = 0, pendingCount = 0;
+  {
+    const { data: pend } = await admin.from('yape_proofs').select('order:orders!yape_proofs_order_id_fkey ( total_cents, event_id )').eq('brand_id', event.brand_id).eq('status', 'pending_review');
+    for (const p of (pend ?? []) as { order: { total_cents: number | null; event_id: string } | null }[]) {
+      if (p.order?.event_id !== event.id) continue;
+      pendingCents += p.order?.total_cents ?? 0; pendingCount++;
+    }
+  }
+  // Próxima fase de precio por tipo (para alertas).
+  const nextByType = new Map<string, { cents: number; at: string }>();
+  {
+    const { data: activePrices } = await admin.rpc('get_event_active_prices', { p_event_id: event.id });
+    for (const ap of (activePrices ?? []) as { ticket_type_id: string; next_price_cents: number | null; next_starts_at: string | null }[]) {
+      if (ap.next_price_cents != null && ap.next_starts_at) nextByType.set(ap.ticket_type_id, { cents: ap.next_price_cents, at: ap.next_starts_at });
+    }
+  }
+  // Alertas visuales (stock bajo / agotado / sube de precio pronto).
+  const alerts: { tone: 'deny' | 'warn' | 'info'; text: string }[] = [];
+  for (const t of types) {
+    if (!t.is_unlimited && t.capacity > 0) {
+      const libres = Math.max(0, t.capacity - (t.sold ?? 0));
+      if (libres === 0) alerts.push({ tone: 'deny', text: `${t.name} agotado` });
+      else if (libres <= 10) alerts.push({ tone: 'warn', text: `Te quedan ${libres} ${t.name}` });
+    }
+    const nx = nextByType.get(t.id);
+    if (nx) {
+      const hrs = (new Date(nx.at).getTime() - Date.now()) / 3600000;
+      if (hrs > 0 && hrs <= 72) alerts.push({ tone: 'info', text: `${t.name} sube a ${formatPEN(nx.cents)} el ${new Date(nx.at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` });
+    }
+  }
+  const confirmedCents = byMethod.yape.cents + byMethod.mp.cents;
+  const recTotal = [...recByType.values()].reduce((a, b) => a + b, 0);
+
   // Yapes rechazados (lectura).
   const { data: rejected } = await admin
     .from('yape_proofs')
@@ -103,74 +145,97 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
     <>
       {/* KPIs */}
       <div className="s-stats-4">
-        <div className="s-stat"><span className="s-stat__label">Recaudación</span><span className="s-stat__value" style={{ fontSize: 26 }}>{formatPEN(paidCents)}</span><span className="s-stat__sub">{paidRows.length} orden{paidRows.length === 1 ? '' : 'es'} pagadas</span></div>
+        <div className="s-stat"><span className="s-stat__label">Recaudación confirmada</span><span className="s-stat__value" style={{ fontSize: 26 }}>{formatPEN(confirmedCents)}</span><span className="s-stat__sub">{paidRows.length} orden{paidRows.length === 1 ? '' : 'es'} pagadas</span></div>
         <div className="s-stat"><span className="s-stat__label">Entradas vendidas</span><span className="s-stat__value">{totalSold}</span><span className="s-stat__sub">{ticketCount ?? 0} tickets válidos</span></div>
+        <div className="s-stat"><span className="s-stat__label">Escaneados</span><span className="s-stat__value">{totalScanned}</span><span className="s-stat__sub">{totalSold > 0 ? `${Math.round((totalScanned / totalSold) * 100)}% entraron` : 'aún nadie entró'}</span></div>
         <div className="s-stat"><span className="s-stat__label">Cupos</span><span className="s-stat__value">{capTotal > 0 ? `${soldCapped}/${capTotal}` : (hasUnlimited ? '∞' : '—')}</span><span className="s-stat__sub">{hasUnlimited ? 'hay stock ilimitado' : 'vendidos / capacidad'}</span></div>
-        <div className="s-stat"><span className="s-stat__label">Yape</span><span className="s-stat__value">{formatPEN(byMethod.yape.cents)}</span><span className="s-stat__sub">{byMethod.mp.count > 0 ? `MP: ${formatPEN(byMethod.mp.cents)}` : 'todo Yape'}</span></div>
       </div>
 
-      {/* Cómo va — por tipo y fase */}
+      {/* Alertas visuales */}
+      {alerts.length > 0 && (
+        <div className="a-alerts">
+          {alerts.map((al, i) => <span key={i} className={`a-alert a-alert--${al.tone}`}>{al.text}</span>)}
+        </div>
+      )}
+
+      {/* Cuadre de dinero — "este es tu dinero" */}
       <section style={{ marginTop: 24 }}>
-        <h2 className="s-h2" style={{ marginBottom: 12 }}>Cómo va la venta</h2>
+        <h2 className="s-h2" style={{ marginBottom: 12 }}>Tu dinero</h2>
+        <div className="s-card">
+          <p className="s-card__desc" style={{ marginBottom: 14 }}>Esto debería estar en tu cuenta de <strong>Yape / MercadoPago</strong>. ParyGo no toca tu plata: cada cobro va directo a tu cuenta.</p>
+          <div className="a-money">
+            <div className="a-money__cell"><span className="s-stat__label">Yape aprobado</span><span className="a-money__v">{formatPEN(byMethod.yape.cents)}</span><span className="s-stat__sub">{byMethod.yape.count} órdenes</span></div>
+            <div className="a-money__cell"><span className="s-stat__label">MercadoPago</span><span className="a-money__v">{formatPEN(byMethod.mp.cents)}</span><span className="s-stat__sub">{byMethod.mp.count} órdenes</span></div>
+            <div className="a-money__cell a-money__cell--total"><span className="s-stat__label">Total confirmado</span><span className="a-money__v">{formatPEN(confirmedCents)}</span><span className="s-stat__sub">ya en tus cuentas</span></div>
+          </div>
+          {pendingCount > 0 && (
+            <div className="a-money__pending">
+              <span>⏳ <strong>Yape pendiente de aprobar: {formatPEN(pendingCents)}</strong> ({pendingCount}). No cuenta como confirmado hasta que lo apruebes — cuadralo con tu app de Yape.</span>
+              <Link href={`/admin/events/${event.id}/yape`} className="s-btn s-btn--soft s-btn--sm">Revisar Yape</Link>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Tabla por tipo de entrada */}
+      <section style={{ marginTop: 24 }}>
+        <h2 className="s-h2" style={{ marginBottom: 12 }}>Entradas por tipo</h2>
         {types.length === 0 ? (
           <div className="s-card"><p className="s-empty">Este evento no tiene tipos de entrada todavía.</p></div>
         ) : (
-          <div className="s-stack" style={{ gap: 10 }}>
-            {types.map((t) => {
-              const sold = t.sold ?? 0;
-              const phase = phaseByType.get(t.id);
-              const rec = recByType.get(t.id) ?? 0;
-              const pct = !t.is_unlimited && t.capacity > 0 ? Math.min(100, Math.round((sold / t.capacity) * 100)) : 0;
-              const full = !t.is_unlimited && t.capacity > 0 && sold >= t.capacity;
-              return (
-                <div key={t.id} className="s-card" style={{ padding: '16px 18px' }}>
-                  <div className="s-card__head" style={{ marginBottom: t.is_unlimited ? 0 : 8 }}>
-                    <div>
-                      <span className="a-evrow__name" style={{ fontSize: 16 }}>
-                        Van <strong>{sold}</strong> {sold === 1 ? 'entrada' : 'entradas'} {t.name}
-                        {!t.is_active && <span className="s-badge s-badge--draft" style={{ marginLeft: 6 }}>inactivo</span>}
-                      </span>
-                      <div className="s-card__desc" style={{ marginTop: 2 }}>
-                        {phase && <><span style={{ color: 'var(--tangerine)', fontWeight: 600 }}>{phase}</span> · </>}
-                        {t.is_unlimited ? 'stock ilimitado' : `${sold}/${t.capacity} cupos`}
-                        {rec > 0 && <> · recaudó <strong>{formatPEN(rec)}</strong></>}
-                      </div>
-                    </div>
-                    <span className="s-saldo-num" style={{ fontSize: 18 }}>{formatPEN(t.price_cents)}</span>
-                  </div>
-                  {!t.is_unlimited && t.capacity > 0 && (
-                    <div className="a-bar"><div className={`a-bar__fill${full ? ' a-bar__fill--full' : ''}`} style={{ width: `${pct}%` }} /></div>
-                  )}
-                </div>
-              );
-            })}
+          <div className="s-card" style={{ padding: 0, overflowX: 'auto' }}>
+            <table className="s-table a-typetable">
+              <thead><tr><th>Tipo</th><th className="num">Capacidad</th><th className="num">Vendidas</th><th className="num">Libres</th><th className="num">Escaneados</th><th className="num">Recaudado</th></tr></thead>
+              <tbody>
+                {types.map((t) => {
+                  const sold = t.sold ?? 0;
+                  const libres = t.is_unlimited ? null : Math.max(0, t.capacity - sold);
+                  const scanned = scannedByType.get(t.id) ?? 0;
+                  const rec = recByType.get(t.id) ?? 0;
+                  const phase = phaseByType.get(t.id);
+                  return (
+                    <tr key={t.id}>
+                      <td>
+                        <strong>{t.name}</strong>{!t.is_active && <span className="s-badge s-badge--draft" style={{ marginLeft: 6 }}>inactivo</span>}
+                        {phase && <div style={{ fontSize: 12, color: 'var(--tangerine)', fontWeight: 600 }}>{phase}</div>}
+                      </td>
+                      <td className="num">{t.is_unlimited ? '∞' : t.capacity}</td>
+                      <td className="num">{sold}</td>
+                      <td className="num">{t.is_unlimited ? '—' : libres}</td>
+                      <td className="num">{scanned}</td>
+                      <td className="num">{formatPEN(rec)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td><strong>Total</strong></td>
+                  <td className="num">{capTotal > 0 ? capTotal : (hasUnlimited ? '∞' : '—')}</td>
+                  <td className="num">{totalSold}</td>
+                  <td className="num">{capTotal > 0 ? Math.max(0, capTotal - soldCapped) : '—'}</td>
+                  <td className="num">{totalScanned}</td>
+                  <td className="num">{formatPEN(recTotal)}</td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         )}
       </section>
 
-      {/* Métricas: método + ritmo */}
-      {paidRows.length > 0 && (
+      {/* Ventas por día */}
+      {paidRows.length > 0 && byDay.length > 0 && (
         <section style={{ marginTop: 24 }}>
-          <h2 className="s-h2" style={{ marginBottom: 12 }}>Métricas</h2>
-          <div className="s-grid-2">
-            <div className="s-card">
-              <p className="eyebrow" style={{ marginBottom: 10 }}>Por método de pago</p>
-              <div className="s-stack" style={{ gap: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Yape <span className="s-muted">· {byMethod.yape.count}</span></span><strong>{formatPEN(byMethod.yape.cents)}</strong></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>MercadoPago <span className="s-muted">· {byMethod.mp.count}</span></span><strong>{formatPEN(byMethod.mp.cents)}</strong></div>
-              </div>
-            </div>
-            <div className="s-card">
-              <p className="eyebrow" style={{ marginBottom: 10 }}>Ventas por día</p>
-              <div className="s-stack" style={{ gap: 6 }}>
-                {byDay.map(([day, cents]) => (
-                  <div key={day} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span className="s-muted" style={{ fontSize: 12.5, width: 64, flexShrink: 0 }}>{day}</span>
-                    <div className="a-bar" style={{ flex: 1 }}><div className="a-bar__fill" style={{ width: `${Math.round((cents / maxDay) * 100)}%` }} /></div>
-                    <span style={{ fontSize: 12.5, width: 72, textAlign: 'right', flexShrink: 0 }}>{formatPEN(cents)}</span>
-                  </div>
-                ))}
-              </div>
+          <h2 className="s-h2" style={{ marginBottom: 12 }}>Ventas por día</h2>
+          <div className="s-card">
+            <div className="s-stack" style={{ gap: 6 }}>
+              {byDay.map(([day, cents]) => (
+                <div key={day} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span className="s-muted" style={{ fontSize: 12.5, width: 64, flexShrink: 0 }}>{day}</span>
+                  <div className="a-bar" style={{ flex: 1 }}><div className="a-bar__fill" style={{ width: `${Math.round((cents / maxDay) * 100)}%` }} /></div>
+                  <span style={{ fontSize: 12.5, width: 72, textAlign: 'right', flexShrink: 0 }}>{formatPEN(cents)}</span>
+                </div>
+              ))}
             </div>
           </div>
         </section>

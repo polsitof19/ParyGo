@@ -8,6 +8,8 @@ import { ConfirmationPoller } from './ConfirmationPoller';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default async function ConfirmationPage({
   params,
   searchParams,
@@ -15,7 +17,7 @@ export default async function ConfirmationPage({
   params: { brand: string; event: string };
   searchParams: { order?: string; pendiente?: string };
 }) {
-  if (!searchParams.order) notFound();
+  if (!searchParams.order || !UUID_RE.test(searchParams.order)) notFound();
 
   const admin = createAdminClient();
   type OrderWithJoins = {
@@ -24,8 +26,6 @@ export default async function ConfirmationPage({
     payment_method: 'mercadopago' | 'yape_manual';
     total_cents: number;
     buyer_name: string;
-    buyer_email: string;
-    buyer_phone: string;
     event: { name: string; starts_at: string; venue_name: string | null } | null;
     brand: { slug: string; name: string; whatsapp_e164: string | null } | null;
     tickets: { id: string; qr_code: string; ticket_type_name: string; ticket_number: string }[];
@@ -34,7 +34,7 @@ export default async function ConfirmationPage({
     .from('orders')
     .select(`
       id, status, payment_method, total_cents,
-      buyer_name, buyer_email, buyer_phone,
+      buyer_name,
       event:events ( name, starts_at, venue_name ),
       brand:brands ( slug, name, whatsapp_e164 ),
       tickets ( id, qr_code, ticket_type_name, ticket_number )
@@ -44,6 +44,9 @@ export default async function ConfirmationPage({
   const order = orderResult.data as unknown as OrderWithJoins | null;
 
   if (!order) notFound();
+  // Defensa: el subdominio debe coincidir con la marca de la orden (igual que
+  // /t/ y /pedido). Evita ver confirmaciones de otra marca aunque se adivine el id.
+  if (order.brand?.slug !== params.brand) notFound();
 
   const event = order.event;
   const brand = order.brand;
@@ -137,7 +140,6 @@ export default async function ConfirmationPage({
       <div className="c-card" style={{ marginTop: 22 }}>
         <p className="c-card__title">Resumen</p>
         <Row label="Comprador">{order.buyer_name}</Row>
-        <Row label="Email">{order.buyer_email}</Row>
         <Row label="Total">{formatPEN(order.total_cents)}</Row>
         <Row label="Entradas">
           <ul style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -156,7 +158,7 @@ export default async function ConfirmationPage({
       </div>
 
       <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginTop: 18 }}>
-        También te enviamos el QR a {order.buyer_email}. Si no llega en 5 min, revisá spam o usá el link permanente.
+        También te enviamos el QR por email. Si no llega en 5 min, revisá spam o usá el link permanente.
       </p>
     </main>
   );
