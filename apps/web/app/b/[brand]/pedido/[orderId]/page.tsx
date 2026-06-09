@@ -16,7 +16,6 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 type OrderView = {
   id: string;
   status: string;
-  buyer_name: string | null;
   event: { name: string; starts_at: string; venue_name: string | null } | null;
   brand: { slug: string; name: string } | null;
   tickets: {
@@ -35,7 +34,7 @@ async function loadOrder(brandSlug: string, orderId: string): Promise<OrderView 
   const { data } = await admin
     .from('orders')
     .select(`
-      id, status, buyer_name,
+      id, status,
       event:events ( name, starts_at, venue_name ),
       brand:brands ( slug, name ),
       tickets ( qr_code, ticket_type_name, ticket_number, attendee_name, invalidated_at, validated_at )
