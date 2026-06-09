@@ -10,6 +10,73 @@ import { publicEnv } from '@/lib/env';
 
 export type InviteValidatorState = { ok: boolean; message: string | null };
 export type ReissueState = { ok: boolean; message: string | null };
+export type VoidTicketState = { ok: boolean; message: string | null };
+
+// =============================================================
+// ANULAR una entrada (su QR deja de valer en puerta).
+// Política por defecto (segura): anular = marcar el ticket invalidado para que
+// validate_ticket lo rechace (estado INVALIDATED). NO toca dinero: ParyGo no
+// mueve la plata; la devolución del Yape/MP la gestiona el organizador por fuera.
+// Seguridad:
+//  - Solo brand_admin; el brand sale de la SESIÓN, nunca del form.
+//  - Se verifica que el ticket sea de ESA marca (no se puede anular de otra).
+//  - UPDATE atómico y brand-scoped (WHERE id + brand_id + invalidated_at IS NULL):
+//    idempotente y serializado con el FOR UPDATE de validate_ticket por el lock de
+//    fila (anular + escanear a la vez → uno gana, el otro ve el estado correcto).
+//  - Auditoría en events_log (quién anuló, motivo).
+// =============================================================
+export async function voidTicketAction(
+  _prev: VoidTicketState,
+  formData: FormData
+): Promise<VoidTicketState> {
+  const user = await requireSession();
+  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
+  if (!membership) return { ok: false, message: 'No autorizado.' };
+
+  const ticketId = String(formData.get('ticket_id') ?? '');
+  const reason = String(formData.get('reason') ?? '').slice(0, 200);
+  if (!ticketId) return { ok: false, message: 'Entrada inválida.' };
+
+  const admin = createAdminClient();
+  // Verificación de pertenencia: el ticket debe ser de la marca de la sesión.
+  const { data: tk } = await admin
+    .from('tickets')
+    .select('id, brand_id, event_id, order_id, invalidated_at, ticket_number')
+    .eq('id', ticketId)
+    .maybeSingle();
+  if (!tk || tk.brand_id !== membership.brandId) {
+    return { ok: false, message: 'Esa entrada no es de tu marca.' };
+  }
+  if (tk.invalidated_at) {
+    return { ok: true, message: 'Esa entrada ya estaba anulada.' };
+  }
+
+  // UPDATE atómico + brand-scoped + idempotente.
+  const { data: updated, error } = await admin
+    .from('tickets')
+    .update({ invalidated_at: new Date().toISOString() })
+    .eq('id', ticketId)
+    .eq('brand_id', membership.brandId)
+    .is('invalidated_at', null)
+    .select('id')
+    .maybeSingle();
+  if (error) return { ok: false, message: 'No se pudo anular la entrada.' };
+  if (!updated) return { ok: true, message: 'Esa entrada ya estaba anulada.' };
+
+  await admin.from('events_log').insert({
+    brand_id: membership.brandId,
+    event_id: tk.event_id,
+    ticket_id: tk.id,
+    order_id: tk.order_id,
+    actor_user_id: user.id,
+    type: 'ticket_voided',
+    payload: { ticket_number: tk.ticket_number, reason: reason || null },
+  });
+
+  revalidatePath(`/admin/events/${tk.event_id}/clientes`);
+  revalidatePath(`/admin/events/${tk.event_id}`);
+  return { ok: true, message: 'Entrada anulada. Su QR ya no vale en puerta. La devolución del dinero la gestionás vos por tu Yape/MercadoPago.' };
+}
 
 // =============================================================
 // Recuperación: re-emitir tickets de una orden PAGADA sin tickets.

@@ -4,6 +4,7 @@ import { requireSession } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
+import { optimizedImage } from '@/lib/imageUrl';
 import { InviteValidator } from './InviteValidator';
 import { ValidatorManager } from './ValidatorManager';
 import { TicketRecovery } from './TicketRecovery';
@@ -30,7 +31,7 @@ export default async function AdminHomePage() {
   const [{ data: events }, { data: pendingProofs }, { data: paidOrders }] = await Promise.all([
     supabase
       .from('events')
-      .select('id, slug, name, starts_at, is_published')
+      .select('id, slug, name, starts_at, is_published, cover_url')
       .eq('brand_id', brand.id)
       .order('starts_at', { ascending: false }),
     supabase
@@ -153,40 +154,46 @@ export default async function AdminHomePage() {
           </p>
         </div>
       ) : (
-        <ul className="s-stack" style={{ gap: 10, listStyle: 'none', margin: 0, padding: 0 }}>
+        <div className="a-evgrid">
           {events.map((e) => {
             const pend = pendingByEvent.get(e.id) ?? 0;
             const sales = salesByEvent.get(e.id) ?? 0;
+            const start = new Date(e.starts_at);
+            const past = start.getTime() < Date.now();
+            const status = !e.is_published ? { cls: 's-badge--draft', label: 'Borrador' }
+              : past ? { cls: 's-badge--draft', label: 'Pasado' }
+              : sales > 0 ? { cls: 's-badge--ok', label: 'Vendiendo' }
+              : { cls: 's-badge--ok', label: 'Publicado' };
+            const day = start.toLocaleDateString('es-PE', { day: '2-digit' });
+            const mon = start.toLocaleDateString('es-PE', { month: 'short' }).replace('.', '').toUpperCase();
             return (
-              <li key={e.id}>
-                <Link href={`/admin/events/${e.id}`} className="a-evrow">
-                  <span className="a-evrow__id">
-                    <span className="a-evrow__name">{e.name}</span>
-                    <span className="a-evrow__date">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(e.starts_at).toLocaleString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                      {' · '}
-                      <span className={`s-badge ${e.is_published ? 's-badge--ok' : 's-badge--draft'}`} style={{ marginLeft: 4 }}>
-                        {e.is_published ? 'Publicado' : 'Borrador'}
-                      </span>
-                    </span>
+              <Link key={e.id} href={`/admin/events/${e.id}`} className={`a-evcard${past ? ' a-evcard--past' : ''}`}>
+                <div className="a-evcard__media">
+                  {e.cover_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={optimizedImage(e.cover_url, { width: 480, quality: 72 })} alt="" loading="lazy" decoding="async" />
+                  ) : (
+                    <div className="a-evcard__noflyer" aria-hidden="true">{(e.name.trim()[0] ?? '?').toUpperCase()}</div>
+                  )}
+                  <span className="a-evcard__date"><b>{day}</b>{mon}</span>
+                  <span className={`s-badge ${status.cls} a-evcard__status`}>{status.label}</span>
+                </div>
+                <div className="a-evcard__body">
+                  <span className="a-evcard__name">{e.name}</span>
+                  <span className="a-evcard__meta">
+                    <Calendar className="h-3 w-3" />
+                    {start.toLocaleString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </span>
-                  <span className="a-evrow__stats">
-                    <span className="a-evstat">
-                      <span className="a-evstat__v">{formatPEN(sales)}</span>
-                      <span className="a-evstat__l">Ventas</span>
-                    </span>
-                    <span className={`a-evstat${pend > 0 ? ' a-evstat--alert' : ''}`}>
-                      <span className="a-evstat__v">{pend}</span>
-                      <span className="a-evstat__l">Yape</span>
-                    </span>
-                  </span>
-                  <span className="a-evrow__go"><ArrowRight className="h-4 w-4" /></span>
-                </Link>
-              </li>
+                  <div className="a-evcard__foot">
+                    <span className="a-evcard__sales">{formatPEN(sales)} <span className="s-muted" style={{ fontWeight: 500 }}>vendido</span></span>
+                    {pend > 0 && <span className="s-badge s-badge--alert">{pend} Yape</span>}
+                    <ArrowRight className="h-4 w-4 a-evcard__go" />
+                  </div>
+                </div>
+              </Link>
             );
           })}
-        </ul>
+        </div>
       )}
 
       {/* Configuración de la marca (resumen) */}

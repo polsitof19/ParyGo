@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronLeft, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ExternalLink, Users, DoorOpen } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -42,7 +42,7 @@ export default async function AdminEventDetailPage({
 
   const [{ data: paid }, { count: ticketCount }, { data: ticketTypes }, proofsRes] =
     await Promise.all([
-      supabase.from('orders').select('total_cents').eq('event_id', event.id).eq('status', 'paid'),
+      supabase.from('orders').select('id, total_cents, payment_method, created_at').eq('event_id', event.id).eq('status', 'paid'),
       supabase
         .from('tickets')
         .select('id', { count: 'exact', head: true })
@@ -65,8 +65,43 @@ export default async function AdminEventDetailPage({
         .order('created_at', { ascending: true }),
     ]);
 
-  const paidCents = (paid ?? []).reduce((acc, o) => acc + (o.total_cents ?? 0), 0);
-  const paidOrders = paid?.length ?? 0;
+  const paidRows = (paid ?? []) as { id: string; total_cents: number | null; payment_method: string; created_at: string }[];
+  const paidCents = paidRows.reduce((acc, o) => acc + (o.total_cents ?? 0), 0);
+  const paidOrders = paidRows.length;
+
+  // ---- Métricas (solo lectura, derivadas de las órdenes pagadas) ----
+  // Por método de pago.
+  const byMethod = { yape: { count: 0, cents: 0 }, mp: { count: 0, cents: 0 } };
+  for (const o of paidRows) {
+    const bucket = o.payment_method === 'mercadopago' ? byMethod.mp : byMethod.yape;
+    bucket.count += 1;
+    bucket.cents += o.total_cents ?? 0;
+  }
+  // Ventas por día (Lima) — últimos con actividad, orden cronológico.
+  const dayMap = new Map<string, { cents: number; orders: number }>();
+  for (const o of paidRows) {
+    const day = new Date(o.created_at).toLocaleDateString('es-PE', { timeZone: 'America/Lima', day: '2-digit', month: 'short' });
+    const agg = dayMap.get(day) ?? { cents: 0, orders: 0 };
+    agg.cents += o.total_cents ?? 0; agg.orders += 1;
+    dayMap.set(day, agg);
+  }
+  const byDay = [...dayMap.entries()].slice(-14);
+  const maxDayCents = Math.max(1, ...byDay.map(([, v]) => v.cents));
+
+  // Recaudación por tipo de entrada (sum de order_items de órdenes pagadas).
+  const recByType = new Map<string, { cents: number; qty: number }>();
+  const paidIds = paidRows.map((o) => o.id);
+  if (paidIds.length > 0) {
+    const { data: items } = await admin
+      .from('order_items')
+      .select('ticket_type_id, subtotal_cents, quantity')
+      .in('order_id', paidIds);
+    for (const it of (items ?? []) as { ticket_type_id: string; subtotal_cents: number | null; quantity: number | null }[]) {
+      const agg = recByType.get(it.ticket_type_id) ?? { cents: 0, qty: 0 };
+      agg.cents += it.subtotal_cents ?? 0; agg.qty += it.quantity ?? 0;
+      recByType.set(it.ticket_type_id, agg);
+    }
+  }
 
   // ---- Promo codes + sales-by-code (tracking por RRPP) ----
   const [{ data: promoCodes }, { data: promoOrders }] = await Promise.all([
@@ -211,6 +246,49 @@ export default async function AdminEventDetailPage({
         </div>
       </div>
 
+      {/* Gestión del evento */}
+      <div className="s-actionbar" style={{ marginTop: 18 }}>
+        <span className="s-actionbar__lead">Gestión</span>
+        <div className="s-actionbar__btns">
+          <Link href={`/admin/events/${event.id}/clientes`} className="s-btn s-btn--soft s-btn--sm"><Users className="h-4 w-4" /> Clientes</Link>
+          <Link href={`/admin/events/${event.id}/accesos`} className="s-btn s-btn--soft s-btn--sm"><DoorOpen className="h-4 w-4" /> Accesos en vivo</Link>
+        </div>
+      </div>
+
+      {/* Métricas: método de pago + ritmo de ventas */}
+      {paidOrders > 0 && (
+        <section style={{ marginTop: 24 }}>
+          <h2 className="s-h2" style={{ marginBottom: 12 }}>Métricas</h2>
+          <div className="s-grid-2">
+            <div className="s-card">
+              <p className="eyebrow" style={{ marginBottom: 10 }}>Por método de pago</p>
+              <div className="s-stack" style={{ gap: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Yape <span className="s-muted">· {byMethod.yape.count}</span></span>
+                  <strong>{formatPEN(byMethod.yape.cents)}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>MercadoPago <span className="s-muted">· {byMethod.mp.count}</span></span>
+                  <strong>{formatPEN(byMethod.mp.cents)}</strong>
+                </div>
+              </div>
+            </div>
+            <div className="s-card">
+              <p className="eyebrow" style={{ marginBottom: 10 }}>Ventas por día</p>
+              <div className="s-stack" style={{ gap: 6 }}>
+                {byDay.map(([day, v]) => (
+                  <div key={day} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span className="s-muted" style={{ fontSize: 12.5, width: 64, flexShrink: 0 }}>{day}</span>
+                    <div className="a-bar" style={{ flex: 1 }}><div className="a-bar__fill" style={{ width: `${Math.round((v.cents / maxDayCents) * 100)}%` }} /></div>
+                    <span style={{ fontSize: 12.5, width: 72, textAlign: 'right', flexShrink: 0 }}>{formatPEN(v.cents)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Flyer del evento */}
       <section style={{ marginTop: 24 }}>
         <h2 className="s-h2" style={{ marginBottom: 12 }}>Flyer del evento</h2>
@@ -273,6 +351,7 @@ export default async function AdminEventDetailPage({
                       </span>
                       <div className="s-card__desc" style={{ marginTop: 2 }}>
                         {t.is_unlimited ? 'Stock ilimitado' : `${t.sold} / ${t.capacity} vendidas`}
+                        {(recByType.get(t.id)?.cents ?? 0) > 0 && <> · recaudó <strong>{formatPEN(recByType.get(t.id)!.cents)}</strong></>}
                       </div>
                     </div>
                     <span className="s-saldo-num" style={{ fontSize: 18 }}>{formatPEN(t.price_cents)}</span>
