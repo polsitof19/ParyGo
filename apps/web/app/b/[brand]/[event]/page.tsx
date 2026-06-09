@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv } from '@/lib/env';
 import { formatPEN } from '@/lib/utils';
+import { optimizedImage } from '@/lib/imageUrl';
 import { EventCheckoutPanel } from './EventCheckoutPanel';
 import { EventStructuredData } from './EventStructuredData';
 
@@ -151,7 +152,7 @@ export default async function EventPage({ params }: Props) {
             {hasCover && (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={event.cover_url!} alt="" className="c-hero__img" fetchPriority="high" decoding="async" />
+                <img src={optimizedImage(event.cover_url, { width: 1080, quality: 72 })} alt="" className="c-hero__img" fetchPriority="high" decoding="async" />
                 <div className="c-hero__veil" style={{ background: 'linear-gradient(180deg, rgba(20,14,10,.25), rgba(20,14,10,.72))' }} />
               </>
             )}

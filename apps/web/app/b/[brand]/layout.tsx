@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { createClient } from '@/lib/supabase/server';
 import { brandColor, brandInk, contrastOn, withAlpha } from './brandTheme';
+import { optimizedImage } from '@/lib/imageUrl';
 import './client.css';
 
 export const runtime = 'edge';
@@ -55,7 +56,7 @@ export default async function BrandLayout({
           <Link href="/" aria-label={brand.name}>
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt={brand.name} className="c-logo" height={34} loading="eager" decoding="async" />
+              <img src={optimizedImage(logoUrl, { width: 220, quality: 85 })} alt={brand.name} className="c-logo" height={34} loading="eager" decoding="async" />
             ) : (
               <span className="c-logo-text">{brand.name}</span>
             )}

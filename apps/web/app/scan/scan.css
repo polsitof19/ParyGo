@@ -72,6 +72,29 @@
 .scan-shell .k-input { width: 100%; height: 46px; padding: 0 14px; background: var(--white); border: 1.5px solid var(--cream-3); border-radius: var(--r-ctl); font: inherit; font-size: 16px; color: var(--ink); }
 .scan-shell .k-input:focus { outline: none; border-color: var(--tangerine); box-shadow: 0 0 0 3px rgba(255,106,61,.16); }
 .scan-shell .k-foot { text-align: center; font-size: 12px; color: var(--ink-3); padding: 8px 0 24px; }
+.scan-shell .k-btn--block { width: 100%; height: 54px; font-size: 16px; }
+
+/* Confirmación de puerta — botones GRANDES (legibles/tappables de noche). PASAR
+   ocupa la mayor parte; NO PASAR queda claramente separado para no equivocarse. */
+.scan-shell .k-confirm { display: grid; gap: 12px; }
+.scan-shell .k-pass {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  width: 100%; min-height: 110px; border: none; border-radius: 20px; cursor: pointer;
+  background: var(--ok); color: #fff;
+  font-family: var(--display); font-weight: 800; font-size: clamp(30px, 8vw, 40px); letter-spacing: 0.01em;
+  box-shadow: 0 14px 30px -12px rgba(21,163,74,.6);
+}
+.scan-shell .k-pass:active { transform: scale(.98); }
+.scan-shell .k-pass:disabled { opacity: .6; }
+.scan-shell .k-pass__ico { width: 38px; height: 38px; stroke-width: 3.2; }
+.scan-shell .k-nopass {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; min-height: 60px; border-radius: 16px; cursor: pointer;
+  background: var(--white); color: var(--deny); border: 2px solid var(--deny);
+  font-family: var(--display); font-weight: 800; font-size: 20px; letter-spacing: 0.02em;
+}
+.scan-shell .k-nopass:active { transform: scale(.98); }
+.scan-shell .k-pass:focus-visible, .scan-shell .k-nopass:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 
 /* /puerta — login por código */
 .scan-shell .k-gate { min-height: 100vh; display: grid; place-items: center; padding: 24px; }

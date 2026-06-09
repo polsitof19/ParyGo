@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Calendar, MapPin, ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { formatPEN } from '@/lib/utils';
+import { optimizedImage } from '@/lib/imageUrl';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,7 @@ function Flyer({ url, name, priority = false }: { url: string | null; name: stri
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={url}
+          src={optimizedImage(url, { width: priority ? 900 : 600, quality: 74 })}
           alt={`Flyer ${name}`}
           loading={priority ? 'eager' : 'lazy'}
           fetchPriority={priority ? 'high' : 'auto'}

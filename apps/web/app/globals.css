@@ -51,11 +51,16 @@
   }
 
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
 
+  /* Identidad cálida: el fondo base es crema (no el oscuro viejo). Cada
+     superficie usa su propio shell cremas (.client-shell/.admin-shell/etc.),
+     así que esto solo gobierna el flash de carga y el overscroll. */
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply antialiased;
+    background: #FBF7F0;
+    color: #231C17;
     font-feature-settings: 'rlig' 1, 'calt' 1, 'ss01' 1;
   }
 

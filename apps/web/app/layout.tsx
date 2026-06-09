@@ -31,7 +31,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: '#050508',
+  // Identidad cálida: el chrome del navegador (barra de estado móvil) toma este
+  // color, no el oscuro viejo. Todas las superficies usan shells cremas.
+  themeColor: '#FBF7F0',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
@@ -63,7 +65,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen font-sans">
         {children}
-        <Toaster theme="dark" richColors position="top-right" />
+        <Toaster theme="light" richColors position="top-right" />
       </body>
     </html>
   );

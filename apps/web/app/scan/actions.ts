@@ -96,6 +96,55 @@ export async function validateScanAction(input: {
   return result;
 }
 
+// ============================================================================
+// PREVISUALIZACIÓN (solo lectura) — NO consume el ticket, NO audita.
+// La puerta muestra esto primero; el ingreso real lo confirma el botón PASAR
+// que dispara validateScanAction (validate_ticket con FOR UPDATE). Acá NO se
+// llama a validate_ticket: es un SELECT puro que calcula qué PASARÍA, sin lock
+// ni mutación. La concurrencia/idempotencia siguen 100% en validate_ticket.
+// Autorización idéntica: validador/brand_admin de la marca del ticket (o super).
+// ============================================================================
+export async function previewScanAction(input: { qr: string }): Promise<ScanResult> {
+  const user = await requireSession();
+  if (!user.isSuperAdmin && validatableBrandIds(user).length === 0) {
+    return { ok: false, status: 'NOT_AUTHORIZED' };
+  }
+  const qr = (input.qr ?? '').trim();
+  if (!isUuid(qr)) return { ok: false, status: 'NOT_FOUND' };
+
+  const admin = createAdminClient();
+  const { data: tk } = await admin
+    .from('tickets')
+    .select('brand_id, attendee_name, ticket_type_name, max_scans, scan_count, invalidated_at, validated_at, order:orders ( buyer_dni, buyer_doc_type )')
+    .eq('qr_code', qr)
+    .maybeSingle();
+  if (!tk) return { ok: false, status: 'NOT_FOUND' };
+
+  // El validador debe pertenecer a la marca del ticket (defensa: no filtrar PII
+  // de otra marca). Mismo criterio que el RPC.
+  if (!user.isSuperAdmin && !validatableBrandIds(user).includes(tk.brand_id)) {
+    return { ok: false, status: 'NOT_AUTHORIZED' };
+  }
+
+  const ord = Array.isArray(tk.order) ? tk.order[0] : tk.order;
+  const base: Partial<ScanResult> = {
+    attendee_name: tk.attendee_name,
+    ticket_type_name: tk.ticket_type_name,
+    scan_count: tk.scan_count,
+    max_scans: tk.max_scans,
+    first_validated_at: tk.validated_at,
+    buyer_dni: ord?.buyer_dni ?? null,
+    buyer_doc_type: ord?.buyer_doc_type ?? null,
+  };
+
+  if (tk.invalidated_at) return { ok: false, status: 'INVALIDATED', ...base };
+  const canScan = tk.max_scans === null || tk.scan_count < tk.max_scans;
+  if (!canScan) return { ok: false, status: 'ALREADY_USED', ...base };
+  // Válido: PUEDE pasar (no consumido). El estado real (OK/REENTRY) lo decide
+  // validate_ticket al confirmar.
+  return { ok: true, status: 'OK', ...base };
+}
+
 export async function preloadEventAction(eventId: string): Promise<PreloadResult> {
   const user = await requireSession();
   const admin = createAdminClient();
