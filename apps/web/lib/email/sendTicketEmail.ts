@@ -13,6 +13,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv, publicEnv } from '@/lib/env';
 import { formatPEN, formatEventDate, whatsappLink } from '@/lib/utils';
+import { brandColor, brandInk, contrastOn } from '@/lib/brandColors';
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
@@ -34,6 +35,7 @@ type OrderWithJoins = {
     slug: string;
     whatsapp_e164: string | null;
     contact_email: string | null;
+    theme_json: { primary_color?: string; logo_url?: string | null } | null;
   } | null;
   event: {
     name: string;
@@ -61,7 +63,7 @@ export async function sendTicketEmail(orderId: string): Promise<SendTicketEmailR
     .from('orders')
     .select(`
       id, brand_id, buyer_name, buyer_email, total_cents, email_sent_at,
-      brand:brands ( name, slug, whatsapp_e164, contact_email ),
+      brand:brands ( name, slug, whatsapp_e164, contact_email, theme_json ),
       event:events ( name, starts_at, venue_name ),
       tickets ( qr_code, ticket_number, ticket_type_name )
     `)
@@ -94,6 +96,17 @@ export async function sendTicketEmail(orderId: string): Promise<SendTicketEmailR
   const venue = event?.venue_name ?? '';
   const brandName = brand?.name ?? 'el promotor';
 
+  // Branding de la marca: color principal + logo. Aplicamos el MISMO contraste
+  // automático que el sitio público — el email tiene fondo claro, así que:
+  //  - `primary` (vivo) va de fondo del botón, con texto `onBrand` legible encima.
+  //  - `ink` (brandInk) es la variante oscurecida del color para usarlo como
+  //    TEXTO/acento sobre el fondo claro (un #FFEE8C claro se oscurece para leerse).
+  const theme = brand?.theme_json ?? {};
+  const primary = brandColor(theme.primary_color);
+  const onBrand = contrastOn(primary);
+  const ink = brandInk(theme.primary_color);
+  const logoUrl = theme.logo_url ?? null;
+
   const html = renderHtml({
     eventName,
     eventDate,
@@ -106,6 +119,10 @@ export async function sendTicketEmail(orderId: string): Promise<SendTicketEmailR
     tickets: order.tickets,
     brandWhatsapp: brand?.whatsapp_e164 ?? null,
     supportWhatsapp,
+    primary,
+    onBrand,
+    ink,
+    logoUrl,
   });
   const text = renderText({
     eventName,
@@ -210,83 +227,109 @@ function renderHtml(p: {
   tickets: { ticket_number: string; ticket_type_name: string; qr_code: string }[];
   brandWhatsapp: string | null;
   supportWhatsapp: string;
+  primary: string;
+  onBrand: string;
+  ink: string;
+  logoUrl: string | null;
 }): string {
+  // Sistema (web-safe, identidad cálida): fondo crema, tinta cálida, sans elegante.
+  const FONT = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+  const CREAM = '#FBF7F0';
+  const CREAM3 = '#EFE6D6';
+  const INK = '#231C17';
+  const INK2 = '#6B5F54';
+  const INK3 = '#A89B8C';
+
   const ticketRows = p.tickets
     .map(
       (t) =>
-        `<tr><td style="padding:6px 0;font:13px/1.4 -apple-system,Segoe UI,Roboto,sans-serif;color:#444"><strong>${escapeHtml(
+        `<tr><td style="padding:5px 0;font-family:${FONT};font-size:13px;line-height:1.4;color:${INK2}"><strong style="color:${INK}">${escapeHtml(
           t.ticket_number
-        )}</strong> · ${escapeHtml(t.ticket_type_name)}</td></tr>`
+        )}</strong> &middot; ${escapeHtml(t.ticket_type_name)}</td></tr>`
     )
     .join('');
+
+  // Encabezado de marca: logo si existe; si no, el nombre en tinta.
+  const brandHeader = p.logoUrl
+    ? `<img src="${escapeHtml(p.logoUrl)}" alt="${escapeHtml(p.brandName)}" height="44" style="display:block;height:44px;width:auto;max-height:44px;border:0;outline:none;text-decoration:none">`
+    : `<span style="font-family:${FONT};font-size:20px;font-weight:800;letter-spacing:-0.02em;color:${INK}">${escapeHtml(p.brandName)}</span>`;
 
   const brandWaButton = p.brandWhatsapp
     ? `<a href="${whatsappLink(
         p.brandWhatsapp.replace(/[^\d]/g, ''),
         `Hola, tengo una consulta con mi entrada para ${p.eventName}`
-      )}" style="display:inline-block;padding:10px 18px;border:1px solid #ddd;border-radius:999px;color:#222;text-decoration:none;font:600 13px -apple-system,Segoe UI,Roboto,sans-serif">📱 WhatsApp ${escapeHtml(
+      )}" style="display:inline-block;padding:11px 20px;background:#ffffff;border:1.5px solid ${CREAM3};border-radius:999px;color:${INK};text-decoration:none;font-family:${FONT};font-weight:600;font-size:13px">WhatsApp ${escapeHtml(
         p.brandName
       )}</a>`
     : '';
 
   const supportLine = p.supportWhatsapp
-    ? `<p style="margin:12px 0 0;font:12px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#888">¿Problema con tu entrada? Soporte ParyGo: <a href="https://wa.me/${p.supportWhatsapp.replace(
+    ? `<p style="margin:14px 0 0;font-family:${FONT};font-size:12px;line-height:1.5;color:${INK3}">&iquest;Problema con tu entrada? Soporte ParyGo: <a href="https://wa.me/${p.supportWhatsapp.replace(
         /[^\d]/g,
         ''
-      )}" style="color:#0070f3">WhatsApp</a></p>`
+      )}" style="color:${p.ink};font-weight:600;text-decoration:none">WhatsApp</a></p>`
     : '';
 
   return `<!doctype html>
-<html><head><meta charset="utf-8"><title>${escapeHtml(p.eventName)}</title></head>
-<body style="margin:0;padding:0;background:#0d0d10">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0d0d10">
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(p.eventName)}</title></head>
+<body style="margin:0;padding:0;background:${CREAM};-webkit-text-size-adjust:100%">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CREAM}">
   <tr><td align="center" style="padding:32px 16px">
-    <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden">
+    <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border:1px solid ${CREAM3};border-radius:20px;overflow:hidden">
+      <!-- banda de color de la marca -->
+      <tr><td style="height:6px;background:${p.primary};font-size:0;line-height:0">&nbsp;</td></tr>
+      <!-- logo de la marca -->
+      <tr><td style="padding:26px 32px 0">${brandHeader}</td></tr>
+      <!-- cabecera del evento -->
       <tr>
-        <td style="padding:32px 32px 8px">
-          <p style="margin:0;font:600 11px/1 -apple-system,Segoe UI,Roboto,sans-serif;letter-spacing:.16em;color:#FF1F8F;text-transform:uppercase">[ Compra confirmada ]</p>
-          <h1 style="margin:8px 0 0;font:800 30px/1.1 Georgia,serif;color:#111">${escapeHtml(
+        <td style="padding:18px 32px 0">
+          <p style="margin:0;font-family:${FONT};font-size:11px;line-height:1;font-weight:700;letter-spacing:.14em;color:${p.ink};text-transform:uppercase">&#10003; Compra confirmada</p>
+          <h1 style="margin:10px 0 0;font-family:${FONT};font-size:27px;line-height:1.15;font-weight:800;letter-spacing:-0.02em;color:${INK}">${escapeHtml(
             p.eventName
           )}</h1>
-          <p style="margin:6px 0 0;font:14px/1.4 -apple-system,Segoe UI,Roboto,sans-serif;color:#444">${escapeHtml(
+          <p style="margin:7px 0 0;font-family:${FONT};font-size:14px;line-height:1.4;color:${INK2}">${escapeHtml(
             p.eventDate
-          )}${p.venue ? ' · ' + escapeHtml(p.venue) : ''}</p>
+          )}${p.venue ? ' &middot; ' + escapeHtml(p.venue) : ''}</p>
         </td>
       </tr>
+      <!-- saludo + botón -->
       <tr>
-        <td style="padding:24px 32px">
-          <p style="margin:0 0 16px;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#222">Hola ${escapeHtml(
+        <td style="padding:20px 32px 0">
+          <p style="margin:0 0 18px;font-family:${FONT};font-size:15px;line-height:1.5;color:${INK}">Hola ${escapeHtml(
             p.buyerName
-          )}, tu pago fue aprobado. Esta es tu entrada — guardá este email o el link abajo.</p>
+          )}, tu pago fue aprobado. Esta es tu entrada &mdash; guard&aacute; este email o abr&iacute; tu entrada con el bot&oacute;n.</p>
           <a href="${
             p.ticketUrl
-          }" style="display:inline-block;padding:14px 24px;background:#FF1F8F;background:linear-gradient(135deg,#FF1F8F,#00E5FF);color:#fff;text-decoration:none;font:700 15px -apple-system,Segoe UI,Roboto,sans-serif;border-radius:999px">Ver mi entrada con QR →</a>
-          <p style="margin:10px 0 0;font:12px/1.4 -apple-system,Segoe UI,Roboto,sans-serif;color:#666">Tu link permanente: <a href="${
+          }" style="display:inline-block;padding:15px 28px;background:${p.primary};color:${p.onBrand};text-decoration:none;font-family:${FONT};font-weight:700;font-size:15px;border-radius:999px">Ver mi entrada con QR &rarr;</a>
+          <p style="margin:12px 0 0;font-family:${FONT};font-size:12px;line-height:1.4;color:${INK3}">Tu link permanente: <a href="${
             p.ticketUrl
-          }" style="color:#0070f3">${escapeHtml(p.ticketUrl)}</a></p>
+          }" style="color:${p.ink};text-decoration:none">${escapeHtml(p.ticketUrl)}</a></p>
         </td>
       </tr>
+      <!-- resumen -->
       <tr>
-        <td style="padding:0 32px 24px">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eee;padding-top:16px">
-            <tr><td style="font:600 11px/1 -apple-system,Segoe UI,Roboto,sans-serif;letter-spacing:.16em;color:#888;text-transform:uppercase;padding-bottom:8px">[ Resumen ]</td></tr>
-            <tr><td style="font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#222"><strong>Total:</strong> ${escapeHtml(
+        <td style="padding:22px 32px 0">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${CREAM3}">
+            <tr><td style="font-family:${FONT};font-size:11px;line-height:1;font-weight:700;letter-spacing:.14em;color:${INK3};text-transform:uppercase;padding:16px 0 8px">Resumen</td></tr>
+            <tr><td style="font-family:${FONT};font-size:14px;line-height:1.5;color:${INK};padding-bottom:4px"><strong>Total:</strong> ${escapeHtml(
               p.total
             )}</td></tr>
             ${ticketRows}
           </table>
         </td>
       </tr>
+      <!-- contacto de la marca -->
       <tr>
-        <td style="padding:8px 32px 28px">
+        <td style="padding:20px 32px 30px">
           ${brandWaButton}
           ${supportLine}
         </td>
       </tr>
     </table>
-    <p style="margin:24px 0 0;font:11px/1.4 -apple-system,Segoe UI,Roboto,sans-serif;color:#666;text-align:center">Enviado por ${escapeHtml(
+    <!-- pie parygo -->
+    <p style="margin:22px 0 0;font-family:${FONT};font-size:11px;line-height:1.4;color:${INK3};text-align:center">Enviado por ${escapeHtml(
       p.brandName
-    )} via ParyGo.</p>
+    )} &middot; <span style="color:${INK2};font-weight:700">parygo<span style="color:#FF6A3D">.</span></span></p>
   </td></tr>
 </table>
 </body></html>`;
