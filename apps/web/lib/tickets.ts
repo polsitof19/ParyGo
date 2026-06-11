@@ -59,6 +59,20 @@ export async function issueTicketsForOrder(
     return { ok: false, error: 'Orden sin items' };
   }
 
+  // 2b. Resolve the scan limit per ticket type. The ticket MUST inherit
+  // max_scans from its type, otherwise it is born NULL = unlimited scans at the
+  // door (audit B1). Default-deny: a type with NULL max_scans falls back to 1
+  // (single admission) — the safest value for gate control. Mirrors the same
+  // coalesce(...,1) applied in settle_mp_payment (MercadoPago path).
+  const typeIds = Array.from(new Set(items.map((i) => i.ticket_type_id)));
+  const { data: types } = await admin
+    .from('ticket_types')
+    .select('id, max_scans')
+    .in('id', typeIds);
+  const maxScansByType = new Map(
+    (types ?? []).map((t) => [t.id, t.max_scans ?? 1])
+  );
+
   // 3. Build ticket rows: one per quantity unit.
   const rows: Array<{
     order_id: string;
@@ -68,6 +82,7 @@ export async function issueTicketsForOrder(
     ticket_type_name: string;
     ticket_number: string;
     attendee_name: string | null;
+    max_scans: number;
   }> = [];
   for (const item of items) {
     for (let i = 0; i < item.quantity; i++) {
@@ -79,6 +94,7 @@ export async function issueTicketsForOrder(
         ticket_type_name: item.ticket_type_name,
         ticket_number: generateTicketNumber(),
         attendee_name: order.buyer_name,
+        max_scans: maxScansByType.get(item.ticket_type_id) ?? 1,
       });
     }
   }
