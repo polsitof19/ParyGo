@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { DoorOpen, XCircle } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
+import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { LiveRefresh } from '../LiveRefresh';
 
@@ -18,8 +19,8 @@ const REJECT_LABELS: Record<string, string> = {
 
 export default async function EventAccessPage({ params }: { params: { id: string } }) {
   const user = await requireSession();
-  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) notFound();
+  const ctx = ownerBrandContext(user);
+  if (!ctx) notFound();
 
   const admin = createAdminClient();
   const { data: event } = await admin
@@ -27,7 +28,7 @@ export default async function EventAccessPage({ params }: { params: { id: string
     .select('id, brand_id, name')
     .eq('id', params.id)
     .maybeSingle();
-  if (!event || event.brand_id !== membership.brandId) notFound();
+  if (!event || event.brand_id !== ctx.brandId) notFound();
 
   // ticket_scans no está en los tipos generados (creada en migr 0015) → cast.
   type RejectScan = { id: string; result: string; scanned_at: string; validator_user_id: string | null; ticket: { ticket_number: string; ticket_type_name: string } | { ticket_number: string; ticket_type_name: string }[] | null };

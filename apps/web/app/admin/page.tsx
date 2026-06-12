@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Calendar, Plus, ScanLine, Settings, ArrowRight, Bell } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
+import { ownerBrandContext } from '@/lib/impersonation';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
@@ -16,14 +17,18 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminHomePage() {
   const user = await requireSession();
-  const brandMembership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!brandMembership) return null;
+  // Marca activa: brand_admin → su marca; super admin con cookie → la marca que
+  // VE en solo lectura. El layout ya gatea; esto es defensa + saber si impersona.
+  const ctx = ownerBrandContext(user);
+  if (!ctx) return null;
+  const brandId = ctx.brandId;
+  const impersonating = ctx.impersonating;
 
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
     .select('id, slug, name, contact_email, whatsapp_e164, yape_number, yape_holder, theme_json, event_balance')
-    .eq('id', brandMembership.brandId)
+    .eq('id', brandId)
     .single();
   if (!brand) return null;
 
@@ -109,7 +114,7 @@ export default async function AdminHomePage() {
             {totalPending > 0 && <> · <span style={{ color: 'var(--alert)' }}>{totalPending} Yape por revisar</span></>}
           </p>
         </div>
-        {canCreate ? (
+        {impersonating ? null : canCreate ? (
           <Link href="/admin/events/new" className="s-btn s-btn--primary">
             <Plus className="h-4 w-4" /> Crear evento
           </Link>
@@ -146,8 +151,9 @@ export default async function AdminHomePage() {
         </div>
       </div>
 
-      {/* Recuperación de tickets — solo aparece si hay órdenes pagadas sin tickets */}
-      {stuckOrders.length > 0 && <TicketRecovery orders={stuckOrders} />}
+      {/* Recuperación de tickets — solo aparece si hay órdenes pagadas sin tickets.
+          Re-emitir es escritura → oculto en solo lectura. */}
+      {stuckOrders.length > 0 && !impersonating && <TicketRecovery orders={stuckOrders} />}
 
       {/* Eventos activos */}
       {!events || events.length === 0 ? (
@@ -227,7 +233,7 @@ export default async function AdminHomePage() {
                   </span>
                 </Link>
                 <span className="s-badge s-badge--draft">Archivado</span>
-                <ArchiveToggle id={e.id} archived={true} action={setEventArchivedAction} noun="el evento" />
+                {!impersonating && <ArchiveToggle id={e.id} archived={true} action={setEventArchivedAction} noun="el evento" />}
               </li>
             ))}
           </ul>
@@ -241,9 +247,11 @@ export default async function AdminHomePage() {
             <h2 className="s-h2">Tu marca</h2>
             <p className="s-card__desc">Datos públicos y de cobro de {brand.name}.</p>
           </div>
-          <Link href="/admin/settings" className="s-btn s-btn--soft s-btn--sm">
-            <Settings className="h-4 w-4" /> Editar
-          </Link>
+          {!impersonating && (
+            <Link href="/admin/settings" className="s-btn s-btn--soft s-btn--sm">
+              <Settings className="h-4 w-4" /> Editar
+            </Link>
+          )}
         </div>
         <div className="s-grid-2" style={{ marginTop: 6 }}>
           <dl className="s-deflist">
@@ -263,25 +271,28 @@ export default async function AdminHomePage() {
         </div>
       </div>
 
-      {/* Staff de puerta */}
-      <div className="s-card" style={{ marginTop: 14 }}>
-        <div className="s-card__head">
-          <div>
-            <h2 className="s-h2">Staff de puerta</h2>
-            <p className="s-card__desc">Invitá a tu staff a validar entradas. Solo ven el escáner, nada más de tu panel.</p>
+      {/* Staff de puerta — gestión de validadores (códigos, contraseñas, invitar)
+          es todo escritura → la card completa se oculta en solo lectura. */}
+      {!impersonating && (
+        <div className="s-card" style={{ marginTop: 14 }}>
+          <div className="s-card__head">
+            <div>
+              <h2 className="s-h2">Staff de puerta</h2>
+              <p className="s-card__desc">Invitá a tu staff a validar entradas. Solo ven el escáner, nada más de tu panel.</p>
+            </div>
+            <Link href="/scan" className="s-btn s-btn--peri s-btn--sm">
+              <ScanLine className="h-4 w-4" /> Abrir escáner
+            </Link>
           </div>
-          <Link href="/scan" className="s-btn s-btn--peri s-btn--sm">
-            <ScanLine className="h-4 w-4" /> Abrir escáner
-          </Link>
+          <div style={{ marginTop: 14 }}>
+            <p className="eyebrow" style={{ marginBottom: 10 }}>Tus validadores · contraseña + código personal de puerta</p>
+            <ValidatorManager validators={validators} />
+          </div>
+          <div className="s-divider" />
+          <p className="eyebrow" style={{ marginBottom: 10 }}>Invitar nuevo validador (por email)</p>
+          <InviteValidator />
         </div>
-        <div style={{ marginTop: 14 }}>
-          <p className="eyebrow" style={{ marginBottom: 10 }}>Tus validadores · contraseña + código personal de puerta</p>
-          <ValidatorManager validators={validators} />
-        </div>
-        <div className="s-divider" />
-        <p className="eyebrow" style={{ marginBottom: 10 }}>Invitar nuevo validador (por email)</p>
-        <InviteValidator />
-      </div>
+      )}
     </>
   );
 }

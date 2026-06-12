@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
+import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { EventCoverUploader } from '../EventCoverUploader';
 import { EditEventForm } from './EditEventForms';
@@ -17,8 +18,9 @@ function toLimaLocal(iso: string): string {
 
 export default async function EditEventPage({ params }: { params: { id: string } }) {
   const user = await requireSession();
-  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) notFound();
+  const ctx = ownerBrandContext(user);
+  if (!ctx) notFound();
+  const impersonating = ctx.impersonating;
 
   const admin = createAdminClient();
   const { data: event } = await admin
@@ -26,7 +28,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
     .select('id, brand_id, name, description, starts_at, venue_name, venue_address, min_age, cover_url, is_published, archived_at')
     .eq('id', params.id)
     .maybeSingle();
-  if (!event || event.brand_id !== membership.brandId) notFound();
+  if (!event || event.brand_id !== ctx.brandId) notFound();
 
   // ¿Hay alguna venta? (define si la fecha queda bloqueada)
   // Además contamos órdenes y tickets para saber si el evento se puede ELIMINAR
@@ -44,8 +46,17 @@ export default async function EditEventPage({ params }: { params: { id: string }
       <div style={{ marginBottom: 14 }}>
         <span className="eyebrow">Editar evento</span>
         <h2 className="s-h2" style={{ marginTop: 2 }}>Datos del evento</h2>
-        <p className="s-card__desc">Los cambios se ven al instante en la página pública.</p>
+        <p className="s-card__desc">
+          {impersonating
+            ? 'Estás viendo este evento en solo lectura. No puedes editarlo desde aquí.'
+            : 'Los cambios se ven al instante en la página pública.'}
+        </p>
       </div>
+      {impersonating && (
+        <p className="s-banner" style={{ background: 'var(--cream-2)', color: 'var(--ink-2)', marginBottom: 14 }} role="status">
+          Solo lectura — los datos se muestran tal cual, sin posibilidad de editarlos.
+        </p>
+      )}
       <div className="s-card">
         <EditEventForm
           eventId={event.id}
@@ -57,46 +68,51 @@ export default async function EditEventPage({ params }: { params: { id: string }
           minAge={event.min_age ?? 18}
           isPublished={event.is_published}
           hasSales={hasSales}
+          readOnly={impersonating}
         />
       </div>
 
       <h2 className="s-h2" style={{ margin: '24px 0 12px' }}>Flyer</h2>
-      <div className="s-card"><EventCoverUploader eventId={event.id} currentUrl={event.cover_url} /></div>
+      <div className="s-card"><EventCoverUploader eventId={event.id} currentUrl={event.cover_url} readOnly={impersonating} /></div>
 
-      {/* Zona de gestión — archivar / eliminar */}
-      <h2 className="s-h2" style={{ margin: '24px 0 12px' }}>Zona de gestión</h2>
-      <div className="s-card">
-        <div className="s-card__head">
-          <div>
-            <h3 className="s-h2" style={{ fontSize: 16 }}>Archivar evento</h3>
-            <p className="s-card__desc">
-              {event.archived_at
-                ? 'Este evento está archivado: no se vende y no aparece en público. Puedes desarchivarlo cuando quieras.'
-                : 'Al archivar deja de venderse y desaparece del público, pero conservas todo su historial. Es reversible.'}
+      {/* Zona de gestión — archivar / eliminar. Todo escritura → oculto en solo lectura. */}
+      {!impersonating && (
+        <>
+          <h2 className="s-h2" style={{ margin: '24px 0 12px' }}>Zona de gestión</h2>
+          <div className="s-card">
+            <div className="s-card__head">
+              <div>
+                <h3 className="s-h2" style={{ fontSize: 16 }}>Archivar evento</h3>
+                <p className="s-card__desc">
+                  {event.archived_at
+                    ? 'Este evento está archivado: no se vende y no aparece en público. Puedes desarchivarlo cuando quieras.'
+                    : 'Al archivar deja de venderse y desaparece del público, pero conservas todo su historial. Es reversible.'}
+                </p>
+              </div>
+              <ArchiveToggle
+                id={event.id}
+                archived={!!event.archived_at}
+                action={setEventArchivedAction}
+                noun="el evento"
+              />
+            </div>
+
+            <div className="s-divider" />
+
+            <h3 className="s-h2" style={{ fontSize: 16 }}>Eliminar definitivamente</h3>
+            <p className="s-card__desc" style={{ marginBottom: 12 }}>
+              Borra el evento para siempre. Solo es posible si no tiene ninguna venta.
             </p>
+            <DangerDeleteButton
+              id={event.id}
+              name={event.name}
+              action={deleteEventAction}
+              canDelete={canDelete}
+              noun="el evento"
+            />
           </div>
-          <ArchiveToggle
-            id={event.id}
-            archived={!!event.archived_at}
-            action={setEventArchivedAction}
-            noun="el evento"
-          />
-        </div>
-
-        <div className="s-divider" />
-
-        <h3 className="s-h2" style={{ fontSize: 16 }}>Eliminar definitivamente</h3>
-        <p className="s-card__desc" style={{ marginBottom: 12 }}>
-          Borra el evento para siempre. Solo es posible si no tiene ninguna venta.
-        </p>
-        <DangerDeleteButton
-          id={event.id}
-          name={event.name}
-          action={deleteEventAction}
-          canDelete={canDelete}
-          noun="el evento"
-        />
-      </div>
+        </>
+      )}
     </>
   );
 }

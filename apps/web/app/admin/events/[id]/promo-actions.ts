@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isImpersonating } from '@/lib/impersonation';
 import { sendPromoCodeEmail } from '@/lib/email/sendPromoCodeEmail';
 
 type CreateResult = { ok: true; id: string } | { ok: false; message: string };
@@ -75,8 +76,10 @@ async function authorizeEventBrandAdmin(eventId: string, userId: string, isSuper
     .eq('id', eventId)
     .maybeSingle();
   if (!event) return null;
+  // SOLO-LECTURA en impersonación: el camino super-admin se deniega mientras la
+  // cookie de impersonación esté presente (no escribir como nadie al "ver").
   const canAct =
-    isSuper ||
+    (isSuper && !isImpersonating()) ||
     memberships.some((m) => m.brandId === event.brand_id && m.role === 'brand_admin');
   if (!canAct) return null;
   return event.brand_id as string;

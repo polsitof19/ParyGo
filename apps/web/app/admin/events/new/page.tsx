@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
+import { ownerBrandContext } from '@/lib/impersonation';
 import { createClient } from '@/lib/supabase/server';
 import { EventBuilder } from './EventBuilder';
 
@@ -10,14 +11,17 @@ export const dynamic = 'force-dynamic';
 
 export default async function NewBrandEventPage() {
   const user = await requireSession();
-  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) redirect('/login');
+  const ctx = ownerBrandContext(user);
+  if (!ctx) redirect('/login');
+  // Crear evento es escritura: en solo lectura (super admin viendo la marca) no
+  // se entra al form. El RPC es el guard real; esto es UX.
+  if (ctx.impersonating) redirect('/admin');
 
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
     .select('id, name, event_balance')
-    .eq('id', membership.brandId)
+    .eq('id', ctx.brandId)
     .single();
   if (!brand) redirect('/admin');
 

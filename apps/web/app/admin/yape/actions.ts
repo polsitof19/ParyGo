@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
+import { isImpersonating } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { issueTicketsForOrder, markOrderPaid } from '@/lib/tickets';
 import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
@@ -25,8 +26,11 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
     .single();
   if (proofErr || !proof) return { ok: false, message: 'Comprobante no encontrado.' };
 
+  // SOLO-LECTURA en impersonación: el super admin NO puede aprobar/rechazar Yape
+  // (escritura de dinero) mientras "ve" la marca. Su camino es por membresía
+  // (que no tiene) o super-sin-impersonar. Iguala el patrón de las otras guardas.
   const canAct =
-    user.isSuperAdmin ||
+    (user.isSuperAdmin && !isImpersonating()) ||
     user.brandMemberships.some(
       (m) => m.brandId === proof.brand_id && m.role === 'brand_admin'
     );
@@ -105,8 +109,11 @@ export async function rejectYapeProof(proofId: string, reason: string): Promise<
     .single();
   if (!proof) return { ok: false, message: 'No encontrado.' };
 
+  // SOLO-LECTURA en impersonación: el super admin NO puede aprobar/rechazar Yape
+  // (escritura de dinero) mientras "ve" la marca. Su camino es por membresía
+  // (que no tiene) o super-sin-impersonar. Iguala el patrón de las otras guardas.
   const canAct =
-    user.isSuperAdmin ||
+    (user.isSuperAdmin && !isImpersonating()) ||
     user.brandMemberships.some(
       (m) => m.brandId === proof.brand_id && m.role === 'brand_admin'
     );

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isImpersonating } from '@/lib/impersonation';
 import { uploadEventCover } from '@/lib/brandAssets';
 
 export type CoverState = { ok: boolean; message: string | null };
@@ -30,8 +31,9 @@ export async function setEventCoverAction(
     .maybeSingle();
   if (!ev || !ev.brand_id) return { ok: false, message: 'Evento no encontrado.' };
 
+  // SOLO-LECTURA en impersonación: el camino super-admin se deniega con la cookie.
   const authorized =
-    user.isSuperAdmin ||
+    (user.isSuperAdmin && !isImpersonating()) ||
     user.brandMemberships.some((m) => m.brandId === ev.brand_id && m.role === 'brand_admin');
   if (!authorized) return { ok: false, message: 'No tenés permiso sobre este evento.' };
 

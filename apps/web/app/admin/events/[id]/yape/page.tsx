@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
+import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
 import { YapeReviewRow } from '../../../yape/YapeReviewRow';
@@ -16,12 +17,13 @@ type ProofRow = {
 
 export default async function EventYapePage({ params }: { params: { id: string } }) {
   const user = await requireSession();
-  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) notFound();
+  const ctx = ownerBrandContext(user);
+  if (!ctx) notFound();
+  const impersonating = ctx.impersonating;
 
   const admin = createAdminClient();
   const { data: event } = await admin.from('events').select('id, brand_id').eq('id', params.id).maybeSingle();
-  if (!event || event.brand_id !== membership.brandId) notFound();
+  if (!event || event.brand_id !== ctx.brandId) notFound();
 
   const { data } = await admin
     .from('yape_proofs')
@@ -70,6 +72,7 @@ export default async function EventYapePage({ params }: { params: { id: string }
                 eventName={p.order?.event?.name ?? ''}
                 createdAt={p.created_at}
                 total={formatPEN(p.order?.total_cents ?? 0)}
+                impersonating={impersonating}
               />
             </div>
           ))}

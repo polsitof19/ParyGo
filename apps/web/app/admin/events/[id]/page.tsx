@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Bell, ArrowRight } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
+import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
 import { PromoCodeManager, type PromoCodeRow, type PromoSales } from './PromoCodeManager';
@@ -11,12 +12,13 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminEventResumenPage({ params }: { params: { id: string } }) {
   const user = await requireSession();
-  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) notFound();
+  const ctx = ownerBrandContext(user);
+  if (!ctx) notFound();
+  const impersonating = ctx.impersonating;
 
   const admin = createAdminClient();
   const { data: event } = await admin.from('events').select('id, brand_id').eq('id', params.id).maybeSingle();
-  if (!event || event.brand_id !== membership.brandId) notFound();
+  if (!event || event.brand_id !== ctx.brandId) notFound();
 
   const [{ data: paid }, { data: ticketTypes }] = await Promise.all([
     admin.from('orders').select('id, total_cents, payment_method, created_at').eq('event_id', event.id).eq('status', 'paid'),
@@ -267,7 +269,7 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
       {/* Códigos promocionales */}
       <section style={{ marginTop: 24 }}>
         <h2 className="s-h2" style={{ marginBottom: 12 }}>Códigos promocionales</h2>
-        <PromoCodeManager eventId={event.id} ticketTypes={types.map((t) => ({ id: t.id, name: t.name }))} codes={(promoCodes ?? []) as PromoCodeRow[]} sales={promoSales} />
+        <PromoCodeManager eventId={event.id} ticketTypes={types.map((t) => ({ id: t.id, name: t.name }))} codes={(promoCodes ?? []) as PromoCodeRow[]} sales={promoSales} impersonating={impersonating} />
       </section>
     </>
   );

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { InviteBrandAdmin } from './InviteBrandAdmin';
 import { SetBrandAdminPassword } from './SetBrandAdminPassword';
 import { RemoveBrandAdminButton } from './RemoveBrandAdminButton';
+import { EnterBrandButton } from './EnterBrandButton';
 import { LoadPackForm } from './LoadPackForm';
 import { EditBrandingForm } from './EditBrandingForm';
 import { EditBrandBasicsForm } from './EditBrandBasicsForm';
@@ -91,9 +92,7 @@ export default async function BrandDetailPage({
             <ExternalLink className="h-3 w-3" />
           </a>
         </div>
-        <button type="button" className="s-btn s-btn--peri" disabled title="Próximamente">
-          Entrar a la marca
-        </button>
+        <EnterBrandButton brandId={brand.id} />
       </header>
 
       {/* Métricas: saldo · eventos · dueño */}

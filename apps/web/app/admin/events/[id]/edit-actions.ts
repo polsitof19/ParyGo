@@ -4,15 +4,19 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isImpersonating } from '@/lib/impersonation';
 
 export type EditState = { ok: boolean; message: string | null };
 
 // Autoriza brand_admin del evento; devuelve brand_id o null.
+// SOLO-LECTURA en impersonación: mientras el super admin "ve" una marca (cookie
+// de impersonación presente), el camino super-admin queda DENEGADO — no puede
+// escribir aunque se fuerce el POST. El brand_admin (por membresía) no se afecta.
 async function authEvent(eventId: string, userId: string, isSuper: boolean, memberships: { brandId: string; role: string }[]) {
   const admin = createAdminClient();
   const { data: ev } = await admin.from('events').select('id, brand_id').eq('id', eventId).maybeSingle();
   if (!ev || !ev.brand_id) return null; // brand_id nulo (huérfano) → rechazar explícito
-  const ok = isSuper || memberships.some((m) => m.brandId === ev.brand_id && m.role === 'brand_admin');
+  const ok = (isSuper && !isImpersonating()) || memberships.some((m) => m.brandId === ev.brand_id && m.role === 'brand_admin');
   return ok ? (ev.brand_id as string) : null;
 }
 

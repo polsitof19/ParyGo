@@ -7,7 +7,7 @@ import { setEventCoverAction, type CoverState } from './cover-actions';
 
 const initial: CoverState = { ok: false, message: null };
 
-export function EventCoverUploader({ eventId, currentUrl }: { eventId: string; currentUrl: string | null }) {
+export function EventCoverUploader({ eventId, currentUrl, readOnly = false }: { eventId: string; currentUrl: string | null; readOnly?: boolean }) {
   const [state, action] = useFormState(setEventCoverAction, initial);
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -40,15 +40,23 @@ export function EventCoverUploader({ eventId, currentUrl }: { eventId: string; c
           )}
         </div>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <p className="s-card__desc" style={{ marginBottom: 10 }}>
-            Subí el flyer del evento (PNG, JPG o WEBP · vertical o cuadrado · máx 10 MB). Se ve grande en la portada del evento y en tu página de marca.
-          </p>
-          <input ref={inputRef} type="file" name="cover" accept="image/png,image/jpeg,image/webp" onChange={onPick} className="s-input" style={{ paddingTop: 9 }} />
-          {fileName && <p className="s-hint">{fileName}</p>}
-          <div style={{ marginTop: 12 }}>
-            <SubmitBtn hasFile={Boolean(fileName)} hasCurrent={Boolean(currentUrl)} />
-          </div>
-          {state.message && <p className={state.ok ? 's-hint s-hint--ok' : 's-err'} style={{ marginTop: 8 }}>{state.message}</p>}
+          {readOnly ? (
+            <p className="s-card__desc">
+              {currentUrl ? 'Flyer actual del evento (solo lectura).' : 'Este evento no tiene flyer cargado (solo lectura).'}
+            </p>
+          ) : (
+            <>
+              <p className="s-card__desc" style={{ marginBottom: 10 }}>
+                Subí el flyer del evento (PNG, JPG o WEBP · vertical o cuadrado · máx 10 MB). Se ve grande en la portada del evento y en tu página de marca.
+              </p>
+              <input ref={inputRef} type="file" name="cover" accept="image/png,image/jpeg,image/webp" onChange={onPick} className="s-input" style={{ paddingTop: 9 }} />
+              {fileName && <p className="s-hint">{fileName}</p>}
+              <div style={{ marginTop: 12 }}>
+                <SubmitBtn hasFile={Boolean(fileName)} hasCurrent={Boolean(currentUrl)} />
+              </div>
+              {state.message && <p className={state.ok ? 's-hint s-hint--ok' : 's-err'} style={{ marginTop: 8 }}>{state.message}</p>}
+            </>
+          )}
         </div>
       </div>
     </form>

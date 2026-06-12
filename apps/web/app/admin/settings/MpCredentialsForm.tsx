@@ -8,9 +8,10 @@ const initial: SettingsState = { ok: false, message: null };
 type Props = {
   hasAccessToken: boolean;
   hasPublicKey: boolean;
+  readOnly?: boolean;
 };
 
-export function MpCredentialsForm({ hasAccessToken, hasPublicKey }: Props) {
+export function MpCredentialsForm({ hasAccessToken, hasPublicKey, readOnly = false }: Props) {
   const [state, action] = useFormState(updateMpCredentialsAction, initial);
   const err = state.fieldErrors ?? {};
   const configured = hasAccessToken && hasPublicKey;
@@ -32,20 +33,24 @@ export function MpCredentialsForm({ hasAccessToken, hasPublicKey }: Props) {
       <form action={action} className="s-stack" style={{ gap: 14 }}>
         <input type="hidden" name="intent" value="save" />
         <Field label="Access Token (APP_USR-… o TEST-…)" htmlFor="mp_access_token" error={err.mp_access_token}>
-          <input id="mp_access_token" name="mp_access_token" type="password" autoComplete="off" className="s-input"
+          <input id="mp_access_token" name="mp_access_token" type="password" autoComplete="off" className="s-input" disabled={readOnly}
             placeholder={hasAccessToken ? '•••••••••• (ya cargado — pegá uno nuevo para reemplazar)' : 'APP_USR-0000000000000000-...'} />
         </Field>
         <Field label="Public Key" htmlFor="mp_public_key" error={err.mp_public_key}>
-          <input id="mp_public_key" name="mp_public_key" type="password" autoComplete="off" className="s-input"
+          <input id="mp_public_key" name="mp_public_key" type="password" autoComplete="off" className="s-input" disabled={readOnly}
             placeholder={hasPublicKey ? '•••••••••• (ya cargada — pegá una nueva para reemplazar)' : 'APP_USR-xxxxxxxx-...'} />
         </Field>
 
         {state.message && <p className={state.ok ? 's-banner s-banner--ok' : 's-banner s-banner--err'}>{state.message}</p>}
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
-          <SaveButton />
-          {configured && <RemoveButton formAction={action} />}
-        </div>
+        {readOnly ? (
+          <p className="s-card__desc">Solo lectura — no puedes cargar ni quitar credenciales desde aquí.</p>
+        ) : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+            <SaveButton />
+            {configured && <RemoveButton formAction={action} />}
+          </div>
+        )}
       </form>
     </section>
   );

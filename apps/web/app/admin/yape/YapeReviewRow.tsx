@@ -21,6 +21,7 @@ type Props = {
   eventName: string;
   createdAt: string;
   total: string;
+  impersonating?: boolean;
 };
 
 export function YapeReviewRow({
@@ -38,6 +39,7 @@ export function YapeReviewRow({
   eventName,
   createdAt,
   total,
+  impersonating = false,
 }: Props) {
   const [pending, start] = useTransition();
   const [showReject, setShowReject] = useState(false);
@@ -94,7 +96,11 @@ export function YapeReviewRow({
           Abrí tu Yape → Movimientos → buscá esta transferencia y verificá los 4 campos. Si todo coincide, aprobá.
         </p>
 
-        {showReject ? (
+        {impersonating ? (
+          <p className="s-banner" style={{ marginTop: 16, background: 'var(--cream-2)', color: 'var(--ink-2)' }} role="status">
+            Solo lectura — no puedes aprobar ni rechazar comprobantes desde aquí.
+          </p>
+        ) : showReject ? (
           <div className="s-card" style={{ marginTop: 14, borderColor: 'var(--alert)', background: 'var(--alert-bg)' }}>
             <label className="s-label">Motivo del rechazo</label>
             <input

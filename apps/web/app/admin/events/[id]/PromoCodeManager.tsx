@@ -37,11 +37,13 @@ export function PromoCodeManager({
   ticketTypes,
   codes,
   sales,
+  impersonating = false,
 }: {
   eventId: string;
   ticketTypes: TicketTypeLite[];
   codes: PromoCodeRow[];
   sales: PromoSales;
+  impersonating?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [discountType, setDiscountType] = useState<'percent' | 'fixed' | 'free'>('percent');
@@ -120,7 +122,8 @@ export function PromoCodeManager({
 
   return (
     <div className="s-stack" style={{ gap: 16 }}>
-      {/* Crear código */}
+      {/* Crear código — escritura, oculto en solo lectura */}
+      {!impersonating && (
       <div className="s-card">
         <div className="s-form-grid">
           <div className="s-field">
@@ -204,6 +207,7 @@ export function PromoCodeManager({
           </button>
         </div>
       </div>
+      )}
 
       {/* Códigos existentes + ventas por código */}
       {codes.length === 0 ? (
@@ -237,13 +241,19 @@ export function PromoCodeManager({
                       <td className="num">{formatPEN(s.soldCents)}</td>
                       <td>{c.is_active ? <span className="s-badge s-badge--ok">Activo</span> : <span className="s-badge s-badge--draft">Inactivo</span>}</td>
                       <td className="num">
-                        <button type="button" onClick={() => onSendEmail(c.id, c.code)} disabled={pending} className="s-btn s-btn--ghost s-btn--sm">
-                          <Send className="h-3.5 w-3.5" /> Enviar
-                        </button>
-                        {c.is_active && (
-                          <button type="button" onClick={() => onRevoke(c.id, c.code)} disabled={pending} className="s-btn s-btn--ghost s-btn--sm">
-                            <Trash2 className="h-3.5 w-3.5" /> Desactivar
-                          </button>
+                        {impersonating ? (
+                          <span className="s-muted-3" style={{ fontSize: 12.5 }}>—</span>
+                        ) : (
+                          <>
+                            <button type="button" onClick={() => onSendEmail(c.id, c.code)} disabled={pending} className="s-btn s-btn--ghost s-btn--sm">
+                              <Send className="h-3.5 w-3.5" /> Enviar
+                            </button>
+                            {c.is_active && (
+                              <button type="button" onClick={() => onRevoke(c.id, c.code)} disabled={pending} className="s-btn s-btn--ghost s-btn--sm">
+                                <Trash2 className="h-3.5 w-3.5" /> Desactivar
+                              </button>
+                            )}
+                          </>
                         )}
                       </td>
                     </tr>

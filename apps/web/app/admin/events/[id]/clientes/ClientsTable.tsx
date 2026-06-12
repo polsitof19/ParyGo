@@ -31,7 +31,7 @@ function csvCell(v: string | number | null): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function ClientsTable({ rows, eventName }: { rows: ClientRow[]; eventName: string }) {
+export function ClientsTable({ rows, eventName, impersonating = false }: { rows: ClientRow[]; eventName: string; impersonating?: boolean }) {
   const [q, setQ] = useState('');
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -98,7 +98,7 @@ export function ClientsTable({ rows, eventName }: { rows: ClientRow[]; eventName
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <p style={{ fontWeight: 800, fontFamily: 'var(--display)' }}>{formatPEN(r.totalCents)}</p>
-                  <ResendButton orderId={r.orderId} />
+                  {!impersonating && <ResendButton orderId={r.orderId} />}
                 </div>
               </div>
               <ul className="s-stack" style={{ gap: 6, listStyle: 'none', margin: '10px 0 0', padding: 0 }}>
@@ -109,7 +109,7 @@ export function ClientsTable({ rows, eventName }: { rows: ClientRow[]; eventName
                       {t.voided && <span className="s-badge s-badge--alert" style={{ marginLeft: 8 }}>Anulada</span>}
                       {!t.voided && t.enteredAt && <span className="s-badge s-badge--ok" style={{ marginLeft: 8 }}>Ingresó {new Date(t.enteredAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}</span>}
                     </span>
-                    {!t.voided && <VoidButton ticketId={t.id} number={t.number} />}
+                    {!t.voided && !impersonating && <VoidButton ticketId={t.id} number={t.number} />}
                   </li>
                 ))}
               </ul>

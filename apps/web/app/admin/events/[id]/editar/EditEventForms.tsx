@@ -17,10 +17,11 @@ function Submit({ label }: { label: string }) {
   return <button type="submit" className="s-btn s-btn--primary s-btn--sm" disabled={pending}>{pending ? 'Guardando…' : label}</button>;
 }
 
-export function EditEventForm(p: { eventId: string; name: string; description: string; startsLocal: string; venueName: string; venueAddress: string; minAge: number; isPublished?: boolean; hasSales?: boolean }) {
+export function EditEventForm(p: { eventId: string; name: string; description: string; startsLocal: string; venueName: string; venueAddress: string; minAge: number; isPublished?: boolean; hasSales?: boolean; readOnly?: boolean }) {
   const [state, action] = useFormState(updateEventAction, initial);
   const dateRef = useRef<HTMLInputElement>(null);
-  const dateLocked = Boolean(p.isPublished && p.hasSales);
+  const ro = Boolean(p.readOnly);
+  const dateLocked = Boolean(p.isPublished && p.hasSales) || ro;
   // Publicado SIN ventas: la fecha se puede cambiar pero avisamos antes de guardar.
   // Publicado CON ventas: input readOnly + el server rechaza igual (defensa real).
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -35,29 +36,30 @@ export function EditEventForm(p: { eventId: string; name: string; description: s
     <form action={action} onSubmit={onSubmit} className="s-stack" style={{ gap: 12 }}>
       <input type="hidden" name="event_id" value={p.eventId} />
       <div className="s-field"><label className="s-label" htmlFor="ev-name">Nombre</label>
-        <input id="ev-name" name="name" defaultValue={p.name} className="s-input" required /></div>
+        <input id="ev-name" name="name" defaultValue={p.name} className="s-input" required disabled={ro} /></div>
       <div className="s-field"><label className="s-label" htmlFor="ev-desc">Descripción</label>
-        <textarea id="ev-desc" name="description" defaultValue={p.description} className="s-input" rows={3} style={{ resize: 'vertical' }} /></div>
+        <textarea id="ev-desc" name="description" defaultValue={p.description} className="s-input" rows={3} style={{ resize: 'vertical' }} disabled={ro} /></div>
       <div className="s-form-grid">
-        <div className="s-field"><label className="s-label" htmlFor="ev-date">Fecha y hora{dateLocked && <span className="s-muted" style={{ fontWeight: 500 }}> · bloqueada, hay ventas</span>}</label>
-          <input ref={dateRef} id="ev-date" name="starts_at" type="datetime-local" defaultValue={p.startsLocal} className="s-input" required readOnly={dateLocked} title={dateLocked ? 'No editable: ya hay entradas vendidas con esta fecha' : undefined} />
-          {dateLocked && <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>No puedes cambiar la fecha: ya hay entradas vendidas con esta fecha.</p>}</div>
+        <div className="s-field"><label className="s-label" htmlFor="ev-date">Fecha y hora{dateLocked && !ro && <span className="s-muted" style={{ fontWeight: 500 }}> · bloqueada, hay ventas</span>}</label>
+          <input ref={dateRef} id="ev-date" name="starts_at" type="datetime-local" defaultValue={p.startsLocal} className="s-input" required readOnly={dateLocked} disabled={ro} title={dateLocked ? 'No editable: ya hay entradas vendidas con esta fecha' : undefined} />
+          {dateLocked && !ro && <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>No puedes cambiar la fecha: ya hay entradas vendidas con esta fecha.</p>}</div>
         <div className="s-field"><label className="s-label" htmlFor="ev-age">Edad mínima</label>
-          <input id="ev-age" name="min_age" type="number" min={0} max={99} defaultValue={p.minAge} className="s-input" /></div>
+          <input id="ev-age" name="min_age" type="number" min={0} max={99} defaultValue={p.minAge} className="s-input" disabled={ro} /></div>
       </div>
       <div className="s-field"><label className="s-label" htmlFor="ev-vname">Lugar (nombre)</label>
-        <input id="ev-vname" name="venue_name" defaultValue={p.venueName} className="s-input" /></div>
+        <input id="ev-vname" name="venue_name" defaultValue={p.venueName} className="s-input" disabled={ro} /></div>
       <div className="s-field"><label className="s-label" htmlFor="ev-vaddr">Dirección</label>
-        <input id="ev-vaddr" name="venue_address" defaultValue={p.venueAddress} className="s-input" /></div>
+        <input id="ev-vaddr" name="venue_address" defaultValue={p.venueAddress} className="s-input" disabled={ro} /></div>
       <Banner state={state} />
-      <div className="s-form-actions"><Submit label="Guardar evento" /></div>
+      {!ro && <div className="s-form-actions"><Submit label="Guardar evento" /></div>}
     </form>
   );
 }
 
-export function TicketTypeEditor({ eventId, tt }: { eventId: string; tt: TtRow }) {
+export function TicketTypeEditor({ eventId, tt, readOnly = false }: { eventId: string; tt: TtRow; readOnly?: boolean }) {
   const [state, action] = useFormState(updateTicketTypeAction, initial);
   const hasSales = tt.sold > 0;
+  const ro = readOnly;
   return (
     <form action={action}>
       <input type="hidden" name="event_id" value={eventId} />
@@ -68,24 +70,24 @@ export function TicketTypeEditor({ eventId, tt }: { eventId: string; tt: TtRow }
       </div>
       <div className="s-form-grid">
         <div className="s-field"><label className="s-label">Nombre</label>
-          <input name="name" defaultValue={tt.name} className="s-input" /></div>
+          <input name="name" defaultValue={tt.name} className="s-input" disabled={ro} /></div>
         <div className="s-field">
-          <label className="s-label">Precio (S/){hasSales && <span className="s-muted" style={{ fontWeight: 500 }}> · congelado, hay ventas</span>}</label>
-          <input name="price_soles" type="number" step="0.5" min={0} defaultValue={(tt.priceCents / 100).toFixed(2)} className="s-input" disabled={hasSales} title={hasSales ? 'No editable: ya tiene ventas' : undefined} />
+          <label className="s-label">Precio (S/){hasSales && !ro && <span className="s-muted" style={{ fontWeight: 500 }}> · congelado, hay ventas</span>}</label>
+          <input name="price_soles" type="number" step="0.5" min={0} defaultValue={(tt.priceCents / 100).toFixed(2)} className="s-input" disabled={hasSales || ro} title={hasSales ? 'No editable: ya tiene ventas' : undefined} />
         </div>
       </div>
       <div className="s-form-grid s-field">
         <div className="s-field">
-          <label className="s-label">Capacidad{!tt.isUnlimited && tt.sold > 0 && <span className="s-muted" style={{ fontWeight: 500 }}> · mín. {tt.sold} (vendidas)</span>}</label>
-          <input name="capacity" type="number" min={Math.max(1, tt.sold)} defaultValue={tt.capacity || ''} className="s-input" disabled={tt.isUnlimited} />
+          <label className="s-label">Capacidad{!tt.isUnlimited && tt.sold > 0 && !ro && <span className="s-muted" style={{ fontWeight: 500 }}> · mín. {tt.sold} (vendidas)</span>}</label>
+          <input name="capacity" type="number" min={Math.max(1, tt.sold)} defaultValue={tt.capacity || ''} className="s-input" disabled={tt.isUnlimited || ro} />
         </div>
         <div className="s-field" style={{ display: 'flex', gap: 16, alignItems: 'flex-end', paddingBottom: 6 }}>
-          <label className="s-check" style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}><input type="checkbox" name="is_unlimited" defaultChecked={tt.isUnlimited} /> Ilimitado</label>
-          <label className="s-check" style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}><input type="checkbox" name="is_active" defaultChecked={tt.isActive} /> Activo</label>
+          <label className="s-check" style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}><input type="checkbox" name="is_unlimited" defaultChecked={tt.isUnlimited} disabled={ro} /> Ilimitado</label>
+          <label className="s-check" style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}><input type="checkbox" name="is_active" defaultChecked={tt.isActive} disabled={ro} /> Activo</label>
         </div>
       </div>
       <Banner state={state} />
-      <div className="s-form-actions"><Submit label="Guardar tipo" /></div>
+      {!ro && <div className="s-form-actions"><Submit label="Guardar tipo" /></div>}
     </form>
   );
 }

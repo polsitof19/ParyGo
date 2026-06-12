@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronLeft, ExternalLink } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
+import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { publicEnv } from '@/lib/env';
 import { EventTabs } from './EventTabs';
@@ -20,8 +21,8 @@ export default async function EventLayout({
   params: { id: string };
 }) {
   const user = await requireSession();
-  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) notFound();
+  const ctx = ownerBrandContext(user);
+  if (!ctx) notFound();
 
   const admin = createAdminClient();
   const { data: event } = await admin
@@ -29,7 +30,7 @@ export default async function EventLayout({
     .select('id, brand_id, slug, name, is_published, starts_at, venue_name, brand:brands ( slug )')
     .eq('id', params.id)
     .maybeSingle();
-  if (!event || event.brand_id !== membership.brandId) notFound();
+  if (!event || event.brand_id !== ctx.brandId) notFound();
 
   // Yapes pendientes de ESTE evento (para el badge de la pestaña).
   const { data: pendingProofs } = await admin
@@ -68,7 +69,7 @@ export default async function EventLayout({
           )}
         </div>
       </header>
-      <PublishControl eventId={event.id} isPublished={!!event.is_published} />
+      <PublishControl eventId={event.id} isPublished={!!event.is_published} impersonating={ctx.impersonating} />
       <EventTabs eventId={event.id} yapePending={yapePending} />
       <div style={{ marginTop: 18 }}>{children}</div>
     </>
