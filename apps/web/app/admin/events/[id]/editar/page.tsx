@@ -4,6 +4,7 @@ import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { EventCoverUploader } from '../EventCoverUploader';
 import { EditEventForm } from './EditEventForms';
+import { PostponeEvent } from './PostponeEvent';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { DangerDeleteButton } from '@/components/manage/DangerDeleteButton';
 import { setEventArchivedAction, deleteEventAction } from '../edit-actions';
@@ -71,6 +72,13 @@ export default async function EditEventPage({ params }: { params: { id: string }
           readOnly={impersonating}
         />
       </div>
+
+      {/* Postergar: solo cuando hay ventas (fecha bloqueada arriba) y no en solo lectura. */}
+      {event.is_published && hasSales && !impersonating && (
+        <div style={{ marginTop: 16 }}>
+          <PostponeEvent eventId={event.id} startsLocal={toLimaLocal(event.starts_at)} />
+        </div>
+      )}
 
       <h2 className="s-h2" style={{ margin: '24px 0 12px' }}>Flyer</h2>
       <div className="s-card"><EventCoverUploader eventId={event.id} currentUrl={event.cover_url} readOnly={impersonating} /></div>

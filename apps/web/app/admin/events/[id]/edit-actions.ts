@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isImpersonating } from '@/lib/impersonation';
+import { formatEventDate } from '@/lib/utils';
+import { sendEventPostponedEmail, type BrandForEmail } from '@/lib/email/sendEventPostponedEmail';
 
 export type EditState = { ok: boolean; message: string | null };
 
@@ -144,6 +146,93 @@ export async function setEventPublishedAction(
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath('/admin');
   return { ok: true };
+}
+
+// ===== 1.b2) POSTERGAR el evento (mover la fecha CON ventas, avisando) =====
+// A diferencia de updateEventAction (que bloquea cambiar la fecha en silencio si
+// hay ventas), postergar es un acto DELIBERADO: permite mover starts_at aunque
+// haya ventas, NO toca tickets ni órdenes (siguen válidos), y avisa por email a
+// cada comprador con entradas válidas. Autoriza por brand_id del ROW (authEvent,
+// que ya deniega super-admin durante impersonación). Email best-effort por
+// destinatario (uno por comprador; nunca se expone la lista).
+export async function postponeEventAction(
+  eventId: string,
+  newStartsAtLima: string
+): Promise<{ ok: boolean; message?: string; emailsSent?: number; emailsTotal?: number }> {
+  const user = await requireSession();
+  const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
+  if (!brandId) return { ok: false, message: 'No tenés permiso sobre este evento.' };
+
+  const startsIso = limaToIso(newStartsAtLima);
+  if (!startsIso) return { ok: false, message: 'Fecha/hora inválida.' };
+
+  const admin = createAdminClient();
+  const { data: ev } = await admin
+    .from('events')
+    .select('id, name, starts_at, venue_name, brand:brands ( name, slug, whatsapp_e164, contact_email, theme_json )')
+    .eq('id', eventId)
+    .eq('brand_id', brandId)
+    .maybeSingle();
+  if (!ev) return { ok: false, message: 'Evento no encontrado.' };
+
+  const oldStartsAt = ev.starts_at as string;
+  if (new Date(oldStartsAt).getTime() === new Date(startsIso).getTime()) {
+    return { ok: false, message: 'Esa es la misma fecha. Elegí una distinta.' };
+  }
+
+  // Mover la fecha. NO se tocan tickets ni órdenes.
+  const { error: updErr } = await admin
+    .from('events')
+    .update({ starts_at: startsIso })
+    .eq('id', eventId)
+    .eq('brand_id', brandId);
+  if (updErr) return { ok: false, message: updErr.message };
+
+  await admin.from('events_log').insert({
+    brand_id: brandId, event_id: eventId, actor_user_id: user.id,
+    type: 'event_postponed', payload: { from: oldStartsAt, to: startsIso },
+  });
+
+  // Avisar por email a cada comprador con entradas VÁLIDAS (no invalidadas).
+  const brand = (Array.isArray(ev.brand) ? ev.brand[0] : ev.brand) as BrandForEmail | null;
+  let emailsSent = 0;
+  let recipients: { email: string; name: string }[] = [];
+  if (brand) {
+    const { data: tk } = await admin
+      .from('tickets')
+      .select('order_id')
+      .eq('event_id', eventId)
+      .is('invalidated_at', null);
+    const orderIds = [...new Set((tk ?? []).map((t) => t.order_id as string))];
+    if (orderIds.length > 0) {
+      const { data: ords } = await admin.from('orders').select('buyer_email, buyer_name').in('id', orderIds);
+      const byEmail = new Map<string, string>();
+      for (const o of (ords ?? []) as { buyer_email: string | null; buyer_name: string }[]) {
+        const em = (o.buyer_email ?? '').trim().toLowerCase();
+        if (em && !byEmail.has(em)) byEmail.set(em, o.buyer_name ?? '');
+      }
+      recipients = [...byEmail.entries()].map(([email, name]) => ({ email, name }));
+    }
+    const oldLabel = formatEventDate(oldStartsAt);
+    const newLabel = formatEventDate(startsIso);
+    for (const r of recipients) {
+      const res = await sendEventPostponedEmail({
+        to: r.email, buyerName: r.name, eventName: ev.name as string,
+        newDateLabel: newLabel, oldDateLabel: oldLabel, venue: (ev.venue_name as string | null) ?? null, brand,
+      });
+      if (res.ok) emailsSent++;
+    }
+  }
+
+  await admin.from('events_log').insert({
+    brand_id: brandId, event_id: eventId, actor_user_id: user.id,
+    type: 'event_postponed_notified', payload: { sent: emailsSent, total: recipients.length },
+  });
+
+  revalidatePath(`/admin/events/${eventId}`);
+  revalidatePath(`/admin/events/${eventId}/editar`);
+  revalidatePath(`/cabina-7k29x/events/${eventId}`);
+  return { ok: true, emailsSent, emailsTotal: recipients.length };
 }
 
 // ===== 1.c) Archivar / desarchivar el evento (dueño o super admin) =====
