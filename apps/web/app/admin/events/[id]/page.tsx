@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Bell, ArrowRight } from 'lucide-react';
+import { Bell, Tag } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
+import { YapeReviewRow } from '@/app/admin/yape/YapeReviewRow';
 import { PromoCodeManager, type PromoCodeRow, type PromoSales } from './PromoCodeManager';
 
 export const runtime = 'edge';
@@ -83,14 +84,43 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
     for (const t of (scanned ?? []) as { ticket_type_id: string }[]) { scannedByType.set(t.ticket_type_id, (scannedByType.get(t.ticket_type_id) ?? 0) + 1); totalScanned++; }
   }
   // Yape PENDIENTE de aprobar (NO suma al confirmado hasta aprobarse).
-  let pendingCents = 0, pendingCount = 0;
-  {
-    const { data: pend } = await admin.from('yape_proofs').select('order:orders!yape_proofs_order_id_fkey ( total_cents, event_id )').eq('brand_id', event.brand_id).eq('status', 'pending_review');
-    for (const p of (pend ?? []) as { order: { total_cents: number | null; event_id: string } | null }[]) {
-      if (p.order?.event_id !== event.id) continue;
-      pendingCents += p.order?.total_cents ?? 0; pendingCount++;
+  // Carga completa: misma lógica que la pestaña /yape para poder aprobar inline.
+  type ProofRow = {
+    id: string; amount_cents: number; operation_number: string; payer_name: string;
+    security_code: string; receipt_url: string; created_at: string;
+    order: { id: string; buyer_name: string; buyer_email: string; buyer_phone: string; total_cents: number; event_id: string; event: { name: string } | null } | null;
+  };
+  const { data: pendData } = await admin
+    .from('yape_proofs')
+    .select(`id, amount_cents, operation_number, payer_name, security_code, receipt_url, created_at,
+      order:orders!yape_proofs_order_id_fkey ( id, buyer_name, buyer_email, buyer_phone, total_cents, event_id, event:events ( name ) )`)
+    .eq('brand_id', event.brand_id)
+    .eq('status', 'pending_review')
+    .order('created_at', { ascending: true });
+  const pendingProofs = ((pendData as unknown as ProofRow[] | null) ?? []).filter((p) => p.order?.event_id === event.id);
+  const pendingCount = pendingProofs.length;
+  const pendingCents = pendingProofs.reduce((a, p) => a + (p.order?.total_cents ?? 0), 0);
+
+  // Items por orden de cada proof pendiente (qué entradas se aprueban) + URLs firmadas.
+  const pendOrderIds = pendingProofs.map((p) => p.order?.id).filter((x): x is string => !!x);
+  const pendItemsByOrder = new Map<string, { name: string; quantity: number }[]>();
+  if (pendOrderIds.length > 0) {
+    const { data: oi } = await admin
+      .from('order_items')
+      .select('order_id, ticket_type_name, quantity')
+      .in('order_id', pendOrderIds);
+    for (const it of (oi ?? []) as { order_id: string; ticket_type_name: string | null; quantity: number | null }[]) {
+      const arr = pendItemsByOrder.get(it.order_id) ?? [];
+      arr.push({ name: it.ticket_type_name ?? 'Entrada', quantity: it.quantity ?? 0 });
+      pendItemsByOrder.set(it.order_id, arr);
     }
   }
+  const pendingReview = await Promise.all(
+    pendingProofs.map(async (p) => {
+      const { data: signed } = await admin.storage.from('yape-proofs').createSignedUrl(p.receipt_url, 60 * 10);
+      return { ...p, signedReceiptUrl: signed?.signedUrl ?? null, items: pendItemsByOrder.get(p.order?.id ?? '') ?? [] };
+    })
+  );
   // Próxima fase de precio por tipo (para alertas).
   const nextByType = new Map<string, { cents: number; at: string }>();
   {
@@ -145,18 +175,44 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
 
   return (
     <>
-      {/* Yape pendiente — lo más urgente, arriba de todo. Solo si hay pendientes. */}
+      {/* Aprobar Yape — lo primero accionable, arriba de todo. La aprobación REAL
+          (no un banner): cada comprobante con sus botones Aprobar/Rechazar inline. */}
       {pendingCount > 0 && (
-        <Link href={`/admin/events/${event.id}/yape`} className="a-yapebanner">
-          <span className="a-yapebanner__main">
-            <Bell className="h-5 w-5 a-yapebanner__bell" />
-            <span>
-              <strong>Tenés {pendingCount} Yape{pendingCount === 1 ? '' : 's'} esperando revisión</strong>
-              <span className="a-yapebanner__sub">{formatPEN(pendingCents)} · hay gente esperando su QR</span>
-            </span>
-          </span>
-          <span className="a-yapebanner__cta">Revisar ahora <ArrowRight className="h-4 w-4" /></span>
-        </Link>
+        <section className="a-yape-inline" aria-labelledby="yape-inline-title">
+          <div className="a-yape-inline__head">
+            <h2 id="yape-inline-title" className="s-h2" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <Bell className="h-5 w-5" style={{ color: 'var(--tangerine)' }} />
+              Yapes para aprobar <span className="s-badge s-badge--alert">{pendingCount}</span>
+            </h2>
+            <p className="s-card__desc" style={{ margin: '4px 0 0' }}>
+              {formatPEN(pendingCents)} esperando tu aprobación · hay gente esperando su QR.
+            </p>
+          </div>
+          <div className="s-stack" style={{ gap: 14 }}>
+            {pendingReview.map((p) => (
+              <div key={p.id} className="s-card">
+                <YapeReviewRow
+                  proofId={p.id}
+                  receiptUrl={p.signedReceiptUrl}
+                  amountCents={p.amount_cents}
+                  expectedAmountCents={p.order?.total_cents ?? 0}
+                  amountMatches={p.amount_cents === p.order?.total_cents}
+                  operationNumber={p.operation_number}
+                  payerName={p.payer_name}
+                  securityCode={p.security_code}
+                  buyerName={p.order?.buyer_name ?? ''}
+                  buyerEmail={p.order?.buyer_email ?? ''}
+                  buyerPhone={p.order?.buyer_phone ?? ''}
+                  eventName={p.order?.event?.name ?? ''}
+                  createdAt={p.created_at}
+                  total={formatPEN(p.order?.total_cents ?? 0)}
+                  items={p.items}
+                  impersonating={impersonating}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Alertas visuales */}
@@ -266,11 +322,19 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
         </section>
       )}
 
-      {/* Códigos promocionales */}
-      <section style={{ marginTop: 24 }}>
-        <h2 className="s-h2" style={{ marginBottom: 12 }}>Códigos promocionales</h2>
-        <PromoCodeManager eventId={event.id} ticketTypes={types.map((t) => ({ id: t.id, name: t.name }))} codes={(promoCodes ?? []) as PromoCodeRow[]} sales={promoSales} impersonating={impersonating} />
-      </section>
+      {/* Códigos promocionales — sección secundaria, colapsada por defecto. */}
+      <details className="a-accordion" style={{ marginTop: 24 }}>
+        <summary className="a-accordion__summary">
+          <span className="a-accordion__title">
+            <Tag className="h-4 w-4" /> Códigos de RR.PP.
+            {(promoCodes?.length ?? 0) > 0 && <span className="s-badge s-badge--draft">{promoCodes!.length}</span>}
+          </span>
+          <span className="a-accordion__hint">Códigos de descuento y seguimiento de ventas por promotor</span>
+        </summary>
+        <div className="a-accordion__body">
+          <PromoCodeManager eventId={event.id} ticketTypes={types.map((t) => ({ id: t.id, name: t.name }))} codes={(promoCodes ?? []) as PromoCodeRow[]} sales={promoSales} impersonating={impersonating} />
+        </div>
+      </details>
     </>
   );
 }

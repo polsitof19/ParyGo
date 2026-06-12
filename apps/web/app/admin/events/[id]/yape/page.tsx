@@ -34,10 +34,26 @@ export default async function EventYapePage({ params }: { params: { id: string }
     .order('created_at', { ascending: true });
 
   const proofs = ((data as unknown as ProofRow[] | null) ?? []).filter((p) => p.order?.event_id === event.id);
+
+  // Items por orden (qué entradas se aprueban): nombre + cantidad por tipo.
+  const orderIds = proofs.map((p) => p.order?.id).filter((x): x is string => !!x);
+  const itemsByOrder = new Map<string, { name: string; quantity: number }[]>();
+  if (orderIds.length > 0) {
+    const { data: oi } = await admin
+      .from('order_items')
+      .select('order_id, ticket_type_name, quantity')
+      .in('order_id', orderIds);
+    for (const it of (oi ?? []) as { order_id: string; ticket_type_name: string | null; quantity: number | null }[]) {
+      const arr = itemsByOrder.get(it.order_id) ?? [];
+      arr.push({ name: it.ticket_type_name ?? 'Entrada', quantity: it.quantity ?? 0 });
+      itemsByOrder.set(it.order_id, arr);
+    }
+  }
+
   const withUrls = await Promise.all(
     proofs.map(async (p) => {
       const { data: signed } = await admin.storage.from('yape-proofs').createSignedUrl(p.receipt_url, 60 * 10);
-      return { ...p, signedReceiptUrl: signed?.signedUrl ?? null };
+      return { ...p, signedReceiptUrl: signed?.signedUrl ?? null, items: itemsByOrder.get(p.order?.id ?? '') ?? [] };
     })
   );
 
@@ -72,6 +88,7 @@ export default async function EventYapePage({ params }: { params: { id: string }
                 eventName={p.order?.event?.name ?? ''}
                 createdAt={p.created_at}
                 total={formatPEN(p.order?.total_cents ?? 0)}
+                items={p.items}
                 impersonating={impersonating}
               />
             </div>

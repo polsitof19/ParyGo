@@ -21,6 +21,7 @@ type Props = {
   eventName: string;
   createdAt: string;
   total: string;
+  items?: { name: string; quantity: number }[];
   impersonating?: boolean;
 };
 
@@ -39,6 +40,7 @@ export function YapeReviewRow({
   eventName,
   createdAt,
   total,
+  items = [],
   impersonating = false,
 }: Props) {
   const [pending, start] = useTransition();
@@ -91,6 +93,21 @@ export function YapeReviewRow({
           <Verify label="Nombre pagador" value={payerName} />
           <Verify label="Código seguridad" value={securityCode} />
         </div>
+
+        {/* Resumen de lo que se está aprobando: cuántas entradas y total. */}
+        {items.length > 0 && (
+          <div className="a-yape-summary" role="group" aria-label="Resumen de entradas a aprobar">
+            <span className="a-yape-summary__count">
+              {items.map((it, i) => (
+                <span key={i}>
+                  {i > 0 && <span className="a-yape-summary__plus"> + </span>}
+                  <strong>{it.quantity}</strong> {it.name}
+                </span>
+              ))}
+            </span>
+            <span className="a-yape-summary__total">{total} en total</span>
+          </div>
+        )}
 
         <p className="s-hint" style={{ marginTop: 10 }}>
           Abrí tu Yape → Movimientos → buscá esta transferencia y verificá los 4 campos. Si todo coincide, aprobá.

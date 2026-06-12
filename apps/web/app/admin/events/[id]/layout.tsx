@@ -5,6 +5,7 @@ import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { publicEnv } from '@/lib/env';
+import { optimizedImage } from '@/lib/imageUrl';
 import { EventTabs } from './EventTabs';
 import { PublishControl } from './PublishControl';
 
@@ -27,7 +28,7 @@ export default async function EventLayout({
   const admin = createAdminClient();
   const { data: event } = await admin
     .from('events')
-    .select('id, brand_id, slug, name, is_published, starts_at, venue_name, brand:brands ( slug )')
+    .select('id, brand_id, slug, name, is_published, starts_at, venue_name, cover_url, brand:brands ( slug )')
     .eq('id', params.id)
     .maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
@@ -49,7 +50,19 @@ export default async function EventLayout({
       <Link href="/admin" className="s-back">
         <ChevronLeft className="h-3.5 w-3.5" /> Tus eventos
       </Link>
-      <header className="s-pagehead">
+      <header className="s-pagehead a-evhead">
+        {event.cover_url && (
+          <a
+            href={event.cover_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="a-evhead__thumb"
+            title="Ver flyer en grande"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={optimizedImage(event.cover_url, { width: 160, quality: 72 })} alt={`Flyer de ${event.name}`} loading="lazy" decoding="async" />
+          </a>
+        )}
         <div>
           <span className="eyebrow">
             Evento
