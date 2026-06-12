@@ -20,10 +20,18 @@ export default async function EditEventPage({ params }: { params: { id: string }
   const admin = createAdminClient();
   const { data: event } = await admin
     .from('events')
-    .select('id, brand_id, name, description, starts_at, venue_name, venue_address, min_age, cover_url')
+    .select('id, brand_id, name, description, starts_at, venue_name, venue_address, min_age, cover_url, is_published')
     .eq('id', params.id)
     .maybeSingle();
   if (!event || event.brand_id !== membership.brandId) notFound();
+
+  // ¿Hay alguna venta? (define si la fecha queda bloqueada)
+  const { count: soldCount } = await admin
+    .from('ticket_types')
+    .select('id', { count: 'exact', head: true })
+    .eq('event_id', event.id)
+    .gt('sold', 0);
+  const hasSales = (soldCount ?? 0) > 0;
 
   return (
     <>
@@ -41,6 +49,8 @@ export default async function EditEventPage({ params }: { params: { id: string }
           venueName={event.venue_name ?? ''}
           venueAddress={event.venue_address ?? ''}
           minAge={event.min_age ?? 18}
+          isPublished={event.is_published}
+          hasSales={hasSales}
         />
       </div>
 

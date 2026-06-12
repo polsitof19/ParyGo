@@ -190,6 +190,85 @@ export async function updateBrandBrandingAction(
   return { ok: true, message: 'Branding actualizado. Ya está en vivo en la página de la marca.' };
 }
 
+// ============================================================================
+// Datos de la marca (super admin): nombre, email, whatsapp, Yape. Seguridad:
+//  - Lockdown: SOLO super admin (requireSession superAdmin) — escritura sobre
+//    CUALQUIER marca, igual que el branding.
+//  - NO toca: slug (rompería el subdominio), credenciales MP (las maneja el
+//    dueño desde /admin, encriptadas), theme_json (branding), event_balance.
+//  - El dueño CONSERVA updateBrandSettingsAction (scoped a SU marca por sesión);
+//    esa invariante "el brand sale de la sesión, nunca del form" queda intacta.
+// ============================================================================
+export type BrandBasicsState = {
+  ok: boolean;
+  message: string | null;
+  fieldErrors?: Partial<Record<string, string>>;
+};
+
+const brandBasicsSchema = z.object({
+  brand_id: z.string().uuid(),
+  name: z.string().trim().min(2, 'Mínimo 2 caracteres').max(120),
+  contact_email: z.string().email('Email inválido').optional().or(z.literal('')),
+  whatsapp_e164: z.string().regex(/^\+\d{8,15}$/, 'Formato +51999000111').optional().or(z.literal('')),
+  yape_number: z.string().max(20).optional().or(z.literal('')),
+  yape_holder: z.string().max(120).optional().or(z.literal('')),
+});
+
+export async function updateBrandBasicsAction(
+  _prev: BrandBasicsState,
+  formData: FormData
+): Promise<BrandBasicsState> {
+  const user = await requireSession({ superAdmin: true });
+
+  const parsed = brandBasicsSchema.safeParse({
+    brand_id: formData.get('brand_id'),
+    name: formData.get('name') ?? '',
+    contact_email: formData.get('contact_email') ?? '',
+    whatsapp_e164: formData.get('whatsapp_e164') ?? '',
+    yape_number: formData.get('yape_number') ?? '',
+    yape_holder: formData.get('yape_holder') ?? '',
+  });
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const e of parsed.error.errors) {
+      const p = e.path.join('.');
+      if (p) fieldErrors[p] = e.message;
+    }
+    return { ok: false, message: 'Revisá los campos marcados.', fieldErrors };
+  }
+
+  const admin = createAdminClient();
+  const { data: brand, error: brandErr } = await admin
+    .from('brands')
+    .select('id, slug')
+    .eq('id', parsed.data.brand_id)
+    .single();
+  if (brandErr || !brand) return { ok: false, message: 'No se encontró la marca.' };
+
+  const { error: updErr } = await admin
+    .from('brands')
+    .update({
+      name: parsed.data.name,
+      contact_email: parsed.data.contact_email || null,
+      whatsapp_e164: parsed.data.whatsapp_e164 || null,
+      yape_number: parsed.data.yape_number || null,
+      yape_holder: parsed.data.yape_holder || null,
+    })
+    .eq('id', brand.id);
+  if (updErr) return { ok: false, message: updErr.message };
+
+  await admin.from('events_log').insert({
+    brand_id: brand.id,
+    actor_user_id: user.id,
+    type: 'brand_basics_updated',
+    payload: { by: 'super_admin', slug: brand.slug },
+  });
+
+  revalidatePath(`/cabina-7k29x/brands/${brand.slug}`);
+  revalidatePath('/cabina-7k29x/brands');
+  return { ok: true, message: 'Datos de la marca actualizados.' };
+}
+
 const schema = z.object({
   brand_id: z.string().uuid(),
   email: z.string().email(),

@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, type EditState } from '../edit-actions';
 
@@ -16,18 +17,31 @@ function Submit({ label }: { label: string }) {
   return <button type="submit" className="s-btn s-btn--primary s-btn--sm" disabled={pending}>{pending ? 'Guardando…' : label}</button>;
 }
 
-export function EditEventForm(p: { eventId: string; name: string; description: string; startsLocal: string; venueName: string; venueAddress: string; minAge: number }) {
+export function EditEventForm(p: { eventId: string; name: string; description: string; startsLocal: string; venueName: string; venueAddress: string; minAge: number; isPublished?: boolean; hasSales?: boolean }) {
   const [state, action] = useFormState(updateEventAction, initial);
+  const dateRef = useRef<HTMLInputElement>(null);
+  const dateLocked = Boolean(p.isPublished && p.hasSales);
+  // Publicado SIN ventas: la fecha se puede cambiar pero avisamos antes de guardar.
+  // Publicado CON ventas: input readOnly + el server rechaza igual (defensa real).
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (dateLocked) return;
+    if (p.isPublished && dateRef.current && dateRef.current.value !== p.startsLocal) {
+      if (!confirm('Este evento está publicado. Cambiar la fecha actualizará lo que ve la gente. ¿Continuar?')) {
+        e.preventDefault();
+      }
+    }
+  };
   return (
-    <form action={action} className="s-stack" style={{ gap: 12 }}>
+    <form action={action} onSubmit={onSubmit} className="s-stack" style={{ gap: 12 }}>
       <input type="hidden" name="event_id" value={p.eventId} />
       <div className="s-field"><label className="s-label" htmlFor="ev-name">Nombre</label>
         <input id="ev-name" name="name" defaultValue={p.name} className="s-input" required /></div>
       <div className="s-field"><label className="s-label" htmlFor="ev-desc">Descripción</label>
         <textarea id="ev-desc" name="description" defaultValue={p.description} className="s-input" rows={3} style={{ resize: 'vertical' }} /></div>
       <div className="s-form-grid">
-        <div className="s-field"><label className="s-label" htmlFor="ev-date">Fecha y hora</label>
-          <input id="ev-date" name="starts_at" type="datetime-local" defaultValue={p.startsLocal} className="s-input" required /></div>
+        <div className="s-field"><label className="s-label" htmlFor="ev-date">Fecha y hora{dateLocked && <span className="s-muted" style={{ fontWeight: 500 }}> · bloqueada, hay ventas</span>}</label>
+          <input ref={dateRef} id="ev-date" name="starts_at" type="datetime-local" defaultValue={p.startsLocal} className="s-input" required readOnly={dateLocked} title={dateLocked ? 'No editable: ya hay entradas vendidas con esta fecha' : undefined} />
+          {dateLocked && <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>No puedes cambiar la fecha: ya hay entradas vendidas con esta fecha.</p>}</div>
         <div className="s-field"><label className="s-label" htmlFor="ev-age">Edad mínima</label>
           <input id="ev-age" name="min_age" type="number" min={0} max={99} defaultValue={p.minAge} className="s-input" /></div>
       </div>

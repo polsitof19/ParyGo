@@ -6,6 +6,7 @@ import { InviteBrandAdmin } from './InviteBrandAdmin';
 import { SetBrandAdminPassword } from './SetBrandAdminPassword';
 import { LoadPackForm } from './LoadPackForm';
 import { EditBrandingForm } from './EditBrandingForm';
+import { EditBrandBasicsForm } from './EditBrandBasicsForm';
 import { brandColor } from '@/lib/brandColors';
 import { publicEnv } from '@/lib/env';
 
@@ -123,16 +124,18 @@ export default async function BrandDetailPage({
           </div>
         </div>
 
-        {/* Configuración / contacto */}
+        {/* Configuración / contacto — editable por super admin */}
         <div className="s-card">
           <h2 className="s-h2">Configuración</h2>
-          <p className="s-card__desc">Datos de contacto y cobro de la marca.</p>
-          <dl className="s-deflist" style={{ marginTop: 14 }}>
-            <Row label="Email">{brand.contact_email ?? '—'}</Row>
-            <Row label="WhatsApp">{brand.whatsapp_e164 ?? '—'}</Row>
-            <Row label="Yape número">{brand.yape_number ?? '—'}</Row>
-            <Row label="Yape titular">{brand.yape_holder ?? '—'}</Row>
-          </dl>
+          <p className="s-card__desc">Nombre, contacto y datos de cobro Yape. El slug ({brand.slug}) no se edita acá. MercadoPago lo gestiona el dueño desde su panel.</p>
+          <EditBrandBasicsForm
+            brandId={brand.id}
+            name={brand.name}
+            contactEmail={brand.contact_email}
+            whatsapp={brand.whatsapp_e164}
+            yapeNumber={brand.yape_number}
+            yapeHolder={brand.yape_holder}
+          />
         </div>
       </div>
 
@@ -226,14 +229,5 @@ export default async function BrandDetailPage({
         </div>
       </div>
     </>
-  );
-}
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="s-defrow">
-      <dt className="s-defrow__k">{label}</dt>
-      <dd className="s-defrow__v">{children}</dd>
-    </div>
   );
 }

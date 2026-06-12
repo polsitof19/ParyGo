@@ -49,6 +49,30 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   if (!startsIso) return { ok: false, message: 'Fecha/hora inválida.' };
 
   const admin = createAdminClient();
+
+  // ===== GUARDA DE FECHA (server-side, no confiar en la UI) =====
+  // Borrador: libre. Publicado sin ventas: libre (la UI avisa antes de guardar).
+  // Publicado CON ventas: la fecha queda BLOQUEADA (igual que el precio congelado)
+  // — la gente compró con esta fecha. Aplica al dueño Y al super admin.
+  const { data: current } = await admin
+    .from('events')
+    .select('starts_at, is_published')
+    .eq('id', eventId)
+    .maybeSingle();
+  const dateChanging = current?.starts_at
+    ? new Date(current.starts_at).getTime() !== new Date(startsIso).getTime()
+    : true;
+  if (dateChanging && current?.is_published) {
+    const { count: soldCount } = await admin
+      .from('ticket_types')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .gt('sold', 0);
+    if ((soldCount ?? 0) > 0) {
+      return { ok: false, message: 'No puedes cambiar la fecha: ya hay entradas vendidas con esta fecha.' };
+    }
+  }
+
   const { error } = await admin
     .from('events')
     .update({
@@ -63,9 +87,16 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
     .eq('brand_id', brandId); // scoped
   if (error) return { ok: false, message: error.message };
 
-  await admin.from('events_log').insert({ brand_id: brandId, event_id: eventId, actor_user_id: user.id, type: 'event_edited', payload: {} });
+  await admin.from('events_log').insert({
+    brand_id: brandId,
+    event_id: eventId,
+    actor_user_id: user.id,
+    type: dateChanging ? 'event_date_changed' : 'event_edited',
+    payload: dateChanging ? { from: current?.starts_at ?? null, to: startsIso } : {},
+  });
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
+  revalidatePath(`/cabina-7k29x/events/${eventId}`);
   return { ok: true, message: 'Evento actualizado.' };
 }
 

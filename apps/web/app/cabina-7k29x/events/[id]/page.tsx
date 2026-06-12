@@ -6,9 +6,16 @@ import { formatPEN } from '@/lib/utils';
 import { publicEnv } from '@/lib/env';
 import { TicketTypesEditor } from './TicketTypesEditor';
 import { TogglePublishedButton } from './TogglePublishedButton';
+import { EditEventForm } from '../../../admin/events/[id]/editar/EditEventForms';
+import { EventCoverUploader } from '../../../admin/events/[id]/EventCoverUploader';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
+
+// UTC → "YYYY-MM-DDTHH:mm" en hora de Lima (UTC-5) para el input datetime-local.
+function toLimaLocal(iso: string): string {
+  return new Date(new Date(iso).getTime() - 5 * 3600 * 1000).toISOString().slice(0, 16);
+}
 
 export default async function EventDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -16,7 +23,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
     .from('events')
     .select(`
       id, slug, name, description, starts_at, ends_at,
-      venue_name, venue_address, min_age, is_published, refund_policy,
+      venue_name, venue_address, min_age, is_published, refund_policy, cover_url,
       brand_id,
       brand:brands ( slug, name )
     `)
@@ -42,6 +49,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
 
   const paidOrders = orders?.filter((o) => o.status === 'paid') ?? [];
   const grossCents = paidOrders.reduce((acc, o) => acc + (o.total_cents ?? 0), 0);
+  const hasSales = (ticketTypes ?? []).some((t) => (t.sold ?? 0) > 0);
   const eventUrl = `https://${brand?.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${event.slug}`;
 
   return (
@@ -94,23 +102,34 @@ export default async function EventDetailPage({ params }: { params: { id: string
       </div>
 
       <div className="s-card" style={{ marginTop: 22 }}>
-        <h2 className="s-h2">Info del evento</h2>
-        <dl className="s-deflist" style={{ marginTop: 14 }}>
-          <Row label="Descripción">{event.description ?? '—'}</Row>
-          <Row label="Dirección">{event.venue_address ?? '—'}</Row>
-          <Row label="Edad mínima">{event.min_age}+</Row>
-          <Row label="Refund policy">{event.refund_policy ?? '—'}</Row>
-        </dl>
+        <h2 className="s-h2">Datos del evento</h2>
+        <p className="s-card__desc" style={{ marginBottom: 14 }}>Los cambios se ven al instante en la página pública. El precio y el slug no se editan acá.</p>
+        <EditEventForm
+          eventId={event.id}
+          name={event.name}
+          description={event.description ?? ''}
+          startsLocal={toLimaLocal(event.starts_at)}
+          venueName={event.venue_name ?? ''}
+          venueAddress={event.venue_address ?? ''}
+          minAge={event.min_age ?? 18}
+          isPublished={event.is_published}
+          hasSales={hasSales}
+        />
       </div>
-    </>
-  );
-}
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="s-defrow">
-      <dt className="s-defrow__k">{label}</dt>
-      <dd className="s-defrow__v">{children}</dd>
-    </div>
+      <div className="s-card" style={{ marginTop: 22 }}>
+        <h2 className="s-h2">Flyer</h2>
+        <div style={{ marginTop: 14 }}>
+          <EventCoverUploader eventId={event.id} currentUrl={event.cover_url} />
+        </div>
+      </div>
+
+      {event.refund_policy && (
+        <div className="s-card" style={{ marginTop: 22 }}>
+          <h2 className="s-h2">Refund policy</h2>
+          <p className="s-card__desc" style={{ marginTop: 8 }}>{event.refund_policy}</p>
+        </div>
+      )}
+    </>
   );
 }
