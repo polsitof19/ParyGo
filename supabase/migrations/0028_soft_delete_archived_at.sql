@@ -27,4 +27,12 @@ create index if not exists brands_active_slug_idx
   on public.brands (slug)
   where archived_at is null;
 
+-- GRANTS de columna: brands usa grants a NIVEL DE COLUMNA (lockdown de mp_* en
+-- 0005/0023), así que una columna nueva NO hereda el SELECT de tabla. El filtro
+-- público `where archived_at is null` requiere SELECT sobre archived_at para
+-- anon/authenticated, o la query entera falla → la marca no resuelve. events usa
+-- grant a nivel de tabla (ya hereda), pero lo concedemos explícito por claridad.
+grant select (archived_at) on public.brands to anon, authenticated;
+grant select (archived_at) on public.events to anon, authenticated;
+
 notify pgrst, 'reload schema';
