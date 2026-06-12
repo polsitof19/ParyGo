@@ -349,6 +349,49 @@ export async function deleteBrandAction(
   return { ok: true };
 }
 
+// ============================================================================
+// Quitar un admin de una marca (SOLO super admin). La guarda del "último admin"
+// es ATÓMICA en el RPC remove_brand_admin (FOR UPDATE + recuento): nunca deja la
+// marca sin admin. Solo quita la membresía; no borra el usuario de auth.
+// ============================================================================
+export type RemoveAdminState = { ok: boolean; message?: string };
+
+export async function removeBrandAdminAction(
+  brandId: string,
+  userId: string
+): Promise<RemoveAdminState> {
+  const user = await requireSession({ superAdmin: true });
+  if (!brandId || !userId) return { ok: false, message: 'Datos inválidos.' };
+
+  const admin = createAdminClient();
+  // Email del target (para el log) antes de quitarlo.
+  const { data: target } = await admin
+    .from('brand_members')
+    .select('display_name')
+    .eq('brand_id', brandId).eq('user_id', userId).eq('role', 'brand_admin')
+    .maybeSingle();
+
+  const { data: res, error } = await admin.rpc('remove_brand_admin', {
+    p_brand_id: brandId,
+    p_user_id: userId,
+  });
+  if (error) return { ok: false, message: error.message };
+  const r = (res ?? {}) as { ok?: boolean; reason?: string };
+  if (!r.ok) {
+    if (r.reason === 'LAST_ADMIN') return { ok: false, message: 'No puedes quitar al único admin. Asigna otro antes.' };
+    if (r.reason === 'NOT_ADMIN') return { ok: false, message: 'Ese usuario ya no es admin de esta marca.' };
+    return { ok: false, message: 'No se pudo quitar el admin.' };
+  }
+
+  const { data: brand } = await admin.from('brands').select('slug').eq('id', brandId).maybeSingle();
+  await admin.from('events_log').insert({
+    brand_id: brandId, actor_user_id: user.id, type: 'brand_admin_removed',
+    payload: { removed_user_id: userId, removed_email: target?.display_name ?? null },
+  });
+  revalidatePath(`/cabina-7k29x/brands/${brand?.slug ?? ''}`);
+  return { ok: true };
+}
+
 const schema = z.object({
   brand_id: z.string().uuid(),
   email: z.string().email(),

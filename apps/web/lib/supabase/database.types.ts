@@ -870,6 +870,10 @@ export type Database = {
         Args: { p_order_id: string; p_session_id: string }
         Returns: number
       }
+      remove_brand_admin: {
+        Args: { p_brand_id: string; p_user_id: string }
+        Returns: Json
+      }
       cleanup_expired_reservations: { Args: never; Returns: number }
       create_or_refresh_stock_reservation: {
         Args: {

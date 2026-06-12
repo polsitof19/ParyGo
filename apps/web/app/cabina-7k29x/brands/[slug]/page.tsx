@@ -4,6 +4,7 @@ import { ChevronLeft, ExternalLink, Plus, ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { InviteBrandAdmin } from './InviteBrandAdmin';
 import { SetBrandAdminPassword } from './SetBrandAdminPassword';
+import { RemoveBrandAdminButton } from './RemoveBrandAdminButton';
 import { LoadPackForm } from './LoadPackForm';
 import { EditBrandingForm } from './EditBrandingForm';
 import { EditBrandBasicsForm } from './EditBrandBasicsForm';
@@ -237,10 +238,20 @@ export default async function BrandDetailPage({
                   <span className="s-avatar s-avatar--sm" style={{ background: bgFor(m.display_name ?? m.id) }}>
                     {initialOf(m.display_name ?? '?')}
                   </span>
-                  <span className="s-owner-row__email">{m.display_name ?? 'Brand admin'}</span>
+                  <span className="s-owner-row__email">
+                    {m.display_name ?? 'Brand admin'}
+                    {m.created_at && (
+                      <span className="s-muted" style={{ display: 'block', fontSize: 12 }}>
+                        desde {new Date(m.created_at).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Lima' })}
+                      </span>
+                    )}
+                  </span>
                   <span className="s-badge s-badge--ok">Activo</span>
                 </div>
-                <SetBrandAdminPassword brandId={brand.id} userId={m.user_id} slug={brand.slug} />
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <SetBrandAdminPassword brandId={brand.id} userId={m.user_id} slug={brand.slug} />
+                  <RemoveBrandAdminButton brandId={brand.id} userId={m.user_id} email={m.display_name ?? 'este admin'} isLast={admins.length === 1} />
+                </div>
               </li>
             ))}
           </ul>
