@@ -22,7 +22,7 @@ export type BrandForEmail = {
   theme_json: { primary_color?: string; logo_url?: string | null } | null;
 };
 
-export type SendPostponedResult = { ok: boolean; reason?: string };
+export type SendPostponedResult = { ok: boolean; reason?: string; resendId?: string | null };
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
@@ -74,7 +74,8 @@ export async function sendEventPostponedEmail(args: {
       console.error('[sendEventPostponedEmail] resend rejected', { status: resp.status, body: body.slice(0, 300) });
       return { ok: false, reason: `resend_${resp.status}` };
     }
-    return { ok: true };
+    const data = (await resp.json().catch(() => null)) as { id?: string } | null;
+    return { ok: true, resendId: data?.id ?? null };
   } catch (err) {
     console.error('[sendEventPostponedEmail] network error', { error: err instanceof Error ? err.message : String(err) });
     return { ok: false, reason: 'network' };

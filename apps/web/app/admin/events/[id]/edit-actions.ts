@@ -196,6 +196,7 @@ export async function postponeEventAction(
   // Avisar por email a cada comprador con entradas VÁLIDAS (no invalidadas).
   const brand = (Array.isArray(ev.brand) ? ev.brand[0] : ev.brand) as BrandForEmail | null;
   let emailsSent = 0;
+  const resendIds: string[] = [];
   let recipients: { email: string; name: string }[] = [];
   if (brand) {
     const { data: tk } = await admin
@@ -220,13 +221,13 @@ export async function postponeEventAction(
         to: r.email, buyerName: r.name, eventName: ev.name as string,
         newDateLabel: newLabel, oldDateLabel: oldLabel, venue: (ev.venue_name as string | null) ?? null, brand,
       });
-      if (res.ok) emailsSent++;
+      if (res.ok) { emailsSent++; if (res.resendId) resendIds.push(res.resendId); }
     }
   }
 
   await admin.from('events_log').insert({
     brand_id: brandId, event_id: eventId, actor_user_id: user.id,
-    type: 'event_postponed_notified', payload: { sent: emailsSent, total: recipients.length },
+    type: 'event_postponed_notified', payload: { sent: emailsSent, total: recipients.length, resend_ids: resendIds },
   });
 
   revalidatePath(`/admin/events/${eventId}`);
