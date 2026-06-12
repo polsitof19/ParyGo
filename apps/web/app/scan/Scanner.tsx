@@ -260,7 +260,7 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
             {pv.status === 'OK' && pv.max_scans != null && pv.max_scans > 1 && (pv.scan_count ?? 0) > 0 && (
               <p className="k-result__sub">reingreso {(pv.scan_count ?? 0) + 1}/{pv.max_scans}</p>
             )}
-            {pv.status === 'ALREADY_USED' && pv.first_validated_at && <p className="k-result__sub">primer ingreso {new Date(pv.first_validated_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</p>}
+            {pv.status === 'ALREADY_USED' && pv.first_validated_at && <p className="k-result__sub">primer ingreso {new Date(pv.first_validated_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}</p>}
             {pv.status === 'OFFLINE_UNKNOWN' && <p className="k-result__sub">No está en la lista precargada. Revisá el documento a mano.</p>}
             {pv.status === 'OK' && <p className="k-result__sub">Revisá el documento y confirmá el ingreso.</p>}
             {pv.offline && <p className="k-result__off">offline · se sincronizará</p>}
@@ -293,7 +293,7 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
             {result.buyer_dni && <p className="k-result__doc">{docLabel(result.buyer_doc_type)} {result.buyer_dni}</p>}
             {result.ticket_type_name && <p className="k-result__type">{result.ticket_type_name}</p>}
             {result.status === 'REENTRY' && result.max_scans != null && <p className="k-result__sub">re-entrada {result.scan_count}/{result.max_scans}</p>}
-            {result.status === 'ALREADY_USED' && result.first_validated_at && <p className="k-result__sub">primer ingreso {new Date(result.first_validated_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</p>}
+            {result.status === 'ALREADY_USED' && result.first_validated_at && <p className="k-result__sub">primer ingreso {new Date(result.first_validated_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}</p>}
             {result.offline && <p className="k-result__off">offline · se sincronizará</p>}
           </div>
           <button type="button" className="k-btn k-btn--brand k-btn--block" onClick={reset}>Escanear otro</button>

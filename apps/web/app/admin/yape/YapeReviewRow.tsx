@@ -72,7 +72,7 @@ export function YapeReviewRow({
           <div className="a-receipt a-receipt--empty">Sin captura</div>
         )}
         <p className="s-hint" style={{ marginTop: 6 }}>
-          Subido {new Date(createdAt).toLocaleString('es-PE')}
+          Subido {new Date(createdAt).toLocaleString('es-PE', { timeZone: 'America/Lima' })}
         </p>
       </div>
 

@@ -65,26 +65,26 @@ export default async function YapeUploadPage({
       <div style={{ textAlign: 'center' }}>
         <span className="c-eyebrow">Pago con Yape</span>
         <h1 className="c-h1" style={{ fontSize: 28, marginTop: 8 }}>
-          Yapeá {formatPEN(order.total_cents)} a {order.brand.yape_holder ?? order.brand.name}
+          Yapea {formatPEN(order.total_cents)} a {order.brand.yape_holder ?? order.brand.name}
         </h1>
         <p className="c-muted" style={{ marginTop: 8 }}>
-          Yapeá al número de abajo y después subí los datos del comprobante. Te mandamos tu QR cuando el promotor confirme.
+          Yapea al número de abajo y después sube los datos del comprobante. Te mandamos tu QR cuando el promotor confirme.
         </p>
       </div>
 
       <div className="c-card" style={{ marginTop: 22 }}>
-        <p className="c-card__title">1 · Yapeá a este número</p>
+        <p className="c-card__title">1 · Yapea a este número</p>
         <p style={{ fontFamily: 'var(--display)', fontWeight: 800, fontSize: 'clamp(34px,9vw,46px)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', color: 'var(--brand-ink)' }}>{order.brand.yape_number}</p>
         <p className="c-muted" style={{ marginTop: 6 }}>Titular: <strong style={{ color: 'var(--ink)' }}>{order.brand.yape_holder ?? order.brand.name}</strong></p>
         <p className="c-muted">Monto exacto: <strong style={{ color: 'var(--ink)' }}>{formatPEN(order.total_cents)}</strong></p>
         <p style={{ marginTop: 12, borderRadius: 'var(--r-ctl)', background: 'var(--warn-bg)', color: 'var(--warn)', padding: '11px 14px', fontSize: 13, fontWeight: 500 }}>
-          ⚠️ Yapeá el monto exacto. Si yapeás de menos o de más, el promotor puede rechazar el comprobante.
+          ⚠️ Yapea el monto exacto. Si yapeas de menos o de más, el promotor puede rechazar el comprobante.
         </p>
       </div>
 
       <div className="c-card" style={{ marginTop: 14 }}>
-        <p className="c-card__title">2 · Subí los datos del comprobante</p>
-        <p className="c-muted" style={{ marginBottom: 14 }}>Después de yapear, abrí &quot;Movimientos&quot; en tu app Yape, abrí esta transferencia y copiá los datos. También adjuntá la captura.</p>
+        <p className="c-card__title">2 · Sube los datos del comprobante</p>
+        <p className="c-muted" style={{ marginBottom: 14 }}>Después de yapear, abre &quot;Movimientos&quot; en tu app Yape, abre esta transferencia y copia los datos. También adjunta la captura.</p>
         <YapeUploadForm
           orderId={order.id}
           brandId={order.brand.slug}

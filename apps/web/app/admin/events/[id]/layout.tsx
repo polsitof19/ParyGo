@@ -58,7 +58,7 @@ export default async function EventLayout({
           </span>
           <h1 className="s-h1" style={{ marginTop: 6 }}>{event.name}</h1>
           <p className="s-card__desc">
-            {new Date(event.starts_at).toLocaleString('es-PE', { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })}
+            {new Date(event.starts_at).toLocaleString('es-PE', { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
             {event.venue_name && <> · {event.venue_name}</>}
           </p>
           {brandUrl && event.is_published && (

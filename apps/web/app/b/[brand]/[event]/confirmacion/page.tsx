@@ -70,7 +70,7 @@ export default async function ConfirmationPage({
         <span className="c-eyebrow" style={{ color: 'var(--alert, #dc2626)', marginTop: 16, display: 'block' }}>Pago no aprobado</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>No pudimos confirmar tu pago</h1>
         <p className="c-muted" style={{ marginTop: 10 }}>
-          MercadoPago no aprobó el pago. No se generó ningún cargo definitivo. Podés intentar de nuevo con otro método o tarjeta.
+          MercadoPago no aprobó el pago. No se generó ningún cargo definitivo. Puedes intentar de nuevo con otro método o tarjeta.
         </p>
         <a href="/" className="c-btn c-btn--brand" style={{ marginTop: 18 }}>Volver a intentar</a>
         {brand?.whatsapp_e164 && (
@@ -158,7 +158,7 @@ export default async function ConfirmationPage({
       </div>
 
       <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginTop: 18 }}>
-        También te enviamos el QR por email. Si no llega en 5 min, revisá spam o usá el link permanente.
+        También te enviamos el QR por email. Si no llega en 5 min, revisa spam o usa el link permanente.
       </p>
     </main>
   );

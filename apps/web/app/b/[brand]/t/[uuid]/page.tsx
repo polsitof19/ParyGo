@@ -84,7 +84,7 @@ export default async function TicketPage({ params }: Props) {
       <main className="c-state">
         <span className="c-eyebrow" style={{ color: 'var(--alert)' }}>Entrada invalidada</span>
         <h1 className="c-h1" style={{ fontSize: 28, marginTop: 8 }}>Esta entrada ya no es válida</h1>
-        <p className="c-muted" style={{ marginTop: 10 }}>Fue devuelta o cancelada. Contactá al promotor si creés que es un error.</p>
+        <p className="c-muted" style={{ marginTop: 10 }}>Fue devuelta o cancelada. Contacta al promotor si crees que es un error.</p>
       </main>
     );
   }
@@ -97,7 +97,7 @@ export default async function TicketPage({ params }: Props) {
       <div style={{ textAlign: 'center', marginBottom: 18 }}>
         <span className="c-eyebrow">Entrada digital</span>
         {t.validated_at && (
-          <p style={{ marginTop: 10 }}><span className="c-validated"><Check className="h-3.5 w-3.5" /> Validada · {new Date(t.validated_at).toLocaleString('es-PE')}</span></p>
+          <p style={{ marginTop: 10 }}><span className="c-validated"><Check className="h-3.5 w-3.5" /> Validada · {new Date(t.validated_at).toLocaleString('es-PE', { timeZone: 'America/Lima' })}</span></p>
         )}
       </div>
 

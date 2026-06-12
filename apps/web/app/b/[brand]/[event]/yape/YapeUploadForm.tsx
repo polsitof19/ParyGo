@@ -37,7 +37,7 @@ export function YapeUploadForm({ orderId, expectedAmountCents, buyerName }: Prop
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (!file) { toast.error('Subí la captura del comprobante'); return; }
+        if (!file) { toast.error('Sube la captura del comprobante'); return; }
         const form = new FormData(e.currentTarget);
         form.set('order_id', orderId);
         form.set('receipt_file', file);

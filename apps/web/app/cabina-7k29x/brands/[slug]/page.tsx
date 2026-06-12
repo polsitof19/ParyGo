@@ -181,7 +181,7 @@ export default async function BrandDetailPage({
               <li key={e.id} className="s-event-row">
                 <Link href={`/cabina-7k29x/events/${e.id}`} className="s-event-row__main">
                   <span className="s-event-row__name">{e.name}</span>
-                  <span className="s-event-row__date">{new Date(e.starts_at).toLocaleString('es-PE')}</span>
+                  <span className="s-event-row__date">{new Date(e.starts_at).toLocaleString('es-PE', { timeZone: 'America/Lima' })}</span>
                 </Link>
                 <span className={`s-badge ${e.is_published ? 's-badge--ok' : 's-badge--draft'}`}>
                   {e.is_published ? 'Publicado' : 'Borrador'}

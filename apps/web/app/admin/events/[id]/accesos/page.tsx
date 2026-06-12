@@ -7,7 +7,7 @@ import { LiveRefresh } from '../LiveRefresh';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' });
 
 // Resultados de ticket_scans que NO son ingreso: intentos rechazados en puerta.
 const REJECT_LABELS: Record<string, string> = {

@@ -245,7 +245,7 @@ function Step2({
     const code = promoInput.trim();
     if (!code) return;
     const email = (document.getElementById('buyer_email') as HTMLInputElement | null)?.value?.trim() ?? '';
-    if (!email) { toast.error('Ingresá tu email antes de aplicar el código.'); return; }
+    if (!email) { toast.error('Ingresa tu email antes de aplicar el código.'); return; }
     setChecking(true);
     try {
       const res = await previewPromo({ eventId: event.id, code, email, items: itemsForPromo });
@@ -253,7 +253,7 @@ function Step2({
         const msgs: Record<string, string> = {
           NOT_FOUND: 'Código inválido.', EXPIRED: 'Código vencido.', EXHAUSTED: 'Código agotado.',
           EMAIL_LIMIT: 'Ya usaste ese código con este email.', NOT_APPLICABLE: 'No aplica a estas entradas.',
-          NEED_EMAIL: 'Ingresá tu email primero.', BAD_TICKET_TYPE: 'Entrada inválida.',
+          NEED_EMAIL: 'Ingresa tu email primero.', BAD_TICKET_TYPE: 'Entrada inválida.',
         };
         setApplied(null);
         toast.error(msgs[res.reason] ?? 'No se pudo aplicar el código.');
@@ -262,7 +262,7 @@ function Step2({
       setApplied({ code, finalCents: res.totalFinalCents, discountCents: res.totalDiscountCents, isFree: res.isFree });
       toast.success(res.isFree ? '¡Entrada gratis con el código!' : `Código aplicado: -${formatPEN(res.totalDiscountCents)}`);
     } catch {
-      toast.error('No se pudo verificar el código (red). Intentá de nuevo.');
+      toast.error('No se pudo verificar el código (red). Intenta de nuevo.');
     } finally {
       setChecking(false);
     }
@@ -277,7 +277,7 @@ function Step2({
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
         const ageOk = fd.get('age_ok') === '1';
-        if (!ageOk) { toast.error(`Tenés que confirmar que sos mayor de ${event.min_age} años`); return; }
+        if (!ageOk) { toast.error(`Tienes que confirmar que eres mayor de ${event.min_age} años`); return; }
         onSubmit({
           eventId: event.id, brandId: brand.id,
           buyerName: String(fd.get('buyer_name') ?? '').trim(),
@@ -344,10 +344,10 @@ function Step2({
 
         {!applied?.isFree && (
           <div className="c-card">
-            <p className="c-card__title">Cómo pagás</p>
+            <p className="c-card__title">Cómo pagas</p>
             <div role="radiogroup" aria-label="Método de pago" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {brand.yape_number && (
-                <PayOption selected={method === 'yape_manual'} onClick={() => setMethod('yape_manual')} title="Yape" sub="Validación en 5–15 min" note={`Yapeás a ${brand.yape_holder ?? brand.name} y nos mandás la captura.`} />
+                <PayOption selected={method === 'yape_manual'} onClick={() => setMethod('yape_manual')} title="Yape" sub="Validación en 5–15 min" note={`Yapeas a ${brand.yape_holder ?? brand.name} y nos mandas la captura.`} />
               )}
               {mpConfigured && (
                 <PayOption selected={method === 'mercadopago'} onClick={() => setMethod('mercadopago')} title="Tarjeta · MercadoPago" sub="Visa · Mastercard · AMEX" note="Tu QR llega al instante." />
@@ -357,7 +357,7 @@ function Step2({
         )}
 
         <div className="c-card">
-          <p className="c-card__title">¿Tenés un código?</p>
+          <p className="c-card__title">¿Tienes un código?</p>
           {applied ? (
             <div className="c-promo-on">
               <div>
@@ -382,7 +382,7 @@ function Step2({
         <div className="c-card">
           <p className="c-card__title">Tu compra</p>
           <p className="c-h2">{event.name}</p>
-          <p className="c-muted-3" style={{ fontSize: 13, marginTop: 2 }}>{new Date(event.starts_at).toLocaleString('es-PE')}</p>
+          <p className="c-muted-3" style={{ fontSize: 13, marginTop: 2 }}>{new Date(event.starts_at).toLocaleString('es-PE', { timeZone: 'America/Lima' })}</p>
           <div style={{ marginTop: 14 }}>
             {sorted.filter((t) => (qty[t.id] ?? 0) > 0).map((t) => {
               const q = qty[t.id]!;

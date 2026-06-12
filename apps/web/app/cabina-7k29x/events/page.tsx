@@ -38,7 +38,7 @@ export default async function EventsListPage() {
                     <span className="s-event-row__name">{e.name}</span>
                     <span className="s-event-row__date">
                       {brand?.name ?? '—'} · {new Date(e.starts_at).toLocaleString('es-PE', {
-                        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima',
                       })}
                     </span>
                   </Link>

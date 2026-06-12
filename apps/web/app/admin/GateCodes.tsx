@@ -54,7 +54,7 @@ export function GateCodes({ codes }: { codes: ActiveCode[] }) {
                   <span className="font-mono text-lg tracking-[0.2em]">{c.code}</span>
                   <span className="ml-3 text-muted-foreground">{c.device_label ?? 'Puesto'}</span>
                   <span className="ml-3 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                    expira {new Date(c.expires_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} · {c.use_count} usos
+                    expira {new Date(c.expires_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} · {c.use_count} usos
                   </span>
                 </div>
                 <RevokeButton id={c.id} />

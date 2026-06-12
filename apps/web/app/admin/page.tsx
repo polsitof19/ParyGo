@@ -164,8 +164,8 @@ export default async function AdminHomePage() {
               : past ? { cls: 's-badge--draft', label: 'Pasado' }
               : sales > 0 ? { cls: 's-badge--ok', label: 'Vendiendo' }
               : { cls: 's-badge--ok', label: 'Publicado' };
-            const day = start.toLocaleDateString('es-PE', { day: '2-digit' });
-            const mon = start.toLocaleDateString('es-PE', { month: 'short' }).replace('.', '').toUpperCase();
+            const day = start.toLocaleDateString('es-PE', { day: '2-digit', timeZone: 'America/Lima' });
+            const mon = start.toLocaleDateString('es-PE', { month: 'short', timeZone: 'America/Lima' }).replace('.', '').toUpperCase();
             return (
               <Link key={e.id} href={`/admin/events/${e.id}`} className={`a-evcard${past ? ' a-evcard--past' : ''}`}>
                 <div className="a-evcard__media">
@@ -182,7 +182,7 @@ export default async function AdminHomePage() {
                   <span className="a-evcard__name">{e.name}</span>
                   <span className="a-evcard__meta">
                     <Calendar className="h-3 w-3" />
-                    {start.toLocaleString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    {start.toLocaleString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
                   </span>
                   <div className="a-evcard__foot">
                     <span className="a-evcard__sales">{formatPEN(sales)} <span className="s-muted" style={{ fontWeight: 500 }}>vendido</span></span>

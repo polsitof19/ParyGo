@@ -89,7 +89,7 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
       <main className="c-state" style={{ minHeight: '70vh', display: 'grid', placeContent: 'center' }}>
         <span className="c-eyebrow">{brand.name}</span>
         <h1 className="c-h1" style={{ fontSize: 'clamp(40px,10vw,64px)', marginTop: 10 }}>Próximamente</h1>
-        <p className="c-muted" style={{ marginTop: 12 }}>Estamos preparando el siguiente evento. Volvé en unos días para no perdértelo.</p>
+        <p className="c-muted" style={{ marginTop: 12 }}>Estamos preparando el siguiente evento. Vuelve en unos días para no perdértelo.</p>
       </main>
     );
   }

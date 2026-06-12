@@ -137,7 +137,7 @@ export default async function EventPage({ params }: Props) {
   const totalSold = limitedTypes.reduce((acc, t) => acc + t.sold, 0);
 
   const dateLabel = new Intl.DateTimeFormat('es-PE', {
-    weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+    weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima',
   }).format(startsAt);
   const hasCover = Boolean(event.cover_url);
 

@@ -23,7 +23,7 @@ export type ClientRow = {
 
 const docLabel = (t: string | null) => (t === 'ce' ? 'CE' : t === 'passport' ? 'Pasaporte' : 'DNI');
 const methodLabel = (m: string) => (m === 'mercadopago' ? 'MercadoPago' : m === 'yape_manual' ? 'Yape' : m);
-const fmtDate = (iso: string) => new Date(iso).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+const fmtDate = (iso: string) => new Date(iso).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' });
 
 // Escape CSV: comillas dobladas + envolver si hay coma/comilla/salto de línea.
 function csvCell(v: string | number | null): string {
@@ -107,7 +107,7 @@ export function ClientsTable({ rows, eventName }: { rows: ClientRow[]; eventName
                     <span style={{ fontSize: 13.5 }}>
                       <strong>{t.number}</strong> · {t.typeName}
                       {t.voided && <span className="s-badge s-badge--alert" style={{ marginLeft: 8 }}>Anulada</span>}
-                      {!t.voided && t.enteredAt && <span className="s-badge s-badge--ok" style={{ marginLeft: 8 }}>Ingresó {new Date(t.enteredAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</span>}
+                      {!t.voided && t.enteredAt && <span className="s-badge s-badge--ok" style={{ marginLeft: 8 }}>Ingresó {new Date(t.enteredAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}</span>}
                     </span>
                     {!t.voided && <VoidButton ticketId={t.id} number={t.number} />}
                   </li>

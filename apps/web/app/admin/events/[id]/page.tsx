@@ -108,7 +108,7 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
     const nx = nextByType.get(t.id);
     if (nx) {
       const hrs = (new Date(nx.at).getTime() - Date.now()) / 3600000;
-      if (hrs > 0 && hrs <= 72) alerts.push({ tone: 'info', text: `${t.name} sube a ${formatPEN(nx.cents)} el ${new Date(nx.at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` });
+      if (hrs > 0 && hrs <= 72) alerts.push({ tone: 'info', text: `${t.name} sube a ${formatPEN(nx.cents)} el ${new Date(nx.at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}` });
     }
   }
   const confirmedCents = byMethod.yape.cents + byMethod.mp.cents;
@@ -256,7 +256,7 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
               {rejectedRows.map((r) => (
                 <li key={r.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', padding: '12px 16px', borderTop: '1px solid var(--cream-3)' }}>
                   <span style={{ minWidth: 0 }}><span style={{ fontWeight: 600 }}>{r.order?.buyer_name ?? '—'}</span><span className="s-muted" style={{ fontSize: 13 }}> · {r.order?.buyer_email}</span>{r.reject_reason && <div className="s-muted" style={{ fontSize: 12.5 }}>Motivo: {r.reject_reason}</div>}</span>
-                  <span className="s-muted" style={{ fontSize: 12.5, textAlign: 'right', flexShrink: 0 }}>{formatPEN(r.amount_cents)}<br />{r.reviewed_at && new Date(r.reviewed_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="s-muted" style={{ fontSize: 12.5, textAlign: 'right', flexShrink: 0 }}>{formatPEN(r.amount_cents)}<br />{r.reviewed_at && new Date(r.reviewed_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}</span>
                 </li>
               ))}
             </ul>

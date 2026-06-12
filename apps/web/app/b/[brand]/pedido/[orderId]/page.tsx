@@ -85,7 +85,7 @@ export default async function OrderPage({ params }: { params: { brand: string; o
         {event?.starts_at && <p className="c-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 14 }}><Calendar className="h-3.5 w-3.5" /> {formatEventDate(event.starts_at)}</p>}
         {event?.venue_name && <p className="c-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14 }}><MapPin className="h-3.5 w-3.5" /> {event.venue_name}</p>}
         <p className="c-muted-3" style={{ fontSize: 13, marginTop: 10 }}>
-          {rendered.length === 1 ? '1 entrada' : `${rendered.length} entradas`} · cada una con su QR. Mostrá un QR por persona en la puerta.
+          {rendered.length === 1 ? '1 entrada' : `${rendered.length} entradas`} · cada una con su QR. Muestra un QR por persona en la puerta.
         </p>
       </div>
 

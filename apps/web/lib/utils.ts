@@ -29,19 +29,28 @@ export function limaNow(): Date {
   return new Date(utcMs - 5 * 3_600_000);
 }
 
-// Format a Date as "Sáb 24 may · 22:00" in es-PE.
-export function formatEventDate(d: Date | string): string {
+// Zona horaria del negocio (Lima, UTC-5 sin DST). Cloudflare corre en UTC, así
+// que TODO formateo de fecha/hora visible debe fijar esta zona, o el comprador
+// ve la hora corrida +5h. Centralizado acá para no repetir el bug.
+export const LIMA_TZ = 'America/Lima';
+
+// Formatea una fecha en es-PE SIEMPRE en hora de Lima. Helper único para
+// fechas/horas visibles; las opciones se mergean con timeZone forzado.
+export function formatLima(d: Date | string, opts: Intl.DateTimeFormatOptions): string {
   const date = typeof d === 'string' ? new Date(d) : d;
-  return new Intl.DateTimeFormat('es-PE', {
+  return new Intl.DateTimeFormat('es-PE', { ...opts, timeZone: LIMA_TZ }).format(date);
+}
+
+// Format a Date as "Sáb 24 may · 22:00" en hora de Lima.
+export function formatEventDate(d: Date | string): string {
+  return formatLima(d, {
     weekday: 'short',
     day: '2-digit',
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-  })
-    .format(date)
-    .replace(',', ' ·');
+  }).replace(',', ' ·');
 }
 
 // Build a wa.me deep link with prefilled text.

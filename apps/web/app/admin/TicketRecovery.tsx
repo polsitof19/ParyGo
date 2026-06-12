@@ -47,7 +47,7 @@ function RecoveryRow({ order }: { order: StuckOrder }) {
       <div style={{ minWidth: 0 }}>
         <p style={{ fontWeight: 700 }}>{order.buyerName ?? 'Comprador'}</p>
         <p className="s-muted" style={{ fontSize: 13 }}>
-          {order.eventName} · {formatPEN(order.totalCents)} · {new Date(order.createdAt).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+          {order.eventName} · {formatPEN(order.totalCents)} · {new Date(order.createdAt).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
         </p>
         {state.message && (
           <p className={state.ok ? 's-banner s-banner--ok' : 's-banner s-banner--err'} style={{ marginTop: 8 }}>{state.message}</p>
