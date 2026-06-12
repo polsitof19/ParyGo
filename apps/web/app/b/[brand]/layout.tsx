@@ -26,6 +26,7 @@ export default async function BrandLayout({
     .from('brands')
     .select('id, slug, name, theme_json')
     .eq('slug', params.brand)
+    .is('archived_at', null) // marca archivada → subdominio apagado (404 de todo)
     .maybeSingle();
 
   if (!brand) notFound();

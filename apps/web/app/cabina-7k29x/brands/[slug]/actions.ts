@@ -269,6 +269,86 @@ export async function updateBrandBasicsAction(
   return { ok: true, message: 'Datos de la marca actualizados.' };
 }
 
+// ============================================================================
+// Archivar / desarchivar marca (SOLO super admin). Archivar = ocultar reversible:
+// apaga el subdominio público (home + checkout 404) y manda la marca a la sección
+// "Archivadas" de la cabina. El saldo y TODO el historial quedan intactos.
+// ============================================================================
+export async function setBrandArchivedAction(
+  brandId: string,
+  archived: boolean
+): Promise<{ ok: boolean; message?: string }> {
+  const user = await requireSession({ superAdmin: true });
+  if (!brandId) return { ok: false, message: 'Marca inválida.' };
+
+  const admin = createAdminClient();
+  const { data: brand } = await admin.from('brands').select('id, slug').eq('id', brandId).maybeSingle();
+  if (!brand) return { ok: false, message: 'Marca no encontrada.' };
+
+  const { error } = await admin
+    .from('brands')
+    .update({ archived_at: archived ? new Date().toISOString() : null })
+    .eq('id', brandId);
+  if (error) return { ok: false, message: error.message };
+
+  await admin.from('events_log').insert({
+    brand_id: brandId, actor_user_id: user.id,
+    type: archived ? 'brand_archived' : 'brand_unarchived', payload: { slug: brand.slug },
+  });
+  revalidatePath('/cabina-7k29x');
+  revalidatePath('/cabina-7k29x/brands');
+  revalidatePath(`/cabina-7k29x/brands/${brand.slug}`);
+  return { ok: true };
+}
+
+// ============================================================================
+// Borrado PERMANENTE de marca — SOLO super admin y SOLO si está VACÍA (0 eventos,
+// 0 órdenes, 0 tickets). Cualquier cosa con historial NO se borra (la DB además
+// lo bloquea por RESTRICT): hay que archivar. Confirmación por nombre. Limpia el
+// storage de la marca (logos/flyers). Cascada DB: brand_members, validator_codes.
+// ============================================================================
+export async function deleteBrandAction(
+  brandId: string,
+  confirmName: string
+): Promise<{ ok: boolean; message?: string }> {
+  const user = await requireSession({ superAdmin: true });
+  const admin = createAdminClient();
+  const { data: brand } = await admin.from('brands').select('id, slug, name').eq('id', brandId).maybeSingle();
+  if (!brand) return { ok: false, message: 'Marca no encontrada.' };
+  if ((confirmName ?? '').trim() !== brand.name) {
+    return { ok: false, message: 'El nombre no coincide. Escribilo igual para confirmar.' };
+  }
+
+  const [{ count: events }, { count: orders }, { count: tickets }] = await Promise.all([
+    admin.from('events').select('id', { count: 'exact', head: true }).eq('brand_id', brandId),
+    admin.from('orders').select('id', { count: 'exact', head: true }).eq('brand_id', brandId),
+    admin.from('tickets').select('id', { count: 'exact', head: true }).eq('brand_id', brandId),
+  ]);
+  if ((orders ?? 0) > 0 || (tickets ?? 0) > 0) {
+    return { ok: false, message: 'No se puede eliminar: tiene ventas. Archivá en su lugar.' };
+  }
+  if ((events ?? 0) > 0) {
+    return { ok: false, message: 'Borrá o archivá sus eventos primero (la marca tiene eventos).' };
+  }
+
+  await admin.from('events_log').insert({
+    brand_id: brandId, actor_user_id: user.id, type: 'brand_deleted', payload: { slug: brand.slug, name: brand.name },
+  });
+
+  const { error } = await admin.from('brands').delete().eq('id', brandId);
+  if (error) return { ok: false, message: error.message };
+
+  // Limpiar el storage de la marca (logos/flyers) — best-effort.
+  const { data: objs } = await admin.storage.from('brand-assets').list(brand.slug);
+  if (objs && objs.length) {
+    await admin.storage.from('brand-assets').remove(objs.map((o) => `${brand.slug}/${o.name}`));
+  }
+
+  revalidatePath('/cabina-7k29x');
+  revalidatePath('/cabina-7k29x/brands');
+  return { ok: true };
+}
+
 const schema = z.object({
   brand_id: z.string().uuid(),
   email: z.string().email(),

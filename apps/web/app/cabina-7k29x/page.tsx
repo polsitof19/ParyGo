@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
+import { setBrandArchivedAction } from './brands/[slug]/actions';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -17,13 +19,14 @@ type BrandRow = {
   owner: string | null;
   eventsTotal: number;
   eventsPublished: number;
+  archived: boolean;
 };
 
 export default async function SuperHome() {
   const supabase = createClient();
 
   const [{ data: brands }, { data: members }, { data: events }] = await Promise.all([
-    supabase.from('brands').select('id, slug, name, event_balance').order('created_at', { ascending: false }),
+    supabase.from('brands').select('id, slug, name, event_balance, archived_at').order('created_at', { ascending: false }),
     supabase.from('brand_members').select('brand_id, display_name, role').eq('role', 'brand_admin'),
     supabase.from('events').select('brand_id, is_published'),
   ]);
@@ -38,7 +41,7 @@ export default async function SuperHome() {
     evByBrand.set(e.brand_id, cur);
   }
 
-  const rows: BrandRow[] = (brands ?? []).map((b) => ({
+  const allRows: BrandRow[] = (brands ?? []).map((b) => ({
     id: b.id,
     slug: b.slug,
     name: b.name,
@@ -46,7 +49,12 @@ export default async function SuperHome() {
     owner: ownerByBrand.get(b.id) || null,
     eventsTotal: evByBrand.get(b.id)?.total ?? 0,
     eventsPublished: evByBrand.get(b.id)?.pub ?? 0,
+    archived: !!b.archived_at,
   }));
+
+  // Las archivadas van en su propia sección al final; no se mezclan con las activas.
+  const rows = allRows.filter((r) => !r.archived);
+  const archivedRows = allRows.filter((r) => r.archived);
 
   const noOwner = rows.filter((r) => !r.owner).length;
   const noSaldo = rows.filter((r) => r.event_balance === 0).length;
@@ -69,8 +77,10 @@ export default async function SuperHome() {
         </Link>
       </div>
 
-      {rows.length === 0 ? (
+      {allRows.length === 0 ? (
         <div className="s-card"><p className="s-empty">Todavía no hay marcas. Creá la primera.</p></div>
+      ) : rows.length === 0 ? (
+        <div className="s-card"><p className="s-empty">Todas las marcas están archivadas. Mirá la sección “Archivadas” más abajo.</p></div>
       ) : (
         <>
           {/* Desktop: tabla densa */}
@@ -144,6 +154,33 @@ export default async function SuperHome() {
             ))}
           </div>
         </>
+      )}
+
+      {/* Archivadas — sección aparte, solo lectura + desarchivar */}
+      {archivedRows.length > 0 && (
+        <div className="s-card" style={{ marginTop: 22 }}>
+          <div className="s-card__head">
+            <div>
+              <h2 className="s-h2">Archivadas</h2>
+              <p className="s-card__desc">
+                {archivedRows.length} marca{archivedRows.length === 1 ? '' : 's'} archivada{archivedRows.length === 1 ? '' : 's'}.
+                No aparecen en público y sus eventos no se venden. Podés desarchivarlas cuando quieras.
+              </p>
+            </div>
+          </div>
+          <ul className="s-event-list">
+            {archivedRows.map((r) => (
+              <li key={r.id} className="s-event-row">
+                <Link href={`/cabina-7k29x/brands/${r.slug}`} className="s-event-row__main">
+                  <span className="s-event-row__name">{r.name}</span>
+                  <span className="s-event-row__date">{r.slug}.parygo.com · {r.eventsTotal} evento{r.eventsTotal === 1 ? '' : 's'}</span>
+                </Link>
+                <span className="s-badge s-badge--draft">Archivada</span>
+                <ArchiveToggle id={r.id} archived={true} action={setBrandArchivedAction} noun="la marca" />
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </>
   );

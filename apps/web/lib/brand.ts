@@ -36,6 +36,7 @@ export const requireBrand = cache(async (): Promise<Brand> => {
     .from('brands')
     .select('id, slug, name, whatsapp_e164, yape_number, yape_holder, theme_json')
     .eq('slug', slug)
+    .is('archived_at', null) // una marca archivada no resuelve en público
     .maybeSingle();
   if (error || !data) notFound();
   return data as Brand;
@@ -51,12 +52,14 @@ export const getBrand = cache(async (): Promise<Brand | null> => {
     .from('brands')
     .select('id, slug, name, whatsapp_e164, yape_number, yape_holder, theme_json')
     .eq('slug', slug)
+    .is('archived_at', null) // una marca archivada no resuelve en público
     .maybeSingle();
   if (error || !data) return null;
   return data as Brand;
 });
 
 // Fetch a brand by explicit slug (e.g. super admin viewing arbitrary brand).
+// Sin filtro de archived_at: el super admin SÍ puede ver marcas archivadas.
 export async function fetchBrandBySlug(slug: string): Promise<Brand | null> {
   const supabase = createClient();
   const { data } = await supabase

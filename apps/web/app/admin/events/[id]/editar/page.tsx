@@ -3,6 +3,9 @@ import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { EventCoverUploader } from '../EventCoverUploader';
 import { EditEventForm } from './EditEventForms';
+import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
+import { DangerDeleteButton } from '@/components/manage/DangerDeleteButton';
+import { setEventArchivedAction, deleteEventAction } from '../edit-actions';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -20,18 +23,21 @@ export default async function EditEventPage({ params }: { params: { id: string }
   const admin = createAdminClient();
   const { data: event } = await admin
     .from('events')
-    .select('id, brand_id, name, description, starts_at, venue_name, venue_address, min_age, cover_url, is_published')
+    .select('id, brand_id, name, description, starts_at, venue_name, venue_address, min_age, cover_url, is_published, archived_at')
     .eq('id', params.id)
     .maybeSingle();
   if (!event || event.brand_id !== membership.brandId) notFound();
 
   // ¿Hay alguna venta? (define si la fecha queda bloqueada)
-  const { count: soldCount } = await admin
-    .from('ticket_types')
-    .select('id', { count: 'exact', head: true })
-    .eq('event_id', event.id)
-    .gt('sold', 0);
+  // Además contamos órdenes y tickets para saber si el evento se puede ELIMINAR
+  // (solo eventos vacíos: 0 órdenes y 0 tickets).
+  const [{ count: soldCount }, { count: orderCount }, { count: ticketCount }] = await Promise.all([
+    admin.from('ticket_types').select('id', { count: 'exact', head: true }).eq('event_id', event.id).gt('sold', 0),
+    admin.from('orders').select('id', { count: 'exact', head: true }).eq('event_id', event.id),
+    admin.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', event.id),
+  ]);
   const hasSales = (soldCount ?? 0) > 0;
+  const canDelete = (orderCount ?? 0) === 0 && (ticketCount ?? 0) === 0;
 
   return (
     <>
@@ -56,6 +62,41 @@ export default async function EditEventPage({ params }: { params: { id: string }
 
       <h2 className="s-h2" style={{ margin: '24px 0 12px' }}>Flyer</h2>
       <div className="s-card"><EventCoverUploader eventId={event.id} currentUrl={event.cover_url} /></div>
+
+      {/* Zona de gestión — archivar / eliminar */}
+      <h2 className="s-h2" style={{ margin: '24px 0 12px' }}>Zona de gestión</h2>
+      <div className="s-card">
+        <div className="s-card__head">
+          <div>
+            <h3 className="s-h2" style={{ fontSize: 16 }}>Archivar evento</h3>
+            <p className="s-card__desc">
+              {event.archived_at
+                ? 'Este evento está archivado: no se vende y no aparece en público. Puedes desarchivarlo cuando quieras.'
+                : 'Al archivar deja de venderse y desaparece del público, pero conservas todo su historial. Es reversible.'}
+            </p>
+          </div>
+          <ArchiveToggle
+            id={event.id}
+            archived={!!event.archived_at}
+            action={setEventArchivedAction}
+            noun="el evento"
+          />
+        </div>
+
+        <div className="s-divider" />
+
+        <h3 className="s-h2" style={{ fontSize: 16 }}>Eliminar definitivamente</h3>
+        <p className="s-card__desc" style={{ marginBottom: 12 }}>
+          Borra el evento para siempre. Solo es posible si no tiene ninguna venta.
+        </p>
+        <DangerDeleteButton
+          id={event.id}
+          name={event.name}
+          action={deleteEventAction}
+          canDelete={canDelete}
+          noun="el evento"
+        />
+      </div>
     </>
   );
 }

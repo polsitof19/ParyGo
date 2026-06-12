@@ -8,6 +8,8 @@ import { optimizedImage } from '@/lib/imageUrl';
 import { InviteValidator } from './InviteValidator';
 import { ValidatorManager } from './ValidatorManager';
 import { TicketRecovery } from './TicketRecovery';
+import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
+import { setEventArchivedAction } from './events/[id]/edit-actions';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -31,7 +33,7 @@ export default async function AdminHomePage() {
   const [{ data: events }, { data: pendingProofs }, { data: paidOrders }] = await Promise.all([
     supabase
       .from('events')
-      .select('id, slug, name, starts_at, is_published, cover_url')
+      .select('id, slug, name, starts_at, is_published, cover_url, archived_at')
       .eq('brand_id', brand.id)
       .order('starts_at', { ascending: false }),
     supabase
@@ -58,6 +60,9 @@ export default async function AdminHomePage() {
   const totalPending = (pendingProofs ?? []).length;
   const totalSalesCents = (paidOrders ?? []).reduce((a, o) => a + ((o as { total_cents: number | null }).total_cents ?? 0), 0);
   const publishedCount = (events ?? []).filter((e) => e.is_published).length;
+  // Separar activos de archivados: los archivados van en su propia sección al final.
+  const activeEvents = (events ?? []).filter((e) => !e.archived_at);
+  const archivedEvents = (events ?? []).filter((e) => e.archived_at);
 
   // Validadores de la marca + su código personal activo (service-role).
   const adminCli = createAdminClient();
@@ -144,7 +149,7 @@ export default async function AdminHomePage() {
       {/* Recuperación de tickets — solo aparece si hay órdenes pagadas sin tickets */}
       {stuckOrders.length > 0 && <TicketRecovery orders={stuckOrders} />}
 
-      {/* Eventos */}
+      {/* Eventos activos */}
       {!events || events.length === 0 ? (
         <div className="s-card">
           <p className="s-empty">
@@ -153,9 +158,13 @@ export default async function AdminHomePage() {
               : 'No tenés eventos. Cuando ParyGo te cargue saldo vas a poder crear el primero.'}
           </p>
         </div>
+      ) : activeEvents.length === 0 ? (
+        <div className="s-card">
+          <p className="s-empty">Todos tus eventos están archivados. Mirá la sección “Archivados” más abajo.</p>
+        </div>
       ) : (
         <div className="a-evgrid">
-          {events.map((e) => {
+          {activeEvents.map((e) => {
             const pend = pendingByEvent.get(e.id) ?? 0;
             const sales = salesByEvent.get(e.id) ?? 0;
             const start = new Date(e.starts_at);
@@ -193,6 +202,35 @@ export default async function AdminHomePage() {
               </Link>
             );
           })}
+        </div>
+      )}
+
+      {/* Archivados — fuera del flujo normal; solo lectura + desarchivar */}
+      {archivedEvents.length > 0 && (
+        <div className="s-card" style={{ marginTop: 22 }}>
+          <div className="s-card__head">
+            <div>
+              <h2 className="s-h2">Archivados</h2>
+              <p className="s-card__desc">
+                {archivedEvents.length} evento{archivedEvents.length === 1 ? '' : 's'} archivado{archivedEvents.length === 1 ? '' : 's'}.
+                No se venden ni aparecen en público. Podés desarchivarlos cuando quieras.
+              </p>
+            </div>
+          </div>
+          <ul className="s-event-list">
+            {archivedEvents.map((e) => (
+              <li key={e.id} className="s-event-row">
+                <Link href={`/admin/events/${e.id}`} className="s-event-row__main">
+                  <span className="s-event-row__name">{e.name}</span>
+                  <span className="s-event-row__date">
+                    {new Date(e.starts_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Lima' })}
+                  </span>
+                </Link>
+                <span className="s-badge s-badge--draft">Archivado</span>
+                <ArchiveToggle id={e.id} archived={true} action={setEventArchivedAction} noun="el evento" />
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

@@ -22,6 +22,7 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
     .from('brands')
     .select('id, slug, name, theme_json, whatsapp_e164, yape_number, yape_holder, contact_email')
     .eq('slug', brandSlug)
+    .is('archived_at', null) // marca archivada → evento no carga
     .maybeSingle();
   if (!brand) return null;
 
@@ -35,6 +36,7 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
     .eq('brand_id', brand.id)
     .eq('slug', eventSlug)
     .eq('is_published', true)
+    .is('archived_at', null) // evento archivado → 404 (oculto del público)
     .maybeSingle();
   if (!event) return null;
 

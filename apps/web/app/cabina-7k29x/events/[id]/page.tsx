@@ -8,6 +8,9 @@ import { TicketTypesEditor } from './TicketTypesEditor';
 import { TogglePublishedButton } from './TogglePublishedButton';
 import { EditEventForm } from '../../../admin/events/[id]/editar/EditEventForms';
 import { EventCoverUploader } from '../../../admin/events/[id]/EventCoverUploader';
+import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
+import { DangerDeleteButton } from '@/components/manage/DangerDeleteButton';
+import { setEventArchivedAction, deleteEventAction } from '../../../admin/events/[id]/edit-actions';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -24,7 +27,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
     .select(`
       id, slug, name, description, starts_at, ends_at,
       venue_name, venue_address, min_age, is_published, refund_policy, cover_url,
-      brand_id,
+      archived_at, brand_id,
       brand:brands ( slug, name )
     `)
     .eq('id', params.id)
@@ -34,7 +37,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
 
   const brand = Array.isArray(event.brand) ? event.brand[0] : event.brand;
 
-  const [{ data: ticketTypes }, { data: orders }] = await Promise.all([
+  const [{ data: ticketTypes }, { data: orders, count: orderCount }, { count: ticketCount }] = await Promise.all([
     supabase
       .from('ticket_types')
       .select('id, name, description, price_cents, capacity, sold, sort_order, color_hex, is_active')
@@ -45,11 +48,17 @@ export default async function EventDetailPage({ params }: { params: { id: string
       .select('id, status, total_cents', { count: 'exact' })
       .eq('event_id', event.id)
       .limit(5000),
+    supabase
+      .from('tickets')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', event.id),
   ]);
 
   const paidOrders = orders?.filter((o) => o.status === 'paid') ?? [];
   const grossCents = paidOrders.reduce((acc, o) => acc + (o.total_cents ?? 0), 0);
   const hasSales = (ticketTypes ?? []).some((t) => (t.sold ?? 0) > 0);
+  // Solo se puede eliminar si el evento está vacío: 0 órdenes y 0 tickets.
+  const canDelete = (orderCount ?? 0) === 0 && (ticketCount ?? 0) === 0;
   const eventUrl = `https://${brand?.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${event.slug}`;
 
   return (
@@ -65,6 +74,11 @@ export default async function EventDetailPage({ params }: { params: { id: string
             <span className={`s-badge ${event.is_published ? 's-badge--ok' : 's-badge--draft'}`} style={{ marginLeft: 10, verticalAlign: 'middle' }}>
               {event.is_published ? 'Publicado' : 'Borrador'}
             </span>
+            {event.archived_at && (
+              <span className="s-badge s-badge--draft" style={{ marginLeft: 8, verticalAlign: 'middle' }}>
+                Archivado
+              </span>
+            )}
           </span>
           <h1 className="s-h1" style={{ marginTop: 6 }}>{event.name}</h1>
           <p className="s-card__desc">
@@ -130,6 +144,40 @@ export default async function EventDetailPage({ params }: { params: { id: string
           <p className="s-card__desc" style={{ marginTop: 8 }}>{event.refund_policy}</p>
         </div>
       )}
+
+      {/* Zona de gestión — archivar / eliminar */}
+      <div className="s-card" style={{ marginTop: 22 }}>
+        <div className="s-card__head">
+          <div>
+            <h2 className="s-h2">Zona de gestión</h2>
+            <p className="s-card__desc">
+              {event.archived_at
+                ? 'Este evento está archivado: no se vende ni aparece en público. Puedes desarchivarlo cuando quieras.'
+                : 'Al archivar deja de venderse y desaparece del público, pero conserva su historial. Es reversible.'}
+            </p>
+          </div>
+          <ArchiveToggle
+            id={event.id}
+            archived={!!event.archived_at}
+            action={setEventArchivedAction}
+            noun="el evento"
+          />
+        </div>
+
+        <div className="s-divider" />
+
+        <h3 className="s-h2" style={{ fontSize: 16 }}>Eliminar definitivamente</h3>
+        <p className="s-card__desc" style={{ marginBottom: 12 }}>
+          Borra el evento para siempre. Solo es posible si no tiene ninguna venta.
+        </p>
+        <DangerDeleteButton
+          id={event.id}
+          name={event.name}
+          action={deleteEventAction}
+          canDelete={canDelete}
+          noun="el evento"
+        />
+      </div>
     </>
   );
 }

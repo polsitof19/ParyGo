@@ -9,6 +9,9 @@ import { EditBrandingForm } from './EditBrandingForm';
 import { EditBrandBasicsForm } from './EditBrandBasicsForm';
 import { brandColor } from '@/lib/brandColors';
 import { publicEnv } from '@/lib/env';
+import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
+import { DangerDeleteButton } from '@/components/manage/DangerDeleteButton';
+import { setBrandArchivedAction, deleteBrandAction } from './actions';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -25,23 +28,33 @@ export default async function BrandDetailPage({
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
-    .select('id, slug, name, contact_email, whatsapp_e164, yape_number, yape_holder, theme_json, created_at, event_balance')
+    .select('id, slug, name, contact_email, whatsapp_e164, yape_number, yape_holder, theme_json, created_at, event_balance, archived_at')
     .eq('slug', params.slug)
     .maybeSingle();
 
   if (!brand) notFound();
 
-  const [{ data: events }, { data: members }] = await Promise.all([
+  const [{ data: events }, { data: members }, { count: orderCount }, { count: ticketCount }] = await Promise.all([
     supabase
       .from('events')
-      .select('id, slug, name, starts_at, is_published')
+      .select('id, slug, name, starts_at, is_published, archived_at')
       .eq('brand_id', brand.id)
       .order('starts_at', { ascending: false }),
     supabase
       .from('brand_members')
       .select('id, role, display_name, user_id, created_at')
       .eq('brand_id', brand.id),
+    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('brand_id', brand.id),
+    supabase.from('tickets').select('id', { count: 'exact', head: true }).eq('brand_id', brand.id),
   ]);
+
+  // Solo se puede eliminar una marca VACÍA: 0 eventos, 0 órdenes, 0 tickets.
+  const eventsCount = (events ?? []).length;
+  const canDeleteBrand = eventsCount === 0 && (orderCount ?? 0) === 0 && (ticketCount ?? 0) === 0;
+  const cannotDeleteReason =
+    (orderCount ?? 0) > 0 || (ticketCount ?? 0) > 0
+      ? 'No se puede eliminar: tiene ventas. Archívala en su lugar.'
+      : 'No se puede eliminar: tiene eventos. Borra o archiva sus eventos primero.';
 
   const brandUrl = `https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}`;
   const admins = (members ?? []).filter((m) => m.role === 'brand_admin');
@@ -64,7 +77,14 @@ export default async function BrandDetailPage({
           {initialOf(brand.name)}
         </span>
         <div className="s-brandhead__id">
-          <h1 className="s-h1">{brand.name}</h1>
+          <h1 className="s-h1">
+            {brand.name}
+            {brand.archived_at && (
+              <span className="s-badge s-badge--draft" style={{ marginLeft: 10, verticalAlign: 'middle' }}>
+                Archivada
+              </span>
+            )}
+          </h1>
           <a href={brandUrl} target="_blank" rel="noopener noreferrer" className="s-brandhead__url">
             {brandUrl.replace('https://', '')}
             <ExternalLink className="h-3 w-3" />
@@ -186,9 +206,13 @@ export default async function BrandDetailPage({
                   <span className="s-event-row__name">{e.name}</span>
                   <span className="s-event-row__date">{new Date(e.starts_at).toLocaleString('es-PE', { timeZone: 'America/Lima' })}</span>
                 </Link>
-                <span className={`s-badge ${e.is_published ? 's-badge--ok' : 's-badge--draft'}`}>
-                  {e.is_published ? 'Publicado' : 'Borrador'}
-                </span>
+                {e.archived_at ? (
+                  <span className="s-badge s-badge--draft">Archivado</span>
+                ) : (
+                  <span className={`s-badge ${e.is_published ? 's-badge--ok' : 's-badge--draft'}`}>
+                    {e.is_published ? 'Publicado' : 'Borrador'}
+                  </span>
+                )}
                 <Link href={`/cabina-7k29x/events/${e.id}`} className="s-event-row__go" aria-label={`Abrir ${e.name}`}>
                   <ArrowRight className="h-4 w-4" />
                 </Link>
@@ -227,6 +251,41 @@ export default async function BrandDetailPage({
         <div style={{ marginTop: 16 }}>
           <InviteBrandAdmin brandId={brand.id} brandName={brand.name} />
         </div>
+      </div>
+
+      {/* Zona de gestión — archivar / eliminar marca (solo super admin) */}
+      <div className="s-card" style={{ borderColor: 'var(--alert)' }}>
+        <div className="s-card__head">
+          <div>
+            <h2 className="s-h2">Zona de gestión</h2>
+            <p className="s-card__desc">
+              {brand.archived_at
+                ? 'Esta marca está archivada: sus eventos dejan de venderse y no aparece en público. Puedes desarchivarla cuando quieras.'
+                : 'Al archivar, la marca y sus eventos dejan de venderse y desaparecen del público, pero conservas el historial. Es reversible.'}
+            </p>
+          </div>
+          <ArchiveToggle
+            id={brand.id}
+            archived={!!brand.archived_at}
+            action={setBrandArchivedAction}
+            noun="la marca"
+          />
+        </div>
+
+        <div className="s-divider" />
+
+        <h3 className="s-h2" style={{ fontSize: 16 }}>Eliminar definitivamente</h3>
+        <p className="s-card__desc" style={{ marginBottom: 12 }}>
+          Borra la marca para siempre. Solo es posible si está vacía: sin eventos, sin ventas.
+        </p>
+        <DangerDeleteButton
+          id={brand.id}
+          name={brand.name}
+          action={deleteBrandAction}
+          canDelete={canDeleteBrand}
+          noun="la marca"
+          cannotDeleteReason={cannotDeleteReason}
+        />
       </div>
     </>
   );

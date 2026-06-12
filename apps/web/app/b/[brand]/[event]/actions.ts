@@ -96,14 +96,23 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // 1. Verify event + ticket types in one query (server-trusted).
   const { data: event } = await admin
     .from('events')
-    .select('id, slug, name, brand_id, is_published, min_age')
+    .select('id, slug, name, brand_id, is_published, min_age, archived_at')
     .eq('id', parsed.data.eventId)
     .maybeSingle();
-  if (!event || !event.is_published) {
+  if (!event || !event.is_published || event.archived_at) {
     return { ok: false, message: 'Evento no disponible.' };
   }
   if (event.brand_id !== parsed.data.brandId) {
     return { ok: false, message: 'Marca/evento no coinciden.' };
+  }
+  // La marca tampoco puede estar archivada (no confiar solo en la página).
+  const { data: brandRow } = await admin
+    .from('brands')
+    .select('archived_at')
+    .eq('id', event.brand_id)
+    .maybeSingle();
+  if (!brandRow || brandRow.archived_at) {
+    return { ok: false, message: 'Evento no disponible.' };
   }
 
   const ticketTypeIds = parsed.data.items.map((i) => i.ticketTypeId);

@@ -142,6 +142,90 @@ export async function setEventPublishedAction(
   return { ok: true };
 }
 
+// ===== 1.c) Archivar / desarchivar el evento (dueño o super admin) =====
+// Archivar = ocultar reversible: lo saca de la home de marca, del checkout y de
+// los listados públicos. Archivar implica despublicar (un evento archivado NO
+// puede tener venta activa). Desarchivar lo deja en borrador (se re-publica a
+// mano). Conserva TODO el historial. Autoriza por brand_id del ROW (authEvent).
+export async function setEventArchivedAction(
+  eventId: string,
+  archived: boolean
+): Promise<{ ok: boolean; message?: string }> {
+  const user = await requireSession();
+  const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
+  if (!brandId) return { ok: false, message: 'No tenés permiso sobre este evento.' };
+
+  const admin = createAdminClient();
+  const update = archived
+    ? { archived_at: new Date().toISOString(), is_published: false } // archivar = ocultar + dejar de vender
+    : { archived_at: null };
+  const { error } = await admin.from('events').update(update).eq('id', eventId).eq('brand_id', brandId);
+  if (error) return { ok: false, message: error.message };
+
+  await admin.from('events_log').insert({
+    brand_id: brandId, event_id: eventId, actor_user_id: user.id,
+    type: archived ? 'event_archived' : 'event_unarchived', payload: {},
+  });
+  revalidatePath(`/admin/events/${eventId}`);
+  revalidatePath('/admin');
+  revalidatePath(`/cabina-7k29x/events/${eventId}`);
+  return { ok: true };
+}
+
+// ===== 1.d) Borrado PERMANENTE — solo eventos VACÍOS (sin historial) =====
+// Solo se permite si el evento NO tiene órdenes NI tickets. Cualquier cosa con
+// historial NO se borra (la DB además lo bloquea por RESTRICT): hay que archivar.
+// Confirmación por nombre (defensa contra borrados accidentales). Limpia el flyer
+// del storage. Cascada DB: ticket_types, fases, promo_codes/redemptions.
+export async function deleteEventAction(
+  eventId: string,
+  confirmName: string
+): Promise<{ ok: boolean; message?: string }> {
+  const user = await requireSession();
+  const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
+  if (!brandId) return { ok: false, message: 'No tenés permiso sobre este evento.' };
+
+  const admin = createAdminClient();
+  const { data: ev } = await admin
+    .from('events')
+    .select('id, name, cover_url')
+    .eq('id', eventId)
+    .eq('brand_id', brandId)
+    .maybeSingle();
+  if (!ev) return { ok: false, message: 'Evento no encontrado.' };
+  if ((confirmName ?? '').trim() !== ev.name) {
+    return { ok: false, message: 'El nombre no coincide. Escribilo igual para confirmar.' };
+  }
+
+  // Guard de historial: 0 órdenes Y 0 tickets, o se rechaza (archivá en su lugar).
+  const [{ count: orders }, { count: tickets }] = await Promise.all([
+    admin.from('orders').select('id', { count: 'exact', head: true }).eq('event_id', eventId),
+    admin.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', eventId),
+  ]);
+  if ((orders ?? 0) > 0 || (tickets ?? 0) > 0) {
+    return { ok: false, message: 'No se puede eliminar: tiene ventas. Archivá en su lugar.' };
+  }
+
+  // Log ANTES de borrar (events_log.event_id queda SET NULL al borrar el evento).
+  await admin.from('events_log').insert({
+    brand_id: brandId, event_id: eventId, actor_user_id: user.id,
+    type: 'event_deleted', payload: { name: ev.name },
+  });
+
+  const { error } = await admin.from('events').delete().eq('id', eventId).eq('brand_id', brandId);
+  if (error) return { ok: false, message: error.message };
+
+  // Limpiar el flyer huérfano del storage (best-effort).
+  if (ev.cover_url) {
+    const path = ev.cover_url.split('/brand-assets/')[1];
+    if (path) await admin.storage.from('brand-assets').remove([path]);
+  }
+
+  revalidatePath('/admin');
+  revalidatePath('/cabina-7k29x/events');
+  return { ok: true };
+}
+
 // ===== 2) Editar un tipo de entrada (con la REGLA SEGURA) =====
 // sin ventas → libre; con ventas → NO bajar capacidad debajo de lo vendido, NO
 // cambiar precio (congelado en order_items). Subir capacidad: sí. Precio: solo si

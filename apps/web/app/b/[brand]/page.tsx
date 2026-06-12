@@ -54,15 +54,16 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
     .from('brands')
     .select('id, name, whatsapp_e164')
     .eq('slug', params.brand)
+    .is('archived_at', null) // marca archivada no responde en público
     .maybeSingle();
   if (!brand) notFound();
 
   const now = new Date().toISOString();
   const [{ data: upcoming }, { data: past }] = await Promise.all([
     supabase.from('events').select('id, slug, name, starts_at, venue_name, cover_url')
-      .eq('brand_id', brand.id).eq('is_published', true).gte('starts_at', now).order('starts_at', { ascending: true }),
+      .eq('brand_id', brand.id).eq('is_published', true).is('archived_at', null).gte('starts_at', now).order('starts_at', { ascending: true }),
     supabase.from('events').select('id, slug, name, starts_at, cover_url')
-      .eq('brand_id', brand.id).eq('is_published', true).lt('starts_at', now).order('starts_at', { ascending: false }).limit(8),
+      .eq('brand_id', brand.id).eq('is_published', true).is('archived_at', null).lt('starts_at', now).order('starts_at', { ascending: false }).limit(8),
   ]);
 
   const up = (upcoming ?? []) as EvRow[];

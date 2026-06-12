@@ -51,6 +51,7 @@ export type Database = {
       }
       brands: {
         Row: {
+          archived_at: string | null
           contact_email: string | null
           created_at: string
           event_balance: number
@@ -67,6 +68,7 @@ export type Database = {
           yape_number: string | null
         }
         Insert: {
+          archived_at?: string | null
           contact_email?: string | null
           created_at?: string
           event_balance?: number
@@ -83,6 +85,7 @@ export type Database = {
           yape_number?: string | null
         }
         Update: {
+          archived_at?: string | null
           contact_email?: string | null
           created_at?: string
           event_balance?: number
@@ -102,6 +105,7 @@ export type Database = {
       }
       events: {
         Row: {
+          archived_at: string | null
           brand_id: string
           cover_url: string | null
           created_at: string
@@ -121,6 +125,7 @@ export type Database = {
           venue_name: string | null
         }
         Insert: {
+          archived_at?: string | null
           brand_id: string
           cover_url?: string | null
           created_at?: string
@@ -140,6 +145,7 @@ export type Database = {
           venue_name?: string | null
         }
         Update: {
+          archived_at?: string | null
           brand_id?: string
           cover_url?: string | null
           created_at?: string

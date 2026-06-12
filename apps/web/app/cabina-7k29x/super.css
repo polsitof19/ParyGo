@@ -69,6 +69,10 @@
 .super-shell .s-btn--peri:hover:not(:disabled) { background: #4757F0; transform: translateY(-1px); box-shadow: 0 10px 22px -8px rgba(91,108,255,.6); }
 .super-shell .s-btn--ghost { background: transparent; color: var(--ink-2); }
 .super-shell .s-btn--ghost:hover:not(:disabled) { color: var(--ink); background: var(--cream-2); }
+.super-shell .s-btn--danger { background: var(--alert); color: #fff; box-shadow: 0 6px 16px -8px rgba(215,71,47,.55); }
+.super-shell .s-btn--danger:hover:not(:disabled) { background: #BE3A24; transform: translateY(-1px); box-shadow: 0 10px 22px -8px rgba(215,71,47,.6); }
+.super-shell .s-btn--danger-soft { background: var(--alert-bg); color: var(--alert); border-color: transparent; }
+.super-shell .s-btn--danger-soft:hover:not(:disabled) { background: #F6D6CF; }
 
 /* stat tile */
 .super-shell .s-stat { background: var(--white); border: 1px solid var(--cream-3); border-radius: var(--r-card); padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; }
