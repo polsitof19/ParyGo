@@ -16,19 +16,19 @@ export default async function AdminSettingsPage() {
   if (!ctx) return null;
   const impersonating = ctx.impersonating;
 
+  // Ambas lecturas dependen solo de ctx.brandId (no una de la otra) → en paralelo.
+  // MP status: service_role; never decrypts, returns only booleans.
   const supabase = createClient();
-  const { data: brand } = await supabase
-    .from('brands')
-    .select('id, name, contact_email, whatsapp_e164, yape_number, yape_holder, theme_json')
-    .eq('id', ctx.brandId)
-    .single();
-  if (!brand) return null;
-
-  // MP credentials status (service_role; never decrypts, returns only booleans).
   const admin = createAdminClient();
-  const { data: mpStatus } = await admin.rpc('get_brand_mp_status', {
-    p_brand_id: ctx.brandId,
-  });
+  const [{ data: brand }, { data: mpStatus }] = await Promise.all([
+    supabase
+      .from('brands')
+      .select('id, name, contact_email, whatsapp_e164, yape_number, yape_holder, theme_json')
+      .eq('id', ctx.brandId)
+      .single(),
+    admin.rpc('get_brand_mp_status', { p_brand_id: ctx.brandId }),
+  ]);
+  if (!brand) return null;
   const mp = (Array.isArray(mpStatus) ? mpStatus[0] : null) ?? {
     has_access_token: false,
     has_public_key: false,

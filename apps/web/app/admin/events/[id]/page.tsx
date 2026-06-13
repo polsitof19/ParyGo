@@ -21,9 +21,40 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
   const { data: event } = await admin.from('events').select('id, brand_id').eq('id', params.id).maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
 
-  const [{ data: paid }, { data: ticketTypes }] = await Promise.all([
+  type ProofRow = {
+    id: string; amount_cents: number; operation_number: string; payer_name: string;
+    security_code: string; receipt_url: string; created_at: string;
+    order: { id: string; buyer_name: string; buyer_email: string; buyer_phone: string; total_cents: number; event_id: string; event: { name: string } | null } | null;
+  };
+
+  // ---- OLA 1: queries independientes en paralelo ----
+  const [
+    { data: paid },
+    { data: ticketTypes },
+    { data: scanned },
+    { data: pendData },
+    { data: activePrices },
+    { data: rejected },
+    { data: promoCodes },
+    { data: promoOrders },
+  ] = await Promise.all([
     admin.from('orders').select('id, total_cents, payment_method, created_at').eq('event_id', event.id).eq('status', 'paid'),
     admin.from('ticket_types').select('id, name, price_cents, capacity, sold, is_unlimited, is_active, sort_order').eq('event_id', event.id).order('sort_order'),
+    admin.from('tickets').select('ticket_type_id').eq('event_id', event.id).is('invalidated_at', null).not('validated_at', 'is', null),
+    admin
+      .from('yape_proofs')
+      .select(`id, amount_cents, operation_number, payer_name, security_code, receipt_url, created_at,
+        order:orders!yape_proofs_order_id_fkey ( id, buyer_name, buyer_email, buyer_phone, total_cents, event_id, event:events ( name ) )`)
+      .eq('brand_id', event.brand_id)
+      .eq('status', 'pending_review')
+      .order('created_at', { ascending: true }),
+    admin.rpc('get_event_active_prices', { p_event_id: event.id }),
+    admin
+      .from('yape_proofs')
+      .select('id, amount_cents, reject_reason, reviewed_at, order:orders!yape_proofs_order_id_fkey ( buyer_name, buyer_email, event_id )')
+      .eq('brand_id', event.brand_id).eq('status', 'rejected').order('reviewed_at', { ascending: false }).limit(50),
+    admin.from('promo_codes').select('id, code, label, discount_type, discount_value, max_uses, use_count, per_email_limit, applies_to_all, expires_at, is_active, created_at').eq('event_id', event.id).order('created_at', { ascending: false }),
+    admin.from('orders').select('id, promo_code_id, total_cents, discount_cents').eq('event_id', event.id).eq('status', 'paid').not('promo_code_id', 'is', null),
   ]);
 
   const paidRows = (paid ?? []) as { id: string; total_cents: number | null; payment_method: string; created_at: string }[];
@@ -44,32 +75,6 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
   const byDay = [...dayMap.entries()].slice(-14);
   const maxDay = Math.max(1, ...byDay.map(([, v]) => v));
 
-  // Recaudación por tipo (order_items de pagadas) + fase de precio activa por tipo.
-  const recByType = new Map<string, number>();
-  const paidIds = paidRows.map((o) => o.id);
-  if (paidIds.length > 0) {
-    const { data: items } = await admin.from('order_items').select('ticket_type_id, subtotal_cents').in('order_id', paidIds);
-    for (const it of (items ?? []) as { ticket_type_id: string; subtotal_cents: number | null }[]) {
-      recByType.set(it.ticket_type_id, (recByType.get(it.ticket_type_id) ?? 0) + (it.subtotal_cents ?? 0));
-    }
-  }
-  // Fase activa por tipo (la ventana que contiene ahora).
-  const phaseByType = new Map<string, string>();
-  if (types.length > 0) {
-    const nowIso = new Date().toISOString();
-    const { data: phases } = await admin
-      .from('ticket_type_price_phases')
-      .select('ticket_type_id, name, starts_at, ends_at, sort_order')
-      .in('ticket_type_id', types.map((t) => t.id))
-      .order('sort_order');
-    for (const ph of (phases ?? []) as { ticket_type_id: string; name: string | null; starts_at: string | null; ends_at: string | null }[]) {
-      if (phaseByType.has(ph.ticket_type_id)) continue; // ya tomamos la primera activa (menor sort_order)
-      const startsOk = !ph.starts_at || ph.starts_at <= nowIso;
-      const endsOk = !ph.ends_at || ph.ends_at > nowIso;
-      if (startsOk && endsOk && ph.name) phaseByType.set(ph.ticket_type_id, ph.name);
-    }
-  }
-
   const totalSold = types.reduce((a, t) => a + (t.sold ?? 0), 0);
   const capped = types.filter((t) => !t.is_unlimited);
   const soldCapped = capped.reduce((a, t) => a + (t.sold ?? 0), 0);
@@ -79,56 +84,78 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
   // Escaneados (entraron por puerta) por tipo + total — tickets ya validados.
   const scannedByType = new Map<string, number>();
   let totalScanned = 0;
-  {
-    const { data: scanned } = await admin.from('tickets').select('ticket_type_id').eq('event_id', event.id).is('invalidated_at', null).not('validated_at', 'is', null);
-    for (const t of (scanned ?? []) as { ticket_type_id: string }[]) { scannedByType.set(t.ticket_type_id, (scannedByType.get(t.ticket_type_id) ?? 0) + 1); totalScanned++; }
-  }
+  for (const t of (scanned ?? []) as { ticket_type_id: string }[]) { scannedByType.set(t.ticket_type_id, (scannedByType.get(t.ticket_type_id) ?? 0) + 1); totalScanned++; }
+
   // Yape PENDIENTE de aprobar (NO suma al confirmado hasta aprobarse).
-  // Carga completa: misma lógica que la pestaña /yape para poder aprobar inline.
-  type ProofRow = {
-    id: string; amount_cents: number; operation_number: string; payer_name: string;
-    security_code: string; receipt_url: string; created_at: string;
-    order: { id: string; buyer_name: string; buyer_email: string; buyer_phone: string; total_cents: number; event_id: string; event: { name: string } | null } | null;
-  };
-  const { data: pendData } = await admin
-    .from('yape_proofs')
-    .select(`id, amount_cents, operation_number, payer_name, security_code, receipt_url, created_at,
-      order:orders!yape_proofs_order_id_fkey ( id, buyer_name, buyer_email, buyer_phone, total_cents, event_id, event:events ( name ) )`)
-    .eq('brand_id', event.brand_id)
-    .eq('status', 'pending_review')
-    .order('created_at', { ascending: true });
   const pendingProofs = ((pendData as unknown as ProofRow[] | null) ?? []).filter((p) => p.order?.event_id === event.id);
   const pendingCount = pendingProofs.length;
   const pendingCents = pendingProofs.reduce((a, p) => a + (p.order?.total_cents ?? 0), 0);
 
-  // Items por orden de cada proof pendiente (qué entradas se aprueban) + URLs firmadas.
-  const pendOrderIds = pendingProofs.map((p) => p.order?.id).filter((x): x is string => !!x);
-  const pendItemsByOrder = new Map<string, { name: string; quantity: number }[]>();
-  if (pendOrderIds.length > 0) {
-    const { data: oi } = await admin
-      .from('order_items')
-      .select('order_id, ticket_type_name, quantity')
-      .in('order_id', pendOrderIds);
-    for (const it of (oi ?? []) as { order_id: string; ticket_type_name: string | null; quantity: number | null }[]) {
-      const arr = pendItemsByOrder.get(it.order_id) ?? [];
-      arr.push({ name: it.ticket_type_name ?? 'Entrada', quantity: it.quantity ?? 0 });
-      pendItemsByOrder.set(it.order_id, arr);
-    }
-  }
-  const pendingReview = await Promise.all(
-    pendingProofs.map(async (p) => {
-      const { data: signed } = await admin.storage.from('yape-proofs').createSignedUrl(p.receipt_url, 60 * 10);
-      return { ...p, signedReceiptUrl: signed?.signedUrl ?? null, items: pendItemsByOrder.get(p.order?.id ?? '') ?? [] };
-    })
-  );
   // Próxima fase de precio por tipo (para alertas).
   const nextByType = new Map<string, { cents: number; at: string }>();
+  for (const ap of (activePrices ?? []) as { ticket_type_id: string; next_price_cents: number | null; next_starts_at: string | null }[]) {
+    if (ap.next_price_cents != null && ap.next_starts_at) nextByType.set(ap.ticket_type_id, { cents: ap.next_price_cents, at: ap.next_starts_at });
+  }
+
+  const promoOrderRows = (promoOrders ?? []) as { id: string; promo_code_id: string | null; total_cents: number | null; discount_cents: number | null }[];
+
+  // ---- OLA 2: queries que dependen de la ola 1, en paralelo ----
+  const paidIds = paidRows.map((o) => o.id);
+  const pendOrderIds = pendingProofs.map((p) => p.order?.id).filter((x): x is string => !!x);
+  const [recItems, phaseRows, pendItems, promoTickets, pendingReview] = await Promise.all([
+    paidIds.length > 0
+      ? admin.from('order_items').select('ticket_type_id, subtotal_cents').in('order_id', paidIds).then((r) => r.data)
+      : Promise.resolve(null),
+    types.length > 0
+      ? admin
+          .from('ticket_type_price_phases')
+          .select('ticket_type_id, name, starts_at, ends_at, sort_order')
+          .in('ticket_type_id', types.map((t) => t.id))
+          .order('sort_order')
+          .then((r) => r.data)
+      : Promise.resolve(null),
+    pendOrderIds.length > 0
+      ? admin.from('order_items').select('order_id, ticket_type_name, quantity').in('order_id', pendOrderIds).then((r) => r.data)
+      : Promise.resolve(null),
+    promoOrderRows.length > 0
+      ? admin.from('tickets').select('order_id').eq('event_id', event.id).is('invalidated_at', null).in('order_id', promoOrderRows.map((o) => o.id)).then((r) => r.data)
+      : Promise.resolve(null),
+    Promise.all(
+      pendingProofs.map(async (p) => {
+        const { data: signed } = await admin.storage.from('yape-proofs').createSignedUrl(p.receipt_url, 60 * 10);
+        return { ...p, signedReceiptUrl: signed?.signedUrl ?? null, items: [] as { name: string; quantity: number }[] };
+      })
+    ),
+  ]);
+
+  // Recaudación por tipo (order_items de pagadas).
+  const recByType = new Map<string, number>();
+  for (const it of (recItems ?? []) as { ticket_type_id: string; subtotal_cents: number | null }[]) {
+    recByType.set(it.ticket_type_id, (recByType.get(it.ticket_type_id) ?? 0) + (it.subtotal_cents ?? 0));
+  }
+
+  // Fase activa por tipo (la ventana que contiene ahora).
+  const phaseByType = new Map<string, string>();
   {
-    const { data: activePrices } = await admin.rpc('get_event_active_prices', { p_event_id: event.id });
-    for (const ap of (activePrices ?? []) as { ticket_type_id: string; next_price_cents: number | null; next_starts_at: string | null }[]) {
-      if (ap.next_price_cents != null && ap.next_starts_at) nextByType.set(ap.ticket_type_id, { cents: ap.next_price_cents, at: ap.next_starts_at });
+    const nowIso = new Date().toISOString();
+    for (const ph of (phaseRows ?? []) as { ticket_type_id: string; name: string | null; starts_at: string | null; ends_at: string | null }[]) {
+      if (phaseByType.has(ph.ticket_type_id)) continue; // ya tomamos la primera activa (menor sort_order)
+      const startsOk = !ph.starts_at || ph.starts_at <= nowIso;
+      const endsOk = !ph.ends_at || ph.ends_at > nowIso;
+      if (startsOk && endsOk && ph.name) phaseByType.set(ph.ticket_type_id, ph.name);
     }
   }
+
+  // Items por orden de cada proof pendiente (qué entradas se aprueban).
+  const pendItemsByOrder = new Map<string, { name: string; quantity: number }[]>();
+  for (const it of (pendItems ?? []) as { order_id: string; ticket_type_name: string | null; quantity: number | null }[]) {
+    const arr = pendItemsByOrder.get(it.order_id) ?? [];
+    arr.push({ name: it.ticket_type_name ?? 'Entrada', quantity: it.quantity ?? 0 });
+    pendItemsByOrder.set(it.order_id, arr);
+  }
+  // Inyectar los items resueltos en cada proof pendiente (las URLs firmadas se
+  // resolvieron en paralelo; los items dependían de pendItemsByOrder).
+  for (const p of pendingReview) p.items = pendItemsByOrder.get(p.order?.id ?? '') ?? [];
   // Alertas visuales (stock bajo / agotado / sube de precio pronto).
   const alerts: { tone: 'deny' | 'warn' | 'info'; text: string }[] = [];
   for (const t of types) {
@@ -147,24 +174,12 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
   const recTotal = [...recByType.values()].reduce((a, b) => a + b, 0);
 
   // Yapes rechazados (lectura).
-  const { data: rejected } = await admin
-    .from('yape_proofs')
-    .select('id, amount_cents, reject_reason, reviewed_at, order:orders!yape_proofs_order_id_fkey ( buyer_name, buyer_email, event_id )')
-    .eq('brand_id', event.brand_id).eq('status', 'rejected').order('reviewed_at', { ascending: false }).limit(50);
   const rejectedRows = ((rejected ?? []) as unknown as { id: string; amount_cents: number; reject_reason: string | null; reviewed_at: string | null; order: { buyer_name: string; buyer_email: string; event_id: string } | null }[])
     .filter((r) => r.order?.event_id === event.id);
 
   // Promos.
-  const [{ data: promoCodes }, { data: promoOrders }] = await Promise.all([
-    admin.from('promo_codes').select('id, code, label, discount_type, discount_value, max_uses, use_count, per_email_limit, applies_to_all, expires_at, is_active, created_at').eq('event_id', event.id).order('created_at', { ascending: false }),
-    admin.from('orders').select('id, promo_code_id, total_cents, discount_cents').eq('event_id', event.id).eq('status', 'paid').not('promo_code_id', 'is', null),
-  ]);
-  const promoOrderRows = (promoOrders ?? []) as { id: string; promo_code_id: string | null; total_cents: number | null; discount_cents: number | null }[];
   const ticketsPerOrder = new Map<string, number>();
-  if (promoOrderRows.length > 0) {
-    const { data: pt } = await admin.from('tickets').select('order_id').eq('event_id', event.id).is('invalidated_at', null).in('order_id', promoOrderRows.map((o) => o.id));
-    for (const t of (pt ?? []) as { order_id: string }[]) ticketsPerOrder.set(t.order_id, (ticketsPerOrder.get(t.order_id) ?? 0) + 1);
-  }
+  for (const t of (promoTickets ?? []) as { order_id: string }[]) ticketsPerOrder.set(t.order_id, (ticketsPerOrder.get(t.order_id) ?? 0) + 1);
   const promoSales: PromoSales = {};
   for (const o of promoOrderRows) {
     if (!o.promo_code_id) continue;

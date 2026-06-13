@@ -32,19 +32,40 @@ export default async function EventAccessPage({ params }: { params: { id: string
 
   // ticket_scans no está en los tipos generados (creada en migr 0015) → cast.
   type RejectScan = { id: string; result: string; scanned_at: string; validator_user_id: string | null; ticket: { ticket_number: string; ticket_type_name: string } | { ticket_number: string; ticket_type_name: string }[] | null };
-  // Tickets válidos (no anulados) + miembros (etiquetar validadores) + intentos
-  // rechazados registrados en ticket_scans (los inserta validate_ticket al confirmar).
-  const [{ data: tickets }, { data: members }, { data: rejects }] = await Promise.all([
+  const LIST_LIMIT = 100;
+
+  // Conteos por SQL (head:true, sin traer filas) + tipos del evento + miembros
+  // (etiquetar validadores) + listas LIMITADAS + intentos rechazados.
+  // AFORO: total válidos (invalidated_at null) y entraron (validated_at not null).
+  const [
+    { count: totalCount },
+    { count: insideCount },
+    { data: ticketTypes },
+    { data: members },
+    { data: insideList },
+    { data: outsideList },
+    { data: rejects },
+  ] = await Promise.all([
+    admin.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', event.id).is('invalidated_at', null),
+    admin.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', event.id).is('invalidated_at', null).not('validated_at', 'is', null),
+    admin.from('ticket_types').select('id, name').eq('event_id', event.id),
+    admin.from('brand_members').select('user_id, display_name').eq('brand_id', event.brand_id),
     admin
       .from('tickets')
       .select('id, ticket_number, ticket_type_name, attendee_name, validated_at, validated_by')
       .eq('event_id', event.id)
       .is('invalidated_at', null)
-      .order('validated_at', { ascending: false, nullsFirst: false }),
+      .not('validated_at', 'is', null)
+      .order('validated_at', { ascending: false })
+      .limit(LIST_LIMIT),
     admin
-      .from('brand_members')
-      .select('user_id, display_name')
-      .eq('brand_id', event.brand_id),
+      .from('tickets')
+      .select('id, ticket_number, ticket_type_name, attendee_name, validated_at, validated_by')
+      .eq('event_id', event.id)
+      .is('invalidated_at', null)
+      .is('validated_at', null)
+      .order('ticket_number', { ascending: true })
+      .limit(LIST_LIMIT),
     (admin as unknown as { from: (t: string) => any })
       .from('ticket_scans')
       .select('id, result, scanned_at, validator_user_id, ticket:tickets ( ticket_number, ticket_type_name )')
@@ -55,21 +76,31 @@ export default async function EventAccessPage({ params }: { params: { id: string
   ]);
 
   const nameByUser = new Map((members ?? []).map((m) => [m.user_id, m.display_name as string | null]));
-  const all = tickets ?? [];
-  const inside = all.filter((t) => t.validated_at);
-  const outside = all.filter((t) => !t.validated_at);
-  const pct = all.length > 0 ? Math.round((inside.length / all.length) * 100) : 0;
+  const totalValid = totalCount ?? 0;
+  const enteredTotal = insideCount ?? 0;
+  const outsideTotal = totalValid - enteredTotal;
+  const inside = insideList ?? [];
+  const outside = outsideList ?? [];
+  const pct = totalValid > 0 ? Math.round((enteredTotal / totalValid) * 100) : 0;
 
-  // Escaneados por tipo: ingresaron / válidas, ordenado por nombre de tipo.
-  const byType = new Map<string, { entered: number; total: number }>();
-  for (const t of all) {
-    const k = t.ticket_type_name;
-    const row = byType.get(k) ?? { entered: 0, total: 0 };
-    row.total += 1;
-    if (t.validated_at) row.entered += 1;
-    byType.set(k, row);
-  }
-  const typeRows = [...byType.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  // Escaneados por tipo (exacto, por COUNT por tipo — pocos tipos): total válidos
+  // (invalidated_at null) y entraron (validated_at not null) por tipo.
+  const types = ticketTypes ?? [];
+  const typeCounts = await Promise.all(
+    types.map(async (t) => {
+      const [{ count: total }, { count: entered }] = await Promise.all([
+        admin.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', event.id).eq('ticket_type_id', t.id).is('invalidated_at', null),
+        admin.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', event.id).eq('ticket_type_id', t.id).is('invalidated_at', null).not('validated_at', 'is', null),
+      ]);
+      return { name: t.name as string, entered: entered ?? 0, total: total ?? 0 };
+    })
+  );
+  // Solo tipos con al menos una entrada válida (igual que antes, que agrupaba por
+  // tickets existentes), ordenado por nombre de tipo.
+  const typeRows: [string, { entered: number; total: number }][] = typeCounts
+    .filter((r) => r.total > 0)
+    .map((r) => [r.name, { entered: r.entered, total: r.total }] as [string, { entered: number; total: number }])
+    .sort((a, b) => a[0].localeCompare(b[0]));
 
   const rejectRows = (rejects ?? []).map((r) => {
     const tk = Array.isArray(r.ticket) ? r.ticket[0] : r.ticket;
@@ -91,7 +122,7 @@ export default async function EventAccessPage({ params }: { params: { id: string
           <h2 className="s-h2" style={{ marginTop: 2 }}>Accesos en vivo</h2>
           <p className="s-card__desc">Quién ya ingresó y quién falta. Solo entradas válidas (no anuladas).</p>
         </div>
-        <LiveRefresh seconds={12} />
+        <LiveRefresh seconds={25} />
       </div>
 
       {/* AFORO AHORA */}
@@ -101,11 +132,11 @@ export default async function EventAccessPage({ params }: { params: { id: string
           <span className="s-muted" style={{ fontSize: 13 }}>{pct}% lleno</span>
         </div>
         <p style={{ fontFamily: 'var(--display)', fontWeight: 800, fontSize: 24, marginTop: 8 }}>
-          Entraron {inside.length} de {all.length}
-          <span className="s-muted" style={{ fontWeight: 600, fontSize: 15 }}> · faltan {outside.length}</span>
+          Entraron {enteredTotal} de {totalValid}
+          <span className="s-muted" style={{ fontWeight: 600, fontSize: 15 }}> · faltan {outsideTotal}</span>
         </p>
         <div className="a-bar" style={{ marginTop: 12, height: 12 }}><div className="a-bar__fill" style={{ width: `${pct}%` }} /></div>
-        {all.length === 0 && <p className="s-empty" style={{ marginTop: 10 }}>No hay entradas válidas todavía.</p>}
+        {totalValid === 0 && <p className="s-empty" style={{ marginTop: 10 }}>No hay entradas válidas todavía.</p>}
       </div>
 
       {/* Escaneados por tipo */}
@@ -132,11 +163,14 @@ export default async function EventAccessPage({ params }: { params: { id: string
       )}
 
       <section>
-        <h2 className="s-h2" style={{ marginBottom: 12 }}>Adentro <span className="s-badge s-badge--ok" style={{ marginLeft: 8 }}>{inside.length}</span></h2>
-        {inside.length === 0 ? (
+        <h2 className="s-h2" style={{ marginBottom: 12 }}>Adentro <span className="s-badge s-badge--ok" style={{ marginLeft: 8 }}>{enteredTotal}</span></h2>
+        {enteredTotal === 0 ? (
           <div className="s-card"><p className="s-empty">Todavía no ingresó nadie.</p></div>
         ) : (
           <div className="s-card" style={{ padding: 0 }}>
+            {enteredTotal > inside.length && (
+              <p className="s-muted" style={{ fontSize: 12.5, padding: '10px 16px 0' }}>Mostrando los primeros {inside.length} de {enteredTotal}.</p>
+            )}
             <ul className="s-stack" style={{ gap: 0, listStyle: 'none', margin: 0, padding: 0 }}>
               {inside.map((t) => (
                 <li key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 16px', borderTop: '1px solid var(--cream-3)' }}>
@@ -156,11 +190,14 @@ export default async function EventAccessPage({ params }: { params: { id: string
       </section>
 
       <section style={{ marginTop: 24 }}>
-        <h2 className="s-h2" style={{ marginBottom: 12 }}>Falta ingresar <span className="s-badge s-badge--draft" style={{ marginLeft: 8 }}>{outside.length}</span></h2>
-        {outside.length === 0 ? (
-          <div className="s-card"><p className="s-empty">{all.length === 0 ? 'No hay entradas válidas todavía.' : 'Todos los que tienen entrada ya ingresaron. 🎉'}</p></div>
+        <h2 className="s-h2" style={{ marginBottom: 12 }}>Falta ingresar <span className="s-badge s-badge--draft" style={{ marginLeft: 8 }}>{outsideTotal}</span></h2>
+        {outsideTotal === 0 ? (
+          <div className="s-card"><p className="s-empty">{totalValid === 0 ? 'No hay entradas válidas todavía.' : 'Todos los que tienen entrada ya ingresaron. 🎉'}</p></div>
         ) : (
           <div className="s-card" style={{ padding: 0 }}>
+            {outsideTotal > outside.length && (
+              <p className="s-muted" style={{ fontSize: 12.5, padding: '10px 16px 0' }}>Mostrando los primeros {outside.length} de {outsideTotal}.</p>
+            )}
             <ul className="s-stack" style={{ gap: 0, listStyle: 'none', margin: 0, padding: 0 }}>
               {outside.map((t) => (
                 <li key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 16px', borderTop: '1px solid var(--cream-3)' }}>

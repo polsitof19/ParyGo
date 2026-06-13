@@ -79,8 +79,8 @@ export function ClientsTable({ rows, eventName, impersonating = false }: { rows:
             aria-label="Buscar comprador"
           />
         </div>
-        <button type="button" onClick={exportCsv} className="s-btn s-btn--soft" disabled={rows.length === 0}>
-          <Download className="h-4 w-4" /> Exportar CSV
+        <button type="button" onClick={exportCsv} className="s-btn s-btn--soft" disabled={rows.length === 0} title="Exporta los compradores de esta página">
+          <Download className="h-4 w-4" /> Exportar CSV (esta página)
         </button>
       </div>
 

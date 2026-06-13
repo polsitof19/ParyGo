@@ -64,7 +64,7 @@ export default async function EventYapePage({ params }: { params: { id: string }
           <span className="eyebrow">Revisar Yape</span>
           <h2 className="s-h2" style={{ marginTop: 2 }}>Comprobantes pendientes {withUrls.length > 0 && <span className="s-badge s-badge--alert" style={{ marginLeft: 8 }}>{withUrls.length}</span>}</h2>
         </div>
-        <LiveRefresh seconds={12} />
+        <LiveRefresh seconds={25} />
       </div>
 
       {withUrls.length === 0 ? (

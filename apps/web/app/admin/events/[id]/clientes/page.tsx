@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
@@ -7,7 +8,9 @@ import { ClientsTable, type ClientRow } from './ClientsTable';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-export default async function EventClientsPage({ params }: { params: { id: string } }) {
+const PAGE_SIZE = 100;
+
+export default async function EventClientsPage({ params, searchParams }: { params: { id: string }; searchParams: { page?: string } }) {
   const user = await requireSession();
   const ctx = ownerBrandContext(user);
   if (!ctx) notFound();
@@ -22,17 +25,26 @@ export default async function EventClientsPage({ params }: { params: { id: strin
     .maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
 
+  const page = Math.max(1, Number(searchParams.page) || 1);
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
   // Compradores = órdenes pagadas del evento, con sus entradas. Solo de esta marca.
-  const { data: orders } = await admin
+  // Paginado: una página de 100 + total exacto (count) para los controles.
+  const { data: orders, count } = await admin
     .from('orders')
     .select(`
       id, buyer_name, buyer_email, buyer_phone, buyer_dni, buyer_doc_type,
       payment_method, total_cents, discount_cents, created_at,
       tickets ( id, ticket_type_name, ticket_number, invalidated_at, validated_at )
-    `)
+    `, { count: 'exact' })
     .eq('event_id', event.id)
     .eq('status', 'paid')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(from, to);
+
+  const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const rows: ClientRow[] = (orders ?? []).map((o) => ({
     orderId: o.id,
@@ -59,9 +71,27 @@ export default async function EventClientsPage({ params }: { params: { id: strin
       <div style={{ marginBottom: 14 }}>
         <span className="eyebrow">Clientes</span>
         <h2 className="s-h2" style={{ marginTop: 2 }}>Compradores</h2>
-        <p className="s-card__desc">{rows.length} comprador{rows.length === 1 ? '' : 'es'} pagados · datos privados de tu marca.</p>
+        <p className="s-card__desc">
+          {total} comprador{total === 1 ? '' : 'es'} pagados · datos privados de tu marca.
+          {totalPages > 1 && <> · página {page} de {totalPages}</>}
+        </p>
       </div>
       <ClientsTable rows={rows} eventName={event.name} impersonating={ctx.impersonating} />
+      {totalPages > 1 && (
+        <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 16 }} aria-label="Paginación de compradores">
+          {page > 1 ? (
+            <Link href={`/admin/events/${event.id}/clientes?page=${page - 1}`} className="s-btn s-btn--soft s-btn--sm">Anterior</Link>
+          ) : (
+            <button type="button" className="s-btn s-btn--soft s-btn--sm" disabled>Anterior</button>
+          )}
+          <span className="s-muted" style={{ fontSize: 13 }}>Página {page} de {totalPages}</span>
+          {page < totalPages ? (
+            <Link href={`/admin/events/${event.id}/clientes?page=${page + 1}`} className="s-btn s-btn--soft s-btn--sm">Siguiente</Link>
+          ) : (
+            <button type="button" className="s-btn s-btn--soft s-btn--sm" disabled>Siguiente</button>
+          )}
+        </nav>
+      )}
     </>
   );
 }

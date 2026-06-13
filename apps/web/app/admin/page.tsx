@@ -35,7 +35,7 @@ export default async function AdminHomePage() {
   // Eventos + lecturas agregadas (solo lectura) para el panorama del dueño:
   // Yape pendientes y ventas pagadas por evento. Antes había que abrir cada
   // evento para ver esto; acá se ve de un vistazo.
-  const [{ data: events }, { data: pendingProofs }, { data: paidOrders }] = await Promise.all([
+  const [{ data: events }, { data: pendingProofs }] = await Promise.all([
     supabase
       .from('events')
       .select('id, slug, name, starts_at, is_published, cover_url, archived_at')
@@ -46,11 +46,6 @@ export default async function AdminHomePage() {
       .select('id, order:orders!yape_proofs_order_id_fkey ( event_id )')
       .eq('brand_id', brand.id)
       .eq('status', 'pending_review'),
-    supabase
-      .from('orders')
-      .select('event_id, total_cents')
-      .eq('brand_id', brand.id)
-      .eq('status', 'paid'),
   ]);
 
   const pendingByEvent = new Map<string, number>();
@@ -58,12 +53,7 @@ export default async function AdminHomePage() {
     const ev = p.order?.event_id;
     if (ev) pendingByEvent.set(ev, (pendingByEvent.get(ev) ?? 0) + 1);
   }
-  const salesByEvent = new Map<string, number>();
-  for (const o of (paidOrders ?? []) as { event_id: string; total_cents: number | null }[]) {
-    salesByEvent.set(o.event_id, (salesByEvent.get(o.event_id) ?? 0) + (o.total_cents ?? 0));
-  }
   const totalPending = (pendingProofs ?? []).length;
-  const totalSalesCents = (paidOrders ?? []).reduce((a, o) => a + ((o as { total_cents: number | null }).total_cents ?? 0), 0);
   const publishedCount = (events ?? []).filter((e) => e.is_published).length;
   // Separar activos de archivados: los archivados van en su propia sección al final.
   const activeEvents = (events ?? []).filter((e) => !e.archived_at);
@@ -89,13 +79,26 @@ export default async function AdminHomePage() {
 
   // Recuperación: órdenes PAGADAS sin tickets (red de seguridad del flujo Yape no
   // atómico). Scopeado por brand.id con service-role. Normalmente vacío.
+  // Una sola lectura de órdenes pagadas de la marca sirve para DOS cosas: el cuadre
+  // de ventas por evento (exacto) y la detección de órdenes sin tickets. Antes se
+  // traían las pagadas dos veces (una para sumar, otra para recuperación).
   const eventNameById = new Map((events ?? []).map((e) => [e.id, e.name] as const));
   const [{ data: paidRows }, { data: ticketOrderRows }] = await Promise.all([
     adminCli.from('orders').select('id, buyer_name, total_cents, created_at, event_id').eq('brand_id', brand.id).eq('status', 'paid'),
     adminCli.from('tickets').select('order_id').eq('brand_id', brand.id),
   ]);
+  const paidOrderRows = (paidRows ?? []) as { id: string; buyer_name: string | null; total_cents: number | null; created_at: string; event_id: string }[];
+
+  // Ventas por evento + total (exacto, mismos montos que antes).
+  const salesByEvent = new Map<string, number>();
+  let totalSalesCents = 0;
+  for (const o of paidOrderRows) {
+    salesByEvent.set(o.event_id, (salesByEvent.get(o.event_id) ?? 0) + (o.total_cents ?? 0));
+    totalSalesCents += o.total_cents ?? 0;
+  }
+
   const ordersWithTickets = new Set((ticketOrderRows ?? []).map((t) => t.order_id as string));
-  const stuckOrders = ((paidRows ?? []) as { id: string; buyer_name: string | null; total_cents: number | null; created_at: string; event_id: string }[])
+  const stuckOrders = paidOrderRows
     .filter((o) => !ordersWithTickets.has(o.id))
     .map((o) => ({ id: o.id, buyerName: o.buyer_name, totalCents: o.total_cents ?? 0, createdAt: o.created_at, eventName: eventNameById.get(o.event_id) ?? 'Evento' }));
 
