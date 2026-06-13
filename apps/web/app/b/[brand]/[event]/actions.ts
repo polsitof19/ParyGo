@@ -148,16 +148,10 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     if (!tt || !tt.is_active || tt.event_id !== event.id) {
       return { ok: false, message: 'Tipo de entrada no disponible.' };
     }
-    // Unlimited types never block on stock; limited types keep anti-oversell.
-    if (!tt.is_unlimited) {
-      const remaining = tt.capacity - tt.sold;
-      if (remaining < item.quantity) {
-        return {
-          ok: false,
-          message: `Stock insuficiente para ${tt.name}. Quedan ${remaining}.`,
-        };
-      }
-    }
+    // El cupo NO se valida acá (era un chequeo `capacity - sold` sin lock, sin
+    // restar reservas y sin exigir reserva → permitía sobreventa en alta
+    // concurrencia). La decisión de stock es ATÓMICA y se toma más abajo en
+    // reserve_order_stock (migr 0031), bajo lock de fila. Ilimitados: excluidos ahí.
     // Active-phase price (fallback to base price_cents if no phase rows).
     const unitPrice = activePriceByType.get(tt.id) ?? tt.price_cents;
     totalCents += unitPrice * item.quantity;
@@ -229,14 +223,6 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     return { ok: false, message: orderErr?.message ?? 'No se pudo crear la orden.' };
   }
 
-  // Bind this session's existing reservations to the new order so they aren't
-  // swept while payment is in flight. If there were no live reservations
-  // (e.g. user reloaded with quantities), this is a no-op.
-  await admin.rpc('attach_reservation_to_order', {
-    p_session_id: parsed.data.sessionId,
-    p_order_id: order.id,
-  });
-
   const { error: itemsErr } = await admin.from('order_items').insert(
     resolved.map((r) => ({
       order_id: order.id,
@@ -249,6 +235,27 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   );
   if (itemsErr) {
     return { ok: false, message: itemsErr.message };
+  }
+
+  // GATE ATÓMICO anti-oversell (B2, migr 0031). Reserva los cupos de los tipos
+  // LIMITADOS de la orden bajo lock de fila, derivando las cantidades de
+  // order_items (server-trusted, recién insertados). Imposible que dos compras
+  // tomen el mismo último lugar. Si algún tipo está agotado → falla la orden y
+  // libera. Ilimitados (Almighty) se excluyen dentro del RPC (camino intacto).
+  const { error: reserveErr } = await admin.rpc('reserve_order_stock', {
+    p_order_id: order.id,
+    p_session_id: parsed.data.sessionId,
+  });
+  if (reserveErr) {
+    await admin.from('orders').update({ status: 'failed' }).eq('id', order.id);
+    await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
+    const agotado = /insufficient_stock/.test(reserveErr.message ?? '');
+    return {
+      ok: false,
+      message: agotado
+        ? 'Se agotaron las entradas mientras completabas la compra.'
+        : 'No se pudo reservar el stock. Intentá de nuevo.',
+    };
   }
 
   // Promo code: validate + apply ATOMICALLY (rewrites order_items + order to
@@ -299,26 +306,30 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   const baseUrl = `${proto}://${host}`;
   const eventBase = `/${event.slug}`;
 
-  // Free order (100% off promo): mark paid, issue tickets + email, skip payment.
+  // Free order (100% off promo): emitir tickets PRIMERO (gate atómico de cupo),
+  // y solo si emite OK marcar pagada + consumir promo + email. Mismo patrón que
+  // approveYapeProof: si el cupo se agotó NO dejamos la orden paid-sin-QR.
   if (isFree) {
-    await markOrderPaid(order.id);
-    await admin.rpc('mark_promo_redemption_consumed', { p_order_id: order.id });
     const issue = await issueTicketsForOrder({ orderId: order.id, reason: 'yape_approved' });
     if (issue.ok) {
+      await markOrderPaid(order.id);
+      await admin.rpc('mark_promo_redemption_consumed', { p_order_id: order.id });
       await sendTicketEmail(order.id);
-    } else {
-      // Order is paid (free) but ticket issuance failed — log loudly for manual
-      // re-issue. The confirmation page polls, so the buyer keeps refreshing.
-      await admin.from('events_log').insert({
-        brand_id: event.brand_id,
-        event_id: event.id,
-        order_id: order.id,
-        type: 'tickets_issue_failed',
-        payload: { error: issue.error, flow: 'free_promo' },
-      });
+      await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
+      return { ok: true, redirectUrl: `${eventBase}/confirmacion?order=${order.id}` };
     }
+    // No se pudo emitir (incl. oversold_no_capacity): NO marcamos pagada. Fallar
+    // la orden y liberar el hold. issueTicketsForOrder ya logueó el detalle.
+    await admin.from('orders').update({ status: 'failed' }).eq('id', order.id);
+    await admin.rpc('release_promo_redemption_for_order', { p_order_id: order.id });
     await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
-    return { ok: true, redirectUrl: `${eventBase}/confirmacion?order=${order.id}` };
+    const agotado = issue.error === 'oversold_no_capacity';
+    return {
+      ok: false,
+      message: agotado
+        ? 'Se agotaron las entradas mientras completabas la compra.'
+        : 'No se pudieron emitir las entradas. Intentá de nuevo.',
+    };
   }
 
   if (parsed.data.method === 'mercadopago') {

@@ -1,5 +1,6 @@
 import { customAlphabet } from 'nanoid';
 import { createAdminClient } from '@/lib/supabase/admin';
+import type { Json } from '@/lib/supabase/database.types';
 
 // Human-readable ticket number for display (the QR itself is a UUID v4).
 const NUMBER_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -23,107 +24,80 @@ type IssueTicketsResult =
 //
 // CRITICAL: this function is the join between "money received" and "QR codes
 // exist". It must be called only after payment is verified server-side.
+//
+// La emisión real (idempotencia + GATE de cupo + insert con max_scans + release
+// de reservas) vive ATÓMICAMENTE en la RPC issue_tickets_atomic (migr 0031), bajo
+// lock de la orden: dos disparos de la MISMA orden no duplican, y NUNCA se emite
+// por encima del aforo (caso raro: la reserva expiró y el cupo se revendió antes
+// de la aprobación → action 'oversold_no_capacity', no se emite). Esta función es
+// un wrapper delgado que preserva el contrato (ticketIds/alreadyIssued) y deja la
+// observabilidad (events_log) del lado de la app.
 export async function issueTicketsForOrder(
   input: IssueTicketsInput
 ): Promise<IssueTicketsResult> {
   const admin = createAdminClient();
 
-  // 1. Idempotency check: do we already have tickets for this order?
-  const { data: existing } = await admin
+  const { data, error } = await admin.rpc('issue_tickets_atomic', {
+    p_order_id: input.orderId,
+  });
+  if (error || !data) {
+    return { ok: false, error: error?.message ?? 'No se pudieron emitir tickets' };
+  }
+  const res = data as {
+    ok: boolean;
+    action: string;
+    ticket_count?: number;
+    detail?: Json;
+  };
+
+  if (!res.ok) {
+    if (res.action === 'oversold_no_capacity') {
+      // El cupo se agotó entre la reserva y la emisión. NO se emite por encima
+      // del aforo. Log forense para reembolso/decisión manual del organizador.
+      const { data: ord } = await admin
+        .from('orders')
+        .select('brand_id, event_id')
+        .eq('id', input.orderId)
+        .maybeSingle();
+      if (ord) {
+        await admin.from('events_log').insert({
+          brand_id: ord.brand_id,
+          event_id: ord.event_id,
+          order_id: input.orderId,
+          type: 'oversold_no_capacity',
+          payload: { flow: input.reason, detail: res.detail ?? null },
+        });
+      }
+    }
+    return { ok: false, error: res.action };
+  }
+
+  // ok: 'issued' | 'already_issued'. Recuperar ids para el contrato existente.
+  const { data: tk } = await admin
     .from('tickets')
     .select('id')
     .eq('order_id', input.orderId);
-  if (existing && existing.length > 0) {
-    return {
-      ok: true,
-      ticketIds: existing.map((t) => t.id),
-      alreadyIssued: true,
-    };
-  }
+  const ticketIds = (tk ?? []).map((t) => t.id);
+  const alreadyIssued = res.action === 'already_issued';
 
-  // 2. Load order + items.
-  const { data: order, error: orderErr } = await admin
-    .from('orders')
-    .select('id, event_id, brand_id, status, buyer_name')
-    .eq('id', input.orderId)
-    .single();
-  if (orderErr || !order) {
-    return { ok: false, error: 'Orden no encontrada' };
-  }
-
-  const { data: items } = await admin
-    .from('order_items')
-    .select('id, ticket_type_id, ticket_type_name, quantity')
-    .eq('order_id', input.orderId);
-  if (!items || items.length === 0) {
-    return { ok: false, error: 'Orden sin items' };
-  }
-
-  // 2b. Resolve the scan limit per ticket type. The ticket MUST inherit
-  // max_scans from its type, otherwise it is born NULL = unlimited scans at the
-  // door (audit B1). Default-deny: a type with NULL max_scans falls back to 1
-  // (single admission) — the safest value for gate control. Mirrors the same
-  // coalesce(...,1) applied in settle_mp_payment (MercadoPago path).
-  const typeIds = Array.from(new Set(items.map((i) => i.ticket_type_id)));
-  const { data: types } = await admin
-    .from('ticket_types')
-    .select('id, max_scans')
-    .in('id', typeIds);
-  const maxScansByType = new Map(
-    (types ?? []).map((t) => [t.id, t.max_scans ?? 1])
-  );
-
-  // 3. Build ticket rows: one per quantity unit.
-  const rows: Array<{
-    order_id: string;
-    event_id: string;
-    brand_id: string;
-    ticket_type_id: string;
-    ticket_type_name: string;
-    ticket_number: string;
-    attendee_name: string | null;
-    max_scans: number;
-  }> = [];
-  for (const item of items) {
-    for (let i = 0; i < item.quantity; i++) {
-      rows.push({
-        order_id: order.id,
-        event_id: order.event_id,
-        brand_id: order.brand_id,
-        ticket_type_id: item.ticket_type_id,
-        ticket_type_name: item.ticket_type_name,
-        ticket_number: generateTicketNumber(),
-        attendee_name: order.buyer_name,
-        max_scans: maxScansByType.get(item.ticket_type_id) ?? 1,
+  if (!alreadyIssued) {
+    const { data: ord } = await admin
+      .from('orders')
+      .select('brand_id, event_id')
+      .eq('id', input.orderId)
+      .maybeSingle();
+    if (ord) {
+      await admin.from('events_log').insert({
+        brand_id: ord.brand_id,
+        event_id: ord.event_id,
+        order_id: input.orderId,
+        type: input.reason === 'mp_paid' ? 'tickets_issued_mp' : 'tickets_issued_yape',
+        payload: { count: ticketIds.length },
       });
     }
   }
 
-  // 4. Insert. qr_code defaults to uuid_generate_v4() at DB level.
-  const { data: created, error: insertErr } = await admin
-    .from('tickets')
-    .insert(rows)
-    .select('id, qr_code');
-
-  if (insertErr || !created) {
-    return { ok: false, error: insertErr?.message ?? 'No se pudieron crear tickets' };
-  }
-
-  // 5. Log + audit + release any held stock reservations (safe-noop if none).
-  await admin.from('events_log').insert({
-    brand_id: order.brand_id,
-    event_id: order.event_id,
-    order_id: order.id,
-    type: input.reason === 'mp_paid' ? 'tickets_issued_mp' : 'tickets_issued_yape',
-    payload: { count: created.length },
-  });
-  await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
-
-  return {
-    ok: true,
-    ticketIds: created.map((t) => t.id),
-    alreadyIssued: false,
-  };
+  return { ok: true, ticketIds, alreadyIssued };
 }
 
 // Mark an order paid (idempotent: only updates if not already paid).

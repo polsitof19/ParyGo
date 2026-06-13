@@ -56,17 +56,32 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
     };
   }
 
-  // Mark order paid + issue tickets (both idempotent).
-  await markOrderPaid(proof.order_id);
-  // If the order used a promo code, confirm its redemption (held → consumed).
-  await admin.rpc('mark_promo_redemption_consumed', { p_order_id: proof.order_id });
+  // Emisión ATÓMICA primero (idempotente + GATE de cupo, migr 0031). Solo si
+  // emite OK marcamos la orden pagada y consumimos la promo. Si el evento se
+  // sobrevendió (la reserva expiró y el cupo se revendió antes de esta
+  // aprobación) NO se emite ni se marca pagada: revertimos la aprobación del
+  // comprobante para que el organizador lo rechace y reembolse el Yape.
   const issue = await issueTicketsForOrder({
     orderId: proof.order_id,
     reason: 'yape_approved',
   });
   if (!issue.ok) {
+    if (issue.error === 'oversold_no_capacity') {
+      await admin
+        .from('yape_proofs')
+        .update({ status: 'pending_review', reviewed_by: null, reviewed_at: null })
+        .eq('id', proofId);
+      return {
+        ok: false,
+        message:
+          'No hay cupo: el evento se agotó. No se emitieron entradas. Rechazá esta orden y reembolsá el Yape.',
+      };
+    }
     return { ok: false, message: `Tickets fallaron: ${issue.error}` };
   }
+  // Emitió OK → marcar pagada + consumir la redención de promo (ambos idempotentes).
+  await markOrderPaid(proof.order_id);
+  await admin.rpc('mark_promo_redemption_consumed', { p_order_id: proof.order_id });
 
   await admin.from('events_log').insert({
     brand_id: proof.brand_id,

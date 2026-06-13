@@ -887,6 +887,14 @@ export type Database = {
         Args: { p_ticket_type_id: string }
         Returns: number
       }
+      reserve_order_stock: {
+        Args: { p_order_id: string; p_session_id: string }
+        Returns: Json
+      }
+      issue_tickets_atomic: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
       get_brand_mp_credentials: {
         Args: { p_brand_id: string; p_encryption_key: string }
         Returns: {
