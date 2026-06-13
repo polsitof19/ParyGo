@@ -998,9 +998,9 @@ export type Database = {
         Returns: string
       }
       is_super_admin: { Args: never; Returns: boolean }
-      recompute_ticket_type_sold: {
-        Args: { p_ticket_type_id: string }
-        Returns: undefined
+      reconcile_ticket_type_sold: {
+        Args: { p_ticket_type_id?: string }
+        Returns: number
       }
       release_stock_reservations_for_order: {
         Args: { p_order_id: string }
