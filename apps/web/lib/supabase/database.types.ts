@@ -407,6 +407,66 @@ export type Database = {
           },
         ]
       }
+      event_postpone_emails: {
+        Row: {
+          attempts: number
+          brand_id: string | null
+          claimed_at: string | null
+          created_at: string
+          dedupe_key: string
+          event_id: string | null
+          event_name: string
+          id: string
+          last_error: string | null
+          new_date_label: string
+          old_date_label: string
+          recipient_email: string
+          recipient_name: string
+          resend_id: string | null
+          sent_at: string | null
+          status: string
+          venue: string | null
+        }
+        Insert: {
+          attempts?: number
+          brand_id?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          dedupe_key: string
+          event_id?: string | null
+          event_name: string
+          id?: string
+          last_error?: string | null
+          new_date_label: string
+          old_date_label: string
+          recipient_email: string
+          recipient_name?: string
+          resend_id?: string | null
+          sent_at?: string | null
+          status?: string
+          venue?: string | null
+        }
+        Update: {
+          attempts?: number
+          brand_id?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          dedupe_key?: string
+          event_id?: string | null
+          event_name?: string
+          id?: string
+          last_error?: string | null
+          new_date_label?: string
+          old_date_label?: string
+          recipient_email?: string
+          recipient_name?: string
+          resend_id?: string | null
+          sent_at?: string | null
+          status?: string
+          venue?: string | null
+        }
+        Relationships: []
+      }
       stock_reservations: {
         Row: {
           created_at: string
@@ -1001,6 +1061,22 @@ export type Database = {
       reconcile_ticket_type_sold: {
         Args: { p_ticket_type_id?: string }
         Returns: number
+      }
+      enqueue_event_postpone_emails: {
+        Args: {
+          p_event_id: string
+          p_brand_id: string
+          p_event_name: string
+          p_old_label: string
+          p_new_label: string
+          p_venue: string
+          p_new_iso: string
+        }
+        Returns: number
+      }
+      claim_postpone_emails: {
+        Args: { p_limit?: number }
+        Returns: Database["public"]["Tables"]["event_postpone_emails"]["Row"][]
       }
       release_stock_reservations_for_order: {
         Args: { p_order_id: string }

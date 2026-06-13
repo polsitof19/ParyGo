@@ -12,6 +12,9 @@ const serverSchema = z.object({
   // Resend is optional during early development; gated at call site.
   RESEND_API_KEY: z.string().min(1).optional(),
   RESEND_FROM_EMAIL: z.string().email().optional(),
+  // Secreto del worker de cola de emails (pg_cron → /api/cron/*). Opcional:
+  // sin él, la ruta de cron rechaza todo (401) y la cola no se drena.
+  CRON_SECRET: z.string().min(16).optional(),
   SUPER_ADMIN_EMAIL: z.string().email(),
   SENTRY_DSN: z.string().url().optional(),
 });

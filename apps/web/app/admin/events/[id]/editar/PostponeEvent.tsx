@@ -16,7 +16,7 @@ export function PostponeEvent({ eventId, startsLocal }: { eventId: string; start
     if (!confirm('¿Postergar el evento a la nueva fecha? Las entradas siguen válidas y avisamos por email a los compradores.')) return;
     start(async () => {
       const res = await postponeEventAction(eventId, value);
-      if (res.ok) toast.success(`Evento postergado. Aviso enviado a ${res.emailsSent}/${res.emailsTotal} compradores.`);
+      if (res.ok) toast.success(`Evento postergado. Aviso en camino a ${res.queued ?? 0} compradores (se envían en segundo plano).`);
       else toast.error(res.message ?? 'No se pudo postergar.');
     });
   };

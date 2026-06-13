@@ -6,7 +6,6 @@ import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isImpersonating } from '@/lib/impersonation';
 import { formatEventDate } from '@/lib/utils';
-import { sendEventPostponedEmail, type BrandForEmail } from '@/lib/email/sendEventPostponedEmail';
 
 export type EditState = { ok: boolean; message: string | null };
 
@@ -158,7 +157,7 @@ export async function setEventPublishedAction(
 export async function postponeEventAction(
   eventId: string,
   newStartsAtLima: string
-): Promise<{ ok: boolean; message?: string; emailsSent?: number; emailsTotal?: number }> {
+): Promise<{ ok: boolean; message?: string; queued?: number }> {
   const user = await requireSession();
   const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
   if (!brandId) return { ok: false, message: 'No tenés permiso sobre este evento.' };
@@ -169,7 +168,7 @@ export async function postponeEventAction(
   const admin = createAdminClient();
   const { data: ev } = await admin
     .from('events')
-    .select('id, name, starts_at, venue_name, brand:brands ( name, slug, whatsapp_e164, contact_email, theme_json )')
+    .select('id, name, starts_at, venue_name')
     .eq('id', eventId)
     .eq('brand_id', brandId)
     .maybeSingle();
@@ -193,47 +192,32 @@ export async function postponeEventAction(
     type: 'event_postponed', payload: { from: oldStartsAt, to: startsIso },
   });
 
-  // Avisar por email a cada comprador con entradas VÁLIDAS (no invalidadas).
-  const brand = (Array.isArray(ev.brand) ? ev.brand[0] : ev.brand) as BrandForEmail | null;
-  let emailsSent = 0;
-  const resendIds: string[] = [];
-  let recipients: { email: string; name: string }[] = [];
-  if (brand) {
-    const { data: tk } = await admin
-      .from('tickets')
-      .select('order_id')
-      .eq('event_id', eventId)
-      .is('invalidated_at', null);
-    const orderIds = [...new Set((tk ?? []).map((t) => t.order_id as string))];
-    if (orderIds.length > 0) {
-      const { data: ords } = await admin.from('orders').select('buyer_email, buyer_name').in('id', orderIds);
-      const byEmail = new Map<string, string>();
-      for (const o of (ords ?? []) as { buyer_email: string | null; buyer_name: string }[]) {
-        const em = (o.buyer_email ?? '').trim().toLowerCase();
-        if (em && !byEmail.has(em)) byEmail.set(em, o.buyer_name ?? '');
-      }
-      recipients = [...byEmail.entries()].map(([email, name]) => ({ email, name }));
-    }
-    const oldLabel = formatEventDate(oldStartsAt);
-    const newLabel = formatEventDate(startsIso);
-    for (const r of recipients) {
-      const res = await sendEventPostponedEmail({
-        to: r.email, buyerName: r.name, eventName: ev.name as string,
-        newDateLabel: newLabel, oldDateLabel: oldLabel, venue: (ev.venue_name as string | null) ?? null, brand,
-      });
-      if (res.ok) { emailsSent++; if (res.resendId) resendIds.push(res.resendId); }
-    }
-  }
+  // ENCOLAR los avisos (NO enviarlos en el request). El worker (pg_cron →
+  // /api/cron/postpone-emails) los entrega en tandas, con idempotencia por
+  // destinatario y reintentos. La RPC deriva la lista de compradores con
+  // entradas válidas server-side → nunca sale del DB hacia la app. Responde rápido
+  // aunque haya miles de compradores (sin loop secuencial ni timeout del Edge).
+  let queued = 0;
+  const { data: enq } = await admin.rpc('enqueue_event_postpone_emails', {
+    p_event_id: eventId,
+    p_brand_id: brandId,
+    p_event_name: ev.name as string,
+    p_old_label: formatEventDate(oldStartsAt),
+    p_new_label: formatEventDate(startsIso),
+    p_venue: (ev.venue_name as string | null) ?? '',
+    p_new_iso: startsIso,
+  });
+  queued = typeof enq === 'number' ? enq : 0;
 
   await admin.from('events_log').insert({
     brand_id: brandId, event_id: eventId, actor_user_id: user.id,
-    type: 'event_postponed_notified', payload: { sent: emailsSent, total: recipients.length, resend_ids: resendIds },
+    type: 'event_postponed_notified', payload: { queued },
   });
 
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
   revalidatePath(`/cabina-7k29x/events/${eventId}`);
-  return { ok: true, emailsSent, emailsTotal: recipients.length };
+  return { ok: true, queued };
 }
 
 // ===== 1.c) Archivar / desarchivar el evento (dueño o super admin) =====

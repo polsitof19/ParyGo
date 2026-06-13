@@ -34,6 +34,10 @@ export async function sendEventPostponedEmail(args: {
   oldDateLabel: string;
   venue: string | null;
   brand: BrandForEmail;
+  // Clave de idempotencia opcional (el dedupe_key de la cola). Resend deduplica
+  // el mismo Idempotency-Key 24h → si el worker reintenta por crash post-envío,
+  // el comprador NO recibe el aviso dos veces.
+  idempotencyKey?: string;
 }): Promise<SendPostponedResult> {
   const apiKey = serverEnv.RESEND_API_KEY;
   const fromEmail = serverEnv.RESEND_FROM_EMAIL ?? 'tickets@parygo.com';
@@ -66,7 +70,11 @@ export async function sendEventPostponedEmail(args: {
   try {
     const resp = await fetch(RESEND_ENDPOINT, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        ...(args.idempotencyKey ? { 'Idempotency-Key': args.idempotencyKey } : {}),
+      },
       body: JSON.stringify(payload),
     });
     if (!resp.ok) {
