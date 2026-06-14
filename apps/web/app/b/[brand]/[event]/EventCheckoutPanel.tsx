@@ -24,14 +24,77 @@ type Brand = { id: string; slug: string; name: string; yape_number: string | nul
 type Event = { id: string; slug: string; name: string; min_age: number; starts_at: string };
 type TicketType = {
   id: string; name: string; description: string | null; price_cents: number;
-  active_price_cents: number; next_price_cents: number | null; next_starts_at: string | null;
-  capacity: number; sold: number; is_unlimited: boolean; sort_order: number; color_hex: string | null;
+  active_price_cents: number; active_name: string | null; active_ends_at: string | null;
+  next_price_cents: number | null; next_starts_at: string | null; next_name: string | null;
+  // soldOut viene calculado server-side; NUNCA se mandan capacity/sold al cliente
+  // (el comprador no ve cuántas hay ni cuántas quedan — solo el estado "Agotado").
+  is_unlimited: boolean; soldOut: boolean; sort_order: number; color_hex: string | null;
 };
 
-function formatRiseDate(nextStartsAt: string): string {
-  const lastMoment = new Date(new Date(nextStartsAt).getTime() - 60_000);
-  if (Number.isNaN(lastMoment.getTime())) return ''; // fecha inválida → no romper el render
-  return new Intl.DateTimeFormat('es-PE', { day: 'numeric', month: 'short', timeZone: 'America/Lima' }).format(lastMoment);
+// Días de CALENDARIO que faltan hasta `endIso`, en horario America/Lima (no UTC).
+function limaYMD(ms: number): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+}
+function calendarDaysLeftLima(endIso: string, nowMs: number): number | null {
+  const end = Date.parse(endIso);
+  if (Number.isNaN(end)) return null;
+  const a = Date.parse(limaYMD(nowMs) + 'T00:00:00Z');
+  const b = Date.parse(limaYMD(end) + 'T00:00:00Z');
+  return Math.round((b - a) / 86_400_000);
+}
+
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const m = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReduced(m.matches);
+    const h = () => setReduced(m.matches);
+    m.addEventListener?.('change', h);
+    return () => m.removeEventListener?.('change', h);
+  }, []);
+  return reduced;
+}
+
+// Fase activa (countdown ≤7 días, hora Lima) + teaser de la siguiente. Solo
+// expone nombres de fase, precios (públicos) y fechas — nada sensible.
+function PhaseTiming({ tt }: { tt: TicketType }) {
+  const reduced = usePrefersReducedMotion();
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const days = tt.active_ends_at ? calendarDaysLeftLima(tt.active_ends_at, nowMs) : null;
+  const lastDay = days === 0;
+  useEffect(() => {
+    if (reduced || !lastDay) return; // ticker liviano SOLO el último día y sin reduced-motion
+    const id = setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, [reduced, lastDay]);
+
+  let countdown: string | null = null;
+  if (days != null && days >= 0 && days <= 7) {
+    const phase = tt.active_name || 'Preventa';
+    if (days >= 2) countdown = `${phase} termina en ${days} días`;
+    else if (days === 1) countdown = `${phase} termina en 1 día`;
+    else {
+      const ms = tt.active_ends_at ? Date.parse(tt.active_ends_at) - nowMs : 0;
+      if (reduced || ms <= 0) countdown = `${phase}: último día`;
+      else {
+        const h = Math.floor(ms / 3_600_000);
+        const m = Math.floor((ms % 3_600_000) / 60_000);
+        countdown = h >= 1 ? `${phase}: último día · ${h}h ${m}m` : `${phase}: último día · ${m}m`;
+      }
+    }
+  }
+
+  const next = tt.next_price_cents != null && tt.next_starts_at
+    ? `${tt.next_name || 'Próxima etapa'}: ${formatPEN(tt.next_price_cents)} · próximamente`
+    : null;
+
+  if (!countdown && !next) return null;
+  return (
+    <div className="c-phase">
+      {countdown && <p className="c-phase__now"><Clock className="h-3.5 w-3.5" /> {countdown}</p>}
+      {next && <p className="c-rise"><TrendingUp className="h-3.5 w-3.5" /> {next}</p>}
+    </div>
+  );
 }
 
 export function EventCheckoutPanel({
@@ -74,7 +137,9 @@ export function EventCheckoutPanel({
         if (want === have) return;
         const res = await reserveStock(sid, ticketTypeId, want);
         if (!res.ok) {
-          toast.error(res.message);
+          // Mensaje SIN número (no exponer cuántas quedan). Si el server informa
+          // el máximo disponible, ajustamos el stepper en silencio.
+          toast.error('No quedan suficientes entradas de este tipo.');
           if (typeof res.available === 'number') {
             setQty((q) => ({ ...q, [ticketTypeId]: res.available! }));
             next[ticketTypeId] = res.available!;
@@ -94,10 +159,11 @@ export function EventCheckoutPanel({
   const totalItems = useMemo(() => Object.values(qty).reduce((a, b) => a + b, 0), [qty]);
 
   function inc(t: TicketType) {
-    const remaining = Math.max(0, t.capacity - t.sold);
     const current = qty[t.id] ?? 0;
-    if (!t.is_unlimited && current >= remaining) { toast.error(`Solo quedan ${remaining} disponibles`); return; }
+    if (t.soldOut) return;
     if (current >= 10) { toast.error('Máximo 10 por compra'); return; }
+    // El tope real de stock lo enforcea reserveStock (atómico) + reserve_order_stock
+    // al confirmar; acá solo limitamos el máximo por compra. No exponemos el cupo.
     setQty({ ...qty, [t.id]: current + 1 });
   }
   function dec(t: TicketType) {
@@ -178,9 +244,7 @@ function Step1({
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {sorted.map((t) => {
-          const remaining = t.capacity - t.sold;
-          const soldOut = !t.is_unlimited && remaining <= 0;
-          const lowStock = !t.is_unlimited && !soldOut && remaining < t.capacity * 0.2;
+          const soldOut = t.soldOut;
           const cur = qty[t.id] ?? 0;
           const perks = (t.description ?? '').split('\n').filter(Boolean);
           return (
@@ -193,14 +257,10 @@ function Step1({
                 {perks.length > 0 && (
                   <ul className="c-tt__perks">{perks.map((p, i) => <li key={i}><span style={{ color: 'var(--brand-ink)'}}>·</span> {p}</li>)}</ul>
                 )}
-                {t.next_price_cents != null && t.next_starts_at && !soldOut && (
-                  <p className="c-rise"><TrendingUp className="h-3.5 w-3.5" /> Sube a {formatPEN(t.next_price_cents)} el {formatRiseDate(t.next_starts_at)}</p>
-                )}
-                {!t.is_unlimited && (
-                  <p className={`c-stock ${soldOut ? 'c-stock--out' : lowStock ? 'c-stock--low' : ''}`}>
-                    {soldOut ? 'Agotado' : lowStock ? `¡Quedan pocas! · ${remaining} de ${t.capacity}` : `Disponibles · ${remaining} de ${t.capacity}`}
-                  </p>
-                )}
+                {/* Agotado = estado, SIN número. Si no, fases (countdown + teaser). */}
+                {soldOut
+                  ? <p className="c-stock c-stock--out">Agotado</p>
+                  : <PhaseTiming tt={t} />}
               </div>
               <div className="c-qty">
                 <button type="button" onClick={() => dec(t)} disabled={cur === 0 || soldOut} aria-label={`Restar ${t.name}`} className="c-qbtn"><Minus className="h-4 w-4" /></button>

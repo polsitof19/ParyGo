@@ -63,8 +63,13 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
     return {
       ...t,
       active_price_cents: ap?.active_price_cents ?? t.price_cents,
+      active_name: ap?.active_name ?? null,
+      active_ends_at: ap?.active_ends_at ?? null,
       next_price_cents: ap?.next_price_cents ?? null,
       next_starts_at: ap?.next_starts_at ?? null,
+      next_name: ap?.next_name ?? null,
+      // Estado de agotado calculado SERVER-side; capacity/sold no salen al cliente.
+      soldOut: !t.is_unlimited && (t.capacity - t.sold) <= 0,
     };
   });
 
@@ -132,11 +137,10 @@ export default async function EventPage({ params }: Props) {
   const { brand, event, ticketTypes, mpConfigured, mpPublicKey } = data;
 
   const startsAt = new Date(event.starts_at);
-  // Capacity meter is meaningful only for LIMITED types; unlimited types are
-  // excluded so the bar doesn't show a fake "X / 0".
-  const limitedTypes = ticketTypes.filter((t) => !t.is_unlimited);
-  const totalCapacity = limitedTypes.reduce((acc, t) => acc + t.capacity, 0);
-  const totalSold = limitedTypes.reduce((acc, t) => acc + t.sold, 0);
+
+  // El panel del COMPRADOR no recibe capacity/sold (no se filtran al cliente);
+  // solo el booleano soldOut. EventStructuredData (server-side) sí los usa.
+  const panelTypes = ticketTypes.map(({ capacity: _cap, sold: _sold, ...rest }) => rest);
 
   const dateLabel = new Intl.DateTimeFormat('es-PE', {
     weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima',
@@ -171,24 +175,11 @@ export default async function EventPage({ params }: Props) {
           </div>
         </section>
 
-        {/* MEDIDOR DE CAPACIDAD */}
-        {totalCapacity > 0 && (
-          <div className="c-meter">
-            <div className="c-meter__inner">
-              <span className="c-muted">Capacidad · {totalSold}/{totalCapacity}</span>
-              <div className="c-meter__bar" role="progressbar" aria-valuenow={totalSold} aria-valuemin={0} aria-valuemax={totalCapacity} aria-label={`Capacidad: ${totalSold} de ${totalCapacity}`}>
-                <div className="c-meter__fill" style={{ width: `${Math.min(100, (totalSold / totalCapacity) * 100)}%` }} />
-              </div>
-              <span className="c-eyebrow">En vivo</span>
-            </div>
-          </div>
-        )}
-
         {/* PANEL DE CHECKOUT */}
         <EventCheckoutPanel
           brand={brand}
           event={event}
-          ticketTypes={ticketTypes}
+          ticketTypes={panelTypes}
           mpConfigured={mpConfigured}
           mpPublicKey={mpPublicKey}
         />

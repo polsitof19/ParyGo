@@ -97,6 +97,9 @@
 .client-shell .c-tt__perks { margin-top: 6px; font-size: 13.5px; color: var(--ink-2); }
 .client-shell .c-tt__perks li { display: flex; gap: 6px; }
 .client-shell .c-rise { margin-top: 6px; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--warn); }
+/* Fases de preventa (countdown de la activa + teaser de la siguiente) */
+.client-shell .c-phase { margin-top: 6px; display: flex; flex-direction: column; gap: 3px; }
+.client-shell .c-phase__now { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--brand-ink); }
 .client-shell .c-stock { margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
 .client-shell .c-stock--low { color: var(--brand-ink); }
 .client-shell .c-stock--out { color: var(--alert); }

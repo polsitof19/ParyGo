@@ -30,14 +30,12 @@ export function EventStructuredData({ brand, event, ticketTypes }: Props) {
   const url = `https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${event.slug}`;
 
   const offers = ticketTypes.map((t) => {
+    // Solo InStock / SoldOut — NO exponemos "LimitedAvailability" (filtraría
+    // "poco stock" a nivel máquina; la capacidad es privada del organizador).
     const remaining = t.capacity - t.sold;
-    const availability = t.is_unlimited
+    const availability = t.is_unlimited || remaining > 0
       ? 'https://schema.org/InStock'
-      : remaining <= 0
-        ? 'https://schema.org/SoldOut'
-        : remaining < t.capacity * 0.2
-          ? 'https://schema.org/LimitedAvailability'
-          : 'https://schema.org/InStock';
+      : 'https://schema.org/SoldOut';
     return {
       '@type': 'Offer',
       name: t.name,

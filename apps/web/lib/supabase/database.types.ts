@@ -978,8 +978,11 @@ export type Database = {
         Returns: {
           ticket_type_id: string
           active_price_cents: number
+          active_name: string | null
+          active_ends_at: string | null
           next_price_cents: number | null
           next_starts_at: string | null
+          next_name: string | null
         }[]
       }
       consume_event_balance: {
