@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { EventCoverUploader } from '../EventCoverUploader';
 import { EditEventForm } from './EditEventForms';
 import { PostponeEvent } from './PostponeEvent';
+import { CourtesyForm } from './CourtesyForm';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { DangerDeleteButton } from '@/components/manage/DangerDeleteButton';
 import { setEventArchivedAction, deleteEventAction } from '../edit-actions';
@@ -42,6 +43,14 @@ export default async function EditEventPage({ params }: { params: { id: string }
   const hasSales = (soldCount ?? 0) > 0;
   const canDelete = (orderCount ?? 0) === 0 && (ticketCount ?? 0) === 0;
 
+  // Tipos activos para el selector de cortesías.
+  const { data: courtesyTypes } = await admin
+    .from('ticket_types')
+    .select('id, name')
+    .eq('event_id', event.id)
+    .eq('is_active', true)
+    .order('sort_order');
+
   return (
     <>
       <div style={{ marginBottom: 14 }}>
@@ -78,6 +87,20 @@ export default async function EditEventPage({ params }: { params: { id: string }
         <div style={{ marginTop: 16 }}>
           <PostponeEvent eventId={event.id} startsLocal={toLimaLocal(event.starts_at)} />
         </div>
+      )}
+
+      {/* Cortesías / VIP: emitir N entradas gratis a un email. Escritura → oculto
+          en solo lectura (el action además deniega impersonación server-side). */}
+      {!impersonating && (
+        <>
+          <h2 className="s-h2" style={{ margin: '24px 0 12px' }}>Cortesías</h2>
+          <div className="s-card">
+            <p className="s-card__desc" style={{ marginBottom: 14 }}>
+              Emití entradas de cortesía de un tipo y enviáselas por email a quien quieras (ej. invitados, prensa, RR.PP.). Son entradas reales, escaneables en puerta, y <strong>descuentan del aforo</strong>.
+            </p>
+            <CourtesyForm eventId={event.id} ticketTypes={courtesyTypes ?? []} />
+          </div>
+        </>
       )}
 
       <h2 className="s-h2" style={{ margin: '24px 0 12px' }}>Flyer</h2>

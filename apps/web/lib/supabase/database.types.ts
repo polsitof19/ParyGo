@@ -1147,7 +1147,7 @@ export type Database = {
         | "failed"
         | "refunded"
         | "expired"
-      payment_method: "mercadopago" | "yape_manual"
+      payment_method: "mercadopago" | "yape_manual" | "courtesy"
       user_role: "super_admin" | "brand_admin" | "validator"
       yape_proof_status: "pending_review" | "approved" | "rejected"
     }
@@ -1285,7 +1285,7 @@ export const Constants = {
         "refunded",
         "expired",
       ],
-      payment_method: ["mercadopago", "yape_manual"],
+      payment_method: ["mercadopago", "yape_manual", "courtesy"],
       user_role: ["super_admin", "brand_admin", "validator"],
       yape_proof_status: ["pending_review", "approved", "rejected"],
     },
