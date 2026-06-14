@@ -34,6 +34,7 @@ export default async function YapeUploadPage({
       yape_number: string | null;
       yape_holder: string | null;
       whatsapp_e164: string | null;
+      theme_json: { yape_qr_url?: string | null } | null;
     } | null;
     event: { name: string; slug: string } | null;
   };
@@ -42,7 +43,7 @@ export default async function YapeUploadPage({
     .from('orders')
     .select(`
       id, status, total_cents, buyer_name, payment_method,
-      brand:brands ( slug, name, yape_number, yape_holder, whatsapp_e164 ),
+      brand:brands ( slug, name, yape_number, yape_holder, whatsapp_e164, theme_json ),
       event:events ( name, slug )
     `)
     .eq('id', searchParams.order)
@@ -77,6 +78,27 @@ export default async function YapeUploadPage({
         <p style={{ fontFamily: 'var(--display)', fontWeight: 800, fontSize: 'clamp(34px,9vw,46px)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', color: 'var(--brand-ink)' }}>{order.brand.yape_number}</p>
         <p className="c-muted" style={{ marginTop: 6 }}>Titular: <strong style={{ color: 'var(--ink)' }}>{order.brand.yape_holder ?? order.brand.name}</strong></p>
         <p className="c-muted">Monto exacto: <strong style={{ color: 'var(--ink)' }}>{formatPEN(order.total_cents)}</strong></p>
+
+        {order.brand.theme_json?.yape_qr_url && (
+          <div style={{ marginTop: 16, borderRadius: 16, border: '1px solid #E7D9F2', background: '#F6F0FB', padding: 14, textAlign: 'center' }}>
+            {/* Morado Yape + nombre en TEXTO (no falsificamos el logo del BCP) */}
+            <p style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontWeight: 800, letterSpacing: '-0.01em', color: '#742384', fontSize: 15 }}>
+              <span aria-hidden style={{ display: 'inline-block', width: 9, height: 9, borderRadius: '50%', background: '#742384' }} />
+              Escaneá con Yape
+            </p>
+            {/* Ampliable: tocar abre el QR a tamaño completo en mobile */}
+            <a href={order.brand.theme_json.yape_qr_url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 10 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={order.brand.theme_json.yape_qr_url}
+                alt={`QR de Yape de ${order.brand.yape_holder ?? order.brand.name}`}
+                style={{ width: 'min(260px, 70vw)', aspectRatio: '1 / 1', objectFit: 'contain', borderRadius: 12, background: '#fff', border: '1px solid #E7D9F2', margin: '0 auto' }}
+              />
+            </a>
+            <p className="c-muted" style={{ marginTop: 8, fontSize: 12 }}>Tocá el QR para ampliarlo</p>
+          </div>
+        )}
+
         <p style={{ marginTop: 12, borderRadius: 'var(--r-ctl)', background: 'var(--warn-bg)', color: 'var(--warn)', padding: '11px 14px', fontSize: 13, fontWeight: 500 }}>
           ⚠️ Yapea el monto exacto. Si yapeas de menos o de más, el promotor puede rechazar el comprobante.
         </p>

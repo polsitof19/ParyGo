@@ -14,6 +14,7 @@ type Props = {
   primaryColor: string;
   secondaryColor: string;
   logoUrl: string | null;
+  yapeQrUrl: string | null;
   readOnly?: boolean;
 };
 
@@ -47,6 +48,25 @@ export function SettingsForm(props: Props) {
         <div className="s-field">
           <Field label="Titular de la cuenta" htmlFor="yape_holder" error={err.yape_holder}>
             <input id="yape_holder" name="yape_holder" defaultValue={props.yapeHolder} placeholder="Tu Marca SAC" className="s-input" disabled={ro} />
+          </Field>
+        </div>
+        <div className="s-field">
+          <Field label="QR de Yape (PNG, JPG o WEBP · máx 2MB · opcional)" htmlFor="yape_qr" error={err.yape_qr}>
+            <p className="s-card__desc" style={{ marginBottom: 8 }}>Si lo subís, tus compradores lo ven en el paso de pago y escanean directo desde su Yape.</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {props.yapeQrUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={props.yapeQrUrl} alt="QR de Yape actual" style={{ height: 64, width: 64, borderRadius: 10, border: '1px solid var(--cream-3)', objectFit: 'cover' }} />
+              ) : (
+                <span className="s-avatar" style={{ background: 'var(--cream-2)', color: 'var(--ink-3)', fontSize: 10, borderRadius: 10 }}>QR</span>
+              )}
+              <input id="yape_qr" name="yape_qr" type="file" accept="image/png,image/jpeg,image/webp" className="s-input" style={{ paddingTop: 9 }} disabled={ro} />
+            </div>
+            {props.yapeQrUrl && !ro && (
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 13, color: 'var(--ink-2)' }}>
+                <input type="checkbox" name="remove_yape_qr" value="1" /> Quitar el QR actual
+              </label>
+            )}
           </Field>
         </div>
       </section>

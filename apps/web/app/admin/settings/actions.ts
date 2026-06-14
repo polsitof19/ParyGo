@@ -79,6 +79,7 @@ export async function updateBrandSettingsAction(
 
   const theme = (brand.theme_json ?? {}) as Record<string, unknown>;
   let logoUrl = (theme.logo_url as string | undefined) ?? null;
+  let yapeQrUrl = (theme.yape_qr_url as string | undefined) ?? null;
 
   // Optional logo upload to the public brand-assets bucket.
   const file = formData.get('logo');
@@ -102,11 +103,38 @@ export async function updateBrandSettingsAction(
     logoUrl = pub.publicUrl;
   }
 
+  // QR de Yape (imagen). Mismo bucket público + mismo criterio que el logo: solo
+  // raster (sin SVG → XSS), path con slug del SERVER + nanoid no adivinable.
+  if (formData.get('remove_yape_qr') === '1') {
+    yapeQrUrl = null;
+  }
+  const qrFile = formData.get('yape_qr');
+  if (qrFile instanceof File && qrFile.size > 0) {
+    const ext = LOGO_TYPES[qrFile.type];
+    if (!ext) {
+      return { ok: false, message: 'QR de Yape: usá PNG, JPG o WEBP.', fieldErrors: { yape_qr: 'Tipo no permitido' } };
+    }
+    if (qrFile.size > 2 * 1024 * 1024) {
+      return { ok: false, message: 'El QR supera 2 MB.', fieldErrors: { yape_qr: 'Muy grande' } };
+    }
+    const path = `${brand.slug}/yape-qr-${nanoid(8)}.${ext}`;
+    const bytes = new Uint8Array(await qrFile.arrayBuffer());
+    const { error: upErr } = await admin.storage
+      .from('brand-assets')
+      .upload(path, bytes, { contentType: qrFile.type, cacheControl: '3600', upsert: true });
+    if (upErr) {
+      return { ok: false, message: `No se pudo subir el QR: ${upErr.message}` };
+    }
+    const { data: pub } = admin.storage.from('brand-assets').getPublicUrl(path);
+    yapeQrUrl = pub.publicUrl;
+  }
+
   const nextTheme = {
     ...theme,
     primary_color: parsed.data.primary_color,
     secondary_color: parsed.data.secondary_color,
     logo_url: logoUrl,
+    yape_qr_url: yapeQrUrl,
   };
 
   const { error: updErr } = await admin

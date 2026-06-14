@@ -36,6 +36,7 @@ export default async function AdminSettingsPage() {
 
   const theme = (brand.theme_json ?? {}) as {
     logo_url?: string | null;
+    yape_qr_url?: string | null;
     primary_color?: string;
     secondary_color?: string;
   };
@@ -70,6 +71,7 @@ export default async function AdminSettingsPage() {
         primaryColor={theme.primary_color ?? '#FF1F8F'}
         secondaryColor={theme.secondary_color ?? '#00E5FF'}
         logoUrl={theme.logo_url ?? null}
+        yapeQrUrl={theme.yape_qr_url ?? null}
         readOnly={impersonating}
       />
 
