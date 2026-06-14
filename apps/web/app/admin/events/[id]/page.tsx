@@ -62,9 +62,13 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
   const types = ticketTypes ?? [];
 
   // ---- Métricas ----
-  const byMethod = { yape: { count: 0, cents: 0 }, mp: { count: 0, cents: 0 } };
+  // Cortesías (payment_method='courtesy', S/0) van a su PROPIO bucket — no se
+  // cuentan como Yape (no inflan el conteo de órdenes pagadas ni el dinero).
+  const byMethod = { yape: { count: 0, cents: 0 }, mp: { count: 0, cents: 0 }, courtesy: { count: 0, cents: 0 } };
   for (const o of paidRows) {
-    const b = o.payment_method === 'mercadopago' ? byMethod.mp : byMethod.yape;
+    const b = o.payment_method === 'mercadopago' ? byMethod.mp
+      : o.payment_method === 'courtesy' ? byMethod.courtesy
+        : byMethod.yape;
     b.count += 1; b.cents += o.total_cents ?? 0;
   }
   const dayMap = new Map<string, number>();
@@ -245,6 +249,9 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
           <div className="a-money">
             <div className="a-money__cell"><span className="s-stat__label">Yape aprobado</span><span className="a-money__v">{formatPEN(byMethod.yape.cents)}</span><span className="s-stat__sub">{byMethod.yape.count} órdenes</span></div>
             <div className="a-money__cell"><span className="s-stat__label">MercadoPago</span><span className="a-money__v">{formatPEN(byMethod.mp.cents)}</span><span className="s-stat__sub">{byMethod.mp.count} órdenes</span></div>
+            {byMethod.courtesy.count > 0 && (
+              <div className="a-money__cell"><span className="s-stat__label">Cortesías</span><span className="a-money__v">{byMethod.courtesy.count}</span><span className="s-stat__sub">entregadas gratis</span></div>
+            )}
             <div className="a-money__cell a-money__cell--total"><span className="s-stat__label">Total confirmado</span><span className="a-money__v">{formatPEN(confirmedCents)}</span><span className="s-stat__sub">ya en tus cuentas</span></div>
           </div>
           {pendingCount > 0 && (
