@@ -109,6 +109,9 @@ export function EventCheckoutPanel({
 
   const [qty, setQty] = useState<Record<string, number>>({});
   const [step, setStep] = useState<1 | 2>(1);
+  // Código de RR.PP. (promo_codes) — se ingresa en el PASO 1 (al comprar) y se
+  // conserva para aplicarlo en el paso 2 con el email. Opcional (no bloquea).
+  const [promoInput, setPromoInput] = useState('');
   const [method, setMethod] = useState<'yape_manual' | 'mercadopago'>(
     brand.yape_number ? 'yape_manual' : mpConfigured ? 'mercadopago' : 'yape_manual'
   );
@@ -213,11 +216,12 @@ export function EventCheckoutPanel({
       {mpCheckout && mpPublicKey ? (
         <MercadoPagoWallet publicKey={mpPublicKey} preferenceId={mpCheckout.preferenceId} initPoint={mpCheckout.initPoint} />
       ) : step === 1 ? (
-        <Step1 sorted={sorted} qty={qty} inc={inc} dec={dec} totalCents={totalCents} totalItems={totalItems} onContinue={() => setStep(2)} />
+        <Step1 sorted={sorted} qty={qty} inc={inc} dec={dec} totalCents={totalCents} totalItems={totalItems} promoInput={promoInput} setPromoInput={setPromoInput} onContinue={() => setStep(2)} />
       ) : (
         <Step2
           brand={brand} event={event} sorted={sorted} qty={qty} totalCents={totalCents}
           method={method} setMethod={setMethod} mpConfigured={mpConfigured} isPending={isPending}
+          promoInput={promoInput} setPromoInput={setPromoInput}
           onBack={() => setStep(1)}
           onSubmit={(input) => {
             startTransition(async () => {
@@ -235,10 +239,10 @@ export function EventCheckoutPanel({
 
 // ============================ Paso 1 — Elegir entradas ============================
 function Step1({
-  sorted, qty, inc, dec, totalCents, totalItems, onContinue,
+  sorted, qty, inc, dec, totalCents, totalItems, promoInput, setPromoInput, onContinue,
 }: {
   sorted: TicketType[]; qty: Record<string, number>; inc: (t: TicketType) => void; dec: (t: TicketType) => void;
-  totalCents: number; totalItems: number; onContinue: () => void;
+  totalCents: number; totalItems: number; promoInput: string; setPromoInput: (v: string) => void; onContinue: () => void;
 }) {
   return (
     <>
@@ -272,6 +276,23 @@ function Step1({
         })}
       </div>
 
+      {/* Código de RR.PP. — visible al comprar. Opcional: si lo tenés, ingresalo;
+          se aplica al confirmar tu email en el siguiente paso. */}
+      <div className="c-card" style={{ marginTop: 16 }}>
+        <label htmlFor="rrpp_code" className="c-card__title" style={{ display: 'block', marginBottom: 4 }}>¿Tenés un código de RR.PP.?</label>
+        <p className="c-muted" style={{ fontSize: 12.5, marginBottom: 10 }}>Si un promotor te pasó un código, ingresalo acá (opcional). Se aplica al pagar.</p>
+        <input
+          id="rrpp_code"
+          value={promoInput}
+          onChange={(e) => setPromoInput(e.target.value)}
+          placeholder="Código del promotor"
+          autoCapitalize="characters"
+          maxLength={32}
+          className="c-input"
+          style={{ textTransform: 'uppercase' }}
+        />
+      </div>
+
       <div className={`c-stickybar ${totalItems === 0 ? 'c-stickybar--off' : ''}`} style={{ marginTop: 20 }}>
         <div className="c-stickybar__t">
           <span className="n">{totalItems} entrada{totalItems === 1 ? '' : 's'}</span>
@@ -287,14 +308,13 @@ function Step1({
 
 // ============================ Paso 2 — Datos + pago ============================
 function Step2({
-  brand, event, sorted, qty, totalCents, method, setMethod, mpConfigured, isPending, onBack, onSubmit,
+  brand, event, sorted, qty, totalCents, method, setMethod, mpConfigured, isPending, promoInput, setPromoInput, onBack, onSubmit,
 }: {
   brand: Brand; event: Event; sorted: TicketType[]; qty: Record<string, number>; totalCents: number;
   method: 'yape_manual' | 'mercadopago'; setMethod: (m: 'yape_manual' | 'mercadopago') => void;
-  mpConfigured: boolean; isPending: boolean; onBack: () => void;
+  mpConfigured: boolean; isPending: boolean; promoInput: string; setPromoInput: (v: string) => void; onBack: () => void;
   onSubmit: (input: Omit<CheckoutInput, 'sessionId'>) => void;
 }) {
-  const [promoInput, setPromoInput] = useState('');
   const [applied, setApplied] = useState<null | { code: string; finalCents: number; discountCents: number; isFree: boolean }>(null);
   const [checking, setChecking] = useState(false);
   const [docType, setDocType] = useState<'dni' | 'ce' | 'passport'>('dni');
@@ -363,7 +383,8 @@ function Step2({
           </div>
           <div className="c-field">
             <label htmlFor="buyer_email" className="c-label">Email</label>
-            <input id="buyer_email" name="buyer_email" type="email" autoComplete="email" required placeholder="tu@email.com" className="c-input" inputMode="email" />
+            <input id="buyer_email" name="buyer_email" type="email" autoComplete="email" required placeholder="tu@email.com" className="c-input" inputMode="email"
+              onBlur={() => { if (promoInput.trim().length >= 2 && !applied && !checking) applyPromo(); }} />
             <p className="c-help">Acá te llega tu QR al instante.</p>
           </div>
           <div className="c-field">
