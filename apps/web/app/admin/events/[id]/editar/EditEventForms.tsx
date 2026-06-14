@@ -17,7 +17,7 @@ function Submit({ label }: { label: string }) {
   return <button type="submit" className="s-btn s-btn--primary s-btn--sm" disabled={pending}>{pending ? 'Guardando…' : label}</button>;
 }
 
-export function EditEventForm(p: { eventId: string; name: string; description: string; startsLocal: string; venueName: string; venueAddress: string; minAge: number; isPublished?: boolean; hasSales?: boolean; readOnly?: boolean }) {
+export function EditEventForm(p: { eventId: string; name: string; description: string; startsLocal: string; venueName: string; venueAddress: string; venueMapsUrl: string; requireAgeConfirmation: boolean; minAge: number; isPublished?: boolean; hasSales?: boolean; readOnly?: boolean }) {
   const [state, action] = useFormState(updateEventAction, initial);
   const dateRef = useRef<HTMLInputElement>(null);
   const ro = Boolean(p.readOnly);
@@ -49,7 +49,18 @@ export function EditEventForm(p: { eventId: string; name: string; description: s
       <div className="s-field"><label className="s-label" htmlFor="ev-vname">Lugar (nombre)</label>
         <input id="ev-vname" name="venue_name" defaultValue={p.venueName} className="s-input" disabled={ro} /></div>
       <div className="s-field"><label className="s-label" htmlFor="ev-vaddr">Dirección</label>
-        <input id="ev-vaddr" name="venue_address" defaultValue={p.venueAddress} className="s-input" disabled={ro} /></div>
+        <input id="ev-vaddr" name="venue_address" defaultValue={p.venueAddress} className="s-input" disabled={ro} />
+        <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Si la cargás, mostramos el mapa de Google en la página pública.</p></div>
+      <div className="s-field"><label className="s-label" htmlFor="ev-vmaps">Enlace de Google Maps (opcional)</label>
+        <input id="ev-vmaps" name="venue_maps_url" type="url" defaultValue={p.venueMapsUrl} placeholder="https://maps.app.goo.gl/..." className="s-input" disabled={ro} />
+        <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Para el botón "Cómo llegar". Pegá el enlace de tu local (debe empezar con https://).</p></div>
+      <div className="s-field">
+        <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+          <input type="checkbox" name="require_age_confirmation" defaultChecked={p.requireAgeConfirmation} disabled={ro} />
+          <span>Pedir confirmación de edad (+{p.minAge}) en el checkout</span>
+        </label>
+        <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Activalo si tu evento lo requiere legalmente (ej. alcohol).</p>
+      </div>
       <Banner state={state} />
       {!ro && <div className="s-form-actions"><Submit label="Guardar evento" /></div>}
     </form>

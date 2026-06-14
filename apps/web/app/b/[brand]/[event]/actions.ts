@@ -51,7 +51,7 @@ const schema = z.object({
   buyerPhone: z.string().min(7).max(20),
   buyerDocType: z.enum(['dni', 'ce', 'passport']),
   buyerDni: z.string().trim().min(6).max(20),
-  ageOk: z.literal(true),
+  ageOk: z.boolean(), // se exige solo si el evento pide confirmación (chequeo abajo)
   marketingOptIn: z.boolean(),
   method: z.enum(['yape_manual', 'mercadopago']),
   items: z
@@ -96,7 +96,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // 1. Verify event + ticket types in one query (server-trusted).
   const { data: event } = await admin
     .from('events')
-    .select('id, slug, name, brand_id, is_published, min_age, archived_at')
+    .select('id, slug, name, brand_id, is_published, min_age, archived_at, require_age_confirmation')
     .eq('id', parsed.data.eventId)
     .maybeSingle();
   if (!event || !event.is_published || event.archived_at) {
@@ -104,6 +104,10 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   }
   if (event.brand_id !== parsed.data.brandId) {
     return { ok: false, message: 'Marca/evento no coinciden.' };
+  }
+  // Confirmación de edad: server-side, solo si el evento la pide (configurable).
+  if (event.require_age_confirmation && !parsed.data.ageOk) {
+    return { ok: false, message: `Tenés que confirmar que sos mayor de ${event.min_age} años.` };
   }
   // La marca tampoco puede estar archivada (no confiar solo en la página).
   const { data: brandRow } = await admin
@@ -203,7 +207,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
       buyer_phone: parsed.data.buyerPhone,
       buyer_dni: parsed.data.buyerDni,
       buyer_doc_type: parsed.data.buyerDocType,
-      buyer_age_ok: true,
+      buyer_age_ok: parsed.data.ageOk,
       marketing_opt_in: parsed.data.marketingOptIn,
       payment_method: parsed.data.method,
       subtotal_cents: totalCents,

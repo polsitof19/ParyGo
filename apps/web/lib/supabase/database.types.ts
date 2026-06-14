@@ -114,6 +114,8 @@ export type Database = {
           id: string
           is_published: boolean
           min_age: number
+          require_age_confirmation: boolean
+          venue_maps_url: string | null
           name: string
           refund_policy: string | null
           slug: string
@@ -134,6 +136,8 @@ export type Database = {
           id?: string
           is_published?: boolean
           min_age?: number
+          require_age_confirmation?: boolean
+          venue_maps_url?: string | null
           name: string
           refund_policy?: string | null
           slug: string
@@ -154,6 +158,8 @@ export type Database = {
           id?: string
           is_published?: boolean
           min_age?: number
+          require_age_confirmation?: boolean
+          venue_maps_url?: string | null
           name?: string
           refund_policy?: string | null
           slug?: string

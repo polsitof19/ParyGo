@@ -34,6 +34,8 @@ const eventSchema = z.object({
   starts_at: z.string().min(1),
   venue_name: z.string().max(120).optional().or(z.literal('')),
   venue_address: z.string().max(200).optional().or(z.literal('')),
+  // Enlace de Google Maps: debe ser https (va a un href). Vacío permitido.
+  venue_maps_url: z.string().url().startsWith('https://').max(500).optional().or(z.literal('')),
   min_age: z.string().optional().or(z.literal('')),
 });
 
@@ -47,9 +49,11 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   const parsed = eventSchema.safeParse({
     name: formData.get('name'), description: formData.get('description') ?? '',
     starts_at: formData.get('starts_at'), venue_name: formData.get('venue_name') ?? '',
-    venue_address: formData.get('venue_address') ?? '', min_age: formData.get('min_age') ?? '',
+    venue_address: formData.get('venue_address') ?? '', venue_maps_url: formData.get('venue_maps_url') ?? '',
+    min_age: formData.get('min_age') ?? '',
   });
-  if (!parsed.success) return { ok: false, message: 'Revisá los campos.' };
+  if (!parsed.success) return { ok: false, message: 'Revisá los campos (el enlace de Maps debe empezar con https://).' };
+  const requireAge = formData.get('require_age_confirmation') === 'on';
   const startsIso = limaToIso(parsed.data.starts_at);
   if (!startsIso) return { ok: false, message: 'Fecha/hora inválida.' };
 
@@ -86,6 +90,8 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
       starts_at: startsIso,
       venue_name: parsed.data.venue_name || null,
       venue_address: parsed.data.venue_address || null,
+      venue_maps_url: parsed.data.venue_maps_url || null,
+      require_age_confirmation: requireAge,
       min_age: parsed.data.min_age ? Math.min(99, Math.max(0, parseInt(parsed.data.min_age, 10) || 18)) : 18,
     })
     .eq('id', eventId)

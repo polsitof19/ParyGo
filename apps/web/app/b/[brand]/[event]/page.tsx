@@ -30,8 +30,8 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
     .from('events')
     .select(`
       id, slug, name, description, starts_at, ends_at,
-      venue_name, venue_address, venue_lat, venue_lng,
-      cover_url, min_age, refund_policy, is_published
+      venue_name, venue_address, venue_lat, venue_lng, venue_maps_url,
+      cover_url, min_age, require_age_confirmation, refund_policy, is_published
     `)
     .eq('brand_id', brand.id)
     .eq('slug', eventSlug)
@@ -192,11 +192,29 @@ export default async function EventPage({ params }: Props) {
                 <p className="c-card__title">Dónde</p>
                 <p className="c-h2">{event.venue_name}</p>
                 <p className="c-muted" style={{ marginTop: 4 }}>{event.venue_address}</p>
-                {event.venue_lat && event.venue_lng && (
-                  <a href={`https://www.google.com/maps/search/?api=1&query=${event.venue_lat},${event.venue_lng}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 12, color: 'var(--brand-ink)', fontWeight: 600, fontSize: 14 }}>
-                    Ver en Google Maps <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                )}
+                {/* Mapa embed OFICIAL de Google (sin API key, lazy) — responsive */}
+                <div style={{ marginTop: 12, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--cream-3)', aspectRatio: '16 / 10', background: 'var(--cream-2)' }}>
+                  <iframe
+                    title={`Mapa de ${event.venue_name ?? 'la ubicación'}`}
+                    src={`https://www.google.com/maps?q=${encodeURIComponent(event.venue_address)}&z=16&output=embed`}
+                    style={{ border: 0, display: 'block', width: '100%', height: '100%' }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                </div>
+                <a
+                  href={
+                    event.venue_maps_url?.startsWith('https://')
+                      ? event.venue_maps_url
+                      : event.venue_lat && event.venue_lng
+                        ? `https://www.google.com/maps/search/?api=1&query=${event.venue_lat},${event.venue_lng}`
+                        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue_address)}`
+                  }
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 12, color: 'var(--brand-ink)', fontWeight: 600, fontSize: 14 }}
+                >
+                  Cómo llegar <ExternalLink className="h-3.5 w-3.5" />
+                </a>
               </div>
             )}
             {event.refund_policy && (

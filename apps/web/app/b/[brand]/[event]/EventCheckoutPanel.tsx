@@ -21,7 +21,7 @@ function readOrCreateSessionId(): string {
 }
 
 type Brand = { id: string; slug: string; name: string; yape_number: string | null; yape_holder: string | null };
-type Event = { id: string; slug: string; name: string; min_age: number; starts_at: string };
+type Event = { id: string; slug: string; name: string; min_age: number; starts_at: string; require_age_confirmation: boolean };
 type TicketType = {
   id: string; name: string; description: string | null; price_cents: number;
   active_price_cents: number; active_name: string | null; active_ends_at: string | null;
@@ -336,8 +336,9 @@ function Step2({
       onSubmit={(e) => {
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
-        const ageOk = fd.get('age_ok') === '1';
-        if (!ageOk) { toast.error(`Tienes que confirmar que eres mayor de ${event.min_age} años`); return; }
+        // Confirmación de edad: solo se exige si el evento la pide (configurable).
+        const ageOk = event.require_age_confirmation ? fd.get('age_ok') === '1' : true;
+        if (event.require_age_confirmation && !ageOk) { toast.error(`Tienes que confirmar que eres mayor de ${event.min_age} años`); return; }
         onSubmit({
           eventId: event.id, brandId: brand.id,
           buyerName: String(fd.get('buyer_name') ?? '').trim(),
@@ -388,12 +389,14 @@ function Step2({
             </div>
             <p className="c-help">Para validar tu identidad en la puerta. No lo compartimos.</p>
           </div>
-          <div className="c-field">
-            <label className="c-check">
-              <input type="checkbox" name="age_ok" value="1" required />
-              <span>Confirmo que soy mayor de {event.min_age} años (requerido para ingresar).</span>
-            </label>
-          </div>
+          {event.require_age_confirmation && (
+            <div className="c-field">
+              <label className="c-check">
+                <input type="checkbox" name="age_ok" value="1" required />
+                <span>Confirmo que soy mayor de {event.min_age} años (requerido para ingresar).</span>
+              </label>
+            </div>
+          )}
           <div className="c-field">
             <label className="c-check">
               <input type="checkbox" name="marketing_opt_in" value="1" defaultChecked />

@@ -26,7 +26,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
     .from('events')
     .select(`
       id, slug, name, description, starts_at, ends_at,
-      venue_name, venue_address, min_age, is_published, refund_policy, cover_url,
+      venue_name, venue_address, venue_maps_url, require_age_confirmation, min_age, is_published, refund_policy, cover_url,
       archived_at, brand_id,
       brand:brands ( slug, name )
     `)
@@ -125,6 +125,8 @@ export default async function EventDetailPage({ params }: { params: { id: string
           startsLocal={toLimaLocal(event.starts_at)}
           venueName={event.venue_name ?? ''}
           venueAddress={event.venue_address ?? ''}
+          venueMapsUrl={event.venue_maps_url ?? ''}
+          requireAgeConfirmation={event.require_age_confirmation ?? false}
           minAge={event.min_age ?? 18}
           isPublished={event.is_published}
           hasSales={hasSales}
