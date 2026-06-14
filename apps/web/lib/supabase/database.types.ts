@@ -1078,6 +1078,18 @@ export type Database = {
         Args: { p_limit?: number }
         Returns: Database["public"]["Tables"]["event_postpone_emails"]["Row"][]
       }
+      set_brand_mp_webhook_secret: {
+        Args: { p_brand_id: string; p_secret: string; p_encryption_key: string }
+        Returns: undefined
+      }
+      get_brand_mp_webhook_secret: {
+        Args: { p_brand_id: string; p_encryption_key: string }
+        Returns: string
+      }
+      migrate_brand_webhook_secret_to_enc: {
+        Args: { p_encryption_key: string }
+        Returns: number
+      }
       release_stock_reservations_for_order: {
         Args: { p_order_id: string }
         Returns: number

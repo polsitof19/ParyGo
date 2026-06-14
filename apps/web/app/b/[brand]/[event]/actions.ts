@@ -5,7 +5,7 @@ import { headers } from 'next/headers';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv, publicEnv } from '@/lib/env';
 import { createMercadoPagoPreference } from '@/lib/mercadopago';
-import { issueTicketsForOrder, markOrderPaid } from '@/lib/tickets';
+import { issueTicketsForOrder } from '@/lib/tickets';
 import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
 
 export type CheckoutInput = {
@@ -306,16 +306,13 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   const baseUrl = `${proto}://${host}`;
   const eventBase = `/${event.slug}`;
 
-  // Free order (100% off promo): emitir tickets PRIMERO (gate atómico de cupo),
-  // y solo si emite OK marcar pagada + consumir promo + email. Mismo patrón que
-  // approveYapeProof: si el cupo se agotó NO dejamos la orden paid-sin-QR.
+  // Free order (100% off promo): issue_tickets_atomic hace gate de cupo + flip a
+  // paid + consumo de promo + emisión + release, TODO atómico (migr 0034). Si el
+  // cupo se agotó NO deja la orden paid-sin-QR. Solo resta el email.
   if (isFree) {
     const issue = await issueTicketsForOrder({ orderId: order.id, reason: 'yape_approved' });
     if (issue.ok) {
-      await markOrderPaid(order.id);
-      await admin.rpc('mark_promo_redemption_consumed', { p_order_id: order.id });
       await sendTicketEmail(order.id);
-      await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
       return { ok: true, redirectUrl: `${eventBase}/confirmacion?order=${order.id}` };
     }
     // No se pudo emitir (incl. oversold_no_capacity): NO marcamos pagada. Fallar

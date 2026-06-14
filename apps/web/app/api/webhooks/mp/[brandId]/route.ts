@@ -32,15 +32,20 @@ export async function POST(
     return NextResponse.json({ error: 'invalid_brand_id' }, { status: 400 });
   }
 
-  // 1. Load brand + webhook secret
+  // 1. Load brand + webhook secret (encriptado, migr 0034 → se desencripta vía
+  // RPC service-role con la clave del server; nunca en texto plano en la DB).
   const { data: brand } = await admin
     .from('brands')
-    .select('id, mp_webhook_secret')
+    .select('id')
     .eq('id', params.brandId)
     .maybeSingle();
   if (!brand) {
     return NextResponse.json({ error: 'brand_not_found' }, { status: 404 });
   }
+  const { data: webhookSecret } = await admin.rpc('get_brand_mp_webhook_secret', {
+    p_brand_id: brand.id,
+    p_encryption_key: serverEnv.BRAND_CREDS_ENCRYPTION_KEY,
+  });
 
   // 2. Verify MP signature — MANDATORY, no exceptions. There is NO environment
   // bypass: a brand without a webhook secret cannot be verified, so we reject
@@ -51,7 +56,7 @@ export async function POST(
   const url = new URL(req.url);
   const dataId = url.searchParams.get('data.id') ?? url.searchParams.get('id');
 
-  if (!brand.mp_webhook_secret) {
+  if (!webhookSecret) {
     return NextResponse.json({ error: 'webhook_secret_missing' }, { status: 401 });
   }
   if (!xSignature || !dataId || !xRequestId) {
@@ -59,7 +64,7 @@ export async function POST(
   }
   const verified = await verifyMpSignature({
     header: xSignature,
-    secret: brand.mp_webhook_secret,
+    secret: webhookSecret,
     dataId,
     requestId: xRequestId,
   });

@@ -1,7 +1,7 @@
 // Client-only IndexedDB layer for the door scanner: caches the event's valid
 // QRs for offline validation and holds a durable queue of offline scans to
 // sync when the network returns.
-import { openDB, type IDBPDatabase } from 'idb';
+import { openDB, deleteDB, type IDBPDatabase } from 'idb';
 
 export type CachedTicket = {
   qr_code: string;
@@ -75,6 +75,21 @@ export async function markScanSynced(clientScanId: string, result: string): Prom
     s.result = result;
     await d.put('queue', s);
   }
+}
+
+// Purga TODO el estado offline del scanner del dispositivo: la cache de tickets
+// (incluye DNI/datos de asistentes) + la cola + las claves de localStorage. Se
+// llama al cerrar sesión para no dejar PII en el celular de puerta.
+export async function purgeOfflineScanData(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  try {
+    if (_db) { _db.close(); _db = null; }
+    await deleteDB(DB_NAME);
+  } catch { /* best-effort: si falla el delete, igual seguimos al logout */ }
+  try {
+    localStorage.removeItem('parygo-device-id');
+    localStorage.removeItem('parygo-scan-muted');
+  } catch { /* noop */ }
 }
 
 export function getDeviceId(): string {

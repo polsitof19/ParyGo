@@ -95,7 +95,15 @@ export function EventStructuredData({ brand, event, ticketTypes }: Props) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      // Escape canónico (Next/React) de < > & en el JSON-LD: evita que un
+      // nombre/descripción de evento con "</script>" o "<!--" rompa el tag e
+      // inyecte HTML (XSS almacenado vía dato del promotor).
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(data)
+          .replace(/</g, '\\u003c')
+          .replace(/>/g, '\\u003e')
+          .replace(/&/g, '\\u0026'),
+      }}
     />
   );
 }

@@ -75,8 +75,8 @@ export async function createBrandAction(
 
   const admin = createAdminClient();
 
-  // Random per-brand webhook HMAC secret. Stored in plain text — needed to
-  // verify incoming MP webhook signatures.
+  // Secreto HMAC del webhook MP por marca. Se guarda ENCRIPTADO (migr 0034) vía
+  // RPC service-role, nunca en texto plano.
   const webhookSecret = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
 
   const themeJson = {
@@ -84,7 +84,8 @@ export async function createBrandAction(
     secondary_color: parsed.data.secondary_color || '#00E5FF',
   };
 
-  // Step 1: insert brand row (without MP creds — those go via secured RPC)
+  // Step 1: insert brand row (sin secretos — el webhook secret y las creds MP van
+  // por RPC encriptada).
   const { data: brand, error: insertErr } = await admin
     .from('brands')
     .insert({
@@ -95,7 +96,6 @@ export async function createBrandAction(
       yape_number: parsed.data.yape_number || null,
       yape_holder: parsed.data.yape_holder || null,
       theme_json: themeJson,
-      mp_webhook_secret: webhookSecret,
     })
     .select('id, slug')
     .single();
@@ -107,11 +107,22 @@ export async function createBrandAction(
     return { ok: false, message: insertErr?.message ?? 'No se pudo crear.' };
   }
 
-  // Step 2: store MP credentials encrypted (if provided)
+  // Step 2: webhook secret encriptado. Si falla → rollback (borrar la marca recién
+  // creada; aún no tiene historial).
+  const { error: wsErr } = await admin.rpc('set_brand_mp_webhook_secret', {
+    p_brand_id: brand.id,
+    p_secret: webhookSecret,
+    p_encryption_key: serverEnv.BRAND_CREDS_ENCRYPTION_KEY,
+  });
+  if (wsErr) {
+    await admin.from('brands').delete().eq('id', brand.id);
+    return { ok: false, message: 'No se pudo guardar el secreto del webhook. Intentá de nuevo.' };
+  }
+
+  // Step 3: store MP credentials encrypted (if provided). Si falla → rollback.
   if (parsed.data.mp_access_token || parsed.data.mp_public_key) {
     // The generated types declare the RPC args as non-null strings, but the
     // underlying plpgsql function treats null as "clear the credential".
-    // Cast through unknown to keep the null semantic without lying about it.
     const { error: rpcErr } = await admin.rpc('set_brand_mp_credentials', {
       p_brand_id: brand.id,
       p_access_token: parsed.data.mp_access_token || (null as unknown as string),
@@ -119,12 +130,8 @@ export async function createBrandAction(
       p_encryption_key: serverEnv.BRAND_CREDS_ENCRYPTION_KEY,
     });
     if (rpcErr) {
-      // Brand was created but creds failed — surface the issue, brand still usable for Yape.
-      revalidatePath('/cabina-7k29x/brands');
-      return {
-        ok: false,
-        message: `Marca creada pero las credenciales MP fallaron: ${rpcErr.message}. Prueba guardarlas desde la página de la marca.`,
-      };
+      await admin.from('brands').delete().eq('id', brand.id); // rollback all-or-nothing
+      return { ok: false, message: `No se pudieron guardar las credenciales MP: ${rpcErr.message}` };
     }
   }
 
@@ -257,7 +264,7 @@ export async function createBrandWithOwnerAction(
     secondary_color: '#00E5FF',
   };
 
-  // Paso 2: insertar la marca.
+  // Paso 2: insertar la marca (sin el secreto en plano; va encriptado por RPC).
   const { data: brand, error: insertErr } = await admin
     .from('brands')
     .insert({
@@ -265,7 +272,6 @@ export async function createBrandWithOwnerAction(
       name: parsed.data.name,
       contact_email: email,
       theme_json: themeJson,
-      mp_webhook_secret: webhookSecret,
     })
     .select('id, slug')
     .single();
@@ -278,6 +284,18 @@ export async function createBrandWithOwnerAction(
     }
     console.error('[createBrandWithOwner] insert brand falló', insertErr?.message);
     return { ok: false, message: 'No se pudo crear la marca.' };
+  }
+
+  // Paso 2.5: webhook secret ENCRIPTADO (migr 0034). Si falla → rollback total.
+  const { error: wsErr } = await admin.rpc('set_brand_mp_webhook_secret', {
+    p_brand_id: brand.id,
+    p_secret: webhookSecret,
+    p_encryption_key: serverEnv.BRAND_CREDS_ENCRYPTION_KEY,
+  });
+  if (wsErr) {
+    await rollback(created.user.id, brand.id);
+    console.error('[createBrandWithOwner] set webhook secret falló', wsErr.message);
+    return { ok: false, message: 'No se pudo crear la marca (secreto webhook).' };
   }
 
   // Paso 3: asignar membresía brand_admin SOLO para esta marca.

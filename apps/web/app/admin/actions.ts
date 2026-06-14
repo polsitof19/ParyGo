@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
+import { isImpersonating } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { issueTicketsForOrder } from '@/lib/tickets';
 import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
@@ -30,6 +31,10 @@ export async function voidTicketAction(
   formData: FormData
 ): Promise<VoidTicketState> {
   const user = await requireSession();
+  // SOLO-LECTURA en impersonación: anular un ticket es escritura de acceso →
+  // denegada mientras el super admin "ve" una marca (defensa explícita, no solo
+  // por ausencia de membership).
+  if (isImpersonating()) return { ok: false, message: 'No autorizado durante impersonación.' };
   const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
   if (!membership) return { ok: false, message: 'No autorizado.' };
 
@@ -92,6 +97,8 @@ export async function reissueTicketsAction(
   formData: FormData
 ): Promise<ReissueState> {
   const user = await requireSession();
+  // SOLO-LECTURA en impersonación: re-emitir tickets es escritura → denegada.
+  if (isImpersonating()) return { ok: false, message: 'No autorizado durante impersonación.' };
   const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
   if (!membership) return { ok: false, message: 'No autorizado.' };
 

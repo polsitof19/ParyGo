@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation';
-import { LogOut, ScanLine } from 'lucide-react';
+import { ScanLine } from 'lucide-react';
 import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { requireSession } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { ScanServiceWorker } from './ScanServiceWorker';
+import { ScanLogoutButton } from './ScanLogoutButton';
 import './scan.css';
 
 export const runtime = 'edge';
@@ -38,9 +39,7 @@ export default async function ScanLayout({ children }: { children: React.ReactNo
             {brand?.name ?? 'Puerta'}
             <span className="k-tag">Puerta</span>
           </span>
-          <form action="/auth/logout" method="post">
-            <button type="submit" aria-label="Cerrar sesión" className="k-logout"><LogOut className="h-4 w-4" /></button>
-          </form>
+          <ScanLogoutButton />
         </div>
       </header>
       <main className="k-wrap">{children}</main>

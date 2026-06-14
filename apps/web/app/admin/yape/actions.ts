@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { isImpersonating } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { issueTicketsForOrder, markOrderPaid } from '@/lib/tickets';
+import { issueTicketsForOrder } from '@/lib/tickets';
 import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
 import { sendYapeRejectedEmail } from '@/lib/email/sendYapeRejectedEmail';
 
@@ -56,11 +56,11 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
     };
   }
 
-  // Emisión ATÓMICA primero (idempotente + GATE de cupo, migr 0031). Solo si
-  // emite OK marcamos la orden pagada y consumimos la promo. Si el evento se
-  // sobrevendió (la reserva expiró y el cupo se revendió antes de esta
-  // aprobación) NO se emite ni se marca pagada: revertimos la aprobación del
-  // comprobante para que el organizador lo rechace y reembolse el Yape.
+  // Emisión ATÓMICA (migr 0031/0034): issue_tickets_atomic hace, en UNA sola
+  // transacción bloqueada, el GATE de cupo + flip a paid + consumo de promo +
+  // emisión → sin estados a medias (paridad con settle_mp_payment). Si el evento
+  // se sobrevendió (reserva expirada + cupo revendido) NO emite ni marca pagada:
+  // revertimos la aprobación del comprobante para que el organizador lo rechace.
   const issue = await issueTicketsForOrder({
     orderId: proof.order_id,
     reason: 'yape_approved',
@@ -79,9 +79,6 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
     }
     return { ok: false, message: `Tickets fallaron: ${issue.error}` };
   }
-  // Emitió OK → marcar pagada + consumir la redención de promo (ambos idempotentes).
-  await markOrderPaid(proof.order_id);
-  await admin.rpc('mark_promo_redemption_consumed', { p_order_id: proof.order_id });
 
   await admin.from('events_log').insert({
     brand_id: proof.brand_id,
@@ -100,6 +97,14 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
     console.error('[approveYapeProof] sendTicketEmail failed', {
       order_id: proof.order_id,
       reason: emailResult.reason,
+    });
+    // Rastro PERSISTENTE (no solo console, que en Edge se pierde) para que el
+    // organizador vea que el QR no se entregó y pueda reenviar desde el panel.
+    await admin.from('events_log').insert({
+      brand_id: proof.brand_id,
+      order_id: proof.order_id,
+      type: 'ticket_email_failed',
+      payload: { reason: emailResult.reason ?? 'unknown', flow: 'yape_approved' },
     });
   }
 
