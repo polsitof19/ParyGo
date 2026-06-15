@@ -56,7 +56,7 @@ export default function LoginPage({
             </a>
           </p>
         )}
-        <p className="auth-legal">Al continuar aceptás los Términos y la Política de Privacidad.</p>
+        <p className="auth-legal">Al continuar aceptás los <a href="/terminos">Términos</a> y la <a href="/privacidad">Política de Privacidad</a>.</p>
       </div>
     </main>
   );

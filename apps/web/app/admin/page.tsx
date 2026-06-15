@@ -10,6 +10,8 @@ import { InviteValidator } from './InviteValidator';
 import { ValidatorManager } from './ValidatorManager';
 import { TicketRecovery } from './TicketRecovery';
 import { SetupChecklist, type SetupStep } from './SetupChecklist';
+import { LowBalanceNotice } from './LowBalanceNotice';
+import { publicEnv } from '@/lib/env';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { setEventArchivedAction } from './events/[id]/edit-actions';
 
@@ -174,6 +176,11 @@ export default async function AdminHomePage() {
           <span className="s-stat__sub">acumulado de la marca</span>
         </div>
       </div>
+
+      {/* Aviso de saldo bajo (solo dueño): empuja a pedir packs cuando queda ≤1. */}
+      {!impersonating && (
+        <LowBalanceNotice balance={balance} brandName={brand.name} supportWhatsapp={publicEnv.NEXT_PUBLIC_SUPPORT_WHATSAPP} />
+      )}
 
       {/* Setup guiado: solo el dueño (no en solo lectura) y solo si falta algún
           paso (el componente se auto-oculta cuando está todo listo). */}

@@ -252,6 +252,11 @@ export default async function EventPage({ params, searchParams }: Props) {
             </>
           )}
         </p>
+        <p className="c-foot" style={{ marginTop: 6, fontSize: 12 }}>
+          <a href="/terminos" style={{ color: 'var(--ink-3)' }}>Términos</a>
+          {' · '}
+          <a href="/privacidad" style={{ color: 'var(--ink-3)' }}>Privacidad</a>
+        </p>
 
         <p className="sr-only">
           Entradas desde {formatPEN(Math.min(...(ticketTypes.length ? ticketTypes.map((t) => t.active_price_cents) : [0])))}.
