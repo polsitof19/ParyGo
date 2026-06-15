@@ -40,22 +40,26 @@ export async function resendMyTickets(_prev: ResendResult, formData: FormData): 
   }
 
   const admin = createAdminClient();
-  const ip = headers().get('x-forwarded-for')?.split(',')[0]?.trim() || null;
-  const sinceIso = new Date(Date.now() - WINDOW_MS).toISOString();
+  // IP real detrás de Cloudflare: cf-connecting-ip NO es spoofeable por el cliente
+  // (x-forwarded-for sí lo es). Fallback a XFF por si cambia el proxy.
+  const ip =
+    headers().get('cf-connecting-ip')?.trim() ||
+    headers().get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    null;
 
-  // (c) Conteo de intentos en la ventana (antes de registrar el actual).
-  const [emailRes, ipRes] = await Promise.all([
-    admin.from('ticket_resend_attempts').select('id', { count: 'exact', head: true }).eq('email', email).gte('created_at', sinceIso),
-    ip
-      ? admin.from('ticket_resend_attempts').select('id', { count: 'exact', head: true }).eq('ip', ip).gte('created_at', sinceIso)
-      : Promise.resolve({ count: 0 } as { count: number | null }),
-  ]);
-  // Registramos SIEMPRE el intento (también el bloqueado) → el sondeo cuenta.
-  await admin.from('ticket_resend_attempts').insert({ email, ip, brand_id: brand.id });
-
-  const overLimit = (emailRes.count ?? 0) >= MAX_PER_EMAIL || (ipRes.count ?? 0) >= MAX_PER_IP;
-  if (overLimit) {
-    // Misma respuesta neutra: no revelamos que se bloqueó.
+  // (c) Rate-limit ATÓMICO (cuenta + registra en una tx con advisory lock por
+  // email → sin carrera TOCTOU). Devuelve si está permitido. Registra SIEMPRE el
+  // intento (también el bloqueado) para que el sondeo cuente.
+  const { data: allowed, error: rlErr } = await admin.rpc('register_ticket_resend_attempt', {
+    p_email: email,
+    p_ip: ip,
+    p_brand_id: brand.id,
+    p_max_email: MAX_PER_EMAIL,
+    p_max_ip: MAX_PER_IP,
+    p_window_secs: Math.floor(WINDOW_MS / 1000),
+  });
+  // Si el rate-limit falla (error), no enviamos: respuesta neutra (fail-closed).
+  if (rlErr || allowed !== true) {
     return { ok: true, message: NEUTRAL };
   }
 

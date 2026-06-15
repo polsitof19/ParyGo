@@ -1189,6 +1189,17 @@ export type Database = {
         Args: { p_limit?: number }
         Returns: Database["public"]["Tables"]["notification_jobs"]["Row"][]
       }
+      register_ticket_resend_attempt: {
+        Args: {
+          p_email: string
+          p_ip: string | null
+          p_brand_id: string | null
+          p_max_email?: number
+          p_max_ip?: number
+          p_window_secs?: number
+        }
+        Returns: boolean
+      }
       set_brand_mp_webhook_secret: {
         Args: { p_brand_id: string; p_secret: string; p_encryption_key: string }
         Returns: undefined
