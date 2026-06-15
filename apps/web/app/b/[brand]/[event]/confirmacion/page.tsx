@@ -224,7 +224,8 @@ export default async function ConfirmationPage({
       </div>
 
       <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginTop: 18 }}>
-        También te enviamos el QR por email. Si no llega en 5 min, revisa spam o usa el link permanente.
+        También te enviamos el QR por email. Si no llega en 5 min, revisa spam o usa el link permanente.{' '}
+        <Link href="/reenviar" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>¿No lo encontrás? Reenviar a mi email</Link>
       </p>
     </main>
   );

@@ -240,14 +240,18 @@ export default async function EventPage({ params, searchParams }: Props) {
         )}
 
         {/* SOPORTE */}
-        {brand.whatsapp_e164 && (
-          <p className="c-foot">
-            ¿Problema con tu compra?{' '}
-            <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>
-              WhatsApp soporte
-            </a>
-          </p>
-        )}
+        <p className="c-foot">
+          ¿Ya compraste y perdiste tu entrada?{' '}
+          <a href="/reenviar" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>Reenviála a tu email</a>
+          {brand.whatsapp_e164 && (
+            <>
+              {' · '}
+              <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>
+                WhatsApp soporte
+              </a>
+            </>
+          )}
+        </p>
 
         <p className="sr-only">
           Entradas desde {formatPEN(Math.min(...(ticketTypes.length ? ticketTypes.map((t) => t.active_price_cents) : [0])))}.

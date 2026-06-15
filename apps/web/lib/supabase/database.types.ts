@@ -539,6 +539,30 @@ export type Database = {
         }
         Relationships: []
       }
+      ticket_resend_attempts: {
+        Row: {
+          brand_id: string | null
+          created_at: string
+          email: string
+          id: string
+          ip: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          ip?: string | null
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          ip?: string | null
+        }
+        Relationships: []
+      }
       stock_reservations: {
         Row: {
           created_at: string
