@@ -27,7 +27,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
   const admin = createAdminClient();
   const { data: event } = await admin
     .from('events')
-    .select('id, brand_id, name, description, starts_at, venue_name, venue_address, venue_maps_url, require_age_confirmation, min_age, cover_url, is_published, archived_at')
+    .select('id, brand_id, name, description, starts_at, venue_name, venue_address, venue_maps_url, require_age_confirmation, require_dni, min_age, cover_url, is_published, archived_at')
     .eq('id', params.id)
     .maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
@@ -77,6 +77,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
           venueAddress={event.venue_address ?? ''}
           venueMapsUrl={event.venue_maps_url ?? ''}
           requireAgeConfirmation={event.require_age_confirmation ?? false}
+          requireDni={event.require_dni ?? true}
           minAge={event.min_age ?? 18}
           isPublished={event.is_published}
           hasSales={hasSales}

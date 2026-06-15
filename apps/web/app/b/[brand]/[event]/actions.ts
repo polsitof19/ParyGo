@@ -50,7 +50,10 @@ const schema = z.object({
   buyerEmail: z.string().email(),
   buyerPhone: z.string().min(7).max(20),
   buyerDocType: z.enum(['dni', 'ce', 'passport']),
-  buyerDni: z.string().trim().min(6).max(20),
+  // El formato del documento se valida server-side MÁS ABAJO, solo si el evento
+  // pide DNI (require_dni). Acá lo dejamos laxo para no romper cuando el evento
+  // NO lo exige (el campo ni se renderiza en el checkout).
+  buyerDni: z.string().trim().max(20),
   ageOk: z.boolean(), // se exige solo si el evento pide confirmación (chequeo abajo)
   marketingOptIn: z.boolean(),
   method: z.enum(['yape_manual', 'mercadopago']),
@@ -64,15 +67,6 @@ const schema = z.object({
     .min(1),
   sessionId: z.string().min(8).max(64),
   promoCode: z.string().min(2).max(32).optional().or(z.literal('')),
-}).superRefine((d, ctx) => {
-  // DNI peruano = exactamente 8 dígitos. CE/pasaporte = alfanumérico 6-15.
-  if (d.buyerDocType === 'dni') {
-    if (!/^\d{8}$/.test(d.buyerDni)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['buyerDni'], message: 'El DNI debe tener 8 dígitos.' });
-    }
-  } else if (!/^[A-Za-z0-9]{6,15}$/.test(d.buyerDni)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['buyerDni'], message: 'Documento inválido.' });
-  }
 });
 
 export async function startCheckout(input: CheckoutInput): Promise<CheckoutResult> {
@@ -96,7 +90,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // 1. Verify event + ticket types in one query (server-trusted).
   const { data: event } = await admin
     .from('events')
-    .select('id, slug, name, brand_id, is_published, min_age, archived_at, require_age_confirmation')
+    .select('id, slug, name, brand_id, is_published, min_age, archived_at, require_age_confirmation, require_dni')
     .eq('id', parsed.data.eventId)
     .maybeSingle();
   if (!event || !event.is_published || event.archived_at) {
@@ -108,6 +102,21 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // Confirmación de edad: server-side, solo si el evento la pide (configurable).
   if (event.require_age_confirmation && !parsed.data.ageOk) {
     return { ok: false, message: `Tenés que confirmar que sos mayor de ${event.min_age} años.` };
+  }
+  // Documento de identidad: server-side, solo si el evento lo pide (configurable).
+  // DNI peruano = exactamente 8 dígitos. CE/pasaporte = alfanumérico 6-15.
+  if (event.require_dni) {
+    const doc = parsed.data.buyerDni.trim();
+    const docOk =
+      parsed.data.buyerDocType === 'dni'
+        ? /^\d{8}$/.test(doc)
+        : /^[A-Za-z0-9]{6,15}$/.test(doc);
+    if (!docOk) {
+      return {
+        ok: false,
+        message: parsed.data.buyerDocType === 'dni' ? 'El DNI debe tener 8 dígitos.' : 'Documento inválido.',
+      };
+    }
   }
   // La marca tampoco puede estar archivada (no confiar solo en la página).
   const { data: brandRow } = await admin
@@ -205,8 +214,8 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
       buyer_name: parsed.data.buyerName,
       buyer_email: parsed.data.buyerEmail.toLowerCase(),
       buyer_phone: parsed.data.buyerPhone,
-      buyer_dni: parsed.data.buyerDni,
-      buyer_doc_type: parsed.data.buyerDocType,
+      buyer_dni: event.require_dni ? parsed.data.buyerDni : null,
+      buyer_doc_type: parsed.data.buyerDocType, // NOT NULL en BD; sin DNI queda 'dni' inerte
       buyer_age_ok: parsed.data.ageOk,
       marketing_opt_in: parsed.data.marketingOptIn,
       payment_method: parsed.data.method,

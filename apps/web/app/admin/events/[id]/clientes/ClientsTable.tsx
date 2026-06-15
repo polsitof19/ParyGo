@@ -31,7 +31,7 @@ function csvCell(v: string | number | null): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function ClientsTable({ rows, eventName, impersonating = false }: { rows: ClientRow[]; eventName: string; impersonating?: boolean }) {
+export function ClientsTable({ rows, eventId, eventName, impersonating = false }: { rows: ClientRow[]; eventId: string; eventName: string; impersonating?: boolean }) {
   const [q, setQ] = useState('');
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -80,8 +80,11 @@ export function ClientsTable({ rows, eventName, impersonating = false }: { rows:
           />
         </div>
         <button type="button" onClick={exportCsv} className="s-btn s-btn--soft" disabled={rows.length === 0} title="Exporta los compradores de esta página">
-          <Download className="h-4 w-4" /> Exportar CSV (esta página)
+          <Download className="h-4 w-4" /> CSV (esta página)
         </button>
+        <a href={`/api/admin/events/${eventId}/export-clientes`} className="s-btn" title="Descarga TODOS los compradores pagados del evento">
+          <Download className="h-4 w-4" /> CSV completo
+        </a>
       </div>
 
       {filtered.length === 0 ? (

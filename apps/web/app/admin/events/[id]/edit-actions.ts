@@ -54,6 +54,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   });
   if (!parsed.success) return { ok: false, message: 'Revisá los campos (el enlace de Maps debe empezar con https://).' };
   const requireAge = formData.get('require_age_confirmation') === 'on';
+  const requireDni = formData.get('require_dni') === 'on';
   const startsIso = limaToIso(parsed.data.starts_at);
   if (!startsIso) return { ok: false, message: 'Fecha/hora inválida.' };
 
@@ -92,6 +93,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
       venue_address: parsed.data.venue_address || null,
       venue_maps_url: parsed.data.venue_maps_url || null,
       require_age_confirmation: requireAge,
+      require_dni: requireDni,
       min_age: parsed.data.min_age ? Math.min(99, Math.max(0, parseInt(parsed.data.min_age, 10) || 18)) : 18,
     })
     .eq('id', eventId)

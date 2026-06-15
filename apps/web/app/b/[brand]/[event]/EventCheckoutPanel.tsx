@@ -21,7 +21,7 @@ function readOrCreateSessionId(): string {
 }
 
 type Brand = { id: string; slug: string; name: string; yape_number: string | null; yape_holder: string | null };
-type Event = { id: string; slug: string; name: string; min_age: number; starts_at: string; require_age_confirmation: boolean };
+type Event = { id: string; slug: string; name: string; min_age: number; starts_at: string; require_age_confirmation: boolean; require_dni: boolean };
 type TicketType = {
   id: string; name: string; description: string | null; price_cents: number;
   active_price_cents: number; active_name: string | null; active_ends_at: string | null;
@@ -98,9 +98,10 @@ function PhaseTiming({ tt }: { tt: TicketType }) {
 }
 
 export function EventCheckoutPanel({
-  brand, event, ticketTypes, mpConfigured, mpPublicKey,
+  brand, event, ticketTypes, mpConfigured, mpPublicKey, refCode = '',
 }: {
   brand: Brand; event: Event; ticketTypes: TicketType[]; mpConfigured: boolean; mpPublicKey: string | null;
+  refCode?: string;
 }) {
   const sorted = useMemo(
     () => [...ticketTypes].sort((a, b) => b.active_price_cents - a.active_price_cents || a.sort_order - b.sort_order),
@@ -111,7 +112,8 @@ export function EventCheckoutPanel({
   const [step, setStep] = useState<1 | 2>(1);
   // Código de RR.PP. (promo_codes) — se ingresa en el PASO 1 (al comprar) y se
   // conserva para aplicarlo en el paso 2 con el email. Opcional (no bloquea).
-  const [promoInput, setPromoInput] = useState('');
+  // B5: pre-rellena con el código del link del promotor (?ref=). Editable.
+  const [promoInput, setPromoInput] = useState(refCode.toUpperCase());
   const [method, setMethod] = useState<'yape_manual' | 'mercadopago'>(
     brand.yape_number ? 'yape_manual' : mpConfigured ? 'mercadopago' : 'yape_manual'
   );
@@ -391,6 +393,7 @@ function Step2({
             <label htmlFor="buyer_phone" className="c-label">WhatsApp</label>
             <input id="buyer_phone" name="buyer_phone" type="tel" autoComplete="tel" required minLength={9} maxLength={20} inputMode="tel" pattern="^[+\d][\d\s\(\)\-]{7,19}$" placeholder="+51 999 999 999" className="c-input" />
           </div>
+          {event.require_dni && (
           <div className="c-field">
             <label htmlFor="buyer_dni" className="c-label">Documento de identidad</label>
             <div className="c-doc">
@@ -410,6 +413,7 @@ function Step2({
             </div>
             <p className="c-help">Para validar tu identidad en la puerta. No lo compartimos.</p>
           </div>
+          )}
           {event.require_age_confirmation && (
             <div className="c-field">
               <label className="c-check">

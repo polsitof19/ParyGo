@@ -14,6 +14,7 @@ export const dynamic = 'force-dynamic';
 
 type Props = {
   params: { brand: string; event: string };
+  searchParams?: { ref?: string | string[] };
 };
 
 async function loadEvent(brandSlug: string, eventSlug: string) {
@@ -31,7 +32,7 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
     .select(`
       id, slug, name, description, starts_at, ends_at,
       venue_name, venue_address, venue_lat, venue_lng, venue_maps_url,
-      cover_url, min_age, require_age_confirmation, refund_policy, is_published
+      cover_url, min_age, require_age_confirmation, require_dni, refund_policy, is_published
     `)
     .eq('brand_id', brand.id)
     .eq('slug', eventSlug)
@@ -131,10 +132,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function EventPage({ params }: Props) {
+export default async function EventPage({ params, searchParams }: Props) {
   const data = await loadEvent(params.brand, params.event);
   if (!data) notFound();
   const { brand, event, ticketTypes, mpConfigured, mpPublicKey } = data;
+
+  // B5 — link propio por promotor: ?ref=CÓDIGO pre-rellena el campo de RR.PP.
+  // Solo prefill (la lógica de promo no cambia); si es inválido, el campo es
+  // editable y el checkout no se rompe. Sanitizamos a [A-Za-z0-9_-] máx 32.
+  const refRaw = Array.isArray(searchParams?.ref) ? searchParams?.ref[0] : searchParams?.ref;
+  const refCode = (refRaw ?? '').trim().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
 
   const startsAt = new Date(event.starts_at);
 
@@ -182,6 +189,7 @@ export default async function EventPage({ params }: Props) {
           ticketTypes={panelTypes}
           mpConfigured={mpConfigured}
           mpPublicKey={mpPublicKey}
+          refCode={refCode}
         />
 
         {/* DÓNDE + DEVOLUCIONES */}

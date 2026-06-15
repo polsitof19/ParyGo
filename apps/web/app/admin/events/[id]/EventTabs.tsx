@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, Pencil, Ticket, Users, DoorOpen, Wallet } from 'lucide-react';
+import { BarChart3, Pencil, Ticket, Users, DoorOpen, Wallet, Megaphone } from 'lucide-react';
 
 const TABS = [
   { seg: '', label: 'Resumen', Icon: BarChart3 },
   { seg: '/editar', label: 'Editar evento', Icon: Pencil },
   { seg: '/entradas', label: 'Editar entradas', Icon: Ticket },
   { seg: '/clientes', label: 'Clientes', Icon: Users },
+  { seg: '/promotores', label: 'Promotores', Icon: Megaphone },
   { seg: '/accesos', label: 'Accesos', Icon: DoorOpen },
   { seg: '/yape', label: 'Revisar Yape', Icon: Wallet },
 ] as const;

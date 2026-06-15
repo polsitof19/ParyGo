@@ -76,7 +76,7 @@ export default async function EventClientsPage({ params, searchParams }: { param
           {totalPages > 1 && <> · página {page} de {totalPages}</>}
         </p>
       </div>
-      <ClientsTable rows={rows} eventName={event.name} impersonating={ctx.impersonating} />
+      <ClientsTable rows={rows} eventId={event.id} eventName={event.name} impersonating={ctx.impersonating} />
       {totalPages > 1 && (
         <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 16 }} aria-label="Paginación de compradores">
           {page > 1 ? (
