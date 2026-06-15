@@ -28,7 +28,13 @@ function toICalUTC(iso: string): string {
 }
 
 function escapeICS(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  // Escapar \ primero, luego ; y , — y colapsar CUALQUIER salto (CRLF/CR/LF) a
+  // un \n literal: un \r crudo permitiría inyectar líneas/propiedades en el .ics.
+  return s
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r\n|\r|\n/g, '\\n');
 }
 
 export function AddToCalendar({ title, startIso, endIso, location, details, uid }: Props) {
