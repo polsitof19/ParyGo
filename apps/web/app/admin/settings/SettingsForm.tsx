@@ -15,6 +15,8 @@ type Props = {
   secondaryColor: string;
   logoUrl: string | null;
   yapeQrUrl: string | null;
+  notifyYapeRecovery: boolean;
+  notifyYapeDigest: boolean;
   readOnly?: boolean;
 };
 
@@ -104,6 +106,25 @@ export function SettingsForm(props: Props) {
           <p className="s-label">Vista previa</p>
           <div className="a-color-prev" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }} />
         </div>
+      </section>
+
+      <section className="s-card">
+        <p className="s-section-lead" style={{ marginBottom: 6 }}>Avisos por email de Yape</p>
+        <p className="s-card__desc" style={{ marginBottom: 14 }}>Recordatorios automáticos por email. No cambian cómo aprobás los Yapes — solo avisan/recuerdan. Desactivados por defecto.</p>
+        <label className="s-check" style={{ display: 'flex', gap: 9, alignItems: 'flex-start', marginBottom: 12 }}>
+          <input type="checkbox" name="notify_yape_recovery" defaultChecked={props.notifyYapeRecovery} disabled={ro} style={{ marginTop: 3 }} />
+          <span>
+            <strong>Recordar a los compradores con Yape a medias</strong>
+            <span className="s-muted" style={{ display: 'block', fontSize: 13 }}>Si alguien empezó la compra pero no subió su comprobante, le mandamos un recordatorio con el link para completarla.</span>
+          </span>
+        </label>
+        <label className="s-check" style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
+          <input type="checkbox" name="notify_yape_digest" defaultChecked={props.notifyYapeDigest} disabled={ro} style={{ marginTop: 3 }} />
+          <span>
+            <strong>Avisarme cuando tengo Yapes por aprobar</strong>
+            <span className="s-muted" style={{ display: 'block', fontSize: 13 }}>Te llega un email a tu correo de contacto cuando hay comprobantes esperando tu revisión.</span>
+          </span>
+        </label>
       </section>
 
       {state.message && <p className={state.ok ? 's-banner s-banner--ok' : 's-banner s-banner--err'}>{state.message}</p>}

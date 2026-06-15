@@ -137,6 +137,10 @@ export async function updateBrandSettingsAction(
     yape_qr_url: yapeQrUrl,
   };
 
+  // Avisos de Yape por email (Grupo C). Checkboxes → 'on'/ausente. Opt-in.
+  const notifyYapeRecovery = formData.get('notify_yape_recovery') === 'on';
+  const notifyYapeDigest = formData.get('notify_yape_digest') === 'on';
+
   const { error: updErr } = await admin
     .from('brands')
     .update({
@@ -144,6 +148,8 @@ export async function updateBrandSettingsAction(
       whatsapp_e164: parsed.data.whatsapp_e164 || null,
       yape_number: parsed.data.yape_number || null,
       yape_holder: parsed.data.yape_holder || null,
+      notify_yape_recovery: notifyYapeRecovery,
+      notify_yape_digest: notifyYapeDigest,
       theme_json: nextTheme,
     })
     .eq('id', brandId); // scoped to the admin's own brand

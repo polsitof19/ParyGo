@@ -60,6 +60,8 @@ export type Database = {
           mp_public_key_enc: string | null
           mp_webhook_secret: string | null
           name: string
+          notify_yape_digest: boolean
+          notify_yape_recovery: boolean
           slug: string
           theme_json: Json
           updated_at: string
@@ -77,6 +79,8 @@ export type Database = {
           mp_public_key_enc?: string | null
           mp_webhook_secret?: string | null
           name: string
+          notify_yape_digest?: boolean
+          notify_yape_recovery?: boolean
           slug: string
           theme_json?: Json
           updated_at?: string
@@ -94,6 +98,8 @@ export type Database = {
           mp_public_key_enc?: string | null
           mp_webhook_secret?: string | null
           name?: string
+          notify_yape_digest?: boolean
+          notify_yape_recovery?: boolean
           slug?: string
           theme_json?: Json
           updated_at?: string
@@ -473,6 +479,63 @@ export type Database = {
           sent_at?: string | null
           status?: string
           venue?: string | null
+        }
+        Relationships: []
+      }
+      notification_jobs: {
+        Row: {
+          attempts: number
+          brand_id: string | null
+          claimed_at: string | null
+          created_at: string
+          dedupe_key: string
+          event_id: string | null
+          id: string
+          kind: string
+          last_error: string | null
+          order_id: string | null
+          payload: Json
+          recipient_email: string
+          recipient_name: string
+          resend_id: string | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          brand_id?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          dedupe_key: string
+          event_id?: string | null
+          id?: string
+          kind: string
+          last_error?: string | null
+          order_id?: string | null
+          payload?: Json
+          recipient_email: string
+          recipient_name?: string
+          resend_id?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          brand_id?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          dedupe_key?: string
+          event_id?: string | null
+          id?: string
+          kind?: string
+          last_error?: string | null
+          order_id?: string | null
+          payload?: Json
+          recipient_email?: string
+          recipient_name?: string
+          resend_id?: string | null
+          sent_at?: string | null
+          status?: string
         }
         Relationships: []
       }
@@ -1089,6 +1152,18 @@ export type Database = {
       claim_postpone_emails: {
         Args: { p_limit?: number }
         Returns: Database["public"]["Tables"]["event_postpone_emails"]["Row"][]
+      }
+      enqueue_yape_notifications: {
+        Args: {
+          p_recovery_min_age_hours?: number
+          p_recovery_max_age_hours?: number
+          p_digest_bucket_seconds?: number
+        }
+        Returns: number
+      }
+      claim_notification_jobs: {
+        Args: { p_limit?: number }
+        Returns: Database["public"]["Tables"]["notification_jobs"]["Row"][]
       }
       set_brand_mp_webhook_secret: {
         Args: { p_brand_id: string; p_secret: string; p_encryption_key: string }
