@@ -13,8 +13,10 @@ export default function NewBrandPage({ searchParams }: { searchParams: { request
   // el request_id deja que el alta marque la solicitud como aprobada al crear.
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const requestId = searchParams.request && UUID_RE.test(searchParams.request) ? searchParams.request : undefined;
-  const initialName = requestId ? (searchParams.name ?? '') : '';
-  const initialEmail = requestId ? (searchParams.email ?? '') : '';
+  // Truncar el prefill a las longitudes del schema del alta (higiene: el query
+  // param no es de confianza, aunque el alta revalide server-side igual).
+  const initialName = requestId ? (searchParams.name ?? '').slice(0, 60) : '';
+  const initialEmail = requestId ? (searchParams.email ?? '').slice(0, 200) : '';
 
   return (
     <div style={{ maxWidth: 560, margin: '0 auto' }}>
