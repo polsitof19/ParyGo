@@ -442,3 +442,12 @@
   padding: 7px 14px; font-weight: 700; font-size: 13px; cursor: pointer; white-space: nowrap;
 }
 .imp-banner__exit:hover { background: #e8e8ff; }
+
+/* ===== Impresión / PDF (reporte post-evento) ===== */
+@media print {
+  .s-topbar, .a-tabs, .s-back, .no-print, .publish-control, .a-evhead__thumb { display: none !important; }
+  .admin-shell { background: #fff !important; }
+  .s-wrap { padding: 0 !important; max-width: 100% !important; }
+  .s-card { border: 1px solid #ddd !important; box-shadow: none !important; break-inside: avoid; }
+  a[href]::after { content: ''; } /* no imprimir URLs de los links */
+}

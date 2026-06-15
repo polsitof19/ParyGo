@@ -3,6 +3,7 @@ import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
+import { PrintReportButton } from './PrintReportButton';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -101,12 +102,15 @@ export default async function ReportePage({ params }: { params: { id: string } }
 
   return (
     <>
-      <div style={{ marginBottom: 14 }}>
-        <span className="eyebrow">Reporte</span>
-        <h2 className="s-h2" style={{ marginTop: 2 }}>{ended ? 'Reporte post-evento' : 'Reporte (en curso)'}</h2>
-        <p className="s-card__desc">
-          {ended ? 'Resumen final del evento.' : 'El evento todavía no terminó — los números siguen actualizándose.'} Datos privados de tu marca.
-        </p>
+      <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <span className="eyebrow">Reporte · {event.name}</span>
+          <h2 className="s-h2" style={{ marginTop: 2 }}>{ended ? 'Reporte post-evento' : 'Reporte (en curso)'}</h2>
+          <p className="s-card__desc">
+            {ended ? 'Resumen final del evento.' : 'El evento todavía no terminó — los números siguen actualizándose.'} Datos privados de tu marca.
+          </p>
+        </div>
+        <PrintReportButton />
       </div>
 
       {/* KPIs */}
