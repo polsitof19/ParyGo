@@ -271,3 +271,19 @@
 @media (prefers-reduced-motion: reduce) {
   .super-shell *, .super-shell *::before, .super-shell *::after { transition-duration: 0ms !important; }
 }
+
+/* ===== Animaciones profesionales (entrada + hover) — super admin ===== */
+@keyframes a-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes a-fadeUp { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .super-shell .s-pagehead,
+  .super-shell .s-card,
+  .super-shell .s-stat { animation: a-fadeUp .42s cubic-bezier(.22,1,.36,1) both; }
+  .super-shell .s-card:nth-child(2) { animation-delay: .05s }
+  .super-shell .s-card:nth-child(3) { animation-delay: .1s }
+  .super-shell .s-card:nth-child(n+4) { animation-delay: .14s }
+  .super-shell .s-btn { transition: transform .1s ease, filter .15s ease; }
+  .super-shell .s-btn:hover { filter: brightness(.97); }
+  .super-shell .s-btn:active { transform: translateY(1px); }
+}

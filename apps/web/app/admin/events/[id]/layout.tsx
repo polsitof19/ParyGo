@@ -26,19 +26,22 @@ export default async function EventLayout({
   if (!ctx) notFound();
 
   const admin = createAdminClient();
-  const { data: event } = await admin
-    .from('events')
-    .select('id, brand_id, slug, name, is_published, starts_at, venue_name, cover_url, brand:brands ( slug )')
-    .eq('id', params.id)
-    .maybeSingle();
+  // Las dos lecturas son independientes (yape filtra por la marca de la SESIÓN,
+  // ctx.brandId, no por el evento) → en PARALELO en vez de en cascada, así la
+  // navegación entre pestañas es más rápida.
+  const [{ data: event }, { data: pendingProofs }] = await Promise.all([
+    admin
+      .from('events')
+      .select('id, brand_id, slug, name, is_published, starts_at, venue_name, cover_url, brand:brands ( slug )')
+      .eq('id', params.id)
+      .maybeSingle(),
+    admin
+      .from('yape_proofs')
+      .select('id, order:orders!yape_proofs_order_id_fkey ( event_id )')
+      .eq('brand_id', ctx.brandId)
+      .eq('status', 'pending_review'),
+  ]);
   if (!event || event.brand_id !== ctx.brandId) notFound();
-
-  // Yapes pendientes de ESTE evento (para el badge de la pestaña).
-  const { data: pendingProofs } = await admin
-    .from('yape_proofs')
-    .select('id, order:orders!yape_proofs_order_id_fkey ( event_id )')
-    .eq('brand_id', event.brand_id)
-    .eq('status', 'pending_review');
   const yapePending = ((pendingProofs ?? []) as { order: { event_id: string } | null }[])
     .filter((p) => p.order?.event_id === event.id).length;
 

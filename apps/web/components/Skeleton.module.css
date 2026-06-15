@@ -1,0 +1,25 @@
+.sk {
+  display: block;
+  border-radius: 10px;
+  background: linear-gradient(100deg, rgba(0,0,0,.05) 30%, rgba(0,0,0,.10) 50%, rgba(0,0,0,.05) 70%);
+  background-size: 200% 100%;
+  animation: skShimmer 1.25s ease-in-out infinite;
+}
+.card {
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,.06);
+  background: rgba(255,255,255,.55);
+  padding: 16px;
+}
+.row { display: flex; gap: 12px; }
+.grid4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+
+@keyframes skShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Respeta prefers-reduced-motion: sin shimmer, solo un gris suave. */
+@media (prefers-reduced-motion: reduce) {
+  .sk { animation: none; background: rgba(0,0,0,.07); }
+}

@@ -451,3 +451,32 @@
   .s-card { border: 1px solid #ddd !important; box-shadow: none !important; break-inside: avoid; }
   a[href]::after { content: ''; } /* no imprimir URLs de los links */
 }
+
+/* ===== Animaciones profesionales del panel (entrada + hover) ===== */
+@keyframes a-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes a-fadeUp { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Entrada suave del contenido al navegar/cargar. */
+  .admin-shell .s-pagehead { animation: a-fadeUp .42s cubic-bezier(.22,1,.36,1) both; }
+  .admin-shell .s-stat,
+  .admin-shell .a-evcard,
+  .admin-shell .s-card { animation: a-fadeUp .42s cubic-bezier(.22,1,.36,1) both; }
+  /* Stagger en KPIs y grilla de eventos (cascada premium). */
+  .admin-shell .s-stats-4 > *:nth-child(1) { animation-delay: .02s }
+  .admin-shell .s-stats-4 > *:nth-child(2) { animation-delay: .07s }
+  .admin-shell .s-stats-4 > *:nth-child(3) { animation-delay: .12s }
+  .admin-shell .s-stats-4 > *:nth-child(4) { animation-delay: .17s }
+  .admin-shell .a-evgrid > *:nth-child(2) { animation-delay: .06s }
+  .admin-shell .a-evgrid > *:nth-child(3) { animation-delay: .12s }
+  .admin-shell .a-evgrid > *:nth-child(4) { animation-delay: .18s }
+  .admin-shell .a-evgrid > *:nth-child(n+5) { animation-delay: .22s }
+
+  /* Hover: las tarjetas de evento "levantan"; botones con feedback al click. */
+  .admin-shell .a-evcard { transition: transform .18s cubic-bezier(.22,1,.36,1), box-shadow .18s ease; }
+  .admin-shell .a-evcard:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(35,28,23,.12); }
+  .admin-shell .s-btn { transition: transform .1s ease, filter .15s ease, background .15s ease; }
+  .admin-shell .s-btn:hover { filter: brightness(.97); }
+  .admin-shell .s-btn:active { transform: translateY(1px); }
+  .admin-shell .a-tab { transition: color .15s ease, background .15s ease; }
+}
