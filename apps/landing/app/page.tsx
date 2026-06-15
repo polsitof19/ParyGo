@@ -4,6 +4,7 @@ import { Uses } from '@/components/sections/Uses';
 import { How } from '@/components/sections/How';
 import { Includes } from '@/components/sections/Includes';
 import { Demo } from '@/components/sections/Demo';
+import { ForOrganizers } from '@/components/sections/ForOrganizers';
 import { Pricing } from '@/components/sections/Pricing';
 import { Proof } from '@/components/sections/Proof';
 import { Final } from '@/components/sections/Final';
@@ -21,6 +22,7 @@ export default function Home() {
         <How />
         <Includes />
         <Demo />
+        <ForOrganizers />
         <Pricing />
         <Proof />
         <Final />

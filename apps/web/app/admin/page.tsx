@@ -9,6 +9,7 @@ import { optimizedImage } from '@/lib/imageUrl';
 import { InviteValidator } from './InviteValidator';
 import { ValidatorManager } from './ValidatorManager';
 import { TicketRecovery } from './TicketRecovery';
+import { SetupChecklist, type SetupStep } from './SetupChecklist';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { setEventArchivedAction } from './events/[id]/edit-actions';
 
@@ -83,10 +84,17 @@ export default async function AdminHomePage() {
   // de ventas por evento (exacto) y la detección de órdenes sin tickets. Antes se
   // traían las pagadas dos veces (una para sumar, otra para recuperación).
   const eventNameById = new Map((events ?? []).map((e) => [e.id, e.name] as const));
-  const [{ data: paidRows }, { data: ticketOrderRows }] = await Promise.all([
+  const eventIds = (events ?? []).map((e) => e.id);
+  const [{ data: paidRows }, { data: ticketOrderRows }, { count: activeTypeCount }, { data: mpStatus }] = await Promise.all([
     adminCli.from('orders').select('id, buyer_name, total_cents, created_at, event_id').eq('brand_id', brand.id).eq('status', 'paid'),
     adminCli.from('tickets').select('order_id').eq('brand_id', brand.id),
+    eventIds.length
+      ? adminCli.from('ticket_types').select('id', { count: 'exact', head: true }).in('event_id', eventIds).eq('is_active', true)
+      : Promise.resolve({ count: 0 } as { count: number | null }),
+    adminCli.rpc('get_brand_mp_status', { p_brand_id: brand.id }),
   ]);
+  const mpRow = Array.isArray(mpStatus) ? mpStatus[0] : null;
+  const mpConfigured = Boolean(mpRow?.has_access_token && mpRow?.has_public_key);
   const paidOrderRows = (paidRows ?? []) as { id: string; buyer_name: string | null; total_cents: number | null; created_at: string; event_id: string }[];
 
   // Ventas por evento + total (exacto, mismos montos que antes).
@@ -105,6 +113,19 @@ export default async function AdminHomePage() {
   const theme = (brand.theme_json ?? {}) as { logo_url?: string | null; primary_color?: string; secondary_color?: string };
   const balance = brand.event_balance ?? 0;
   const canCreate = balance > 0;
+
+  // Setup guiado (Grupo B): progreso DERIVADO de los datos (no hay flag en BD).
+  // Pasos = configurar cobro → crear evento → cargar entradas → publicar.
+  const cobroReady = Boolean(brand.yape_number) || mpConfigured;
+  const hasEvent = (events?.length ?? 0) > 0;
+  const hasTickets = (activeTypeCount ?? 0) > 0;
+  const firstEventId = activeEvents[0]?.id ?? (events ?? [])[0]?.id ?? null;
+  const setupSteps: SetupStep[] = [
+    { key: 'cobro', title: 'Configurá tu cobro', desc: 'Cargá tu Yape (o tus credenciales de tarjeta) para recibir los pagos.', done: cobroReady, href: '/admin/settings', cta: 'Configurar' },
+    { key: 'evento', title: 'Creá tu primer evento', desc: 'Nombre, fecha y lugar. Te toma un par de minutos.', done: hasEvent, href: '/admin/events/new', cta: 'Crear' },
+    { key: 'entradas', title: 'Cargá tus entradas', desc: 'Definí tipos de entrada, precios y cupos.', done: hasTickets, href: firstEventId ? `/admin/events/${firstEventId}/entradas` : '/admin/events/new', cta: 'Cargar' },
+    { key: 'publicar', title: 'Publicá tu evento', desc: 'Cuando esté listo, ponelo en vivo para empezar a vender.', done: publishedCount > 0, href: firstEventId ? `/admin/events/${firstEventId}` : '/admin/events/new', cta: 'Publicar' },
+  ];
 
   return (
     <>
@@ -153,6 +174,10 @@ export default async function AdminHomePage() {
           <span className="s-stat__sub">acumulado de la marca</span>
         </div>
       </div>
+
+      {/* Setup guiado: solo el dueño (no en solo lectura) y solo si falta algún
+          paso (el componente se auto-oculta cuando está todo listo). */}
+      {!impersonating && <SetupChecklist steps={setupSteps} brandName={brand.name} />}
 
       {/* Recuperación de tickets — solo aparece si hay órdenes pagadas sin tickets.
           Re-emitir es escritura → oculto en solo lectura. */}
