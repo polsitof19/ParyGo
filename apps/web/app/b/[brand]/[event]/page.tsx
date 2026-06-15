@@ -167,7 +167,8 @@ export default async function EventPage({ params, searchParams }: Props) {
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={optimizedImage(event.cover_url, { width: 1080, quality: 72 })} alt="" className="c-hero__img" fetchPriority="high" decoding="async" />
-                <div className="c-hero__veil" style={{ background: 'linear-gradient(180deg, rgba(20,14,10,.25), rgba(20,14,10,.72))' }} />
+                {/* Velo tintado con el color de la marca abajo → cada flyer se siente propio de la marca */}
+                <div className="c-hero__veil" style={{ background: 'linear-gradient(180deg, rgba(20,14,10,.12) 0%, rgba(20,14,10,.50) 62%, color-mix(in srgb, var(--brand) 55%, rgba(20,14,10,.82)) 100%)' }} />
               </>
             )}
           </div>

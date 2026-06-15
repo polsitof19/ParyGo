@@ -223,8 +223,11 @@ export function EventCheckoutPanel({
       {mpCheckout && mpPublicKey ? (
         <MercadoPagoWallet publicKey={mpPublicKey} preferenceId={mpCheckout.preferenceId} initPoint={mpCheckout.initPoint} />
       ) : step === 1 ? (
+        <div className="c-stepwrap" key="step1">
         <Step1 sorted={sorted} qty={qty} inc={inc} dec={dec} totalCents={totalCents} totalItems={totalItems} promoInput={promoInput} setPromoInput={setPromoInput} onContinue={() => setStep(2)} />
+        </div>
       ) : (
+        <div className="c-stepwrap" key="step2">
         <Step2
           brand={brand} event={event} sorted={sorted} qty={qty} totalCents={totalCents}
           method={method} setMethod={setMethod} mpConfigured={mpConfigured} isPending={isPending}
@@ -239,6 +242,7 @@ export function EventCheckoutPanel({
             });
           }}
         />
+        </div>
       )}
     </section>
   );
@@ -254,30 +258,37 @@ function Step1({
   return (
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {sorted.map((t) => {
+        {sorted.map((t, i) => {
           const soldOut = t.soldOut;
           const cur = qty[t.id] ?? 0;
           const perks = (t.description ?? '').split('\n').filter(Boolean);
+          // Banda de color por tipo (color_hex; cae a la marca) + delay de entrada.
+          const ttStyle = { '--i': i, ...(t.color_hex ? { '--tt-accent': t.color_hex } : {}) } as React.CSSProperties;
           return (
-            <article key={t.id} className={`c-tt ${cur > 0 ? 'c-tt--active' : ''} ${soldOut ? 'c-tt--out' : ''}`}>
+            <article key={t.id} className={`c-tt ${cur > 0 ? 'c-tt--active' : ''} ${soldOut ? 'c-tt--out' : ''}`} style={ttStyle}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
                   <h3 className="c-tt__name">{t.name}</h3>
                   <span className="c-tt__price">{formatPEN(t.active_price_cents)}</span>
                 </div>
                 {perks.length > 0 && (
-                  <ul className="c-tt__perks">{perks.map((p, i) => <li key={i}><span style={{ color: 'var(--brand-ink)'}}>·</span> {p}</li>)}</ul>
+                  <ul className="c-tt__perks">{perks.map((p, idx) => <li key={idx}><span style={{ color: 'var(--brand-ink)'}}>·</span> {p}</li>)}</ul>
                 )}
-                {/* Agotado = estado, SIN número. Si no, fases (countdown + teaser). */}
-                {soldOut
-                  ? <p className="c-stock c-stock--out">Agotado</p>
-                  : <PhaseTiming tt={t} />}
+                {/* No agotado → fases (countdown + teaser). Agotado → badge a la derecha. */}
+                {!soldOut && <PhaseTiming tt={t} />}
               </div>
-              <div className="c-qty">
-                <button type="button" onClick={() => dec(t)} disabled={cur === 0 || soldOut} aria-label={`Restar ${t.name}`} className="c-qbtn"><Minus className="h-4 w-4" /></button>
-                <span className="c-qval">{cur}</span>
-                <button type="button" onClick={() => inc(t)} disabled={soldOut} aria-label={`Sumar ${t.name}`} className="c-qbtn c-qbtn--add"><Plus className="h-4 w-4" /></button>
-              </div>
+              {soldOut ? (
+                <span className="c-soldout">Agotado</span>
+              ) : cur === 0 ? (
+                // En reposo, solo el botón "+" (sin un "0" administrativo).
+                <button type="button" onClick={() => inc(t)} aria-label={`Sumar ${t.name}`} className="c-qbtn c-qbtn--add"><Plus className="h-4 w-4" /></button>
+              ) : (
+                <div className="c-qty">
+                  <button type="button" onClick={() => dec(t)} aria-label={`Restar ${t.name}`} className="c-qbtn"><Minus className="h-4 w-4" /></button>
+                  <span className="c-qval">{cur}</span>
+                  <button type="button" onClick={() => inc(t)} aria-label={`Sumar ${t.name}`} className="c-qbtn c-qbtn--add"><Plus className="h-4 w-4" /></button>
+                </div>
+              )}
             </article>
           );
         })}
@@ -440,10 +451,10 @@ function Step2({
             <p className="c-card__title">Cómo pagas</p>
             <div role="radiogroup" aria-label="Método de pago" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {brand.yape_number && (
-                <PayOption selected={method === 'yape_manual'} onClick={() => setMethod('yape_manual')} title="Yape" sub="Validación en 5–15 min" note={`Yapeas a ${brand.yape_holder ?? brand.name} y nos mandas la captura.`} />
+                <PayOption kind="yape" selected={method === 'yape_manual'} onClick={() => setMethod('yape_manual')} title="Yape" sub="Validación en 5–15 min" note={`Yapeas a ${brand.yape_holder ?? brand.name} y nos mandás la captura.`} />
               )}
               {mpConfigured && (
-                <PayOption selected={method === 'mercadopago'} onClick={() => setMethod('mercadopago')} title="Tarjeta · MercadoPago" sub="Visa · Mastercard · AMEX" note="Tu QR llega al instante." />
+                <PayOption kind="mp" selected={method === 'mercadopago'} onClick={() => setMethod('mercadopago')} title="Tarjeta · MercadoPago" sub="Pago con tarjeta — tu QR al instante" note="Procesado de forma segura por MercadoPago." />
               )}
             </div>
           </div>
@@ -496,10 +507,11 @@ function Step2({
             : <>Continuar con Yape</>}
         </button>
 
-        <p className="c-reassure"><Mail className="h-4 w-4" style={{ color: 'var(--brand-ink)'}} /> Recibes tu entrada con QR al instante por email.</p>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
+        <p className="c-reassure"><Mail className="h-4 w-4" style={{ color: 'var(--brand-ink)'}} /> Recibís tu entrada con QR al instante por email.</p>
+        <div className="c-seals">
           <span className="c-seal"><ShieldCheck className="h-4 w-4" /> Pago seguro</span>
-          <span className="c-seal"><Lock className="h-4 w-4" /> Tus datos protegidos</span>
+          <span className="c-seal"><Lock className="h-4 w-4" /> Datos protegidos</span>
+          <span className="c-seal"><Mail className="h-4 w-4" /> QR al instante</span>
         </div>
         <button type="button" onClick={onBack} className="c-btn c-btn--ghost" style={{ margin: '0 auto' }}>← Editar entradas</button>
       </aside>
@@ -507,14 +519,25 @@ function Step2({
   );
 }
 
-function PayOption({ selected, onClick, title, sub, note }: { selected: boolean; onClick: () => void; title: string; sub: string; note: string }) {
+function PayOption({ selected, onClick, title, sub, note, kind }: { selected: boolean; onClick: () => void; title: string; sub: string; note: string; kind?: 'yape' | 'mp' }) {
   return (
     <button type="button" role="radio" aria-checked={selected} aria-label={`${title}. ${sub}`} onClick={onClick} className={`c-pay ${selected ? 'c-pay--on' : ''}`}>
       <div className="c-pay__top">
-        <span className="c-pay__title">{title}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {kind === 'yape' ? <span className="c-pmt c-pmt--yape">Yape</span>
+            : kind === 'mp' ? <span className="c-pmt c-pmt--mp">MercadoPago</span>
+            : <span className="c-pay__title">{title}</span>}
+        </span>
         <span aria-hidden className="c-pay__radio" />
       </div>
       <p className="c-pay__sub">{sub}</p>
+      {kind === 'mp' && (
+        <div className="c-cardmarks" style={{ marginTop: 8 }}>
+          <span className="c-cardmark">VISA</span>
+          <span className="c-cardmark">Mastercard</span>
+          <span className="c-cardmark">AMEX</span>
+        </div>
+      )}
       <p className="c-pay__note">{note}</p>
     </button>
   );
