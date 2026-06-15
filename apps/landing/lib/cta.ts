@@ -11,9 +11,8 @@ export const CTA = {
   pack5: `${base}?text=${enc('Hola ParyGo, quiero contratar el Pack 5 (S/850)')}`,
   pack10: `${base}?text=${enc('Hola ParyGo, quiero contratar el Pack 10 (S/1,500)')}`,
   final: `${base}?text=${enc('Hola ParyGo, quiero conversar sobre mi próximo evento')}`,
-  // "Pedir acceso" de organizadores. Interino por WhatsApp; cuando el form de
-  // solicitud (Grupo C) esté en prod, se repunta a https://app.parygo.com/organizadores.
-  requestAccess: `${base}?text=${enc('Hola ParyGo, soy organizador y quiero pedir acceso a la plataforma')}`,
+  // "Pedir acceso" de organizadores → form de solicitud (Grupo C) en el app host.
+  requestAccess: 'https://app.parygo.com/organizadores',
 } as const;
 
 export type CTAKey = keyof typeof CTA;

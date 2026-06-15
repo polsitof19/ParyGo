@@ -539,6 +539,51 @@ export type Database = {
         }
         Relationships: []
       }
+      access_requests: {
+        Row: {
+          brand_id: string | null
+          brand_name: string
+          contact_email: string
+          contact_name: string
+          contact_phone: string | null
+          created_at: string
+          event_info: string | null
+          id: string
+          ip: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          brand_id?: string | null
+          brand_name: string
+          contact_email: string
+          contact_name: string
+          contact_phone?: string | null
+          created_at?: string
+          event_info?: string | null
+          id?: string
+          ip?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          brand_id?: string | null
+          brand_name?: string
+          contact_email?: string
+          contact_name?: string
+          contact_phone?: string | null
+          created_at?: string
+          event_info?: string | null
+          id?: string
+          ip?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       ticket_resend_attempts: {
         Row: {
           brand_id: string | null
@@ -1194,6 +1239,20 @@ export type Database = {
           p_email: string
           p_ip: string | null
           p_brand_id: string | null
+          p_max_email?: number
+          p_max_ip?: number
+          p_window_secs?: number
+        }
+        Returns: boolean
+      }
+      submit_access_request: {
+        Args: {
+          p_brand_name: string
+          p_contact_name: string
+          p_contact_email: string
+          p_contact_phone: string | null
+          p_event_info: string | null
+          p_ip: string | null
           p_max_email?: number
           p_max_ip?: number
           p_window_secs?: number

@@ -184,7 +184,7 @@ export async function createBrandWithOwnerAction(
   formData: FormData
 ): Promise<FormState> {
   // Lockdown: solo super admin puede orquestar marca + dueño.
-  await requireSession({ superAdmin: true });
+  const actor = await requireSession({ superAdmin: true });
 
   const parsed = ownerSchema.safeParse({
     name: formData.get('name'),
@@ -335,6 +335,20 @@ export async function createBrandWithOwnerAction(
     { brand_id: brand.id, actor_user_id: created.user.id, type: 'brand_admin_created', payload: { email } },
   ]);
   if (logErr) console.error('[createBrandWithOwner] events_log falló', logErr.message);
+
+  // Grupo C: si esta alta viene de aprobar una SOLICITUD, marcarla aprobada y
+  // enlazar la marca creada. Additivo: no cambia la lógica de alta/rollback; un
+  // fallo acá no rompe el alta (la marca ya existe). Solo pasa de 'pending'.
+  const requestIdRaw = String(formData.get('request_id') ?? '');
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestIdRaw)) {
+    const { error: reqErr } = await admin
+      .from('access_requests')
+      .update({ status: 'approved', brand_id: brand.id, reviewed_by: actor.id, reviewed_at: new Date().toISOString() })
+      .eq('id', requestIdRaw)
+      .eq('status', 'pending');
+    if (reqErr) console.error('[createBrandWithOwner] marcar solicitud aprobada falló', reqErr.message);
+    revalidatePath('/cabina-7k29x/solicitudes');
+  }
 
   revalidatePath('/cabina-7k29x');
   revalidatePath('/cabina-7k29x/brands');

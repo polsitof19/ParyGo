@@ -19,10 +19,10 @@ function slugify(value: string): string {
     .slice(0, 32);
 }
 
-export function CreateBrandForm() {
+export function CreateBrandForm({ requestId, initialName = '', initialEmail = '' }: { requestId?: string; initialName?: string; initialEmail?: string } = {}) {
   const [state, action] = useFormState(createBrandWithOwnerAction, initial);
-  const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
+  const [name, setName] = useState(initialName);
+  const [slug, setSlug] = useState(() => slugify(initialName));
   const [showPwd, setShowPwd] = useState(false);
   // El slug sigue al nombre hasta que el usuario lo edita a mano.
   const slugTouched = useRef(false);
@@ -33,6 +33,7 @@ export function CreateBrandForm() {
 
   return (
     <form action={action} className="s-card s-card--lg">
+      {requestId && <input type="hidden" name="request_id" value={requestId} />}
       <div className="s-field">
         <label htmlFor="name" className="s-label">Nombre de la marca <span className="req">*</span></label>
         <input
@@ -83,6 +84,7 @@ export function CreateBrandForm() {
           className="s-input"
           placeholder="promotor@code.com.pe"
           required
+          defaultValue={initialEmail}
           autoComplete="off"
         />
         <p className="s-hint">Con este email y la contraseña entra a su panel.</p>
