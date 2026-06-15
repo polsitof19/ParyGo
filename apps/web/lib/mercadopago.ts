@@ -45,7 +45,7 @@ async function getBrandAccessToken(
   const first = Array.isArray(data) ? data[0] : null;
   const token = first?.access_token;
   if (!token) {
-    throw new Error('La marca no tiene credenciales MercadoPago configuradas. Pedile al super admin que las cargue.');
+    throw new Error('La marca no tiene credenciales de MercadoPago configuradas. El dueño puede cargarlas desde Configuración → Cobro con tarjeta.');
   }
   return token;
 }
