@@ -37,14 +37,13 @@ export async function POST(req: NextRequest) {
     if (!user.isSuperAdmin) {
       return NextResponse.json({ ok: false, reason: 'forbidden' }, { status: 403 });
     }
+    // No exponemos forma/longitud/prefijo de la API key (aunque sea super-admin):
+    // solo si está cargada, si tiene whitespace accidental, y el from (no secreto).
     const raw = process.env.RESEND_API_KEY;
     return NextResponse.json({
       ok: true,
       status: 'probe',
       has_key: Boolean(raw),
-      key_len: raw ? raw.length : 0,
-      key_prefix: raw ? raw.slice(0, 5) : null,
-      key_suffix: raw ? raw.slice(-3) : null,
       key_has_whitespace: raw ? /\s/.test(raw) : false,
       from_email: process.env.RESEND_FROM_EMAIL ?? null,
     });

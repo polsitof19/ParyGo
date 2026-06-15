@@ -58,7 +58,6 @@ export type Database = {
           id: string
           mp_access_token_enc: string | null
           mp_public_key_enc: string | null
-          mp_webhook_secret: string | null
           name: string
           notify_yape_digest: boolean
           notify_yape_recovery: boolean
@@ -77,7 +76,6 @@ export type Database = {
           id?: string
           mp_access_token_enc?: string | null
           mp_public_key_enc?: string | null
-          mp_webhook_secret?: string | null
           name: string
           notify_yape_digest?: boolean
           notify_yape_recovery?: boolean
@@ -96,7 +94,6 @@ export type Database = {
           id?: string
           mp_access_token_enc?: string | null
           mp_public_key_enc?: string | null
-          mp_webhook_secret?: string | null
           name?: string
           notify_yape_digest?: boolean
           notify_yape_recovery?: boolean

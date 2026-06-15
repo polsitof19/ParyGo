@@ -75,21 +75,19 @@ const website = {
   inLanguage: 'es-PE',
 };
 
+// Escapa < > & a su forma unicode para que el JSON-LD no pueda romper el <script>
+// ni inyectar markup. Hoy el contenido es 100% estático, pero lo dejamos blindado
+// (mismo criterio que EventStructuredData del web app).
+function jsonLd(obj: unknown): string {
+  return JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
+}
+
 export function StructuredData() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(service) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(website) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(organization) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(service) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(website) }} />
     </>
   );
 }
