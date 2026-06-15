@@ -3,11 +3,12 @@ import type { Metadata } from 'next';
 import { Calendar, MapPin, ShieldCheck, ExternalLink } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { serverEnv } from '@/lib/env';
+import { serverEnv, publicEnv } from '@/lib/env';
 import { formatPEN } from '@/lib/utils';
 import { optimizedImage } from '@/lib/imageUrl';
 import { EventCheckoutPanel } from './EventCheckoutPanel';
 import { EventStructuredData } from './EventStructuredData';
+import { ShareEvent } from './ShareEvent';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -179,6 +180,10 @@ export default async function EventPage({ params, searchParams }: Props) {
               {event.venue_name && <span className="c-chip"><MapPin className="h-4 w-4" /> {event.venue_name}</span>}
               {event.min_age > 0 && <span className="c-chip"><ShieldCheck className="h-4 w-4" /> +{event.min_age}</span>}
             </div>
+            <ShareEvent
+              eventName={event.name}
+              shareUrl={`https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${event.slug}`}
+            />
           </div>
         </section>
 

@@ -68,18 +68,23 @@ function PhaseTiming({ tt }: { tt: TicketType }) {
     return () => clearInterval(id);
   }, [reduced, lastDay]);
 
+  // ¿El precio SUBE cuando termina esta fase? (dato real, no escasez inventada).
+  // Si sube, el countdown enfatiza "a este precio"; si no, avisa el fin de fase.
+  const priceRises = tt.next_price_cents != null && tt.next_price_cents > tt.active_price_cents;
+
   let countdown: string | null = null;
   if (days != null && days >= 0 && days <= 7) {
     const phase = tt.active_name || 'Preventa';
-    if (days >= 2) countdown = `${phase} termina en ${days} días`;
-    else if (days === 1) countdown = `${phase} termina en 1 día`;
+    if (days >= 2) countdown = priceRises ? `Quedan ${days} días a este precio` : `${phase} termina en ${days} días`;
+    else if (days === 1) countdown = priceRises ? `Último día a este precio` : `${phase} termina en 1 día`;
     else {
       const ms = tt.active_ends_at ? Date.parse(tt.active_ends_at) - nowMs : 0;
-      if (reduced || ms <= 0) countdown = `${phase}: último día`;
+      const lead = priceRises ? 'Último día a este precio' : `${phase}: último día`;
+      if (reduced || ms <= 0) countdown = lead;
       else {
         const h = Math.floor(ms / 3_600_000);
         const m = Math.floor((ms % 3_600_000) / 60_000);
-        countdown = h >= 1 ? `${phase}: último día · ${h}h ${m}m` : `${phase}: último día · ${m}m`;
+        countdown = h >= 1 ? `${lead} · ${h}h ${m}m` : `${lead} · ${m}m`;
       }
     }
   }

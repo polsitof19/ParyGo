@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, Pencil, Ticket, Users, DoorOpen, Wallet, Megaphone } from 'lucide-react';
+import { BarChart3, Pencil, Ticket, Users, DoorOpen, Wallet, Megaphone, FileText } from 'lucide-react';
 
 const TABS = [
   { seg: '', label: 'Resumen', Icon: BarChart3 },
@@ -12,6 +12,7 @@ const TABS = [
   { seg: '/promotores', label: 'Promotores', Icon: Megaphone },
   { seg: '/accesos', label: 'Accesos', Icon: DoorOpen },
   { seg: '/yape', label: 'Revisar Yape', Icon: Wallet },
+  { seg: '/reporte', label: 'Reporte', Icon: FileText },
 ] as const;
 
 export function EventTabs({ eventId, yapePending }: { eventId: string; yapePending: number }) {

@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Check, Mail, ArrowRight } from 'lucide-react';
+import { Check, Mail, ArrowRight, MapPin, Ticket as TicketIcon, ExternalLink } from 'lucide-react';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN, formatEventDate, whatsappLink } from '@/lib/utils';
 import { ConfirmationPoller } from './ConfirmationPoller';
+import { AddToCalendar } from './AddToCalendar';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -26,7 +27,7 @@ export default async function ConfirmationPage({
     payment_method: 'mercadopago' | 'yape_manual';
     total_cents: number;
     buyer_name: string;
-    event: { name: string; starts_at: string; venue_name: string | null } | null;
+    event: { name: string; starts_at: string; ends_at: string | null; venue_name: string | null; venue_address: string | null; venue_maps_url: string | null; venue_lat: number | null; venue_lng: number | null; require_dni: boolean } | null;
     brand: { slug: string; name: string; whatsapp_e164: string | null } | null;
     tickets: { id: string; qr_code: string; ticket_type_name: string; ticket_number: string }[];
   };
@@ -35,7 +36,7 @@ export default async function ConfirmationPage({
     .select(`
       id, status, payment_method, total_cents,
       buyer_name,
-      event:events ( name, starts_at, venue_name ),
+      event:events ( name, starts_at, ends_at, venue_name, venue_address, venue_maps_url, venue_lat, venue_lng, require_dni ),
       brand:brands ( slug, name, whatsapp_e164 ),
       tickets ( id, qr_code, ticket_type_name, ticket_number )
     `)
@@ -62,6 +63,11 @@ export default async function ConfirmationPage({
       (order.status !== 'paid' && order.payment_method === 'mercadopago'));
   const isYapeReview =
     order.status === 'pending_yape_review' && order.payment_method === 'yape_manual';
+  // Yape RECHAZADO: la orden quedó en failed/rejected/cancelled con método Yape.
+  // Antes caía en la vista "pagado" sin tickets (mostraba "en camino" por error).
+  const isYapeRejected =
+    order.payment_method === 'yape_manual' &&
+    ['failed', 'rejected', 'cancelled'].includes(order.status);
 
   if (isFailed) {
     return (
@@ -113,10 +119,36 @@ export default async function ConfirmationPage({
     );
   }
 
+  if (isYapeRejected) {
+    return (
+      <main className="c-state">
+        <div className="c-confirm__badge" style={{ background: 'var(--alert-bg, rgba(220,38,38,.1))', color: 'var(--alert, #dc2626)' }}><Mail className="h-8 w-8" /></div>
+        <span className="c-eyebrow" style={{ color: 'var(--alert, #dc2626)', marginTop: 16, display: 'block' }}>Comprobante rechazado</span>
+        <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>No pudimos validar tu Yape</h1>
+        <p className="c-muted" style={{ marginTop: 10 }}>
+          {brand?.name ?? 'El promotor'} no pudo confirmar tu comprobante, así que no se emitió ninguna entrada y no quedó ningún cargo de nuestra parte. Si creés que es un error, escribí al organizador con tu comprobante a mano.
+        </p>
+        {brand?.whatsapp_e164 && (
+          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand-ink)', fontWeight: 600 }}>Escribir al organizador por WhatsApp</a>
+        )}
+      </main>
+    );
+  }
+
   // Pagado + tickets emitidos → cierre celebratorio
   const tickets = order.tickets ?? [];
   const firstTicket = tickets[0];
   const ticketUrl = firstTicket ? `/t/${firstTicket.qr_code}` : null;
+
+  // "Cómo llegar": mismo criterio que la página del evento (maps_url > coords > dirección).
+  const mapsHref = event?.venue_maps_url?.startsWith('https://')
+    ? event.venue_maps_url
+    : event?.venue_lat && event?.venue_lng
+      ? `https://www.google.com/maps/search/?api=1&query=${event.venue_lat},${event.venue_lng}`
+      : event?.venue_address
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue_address)}`
+        : null;
+  const calDetails = `Tu entrada para ${event?.name ?? 'el evento'}. Llevá ${event?.require_dni ? 'tu documento de identidad y ' : ''}tu QR (te llegó por email). Entrada por ParyGo.`;
 
   return (
     <main className="c-narrow" style={{ paddingTop: 48, paddingBottom: 56 }}>
@@ -146,6 +178,40 @@ export default async function ConfirmationPage({
             {tickets.map((t) => <li key={t.id} style={{ fontSize: 13.5 }}>{t.ticket_number} · {t.ticket_type_name}</li>)}
           </ul>
         </Row>
+      </div>
+
+      {/* Antes de ir: calendario + cómo llegar + qué llevar */}
+      <div className="c-card" style={{ marginTop: 16 }}>
+        <p className="c-card__title">Antes de ir</p>
+        {event?.starts_at && (
+          <div style={{ marginTop: 4, marginBottom: 12 }}>
+            <AddToCalendar
+              title={event.name}
+              startIso={event.starts_at}
+              endIso={event.ends_at}
+              location={[event.venue_name, event.venue_address].filter(Boolean).join(', ') || null}
+              details={calDetails}
+              uid={order.id}
+            />
+          </div>
+        )}
+        {mapsHref && (
+          <a href={mapsHref} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600, color: 'var(--brand-ink)', fontSize: 14 }}>
+            <MapPin className="h-4 w-4" /> Cómo llegar{event?.venue_name ? ` · ${event.venue_name}` : ''} <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        )}
+        <ul style={{ listStyle: 'none', margin: '12px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <li style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13.5, color: 'var(--ink-2)' }}>
+            <TicketIcon className="h-4 w-4" style={{ flexShrink: 0, marginTop: 1, color: 'var(--brand-ink)' }} />
+            Mostrá tu QR en la puerta (desde el email o tu link permanente).
+          </li>
+          {event?.require_dni && (
+            <li style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13.5, color: 'var(--ink-2)' }}>
+              <Check className="h-4 w-4" style={{ flexShrink: 0, marginTop: 1, color: 'var(--brand-ink)' }} />
+              Llevá tu documento de identidad (te lo pueden pedir en la puerta).
+            </li>
+          )}
+        </ul>
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10, marginTop: 18 }}>

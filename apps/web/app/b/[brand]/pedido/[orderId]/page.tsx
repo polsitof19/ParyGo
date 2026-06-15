@@ -16,8 +16,9 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 type OrderView = {
   id: string;
   status: string;
+  payment_method: 'mercadopago' | 'yape_manual';
   event: { name: string; starts_at: string; venue_name: string | null } | null;
-  brand: { slug: string; name: string } | null;
+  brand: { slug: string; name: string; whatsapp_e164: string | null } | null;
   tickets: {
     qr_code: string;
     ticket_type_name: string;
@@ -34,9 +35,9 @@ async function loadOrder(brandSlug: string, orderId: string): Promise<OrderView 
   const { data } = await admin
     .from('orders')
     .select(`
-      id, status,
+      id, status, payment_method,
       event:events ( name, starts_at, venue_name ),
-      brand:brands ( slug, name ),
+      brand:brands ( slug, name, whatsapp_e164 ),
       tickets ( qr_code, ticket_type_name, ticket_number, attendee_name, invalidated_at, validated_at )
     `)
     .eq('id', orderId)
@@ -62,11 +63,25 @@ export default async function OrderPage({ params }: { params: { brand: string; o
   const event = order.event;
 
   if (tickets.length === 0) {
+    const wa = order.brand?.whatsapp_e164 ? `https://wa.me/${order.brand.whatsapp_e164.replace(/[^\d]/g, '')}` : null;
+    // Estado del pedido cuando aún no hay QR: distinguir en-revisión vs rechazado.
+    const rejected = ['failed', 'rejected', 'cancelled'].includes(order.status);
+    if (rejected) {
+      return (
+        <main className="c-state">
+          <span className="c-eyebrow" style={{ color: 'var(--alert, #dc2626)' }}>Comprobante rechazado</span>
+          <h1 className="c-h1" style={{ fontSize: 26, marginTop: 8 }}>No se emitieron entradas</h1>
+          <p className="c-muted" style={{ marginTop: 10 }}>Tu comprobante no pudo validarse, así que no hay entradas para este pedido y no quedó ningún cargo de nuestra parte. Si creés que es un error, contactá al organizador.</p>
+          {wa && <a href={wa} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand-ink)', fontWeight: 600 }}>Escribir al organizador por WhatsApp</a>}
+        </main>
+      );
+    }
     return (
       <main className="c-state">
-        <span className="c-eyebrow">Tu pedido</span>
-        <h1 className="c-h1" style={{ fontSize: 26, marginTop: 8 }}>Todavía no hay entradas emitidas</h1>
-        <p className="c-muted" style={{ marginTop: 10 }}>Si pagaste por Yape, tu comprobante está en revisión. Te avisamos por email apenas se apruebe.</p>
+        <span className="c-eyebrow" style={{ color: 'var(--warn)' }}>Comprobante en revisión</span>
+        <h1 className="c-h1" style={{ fontSize: 26, marginTop: 8 }}>Estamos verificando tu Yape</h1>
+        <p className="c-muted" style={{ marginTop: 10 }}>El organizador está revisando tu comprobante. Te avisamos por email apenas se apruebe y acá vas a ver tus QR. Suele tomar 5–15 minutos en horario operativo.</p>
+        {wa && <a href={wa} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand-ink)', fontWeight: 600 }}>¿Pasó algo? WhatsApp soporte</a>}
       </main>
     );
   }
