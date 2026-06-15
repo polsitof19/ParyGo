@@ -243,7 +243,7 @@ export async function cloneEventAction(eventId: string): Promise<{ ok: boolean; 
   const admin = createAdminClient();
   const { data: ev } = await admin
     .from('events')
-    .select('slug, name, description, starts_at, ends_at, venue_name, venue_address, cover_url, min_age, refund_policy')
+    .select('slug, name, description, starts_at, ends_at, venue_name, venue_address, venue_maps_url, venue_lat, venue_lng, cover_url, min_age, refund_policy')
     .eq('id', eventId)
     .eq('brand_id', brandId)
     .maybeSingle();
@@ -312,6 +312,16 @@ export async function cloneEventAction(eventId: string): Promise<{ ok: boolean; 
       return { ok: false, message: 'No se pudo generar el borrador. Probá de nuevo.' };
     }
     return { ok: false, message: msg || 'No se pudo clonar el evento.' };
+  }
+
+  // create_brand_event no acepta venue_maps_url/lat/lng → los copiamos aparte
+  // (best-effort, scopeado a la marca; si falla no rompe el clon ya creado).
+  if (ev.venue_maps_url || ev.venue_lat != null || ev.venue_lng != null) {
+    await admin
+      .from('events')
+      .update({ venue_maps_url: ev.venue_maps_url, venue_lat: ev.venue_lat, venue_lng: ev.venue_lng })
+      .eq('id', newId as string)
+      .eq('brand_id', brandId);
   }
 
   revalidatePath('/admin');

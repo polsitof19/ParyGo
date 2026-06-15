@@ -94,9 +94,12 @@ export function YapeReviewRow({
 
         {duplicateWarning && (
           <p
-            className="s-banner s-banner--err"
+            className={duplicateWarning === 'approved' ? 's-banner s-banner--err' : 's-banner'}
             role="alert"
-            style={{ marginBottom: 12, display: 'flex', alignItems: 'flex-start', gap: 8 }}
+            style={{
+              marginBottom: 12, display: 'flex', alignItems: 'flex-start', gap: 8,
+              ...(duplicateWarning === 'pending' ? { background: 'var(--warn-bg, #fff4e5)', color: 'var(--warn, #9a6700)' } : {}),
+            }}
           >
             <X className="h-4 w-4" style={{ flexShrink: 0, marginTop: 2 }} />
             <span>
