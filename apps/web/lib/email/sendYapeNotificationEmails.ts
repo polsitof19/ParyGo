@@ -70,6 +70,12 @@ async function sendViaResend(args: {
       },
       body: JSON.stringify(payload),
     });
+    // 409 = Idempotency-Key ya procesada por Resend → el email YA fue aceptado
+    // una vez (es justo lo que queremos: no duplicar). Lo tratamos como éxito, no
+    // como fallo (si no, reintentaría 5× y moriría en dead-letter sin razón).
+    if (resp.status === 409) {
+      return { ok: true, resendId: null };
+    }
     if (!resp.ok) {
       const body = await resp.text().catch(() => '');
       console.error(`[${args.kind}] resend rejected`, { status: resp.status, body: body.slice(0, 300) });
