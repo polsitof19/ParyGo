@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -226,6 +227,95 @@ export async function postponeEventAction(
   revalidatePath(`/admin/events/${eventId}/editar`);
   revalidatePath(`/cabina-7k29x/events/${eventId}`);
   return { ok: true, queued };
+}
+
+// ===== 1.b-bis) Clonar evento (dueño o super admin) =====
+// Crea un BORRADOR nuevo a partir de un evento existente: copia datos + tipos de
+// entrada + fases de precio. Reusa create_brand_event (mismo RPC del alta), así
+// que consume 1 saldo y NO toca el evento original ni sus ventas. is_published
+// queda false (lo publica el dueño cuando quiera). Autoriza por authEvent
+// (denegado en impersonación: el super admin viendo NO crea eventos).
+export async function cloneEventAction(eventId: string): Promise<{ ok: boolean; message?: string }> {
+  const user = await requireSession();
+  const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
+  if (!brandId) return { ok: false, message: 'No tenés permiso sobre este evento.' };
+
+  const admin = createAdminClient();
+  const { data: ev } = await admin
+    .from('events')
+    .select('slug, name, description, starts_at, ends_at, venue_name, venue_address, cover_url, min_age, refund_policy')
+    .eq('id', eventId)
+    .eq('brand_id', brandId)
+    .maybeSingle();
+  if (!ev) return { ok: false, message: 'Evento no encontrado.' };
+
+  const { data: types } = await admin
+    .from('ticket_types')
+    .select('id, name, price_cents, capacity, is_unlimited, sort_order')
+    .eq('event_id', eventId)
+    .order('sort_order');
+  if (!types || types.length === 0) return { ok: false, message: 'El evento no tiene tipos de entrada para clonar.' };
+
+  const typeIds = types.map((t) => t.id);
+  const { data: phases } = await admin
+    .from('ticket_type_price_phases')
+    .select('ticket_type_id, price_cents, starts_at, ends_at, sort_order')
+    .in('ticket_type_id', typeIds);
+  const phasesByType = new Map<string, { price_cents: number; starts_at: string | null; ends_at: string | null; sort_order: number }[]>();
+  for (const p of phases ?? []) {
+    const arr = phasesByType.get(p.ticket_type_id) ?? [];
+    arr.push({ price_cents: p.price_cents, starts_at: p.starts_at, ends_at: p.ends_at, sort_order: p.sort_order });
+    phasesByType.set(p.ticket_type_id, arr);
+  }
+
+  const p_ticket_types = types.map((t) => {
+    const ph = (phasesByType.get(t.id) ?? []).sort((a, b) => a.sort_order - b.sort_order);
+    return {
+      name: t.name,
+      price_cents: t.price_cents,
+      capacity: t.capacity ?? 0,
+      is_unlimited: t.is_unlimited,
+      sort_order: t.sort_order,
+      // create_brand_event exige >=1 fase; si el tipo no tenía, sintetizamos la base.
+      phases: ph.length ? ph : [{ price_cents: t.price_cents, starts_at: null, ends_at: null, sort_order: 0 }],
+    };
+  });
+
+  const base = (ev.slug || 'evento').slice(0, 30).replace(/-+$/, '');
+  const newSlug = `${base}-copia-${Math.random().toString(36).slice(2, 6)}`;
+
+  const { data: newId, error } = await admin.rpc('create_brand_event', {
+    p_brand_id: brandId,
+    p_actor_user_id: user.id,
+    p_event: {
+      slug: newSlug,
+      name: `${ev.name} (copia)`.slice(0, 120),
+      description: ev.description,
+      starts_at: ev.starts_at,
+      ends_at: ev.ends_at,
+      venue_name: ev.venue_name,
+      venue_address: ev.venue_address,
+      cover_url: ev.cover_url,
+      min_age: ev.min_age ?? 18,
+      refund_policy: ev.refund_policy,
+    },
+    p_ticket_types,
+  });
+
+  if (error || !newId) {
+    const msg = error?.message ?? '';
+    if (msg.includes('INSUFFICIENT_BALANCE')) {
+      return { ok: false, message: 'No tenés saldo de eventos para clonar. Pedí un pack a ParyGo.' };
+    }
+    if (error?.code === '23505') {
+      // Colisión de slug (rarísima por el sufijo random) → reintentá el botón.
+      return { ok: false, message: 'No se pudo generar el borrador. Probá de nuevo.' };
+    }
+    return { ok: false, message: msg || 'No se pudo clonar el evento.' };
+  }
+
+  revalidatePath('/admin');
+  redirect(`/admin/events/${newId}`);
 }
 
 // ===== 1.c) Archivar / desarchivar el evento (dueño o super admin) =====

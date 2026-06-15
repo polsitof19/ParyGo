@@ -23,6 +23,10 @@ type Props = {
   total: string;
   items?: { name: string; quantity: number }[];
   impersonating?: boolean;
+  // Anti-fraude: el mismo N° de operación aparece en otro comprobante de la marca.
+  // 'approved' = ya se aprobó una orden con ese N° (reuso = fraude probable);
+  // 'pending'  = otro pendiente con el mismo N° (revisar antes de aprobar ambos).
+  duplicateWarning?: 'approved' | 'pending' | null;
 };
 
 export function YapeReviewRow({
@@ -42,6 +46,7 @@ export function YapeReviewRow({
   total,
   items = [],
   impersonating = false,
+  duplicateWarning = null,
 }: Props) {
   const [pending, start] = useTransition();
   const [showReject, setShowReject] = useState(false);
@@ -86,6 +91,22 @@ export function YapeReviewRow({
           <p className="a-evrow__name" style={{ fontSize: 17 }}>{eventName}</p>
           <p className="s-card__desc">{buyerName} · {buyerEmail} · {buyerPhone}</p>
         </div>
+
+        {duplicateWarning && (
+          <p
+            className="s-banner s-banner--err"
+            role="alert"
+            style={{ marginBottom: 12, display: 'flex', alignItems: 'flex-start', gap: 8 }}
+          >
+            <X className="h-4 w-4" style={{ flexShrink: 0, marginTop: 2 }} />
+            <span>
+              <strong>Ojo: N° de operación repetido.</strong>{' '}
+              {duplicateWarning === 'approved'
+                ? 'Este número de operación ya se usó en un comprobante APROBADO de tu marca. Podría ser un comprobante reutilizado — verificá en tu Yape antes de aprobar.'
+                : 'Este número de operación aparece en otro comprobante pendiente. Revisá ambos antes de aprobar para no duplicar.'}
+            </span>
+          </p>
+        )}
 
         <div className="a-verify-box">
           <Verify label="Monto" value={formatPEN(amountCents)} expected={formatPEN(expectedAmountCents)} ok={amountMatches} />

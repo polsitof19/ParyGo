@@ -35,6 +35,31 @@ export default async function EventYapePage({ params }: { params: { id: string }
 
   const proofs = ((data as unknown as ProofRow[] | null) ?? []).filter((p) => p.order?.event_id === event.id);
 
+  // ANTI-FRAUDE: detectar N° de operación repetido en la MARCA. Un mismo número
+  // usado en un comprobante ya APROBADO = comprobante reutilizado (fraude probable);
+  // en otro pendiente = revisar ambos. Solo READ + flag (no bloquea; el dueño decide).
+  const dupWarningByProof = new Map<string, 'approved' | 'pending'>();
+  const opNumbers = [...new Set(proofs.map((p) => p.operation_number?.trim()).filter((x): x is string => !!x))];
+  if (opNumbers.length > 0) {
+    const { data: sameOps } = await admin
+      .from('yape_proofs')
+      .select('id, operation_number, status')
+      .eq('brand_id', event.brand_id)
+      .in('operation_number', opNumbers);
+    const byOp = new Map<string, { id: string; status: string }[]>();
+    for (const r of (sameOps ?? []) as { id: string; operation_number: string; status: string }[]) {
+      const k = r.operation_number.trim();
+      const arr = byOp.get(k) ?? [];
+      arr.push({ id: r.id, status: r.status });
+      byOp.set(k, arr);
+    }
+    for (const p of proofs) {
+      const others = (byOp.get(p.operation_number?.trim() ?? '') ?? []).filter((r) => r.id !== p.id);
+      if (others.some((r) => r.status === 'approved')) dupWarningByProof.set(p.id, 'approved');
+      else if (others.length > 0) dupWarningByProof.set(p.id, 'pending');
+    }
+  }
+
   // Items por orden (qué entradas se aprueban): nombre + cantidad por tipo.
   const orderIds = proofs.map((p) => p.order?.id).filter((x): x is string => !!x);
   const itemsByOrder = new Map<string, { name: string; quantity: number }[]>();
@@ -90,6 +115,7 @@ export default async function EventYapePage({ params }: { params: { id: string }
                 total={formatPEN(p.order?.total_cents ?? 0)}
                 items={p.items}
                 impersonating={impersonating}
+                duplicateWarning={dupWarningByProof.get(p.id) ?? null}
               />
             </div>
           ))}

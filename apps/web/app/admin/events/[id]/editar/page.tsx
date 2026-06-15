@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { EventCoverUploader } from '../EventCoverUploader';
 import { EditEventForm } from './EditEventForms';
 import { PostponeEvent } from './PostponeEvent';
+import { CloneEventButton } from './CloneEventButton';
 import { CourtesyForm } from './CourtesyForm';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { DangerDeleteButton } from '@/components/manage/DangerDeleteButton';
@@ -89,6 +90,13 @@ export default async function EditEventPage({ params }: { params: { id: string }
       {event.is_published && hasSales && !impersonating && (
         <div style={{ marginTop: 16 }}>
           <PostponeEvent eventId={event.id} startsLocal={toLimaLocal(event.starts_at)} />
+        </div>
+      )}
+
+      {/* Clonar evento (cualquier evento, no en solo lectura). */}
+      {!impersonating && (
+        <div style={{ marginTop: 16 }}>
+          <CloneEventButton eventId={event.id} />
         </div>
       )}
 
