@@ -34,9 +34,9 @@ export default async function ReportePage({ params }: { params: { id: string } }
   if (!event || event.brand_id !== ctx.brandId) notFound();
 
   // Todo depende solo del event_id → en paralelo.
-  const [ttRes, tkRes, ordRes, oiRes, promoRes, redRes] = await Promise.all([
+  const [ttRes, statsRes, ordRes, oiRes, promoRes, redRes] = await Promise.all([
     admin.from('ticket_types').select('id, name, sort_order').eq('event_id', event.id).order('sort_order'),
-    admin.from('tickets').select('ticket_type_id, validated_at, invalidated_at').eq('event_id', event.id),
+    admin.rpc('event_ticket_stats', { p_event_id: event.id }),
     admin.from('orders').select('total_cents, payment_method').eq('event_id', event.id).eq('status', 'paid'),
     admin.from('order_items').select('ticket_type_id, subtotal_cents, orders!inner(event_id, status)').eq('orders.event_id', event.id).eq('orders.status', 'paid'),
     admin.from('promo_codes').select('id, code, label').eq('event_id', event.id),
@@ -44,7 +44,7 @@ export default async function ReportePage({ params }: { params: { id: string } }
   ]);
 
   const types = ttRes.data ?? [];
-  const tickets = (tkRes.data ?? []) as { ticket_type_id: string | null; validated_at: string | null; invalidated_at: string | null }[];
+  const stats = (statsRes.data ?? []) as { ticket_type_id: string; emitidas: number; escaneadas: number }[];
   const paidOrders = (ordRes.data ?? []) as { total_cents: number | null; payment_method: string }[];
   const orderItems = (oiRes.data ?? []) as unknown as { ticket_type_id: string | null; subtotal_cents: number | null }[];
 
@@ -55,15 +55,15 @@ export default async function ReportePage({ params }: { params: { id: string } }
     recByType.set(oi.ticket_type_id, (recByType.get(oi.ticket_type_id) ?? 0) + (oi.subtotal_cents ?? 0));
   }
 
-  // Emitidas (válidas) + escaneadas por tipo (de tickets, excluyendo anuladas).
+  // Emitidas (válidas) + escaneadas por tipo — agregado en Postgres
+  // (event_ticket_stats) en vez de traer todos los tickets.
   const byType = new Map<string, TypeRow>();
   for (const t of types) byType.set(t.id, { id: t.id, name: t.name, emitidas: 0, escaneadas: 0, recaudadoCents: recByType.get(t.id) ?? 0 });
-  for (const tk of tickets) {
-    if (tk.invalidated_at) continue; // anuladas no cuentan como vendidas
-    const row = tk.ticket_type_id ? byType.get(tk.ticket_type_id) : null;
+  for (const r of stats) {
+    const row = byType.get(r.ticket_type_id);
     if (!row) continue;
-    row.emitidas += 1;
-    if (tk.validated_at) row.escaneadas += 1;
+    row.emitidas = Number(r.emitidas) || 0;
+    row.escaneadas = Number(r.escaneadas) || 0;
   }
   const typeRows = [...byType.values()];
 

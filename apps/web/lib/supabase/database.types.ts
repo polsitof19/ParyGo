@@ -1231,6 +1231,10 @@ export type Database = {
         Args: { p_limit?: number }
         Returns: Database["public"]["Tables"]["notification_jobs"]["Row"][]
       }
+      event_ticket_stats: {
+        Args: { p_event_id: string }
+        Returns: { ticket_type_id: string; emitidas: number; escaneadas: number }[]
+      }
       register_ticket_resend_attempt: {
         Args: {
           p_email: string

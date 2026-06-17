@@ -31,7 +31,7 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
   const [
     { data: paid },
     { data: ticketTypes },
-    { data: scanned },
+    { data: ticketStats },
     { data: pendData },
     { data: activePrices },
     { data: rejected },
@@ -40,7 +40,7 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
   ] = await Promise.all([
     admin.from('orders').select('id, total_cents, payment_method, created_at').eq('event_id', event.id).eq('status', 'paid'),
     admin.from('ticket_types').select('id, name, price_cents, capacity, sold, is_unlimited, is_active, sort_order').eq('event_id', event.id).order('sort_order'),
-    admin.from('tickets').select('ticket_type_id').eq('event_id', event.id).is('invalidated_at', null).not('validated_at', 'is', null),
+    admin.rpc('event_ticket_stats', { p_event_id: event.id }),
     admin
       .from('yape_proofs')
       .select(`id, amount_cents, operation_number, payer_name, security_code, receipt_url, created_at,
@@ -85,10 +85,15 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
   const capTotal = capped.reduce((a, t) => a + (t.capacity ?? 0), 0);
   const hasUnlimited = types.some((t) => t.is_unlimited);
 
-  // Escaneados (entraron por puerta) por tipo + total — tickets ya validados.
+  // Escaneados (entraron por puerta) por tipo + total — agregado en Postgres
+  // (event_ticket_stats) en vez de traer todos los tickets.
   const scannedByType = new Map<string, number>();
   let totalScanned = 0;
-  for (const t of (scanned ?? []) as { ticket_type_id: string }[]) { scannedByType.set(t.ticket_type_id, (scannedByType.get(t.ticket_type_id) ?? 0) + 1); totalScanned++; }
+  for (const r of (ticketStats ?? []) as { ticket_type_id: string; escaneadas: number }[]) {
+    const n = Number(r.escaneadas) || 0;
+    scannedByType.set(r.ticket_type_id, n);
+    totalScanned += n;
+  }
 
   // Yape PENDIENTE de aprobar (NO suma al confirmado hasta aprobarse).
   const pendingProofs = ((pendData as unknown as ProofRow[] | null) ?? []).filter((p) => p.order?.event_id === event.id);
