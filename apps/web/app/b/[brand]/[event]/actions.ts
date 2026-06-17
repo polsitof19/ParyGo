@@ -19,7 +19,10 @@ export type CheckoutInput = {
   ageOk: boolean;
   marketingOptIn: boolean;
   method: 'yape_manual' | 'mercadopago';
-  items: { ticketTypeId: string; quantity: number }[];
+  // attendeeNames: nombre por entrada (índice = unidad). Solo se persiste si el
+  // evento pide nombres (collect_attendee_names); el server nunca confía en esto
+  // para nada sensible — es solo una etiqueta del ticket.
+  items: { ticketTypeId: string; quantity: number; attendeeNames?: string[] }[];
   sessionId: string;
   promoCode?: string;
 };
@@ -62,6 +65,7 @@ const schema = z.object({
       z.object({
         ticketTypeId: z.string().uuid(),
         quantity: z.number().int().min(1).max(10),
+        attendeeNames: z.array(z.string().trim().max(120)).max(10).optional(),
       })
     )
     .min(1),
@@ -90,7 +94,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // 1. Verify event + ticket types in one query (server-trusted).
   const { data: event } = await admin
     .from('events')
-    .select('id, slug, name, brand_id, is_published, min_age, archived_at, require_age_confirmation, require_dni')
+    .select('id, slug, name, brand_id, is_published, min_age, archived_at, require_age_confirmation, require_dni, collect_attendee_names')
     .eq('id', parsed.data.eventId)
     .maybeSingle();
   if (!event || !event.is_published || event.archived_at) {
@@ -154,6 +158,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     name: string;
     price_cents: number;
     quantity: number;
+    attendeeNames: string[] | null;
   };
   const resolved: Resolved[] = [];
   for (const item of parsed.data.items) {
@@ -168,11 +173,19 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     // Active-phase price (fallback to base price_cents if no phase rows).
     const unitPrice = activePriceByType.get(tt.id) ?? tt.price_cents;
     totalCents += unitPrice * item.quantity;
+    // Nombres por entrada: solo si el evento los pide. Recortamos a la cantidad
+    // comprada (no guardar más nombres que unidades) y limpiamos vacíos al final.
+    let attendeeNames: string[] | null = null;
+    if (event.collect_attendee_names && Array.isArray(item.attendeeNames)) {
+      const names = item.attendeeNames.slice(0, item.quantity).map((n) => (n ?? '').trim().slice(0, 120));
+      attendeeNames = names.some((n) => n.length > 0) ? names : null;
+    }
     resolved.push({
       id: tt.id,
       name: tt.name,
       price_cents: unitPrice,
       quantity: item.quantity,
+      attendeeNames,
     });
   }
 
@@ -244,6 +257,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
       quantity: r.quantity,
       unit_price_cents: r.price_cents,
       subtotal_cents: r.price_cents * r.quantity,
+      attendee_names: r.attendeeNames,
     }))
   );
   if (itemsErr) {

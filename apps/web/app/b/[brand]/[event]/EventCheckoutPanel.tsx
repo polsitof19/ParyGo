@@ -21,7 +21,7 @@ function readOrCreateSessionId(): string {
 }
 
 type Brand = { id: string; slug: string; name: string; yape_number: string | null; yape_holder: string | null };
-type Event = { id: string; slug: string; name: string; min_age: number; starts_at: string; require_age_confirmation: boolean; require_dni: boolean };
+type Event = { id: string; slug: string; name: string; min_age: number; starts_at: string; require_age_confirmation: boolean; require_dni: boolean; collect_attendee_names: boolean };
 type TicketType = {
   id: string; name: string; description: string | null; price_cents: number;
   active_price_cents: number; active_name: string | null; active_ends_at: string | null;
@@ -336,8 +336,17 @@ function Step2({
   const [applied, setApplied] = useState<null | { code: string; finalCents: number; discountCents: number; isFree: boolean }>(null);
   const [checking, setChecking] = useState(false);
   const [docType, setDocType] = useState<'dni' | 'ce' | 'passport'>('dni');
+  // Nombre por entrada (solo si el evento lo pide). Clave: ticketTypeId → nombres[].
+  const [attendeeNames, setAttendeeNames] = useState<Record<string, string[]>>({});
+  const setAttendee = (typeId: string, idx: number, val: string) =>
+    setAttendeeNames((prev) => {
+      const arr = [...(prev[typeId] ?? [])];
+      arr[idx] = val;
+      return { ...prev, [typeId]: arr };
+    });
 
   const itemsForPromo = Object.entries(qty).filter(([, q]) => q > 0).map(([ticketTypeId, quantity]) => ({ ticketTypeId, quantity }));
+  const selectedTypes = sorted.filter((t) => (qty[t.id] ?? 0) > 0);
 
   async function applyPromo() {
     const code = promoInput.trim();
@@ -385,7 +394,11 @@ function Step2({
           buyerDocType: docType,
           buyerDni: String(fd.get('buyer_dni') ?? '').trim(),
           ageOk, marketingOptIn: fd.get('marketing_opt_in') === '1',
-          method, items: itemsForPromo, promoCode: applied?.code,
+          method,
+          items: event.collect_attendee_names
+            ? itemsForPromo.map((it) => ({ ...it, attendeeNames: (attendeeNames[it.ticketTypeId] ?? []).slice(0, it.quantity) }))
+            : itemsForPromo,
+          promoCode: applied?.code,
         });
       }}
       style={{ display: 'grid', gap: 20, gridTemplateColumns: 'minmax(0,1fr) 360px', alignItems: 'start' }}
@@ -445,6 +458,33 @@ function Step2({
             </label>
           </div>
         </div>
+
+        {event.collect_attendee_names && selectedTypes.length > 0 && (
+          <div className="c-card">
+            <p className="c-card__title">¿Quiénes asisten?</p>
+            <p className="c-muted" style={{ fontSize: 12.5, marginBottom: 10 }}>Poné el nombre de cada asistente (opcional). Aparece en cada entrada. Si lo dejás vacío, usamos tu nombre.</p>
+            <div className="c-stack" style={{ gap: 12 }}>
+              {selectedTypes.map((t) => (
+                <div key={t.id}>
+                  <p className="c-label" style={{ marginBottom: 6 }}>{t.name}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {Array.from({ length: qty[t.id] ?? 0 }).map((_, i) => (
+                      <input
+                        key={i}
+                        className="c-input"
+                        placeholder={`Asistente ${i + 1}`}
+                        maxLength={120}
+                        autoComplete="off"
+                        value={attendeeNames[t.id]?.[i] ?? ''}
+                        onChange={(e) => setAttendee(t.id, i, e.target.value)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {!applied?.isFree && (
           <div className="c-card">

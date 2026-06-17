@@ -57,6 +57,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   const requireAge = formData.get('require_age_confirmation') === 'on';
   const requireDni = formData.get('require_dni') === 'on';
   const sendReminder = formData.get('send_reminder') === 'on';
+  const collectAttendeeNames = formData.get('collect_attendee_names') === 'on';
   const startsIso = limaToIso(parsed.data.starts_at);
   if (!startsIso) return { ok: false, message: 'Fecha/hora inválida.' };
 
@@ -97,6 +98,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
       require_age_confirmation: requireAge,
       require_dni: requireDni,
       send_reminder: sendReminder,
+      collect_attendee_names: collectAttendeeNames,
       min_age: parsed.data.min_age ? Math.min(99, Math.max(0, parseInt(parsed.data.min_age, 10) || 18)) : 18,
     })
     .eq('id', eventId)

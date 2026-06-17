@@ -26,7 +26,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
     .from('events')
     .select(`
       id, slug, name, description, starts_at, ends_at,
-      venue_name, venue_address, venue_maps_url, require_age_confirmation, require_dni, send_reminder, min_age, is_published, refund_policy, cover_url,
+      venue_name, venue_address, venue_maps_url, require_age_confirmation, require_dni, send_reminder, collect_attendee_names, min_age, is_published, refund_policy, cover_url,
       archived_at, brand_id,
       brand:brands ( slug, name )
     `)
@@ -129,6 +129,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
           requireAgeConfirmation={event.require_age_confirmation ?? false}
           requireDni={event.require_dni ?? true}
           sendReminder={event.send_reminder ?? false}
+          collectAttendeeNames={event.collect_attendee_names ?? false}
           minAge={event.min_age ?? 18}
           isPublished={event.is_published}
           hasSales={hasSales}

@@ -120,6 +120,7 @@ export type Database = {
           require_age_confirmation: boolean
           require_dni: boolean
           send_reminder: boolean
+          collect_attendee_names: boolean
           venue_maps_url: string | null
           name: string
           refund_policy: string | null
@@ -144,6 +145,7 @@ export type Database = {
           require_age_confirmation?: boolean
           require_dni?: boolean
           send_reminder?: boolean
+          collect_attendee_names?: boolean
           venue_maps_url?: string | null
           name: string
           refund_policy?: string | null
@@ -168,6 +170,7 @@ export type Database = {
           require_age_confirmation?: boolean
           require_dni?: boolean
           send_reminder?: boolean
+          collect_attendee_names?: boolean
           venue_maps_url?: string | null
           name?: string
           refund_policy?: string | null
@@ -263,6 +266,7 @@ export type Database = {
           ticket_type_id: string
           ticket_type_name: string
           unit_price_cents: number
+          attendee_names: string[] | null
         }
         Insert: {
           id?: string
@@ -272,6 +276,7 @@ export type Database = {
           ticket_type_id: string
           ticket_type_name: string
           unit_price_cents: number
+          attendee_names?: string[] | null
         }
         Update: {
           id?: string
@@ -281,6 +286,7 @@ export type Database = {
           ticket_type_id?: string
           ticket_type_name?: string
           unit_price_cents?: number
+          attendee_names?: string[] | null
         }
         Relationships: [
           {

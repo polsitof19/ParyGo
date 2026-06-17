@@ -33,7 +33,7 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
     .select(`
       id, slug, name, description, starts_at, ends_at,
       venue_name, venue_address, venue_lat, venue_lng, venue_maps_url,
-      cover_url, min_age, require_age_confirmation, require_dni, refund_policy, is_published
+      cover_url, min_age, require_age_confirmation, require_dni, collect_attendee_names, refund_policy, is_published
     `)
     .eq('brand_id', brand.id)
     .eq('slug', eventSlug)
