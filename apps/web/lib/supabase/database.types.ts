@@ -119,6 +119,7 @@ export type Database = {
           min_age: number
           require_age_confirmation: boolean
           require_dni: boolean
+          send_reminder: boolean
           venue_maps_url: string | null
           name: string
           refund_policy: string | null
@@ -142,6 +143,7 @@ export type Database = {
           min_age?: number
           require_age_confirmation?: boolean
           require_dni?: boolean
+          send_reminder?: boolean
           venue_maps_url?: string | null
           name: string
           refund_policy?: string | null
@@ -165,6 +167,7 @@ export type Database = {
           min_age?: number
           require_age_confirmation?: boolean
           require_dni?: boolean
+          send_reminder?: boolean
           venue_maps_url?: string | null
           name?: string
           refund_policy?: string | null
@@ -1225,6 +1228,10 @@ export type Database = {
           p_recovery_max_age_hours?: number
           p_digest_bucket_seconds?: number
         }
+        Returns: number
+      }
+      enqueue_event_reminders: {
+        Args: Record<string, never>
         Returns: number
       }
       claim_notification_jobs: {

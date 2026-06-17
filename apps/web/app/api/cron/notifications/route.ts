@@ -38,12 +38,16 @@ export async function POST(req: NextRequest) {
 
   const { createAdminClient } = await import('@/lib/supabase/admin');
   const { sendYapeRecoveryEmail, sendYapePendingDigestEmail } = await import('@/lib/email/sendYapeNotificationEmails');
+  const { sendEventReminderEmail } = await import('@/lib/email/sendEventReminderEmail');
   const admin = createAdminClient();
 
   // 1. Encolar lo nuevo (idempotente). Si falla, igual seguimos a procesar lo ya
   //    encolado (no abortamos la tanda por un error de enqueue).
   const { error: enqErr, data: enqCount } = await admin.rpc('enqueue_yape_notifications', {});
   const enqueued = typeof enqCount === 'number' ? enqCount : 0;
+  // Recordatorios pre-evento (eventos que arrancan dentro de 24h, idempotente).
+  const { error: remErr, data: remCount } = await admin.rpc('enqueue_event_reminders', {});
+  const enqueuedReminders = typeof remCount === 'number' ? remCount : 0;
 
   // 2. Reclamar una tanda.
   const { data: claimed, error: claimErr } = await admin.rpc('claim_notification_jobs', { p_limit: BATCH });
@@ -52,7 +56,7 @@ export async function POST(req: NextRequest) {
   }
   const rows = (claimed ?? []) as unknown as Job[];
   if (rows.length === 0) {
-    return NextResponse.json({ ok: true, enqueued, claimed: 0, sent: 0, failed: 0, enqueue_error: enqErr?.message ?? null });
+    return NextResponse.json({ ok: true, enqueued, enqueuedReminders, claimed: 0, sent: 0, failed: 0, enqueue_error: enqErr?.message ?? null, reminder_enqueue_error: remErr?.message ?? null });
   }
 
   // 3. Cargar las marcas involucradas UNA vez (datos de marca, no PII del comprador).
@@ -95,6 +99,13 @@ export async function POST(req: NextRequest) {
           to: r.recipient_email, eventName: String(p.event_name ?? ''), eventId: r.event_id,
           brand: brandForEmail, pendingCount: Number(p.pending_count ?? 0), idempotencyKey: r.dedupe_key,
         });
+      } else if (r.kind === 'event_reminder') {
+        res = await sendEventReminderEmail({
+          to: r.recipient_email, buyerName: r.recipient_name,
+          eventName: String(p.event_name ?? ''), eventSlug: String(p.event_slug ?? ''),
+          startsAtIso: String(p.starts_at ?? ''), venue: (p.venue as string | null) ?? null,
+          brand: brandForEmail, idempotencyKey: r.dedupe_key,
+        });
       } else {
         await markFailed(r.id, `unknown_kind:${r.kind}`); failed++; return;
       }
@@ -103,5 +114,5 @@ export async function POST(req: NextRequest) {
     }));
   }
 
-  return NextResponse.json({ ok: true, enqueued, claimed: rows.length, sent, failed, enqueue_error: enqErr?.message ?? null });
+  return NextResponse.json({ ok: true, enqueued, enqueuedReminders, claimed: rows.length, sent, failed, enqueue_error: enqErr?.message ?? null, reminder_enqueue_error: remErr?.message ?? null });
 }
