@@ -62,6 +62,7 @@ export function MercadoPagoWallet({
   const containerRef = useRef<HTMLDivElement>(null);
   const renderedRef = useRef(false);
   const [failed, setFailed] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +75,7 @@ export function MercadoPagoWallet({
         await mp.bricks().create('wallet', CONTAINER_ID, {
           initialization: { preferenceId },
         });
+        if (!cancelled) setReady(true);
       } catch {
         if (!cancelled) setFailed(true);
       }
@@ -86,10 +88,14 @@ export function MercadoPagoWallet({
   return (
     <div className="c-card" style={{ maxWidth: 520, margin: '0 auto' }}>
       <p className="c-card__title">Pagá con MercadoPago</p>
-      {!failed && (
-        <div className="c-muted" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Cargando el botón seguro de MercadoPago…
-        </div>
+      {!failed && !ready && (
+        <>
+          <div className="c-muted" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Cargando el botón seguro de MercadoPago…
+          </div>
+          {/* Skeleton con la forma del botón MP → cero salto de layout al cargar */}
+          <div className="c-mpskel" aria-hidden style={{ marginTop: 12 }} />
+        </>
       )}
       {/* MP injects the Wallet button here */}
       <div id={CONTAINER_ID} ref={containerRef} style={{ marginTop: 12 }} />

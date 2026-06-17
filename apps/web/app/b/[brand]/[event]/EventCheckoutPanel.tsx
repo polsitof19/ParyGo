@@ -314,7 +314,7 @@ function Step1({
       <div className={`c-stickybar ${totalItems === 0 ? 'c-stickybar--off' : ''}`} style={{ marginTop: 20 }}>
         <div className="c-stickybar__t">
           <span className="n">{totalItems} entrada{totalItems === 1 ? '' : 's'}</span>
-          <span className="v">{formatPEN(totalCents)} <span style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 500 }}>IGV inc.</span></span>
+          <span className="v"><span key={totalCents} className="c-amount">{formatPEN(totalCents)}</span> <span style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 500 }}>IGV inc.</span></span>
         </div>
         <button type="button" className="c-btn c-btn--brand" disabled={totalItems === 0} onClick={onContinue}>
           Continuar <ArrowRight className="h-4 w-4" />
@@ -496,7 +496,7 @@ function Step2({
             })}
             {applied && <div className="c-sum__row c-sum__discount"><span>Código {applied.code}</span><span className="v">−{formatPEN(applied.discountCents)}</span></div>}
           </div>
-          <div className="c-sum__total"><span className="l">Total</span><span className="v">{formatPEN(finalTotal)}</span></div>
+          <div className="c-sum__total"><span className="l">Total</span><span className="v"><span key={finalTotal} className="c-amount">{formatPEN(finalTotal)}</span></span></div>
           <p className="c-muted-3" style={{ fontSize: 11.5, textAlign: 'right', marginTop: 2 }}>IGV incluido · sin costos ocultos</p>
         </div>
 
@@ -515,6 +515,21 @@ function Step2({
         </div>
         <button type="button" onClick={onBack} className="c-btn c-btn--ghost" style={{ margin: '0 auto' }}>← Editar entradas</button>
       </aside>
+
+      {/* CTA sticky SOLO en mobile: el total + pagar siempre a la vista sin
+          tener que scrollear hasta el final del formulario. Submite el form. */}
+      <div className="c-mobilecta">
+        <div className="c-mobilecta__t">
+          <span className="n">Total</span>
+          <span className="v"><span key={finalTotal} className="c-amount">{formatPEN(finalTotal)}</span></span>
+        </div>
+        <button type="submit" className="c-btn c-btn--brand" disabled={isPending}>
+          {isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> …</>
+            : applied?.isFree ? <>Entrada gratis</>
+            : method === 'mercadopago' ? <><Lock className="h-4 w-4" /> Pagar</>
+            : <>Continuar <ArrowRight className="h-4 w-4" /></>}
+        </button>
+      </div>
     </form>
   );
 }

@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { MapPin, Calendar, Check } from 'lucide-react';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateQrSvg } from '@/lib/qr';
+import { optimizedImage } from '@/lib/imageUrl';
 import { formatEventDate, whatsappLink } from '@/lib/utils';
 import { DownloadQrButton } from '../../DownloadQrButton';
 
@@ -31,7 +32,7 @@ type TicketView = {
   attendee_name: string | null;
   validated_at: string | null;
   invalidated_at: string | null;
-  event: { name: string; starts_at: string; venue_name: string | null; venue_address: string | null } | null;
+  event: { name: string; starts_at: string; venue_name: string | null; venue_address: string | null; cover_url: string | null } | null;
   brand: {
     slug: string;
     name: string;
@@ -50,7 +51,7 @@ async function loadTicket(brandSlug: string, qrCode: string): Promise<TicketView
     .from('tickets')
     .select(`
       id, qr_code, ticket_type_name, ticket_number, attendee_name, validated_at, invalidated_at,
-      event:events ( name, starts_at, venue_name, venue_address ),
+      event:events ( name, starts_at, venue_name, venue_address, cover_url ),
       brand:brands ( slug, name, whatsapp_e164, theme_json )
     `)
     .eq('qr_code', qrCode)
@@ -102,7 +103,21 @@ export default async function TicketPage({ params }: Props) {
       </div>
 
       <article className="c-ticket__card">
-        <div className="c-ticket__band" />
+        {/* Arte del evento como cabecera del ticket + logo de la marca → la
+            entrada se siente del evento, no genérica. Cae a la banda de color. */}
+        {event?.cover_url ? (
+          <div className="c-ticket__art">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={optimizedImage(event.cover_url, { width: 840, quality: 78 })} alt="" decoding="async" />
+            <div className="c-ticket__art-veil" />
+            {brand?.theme_json?.logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="c-ticket__logo" src={optimizedImage(brand.theme_json.logo_url, { width: 200, quality: 82 })} alt={brand.name} decoding="async" />
+            )}
+          </div>
+        ) : (
+          <div className="c-ticket__band" />
+        )}
         <div style={{ padding: '20px 24px 0' }}>
           <p className="c-eyebrow">{t.ticket_type_name}</p>
           <h1 className="c-h1" style={{ fontSize: 25, marginTop: 4 }}>{event?.name}</h1>

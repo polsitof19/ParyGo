@@ -172,19 +172,29 @@ export default async function EventPage({ params, searchParams }: Props) {
               </>
             )}
           </div>
-          <div className="c-hero__inner">
-            <span className="c-live"><span className="dot" /> Vendiendo ahora</span>
-            <h1>{event.name}</h1>
-            {event.description && <p className="c-hero__desc">{event.description}</p>}
-            <div className="c-chips">
-              <span className="c-chip"><Calendar className="h-4 w-4" /> {dateLabel}</span>
-              {event.venue_name && <span className="c-chip"><MapPin className="h-4 w-4" /> {event.venue_name}</span>}
-              {event.min_age > 0 && <span className="c-chip"><ShieldCheck className="h-4 w-4" /> +{event.min_age}</span>}
+          <div className={`c-hero__inner ${hasCover ? 'c-hero__inner--poster' : ''}`}>
+            <div className="c-hero__copy">
+              <span className="c-live"><span className="dot" /> Vendiendo ahora</span>
+              <h1>{event.name}</h1>
+              {event.description && <p className="c-hero__desc">{event.description}</p>}
+              <div className="c-chips">
+                <span className="c-chip"><Calendar className="h-4 w-4" /> {dateLabel}</span>
+                {event.venue_name && <span className="c-chip"><MapPin className="h-4 w-4" /> {event.venue_name}</span>}
+                {event.min_age > 0 && <span className="c-chip"><ShieldCheck className="h-4 w-4" /> +{event.min_age}</span>}
+              </div>
+              <ShareEvent
+                eventName={event.name}
+                shareUrl={`https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${event.slug}`}
+              />
             </div>
-            <ShareEvent
-              eventName={event.name}
-              shareUrl={`https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${event.slug}`}
-            />
+            {hasCover && (
+              // Flyer nítido como póster (no solo fondo borroso): el arte real del
+              // evento, enmarcado y de alta calidad. El fondo queda como ambiente.
+              <div className="c-hero__poster">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={optimizedImage(event.cover_url, { width: 760, quality: 82 })} alt={`Flyer de ${event.name}`} decoding="async" />
+              </div>
+            )}
           </div>
         </section>
 
