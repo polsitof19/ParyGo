@@ -44,14 +44,16 @@ export default async function AdminLayout({
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
-    .select('slug, name')
+    .select('slug, name, theme_json')
     .eq('id', ctx.brandId)
     .maybeSingle();
+
+  const logoUrl = (brand?.theme_json as { logo_url?: string | null } | null)?.logo_url ?? null;
 
   return (
     <div className={`admin-shell ${bricolage.variable} ${hanken.variable}`}>
       {ctx.impersonating && <ImpersonationBanner brandName={brand?.name ?? 'la marca'} />}
-      <AdminTopbar brandName={brand?.name ?? 'Tu marca'} email={user.email} />
+      <AdminTopbar brandName={brand?.name ?? 'Tu marca'} email={user.email} logoUrl={logoUrl} />
       <main className="s-wrap">{children}</main>
     </div>
   );

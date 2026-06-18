@@ -73,10 +73,18 @@ export default async function BrandDetailPage({
         <ChevronLeft className="h-3.5 w-3.5" /> Marcas
       </Link>
 
-      {/* Cabecera: avatar + nombre + dominio + entrar a la marca */}
+      {/* Cabecera: avatar (color/logo real de la marca) + nombre + dominio + entrar */}
       <header className="s-brandhead">
-        <span className="s-avatar s-avatar--lg" style={{ background: bgFor(brand.slug) }}>
-          {initialOf(brand.name)}
+        <span
+          className="s-avatar s-avatar--lg"
+          style={{ background: logoUrl ? 'var(--white)' : primaryColor, color: '#fff', overflow: 'hidden' }}
+        >
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUrl} alt={`logo de ${brand.name}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            initialOf(brand.name)
+          )}
         </span>
         <div className="s-brandhead__id">
           <h1 className="s-h1">

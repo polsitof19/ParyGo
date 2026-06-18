@@ -98,7 +98,7 @@ export default async function TicketPage({ params }: Props) {
     <main className="c-ticket" style={{ padding: '28px 16px 48px' }}>
       {event?.cancelled_at && (
         <div style={{ background: 'var(--alert-bg)', color: 'var(--alert)', border: '1px solid var(--alert)', borderRadius: 12, padding: '12px 14px', marginBottom: 16, textAlign: 'center', fontWeight: 700, fontSize: 14 }}>
-          Este evento fue cancelado. Te avisamos por email; coordiná la devolución con el organizador.
+          Este evento fue cancelado. Te avisamos por email; coordina la devolución con el organizador.
         </div>
       )}
       <div style={{ textAlign: 'center', marginBottom: 18 }}>

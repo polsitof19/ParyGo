@@ -197,6 +197,19 @@ export default async function EventPage({ params, searchParams }: Props) {
           <div className={`c-hero__inner ${hasCover ? 'c-hero__inner--poster' : ''}`}>
             <div className="c-hero__copy">
               <span className="c-live"><span className="dot" /> Vendiendo ahora</span>
+              {/* Logo de la marca sobre el hero (o "por {marca}" si no hay logo).
+                  Sobre c-hero--img el texto es blanco, así que el logo lleva
+                  drop-shadow suave para verse bien sobre fondo oscuro. */}
+              {(() => {
+                const logoUrl = (brand.theme_json as { logo_url?: string | null } | null)?.logo_url;
+                if (logoUrl) {
+                  return (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img className="c-hero__brand" src={optimizedImage(logoUrl, { width: 200, quality: 82 })} alt={brand.name} decoding="async" />
+                  );
+                }
+                return <span className="c-hero__by">por {brand.name}</span>;
+              })()}
               <h1>{event.name}</h1>
               {event.description && <p className="c-hero__desc">{event.description}</p>}
               <div className="c-chips">

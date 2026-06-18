@@ -235,7 +235,7 @@ export function EventCheckoutPanel({
         <MercadoPagoWallet publicKey={mpPublicKey} preferenceId={mpCheckout.preferenceId} initPoint={mpCheckout.initPoint} />
       ) : step === 1 ? (
         <div className="c-stepwrap" key="step1">
-        <Step1 sorted={sorted} qty={qty} inc={inc} dec={dec} totalCents={totalCents} totalItems={totalItems} promoInput={promoInput} setPromoInput={setPromoInput} onContinue={() => setStep(2)} />
+        <Step1 sorted={sorted} qty={qty} inc={inc} dec={dec} totalCents={totalCents} totalItems={totalItems} onContinue={() => setStep(2)} />
         </div>
       ) : (
         <div className="c-stepwrap" key="step2">
@@ -261,10 +261,10 @@ export function EventCheckoutPanel({
 
 // ============================ Paso 1 — Elegir entradas ============================
 function Step1({
-  sorted, qty, inc, dec, totalCents, totalItems, promoInput, setPromoInput, onContinue,
+  sorted, qty, inc, dec, totalCents, totalItems, onContinue,
 }: {
   sorted: TicketType[]; qty: Record<string, number>; inc: (t: TicketType) => void; dec: (t: TicketType) => void;
-  totalCents: number; totalItems: number; promoInput: string; setPromoInput: (v: string) => void; onContinue: () => void;
+  totalCents: number; totalItems: number; onContinue: () => void;
 }) {
   return (
     <>
@@ -288,7 +288,7 @@ function Step1({
                 {/* Descuento por cantidad (bulk): incentivo visible. */}
                 {t.bulk_min_qty > 0 && t.bulk_discount_pct > 0 && (
                   <p style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: 'var(--brand-ink)' }}>
-                    🎟️ Llevá {t.bulk_min_qty}+ y pagás {t.bulk_discount_pct}% menos
+                    🎟️ Lleva {t.bulk_min_qty}+ y pagas {t.bulk_discount_pct}% menos
                   </p>
                 )}
                 {/* No agotado → fases (countdown + teaser). Agotado → badge a la derecha. */}
@@ -311,22 +311,9 @@ function Step1({
         })}
       </div>
 
-      {/* Código de RR.PP. — visible al comprar. Opcional: si lo tenés, ingresalo;
-          se aplica al confirmar tu email en el siguiente paso. */}
-      <div className="c-card" style={{ marginTop: 16 }}>
-        <label htmlFor="rrpp_code" className="c-card__title" style={{ display: 'block', marginBottom: 4 }}>¿Tenés un código de RR.PP.?</label>
-        <p className="c-muted" style={{ fontSize: 12.5, marginBottom: 10 }}>Si un promotor te pasó un código, ingresalo acá (opcional). Se aplica al pagar.</p>
-        <input
-          id="rrpp_code"
-          value={promoInput}
-          onChange={(e) => setPromoInput(e.target.value)}
-          placeholder="Código del promotor"
-          autoCapitalize="characters"
-          maxLength={32}
-          className="c-input"
-          style={{ textTransform: 'uppercase' }}
-        />
-      </div>
+      {/* El código de RR.PP. se pide UNA sola vez, en el Paso 2 (junto al email,
+          que es donde se aplica). El prefill por ?ref sigue viajando vía
+          promoInput hacia Step2 — no se pierde aunque ya no se muestre aquí. */}
 
       <div className={`c-stickybar ${totalItems === 0 ? 'c-stickybar--off' : ''}`} style={{ marginTop: 20 }}>
         <div className="c-stickybar__t">
@@ -481,7 +468,7 @@ function Step2({
         {event.collect_attendee_names && selectedTypes.length > 0 && (
           <div className="c-card">
             <p className="c-card__title">¿Quiénes asisten?</p>
-            <p className="c-muted" style={{ fontSize: 12.5, marginBottom: 10 }}>Poné el nombre de cada asistente (opcional). Aparece en cada entrada. Si lo dejás vacío, usamos tu nombre.</p>
+            <p className="c-muted" style={{ fontSize: 12.5, marginBottom: 10 }}>Pon el nombre de cada asistente (opcional). Aparece en cada entrada. Si lo dejas vacío, usamos tu nombre.</p>
             <div className="c-stack" style={{ gap: 12 }}>
               {selectedTypes.map((t) => (
                 <div key={t.id}>
@@ -510,7 +497,7 @@ function Step2({
             <p className="c-card__title">Cómo pagas</p>
             <div role="radiogroup" aria-label="Método de pago" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {brand.yape_number && (
-                <PayOption kind="yape" selected={method === 'yape_manual'} onClick={() => setMethod('yape_manual')} title="Yape" sub="Validación en 5–15 min" note={`Yapeas a ${brand.yape_holder ?? brand.name} y nos mandás la captura.`} />
+                <PayOption kind="yape" selected={method === 'yape_manual'} onClick={() => setMethod('yape_manual')} title="Yape" sub="Validación en 5–15 min" note={`Yapeas a ${brand.yape_holder ?? brand.name} y nos envías la captura.`} />
               )}
               {mpConfigured && (
                 <PayOption kind="mp" selected={method === 'mercadopago'} onClick={() => setMethod('mercadopago')} title="Tarjeta · MercadoPago" sub="Pago con tarjeta — tu QR al instante" note="Procesado de forma segura por MercadoPago." />
@@ -564,10 +551,16 @@ function Step2({
           {isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Procesando…</>
             : applied?.isFree ? <>Obtener entrada gratis</>
             : method === 'mercadopago' ? <><Lock className="h-4 w-4" /> Pagar {formatPEN(finalTotal)}</>
-            : <>Continuar con Yape</>}
+            : <>Ir a pagar con Yape</>}
         </button>
 
-        <p className="c-reassure"><Mail className="h-4 w-4" style={{ color: 'var(--brand-ink)'}} /> Recibís tu entrada con QR al instante por email.</p>
+        {method === 'yape_manual' && !applied?.isFree && (
+          <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginTop: -4 }}>
+            Después: yapeas y subes tu comprobante.
+          </p>
+        )}
+
+        <p className="c-reassure"><Mail className="h-4 w-4" style={{ color: 'var(--brand-ink)'}} /> Recibes tu entrada con QR al instante por email.</p>
         <div className="c-seals">
           <span className="c-seal"><ShieldCheck className="h-4 w-4" /> Pago seguro</span>
           <span className="c-seal"><Lock className="h-4 w-4" /> Datos protegidos</span>

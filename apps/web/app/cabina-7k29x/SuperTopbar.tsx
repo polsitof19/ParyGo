@@ -16,7 +16,7 @@ function isActive(pathname: string, href: string): boolean {
   return pathname.startsWith(href);
 }
 
-export function SuperTopbar({ email }: { email: string }) {
+export function SuperTopbar({ email, pendingRequests = 0 }: { email: string; pendingRequests?: number }) {
   const pathname = usePathname() ?? '';
 
   return (
@@ -35,6 +35,9 @@ export function SuperTopbar({ email }: { email: string }) {
               aria-current={isActive(pathname, item.href) ? 'page' : undefined}
             >
               {item.label}
+              {item.href === '/cabina-7k29x/solicitudes' && pendingRequests > 0 && (
+                <span className="s-nav-count" aria-label={`${pendingRequests} pendientes`}>{pendingRequests}</span>
+              )}
             </Link>
           ))}
         </nav>

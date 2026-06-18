@@ -4,6 +4,7 @@ import { Calendar, MapPin, Check } from 'lucide-react';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateQrSvg } from '@/lib/qr';
 import { formatEventDate } from '@/lib/utils';
+import { optimizedImage } from '@/lib/imageUrl';
 import { DownloadQrButton } from '../../DownloadQrButton';
 
 // QR generado server-side, sin dependencias Node-only → corre en edge.
@@ -17,8 +18,8 @@ type OrderView = {
   id: string;
   status: string;
   payment_method: 'mercadopago' | 'yape_manual';
-  event: { name: string; starts_at: string; venue_name: string | null } | null;
-  brand: { slug: string; name: string; whatsapp_e164: string | null } | null;
+  event: { name: string; starts_at: string; venue_name: string | null; cover_url: string | null } | null;
+  brand: { slug: string; name: string; whatsapp_e164: string | null; theme_json: { logo_url?: string | null } | null } | null;
   tickets: {
     qr_code: string;
     ticket_type_name: string;
@@ -36,8 +37,8 @@ async function loadOrder(brandSlug: string, orderId: string): Promise<OrderView 
     .from('orders')
     .select(`
       id, status, payment_method,
-      event:events ( name, starts_at, venue_name ),
-      brand:brands ( slug, name, whatsapp_e164 ),
+      event:events ( name, starts_at, venue_name, cover_url ),
+      brand:brands ( slug, name, whatsapp_e164, theme_json ),
       tickets ( qr_code, ticket_type_name, ticket_number, attendee_name, invalidated_at, validated_at )
     `)
     .eq('id', orderId)
@@ -61,6 +62,7 @@ export default async function OrderPage({ params }: { params: { brand: string; o
   // Orden sin tickets emitidos todavía (ej. Yape en revisión).
   const tickets = (order.tickets ?? []).slice().sort((a, b) => a.ticket_number.localeCompare(b.ticket_number));
   const event = order.event;
+  const brand = order.brand;
 
   if (tickets.length === 0) {
     const wa = order.brand?.whatsapp_e164 ? `https://wa.me/${order.brand.whatsapp_e164.replace(/[^\d]/g, '')}` : null;
@@ -71,7 +73,7 @@ export default async function OrderPage({ params }: { params: { brand: string; o
         <main className="c-state">
           <span className="c-eyebrow" style={{ color: 'var(--alert, #dc2626)' }}>Comprobante rechazado</span>
           <h1 className="c-h1" style={{ fontSize: 26, marginTop: 8 }}>No se emitieron entradas</h1>
-          <p className="c-muted" style={{ marginTop: 10 }}>Tu comprobante no pudo validarse, así que no hay entradas para este pedido y no quedó ningún cargo de nuestra parte. Si creés que es un error, contactá al organizador.</p>
+          <p className="c-muted" style={{ marginTop: 10 }}>Tu comprobante no pudo validarse, así que no hay entradas para este pedido y no quedó ningún cargo de nuestra parte. Si crees que es un error, contacta al organizador.</p>
           {wa && <a href={wa} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand-ink)', fontWeight: 600 }}>Escribir al organizador por WhatsApp</a>}
         </main>
       );
@@ -80,7 +82,7 @@ export default async function OrderPage({ params }: { params: { brand: string; o
       <main className="c-state">
         <span className="c-eyebrow" style={{ color: 'var(--warn)' }}>Comprobante en revisión</span>
         <h1 className="c-h1" style={{ fontSize: 26, marginTop: 8 }}>Estamos verificando tu Yape</h1>
-        <p className="c-muted" style={{ marginTop: 10 }}>El organizador está revisando tu comprobante. Te avisamos por email apenas se apruebe y acá vas a ver tus QR. Suele tomar 5–15 minutos en horario operativo.</p>
+        <p className="c-muted" style={{ marginTop: 10 }}>El organizador está revisando tu comprobante. Te avisamos por email apenas se apruebe y aquí vas a ver tus QR. Suele tomar 5–15 minutos en horario operativo.</p>
         {wa && <a href={wa} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand-ink)', fontWeight: 600 }}>¿Pasó algo? WhatsApp soporte</a>}
       </main>
     );
@@ -110,7 +112,21 @@ export default async function OrderPage({ params }: { params: { brand: string; o
           const voided = !!t.invalidated_at;
           return (
             <article key={t.qr_code} className="c-ticket__card">
-              <div className="c-ticket__band" />
+              {/* Arte del evento + logo de la marca como cabecera (igual que /t/);
+                  cae a la banda de color si el evento no tiene cover. */}
+              {event?.cover_url ? (
+                <div className="c-ticket__art">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={optimizedImage(event.cover_url, { width: 840, quality: 78 })} alt="" decoding="async" />
+                  <div className="c-ticket__art-veil" />
+                  {brand?.theme_json?.logo_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img className="c-ticket__logo" src={optimizedImage(brand.theme_json.logo_url, { width: 200, quality: 82 })} alt={brand.name} decoding="async" />
+                  )}
+                </div>
+              ) : (
+                <div className="c-ticket__band" />
+              )}
               <div style={{ padding: '16px 22px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
                 <p className="c-eyebrow">Entrada {i + 1}/{rendered.length} · {t.ticket_type_name}</p>
                 {voided ? <span className="c-validated" style={{ color: 'var(--alert)' }}>Anulada</span>

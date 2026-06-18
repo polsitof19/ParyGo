@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ChevronLeft, ExternalLink } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { formatPEN } from '@/lib/utils';
+import { brandColor } from '@/lib/brandColors';
 import { publicEnv } from '@/lib/env';
 import { TicketTypesEditor } from './TicketTypesEditor';
 import { TogglePublishedButton } from './TogglePublishedButton';
@@ -28,14 +29,20 @@ export default async function EventDetailPage({ params }: { params: { id: string
       id, slug, name, description, starts_at, ends_at,
       venue_name, venue_address, venue_maps_url, require_age_confirmation, require_dni, send_reminder, collect_attendee_names, allow_transfer, min_age, is_published, refund_policy, cover_url,
       archived_at, brand_id,
-      brand:brands ( slug, name )
+      brand:brands ( slug, name, theme_json )
     `)
     .eq('id', params.id)
     .maybeSingle();
 
   if (!event) notFound();
 
-  const brand = Array.isArray(event.brand) ? event.brand[0] : event.brand;
+  const brand = (Array.isArray(event.brand) ? event.brand[0] : event.brand) as
+    | { slug: string; name: string; theme_json?: { primary_color?: string; logo_url?: string | null } | null }
+    | null;
+  const brandTheme = (brand?.theme_json ?? {}) as { primary_color?: string; logo_url?: string | null };
+  const brandPrimary = brandColor(brandTheme.primary_color);
+  const brandLogo = brandTheme.logo_url ?? null;
+  const brandInitial = (brand?.name?.trim()[0] ?? '?').toUpperCase();
 
   const [{ data: ticketTypes }, { data: orders, count: orderCount }, { count: ticketCount }] = await Promise.all([
     supabase
@@ -68,7 +75,21 @@ export default async function EventDetailPage({ params }: { params: { id: string
       </Link>
 
       <header className="s-pagehead">
-        <div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, minWidth: 0 }}>
+          <Link
+            href={`/cabina-7k29x/brands/${brand?.slug ?? ''}`}
+            className="s-avatar s-avatar--lg"
+            aria-label={`Marca ${brand?.name ?? ''}`}
+            style={{ background: brandLogo ? 'var(--white)' : brandPrimary, color: '#fff', overflow: 'hidden', marginTop: 2 }}
+          >
+            {brandLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={brandLogo} alt={`logo de ${brand?.name ?? ''}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              brandInitial
+            )}
+          </Link>
+          <div style={{ minWidth: 0 }}>
           <span className="eyebrow">
             Evento · {brand?.name ?? brand?.slug}
             <span className={`s-badge ${event.is_published ? 's-badge--ok' : 's-badge--draft'}`} style={{ marginLeft: 10, verticalAlign: 'middle' }}>
@@ -91,6 +112,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
             {eventUrl.replace('https://', '')}
             <ExternalLink className="h-3 w-3" />
           </a>
+          </div>
         </div>
         <TogglePublishedButton eventId={event.id} isPublished={event.is_published} />
       </header>

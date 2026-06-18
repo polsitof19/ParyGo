@@ -77,6 +77,11 @@
 .client-shell .c-hero--img h1, .client-shell .c-hero--img .c-hero__desc { color: #fff; }
 .client-shell .c-hero--img .c-chip { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.28); color: #fff; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
 .client-shell .c-hero--img .c-live { color: #fff; }
+/* Logo / firma de la marca sobre el hero */
+.client-shell .c-hero__brand { display: block; height: 30px; width: auto; max-width: 160px; object-fit: contain; margin-top: 14px; border-radius: 6px; }
+.client-shell .c-hero__by { display: block; margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.client-shell .c-hero--img .c-hero__brand { filter: drop-shadow(0 2px 8px rgba(0,0,0,.55)); }
+.client-shell .c-hero--img .c-hero__by { color: rgba(255,255,255,.92); text-shadow: 0 1px 6px rgba(0,0,0,.45); }
 
 /* capacity meter */
 .client-shell .c-meter { background: var(--white); border-bottom: 1px solid var(--cream-3); }

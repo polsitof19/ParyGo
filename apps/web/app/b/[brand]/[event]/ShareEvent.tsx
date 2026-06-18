@@ -14,7 +14,7 @@ import { Share2, Link2, Check, Instagram } from 'lucide-react';
 
 export function ShareEvent({ eventName, shareUrl }: { eventName: string; shareUrl: string }) {
   const [copied, setCopied] = useState(false);
-  const text = `Voy a ${eventName} 🎟️ Conseguí tu entrada acá:`;
+  const text = `Voy a ${eventName} 🎟️ Consigue tu entrada aquí:`;
   const waHref = `https://wa.me/?text=${encodeURIComponent(`${text} ${shareUrl}`)}`;
 
   async function copyLink() {
@@ -40,7 +40,7 @@ export function ShareEvent({ eventName, shareUrl }: { eventName: string; shareUr
     }
     try {
       await navigator.clipboard.writeText(`${text} ${shareUrl}`);
-      toast.success('Texto copiado — pegalo en tu historia o post de Instagram');
+      toast.success('Texto copiado — pégalo en tu historia o post de Instagram');
     } catch {
       toast.error('No se pudo copiar');
     }

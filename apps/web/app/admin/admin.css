@@ -7,6 +7,7 @@
   --cream: #FBF7F0; --cream-2: #F4EDE1; --cream-3: #EFE6D6;
   --ink: #231C17; --ink-2: #6B5F54; --ink-3: #A89B8C;
   --tangerine: #FF6A3D; --tangerine-deep: #E8552A; --peri: #5B6CFF; --white: #FFFFFF;
+  --brand-ink: var(--tangerine);
   --ok: #2E9E6B; --ok-bg: #E6F4EC; --warn: #C7791A; --warn-bg: #FBEEDD;
   --alert: #D7472F; --alert-bg: #FBE9E5; --info: #5B6CFF; --info-bg: #E9ECFF;
   --display: var(--font-bricolage), "Bricolage Grotesque", system-ui, sans-serif;
@@ -121,6 +122,13 @@
 .admin-shell .s-pwrap .s-input { padding-right: 44px; }
 .admin-shell .s-peek { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; display: grid; place-items: center; border: none; background: transparent; color: var(--ink-3); cursor: pointer; border-radius: 8px; }
 .admin-shell .s-peek:hover { color: var(--ink); background: var(--cream-2); }
+
+/* details "avanzado" (toggles plegables del editor de evento) */
+.admin-shell .s-details > summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--ink-2); padding: 4px 0; list-style: none; user-select: none; transition: color .15s; }
+.admin-shell .s-details > summary::-webkit-details-marker { display: none; }
+.admin-shell .s-details > summary::before { content: '▸'; display: inline-block; margin-right: 8px; color: var(--ink-3); transition: transform .2s var(--ease); }
+.admin-shell .s-details[open] > summary::before { transform: rotate(90deg); }
+.admin-shell .s-details > summary:hover { color: var(--ink); }
 
 /* feedback banners */
 .admin-shell .s-banner { border-radius: var(--r-ctl); padding: 11px 14px; font-size: 13.5px; font-weight: 500; }
@@ -479,4 +487,8 @@
   .admin-shell .s-btn:hover { filter: brightness(.97); }
   .admin-shell .s-btn:active { transform: translateY(1px); }
   .admin-shell .a-tab { transition: color .15s ease, background .15s ease; }
+
+  /* Toggle Publicar/Borrador: el cambio de estado se funde, no salta. */
+  .admin-shell .a-publish { transition: background-color .3s var(--ease), border-color .3s var(--ease); }
+  .admin-shell .a-publish__txt > svg { transition: color .3s var(--ease); }
 }

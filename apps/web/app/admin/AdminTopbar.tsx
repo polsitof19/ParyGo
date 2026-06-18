@@ -14,13 +14,23 @@ function isActive(pathname: string, href: string): boolean {
   return pathname.startsWith(href);
 }
 
-export function AdminTopbar({ brandName, email }: { brandName: string; email: string }) {
+export function AdminTopbar({ brandName, email, logoUrl }: { brandName: string; email: string; logoUrl?: string | null }) {
   const pathname = usePathname() ?? '';
 
   return (
     <header className="s-topbar">
       <div className="s-topbar__inner">
-        <Link href="/admin" className="s-logo">
+        <Link href="/admin" className="s-logo" style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+          {logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt=""
+              width={28}
+              height={28}
+              style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'contain', flexShrink: 0 }}
+            />
+          )}
           {brandName}
           <span className="dot">.</span>
           <span className="tag">Tu panel</span>

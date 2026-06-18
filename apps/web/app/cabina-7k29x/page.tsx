@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { setBrandArchivedAction } from './brands/[slug]/actions';
 
@@ -25,10 +26,15 @@ type BrandRow = {
 export default async function SuperHome() {
   const supabase = createClient();
 
-  const [{ data: brands }, { data: members }, { data: events }] = await Promise.all([
+  const admin = createAdminClient();
+  const HEAD = { count: 'exact' as const, head: true };
+  const [{ data: brands }, { data: members }, { data: events }, { count: yapePending }, { count: pendingRequests }] = await Promise.all([
     supabase.from('brands').select('id, slug, name, event_balance, archived_at').order('created_at', { ascending: false }),
     supabase.from('brand_members').select('brand_id, display_name, role').eq('role', 'brand_admin'),
-    supabase.from('events').select('brand_id, is_published'),
+    supabase.from('events').select('brand_id, is_published, archived_at'),
+    // Yape por revisar + solicitudes pendientes — agregados cross-tenant (admin client), igual que /salud y /solicitudes.
+    admin.from('orders').select('id', HEAD).eq('status', 'pending_yape_review'),
+    admin.from('access_requests').select('id', HEAD).eq('status', 'pending'),
   ]);
 
   const ownerByBrand = new Map<string, string>();
@@ -37,7 +43,8 @@ export default async function SuperHome() {
   for (const e of events ?? []) {
     const cur = evByBrand.get(e.brand_id) ?? { total: 0, pub: 0 };
     cur.total += 1;
-    if (e.is_published) cur.pub += 1;
+    // "Vendiendo" = publicado y NO archivado (alineado con /salud).
+    if (e.is_published && !e.archived_at) cur.pub += 1;
     evByBrand.set(e.brand_id, cur);
   }
 
@@ -60,6 +67,12 @@ export default async function SuperHome() {
   const noSaldo = rows.filter((r) => r.event_balance === 0).length;
   const isAlert = (r: BrandRow) => !r.owner || r.event_balance === 0;
 
+  // KPIs de plataforma (dashboard) — marcas activas, eventos vendiendo, Yape por revisar, solicitudes.
+  const brandsActive = rows.length;
+  const eventsSelling = rows.reduce((acc, r) => acc + r.eventsPublished, 0);
+  const yapeReview = yapePending ?? 0;
+  const pendingReqs = pendingRequests ?? 0;
+
   return (
     <>
       <div className="s-pagehead">
@@ -74,6 +87,26 @@ export default async function SuperHome() {
         </div>
         <Link href="/cabina-7k29x/brands/new" className="s-btn s-btn--primary">
           <Plus className="h-4 w-4" /> Crear marca
+        </Link>
+      </div>
+
+      {/* KPIs de plataforma */}
+      <div className="s-stats-4" style={{ marginBottom: 18 }}>
+        <div className="s-stat">
+          <span className="s-stat__label">Marcas activas</span>
+          <span className="s-stat__value">{brandsActive}</span>
+        </div>
+        <div className="s-stat">
+          <span className="s-stat__label">Eventos vendiendo</span>
+          <span className="s-stat__value">{eventsSelling}</span>
+        </div>
+        <Link href="/cabina-7k29x/salud" className={`s-stat${yapeReview > 0 ? ' s-stat--alert' : ''}`}>
+          <span className="s-stat__label">Yape por revisar</span>
+          <span className="s-stat__value">{yapeReview}</span>
+        </Link>
+        <Link href="/cabina-7k29x/solicitudes" className={`s-stat${pendingReqs > 0 ? ' s-stat--alert' : ''}`}>
+          <span className="s-stat__label">Solicitudes pendientes</span>
+          <span className="s-stat__value">{pendingReqs}</span>
         </Link>
       </div>
 

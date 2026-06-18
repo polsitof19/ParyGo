@@ -1,7 +1,8 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
+import { toast } from 'sonner';
 import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, type EditState } from '../edit-actions';
 
 export type TtRow = { id: string; name: string; priceCents: number; capacity: number; sold: number; isUnlimited: boolean; isActive: boolean; bulkMinQty: number; bulkDiscountPct: number };
@@ -37,6 +38,10 @@ export function EditEventForm(p: { eventId: string; name: string; description: s
   const [state, action] = useFormState(updateEventAction, initial);
   const dateRef = useRef<HTMLInputElement>(null);
   const ro = Boolean(p.readOnly);
+  // Feedback inmediato en mobile: el Banner al pie suele quedar fuera de viewport.
+  useEffect(() => {
+    if (state.ok && state.message) toast.success(state.message);
+  }, [state.ok, state.message]);
   const dateLocked = Boolean(p.isPublished && p.hasSales) || ro;
   // Publicado SIN ventas: la fecha se puede cambiar pero avisamos antes de guardar.
   // Publicado CON ventas: input readOnly + el server rechaza igual (defensa real).
@@ -70,41 +75,44 @@ export function EditEventForm(p: { eventId: string; name: string; description: s
       <div className="s-field"><label className="s-label" htmlFor="ev-vmaps">Enlace de Google Maps (opcional)</label>
         <input id="ev-vmaps" name="venue_maps_url" type="url" defaultValue={p.venueMapsUrl} placeholder="https://maps.app.goo.gl/..." className="s-input" disabled={ro} />
         <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Para el botón "Cómo llegar". Pegá el enlace de tu local (debe empezar con https://).</p></div>
-      <div className="s-field">
-        <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-          <input type="checkbox" name="require_age_confirmation" defaultChecked={p.requireAgeConfirmation} disabled={ro} />
-          <span>Pedir confirmación de edad (+{p.minAge}) en el checkout</span>
-        </label>
-        <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Activalo si tu evento lo requiere legalmente (ej. alcohol).</p>
-      </div>
-      <div className="s-field">
-        <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-          <input type="checkbox" name="require_dni" defaultChecked={p.requireDni} disabled={ro} />
-          <span>Pedir documento de identidad (DNI/CE) en el checkout</span>
-        </label>
-        <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto activado. Sirve para validar identidad en la puerta. Desactivalo si no lo necesitás.</p>
-      </div>
-      <div className="s-field">
-        <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-          <input type="checkbox" name="send_reminder" defaultChecked={p.sendReminder} disabled={ro} />
-          <span>Enviar recordatorio por email ~24h antes del evento</span>
-        </label>
-        <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Si lo activás, cada comprador con entrada válida recibe un recordatorio automático el día previo (una sola vez).</p>
-      </div>
-      <div className="s-field">
-        <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-          <input type="checkbox" name="collect_attendee_names" defaultChecked={p.collectAttendeeNames} disabled={ro} />
-          <span>Pedir el nombre de cada asistente en el checkout</span>
-        </label>
-        <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Si lo activás, el comprador puede poner un nombre por entrada (aparece en cada QR). Opcional para el comprador.</p>
-      </div>
-      <div className="s-field">
-        <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-          <input type="checkbox" name="allow_transfer" defaultChecked={p.allowTransfer} disabled={ro} />
-          <span>Permitir transferir / regalar entradas</span>
-        </label>
-        <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Si lo activás, cada comprador puede pasar su entrada a otra persona desde su QR (se reemite el QR y se avisa al nuevo dueño por email).</p>
-      </div>
+      <details className="s-details">
+        <summary>Opciones del checkout y avisos (avanzado)</summary>
+        <div className="s-field" style={{ marginTop: 12 }}>
+          <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+            <input type="checkbox" name="require_age_confirmation" defaultChecked={p.requireAgeConfirmation} disabled={ro} />
+            <span>Pedir confirmación de edad (+{p.minAge}) en el checkout</span>
+          </label>
+          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Activalo si tu evento lo requiere legalmente (ej. alcohol).</p>
+        </div>
+        <div className="s-field">
+          <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+            <input type="checkbox" name="require_dni" defaultChecked={p.requireDni} disabled={ro} />
+            <span>Pedir documento de identidad (DNI/CE) en el checkout</span>
+          </label>
+          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto activado. Sirve para validar identidad en la puerta. Desactivalo si no lo necesitás.</p>
+        </div>
+        <div className="s-field">
+          <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+            <input type="checkbox" name="send_reminder" defaultChecked={p.sendReminder} disabled={ro} />
+            <span>Enviar recordatorio por email ~24h antes del evento</span>
+          </label>
+          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Si lo activás, cada comprador con entrada válida recibe un recordatorio automático el día previo (una sola vez).</p>
+        </div>
+        <div className="s-field">
+          <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+            <input type="checkbox" name="collect_attendee_names" defaultChecked={p.collectAttendeeNames} disabled={ro} />
+            <span>Pedir el nombre de cada asistente en el checkout</span>
+          </label>
+          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Si lo activás, el comprador puede poner un nombre por entrada (aparece en cada QR). Opcional para el comprador.</p>
+        </div>
+        <div className="s-field">
+          <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+            <input type="checkbox" name="allow_transfer" defaultChecked={p.allowTransfer} disabled={ro} />
+            <span>Permitir transferir / regalar entradas</span>
+          </label>
+          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Si lo activás, cada comprador puede pasar su entrada a otra persona desde su QR (se reemite el QR y se avisa al nuevo dueño por email).</p>
+        </div>
+      </details>
       <Banner state={state} />
       {!ro && <div className="s-form-actions"><Submit label="Guardar evento" /></div>}
     </form>

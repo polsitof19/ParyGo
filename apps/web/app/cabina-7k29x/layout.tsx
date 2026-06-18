@@ -1,5 +1,6 @@
 import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { requireSession } from '@/lib/auth';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { SuperTopbar } from './SuperTopbar';
 import './super.css';
 
@@ -24,9 +25,16 @@ const hanken = Hanken_Grotesk({
 export default async function SuperLayout({ children }: { children: React.ReactNode }) {
   const user = await requireSession({ superAdmin: true });
 
+  // Badge de pendientes en el topbar — mismo filtro que /solicitudes
+  // (access_requests, status='pending'). Service role: la cola es solo del super admin.
+  const { count: pendingRequests } = await createAdminClient()
+    .from('access_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending');
+
   return (
     <div className={`super-shell ${bricolage.variable} ${hanken.variable}`}>
-      <SuperTopbar email={user.email} />
+      <SuperTopbar email={user.email} pendingRequests={pendingRequests ?? 0} />
       <main className="s-wrap">{children}</main>
     </div>
   );

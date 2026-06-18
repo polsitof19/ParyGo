@@ -121,7 +121,7 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
         <section className="c-brandhead" style={{ textAlign: 'center' }}>
           <span className="c-eyebrow">{brand.name}</span>
           <h1 className="c-brandname" style={{ marginTop: 8 }}>Próximamente</h1>
-          <p className="c-muted" style={{ marginTop: 8, maxWidth: 460, marginInline: 'auto' }}>Estamos preparando el próximo evento. Mirá lo que hicimos antes 👇</p>
+          <p className="c-muted" style={{ marginTop: 8, maxWidth: 460, marginInline: 'auto' }}>Estamos preparando el próximo evento. Mira lo que hicimos antes 👇</p>
         </section>
       )}
 

@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
 import { YapeUploadForm } from './YapeUploadForm';
+import { CopyButton } from './CopyButton';
 import { publicEnv } from '@/lib/env';
 
 export const runtime = 'edge';
@@ -75,16 +76,22 @@ export default async function YapeUploadPage({
 
       <div className="c-card" style={{ marginTop: 22 }}>
         <p className="c-card__title">1 · Yapea a este número</p>
-        <p style={{ fontFamily: 'var(--display)', fontWeight: 800, fontSize: 'clamp(34px,9vw,46px)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', color: 'var(--brand-ink)' }}>{order.brand.yape_number}</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <p style={{ fontFamily: 'var(--display)', fontWeight: 800, fontSize: 'clamp(34px,9vw,46px)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', color: 'var(--brand-ink)', margin: 0 }}>{order.brand.yape_number}</p>
+          <CopyButton value={order.brand.yape_number} label="Número" />
+        </div>
         <p className="c-muted" style={{ marginTop: 6 }}>Titular: <strong style={{ color: 'var(--ink)' }}>{order.brand.yape_holder ?? order.brand.name}</strong></p>
-        <p className="c-muted">Monto exacto: <strong style={{ color: 'var(--ink)' }}>{formatPEN(order.total_cents)}</strong></p>
+        <p className="c-muted" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span>Monto exacto: <strong style={{ color: 'var(--ink)' }}>{formatPEN(order.total_cents)}</strong></span>
+          <CopyButton value={(order.total_cents / 100).toFixed(2)} label="Monto" />
+        </p>
 
         {order.brand.theme_json?.yape_qr_url && (
           <div style={{ marginTop: 16, borderRadius: 16, border: '1px solid #E7D9F2', background: '#F6F0FB', padding: 14, textAlign: 'center' }}>
             {/* Morado Yape + nombre en TEXTO (no falsificamos el logo del BCP) */}
             <p style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontWeight: 800, letterSpacing: '-0.01em', color: '#742384', fontSize: 15 }}>
               <span aria-hidden style={{ display: 'inline-block', width: 9, height: 9, borderRadius: '50%', background: '#742384' }} />
-              Escaneá con Yape
+              Escanea con Yape
             </p>
             {/* Ampliable: tocar abre el QR a tamaño completo en mobile */}
             <a href={order.brand.theme_json.yape_qr_url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 10 }}>
@@ -95,7 +102,7 @@ export default async function YapeUploadPage({
                 style={{ width: 'min(260px, 70vw)', aspectRatio: '1 / 1', objectFit: 'contain', borderRadius: 12, background: '#fff', border: '1px solid #E7D9F2', margin: '0 auto' }}
               />
             </a>
-            <p className="c-muted" style={{ marginTop: 8, fontSize: 12 }}>Tocá el QR para ampliarlo</p>
+            <p className="c-muted" style={{ marginTop: 8, fontSize: 12 }}>Toca el QR para ampliarlo</p>
           </div>
         )}
 

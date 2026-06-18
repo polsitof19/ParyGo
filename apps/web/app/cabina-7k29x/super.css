@@ -190,6 +190,8 @@
 .super-shell .s-nav a { font-size: 14px; font-weight: 600; color: var(--ink-2); padding: 8px 14px; border-radius: var(--r-pill); transition: color .18s, background-color .18s; }
 .super-shell .s-nav a:hover { color: var(--ink); background: var(--cream-2); }
 .super-shell .s-nav a[aria-current="page"] { color: var(--ink); background: var(--white); box-shadow: var(--shadow-card); }
+.super-shell .s-nav a { display: inline-flex; align-items: center; gap: 7px; }
+.super-shell .s-nav-count { background: var(--warn-bg); color: var(--warn); font-size: 11px; font-weight: 700; line-height: 1; border-radius: var(--r-pill); padding: 3px 7px; font-variant-numeric: tabular-nums; }
 .super-shell .s-topbar__right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .super-shell .s-email { font-size: 13px; color: var(--ink-3); }
 .super-shell .s-iconbtn { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; border: 1.5px solid var(--cream-3); background: var(--white); color: var(--ink-2); cursor: pointer; transition: border-color .18s, color .18s; }
@@ -286,4 +288,14 @@
   .super-shell .s-btn { transition: transform .1s ease, filter .15s ease; }
   .super-shell .s-btn:hover { filter: brightness(.97); }
   .super-shell .s-btn:active { transform: translateY(1px); }
+
+  /* Stagger sutil de filas: tabla de marcas + listas de eventos. Liviano. */
+  .super-shell .s-table tbody tr,
+  .super-shell .s-brandcard,
+  .super-shell .s-event-row { animation: a-fadeUp .36s cubic-bezier(.22,1,.36,1) both; }
+  .super-shell .s-table tbody tr:nth-child(1), .super-shell .s-event-row:nth-child(1), .super-shell .s-brandcard:nth-child(1) { animation-delay: .02s }
+  .super-shell .s-table tbody tr:nth-child(2), .super-shell .s-event-row:nth-child(2), .super-shell .s-brandcard:nth-child(2) { animation-delay: .05s }
+  .super-shell .s-table tbody tr:nth-child(3), .super-shell .s-event-row:nth-child(3), .super-shell .s-brandcard:nth-child(3) { animation-delay: .08s }
+  .super-shell .s-table tbody tr:nth-child(4), .super-shell .s-event-row:nth-child(4), .super-shell .s-brandcard:nth-child(4) { animation-delay: .11s }
+  .super-shell .s-table tbody tr:nth-child(n+5), .super-shell .s-event-row:nth-child(n+5), .super-shell .s-brandcard:nth-child(n+5) { animation-delay: .14s }
 }
