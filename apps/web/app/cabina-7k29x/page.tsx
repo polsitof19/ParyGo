@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { optimizedImage } from '@/lib/imageUrl';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { setBrandArchivedAction } from './brands/[slug]/actions';
 
@@ -12,6 +13,20 @@ const AVATAR_BG = ['#FF6A3D', '#5B6CFF', '#E8552A', '#2E9E6B', '#C7791A', '#8A5B
 const bgFor = (s: string) => AVATAR_BG[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_BG.length];
 const initialOf = (name: string) => (name.trim()[0] ?? '?').toUpperCase();
 
+// Avatar de marca: logo real si está subido; si no, color de marca (o hash) + inicial.
+function BrandAvatar({ name, slug, logoUrl, color }: { name: string; slug: string; logoUrl: string | null; color: string | null }) {
+  return (
+    <span className="s-avatar" style={{ background: logoUrl ? 'var(--white)' : (color || bgFor(slug)), overflow: 'hidden' }}>
+      {logoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={optimizedImage(logoUrl, { width: 96, quality: 80 })} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} decoding="async" />
+      ) : (
+        initialOf(name)
+      )}
+    </span>
+  );
+}
+
 type BrandRow = {
   id: string;
   slug: string;
@@ -21,6 +36,8 @@ type BrandRow = {
   eventsTotal: number;
   eventsPublished: number;
   archived: boolean;
+  logoUrl: string | null;
+  color: string | null;
 };
 
 export default async function SuperHome() {
@@ -29,7 +46,7 @@ export default async function SuperHome() {
   const admin = createAdminClient();
   const HEAD = { count: 'exact' as const, head: true };
   const [{ data: brands }, { data: members }, { data: events }, { count: yapePending }, { count: pendingRequests }] = await Promise.all([
-    supabase.from('brands').select('id, slug, name, event_balance, archived_at').order('created_at', { ascending: false }),
+    supabase.from('brands').select('id, slug, name, event_balance, archived_at, theme_json').order('created_at', { ascending: false }),
     supabase.from('brand_members').select('brand_id, display_name, role').eq('role', 'brand_admin'),
     supabase.from('events').select('brand_id, is_published, archived_at'),
     // Yape por revisar + solicitudes pendientes — agregados cross-tenant (admin client), igual que /salud y /solicitudes.
@@ -48,16 +65,21 @@ export default async function SuperHome() {
     evByBrand.set(e.brand_id, cur);
   }
 
-  const allRows: BrandRow[] = (brands ?? []).map((b) => ({
-    id: b.id,
-    slug: b.slug,
-    name: b.name,
-    event_balance: b.event_balance ?? 0,
-    owner: ownerByBrand.get(b.id) || null,
-    eventsTotal: evByBrand.get(b.id)?.total ?? 0,
-    eventsPublished: evByBrand.get(b.id)?.pub ?? 0,
-    archived: !!b.archived_at,
-  }));
+  const allRows: BrandRow[] = (brands ?? []).map((b) => {
+    const tj = (b.theme_json ?? {}) as { logo_url?: string | null; primary_color?: string };
+    return {
+      id: b.id,
+      slug: b.slug,
+      name: b.name,
+      event_balance: b.event_balance ?? 0,
+      owner: ownerByBrand.get(b.id) || null,
+      eventsTotal: evByBrand.get(b.id)?.total ?? 0,
+      eventsPublished: evByBrand.get(b.id)?.pub ?? 0,
+      archived: !!b.archived_at,
+      logoUrl: tj.logo_url ?? null,
+      color: tj.primary_color ?? null,
+    };
+  });
 
   // Las archivadas van en su propia sección al final; no se mezclan con las activas.
   const rows = allRows.filter((r) => !r.archived);
@@ -134,7 +156,7 @@ export default async function SuperHome() {
                     <tr key={r.id} className={isAlert(r) ? 's-row--alert' : undefined}>
                       <td>
                         <Link href={`/cabina-7k29x/brands/${r.slug}`} className="s-cell-brand s-rowlink" aria-label={`Abrir ${r.name}`}>
-                          <span className="s-avatar" style={{ background: bgFor(r.slug) }}>{initialOf(r.name)}</span>
+                          <BrandAvatar name={r.name} slug={r.slug} logoUrl={r.logoUrl} color={r.color} />
                           <span>
                             <span className="nm" style={{ display: 'block' }}>{r.name}</span>
                             <span className="sl">{r.slug}.parygo.com</span>
@@ -170,7 +192,7 @@ export default async function SuperHome() {
           <div className="s-brandcards">
             {rows.map((r) => (
               <Link key={r.id} href={`/cabina-7k29x/brands/${r.slug}`} className={`s-brandcard${isAlert(r) ? ' s-brandcard--alert' : ''}`}>
-                <span className="s-avatar" style={{ background: bgFor(r.slug) }}>{initialOf(r.name)}</span>
+                <BrandAvatar name={r.name} slug={r.slug} logoUrl={r.logoUrl} color={r.color} />
                 <span style={{ minWidth: 0 }}>
                   <span className="nm" style={{ display: 'block' }}>{r.name}</span>
                   <span className="meta">

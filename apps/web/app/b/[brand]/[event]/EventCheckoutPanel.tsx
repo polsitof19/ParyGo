@@ -195,13 +195,34 @@ export function EventCheckoutPanel({
 
   const secondsLeft = reservationExpiresAt === null ? null : Math.max(0, Math.floor((reservationExpiresAt - now) / 1000));
   const countdownLabel = secondsLeft === null ? null : `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`;
+  // Al expirar la reserva NO recargamos la página (perdería los datos que el
+  // comprador está tipeando). Renovamos la reserva del carrito actual en silencio;
+  // solo si algo se agotó mientras tanto, avisamos y ajustamos el carrito.
   useEffect(() => {
-    if (secondsLeft === 0 && totalItems > 0) {
-      toast.error('Tu reserva expiró. Recargando…');
-      const t = setTimeout(() => window.location.reload(), 1500);
-      return () => clearTimeout(t);
-    }
-  }, [secondsLeft, totalItems]);
+    if (secondsLeft !== 0 || totalItems === 0) return;
+    const sid = sessionIdRef.current;
+    if (!sid) return;
+    let cancelled = false;
+    (async () => {
+      let renewed = false;
+      let shortfall = false;
+      for (const [ticketTypeId, want] of Object.entries(qty)) {
+        if (want <= 0) continue;
+        const res = await reserveStock(sid, ticketTypeId, want);
+        if (cancelled) return;
+        if (!res.ok) {
+          shortfall = true;
+          if (typeof res.available === 'number') setQty((q) => ({ ...q, [ticketTypeId]: res.available! }));
+          continue;
+        }
+        if (res.expiresAt) { setReservationExpiresAt(new Date(res.expiresAt).getTime()); renewed = true; }
+      }
+      if (cancelled) return;
+      if (shortfall) toast.error('Se agotaron algunas entradas mientras comprabas; ajustamos tu carrito.');
+      else if (renewed) toast.success('Renovamos tu reserva.');
+    })();
+    return () => { cancelled = true; };
+  }, [secondsLeft, totalItems, qty]);
 
   if (sorted.length === 0) {
     return (

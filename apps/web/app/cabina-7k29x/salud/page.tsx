@@ -75,12 +75,12 @@ export default async function SaludPage() {
         <p className="s-card__desc">Estado en vivo de la plataforma. Solo lectura.</p>
       </div>
 
-      {/* Alertas (si hay) */}
+      {/* Alertas (si hay) — dot de color del sistema, sin emojis */}
       {alerts.length > 0 && (
         <div className="s-stack" style={{ gap: 8, marginBottom: 16 }}>
           {alerts.map((a, i) => (
             <div key={i} className="s-card" style={{ padding: '12px 16px', borderLeft: `4px solid var(--${a.tone})`, display: 'flex', gap: 10, alignItems: 'center' }}>
-              <span style={{ fontSize: 18 }}>{a.tone === 'alert' ? '🔴' : '🟠'}</span>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: `var(--${a.tone})`, flexShrink: 0 }} />
               <span style={{ fontSize: 14, fontWeight: 600 }}>{a.text}</span>
             </div>
           ))}
@@ -88,12 +88,13 @@ export default async function SaludPage() {
       )}
       {alerts.length === 0 && (
         <div className="s-card" style={{ padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center' }}>
-          <span style={{ fontSize: 18 }}>🟢</span><span style={{ fontSize: 14, fontWeight: 600 }}>Todo en orden — sin alertas.</span>
+          <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--ok)', flexShrink: 0 }} />
+          <span style={{ fontSize: 14, fontWeight: 600 }}>Todo en orden — sin alertas.</span>
         </div>
       )}
 
       {/* KPIs */}
-      <div className="s-form-grid" style={{ gap: 12, marginBottom: 16 }}>
+      <div className="s-stats-4" style={{ marginBottom: 16 }}>
         <Kpi label="Marcas activas" value={String(brandsActive)} />
         <Kpi label="Eventos publicados" value={String(eventsPublished)} />
         <Kpi label="Órdenes pagadas hoy" value={String(ordersToday)} sub="horario Lima" />
@@ -103,7 +104,7 @@ export default async function SaludPage() {
       {/* Cola de emails */}
       <div className="s-card" style={{ marginBottom: 16 }}>
         <p className="s-card__title">Cola de emails (notification_jobs)</p>
-        <div className="s-form-grid" style={{ gap: 12, marginTop: 4 }}>
+        <div className="s-stats-4" style={{ marginTop: 4 }}>
           <Kpi label="Pendientes" value={String(njPending)} sub="por enviar / en proceso" />
           <Kpi label="Fallidos" value={String(njFailed.length)} sub="últimos 14 días" />
           <Kpi label="Enviados" value={String(njSent14d)} sub="últimos 14 días" />
@@ -145,10 +146,10 @@ export default async function SaludPage() {
 
 function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="s-card" style={{ padding: '14px 16px' }}>
-      <p className="s-muted" style={{ fontSize: 12.5, fontWeight: 600 }}>{label}</p>
-      <p style={{ fontFamily: 'var(--display)', fontWeight: 800, fontSize: 26, marginTop: 4 }}>{value}</p>
-      {sub && <p className="s-muted" style={{ fontSize: 12, marginTop: 2 }}>{sub}</p>}
+    <div className="s-stat">
+      <span className="s-stat__label">{label}</span>
+      <span className="s-stat__value">{value}</span>
+      {sub && <span className="s-stat__sub">{sub}</span>}
     </div>
   );
 }
