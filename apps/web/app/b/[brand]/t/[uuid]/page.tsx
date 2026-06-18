@@ -162,9 +162,11 @@ export default async function TicketPage({ params }: Props) {
         </div>
       )}
 
-      {/* Transferir/regalar: solo si el evento lo permite y la entrada sigue
-          usable (no escaneada, no anulada, evento no cancelado). */}
-      {event?.allow_transfer && !t.validated_at && !event?.cancelled_at && (
+      {/* Transferir/regalar: solo si el evento lo permite, no empezó, y la entrada
+          sigue usable (no escaneada, no anulada, evento no cancelado). El corte al
+          inicio del evento evita conflictos con el validador de puerta offline. */}
+      {event?.allow_transfer && !t.validated_at && !event?.cancelled_at
+        && event?.starts_at && new Date(event.starts_at).getTime() > Date.now() && (
         <TransferTicket qrCode={t.qr_code} />
       )}
     </main>

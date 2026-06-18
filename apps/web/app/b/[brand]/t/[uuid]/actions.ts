@@ -44,6 +44,7 @@ export async function transferTicketAction(_prev: TransferState, formData: FormD
       reason === 'already_used' ? 'Esta entrada ya fue usada en la puerta; no se puede transferir.'
       : reason === 'invalidated' ? 'Esta entrada ya no es válida.'
       : reason === 'not_allowed' ? 'Este evento no permite transferir entradas.'
+      : reason === 'event_started' ? 'El evento ya empezó; ya no se puede transferir.'
       : reason === 'not_found' ? 'Entrada no encontrada.'
       : reason === 'no_name' ? 'Poné el nombre del nuevo dueño.'
       : 'No se pudo transferir la entrada.';

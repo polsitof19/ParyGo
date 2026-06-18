@@ -74,6 +74,7 @@ as $$
 declare
   v_ticket public.tickets%rowtype;
   v_allow  boolean;
+  v_starts timestamptz;
   v_new_qr uuid := gen_random_uuid();
   v_name   text := nullif(btrim(coalesce(p_new_name, '')), '');
 begin
@@ -91,9 +92,15 @@ begin
   if v_ticket.validated_at is not null then
     return jsonb_build_object('ok', false, 'reason', 'already_used');
   end if;
-  select allow_transfer into v_allow from public.events where id = v_ticket.event_id;
+  select allow_transfer, starts_at into v_allow, v_starts from public.events where id = v_ticket.event_id;
   if not coalesce(v_allow, false) then
     return jsonb_build_object('ok', false, 'reason', 'not_allowed');
+  end if;
+  -- No transferir una vez iniciado el evento: el validador de puerta puede estar
+  -- OFFLINE con un snapshot viejo y admitir el qr anterior. Cerrar reemisiones
+  -- al arrancar el evento elimina esa ventana.
+  if v_starts is not null and v_starts <= now() then
+    return jsonb_build_object('ok', false, 'reason', 'event_started');
   end if;
 
   update public.tickets
