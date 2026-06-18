@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { EventCoverUploader } from '../EventCoverUploader';
 import { EditEventForm } from './EditEventForms';
 import { PostponeEvent } from './PostponeEvent';
+import { CancelEvent } from './CancelEvent';
 import { CloneEventButton } from './CloneEventButton';
 import { CourtesyForm } from './CourtesyForm';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
@@ -28,7 +29,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
   const admin = createAdminClient();
   const { data: event } = await admin
     .from('events')
-    .select('id, brand_id, name, description, starts_at, venue_name, venue_address, venue_maps_url, require_age_confirmation, require_dni, send_reminder, collect_attendee_names, min_age, cover_url, is_published, archived_at')
+    .select('id, brand_id, name, description, starts_at, venue_name, venue_address, venue_maps_url, require_age_confirmation, require_dni, send_reminder, collect_attendee_names, min_age, cover_url, is_published, archived_at, cancelled_at')
     .eq('id', params.id)
     .maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
@@ -99,6 +100,13 @@ export default async function EditEventPage({ params }: { params: { id: string }
       {!impersonating && (
         <div style={{ marginTop: 16 }}>
           <CloneEventButton eventId={event.id} />
+        </div>
+      )}
+
+      {/* Cancelar evento: despublica + avisa por email. No en solo lectura. */}
+      {!impersonating && !event.archived_at && (
+        <div style={{ marginTop: 16 }}>
+          <CancelEvent eventId={event.id} eventName={event.name} cancelled={!!event.cancelled_at} />
         </div>
       )}
 

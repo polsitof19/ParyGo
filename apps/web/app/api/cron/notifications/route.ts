@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
   const { createAdminClient } = await import('@/lib/supabase/admin');
   const { sendYapeRecoveryEmail, sendYapePendingDigestEmail } = await import('@/lib/email/sendYapeNotificationEmails');
   const { sendEventReminderEmail } = await import('@/lib/email/sendEventReminderEmail');
+  const { sendEventCancelledEmail } = await import('@/lib/email/sendEventCancelledEmail');
   const admin = createAdminClient();
 
   // 1. Encolar lo nuevo (idempotente). Si falla, igual seguimos a procesar lo ya
@@ -104,6 +105,13 @@ export async function POST(req: NextRequest) {
           to: r.recipient_email, buyerName: r.recipient_name,
           eventName: String(p.event_name ?? ''), eventSlug: String(p.event_slug ?? ''),
           startsAtIso: String(p.starts_at ?? ''), venue: (p.venue as string | null) ?? null,
+          brand: brandForEmail, idempotencyKey: r.dedupe_key,
+        });
+      } else if (r.kind === 'event_cancelled') {
+        res = await sendEventCancelledEmail({
+          to: r.recipient_email, buyerName: r.recipient_name,
+          eventName: String(p.event_name ?? ''), startsAtIso: String(p.starts_at ?? ''),
+          reason: (p.reason as string | null) ?? null,
           brand: brandForEmail, idempotencyKey: r.dedupe_key,
         });
       } else {

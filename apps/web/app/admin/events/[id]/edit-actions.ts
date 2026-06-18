@@ -233,6 +233,68 @@ export async function postponeEventAction(
   return { ok: true, queued };
 }
 
+// ===== 1.b3) CANCELAR el evento (despublica + avisa por email) =====
+// Acto DELIBERADO e irreversible en la práctica: marca el evento cancelado
+// (cancelled_at), lo despublica (deja de venderse y desaparece del público) y
+// encola un aviso por email a cada comprador con entradas válidas. NO toca
+// tickets ni dinero (los reembolsos los maneja el organizador por fuera).
+// Autoriza por brand_id del ROW (authEvent → deniega super-admin impersonando).
+export async function cancelEventAction(
+  eventId: string,
+  reason: string
+): Promise<{ ok: boolean; message?: string; queued?: number }> {
+  const user = await requireSession();
+  const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
+  if (!brandId) return { ok: false, message: 'No tenés permiso sobre este evento.' };
+
+  const cleanReason = (reason ?? '').trim().slice(0, 500);
+
+  const admin = createAdminClient();
+  const { data: ev } = await admin
+    .from('events')
+    .select('id, name, starts_at, cancelled_at')
+    .eq('id', eventId)
+    .eq('brand_id', brandId)
+    .maybeSingle();
+  if (!ev) return { ok: false, message: 'Evento no encontrado.' };
+  if (ev.cancelled_at) return { ok: false, message: 'Este evento ya está cancelado.' };
+
+  // Marcar cancelado + despublicar (deja de venderse y sale del público).
+  const { error: updErr } = await admin
+    .from('events')
+    .update({ cancelled_at: new Date().toISOString(), cancellation_reason: cleanReason || null, is_published: false })
+    .eq('id', eventId)
+    .eq('brand_id', brandId);
+  if (updErr) return { ok: false, message: updErr.message };
+
+  await admin.from('events_log').insert({
+    brand_id: brandId, event_id: eventId, actor_user_id: user.id,
+    type: 'event_cancelled', payload: { reason: cleanReason || null },
+  });
+
+  // ENCOLAR el aviso (uno por comprador con entrada válida). El worker
+  // (/api/cron/notifications) lo entrega en tandas, idempotente por destinatario.
+  let queued = 0;
+  const { data: enq } = await admin.rpc('enqueue_event_cancellation', {
+    p_event_id: eventId,
+    p_brand_id: brandId,
+    p_event_name: ev.name as string,
+    p_starts_iso: ev.starts_at as string,
+    p_reason: cleanReason,
+  });
+  queued = typeof enq === 'number' ? enq : 0;
+
+  await admin.from('events_log').insert({
+    brand_id: brandId, event_id: eventId, actor_user_id: user.id,
+    type: 'event_cancelled_notified', payload: { queued },
+  });
+
+  revalidatePath(`/admin/events/${eventId}`);
+  revalidatePath(`/admin/events/${eventId}/editar`);
+  revalidatePath(`/cabina-7k29x/events/${eventId}`);
+  return { ok: true, queued };
+}
+
 // ===== 1.b-bis) Clonar evento (dueño o super admin) =====
 // Crea un BORRADOR nuevo a partir de un evento existente: copia datos + tipos de
 // entrada + fases de precio. Reusa create_brand_event (mismo RPC del alta), así

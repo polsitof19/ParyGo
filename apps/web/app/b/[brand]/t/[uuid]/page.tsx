@@ -32,7 +32,7 @@ type TicketView = {
   attendee_name: string | null;
   validated_at: string | null;
   invalidated_at: string | null;
-  event: { name: string; starts_at: string; venue_name: string | null; venue_address: string | null; cover_url: string | null } | null;
+  event: { name: string; starts_at: string; venue_name: string | null; venue_address: string | null; cover_url: string | null; cancelled_at: string | null } | null;
   brand: {
     slug: string;
     name: string;
@@ -51,7 +51,7 @@ async function loadTicket(brandSlug: string, qrCode: string): Promise<TicketView
     .from('tickets')
     .select(`
       id, qr_code, ticket_type_name, ticket_number, attendee_name, validated_at, invalidated_at,
-      event:events ( name, starts_at, venue_name, venue_address, cover_url ),
+      event:events ( name, starts_at, venue_name, venue_address, cover_url, cancelled_at ),
       brand:brands ( slug, name, whatsapp_e164, theme_json )
     `)
     .eq('qr_code', qrCode)
@@ -95,6 +95,11 @@ export default async function TicketPage({ params }: Props) {
 
   return (
     <main className="c-ticket" style={{ padding: '28px 16px 48px' }}>
+      {event?.cancelled_at && (
+        <div style={{ background: 'var(--alert-bg)', color: 'var(--alert)', border: '1px solid var(--alert)', borderRadius: 12, padding: '12px 14px', marginBottom: 16, textAlign: 'center', fontWeight: 700, fontSize: 14 }}>
+          Este evento fue cancelado. Te avisamos por email; coordiná la devolución con el organizador.
+        </div>
+      )}
       <div style={{ textAlign: 'center', marginBottom: 18 }}>
         <span className="c-eyebrow">Entrada digital</span>
         {t.validated_at && (

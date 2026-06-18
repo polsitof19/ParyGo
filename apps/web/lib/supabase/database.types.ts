@@ -121,6 +121,8 @@ export type Database = {
           require_dni: boolean
           send_reminder: boolean
           collect_attendee_names: boolean
+          cancelled_at: string | null
+          cancellation_reason: string | null
           venue_maps_url: string | null
           name: string
           refund_policy: string | null
@@ -146,6 +148,8 @@ export type Database = {
           require_dni?: boolean
           send_reminder?: boolean
           collect_attendee_names?: boolean
+          cancelled_at?: string | null
+          cancellation_reason?: string | null
           venue_maps_url?: string | null
           name: string
           refund_policy?: string | null
@@ -171,6 +175,8 @@ export type Database = {
           require_dni?: boolean
           send_reminder?: boolean
           collect_attendee_names?: boolean
+          cancelled_at?: string | null
+          cancellation_reason?: string | null
           venue_maps_url?: string | null
           name?: string
           refund_policy?: string | null
@@ -1238,6 +1244,16 @@ export type Database = {
       }
       enqueue_event_reminders: {
         Args: Record<string, never>
+        Returns: number
+      }
+      enqueue_event_cancellation: {
+        Args: {
+          p_event_id: string
+          p_brand_id: string
+          p_event_name: string
+          p_starts_iso: string
+          p_reason: string
+        }
         Returns: number
       }
       claim_notification_jobs: {
