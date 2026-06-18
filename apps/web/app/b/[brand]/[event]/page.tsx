@@ -157,7 +157,9 @@ export default async function EventPage({ params, searchParams }: Props) {
   if (refCode) {
     try {
       const ip = headers().get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-      const visitorHash = await sha256Hex(`${ip}:${event.id}`);
+      // Salt con un secreto del server → el hash no es enumerable por fuerza bruta
+      // del espacio de IPs (defensa de privacidad). No se guarda la IP cruda.
+      const visitorHash = await sha256Hex(`${ip}:${event.id}:${serverEnv.BRAND_CREDS_ENCRYPTION_KEY}`);
       await createAdminClient().rpc('record_ref_click', { p_event_id: event.id, p_ref_code: refCode, p_visitor_hash: visitorHash });
     } catch (e) {
       console.error('record_ref_click failed', { eventId: event.id, error: e instanceof Error ? e.message : String(e) });
