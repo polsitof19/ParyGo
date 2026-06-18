@@ -23,7 +23,7 @@ export default async function AdminSettingsPage() {
   const [{ data: brand }, { data: mpStatus }] = await Promise.all([
     supabase
       .from('brands')
-      .select('id, name, contact_email, whatsapp_e164, yape_number, yape_holder, notify_yape_recovery, notify_yape_digest, theme_json')
+      .select('id, name, contact_email, whatsapp_e164, instagram, yape_number, yape_holder, notify_yape_recovery, notify_yape_digest, theme_json')
       .eq('id', ctx.brandId)
       .single(),
     admin.rpc('get_brand_mp_status', { p_brand_id: ctx.brandId }),
@@ -66,6 +66,7 @@ export default async function AdminSettingsPage() {
       <SettingsForm
         contactEmail={brand.contact_email ?? ''}
         whatsapp={brand.whatsapp_e164 ?? ''}
+        instagram={brand.instagram ?? ''}
         yapeNumber={brand.yape_number ?? ''}
         yapeHolder={brand.yape_holder ?? ''}
         primaryColor={theme.primary_color ?? '#FF1F8F'}

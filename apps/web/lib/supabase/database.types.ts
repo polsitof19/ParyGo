@@ -56,6 +56,7 @@ export type Database = {
           created_at: string
           event_balance: number
           id: string
+          instagram: string | null
           mp_access_token_enc: string | null
           mp_public_key_enc: string | null
           name: string
@@ -74,6 +75,7 @@ export type Database = {
           created_at?: string
           event_balance?: number
           id?: string
+          instagram?: string | null
           mp_access_token_enc?: string | null
           mp_public_key_enc?: string | null
           name: string
@@ -92,6 +94,7 @@ export type Database = {
           created_at?: string
           event_balance?: number
           id?: string
+          instagram?: string | null
           mp_access_token_enc?: string | null
           mp_public_key_enc?: string | null
           name?: string

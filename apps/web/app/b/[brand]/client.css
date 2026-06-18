@@ -49,20 +49,20 @@
 .client-shell .c-muted { color: var(--ink-2); }
 .client-shell .c-muted-3 { color: var(--ink-3); }
 
-/* header — barra superior con el COLOR de la marca (logo grande + nombre) */
-.client-shell .c-header { position: sticky; top: 0; z-index: 40; }
-.client-shell .c-header--brand { background: var(--brand); border-bottom: 1px solid rgba(0,0,0,.08); }
-.client-shell .c-header__inner { max-width: 1080px; margin: 0 auto; min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px var(--pad); }
-/* logo + nombre de la marca, juntos a la izquierda */
-.client-shell .c-brandlink { display: inline-flex; align-items: center; gap: 12px; min-width: 0; }
-.client-shell .c-logo { height: 48px; width: auto; max-width: 200px; object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,.18)); }
-/* nombre secundario al logo: chico y prolijo (minimalista). Clase propia para
-   NO colisionar con .c-brandname del home de marca (que es un título grande). */
-.client-shell .c-hdr-name { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: -0.01em; line-height: 1; color: var(--on-brand); opacity: .92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.client-shell .c-logo-text { font-family: var(--display); font-weight: 800; font-size: 20px; letter-spacing: -0.02em; color: var(--on-brand); }
-.client-shell .c-powered { font-size: 11px; color: var(--on-brand); opacity: .72; flex-shrink: 0; }
-.client-shell .c-powered a { font-weight: 700; text-decoration: underline; }
-.client-shell .c-powered a:hover { opacity: .85; }
+/* header — lockup ParyGo sobre crema (identidad unificada, compartido) */
+.client-shell .c-header { position: sticky; top: 0; z-index: 50; background: rgba(245,239,230,.82); -webkit-backdrop-filter: saturate(120%) blur(10px); backdrop-filter: saturate(120%) blur(10px); border-bottom: 1px solid rgba(22,18,13,.10); }
+.client-shell .c-header__inner { max-width: 1120px; margin: 0 auto; height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 28px; }
+.client-shell .c-lockup { display: inline-flex; align-items: center; gap: 11px; min-width: 0; }
+.client-shell .c-lockup__logo { height: 36px; width: auto; max-width: 150px; object-fit: contain; border-radius: 8px; }
+.client-shell .c-lockup__mark { width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(150deg,#1f1a14,#3a3128); display: grid; place-items: center; flex: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), 0 1px 2px rgba(0,0,0,.18); }
+.client-shell .c-lockup__mark > span { width: 13px; height: 13px; border-radius: 50%; background: #FF6B35; box-shadow: 0 0 0 3px rgba(255,107,53,.18); }
+.client-shell .c-lockup__name { font-family: var(--font-archivo), system-ui, sans-serif; font-weight: 700; font-size: 19px; letter-spacing: -0.01em; line-height: 1; color: #16120D; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.client-shell .c-powered { display: flex; align-items: center; gap: 5px; font-size: 12px; color: rgba(22,18,13,.34); flex-shrink: 0; }
+.client-shell .c-powered a { text-decoration: none; }
+.client-shell .c-powered b { font-family: var(--font-archivo), system-ui, sans-serif; font-weight: 700; color: rgba(22,18,13,.56); }
+.client-shell .c-powered a:hover b { color: #FF6B35; }
+.client-shell .c-powered__dot { width: 4px; height: 4px; border-radius: 50%; background: #FF6B35; margin-left: -2px; }
+@media (max-width: 860px) { .client-shell .c-powered { display: none; } }
 
 /* hero / portada */
 .client-shell .c-hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--cream-3); }

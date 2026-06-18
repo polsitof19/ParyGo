@@ -1,16 +1,21 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
+import { Bricolage_Grotesque, Hanken_Grotesk, Archivo, Inter, Instrument_Serif } from 'next/font/google';
 import { createClient } from '@/lib/supabase/server';
 import { brandColor, brandInk, contrastOn, withAlpha } from './brandTheme';
 import { optimizedImage } from '@/lib/imageUrl';
 import './client.css';
+import './landing.css';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 const bricolage = Bricolage_Grotesque({ weight: ['700', '800'], subsets: ['latin'], variable: '--font-bricolage', display: 'swap' });
 const hanken = Hanken_Grotesk({ weight: ['400', '500', '600', '700'], subsets: ['latin'], variable: '--font-hanken', display: 'swap' });
+// Identidad ParyGo del landing de marca (mockup): Archivo (display), Inter (cuerpo), Instrument Serif (acento itálico).
+const archivo = Archivo({ weight: ['500', '600', '700', '800', '900'], subsets: ['latin'], variable: '--font-archivo', display: 'swap' });
+const inter = Inter({ weight: ['400', '500', '600'], subsets: ['latin'], variable: '--font-inter', display: 'swap' });
+const instrument = Instrument_Serif({ weight: '400', style: 'italic', subsets: ['latin'], variable: '--font-instrument', display: 'swap' });
 
 // Layout de las páginas públicas por marca. El middleware reescribe
 // <slug>.parygo.com/* → /b/<slug>/*, así que este segmento recibe el slug.
@@ -42,7 +47,7 @@ export default async function BrandLayout({
 
   return (
     <div
-      className={`client-shell ${bricolage.variable} ${hanken.variable}`}
+      className={`client-shell ${bricolage.variable} ${hanken.variable} ${archivo.variable} ${inter.variable} ${instrument.variable}`}
       style={
         {
           '--brand': primary,
@@ -52,18 +57,21 @@ export default async function BrandLayout({
         } as React.CSSProperties
       }
     >
-      <header className="c-header c-header--brand">
+      <header className="c-header">
         <div className="c-header__inner">
-          <Link href="/" className="c-brandlink" aria-label={brand.name}>
-            {logoUrl && (
+          <Link href="/" className="c-lockup" aria-label={brand.name}>
+            {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={optimizedImage(logoUrl, { width: 280, quality: 88 })} alt="" className="c-logo" height={48} loading="eager" decoding="async" />
+              <img src={optimizedImage(logoUrl, { width: 120, quality: 88 })} alt="" className="c-lockup__logo" loading="eager" decoding="async" />
+            ) : (
+              <span className="c-lockup__mark"><span /></span>
             )}
-            <span className="c-hdr-name">{brand.name}</span>
+            <span className="c-lockup__name">{brand.name}</span>
           </Link>
           <span className="c-powered">
             powered by{' '}
-            <a href="https://parygo.com" target="_blank" rel="noopener noreferrer">parygo</a>
+            <a href="https://parygo.com" target="_blank" rel="noopener noreferrer"><b>parygo</b></a>
+            <span className="c-powered__dot" />
           </span>
         </div>
       </header>

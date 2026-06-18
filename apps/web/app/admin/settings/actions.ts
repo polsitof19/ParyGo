@@ -23,6 +23,7 @@ const schema = z.object({
     .or(z.literal('')),
   yape_number: z.string().max(20).optional().or(z.literal('')),
   yape_holder: z.string().max(120).optional().or(z.literal('')),
+  instagram: z.string().max(120).optional().or(z.literal('')),
   primary_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Color inválido'),
   secondary_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Color inválido'),
 });
@@ -53,6 +54,7 @@ export async function updateBrandSettingsAction(
     whatsapp_e164: formData.get('whatsapp_e164') ?? '',
     yape_number: formData.get('yape_number') ?? '',
     yape_holder: formData.get('yape_holder') ?? '',
+    instagram: formData.get('instagram') ?? '',
     primary_color: formData.get('primary_color') ?? '',
     secondary_color: formData.get('secondary_color') ?? '',
   });
@@ -148,6 +150,7 @@ export async function updateBrandSettingsAction(
       whatsapp_e164: parsed.data.whatsapp_e164 || null,
       yape_number: parsed.data.yape_number || null,
       yape_holder: parsed.data.yape_holder || null,
+      instagram: parsed.data.instagram || null,
       notify_yape_recovery: notifyYapeRecovery,
       notify_yape_digest: notifyYapeDigest,
       theme_json: nextTheme,

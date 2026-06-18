@@ -10,6 +10,7 @@ const initial: SettingsState = { ok: false, message: null };
 type Props = {
   contactEmail: string;
   whatsapp: string;
+  instagram: string;
   yapeNumber: string;
   yapeHolder: string;
   primaryColor: string;
@@ -43,6 +44,12 @@ export function SettingsForm(props: Props) {
           <Field label="WhatsApp (formato +51999000111)" htmlFor="whatsapp_e164" error={err.whatsapp_e164}>
             <input id="whatsapp_e164" name="whatsapp_e164" type="tel" inputMode="tel" pattern="^\+\d{8,15}$" defaultValue={props.whatsapp} placeholder="+51999000111" className="s-input" disabled={ro} />
           </Field>
+        </div>
+        <div className="s-field">
+          <Field label="Instagram (usuario o link)" htmlFor="instagram" error={err.instagram}>
+            <input id="instagram" name="instagram" defaultValue={props.instagram} placeholder="@tumarca" className="s-input" disabled={ro} />
+          </Field>
+          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Aparece en tu página pública. Podés poner @usuario o el link completo.</p>
         </div>
       </section>
 
