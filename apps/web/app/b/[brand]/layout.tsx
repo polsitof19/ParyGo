@@ -52,15 +52,14 @@ export default async function BrandLayout({
         } as React.CSSProperties
       }
     >
-      <header className="c-header">
+      <header className="c-header c-header--brand">
         <div className="c-header__inner">
-          <Link href="/" aria-label={brand.name}>
-            {logoUrl ? (
+          <Link href="/" className="c-brandlink" aria-label={brand.name}>
+            {logoUrl && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={optimizedImage(logoUrl, { width: 220, quality: 85 })} alt={brand.name} className="c-logo" height={34} loading="eager" decoding="async" />
-            ) : (
-              <span className="c-logo-text">{brand.name}</span>
+              <img src={optimizedImage(logoUrl, { width: 280, quality: 88 })} alt="" className="c-logo" height={48} loading="eager" decoding="async" />
             )}
+            <span className="c-brandname">{brand.name}</span>
           </Link>
           <span className="c-powered">
             powered by{' '}
