@@ -6,6 +6,7 @@ import { generateQrSvg } from '@/lib/qr';
 import { optimizedImage } from '@/lib/imageUrl';
 import { formatEventDate, whatsappLink } from '@/lib/utils';
 import { DownloadQrButton } from '../../DownloadQrButton';
+import { TransferTicket } from './TransferTicket';
 
 // SVG QR generation has no Node-only dependencies (no pngjs/Buffer), so this
 // route runs fine on Cloudflare Pages edge runtime.
@@ -32,7 +33,7 @@ type TicketView = {
   attendee_name: string | null;
   validated_at: string | null;
   invalidated_at: string | null;
-  event: { name: string; starts_at: string; venue_name: string | null; venue_address: string | null; cover_url: string | null; cancelled_at: string | null } | null;
+  event: { name: string; starts_at: string; venue_name: string | null; venue_address: string | null; cover_url: string | null; cancelled_at: string | null; allow_transfer: boolean } | null;
   brand: {
     slug: string;
     name: string;
@@ -51,7 +52,7 @@ async function loadTicket(brandSlug: string, qrCode: string): Promise<TicketView
     .from('tickets')
     .select(`
       id, qr_code, ticket_type_name, ticket_number, attendee_name, validated_at, invalidated_at,
-      event:events ( name, starts_at, venue_name, venue_address, cover_url, cancelled_at ),
+      event:events ( name, starts_at, venue_name, venue_address, cover_url, cancelled_at, allow_transfer ),
       brand:brands ( slug, name, whatsapp_e164, theme_json )
     `)
     .eq('qr_code', qrCode)
@@ -159,6 +160,12 @@ export default async function TicketPage({ params }: Props) {
             ¿Problema? <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>WhatsApp soporte</a>
           </p>
         </div>
+      )}
+
+      {/* Transferir/regalar: solo si el evento lo permite y la entrada sigue
+          usable (no escaneada, no anulada, evento no cancelado). */}
+      {event?.allow_transfer && !t.validated_at && !event?.cancelled_at && (
+        <TransferTicket qrCode={t.qr_code} />
       )}
     </main>
   );

@@ -121,6 +121,7 @@ export type Database = {
           require_dni: boolean
           send_reminder: boolean
           collect_attendee_names: boolean
+          allow_transfer: boolean
           cancelled_at: string | null
           cancellation_reason: string | null
           venue_maps_url: string | null
@@ -148,6 +149,7 @@ export type Database = {
           require_dni?: boolean
           send_reminder?: boolean
           collect_attendee_names?: boolean
+          allow_transfer?: boolean
           cancelled_at?: string | null
           cancellation_reason?: string | null
           venue_maps_url?: string | null
@@ -175,6 +177,7 @@ export type Database = {
           require_dni?: boolean
           send_reminder?: boolean
           collect_attendee_names?: boolean
+          allow_transfer?: boolean
           cancelled_at?: string | null
           cancellation_reason?: string | null
           venue_maps_url?: string | null
@@ -1263,6 +1266,14 @@ export type Database = {
       ref_click_counts: {
         Args: { p_event_id: string }
         Returns: { promo_code_id: string; clicks: number }[]
+      }
+      register_ticket_transfer_attempt: {
+        Args: { p_key: string; p_ip: string | null; p_max_key?: number; p_max_ip?: number; p_window_secs?: number }
+        Returns: boolean
+      }
+      transfer_ticket: {
+        Args: { p_qr_code: string; p_new_name: string }
+        Returns: Json
       }
       claim_notification_jobs: {
         Args: { p_limit?: number }

@@ -17,7 +17,7 @@ function Submit({ label }: { label: string }) {
   return <button type="submit" className="s-btn s-btn--primary s-btn--sm" disabled={pending}>{pending ? 'Guardando…' : label}</button>;
 }
 
-export function EditEventForm(p: { eventId: string; name: string; description: string; startsLocal: string; venueName: string; venueAddress: string; venueMapsUrl: string; requireAgeConfirmation: boolean; requireDni: boolean; sendReminder: boolean; collectAttendeeNames: boolean; minAge: number; isPublished?: boolean; hasSales?: boolean; readOnly?: boolean }) {
+export function EditEventForm(p: { eventId: string; name: string; description: string; startsLocal: string; venueName: string; venueAddress: string; venueMapsUrl: string; requireAgeConfirmation: boolean; requireDni: boolean; sendReminder: boolean; collectAttendeeNames: boolean; allowTransfer: boolean; minAge: number; isPublished?: boolean; hasSales?: boolean; readOnly?: boolean }) {
   const [state, action] = useFormState(updateEventAction, initial);
   const dateRef = useRef<HTMLInputElement>(null);
   const ro = Boolean(p.readOnly);
@@ -81,6 +81,13 @@ export function EditEventForm(p: { eventId: string; name: string; description: s
           <span>Pedir el nombre de cada asistente en el checkout</span>
         </label>
         <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Si lo activás, el comprador puede poner un nombre por entrada (aparece en cada QR). Opcional para el comprador.</p>
+      </div>
+      <div className="s-field">
+        <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+          <input type="checkbox" name="allow_transfer" defaultChecked={p.allowTransfer} disabled={ro} />
+          <span>Permitir transferir / regalar entradas</span>
+        </label>
+        <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Si lo activás, cada comprador puede pasar su entrada a otra persona desde su QR (se reemite el QR y se avisa al nuevo dueño por email).</p>
       </div>
       <Banner state={state} />
       {!ro && <div className="s-form-actions"><Submit label="Guardar evento" /></div>}
