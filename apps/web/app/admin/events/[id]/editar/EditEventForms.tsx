@@ -12,7 +12,7 @@ function BulkFields({ minQty, pct, disabled }: { minQty?: number; pct?: number; 
     <div className="s-form-grid">
       <div className="s-field">
         <label className="s-label">Descuento por cantidad — desde N entradas</label>
-        <input name="bulk_min_qty" type="number" min={0} max={50} defaultValue={minQty || ''} placeholder="0 = sin descuento" className="s-input" disabled={disabled} />
+        <input name="bulk_min_qty" type="number" min={0} max={10} defaultValue={minQty || ''} placeholder="0 = sin descuento" className="s-input" disabled={disabled} />
       </div>
       <div className="s-field">
         <label className="s-label">% de descuento</label>

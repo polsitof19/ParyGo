@@ -509,7 +509,8 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   const update: Record<string, unknown> = { name, is_active: isActive };
 
   // --- Descuento por cantidad (bulk): min 0 (off) o 2-50; pct 0-90 ---
-  const bulkMinQty = Math.max(0, Math.min(50, parseInt(String(formData.get('bulk_min_qty') ?? '0'), 10) || 0));
+  // Tope 10 = máximo por compra (Zod en checkout); umbrales mayores serían inalcanzables.
+  const bulkMinQty = Math.max(0, Math.min(10, parseInt(String(formData.get('bulk_min_qty') ?? '0'), 10) || 0));
   const bulkPct = Math.max(0, Math.min(90, parseInt(String(formData.get('bulk_discount_pct') ?? '0'), 10) || 0));
   update.bulk_min_qty = bulkMinQty >= 2 ? bulkMinQty : 0; // <2 no tiene sentido → off
   update.bulk_discount_pct = update.bulk_min_qty ? bulkPct : 0;
@@ -567,7 +568,7 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
   if (!Number.isFinite(priceCents) || priceCents < 0) return { ok: false, message: 'Precio inválido.' };
   const capacity = isUnlimited ? 0 : parseInt(String(formData.get('capacity') ?? ''), 10);
   if (!isUnlimited && (!Number.isFinite(capacity) || capacity < 1)) return { ok: false, message: 'Capacidad inválida.' };
-  const bulkMinQtyRaw = Math.max(0, Math.min(50, parseInt(String(formData.get('bulk_min_qty') ?? '0'), 10) || 0));
+  const bulkMinQtyRaw = Math.max(0, Math.min(10, parseInt(String(formData.get('bulk_min_qty') ?? '0'), 10) || 0));
   const bulkMinQty = bulkMinQtyRaw >= 2 ? bulkMinQtyRaw : 0;
   const bulkPct = bulkMinQty ? Math.max(0, Math.min(90, parseInt(String(formData.get('bulk_discount_pct') ?? '0'), 10) || 0)) : 0;
 
