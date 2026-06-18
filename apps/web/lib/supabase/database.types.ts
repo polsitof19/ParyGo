@@ -1256,6 +1256,14 @@ export type Database = {
         }
         Returns: number
       }
+      record_ref_click: {
+        Args: { p_event_id: string; p_ref_code: string; p_visitor_hash: string }
+        Returns: undefined
+      }
+      ref_click_counts: {
+        Args: { p_event_id: string }
+        Returns: { promo_code_id: string; clicks: number }[]
+      }
       claim_notification_jobs: {
         Args: { p_limit?: number }
         Returns: Database["public"]["Tables"]["notification_jobs"]["Row"][]

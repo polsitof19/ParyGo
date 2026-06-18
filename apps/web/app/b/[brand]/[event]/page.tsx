@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
 import type { Metadata } from 'next';
 import { Calendar, MapPin, ShieldCheck, ExternalLink } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
@@ -12,6 +13,12 @@ import { ShareEvent } from './ShareEvent';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
+
+// Hash estable (no reversible) para deduplicar clics por visitante sin guardar IP.
+async function sha256Hex(s: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+}
 
 type Props = {
   params: { brand: string; event: string };
@@ -143,6 +150,19 @@ export default async function EventPage({ params, searchParams }: Props) {
   // editable y el checkout no se rompe. Sanitizamos a [A-Za-z0-9_-] máx 32.
   const refRaw = Array.isArray(searchParams?.ref) ? searchParams?.ref[0] : searchParams?.ref;
   const refCode = (refRaw ?? '').trim().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
+
+  // Tracking de clics del link de promotor (?ref). Best-effort: registra un clic
+  // por visitante/día atribuido al código (solo si existe). Hasheamos la IP (no
+  // se guarda cruda) y nunca rompemos la página si falla. service_role vía RPC.
+  if (refCode) {
+    try {
+      const ip = headers().get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+      const visitorHash = await sha256Hex(`${ip}:${event.id}`);
+      await createAdminClient().rpc('record_ref_click', { p_event_id: event.id, p_ref_code: refCode, p_visitor_hash: visitorHash });
+    } catch (e) {
+      console.error('record_ref_click failed', { eventId: event.id, error: e instanceof Error ? e.message : String(e) });
+    }
+  }
 
   const startsAt = new Date(event.starts_at);
 
