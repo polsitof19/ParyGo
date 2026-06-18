@@ -29,7 +29,18 @@ type TicketType = {
   // soldOut viene calculado server-side; NUNCA se mandan capacity/sold al cliente
   // (el comprador no ve cuántas hay ni cuántas quedan — solo el estado "Agotado").
   is_unlimited: boolean; soldOut: boolean; sort_order: number; color_hex: string | null;
+  bulk_min_qty: number; bulk_discount_pct: number;
 };
+
+// Precio unitario con descuento por cantidad (bulk) aplicado, si corresponde.
+// Solo para MOSTRAR — el server recalcula y congela el precio real en el checkout
+// (y el bulk NO se apila con un código promo: si hay código, gana el código).
+function bulkUnitPrice(t: TicketType, q: number): number {
+  if (t.bulk_min_qty > 0 && t.bulk_discount_pct > 0 && q >= t.bulk_min_qty) {
+    return Math.floor((t.active_price_cents * (100 - t.bulk_discount_pct)) / 100);
+  }
+  return t.active_price_cents;
+}
 
 // Días de CALENDARIO que faltan hasta `endIso`, en horario America/Lima (no UTC).
 function limaYMD(ms: number): string {
@@ -165,7 +176,7 @@ export function EventCheckoutPanel({
     return () => clearTimeout(timer);
   }, [qty]);
 
-  const totalCents = useMemo(() => sorted.reduce((acc, t) => acc + (qty[t.id] ?? 0) * t.active_price_cents, 0), [qty, sorted]);
+  const totalCents = useMemo(() => sorted.reduce((acc, t) => { const q = qty[t.id] ?? 0; return acc + q * bulkUnitPrice(t, q); }, 0), [qty, sorted]);
   const totalItems = useMemo(() => Object.values(qty).reduce((a, b) => a + b, 0), [qty]);
 
   function inc(t: TicketType) {
@@ -274,6 +285,12 @@ function Step1({
                 {perks.length > 0 && (
                   <ul className="c-tt__perks">{perks.map((p, idx) => <li key={idx}><span style={{ color: 'var(--brand-ink)'}}>·</span> {p}</li>)}</ul>
                 )}
+                {/* Descuento por cantidad (bulk): incentivo visible. */}
+                {t.bulk_min_qty > 0 && t.bulk_discount_pct > 0 && (
+                  <p style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: 'var(--brand-ink)' }}>
+                    🎟️ Llevá {t.bulk_min_qty}+ y pagás {t.bulk_discount_pct}% menos
+                  </p>
+                )}
                 {/* No agotado → fases (countdown + teaser). Agotado → badge a la derecha. */}
                 {!soldOut && <PhaseTiming tt={t} />}
               </div>
@@ -376,6 +393,8 @@ function Step2({
   }
 
   const finalTotal = applied ? applied.finalCents : totalCents;
+  // Ahorro por cantidad (bulk) — solo si NO hay código (son excluyentes).
+  const bulkSavings = applied ? 0 : sorted.reduce((s, t) => { const q = qty[t.id] ?? 0; return s + q * (t.active_price_cents - bulkUnitPrice(t, q)); }, 0);
   const docLabel = docType === 'dni' ? 'DNI' : docType === 'ce' ? 'Carné ext.' : 'Pasaporte';
 
   return (
@@ -535,6 +554,7 @@ function Step2({
               );
             })}
             {applied && <div className="c-sum__row c-sum__discount"><span>Código {applied.code}</span><span className="v">−{formatPEN(applied.discountCents)}</span></div>}
+            {!applied && bulkSavings > 0 && <div className="c-sum__row c-sum__discount"><span>Descuento por cantidad</span><span className="v">−{formatPEN(bulkSavings)}</span></div>}
           </div>
           <div className="c-sum__total"><span className="l">Total</span><span className="v"><span key={finalTotal} className="c-amount">{formatPEN(finalTotal)}</span></span></div>
           <p className="c-muted-3" style={{ fontSize: 11.5, textAlign: 'right', marginTop: 2 }}>IGV incluido · sin costos ocultos</p>

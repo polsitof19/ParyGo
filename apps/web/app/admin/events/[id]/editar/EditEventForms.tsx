@@ -4,7 +4,23 @@ import { useRef } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, type EditState } from '../edit-actions';
 
-export type TtRow = { id: string; name: string; priceCents: number; capacity: number; sold: number; isUnlimited: boolean; isActive: boolean };
+export type TtRow = { id: string; name: string; priceCents: number; capacity: number; sold: number; isUnlimited: boolean; isActive: boolean; bulkMinQty: number; bulkDiscountPct: number };
+
+// Campos de descuento por cantidad (compartidos entre crear y editar).
+function BulkFields({ minQty, pct, disabled }: { minQty?: number; pct?: number; disabled?: boolean }) {
+  return (
+    <div className="s-form-grid">
+      <div className="s-field">
+        <label className="s-label">Descuento por cantidad — desde N entradas</label>
+        <input name="bulk_min_qty" type="number" min={0} max={50} defaultValue={minQty || ''} placeholder="0 = sin descuento" className="s-input" disabled={disabled} />
+      </div>
+      <div className="s-field">
+        <label className="s-label">% de descuento</label>
+        <input name="bulk_discount_pct" type="number" min={0} max={90} defaultValue={pct || ''} placeholder="ej. 10" className="s-input" disabled={disabled} />
+      </div>
+    </div>
+  );
+}
 
 const initial: EditState = { ok: false, message: null };
 
@@ -125,6 +141,7 @@ export function TicketTypeEditor({ eventId, tt, readOnly = false }: { eventId: s
           <label className="s-check" style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}><input type="checkbox" name="is_active" defaultChecked={tt.isActive} disabled={ro} /> Activo</label>
         </div>
       </div>
+      <BulkFields minQty={tt.bulkMinQty} pct={tt.bulkDiscountPct} disabled={ro} />
       <Banner state={state} />
       {!ro && <div className="s-form-actions"><Submit label="Guardar tipo" /></div>}
     </form>
@@ -146,6 +163,7 @@ export function NewTicketTypeForm({ eventId }: { eventId: string }) {
           <label className="s-check" style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}><input type="checkbox" name="is_unlimited" /> Stock ilimitado</label>
         </div>
       </div>
+      <BulkFields />
       <Banner state={state} />
       <div className="s-form-actions"><Submit label="Crear tipo" /></div>
     </form>

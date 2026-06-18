@@ -135,7 +135,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   const ticketTypeIds = parsed.data.items.map((i) => i.ticketTypeId);
   const { data: tts } = await admin
     .from('ticket_types')
-    .select('id, name, price_cents, capacity, sold, is_active, is_unlimited, event_id')
+    .select('id, name, price_cents, capacity, sold, is_active, is_unlimited, event_id, bulk_min_qty, bulk_discount_pct')
     .in('id', ticketTypeIds);
   if (!tts || tts.length !== ticketTypeIds.length) {
     return { ok: false, message: 'Tipo de entrada inválido.' };
@@ -152,7 +152,13 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   );
 
   // 2. Validate stock + compute total server-side.
-  let totalCents = 0;
+  // Descuento por cantidad (bulk): automático, server-side, SOLO si el comprador
+  // NO usa un código promo (son mutuamente excluyentes → no se apilan). Si hay
+  // código, gana el código y el bulk no se aplica (precio = fase activa).
+  const usingPromo = Boolean(parsed.data.promoCode && parsed.data.promoCode.trim());
+  let totalCents = 0;       // total efectivo (con bulk si aplica)
+  let listTotalCents = 0;   // total a precio de lista (fase activa, sin bulk)
+  let bulkDiscountCents = 0;
   type Resolved = {
     id: string;
     name: string;
@@ -172,7 +178,16 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     // reserve_order_stock (migr 0031), bajo lock de fila. Ilimitados: excluidos ahí.
     // Active-phase price (fallback to base price_cents if no phase rows).
     const unitPrice = activePriceByType.get(tt.id) ?? tt.price_cents;
-    totalCents += unitPrice * item.quantity;
+    // Bulk: si quantity >= bulk_min_qty (>0) y hay %, baja el precio unitario.
+    let effUnit = unitPrice;
+    const minQty = tt.bulk_min_qty ?? 0;
+    const pct = tt.bulk_discount_pct ?? 0;
+    if (!usingPromo && minQty > 0 && pct > 0 && item.quantity >= minQty) {
+      effUnit = Math.floor((unitPrice * (100 - pct)) / 100);
+      bulkDiscountCents += (unitPrice - effUnit) * item.quantity;
+    }
+    listTotalCents += unitPrice * item.quantity;
+    totalCents += effUnit * item.quantity;
     // Nombres por entrada: solo si el evento los pide. Recortamos a la cantidad
     // comprada (no guardar más nombres que unidades) y limpiamos vacíos al final.
     let attendeeNames: string[] | null = null;
@@ -183,7 +198,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     resolved.push({
       id: tt.id,
       name: tt.name,
-      price_cents: unitPrice,
+      price_cents: effUnit,
       quantity: item.quantity,
       attendeeNames,
     });
@@ -232,8 +247,11 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
       buyer_age_ok: parsed.data.ageOk,
       marketing_opt_in: parsed.data.marketingOptIn,
       payment_method: parsed.data.method,
-      subtotal_cents: totalCents,
+      // subtotal = precio de lista; total = con bulk; discount = lo que ahorró el
+      // bulk. Si luego hay código promo, apply_promo_to_order reescribe los tres.
+      subtotal_cents: listTotalCents,
       total_cents: totalCents,
+      discount_cents: bulkDiscountCents,
       status,
       ip_address: ip,
       user_agent: userAgent,

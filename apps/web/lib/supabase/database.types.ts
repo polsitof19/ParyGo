@@ -810,6 +810,8 @@ export type Database = {
           sold: number
           sort_order: number
           updated_at: string
+          bulk_min_qty: number
+          bulk_discount_pct: number
         }
         Insert: {
           capacity: number
@@ -828,6 +830,8 @@ export type Database = {
           sold?: number
           sort_order?: number
           updated_at?: string
+          bulk_min_qty?: number
+          bulk_discount_pct?: number
         }
         Update: {
           capacity?: number
@@ -846,6 +850,8 @@ export type Database = {
           sold?: number
           sort_order?: number
           updated_at?: string
+          bulk_min_qty?: number
+          bulk_discount_pct?: number
         }
         Relationships: [
           {

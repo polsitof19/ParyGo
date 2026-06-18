@@ -51,7 +51,7 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
 
   const { data: ticketTypes } = await supabase
     .from('ticket_types')
-    .select('id, name, description, price_cents, capacity, sold, sort_order, color_hex, is_active, is_unlimited')
+    .select('id, name, description, price_cents, capacity, sold, sort_order, color_hex, is_active, is_unlimited, bulk_min_qty, bulk_discount_pct')
     .eq('event_id', event.id)
     .eq('is_active', true)
     .order('sort_order')
