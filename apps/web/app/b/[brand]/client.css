@@ -56,8 +56,9 @@
 /* logo + nombre de la marca, juntos a la izquierda */
 .client-shell .c-brandlink { display: inline-flex; align-items: center; gap: 12px; min-width: 0; }
 .client-shell .c-logo { height: 48px; width: auto; max-width: 200px; object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,.18)); }
-/* nombre secundario al logo: chico y prolijo (minimalista) */
-.client-shell .c-brandname { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: -0.01em; line-height: 1; color: var(--on-brand); opacity: .92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* nombre secundario al logo: chico y prolijo (minimalista). Clase propia para
+   NO colisionar con .c-brandname del home de marca (que es un título grande). */
+.client-shell .c-hdr-name { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: -0.01em; line-height: 1; color: var(--on-brand); opacity: .92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .client-shell .c-logo-text { font-family: var(--display); font-weight: 800; font-size: 20px; letter-spacing: -0.02em; color: var(--on-brand); }
 .client-shell .c-powered { font-size: 11px; color: var(--on-brand); opacity: .72; flex-shrink: 0; }
 .client-shell .c-powered a { font-weight: 700; text-decoration: underline; }

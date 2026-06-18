@@ -59,7 +59,7 @@ export default async function BrandLayout({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={optimizedImage(logoUrl, { width: 280, quality: 88 })} alt="" className="c-logo" height={48} loading="eager" decoding="async" />
             )}
-            <span className="c-brandname">{brand.name}</span>
+            <span className="c-hdr-name">{brand.name}</span>
           </Link>
           <span className="c-powered">
             powered by{' '}
