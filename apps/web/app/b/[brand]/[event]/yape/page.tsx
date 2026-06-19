@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
 import { YapeUploadForm } from './YapeUploadForm';
 import { CopyButton } from './CopyButton';
+import { CheckoutSteps } from '../CheckoutSteps';
 import { publicEnv } from '@/lib/env';
 
 export const runtime = 'edge';
@@ -64,6 +65,10 @@ export default async function YapeUploadPage({
 
   return (
     <main className="c-narrow" style={{ paddingTop: 32, paddingBottom: 48 }}>
+      {/* El comprador sigue dentro del flujo: paso 3 "Pagar con Yape" activo. */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 22 }}>
+        <CheckoutSteps method="yape_manual" active={3} />
+      </div>
       <div style={{ textAlign: 'center' }}>
         <span className="c-eyebrow">Pago con Yape</span>
         <h1 className="c-h1" style={{ fontSize: 28, marginTop: 8 }}>

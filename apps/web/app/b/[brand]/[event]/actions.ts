@@ -105,7 +105,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   }
   // Confirmación de edad: server-side, solo si el evento la pide (configurable).
   if (event.require_age_confirmation && !parsed.data.ageOk) {
-    return { ok: false, message: `Tenés que confirmar que sos mayor de ${event.min_age} años.` };
+    return { ok: false, message: `Tienes que confirmar que eres mayor de ${event.min_age} años.` };
   }
   // Documento de identidad: server-side, solo si el evento lo pide (configurable).
   // DNI peruano = exactamente 8 dígitos. CE/pasaporte = alfanumérico 6-15.
@@ -299,7 +299,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
       ok: false,
       message: agotado
         ? 'Se agotaron las entradas mientras completabas la compra.'
-        : 'No se pudo reservar el stock. Intentá de nuevo.',
+        : 'No se pudo reservar el stock. Intenta de nuevo.',
     };
   }
 
@@ -370,7 +370,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
       ok: false,
       message: agotado
         ? 'Se agotaron las entradas mientras completabas la compra.'
-        : 'No se pudieron emitir las entradas. Intentá de nuevo.',
+        : 'No se pudieron emitir las entradas. Intenta de nuevo.',
     };
   }
 

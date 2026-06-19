@@ -155,7 +155,7 @@ export default async function ConfirmationPage({
       <div className="c-confirm">
         <div className="c-confirm__badge"><Check className="h-9 w-9" /></div>
         <span className="c-eyebrow" style={{ color: 'var(--ok)' }}>¡Compra confirmada!</span>
-        <h1>Tu entrada está en camino</h1>
+        <h1>¡Tu entrada está lista!</h1>
         <p className="c-muted">{event?.name}{event?.starts_at ? ` · ${formatEventDate(event.starts_at)}` : ''}</p>
       </div>
 

@@ -7,6 +7,7 @@ import { formatPEN } from '@/lib/utils';
 import { startCheckout, previewPromo, type CheckoutInput } from './actions';
 import { reserveStock } from '@/lib/reservations';
 import { MercadoPagoWallet } from './MercadoPagoWallet';
+import { CheckoutSteps } from './CheckoutSteps';
 
 const SESSION_STORAGE_KEY = 'parygo-checkout-session';
 
@@ -238,13 +239,7 @@ export function EventCheckoutPanel({
     <section id="entradas" className="c-wrap" style={{ marginTop: 32 }}>
       {/* Progreso (goal-gradient) + countdown */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
-        <ol className="c-steps" aria-label="Pasos de la compra">
-          <li role="listitem" aria-current={activeStep === 1 ? 'step' : undefined} className={`c-step ${activeStep >= 1 ? 'c-step--on' : ''}`}><b>1</b> Entradas</li>
-          <span className="c-step__line" aria-hidden="true" />
-          <li role="listitem" aria-current={activeStep === 2 ? 'step' : undefined} className={`c-step ${activeStep >= 2 ? 'c-step--on' : ''}`}><b>2</b> Datos + pago</li>
-          <span className="c-step__line" aria-hidden="true" />
-          <li role="listitem" className="c-step"><b>3</b> ¡Listo!</li>
-        </ol>
+        <CheckoutSteps method={method} active={activeStep} />
         {countdownLabel && totalItems > 0 && (
           <span className="c-chip" style={secondsLeft !== null && secondsLeft < 60 ? { color: 'var(--alert)', borderColor: 'var(--alert)' } : { color: 'var(--brand-ink)', borderColor: 'var(--brand)' }} aria-live="polite">
             <Clock className="h-3.5 w-3.5" /> Reserva · {countdownLabel}
@@ -361,6 +356,9 @@ function Step2({
   const [applied, setApplied] = useState<null | { code: string; finalCents: number; discountCents: number; isFree: boolean }>(null);
   const [checking, setChecking] = useState(false);
   const [docType, setDocType] = useState<'dni' | 'ce' | 'passport'>('dni');
+  // Código colapsado por defecto. Se muestra expandido de entrada si ya hay un
+  // código aplicado o vino prellenado por ?ref (promoInput no vacío al montar).
+  const [showPromo, setShowPromo] = useState(() => Boolean(applied) || promoInput.trim().length > 0);
   // Nombre por entrada (solo si el evento lo pide). Clave: ticketTypeId → nombres[].
   const [attendeeNames, setAttendeeNames] = useState<Record<string, string[]>>({});
   const setAttendee = (typeId: string, idx: number, val: string) =>
@@ -405,6 +403,17 @@ function Step2({
   const bulkSavings = applied ? 0 : sorted.reduce((s, t) => { const q = qty[t.id] ?? 0; return s + q * (t.active_price_cents - bulkUnitPrice(t, q)); }, 0);
   const docLabel = docType === 'dni' ? 'DNI' : docType === 'ce' ? 'Carné ext.' : 'Pasaporte';
 
+  // Label ÚNICO del CTA (mismo texto en el botón desktop del aside y en la barra
+  // mobile .c-mobilecta) — coherencia de copy según estado y método.
+  const ctaLabel = isPending
+    ? 'Procesando…'
+    : applied?.isFree
+      ? 'Obtener entrada gratis'
+      : method === 'mercadopago'
+        ? `Pagar ${formatPEN(finalTotal)}`
+        : 'Ir a pagar con Yape';
+  const isYape = method === 'yape_manual' && !applied?.isFree;
+
   return (
     <form
       onSubmit={(e) => {
@@ -433,6 +442,29 @@ function Step2({
     >
       {/* Columna form */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* "Cómo pagas" va ARRIBA de "Tus datos": el comprador elige método
+            antes de tipear sus datos (mejora de orden, sin tocar inputs). */}
+        {!applied?.isFree && (
+          <div className="c-card">
+            <p className="c-card__title">Cómo pagas</p>
+            <div role="radiogroup" aria-label="Método de pago" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {brand.yape_number && (
+                <PayOption kind="yape" selected={method === 'yape_manual'} onClick={() => setMethod('yape_manual')} title="Yape" sub="Validación en 5–15 min" note={`Yapeas a ${brand.yape_holder ?? brand.name} y nos envías la captura.`} />
+              )}
+              {mpConfigured && (
+                <PayOption kind="mp" selected={method === 'mercadopago'} onClick={() => setMethod('mercadopago')} title="Tarjeta · MercadoPago" sub="Pago con tarjeta — tu QR al instante" note="Procesado de forma segura por MercadoPago." />
+              )}
+            </div>
+            {/* Aviso Yape visible en mobile Y desktop (mejora 4): anticipa el paso
+                siguiente para que nadie se sorprenda al salir del formulario. */}
+            {isYape && (
+              <p className="c-yape-heads" style={{ marginTop: 12, borderRadius: 'var(--r-ctl)', background: '#F6F0FB', color: '#742384', padding: '10px 13px', fontSize: 12.5, fontWeight: 500, lineHeight: 1.4 }}>
+                Con Yape: en la pantalla siguiente yapeas y subes tu comprobante. Tu QR llega cuando el organizador confirme (5–15 min).
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="c-card">
           <p className="c-card__title">Tus datos</p>
           <div className="c-field">
@@ -443,7 +475,7 @@ function Step2({
             <label htmlFor="buyer_email" className="c-label">Email</label>
             <input id="buyer_email" name="buyer_email" type="email" autoComplete="email" required placeholder="tu@email.com" className="c-input" inputMode="email"
               onBlur={() => { if (promoInput.trim().length >= 2 && !applied && !checking) applyPromo(); }} />
-            <p className="c-help">Acá te llega tu QR al instante.</p>
+            <p className="c-help">Aquí te llega tu QR al instante.</p>
           </div>
           <div className="c-field">
             <label htmlFor="buyer_phone" className="c-label">WhatsApp</label>
@@ -513,23 +545,11 @@ function Step2({
           </div>
         )}
 
-        {!applied?.isFree && (
+        {/* Código colapsado: link discreto que expande el input. Si ya hay un
+            código aplicado o vino por ?ref, se muestra expandido de entrada. */}
+        {applied ? (
           <div className="c-card">
-            <p className="c-card__title">Cómo pagas</p>
-            <div role="radiogroup" aria-label="Método de pago" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {brand.yape_number && (
-                <PayOption kind="yape" selected={method === 'yape_manual'} onClick={() => setMethod('yape_manual')} title="Yape" sub="Validación en 5–15 min" note={`Yapeas a ${brand.yape_holder ?? brand.name} y nos envías la captura.`} />
-              )}
-              {mpConfigured && (
-                <PayOption kind="mp" selected={method === 'mercadopago'} onClick={() => setMethod('mercadopago')} title="Tarjeta · MercadoPago" sub="Pago con tarjeta — tu QR al instante" note="Procesado de forma segura por MercadoPago." />
-              )}
-            </div>
-          </div>
-        )}
-
-        <div className="c-card">
-          <p className="c-card__title">¿Tienes un código?</p>
-          {applied ? (
+            <p className="c-card__title">¿Tienes un código?</p>
             <div className="c-promo-on">
               <div>
                 <span style={{ fontWeight: 700, color: 'var(--brand-ink)'}}>{applied.code}</span>
@@ -537,15 +557,22 @@ function Step2({
               </div>
               <button type="button" className="c-btn c-btn--ghost" onClick={() => { setApplied(null); setPromoInput(''); }}>Quitar</button>
             </div>
-          ) : (
+          </div>
+        ) : showPromo ? (
+          <div className="c-card">
+            <p className="c-card__title">¿Tienes un código?</p>
             <div style={{ display: 'flex', gap: 8 }}>
-              <input value={promoInput} onChange={(e) => setPromoInput(e.target.value)} placeholder="Código de RRPP" autoCapitalize="characters" maxLength={32} className="c-input" style={{ textTransform: 'uppercase' }} />
+              <input value={promoInput} onChange={(e) => setPromoInput(e.target.value)} placeholder="Código de RRPP" autoCapitalize="characters" maxLength={32} className="c-input" style={{ textTransform: 'uppercase' }} autoFocus />
               <button type="button" className="c-btn c-btn--soft" onClick={applyPromo} disabled={checking || promoInput.trim().length < 2}>
                 {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
               </button>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <button type="button" className="c-promo-toggle" onClick={() => setShowPromo(true)} style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: '2px 0', color: 'var(--brand-ink)', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+            ¿Tienes un código de descuento?
+          </button>
+        )}
       </div>
 
       {/* Columna resumen (confianza) */}
@@ -569,13 +596,12 @@ function Step2({
         </div>
 
         <button type="submit" className="c-btn c-btn--brand c-btn--block c-btn--lg" disabled={isPending}>
-          {isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Procesando…</>
-            : applied?.isFree ? <>Obtener entrada gratis</>
-            : method === 'mercadopago' ? <><Lock className="h-4 w-4" /> Pagar {formatPEN(finalTotal)}</>
-            : <>Ir a pagar con Yape</>}
+          {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+          {!isPending && method === 'mercadopago' && !applied?.isFree && <Lock className="h-4 w-4" />}
+          {ctaLabel}
         </button>
 
-        {method === 'yape_manual' && !applied?.isFree && (
+        {isYape && (
           <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginTop: -4 }}>
             Después: yapeas y subes tu comprobante.
           </p>
@@ -598,10 +624,9 @@ function Step2({
           <span className="v"><span key={finalTotal} className="c-amount">{formatPEN(finalTotal)}</span></span>
         </div>
         <button type="submit" className="c-btn c-btn--brand" disabled={isPending}>
-          {isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> …</>
-            : applied?.isFree ? <>Entrada gratis</>
-            : method === 'mercadopago' ? <><Lock className="h-4 w-4" /> Pagar</>
-            : <>Continuar <ArrowRight className="h-4 w-4" /></>}
+          {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+          {!isPending && method === 'mercadopago' && !applied?.isFree && <Lock className="h-4 w-4" />}
+          {ctaLabel}
         </button>
       </div>
     </form>

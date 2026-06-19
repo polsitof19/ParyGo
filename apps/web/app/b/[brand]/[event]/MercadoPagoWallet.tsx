@@ -87,7 +87,7 @@ export function MercadoPagoWallet({
 
   return (
     <div className="c-card" style={{ maxWidth: 520, margin: '0 auto' }}>
-      <p className="c-card__title">Pagá con MercadoPago</p>
+      <p className="c-card__title">Paga con MercadoPago</p>
       {!failed && !ready && (
         <>
           <div className="c-muted" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
