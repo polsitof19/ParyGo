@@ -18,6 +18,9 @@ export function YapeUploadForm({ orderId, expectedAmountCents, buyerName }: Prop
   const [pending, start] = useTransition();
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  // Aviso (no bloqueante) si el monto tipeado difiere del esperado exacto.
+  const expectedSoles = (expectedAmountCents / 100).toFixed(2);
+  const [amountMismatch, setAmountMismatch] = useState(false);
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0] ?? null;
@@ -51,8 +54,19 @@ export function YapeUploadForm({ orderId, expectedAmountCents, buyerName }: Prop
     >
       <div className="c-field">
         <label htmlFor="amount" className="c-label">Monto que yapeaste (S/)</label>
-        <input id="amount" name="amount_soles" type="number" step="0.01" required defaultValue={(expectedAmountCents / 100).toFixed(2)} className="c-input" inputMode="decimal" />
+        <input
+          id="amount" name="amount_soles" type="number" step="0.01" required
+          defaultValue={expectedSoles} className="c-input" inputMode="decimal"
+          onChange={(e) => {
+            // Comparamos en céntimos para evitar imprecisión de coma flotante.
+            const cents = Math.round(parseFloat(e.target.value) * 100);
+            setAmountMismatch(Number.isFinite(cents) && cents !== expectedAmountCents);
+          }}
+        />
         <p className="c-help">Debe ser exactamente {formatPEN(expectedAmountCents)}</p>
+        {amountMismatch && (
+          <p className="c-err">El monto debe ser exactamente {formatPEN(expectedAmountCents)}</p>
+        )}
       </div>
 
       <div className="c-field">

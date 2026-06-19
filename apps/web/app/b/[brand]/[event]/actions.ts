@@ -94,7 +94,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // 1. Verify event + ticket types in one query (server-trusted).
   const { data: event } = await admin
     .from('events')
-    .select('id, slug, name, brand_id, is_published, min_age, archived_at, require_age_confirmation, require_dni, collect_attendee_names')
+    .select('id, slug, name, brand_id, is_published, min_age, archived_at, starts_at, ends_at, require_age_confirmation, require_dni, collect_attendee_names')
     .eq('id', parsed.data.eventId)
     .maybeSingle();
   if (!event || !event.is_published || event.archived_at) {
@@ -130,6 +130,13 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     .maybeSingle();
   if (!brandRow || brandRow.archived_at) {
     return { ok: false, message: 'Evento no disponible.' };
+  }
+  // Guarda de evento pasado (misma regla que la página): un evento ya terminado
+  // no acepta compras, aunque el link viejo siga publicado. ends_at si existe,
+  // si no 6h tras el inicio.
+  const overAt = event.ends_at ? Date.parse(event.ends_at) : Date.parse(event.starts_at) + 6 * 3600 * 1000;
+  if (Number.isFinite(overAt) && overAt < Date.now()) {
+    return { ok: false, message: 'Este evento ya terminó.' };
   }
 
   const ticketTypeIds = parsed.data.items.map((i) => i.ticketTypeId);
@@ -204,7 +211,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     });
   }
 
-  if (totalCents <= 0) {
+  if (totalCents < 0) {
     return { ok: false, message: 'Total inválido.' };
   }
 
@@ -354,7 +361,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // Free order (100% off promo): issue_tickets_atomic hace gate de cupo + flip a
   // paid + consumo de promo + emisión + release, TODO atómico (migr 0034). Si el
   // cupo se agotó NO deja la orden paid-sin-QR. Solo resta el email.
-  if (isFree) {
+  if (isFree || totalCents === 0) {
     const issue = await issueTicketsForOrder({ orderId: order.id, reason: 'yape_approved' });
     if (issue.ok) {
       await sendTicketEmail(order.id);

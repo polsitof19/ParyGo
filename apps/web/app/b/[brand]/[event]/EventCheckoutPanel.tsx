@@ -157,7 +157,13 @@ export function EventCheckoutPanel({
         const want = qty[ticketTypeId] ?? 0;
         const have = lastReserved.current[ticketTypeId] ?? 0;
         if (want === have) return;
-        const res = await reserveStock(sid, ticketTypeId, want);
+        let res: Awaited<ReturnType<typeof reserveStock>>;
+        try {
+          res = await reserveStock(sid, ticketTypeId, want);
+        } catch {
+          toast.error('Sin conexión. Revisa tu internet e intenta de nuevo.');
+          return;
+        }
         if (!res.ok) {
           // Mensaje SIN número (no exponer cuántas quedan). Si el server informa
           // el máximo disponible, ajustamos el stepper en silencio.
@@ -209,7 +215,14 @@ export function EventCheckoutPanel({
       let shortfall = false;
       for (const [ticketTypeId, want] of Object.entries(qty)) {
         if (want <= 0) continue;
-        const res = await reserveStock(sid, ticketTypeId, want);
+        let res: Awaited<ReturnType<typeof reserveStock>>;
+        try {
+          res = await reserveStock(sid, ticketTypeId, want);
+        } catch {
+          if (cancelled) return;
+          toast.error('Sin conexión. Revisa tu internet e intenta de nuevo.');
+          return;
+        }
         if (cancelled) return;
         if (!res.ok) {
           shortfall = true;
@@ -399,6 +412,9 @@ function Step2({
   }
 
   const finalTotal = applied ? applied.finalCents : totalCents;
+  // Evento/orden gratis: por código free O por total nativo S/0 (entrada a precio 0).
+  // En ambos casos NO se muestra el pago y el CTA dice "Obtener entrada gratis".
+  const isFreeOrder = (applied?.isFree ?? false) || finalTotal === 0;
   // Ahorro por cantidad (bulk) — solo si NO hay código (son excluyentes).
   const bulkSavings = applied ? 0 : sorted.reduce((s, t) => { const q = qty[t.id] ?? 0; return s + q * (t.active_price_cents - bulkUnitPrice(t, q)); }, 0);
   const docLabel = docType === 'dni' ? 'DNI' : docType === 'ce' ? 'Carné ext.' : 'Pasaporte';
@@ -407,21 +423,41 @@ function Step2({
   // mobile .c-mobilecta) — coherencia de copy según estado y método.
   const ctaLabel = isPending
     ? 'Procesando…'
-    : applied?.isFree
+    : isFreeOrder
       ? 'Obtener entrada gratis'
       : method === 'mercadopago'
         ? `Pagar ${formatPEN(finalTotal)}`
         : 'Ir a pagar con Yape';
-  const isYape = method === 'yape_manual' && !applied?.isFree;
+  const isYape = method === 'yape_manual' && !isFreeOrder;
+
+  // Carrito vacío (p.ej. todo se agotó mientras comprabas): no mostramos el
+  // formulario, ofrecemos volver a elegir entradas.
+  if (selectedTypes.length === 0) {
+    return (
+      <div className="c-card" style={{ textAlign: 'center' }}>
+        <p>Tu carrito quedó vacío.</p>
+        <button type="button" className="c-btn c-btn--soft" onClick={onBack}>← Volver a elegir entradas</button>
+      </div>
+    );
+  }
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
+        // Como hacemos preventDefault, la validación HTML5 no corre sola:
+        // reportValidity muestra el aviso nativo y enfoca el primer campo inválido.
+        if (!e.currentTarget.reportValidity()) return;
         const fd = new FormData(e.currentTarget);
         // Confirmación de edad: solo se exige si el evento la pide (configurable).
         const ageOk = event.require_age_confirmation ? fd.get('age_ok') === '1' : true;
-        if (event.require_age_confirmation && !ageOk) { toast.error(`Tienes que confirmar que eres mayor de ${event.min_age} años`); return; }
+        if (event.require_age_confirmation && !ageOk) {
+          toast.error(`Tienes que confirmar que eres mayor de ${event.min_age} años`);
+          const ageEl = document.getElementById('age_ok');
+          ageEl?.focus();
+          ageEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
         onSubmit({
           eventId: event.id, brandId: brand.id,
           buyerName: String(fd.get('buyer_name') ?? '').trim(),
@@ -444,7 +480,7 @@ function Step2({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* "Cómo pagas" va ARRIBA de "Tus datos": el comprador elige método
             antes de tipear sus datos (mejora de orden, sin tocar inputs). */}
-        {!applied?.isFree && (
+        {!isFreeOrder && (
           <div className="c-card">
             <p className="c-card__title">Cómo pagas</p>
             <div role="radiogroup" aria-label="Método de pago" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -505,7 +541,7 @@ function Step2({
           {event.require_age_confirmation && (
             <div className="c-field">
               <label className="c-check">
-                <input type="checkbox" name="age_ok" value="1" required />
+                <input id="age_ok" type="checkbox" name="age_ok" value="1" required />
                 <span>Confirmo que soy mayor de {event.min_age} años (requerido para ingresar).</span>
               </label>
             </div>
@@ -597,7 +633,7 @@ function Step2({
 
         <button type="submit" className="c-btn c-btn--brand c-btn--block c-btn--lg" disabled={isPending}>
           {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-          {!isPending && method === 'mercadopago' && !applied?.isFree && <Lock className="h-4 w-4" />}
+          {!isPending && method === 'mercadopago' && !isFreeOrder && <Lock className="h-4 w-4" />}
           {ctaLabel}
         </button>
 
@@ -625,7 +661,7 @@ function Step2({
         </div>
         <button type="submit" className="c-btn c-btn--brand" disabled={isPending}>
           {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-          {!isPending && method === 'mercadopago' && !applied?.isFree && <Lock className="h-4 w-4" />}
+          {!isPending && method === 'mercadopago' && !isFreeOrder && <Lock className="h-4 w-4" />}
           {ctaLabel}
         </button>
       </div>
