@@ -368,3 +368,22 @@
     border-top: 1px solid var(--cream-3); }
   .client-shell .c-mobilecta .c-btn { flex: 0 0 auto; }
 }
+
+/* ============================================================
+   Checkout (pagina de evento) en DESKTOP: ocultar el afiche gigante
+   (fondo + poster) para que el comprador vea directo el selector de
+   entradas. Queda una franja compacta con nombre/fecha/+18 (texto
+   oscuro sobre crema). En mobile el flyer se mantiene tal cual.
+   Solo presentacion; no toca selector/precio/pago/emision/aforo.
+   ============================================================ */
+@media (min-width: 900px) {
+  .client-shell .c-hero--img .c-hero__bg { display: none; }
+  .client-shell .c-hero__poster { display: none; }
+  .client-shell .c-hero__inner--poster { display: block; }
+  .client-shell .c-hero__inner { padding-top: 28px; padding-bottom: 10px; }
+  .client-shell .c-hero--img h1, .client-shell .c-hero--img .c-hero__desc { color: var(--ink); }
+  .client-shell .c-hero--img .c-live { color: var(--brand-ink); }
+  .client-shell .c-hero--img .c-chip { background: var(--white); border-color: var(--cream-3); color: var(--ink); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .client-shell .c-hero--img .c-hero__brand { filter: none; }
+  .client-shell .c-hero { border-bottom: 1px solid var(--cream-3); }
+}

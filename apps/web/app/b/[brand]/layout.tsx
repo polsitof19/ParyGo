@@ -61,17 +61,14 @@ export default async function BrandLayout({
         <div className="c-header__inner">
           <Link href="/" className="c-lockup" aria-label={brand.name}>
             {logoUrl ? (
-              // Con logo: mostramos SOLO el logo (muchos logos ya incluyen el nombre
-              // → evita duplicarlo). El alt lleva el nombre para lectores de pantalla.
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={optimizedImage(logoUrl, { width: 120, quality: 88 })} alt={brand.name} className="c-lockup__logo" loading="eager" decoding="async" />
+              <img src={optimizedImage(logoUrl, { width: 120, quality: 88 })} alt="" className="c-lockup__logo" loading="eager" decoding="async" />
             ) : (
-              // Sin logo: marca genérica + nombre en texto.
-              <>
-                <span className="c-lockup__mark"><span /></span>
-                <span className="c-lockup__name">{brand.name}</span>
-              </>
+              <span className="c-lockup__mark"><span /></span>
             )}
+            {/* El nombre se muestra SIEMPRE (con o sin logo): un logo-ícono claro
+                podría fundirse con una barra clara y dejar la marca invisible. */}
+            <span className="c-lockup__name">{brand.name}</span>
           </Link>
           <span className="c-powered">
             powered by{' '}
