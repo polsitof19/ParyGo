@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Minus, Plus, Loader2, Clock, ShieldCheck, Lock, Mail, ArrowRight, TrendingUp } from 'lucide-react';
+import { Minus, Plus, Loader2, Clock, Lock, ArrowRight, TrendingUp, ExternalLink } from 'lucide-react';
 import { formatPEN } from '@/lib/utils';
+import { optimizedImage } from '@/lib/imageUrl';
 import { startCheckout, previewPromo, type CheckoutInput } from './actions';
 import { reserveStock } from '@/lib/reservations';
 import { MercadoPagoWallet } from './MercadoPagoWallet';
-import { CheckoutSteps } from './CheckoutSteps';
+import { ShareEvent } from './ShareEvent';
 
 const SESSION_STORAGE_KEY = 'parygo-checkout-session';
 
@@ -21,8 +22,20 @@ function readOrCreateSessionId(): string {
   return id;
 }
 
-type Brand = { id: string; slug: string; name: string; yape_number: string | null; yape_holder: string | null };
-type Event = { id: string; slug: string; name: string; min_age: number; starts_at: string; require_age_confirmation: boolean; require_dni: boolean; collect_attendee_names: boolean };
+type Brand = {
+  id: string; slug: string; name: string;
+  yape_number: string | null; yape_holder: string | null;
+  // Supabase tipa theme_json como Json; se narrowing-castea al leer el logo.
+  theme_json?: unknown;
+};
+type Event = {
+  id: string; slug: string; name: string; description?: string | null;
+  min_age: number; starts_at: string; ends_at?: string | null;
+  venue_name?: string | null; venue_address?: string | null;
+  venue_lat?: number | null; venue_lng?: number | null; venue_maps_url?: string | null;
+  cover_url?: string | null; refund_policy?: string | null;
+  require_age_confirmation: boolean; require_dni: boolean; collect_attendee_names: boolean;
+};
 type TicketType = {
   id: string; name: string; description: string | null; price_cents: number;
   active_price_cents: number; active_name: string | null; active_ends_at: string | null;
@@ -114,11 +127,19 @@ function PhaseTiming({ tt }: { tt: TicketType }) {
   );
 }
 
+// Fecha corta + hora (Lima) para hero y rail.
+function fmtDateShort(iso: string): string {
+  return new Intl.DateTimeFormat('es-PE', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'America/Lima' }).format(new Date(iso));
+}
+function fmtTime(iso: string): string {
+  return new Intl.DateTimeFormat('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' }).format(new Date(iso));
+}
+
 export function EventCheckoutPanel({
-  brand, event, ticketTypes, mpConfigured, mpPublicKey, refCode = '',
+  brand, event, ticketTypes, mpConfigured, mpPublicKey, refCode = '', shareUrl,
 }: {
   brand: Brand; event: Event; ticketTypes: TicketType[]; mpConfigured: boolean; mpPublicKey: string | null;
-  refCode?: string;
+  refCode?: string; shareUrl: string;
 }) {
   const sorted = useMemo(
     () => [...ticketTypes].sort((a, b) => b.active_price_cents - a.active_price_cents || a.sort_order - b.sort_order),
@@ -127,15 +148,27 @@ export function EventCheckoutPanel({
 
   const [qty, setQty] = useState<Record<string, number>>({});
   const [step, setStep] = useState<1 | 2>(1);
-  // Código de RR.PP. (promo_codes) — se ingresa en el PASO 1 (al comprar) y se
-  // conserva para aplicarlo en el paso 2 con el email. Opcional (no bloquea).
-  // B5: pre-rellena con el código del link del promotor (?ref=). Editable.
+  // Código de RR.PP. (promo_codes) — opcional. Se ingresa en el paso 1 o 2 y se
+  // aplica en el paso 2 junto al email. B5: pre-rellena con ?ref del promotor.
   const [promoInput, setPromoInput] = useState(refCode.toUpperCase());
   const [method, setMethod] = useState<'yape_manual' | 'mercadopago'>(
     brand.yape_number ? 'yape_manual' : mpConfigured ? 'mercadopago' : 'yape_manual'
   );
   const [mpCheckout, setMpCheckout] = useState<{ preferenceId: string; initPoint: string } | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // ----- Estado del paso 2 (elevado al panel para que el rail comparta total) -----
+  const [applied, setApplied] = useState<null | { code: string; finalCents: number; discountCents: number; isFree: boolean }>(null);
+  const [checking, setChecking] = useState(false);
+  const [docType, setDocType] = useState<'dni' | 'ce' | 'passport'>('dni');
+  const [showPromo, setShowPromo] = useState(() => promoInput.trim().length > 0);
+  const [attendeeNames, setAttendeeNames] = useState<Record<string, string[]>>({});
+  const setAttendee = (typeId: string, idx: number, val: string) =>
+    setAttendeeNames((prev) => {
+      const arr = [...(prev[typeId] ?? [])];
+      arr[idx] = val;
+      return { ...prev, [typeId]: arr };
+    });
 
   const sessionIdRef = useRef<string>('');
   const [reservationExpiresAt, setReservationExpiresAt] = useState<number | null>(null);
@@ -225,149 +258,7 @@ export function EventCheckoutPanel({
     return () => { cancelled = true; };
   }, [secondsLeft, totalItems, qty]);
 
-  if (sorted.length === 0) {
-    return (
-      <section className="c-wrap" style={{ marginTop: 40 }}>
-        <div className="c-card" style={{ textAlign: 'center', color: 'var(--ink-2)' }}>Las entradas estarán disponibles pronto.</div>
-      </section>
-    );
-  }
-
-  const activeStep = mpCheckout ? 2 : step;
-
-  return (
-    <section id="entradas" className="c-wrap" style={{ marginTop: 32 }}>
-      {/* Progreso (goal-gradient) + countdown */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
-        <CheckoutSteps method={method} active={activeStep} />
-        {countdownLabel && totalItems > 0 && (
-          <span className="c-chip" style={secondsLeft !== null && secondsLeft < 60 ? { color: 'var(--alert)', borderColor: 'var(--alert)' } : { color: 'var(--brand-ink)', borderColor: 'var(--brand)' }} aria-live="polite">
-            <Clock className="h-3.5 w-3.5" /> Reserva · {countdownLabel}
-          </span>
-        )}
-      </div>
-
-      {mpCheckout && mpPublicKey ? (
-        <MercadoPagoWallet publicKey={mpPublicKey} preferenceId={mpCheckout.preferenceId} initPoint={mpCheckout.initPoint} />
-      ) : step === 1 ? (
-        <div className="c-stepwrap" key="step1">
-        <Step1 sorted={sorted} qty={qty} inc={inc} dec={dec} totalCents={totalCents} totalItems={totalItems} onContinue={() => setStep(2)} />
-        </div>
-      ) : (
-        <div className="c-stepwrap" key="step2">
-        <Step2
-          brand={brand} event={event} sorted={sorted} qty={qty} totalCents={totalCents}
-          method={method} setMethod={setMethod} mpConfigured={mpConfigured} isPending={isPending}
-          promoInput={promoInput} setPromoInput={setPromoInput}
-          onBack={() => setStep(1)}
-          onSubmit={(input) => {
-            startTransition(async () => {
-              const res = await startCheckout({ ...input, sessionId: sessionIdRef.current });
-              if (!res.ok) { toast.error(res.message ?? 'Error en el checkout'); return; }
-              if ('mp' in res) { if (mpPublicKey) setMpCheckout(res.mp); else window.location.href = res.mp.initPoint; return; }
-              if ('redirectUrl' in res) window.location.href = res.redirectUrl;
-            });
-          }}
-        />
-        </div>
-      )}
-    </section>
-  );
-}
-
-// ============================ Paso 1 — Elegir entradas ============================
-function Step1({
-  sorted, qty, inc, dec, totalCents, totalItems, onContinue,
-}: {
-  sorted: TicketType[]; qty: Record<string, number>; inc: (t: TicketType) => void; dec: (t: TicketType) => void;
-  totalCents: number; totalItems: number; onContinue: () => void;
-}) {
-  return (
-    <>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {sorted.map((t, i) => {
-          const soldOut = t.soldOut;
-          const cur = qty[t.id] ?? 0;
-          const perks = (t.description ?? '').split('\n').filter(Boolean);
-          // Banda de color por tipo (color_hex; cae a la marca) + delay de entrada.
-          const ttStyle = { '--i': i, ...(t.color_hex ? { '--tt-accent': t.color_hex } : {}) } as React.CSSProperties;
-          return (
-            <article key={t.id} className={`c-tt ${cur > 0 ? 'c-tt--active' : ''} ${soldOut ? 'c-tt--out' : ''}`} style={ttStyle}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-                  <h3 className="c-tt__name">{t.name}</h3>
-                  <span className="c-tt__price">{formatPEN(t.active_price_cents)}</span>
-                </div>
-                {perks.length > 0 && (
-                  <ul className="c-tt__perks">{perks.map((p, idx) => <li key={idx}><span style={{ color: 'var(--brand-ink)'}}>·</span> {p}</li>)}</ul>
-                )}
-                {/* Descuento por cantidad (bulk): incentivo visible. */}
-                {t.bulk_min_qty > 0 && t.bulk_discount_pct > 0 && (
-                  <p style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: 'var(--brand-ink)' }}>
-                    🎟️ Lleva {t.bulk_min_qty}+ y pagas {t.bulk_discount_pct}% menos
-                  </p>
-                )}
-                {/* No agotado → fases (countdown + teaser). Agotado → badge a la derecha. */}
-                {!soldOut && <PhaseTiming tt={t} />}
-              </div>
-              {soldOut ? (
-                <span className="c-soldout">Agotado</span>
-              ) : cur === 0 ? (
-                // En reposo, solo el botón "+" (sin un "0" administrativo).
-                <button type="button" onClick={() => inc(t)} aria-label={`Sumar ${t.name}`} className="c-qbtn c-qbtn--add"><Plus className="h-4 w-4" /></button>
-              ) : (
-                <div className="c-qty">
-                  <button type="button" onClick={() => dec(t)} aria-label={`Restar ${t.name}`} className="c-qbtn"><Minus className="h-4 w-4" /></button>
-                  <span className="c-qval">{cur}</span>
-                  <button type="button" onClick={() => inc(t)} aria-label={`Sumar ${t.name}`} className="c-qbtn c-qbtn--add"><Plus className="h-4 w-4" /></button>
-                </div>
-              )}
-            </article>
-          );
-        })}
-      </div>
-
-      {/* El código de RR.PP. se pide UNA sola vez, en el Paso 2 (junto al email,
-          que es donde se aplica). El prefill por ?ref sigue viajando vía
-          promoInput hacia Step2 — no se pierde aunque ya no se muestre aquí. */}
-
-      <div className={`c-stickybar ${totalItems === 0 ? 'c-stickybar--off' : ''}`} style={{ marginTop: 20 }}>
-        <div className="c-stickybar__t">
-          <span className="n">{totalItems} entrada{totalItems === 1 ? '' : 's'}</span>
-          <span className="v"><span key={totalCents} className="c-amount">{formatPEN(totalCents)}</span> <span style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 500 }}>IGV inc.</span></span>
-        </div>
-        <button type="button" className="c-btn c-btn--brand" disabled={totalItems === 0} onClick={onContinue}>
-          Continuar <ArrowRight className="h-4 w-4" />
-        </button>
-      </div>
-    </>
-  );
-}
-
-// ============================ Paso 2 — Datos + pago ============================
-function Step2({
-  brand, event, sorted, qty, totalCents, method, setMethod, mpConfigured, isPending, promoInput, setPromoInput, onBack, onSubmit,
-}: {
-  brand: Brand; event: Event; sorted: TicketType[]; qty: Record<string, number>; totalCents: number;
-  method: 'yape_manual' | 'mercadopago'; setMethod: (m: 'yape_manual' | 'mercadopago') => void;
-  mpConfigured: boolean; isPending: boolean; promoInput: string; setPromoInput: (v: string) => void; onBack: () => void;
-  onSubmit: (input: Omit<CheckoutInput, 'sessionId'>) => void;
-}) {
-  const [applied, setApplied] = useState<null | { code: string; finalCents: number; discountCents: number; isFree: boolean }>(null);
-  const [checking, setChecking] = useState(false);
-  const [docType, setDocType] = useState<'dni' | 'ce' | 'passport'>('dni');
-  // Código colapsado por defecto. Se muestra expandido de entrada si ya hay un
-  // código aplicado o vino prellenado por ?ref (promoInput no vacío al montar).
-  const [showPromo, setShowPromo] = useState(() => Boolean(applied) || promoInput.trim().length > 0);
-  // Nombre por entrada (solo si el evento lo pide). Clave: ticketTypeId → nombres[].
-  const [attendeeNames, setAttendeeNames] = useState<Record<string, string[]>>({});
-  const setAttendee = (typeId: string, idx: number, val: string) =>
-    setAttendeeNames((prev) => {
-      const arr = [...(prev[typeId] ?? [])];
-      arr[idx] = val;
-      return { ...prev, [typeId]: arr };
-    });
-
+  // ----- Derivados del paso 2 -----
   const itemsForPromo = Object.entries(qty).filter(([, q]) => q > 0).map(([ticketTypeId, quantity]) => ({ ticketTypeId, quantity }));
   const selectedTypes = sorted.filter((t) => (qty[t.id] ?? 0) > 0);
 
@@ -403,8 +294,7 @@ function Step2({
   const bulkSavings = applied ? 0 : sorted.reduce((s, t) => { const q = qty[t.id] ?? 0; return s + q * (t.active_price_cents - bulkUnitPrice(t, q)); }, 0);
   const docLabel = docType === 'dni' ? 'DNI' : docType === 'ce' ? 'Carné ext.' : 'Pasaporte';
 
-  // Label ÚNICO del CTA (mismo texto en el botón desktop del aside y en la barra
-  // mobile .c-mobilecta) — coherencia de copy según estado y método.
+  // Label ÚNICO del CTA (mismo texto en el botón del rail y en la barra mobile).
   const ctaLabel = isPending
     ? 'Procesando…'
     : applied?.isFree
@@ -414,245 +304,485 @@ function Step2({
         : 'Ir a pagar con Yape';
   const isYape = method === 'yape_manual' && !applied?.isFree;
 
+  function submitCheckout(form: HTMLFormElement) {
+    const fd = new FormData(form);
+    // Confirmación de edad: solo se exige si el evento la pide (configurable).
+    const ageOk = event.require_age_confirmation ? fd.get('age_ok') === '1' : true;
+    if (event.require_age_confirmation && !ageOk) { toast.error(`Tienes que confirmar que eres mayor de ${event.min_age} años`); return; }
+    const input: Omit<CheckoutInput, 'sessionId'> = {
+      eventId: event.id, brandId: brand.id,
+      buyerName: String(fd.get('buyer_name') ?? '').trim(),
+      buyerEmail: String(fd.get('buyer_email') ?? '').trim(),
+      buyerPhone: String(fd.get('buyer_phone') ?? '').trim(),
+      buyerDocType: docType,
+      buyerDni: String(fd.get('buyer_dni') ?? '').trim(),
+      ageOk, marketingOptIn: fd.get('marketing_opt_in') === '1',
+      method,
+      items: event.collect_attendee_names
+        ? itemsForPromo.map((it) => ({ ...it, attendeeNames: (attendeeNames[it.ticketTypeId] ?? []).slice(0, it.quantity) }))
+        : itemsForPromo,
+      promoCode: applied?.code,
+    };
+    startTransition(async () => {
+      const res = await startCheckout({ ...input, sessionId: sessionIdRef.current });
+      if (!res.ok) { toast.error(res.message ?? 'Error en el checkout'); return; }
+      if ('mp' in res) { if (mpPublicKey) setMpCheckout(res.mp); else window.location.href = res.mp.initPoint; return; }
+      if ('redirectUrl' in res) window.location.href = res.redirectUrl;
+    });
+  }
+
+  if (sorted.length === 0) {
+    return (
+      <section className="c-co">
+        <div className="c-card" style={{ textAlign: 'center', color: 'var(--ink-2)' }}>Las entradas estarán disponibles pronto.</div>
+      </section>
+    );
+  }
+
+  const activeStep = mpCheckout ? 2 : step;
+  const lineItems = selectedTypes.map((t) => ({ id: t.id, name: t.name, q: qty[t.id]!, amount: qty[t.id]! * t.active_price_cents }));
+
+  // CTA del rail según paso (paso 1 = Continuar; paso 2 = submit del form).
+  const railCta = mpCheckout ? null : step === 1 ? (
+    <button type="button" className="c-btn c-btn--brand c-btn--block c-btn--lg" disabled={totalItems === 0} onClick={() => setStep(2)}>
+      Continuar <ArrowRight className="h-4 w-4" />
+    </button>
+  ) : (
+    <button type="submit" form="checkout-form" className="c-btn c-btn--brand c-btn--block c-btn--lg" disabled={isPending}>
+      {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+      {!isPending && method === 'mercadopago' && !applied?.isFree && <Lock className="h-4 w-4" />}
+      {ctaLabel}
+    </button>
+  );
+
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        const fd = new FormData(e.currentTarget);
-        // Confirmación de edad: solo se exige si el evento la pide (configurable).
-        const ageOk = event.require_age_confirmation ? fd.get('age_ok') === '1' : true;
-        if (event.require_age_confirmation && !ageOk) { toast.error(`Tienes que confirmar que eres mayor de ${event.min_age} años`); return; }
-        onSubmit({
-          eventId: event.id, brandId: brand.id,
-          buyerName: String(fd.get('buyer_name') ?? '').trim(),
-          buyerEmail: String(fd.get('buyer_email') ?? '').trim(),
-          buyerPhone: String(fd.get('buyer_phone') ?? '').trim(),
-          buyerDocType: docType,
-          buyerDni: String(fd.get('buyer_dni') ?? '').trim(),
-          ageOk, marketingOptIn: fd.get('marketing_opt_in') === '1',
-          method,
-          items: event.collect_attendee_names
-            ? itemsForPromo.map((it) => ({ ...it, attendeeNames: (attendeeNames[it.ticketTypeId] ?? []).slice(0, it.quantity) }))
-            : itemsForPromo,
-          promoCode: applied?.code,
-        });
-      }}
-      style={{ display: 'grid', gap: 20, gridTemplateColumns: 'minmax(0,1fr) 360px', alignItems: 'start' }}
-      className="c-checkout-grid"
-    >
-      {/* Columna form */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {/* "Cómo pagas" va ARRIBA de "Tus datos": el comprador elige método
-            antes de tipear sus datos (mejora de orden, sin tocar inputs). */}
-        {!applied?.isFree && (
-          <div className="c-card">
-            <p className="c-card__title">Cómo pagas</p>
-            <div role="radiogroup" aria-label="Método de pago" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {brand.yape_number && (
-                <PayOption kind="yape" selected={method === 'yape_manual'} onClick={() => setMethod('yape_manual')} title="Yape" sub="Validación en 5–15 min" note={`Yapeas a ${brand.yape_holder ?? brand.name} y nos envías la captura.`} />
-              )}
-              {mpConfigured && (
-                <PayOption kind="mp" selected={method === 'mercadopago'} onClick={() => setMethod('mercadopago')} title="Tarjeta · MercadoPago" sub="Pago con tarjeta — tu QR al instante" note="Procesado de forma segura por MercadoPago." />
-              )}
-            </div>
-            {/* Aviso Yape visible en mobile Y desktop (mejora 4): anticipa el paso
-                siguiente para que nadie se sorprenda al salir del formulario. */}
-            {isYape && (
-              <p className="c-yape-heads" style={{ marginTop: 12, borderRadius: 'var(--r-ctl)', background: '#F6F0FB', color: '#742384', padding: '10px 13px', fontSize: 12.5, fontWeight: 500, lineHeight: 1.4 }}>
-                Con Yape: en la pantalla siguiente yapeas y subes tu comprobante. Tu QR llega cuando el organizador confirme (5–15 min).
-              </p>
-            )}
-          </div>
-        )}
+    <section id="entradas" className="c-co">
+      <Stepper active={activeStep} onGoStep1={() => { if (step === 2 && !mpCheckout) setStep(1); }} />
 
-        <div className="c-card">
-          <p className="c-card__title">Tus datos</p>
-          <div className="c-field">
-            <label htmlFor="buyer_name" className="c-label">Nombre y apellido</label>
-            <input id="buyer_name" name="buyer_name" autoComplete="name" required placeholder="María López" className="c-input" />
-          </div>
-          <div className="c-field">
-            <label htmlFor="buyer_email" className="c-label">Email</label>
-            <input id="buyer_email" name="buyer_email" type="email" autoComplete="email" required placeholder="tu@email.com" className="c-input" inputMode="email"
-              onBlur={() => { if (promoInput.trim().length >= 2 && !applied && !checking) applyPromo(); }} />
-            <p className="c-help">Aquí te llega tu QR al instante.</p>
-          </div>
-          <div className="c-field">
-            <label htmlFor="buyer_phone" className="c-label">WhatsApp</label>
-            <input id="buyer_phone" name="buyer_phone" type="tel" autoComplete="tel" required minLength={9} maxLength={20} inputMode="tel" pattern="^[+\d][\d\s\(\)\-]{7,19}$" placeholder="+51 999 999 999" className="c-input" />
-          </div>
-          {event.require_dni && (
-          <div className="c-field">
-            <label htmlFor="buyer_dni" className="c-label">Documento de identidad</label>
-            <div className="c-doc">
-              <select aria-label="Tipo de documento" value={docType} onChange={(e) => setDocType(e.target.value as 'dni' | 'ce' | 'passport')} className="c-input">
-                <option value="dni">DNI</option>
-                <option value="ce">CE</option>
-                <option value="passport">Pasaporte</option>
-              </select>
-              <input
-                id="buyer_dni" name="buyer_dni" required
-                inputMode={docType === 'dni' ? 'numeric' : 'text'}
-                maxLength={docType === 'dni' ? 8 : 15}
-                pattern={docType === 'dni' ? '\\d{8}' : '[A-Za-z0-9]{6,15}'}
-                placeholder={docType === 'dni' ? '8 dígitos' : `Número de ${docLabel.toLowerCase()}`}
-                autoComplete="off" className="c-input"
-              />
+      <div className="c-co__grid">
+        {/* ---------------- Columna principal ---------------- */}
+        <div className="c-co__main">
+          {mpCheckout && mpPublicKey ? (
+            <div className="c-stepwrap">
+              <div className="c-card">
+                <p className="c-card__title">Pagar con tarjeta</p>
+                <MercadoPagoWallet publicKey={mpPublicKey} preferenceId={mpCheckout.preferenceId} initPoint={mpCheckout.initPoint} />
+              </div>
             </div>
-            <p className="c-help">Para validar tu identidad en la puerta. No lo compartimos.</p>
-          </div>
-          )}
-          {event.require_age_confirmation && (
-            <div className="c-field">
-              <label className="c-check">
-                <input type="checkbox" name="age_ok" value="1" required />
-                <span>Confirmo que soy mayor de {event.min_age} años (requerido para ingresar).</span>
-              </label>
-            </div>
-          )}
-          <div className="c-field">
-            <label className="c-check">
-              <input type="checkbox" name="marketing_opt_in" value="1" defaultChecked />
-              <span>Quiero recibir info de los próximos eventos de {brand.name}.</span>
-            </label>
-          </div>
-        </div>
+          ) : step === 1 ? (
+            <div className="c-stepwrap" key="step1">
+              <HeroCard event={event} brand={brand} shareUrl={shareUrl} />
 
-        {event.collect_attendee_names && selectedTypes.length > 0 && (
-          <div className="c-card">
-            <p className="c-card__title">¿Quiénes asisten?</p>
-            <p className="c-muted" style={{ fontSize: 12.5, marginBottom: 10 }}>Pon el nombre de cada asistente (opcional). Aparece en cada entrada. Si lo dejas vacío, usamos tu nombre.</p>
-            <div className="c-stack" style={{ gap: 12 }}>
-              {selectedTypes.map((t) => (
-                <div key={t.id}>
-                  <p className="c-label" style={{ marginBottom: 6 }}>{t.name}</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {Array.from({ length: qty[t.id] ?? 0 }).map((_, i) => (
-                      <input
-                        key={i}
-                        className="c-input"
-                        placeholder={`Asistente ${i + 1}`}
-                        maxLength={120}
-                        autoComplete="off"
-                        value={attendeeNames[t.id]?.[i] ?? ''}
-                        onChange={(e) => setAttendee(t.id, i, e.target.value)}
-                      />
-                    ))}
+              {/* ENTRADAS */}
+              <section>
+                <div className="c-co__sechead">
+                  <span className="c-card__title" style={{ margin: 0 }}>— Elegí tus entradas</span>
+                  {event.venue_name && <span className="c-co__sechead-meta">{fmtDateShort(event.starts_at)} · {event.venue_name}</span>}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {sorted.map((t, i) => {
+                    const soldOut = t.soldOut;
+                    const cur = qty[t.id] ?? 0;
+                    const perks = (t.description ?? '').split('\n').filter(Boolean);
+                    const ttStyle = { '--i': i, ...(t.color_hex ? { '--tt-accent': t.color_hex } : {}) } as React.CSSProperties;
+                    return (
+                      <article key={t.id} className={`c-tt ${cur > 0 ? 'c-tt--active' : ''} ${soldOut ? 'c-tt--out' : ''}`} style={ttStyle}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                            <h3 className="c-tt__name">{t.name}</h3>
+                            <span className="c-tt__price">{formatPEN(t.active_price_cents)}</span>
+                          </div>
+                          {perks.length > 0 && (
+                            <ul className="c-tt__perks">{perks.map((p, idx) => <li key={idx}><span style={{ color: 'var(--brand-ink)' }}>·</span> {p}</li>)}</ul>
+                          )}
+                          {t.bulk_min_qty > 0 && t.bulk_discount_pct > 0 && (
+                            <p style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: 'var(--brand-ink)' }}>
+                              🎟️ Lleva {t.bulk_min_qty}+ y pagas {t.bulk_discount_pct}% menos
+                            </p>
+                          )}
+                          {!soldOut && <PhaseTiming tt={t} />}
+                        </div>
+                        {soldOut ? (
+                          <span className="c-soldout">Agotado</span>
+                        ) : cur === 0 ? (
+                          <button type="button" onClick={() => inc(t)} aria-label={`Sumar ${t.name}`} className="c-qbtn c-qbtn--add"><Plus className="h-4 w-4" /></button>
+                        ) : (
+                          <div className="c-qty">
+                            <button type="button" onClick={() => dec(t)} aria-label={`Restar ${t.name}`} className="c-qbtn"><Minus className="h-4 w-4" /></button>
+                            <span className="c-qval">{cur}</span>
+                            <button type="button" onClick={() => inc(t)} aria-label={`Sumar ${t.name}`} className="c-qbtn c-qbtn--add"><Plus className="h-4 w-4" /></button>
+                          </div>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+
+                {/* Código de promotor (opcional): se aplica en el paso 2 con el email. */}
+                <div style={{ marginTop: 16 }}>
+                  {showPromo ? (
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', maxWidth: 440 }}>
+                      <input value={promoInput} onChange={(e) => setPromoInput(e.target.value)} placeholder="Código de promotor" autoCapitalize="characters" maxLength={32} className="c-input" style={{ textTransform: 'uppercase', letterSpacing: '0.04em' }} />
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => setShowPromo(true)} className="c-promo-toggle">
+                      <span aria-hidden className="c-promo-toggle__plus">+</span> ¿Tenés un código de promotor?
+                    </button>
+                  )}
+                </div>
+              </section>
+
+              <DondeCard event={event} />
+            </div>
+          ) : (
+            <div className="c-stepwrap" key="step2">
+              <form
+                id="checkout-form"
+                onSubmit={(e) => { e.preventDefault(); submitCheckout(e.currentTarget); }}
+                style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+              >
+                {/* TUS DATOS */}
+                <div className="c-card">
+                  <p className="c-card__title">Tus datos</p>
+                  <div className="c-field">
+                    <label htmlFor="buyer_name" className="c-label">Nombre y apellido</label>
+                    <input id="buyer_name" name="buyer_name" autoComplete="name" required placeholder="María López" className="c-input" />
+                  </div>
+                  <div className="c-field">
+                    <label htmlFor="buyer_email" className="c-label">Email</label>
+                    <input id="buyer_email" name="buyer_email" type="email" autoComplete="email" required placeholder="tu@email.com" className="c-input" inputMode="email"
+                      onBlur={() => { if (promoInput.trim().length >= 2 && !applied && !checking) applyPromo(); }} />
+                    <p className="c-help">Aquí te llega tu QR al instante.</p>
+                  </div>
+                  <div className="c-field">
+                    <label htmlFor="buyer_phone" className="c-label">WhatsApp</label>
+                    <input id="buyer_phone" name="buyer_phone" type="tel" autoComplete="tel" required minLength={9} maxLength={20} inputMode="tel" pattern="^[+\d][\d\s\(\)\-]{7,19}$" placeholder="+51 999 999 999" className="c-input" />
+                  </div>
+                  {event.require_dni && (
+                    <div className="c-field">
+                      <label htmlFor="buyer_dni" className="c-label">Documento de identidad</label>
+                      <div className="c-doc">
+                        <select aria-label="Tipo de documento" value={docType} onChange={(e) => setDocType(e.target.value as 'dni' | 'ce' | 'passport')} className="c-input">
+                          <option value="dni">DNI</option>
+                          <option value="ce">CE</option>
+                          <option value="passport">Pasaporte</option>
+                        </select>
+                        <input
+                          id="buyer_dni" name="buyer_dni" required
+                          inputMode={docType === 'dni' ? 'numeric' : 'text'}
+                          maxLength={docType === 'dni' ? 8 : 15}
+                          pattern={docType === 'dni' ? '\\d{8}' : '[A-Za-z0-9]{6,15}'}
+                          placeholder={docType === 'dni' ? '8 dígitos' : `Número de ${docLabel.toLowerCase()}`}
+                          autoComplete="off" className="c-input"
+                        />
+                      </div>
+                      <p className="c-help">Para validar tu identidad en la puerta. No lo compartimos.</p>
+                    </div>
+                  )}
+                  {event.require_age_confirmation && (
+                    <div className="c-field">
+                      <label className="c-check">
+                        <input type="checkbox" name="age_ok" value="1" required />
+                        <span>Confirmo que soy mayor de {event.min_age} años (requerido para ingresar).</span>
+                      </label>
+                    </div>
+                  )}
+                  <div className="c-field">
+                    <label className="c-check">
+                      <input type="checkbox" name="marketing_opt_in" value="1" defaultChecked />
+                      <span>Quiero recibir info de los próximos eventos de {brand.name}.</span>
+                    </label>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
 
-        {/* Código colapsado: link discreto que expande el input. Si ya hay un
-            código aplicado o vino por ?ref, se muestra expandido de entrada. */}
-        {applied ? (
-          <div className="c-card">
-            <p className="c-card__title">¿Tienes un código?</p>
-            <div className="c-promo-on">
-              <div>
-                <span style={{ fontWeight: 700, color: 'var(--brand-ink)'}}>{applied.code}</span>
-                <p className="c-muted" style={{ fontSize: 12.5, marginTop: 2 }}>{applied.isFree ? '¡Entrada gratis!' : `Descuento: -${formatPEN(applied.discountCents)}`}</p>
-              </div>
-              <button type="button" className="c-btn c-btn--ghost" onClick={() => { setApplied(null); setPromoInput(''); }}>Quitar</button>
+                {event.collect_attendee_names && selectedTypes.length > 0 && (
+                  <div className="c-card">
+                    <p className="c-card__title">¿Quiénes asisten?</p>
+                    <p className="c-muted" style={{ fontSize: 12.5, marginBottom: 10 }}>Pon el nombre de cada asistente (opcional). Aparece en cada entrada. Si lo dejas vacío, usamos tu nombre.</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {selectedTypes.map((t) => (
+                        <div key={t.id}>
+                          <p className="c-label" style={{ marginBottom: 6 }}>{t.name}</p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {Array.from({ length: qty[t.id] ?? 0 }).map((_, i) => (
+                              <input
+                                key={i}
+                                className="c-input"
+                                placeholder={`Asistente ${i + 1}`}
+                                maxLength={120}
+                                autoComplete="off"
+                                value={attendeeNames[t.id]?.[i] ?? ''}
+                                onChange={(e) => setAttendee(t.id, i, e.target.value)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* PAGO (pestañas adaptadas a los métodos reales) */}
+                {!applied?.isFree && (
+                  <div className="c-card">
+                    <p className="c-card__title">Pago</p>
+                    <div className="c-paytabs" role="radiogroup" aria-label="Método de pago">
+                      {brand.yape_number && (
+                        <button type="button" role="radio" aria-checked={method === 'yape_manual'} className={`c-paytab ${method === 'yape_manual' ? 'c-paytab--on' : ''}`} onClick={() => setMethod('yape_manual')}>Yape</button>
+                      )}
+                      {mpConfigured && (
+                        <button type="button" role="radio" aria-checked={method === 'mercadopago'} className={`c-paytab ${method === 'mercadopago' ? 'c-paytab--on' : ''}`} onClick={() => setMethod('mercadopago')}>Tarjeta</button>
+                      )}
+                    </div>
+                    {isYape ? (
+                      <div className="c-paypanel">
+                        <p style={{ fontSize: 14, fontWeight: 700 }}>Yapeas a {brand.yape_holder ?? brand.name}</p>
+                        <p className="c-muted" style={{ fontSize: 13, marginTop: 4 }}>En la pantalla siguiente yapeas y subes tu comprobante. Tu QR llega cuando el organizador confirme (5–15 min).</p>
+                      </div>
+                    ) : method === 'mercadopago' ? (
+                      <div className="c-paypanel">
+                        <div className="c-cardmarks">
+                          <span className="c-cardmark">VISA</span>
+                          <span className="c-cardmark">Mastercard</span>
+                          <span className="c-cardmark">AMEX</span>
+                        </div>
+                        <p className="c-muted" style={{ fontSize: 13, marginTop: 8 }}>Procesado de forma segura por MercadoPago. Tu QR llega al instante.</p>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+
+                {/* Código de promotor (si no se ingresó en el paso 1 o para verlo aplicado) */}
+                {applied ? (
+                  <div className="c-card">
+                    <p className="c-card__title">¿Tienes un código?</p>
+                    <div className="c-promo-on">
+                      <div>
+                        <span style={{ fontWeight: 700, color: 'var(--brand-ink)' }}>{applied.code}</span>
+                        <p className="c-muted" style={{ fontSize: 12.5, marginTop: 2 }}>{applied.isFree ? '¡Entrada gratis!' : `Descuento: -${formatPEN(applied.discountCents)}`}</p>
+                      </div>
+                      <button type="button" className="c-btn c-btn--ghost" onClick={() => { setApplied(null); setPromoInput(''); }}>Quitar</button>
+                    </div>
+                  </div>
+                ) : showPromo ? (
+                  <div className="c-card">
+                    <p className="c-card__title">¿Tienes un código?</p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input value={promoInput} onChange={(e) => setPromoInput(e.target.value)} placeholder="Código de RRPP" autoCapitalize="characters" maxLength={32} className="c-input" style={{ textTransform: 'uppercase' }} />
+                      <button type="button" className="c-btn c-btn--soft" onClick={applyPromo} disabled={checking || promoInput.trim().length < 2}>
+                        {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" className="c-promo-toggle" onClick={() => setShowPromo(true)}>
+                    <span aria-hidden className="c-promo-toggle__plus">+</span> ¿Tienes un código de descuento?
+                  </button>
+                )}
+
+                <button type="button" onClick={() => setStep(1)} className="c-co__back">← Volver a entradas</button>
+              </form>
             </div>
-          </div>
-        ) : showPromo ? (
-          <div className="c-card">
-            <p className="c-card__title">¿Tienes un código?</p>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input value={promoInput} onChange={(e) => setPromoInput(e.target.value)} placeholder="Código de RRPP" autoCapitalize="characters" maxLength={32} className="c-input" style={{ textTransform: 'uppercase' }} autoFocus />
-              <button type="button" className="c-btn c-btn--soft" onClick={applyPromo} disabled={checking || promoInput.trim().length < 2}>
-                {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button type="button" className="c-promo-toggle" onClick={() => setShowPromo(true)} style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: '2px 0', color: 'var(--brand-ink)', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
-            ¿Tienes un código de descuento?
-          </button>
-        )}
+          )}
+        </div>
+
+        {/* ---------------- Rail de resumen (sticky) ---------------- */}
+        <aside className="c-co__rail">
+          <SummaryRail
+            event={event} lineItems={lineItems} applied={applied} bulkSavings={bulkSavings}
+            finalTotal={finalTotal} countdownLabel={countdownLabel} secondsLeft={secondsLeft}
+            totalItems={totalItems} isYape={isYape && step === 2} cta={railCta}
+          />
+        </aside>
       </div>
 
-      {/* Columna resumen (confianza) */}
-      <aside style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 76 }}>
-        <div className="c-card">
-          <p className="c-card__title">Tu compra</p>
-          <p className="c-h2">{event.name}</p>
-          <p className="c-muted-3" style={{ fontSize: 13, marginTop: 2 }}>{new Date(event.starts_at).toLocaleString('es-PE', { timeZone: 'America/Lima' })}</p>
-          <div style={{ marginTop: 14 }}>
-            {sorted.filter((t) => (qty[t.id] ?? 0) > 0).map((t) => {
-              const q = qty[t.id]!;
-              return (
-                <div key={t.id} className="c-sum__row"><span>{q}× {t.name}</span><span className="v">{formatPEN(q * t.active_price_cents)}</span></div>
-              );
-            })}
-            {applied && <div className="c-sum__row c-sum__discount"><span>Código {applied.code}</span><span className="v">−{formatPEN(applied.discountCents)}</span></div>}
-            {!applied && bulkSavings > 0 && <div className="c-sum__row c-sum__discount"><span>Descuento por cantidad</span><span className="v">−{formatPEN(bulkSavings)}</span></div>}
+      {/* CTA sticky SOLO en mobile */}
+      {!mpCheckout && (
+        <div className="c-mobilecta">
+          <div className="c-mobilecta__t">
+            <span className="n">{step === 1 ? `${totalItems} entrada${totalItems === 1 ? '' : 's'}` : 'Total'}</span>
+            <span className="v"><span key={finalTotal} className="c-amount">{formatPEN(step === 1 ? totalCents : finalTotal)}</span></span>
           </div>
-          <div className="c-sum__total"><span className="l">Total</span><span className="v"><span key={finalTotal} className="c-amount">{formatPEN(finalTotal)}</span></span></div>
-          <p className="c-muted-3" style={{ fontSize: 11.5, textAlign: 'right', marginTop: 2 }}>IGV incluido · sin costos ocultos</p>
+          {step === 1 ? (
+            <button type="button" className="c-btn c-btn--brand" disabled={totalItems === 0} onClick={() => setStep(2)}>
+              Continuar <ArrowRight className="h-4 w-4" />
+            </button>
+          ) : (
+            <button type="submit" form="checkout-form" className="c-btn c-btn--brand" disabled={isPending}>
+              {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              {!isPending && method === 'mercadopago' && !applied?.isFree && <Lock className="h-4 w-4" />}
+              {ctaLabel}
+            </button>
+          )}
         </div>
-
-        <button type="submit" className="c-btn c-btn--brand c-btn--block c-btn--lg" disabled={isPending}>
-          {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-          {!isPending && method === 'mercadopago' && !applied?.isFree && <Lock className="h-4 w-4" />}
-          {ctaLabel}
-        </button>
-
-        {isYape && (
-          <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginTop: -4 }}>
-            Después: yapeas y subes tu comprobante.
-          </p>
-        )}
-
-        <p className="c-reassure"><Mail className="h-4 w-4" style={{ color: 'var(--brand-ink)'}} /> Recibes tu entrada con QR al instante por email.</p>
-        <div className="c-seals">
-          <span className="c-seal"><ShieldCheck className="h-4 w-4" /> Pago seguro</span>
-          <span className="c-seal"><Lock className="h-4 w-4" /> Datos protegidos</span>
-          <span className="c-seal"><Mail className="h-4 w-4" /> QR al instante</span>
-        </div>
-        <button type="button" onClick={onBack} className="c-btn c-btn--ghost" style={{ margin: '0 auto' }}>← Editar entradas</button>
-      </aside>
-
-      {/* CTA sticky SOLO en mobile: el total + pagar siempre a la vista sin
-          tener que scrollear hasta el final del formulario. Submite el form. */}
-      <div className="c-mobilecta">
-        <div className="c-mobilecta__t">
-          <span className="n">Total</span>
-          <span className="v"><span key={finalTotal} className="c-amount">{formatPEN(finalTotal)}</span></span>
-        </div>
-        <button type="submit" className="c-btn c-btn--brand" disabled={isPending}>
-          {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-          {!isPending && method === 'mercadopago' && !applied?.isFree && <Lock className="h-4 w-4" />}
-          {ctaLabel}
-        </button>
-      </div>
-    </form>
+      )}
+    </section>
   );
 }
 
-function PayOption({ selected, onClick, title, sub, note, kind }: { selected: boolean; onClick: () => void; title: string; sub: string; note: string; kind?: 'yape' | 'mp' }) {
+// ============================ Stepper ============================
+function Stepper({ active, onGoStep1 }: { active: number; onGoStep1: () => void }) {
+  const steps = [
+    { n: 1, label: 'ENTRADAS' },
+    { n: 2, label: 'DATOS' },
+    { n: 3, label: '¡LISTO!' },
+  ];
   return (
-    <button type="button" role="radio" aria-checked={selected} aria-label={`${title}. ${sub}`} onClick={onClick} className={`c-pay ${selected ? 'c-pay--on' : ''}`}>
-      <div className="c-pay__top">
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          {kind === 'yape' ? <span className="c-pmt c-pmt--yape">Yape</span>
-            : kind === 'mp' ? <span className="c-pmt c-pmt--mp">MercadoPago</span>
-            : <span className="c-pay__title">{title}</span>}
-        </span>
-        <span aria-hidden className="c-pay__radio" />
+    <div className="c-stepper" aria-label="Pasos de la compra">
+      {steps.map((s, i) => {
+        const done = active > s.n;
+        const on = active === s.n;
+        const clickable = s.n === 1 && active > 1;
+        return (
+          <span key={s.n} style={{ display: 'contents' }}>
+            {i > 0 && <span className="c-stepper__line" aria-hidden />}
+            <button
+              type="button"
+              className="c-stepper__item"
+              onClick={clickable ? onGoStep1 : undefined}
+              aria-current={on ? 'step' : undefined}
+              style={{ cursor: clickable ? 'pointer' : 'default' }}
+              disabled={!clickable}
+            >
+              <span className={`c-stepper__num ${on ? 'c-stepper__num--on' : done ? 'c-stepper__num--done' : ''}`}>{done ? '✓' : '0' + s.n}</span>
+              <span className={`c-stepper__label ${on || done ? 'c-stepper__label--on' : ''}`}>{s.label}</span>
+            </button>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+// ============================ Hero (tarjeta enmarcada) ============================
+function HeroCard({ event, brand, shareUrl }: { event: Event; brand: Brand; shareUrl: string }) {
+  const logoUrl = (brand.theme_json as { logo_url?: string | null } | null)?.logo_url ?? null;
+  const cover = event.cover_url ?? null;
+  return (
+    <section className="c-hcard">
+      <div className="c-hcard__poster">
+        {cover ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={optimizedImage(cover, { width: 360, quality: 82 })} alt={`Flyer de ${event.name}`} decoding="async" />
+        ) : (
+          <div className="c-hcard__poster-fallback"><span>{event.name}</span></div>
+        )}
+        {event.min_age > 0 && <div className="c-hcard__age">+{event.min_age}</div>}
       </div>
-      <p className="c-pay__sub">{sub}</p>
-      {kind === 'mp' && (
-        <div className="c-cardmarks" style={{ marginTop: 8 }}>
-          <span className="c-cardmark">VISA</span>
-          <span className="c-cardmark">Mastercard</span>
-          <span className="c-cardmark">AMEX</span>
+      <div className="c-hcard__body">
+        <span className="c-live"><span className="dot" /> Vendiendo ahora</span>
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="c-hcard__brand" src={optimizedImage(logoUrl, { width: 200, quality: 82 })} alt={brand.name} decoding="async" />
+        ) : (
+          <span className="c-hcard__by">por {brand.name}</span>
+        )}
+        <h1 className="c-hcard__title">{event.name}</h1>
+        {event.description && <p className="c-hcard__lineup">{event.description}</p>}
+        <div className="c-hcard__meta">
+          <span>◆ {fmtDateShort(event.starts_at)} · {fmtTime(event.starts_at)}</span>
+          {event.venue_name && <span>◆ {event.venue_name}</span>}
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <ShareEvent eventName={event.name} shareUrl={shareUrl} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ============================ Dónde (mapa real) ============================
+function DondeCard({ event }: { event: Event }) {
+  if (!event.venue_address && !event.refund_policy) return null;
+  const mapsHref = event.venue_maps_url?.startsWith('https://')
+    ? event.venue_maps_url
+    : event.venue_lat && event.venue_lng
+      ? `https://www.google.com/maps/search/?api=1&query=${event.venue_lat},${event.venue_lng}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue_address ?? '')}`;
+  return (
+    <section>
+      <div className="c-card__title">— Dónde</div>
+      <div className="c-donde">
+        {event.venue_address && (
+          <div className="c-donde__map">
+            <iframe
+              title={`Mapa de ${event.venue_name ?? 'la ubicación'}`}
+              src={`https://www.google.com/maps?q=${encodeURIComponent(event.venue_address)}&z=16&output=embed`}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+        )}
+        <div className="c-donde__info">
+          {event.venue_name && <div className="c-h2">{event.venue_name}</div>}
+          {event.venue_address && <p className="c-muted" style={{ marginTop: 4 }}>{event.venue_address}</p>}
+          {event.refund_policy && (
+            <p className="c-donde__refund"><b>DEVOLUCIONES ·</b> {event.refund_policy}</p>
+          )}
+          {event.venue_address && (
+            <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="c-donde__link">
+              Cómo llegar <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ============================ Rail de resumen ============================
+function SummaryRail({
+  event, lineItems, applied, bulkSavings, finalTotal, countdownLabel, secondsLeft, totalItems, isYape, cta,
+}: {
+  event: Event;
+  lineItems: { id: string; name: string; q: number; amount: number }[];
+  applied: null | { code: string; discountCents: number; isFree: boolean };
+  bulkSavings: number; finalTotal: number; countdownLabel: string | null; secondsLeft: number | null;
+  totalItems: number; isYape: boolean; cta: React.ReactNode;
+}) {
+  const cover = event.cover_url ?? null;
+  return (
+    <div className="c-rail">
+      <div className="c-rail__head">
+        {cover && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={optimizedImage(cover, { width: 140, quality: 80 })} alt="" decoding="async" />
+        )}
+        <div style={{ minWidth: 0 }}>
+          <div className="c-rail__name">{event.name}</div>
+          <div className="c-rail__meta">{fmtDateShort(event.starts_at)} · {fmtTime(event.starts_at)}</div>
+          {event.venue_name && <div className="c-rail__meta">{event.venue_name}</div>}
+        </div>
+      </div>
+
+      {countdownLabel && totalItems > 0 && (
+        <div className={`c-rail__timer ${secondsLeft !== null && secondsLeft < 60 ? 'c-rail__timer--soon' : ''}`} aria-live="polite">
+          <Clock className="h-3.5 w-3.5" /> Entradas reservadas por <b style={{ fontVariantNumeric: 'tabular-nums' }}>{countdownLabel}</b>
         </div>
       )}
-      <p className="c-pay__note">{note}</p>
-    </button>
+
+      <div className="c-rail__body">
+        <p className="c-rail__label">Tu compra</p>
+        {totalItems === 0 ? (
+          <p className="c-rail__empty">Aún no elegiste entradas. Sumá al menos una para continuar.</p>
+        ) : (
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+              {lineItems.map((l) => (
+                <div key={l.id} className="c-sum__row"><span>{l.q}× {l.name}</span><span className="v">{formatPEN(l.amount)}</span></div>
+              ))}
+              {applied && <div className="c-sum__row c-sum__discount"><span>Código {applied.code}</span><span className="v">−{formatPEN(applied.discountCents)}</span></div>}
+              {!applied && bulkSavings > 0 && <div className="c-sum__row c-sum__discount"><span>Descuento por cantidad</span><span className="v">−{formatPEN(bulkSavings)}</span></div>}
+            </div>
+            <div className="c-sum__total"><span className="l">Total</span><span className="v"><span key={finalTotal} className="c-amount">{formatPEN(finalTotal)}</span></span></div>
+            <p className="c-muted-3" style={{ fontSize: 11.5, textAlign: 'right', marginTop: 2 }}>IGV incluido · sin costos ocultos</p>
+          </>
+        )}
+
+        {cta && <div style={{ marginTop: 18 }}>{cta}</div>}
+        {isYape && <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12, marginTop: 10 }}>Después: yapeas y subes tu comprobante.</p>}
+        <p className="c-rail__secure"><Lock className="h-3.5 w-3.5" /> Pago seguro · encriptado de extremo a extremo</p>
+      </div>
+    </div>
   );
 }

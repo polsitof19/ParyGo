@@ -1,15 +1,12 @@
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import type { Metadata } from 'next';
-import { Calendar, MapPin, ShieldCheck, ExternalLink } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv, publicEnv } from '@/lib/env';
 import { formatPEN } from '@/lib/utils';
-import { optimizedImage } from '@/lib/imageUrl';
 import { EventCheckoutPanel } from './EventCheckoutPanel';
 import { EventStructuredData } from './EventStructuredData';
-import { ShareEvent } from './ShareEvent';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -166,74 +163,18 @@ export default async function EventPage({ params, searchParams }: Props) {
     }
   }
 
-  const startsAt = new Date(event.starts_at);
-
   // El panel del COMPRADOR no recibe capacity/sold (no se filtran al cliente);
   // solo el booleano soldOut. EventStructuredData (server-side) sí los usa.
   const panelTypes = ticketTypes.map(({ capacity: _cap, sold: _sold, ...rest }) => rest);
 
-  const dateLabel = new Intl.DateTimeFormat('es-PE', {
-    weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima',
-  }).format(startsAt);
-  const hasCover = Boolean(event.cover_url);
+  const shareUrl = `https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${event.slug}`;
 
   return (
     <>
       <EventStructuredData brand={brand} event={event} ticketTypes={ticketTypes} />
 
       <article style={{ paddingBottom: 64 }}>
-        {/* HERO / PORTADA */}
-        <section className={`c-hero ${hasCover ? 'c-hero--img' : 'c-hero--tint'}`}>
-          <div className="c-hero__bg">
-            {hasCover && (
-              <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={optimizedImage(event.cover_url, { width: 1080, quality: 72 })} alt="" className="c-hero__img" fetchPriority="high" decoding="async" />
-                {/* Velo tintado con el color de la marca abajo → cada flyer se siente propio de la marca */}
-                <div className="c-hero__veil" style={{ background: 'linear-gradient(180deg, rgba(20,14,10,.12) 0%, rgba(20,14,10,.50) 62%, color-mix(in srgb, var(--brand) 55%, rgba(20,14,10,.82)) 100%)' }} />
-              </>
-            )}
-          </div>
-          <div className={`c-hero__inner ${hasCover ? 'c-hero__inner--poster' : ''}`}>
-            <div className="c-hero__copy">
-              <span className="c-live"><span className="dot" /> Vendiendo ahora</span>
-              {/* Logo de la marca sobre el hero (o "por {marca}" si no hay logo).
-                  Sobre c-hero--img el texto es blanco, así que el logo lleva
-                  drop-shadow suave para verse bien sobre fondo oscuro. */}
-              {(() => {
-                const logoUrl = (brand.theme_json as { logo_url?: string | null } | null)?.logo_url;
-                if (logoUrl) {
-                  return (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img className="c-hero__brand" src={optimizedImage(logoUrl, { width: 200, quality: 82 })} alt={brand.name} decoding="async" />
-                  );
-                }
-                return <span className="c-hero__by">por {brand.name}</span>;
-              })()}
-              <h1>{event.name}</h1>
-              {event.description && <p className="c-hero__desc">{event.description}</p>}
-              <div className="c-chips">
-                <span className="c-chip"><Calendar className="h-4 w-4" /> {dateLabel}</span>
-                {event.venue_name && <span className="c-chip"><MapPin className="h-4 w-4" /> {event.venue_name}</span>}
-                {event.min_age > 0 && <span className="c-chip"><ShieldCheck className="h-4 w-4" /> +{event.min_age}</span>}
-              </div>
-              <ShareEvent
-                eventName={event.name}
-                shareUrl={`https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${event.slug}`}
-              />
-            </div>
-            {hasCover && (
-              // Flyer nítido como póster (no solo fondo borroso): el arte real del
-              // evento, enmarcado y de alta calidad. El fondo queda como ambiente.
-              <div className="c-hero__poster">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={optimizedImage(event.cover_url, { width: 760, quality: 82 })} alt={`Flyer de ${event.name}`} decoding="async" />
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* PANEL DE CHECKOUT */}
+        {/* CHECKOUT (hero, entradas, datos/pago, resumen y "dónde" viven en el panel) */}
         <EventCheckoutPanel
           brand={brand}
           event={event}
@@ -241,49 +182,8 @@ export default async function EventPage({ params, searchParams }: Props) {
           mpConfigured={mpConfigured}
           mpPublicKey={mpPublicKey}
           refCode={refCode}
+          shareUrl={shareUrl}
         />
-
-        {/* DÓNDE + DEVOLUCIONES */}
-        {(event.venue_address || event.refund_policy) && (
-          <section className="c-wrap" style={{ marginTop: 40, display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
-            {event.venue_address && (
-              <div className="c-card">
-                <p className="c-card__title">Dónde</p>
-                <p className="c-h2">{event.venue_name}</p>
-                <p className="c-muted" style={{ marginTop: 4 }}>{event.venue_address}</p>
-                {/* Mapa embed OFICIAL de Google (sin API key, lazy) — responsive */}
-                <div style={{ marginTop: 12, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--cream-3)', aspectRatio: '16 / 10', background: 'var(--cream-2)' }}>
-                  <iframe
-                    title={`Mapa de ${event.venue_name ?? 'la ubicación'}`}
-                    src={`https://www.google.com/maps?q=${encodeURIComponent(event.venue_address)}&z=16&output=embed`}
-                    style={{ border: 0, display: 'block', width: '100%', height: '100%' }}
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                  />
-                </div>
-                <a
-                  href={
-                    event.venue_maps_url?.startsWith('https://')
-                      ? event.venue_maps_url
-                      : event.venue_lat && event.venue_lng
-                        ? `https://www.google.com/maps/search/?api=1&query=${event.venue_lat},${event.venue_lng}`
-                        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue_address)}`
-                  }
-                  target="_blank" rel="noopener noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 12, color: 'var(--brand-ink)', fontWeight: 600, fontSize: 14 }}
-                >
-                  Cómo llegar <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </div>
-            )}
-            {event.refund_policy && (
-              <div className="c-card">
-                <p className="c-card__title">Devoluciones</p>
-                <p className="c-muted">{event.refund_policy}</p>
-              </div>
-            )}
-          </section>
-        )}
 
         {/* SOPORTE */}
         <p className="c-foot">
