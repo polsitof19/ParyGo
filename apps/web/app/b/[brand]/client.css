@@ -32,7 +32,7 @@
   color: var(--ink);
   font-family: var(--body);
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -44,8 +44,8 @@
 
 /* type */
 .client-shell .c-h1 { font-family: var(--display); font-weight: 800; letter-spacing: -0.02em; line-height: 1.02; }
-.client-shell .c-h2 { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; }
-.client-shell .c-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--brand-ink); }
+.client-shell .c-h2 { font-family: var(--display); font-weight: 700; font-size: 21px; letter-spacing: -0.02em; }
+.client-shell .c-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--brand-ink); }
 .client-shell .c-muted { color: var(--ink-2); }
 .client-shell .c-muted-3 { color: var(--ink-3); }
 
@@ -106,7 +106,7 @@
 .client-shell .c-step__line { flex: 1; min-width: 14px; height: 2px; background: var(--cream-3); border-radius: 2px; }
 
 /* card */
-.client-shell .c-card { background: var(--white); border: 1px solid var(--hairline); border-radius: var(--r-card); box-shadow: var(--shadow-sm); padding: 22px; }
+.client-shell .c-card { background: var(--white); border: 1px solid var(--hairline); border-radius: var(--r-card); box-shadow: var(--shadow-sm); padding: 24px; }
 .client-shell .c-card__title { font-family: var(--display); font-size: 13px; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; color: var(--brand-ink); margin-bottom: 14px; }
 
 /* ticket type row (selección) */
@@ -424,7 +424,7 @@
 .client-shell .c-hcard__body { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
 .client-shell .c-hcard__brand { display: block; height: 28px; width: auto; max-width: 150px; object-fit: contain; border-radius: 6px; }
 .client-shell .c-hcard__by { font-size: 13px; font-weight: 600; color: var(--ink-2); }
-.client-shell .c-hcard__title { font-family: var(--display); font-weight: 800; font-size: clamp(32px,4.4vw,54px); line-height: 0.94; letter-spacing: -0.03em; margin: 2px 0 0; }
+.client-shell .c-hcard__title { font-family: var(--display); font-weight: 800; font-size: clamp(32px,4.4vw,54px); line-height: 0.92; letter-spacing: -0.03em; margin: 2px 0 0; }
 .client-shell .c-hcard__lineup { font-family: var(--font-instrument), Georgia, serif; font-style: italic; font-size: clamp(16px,2vw,20px); line-height: 1.2; color: var(--ink-2); margin: 0; }
 .client-shell .c-hcard__meta { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--ink-2); }
 .client-shell .c-hcard__meta span { display: inline-flex; align-items: center; gap: 6px; }

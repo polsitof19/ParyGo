@@ -30,7 +30,7 @@ export default async function NewEventPage({
       </Link>
       <header style={{ marginBottom: 22 }}>
         <span className="eyebrow">Nuevo evento</span>
-        <h1 className="s-h1" style={{ marginTop: 4 }}>Crear evento</h1>
+        <h1 className="s-h1" style={{ marginTop: 8 }}>Crear evento</h1>
         <p className="s-card__desc">
           Solo super admin crea eventos. El dueño después edita contenido y tipos de entrada.
         </p>

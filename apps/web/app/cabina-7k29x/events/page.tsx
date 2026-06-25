@@ -17,7 +17,7 @@ export default async function EventsListPage() {
       <div className="s-pagehead">
         <div>
           <span className="eyebrow">Plataforma</span>
-          <h1 className="s-h1" style={{ marginTop: 4 }}>Eventos</h1>
+          <h1 className="s-h1" style={{ marginTop: 8 }}>Eventos</h1>
           <p className="s-card__desc">{events?.length ?? 0} evento{events?.length === 1 ? '' : 's'} en todas las marcas.</p>
         </div>
         <Link href="/cabina-7k29x/events/new" className="s-btn s-btn--primary">

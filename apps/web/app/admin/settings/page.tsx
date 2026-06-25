@@ -49,7 +49,7 @@ export default async function AdminSettingsPage() {
 
       <header style={{ marginBottom: 22 }}>
         <span className="eyebrow">Configuración · {brand.name}</span>
-        <h1 className="s-h1" style={{ marginTop: 4 }}>Tu marca</h1>
+        <h1 className="s-h1" style={{ marginTop: 8 }}>Tu marca</h1>
         <p className="s-card__desc">
           {impersonating
             ? 'Estás viendo la configuración de la marca en solo lectura. No puedes editarla desde aquí.'

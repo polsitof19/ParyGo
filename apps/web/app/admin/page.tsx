@@ -134,7 +134,7 @@ export default async function AdminHomePage() {
       <div className="s-pagehead">
         <div>
           <span className="eyebrow">{brand.name} · tu panel</span>
-          <h1 className="s-h1" style={{ marginTop: 4 }}>Tus eventos</h1>
+          <h1 className="s-h1" style={{ marginTop: 8 }}>Tus eventos</h1>
           <p className="s-card__desc">
             {events?.length ?? 0} evento{events?.length === 1 ? '' : 's'} · {publishedCount} publicado{publishedCount === 1 ? '' : 's'}
             {totalPending > 0 && <> · <span style={{ color: 'var(--alert)' }}>{totalPending} Yape por revisar</span></>}

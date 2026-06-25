@@ -26,7 +26,7 @@ export default function NewBrandPage({ searchParams }: { searchParams: { request
 
       <header style={{ marginBottom: 22 }}>
         <span className="eyebrow">{requestId ? 'Aprobar solicitud' : 'Nueva marca'}</span>
-        <h1 className="s-h1" style={{ marginTop: 4 }}>Crear marca y dueño</h1>
+        <h1 className="s-h1" style={{ marginTop: 8 }}>Crear marca y dueño</h1>
         <p className="s-card__desc">
           En un paso: la marca, su subdominio y el dueño con su acceso. El saldo se carga después con un clic.
         </p>

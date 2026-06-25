@@ -100,7 +100,7 @@ export default async function SuperHome() {
       <div className="s-pagehead">
         <div>
           <span className="eyebrow">Plataforma</span>
-          <h1 className="s-h1" style={{ marginTop: 4 }}>Marcas</h1>
+          <h1 className="s-h1" style={{ marginTop: 8 }}>Marcas</h1>
           <p className="s-card__desc">
             {rows.length} marca{rows.length === 1 ? '' : 's'}
             {noOwner > 0 && <> · <span style={{ color: 'var(--alert)' }}>{noOwner} sin dueño</span></>}
