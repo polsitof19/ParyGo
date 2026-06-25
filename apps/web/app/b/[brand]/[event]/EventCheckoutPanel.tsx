@@ -779,8 +779,8 @@ function SummaryRail({
           </>
         )}
 
-        {cta && <div style={{ marginTop: 18 }}>{cta}</div>}
-        {isYape && <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12, marginTop: 10 }}>Después: yapeas y subes tu comprobante.</p>}
+        {cta && <div className="c-rail__cta" style={{ marginTop: 18 }}>{cta}</div>}
+        {isYape && <p className="c-rail__cta c-muted-3" style={{ textAlign: 'center', fontSize: 12, marginTop: 10 }}>Después: yapeas y subes tu comprobante.</p>}
         <p className="c-rail__secure"><Lock className="h-3.5 w-3.5" /> Pago seguro · encriptado de extremo a extremo</p>
       </div>
     </div>
