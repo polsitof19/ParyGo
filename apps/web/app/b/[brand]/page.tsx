@@ -199,8 +199,13 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
         <div className="bl-foot-in">
           <span className="pg">parygo<i>.</i></span>
           <div className="bl-foot-q">
-            {waHref ? (
-              <>¿Consultas? <a href={waHref} target="_blank" rel="noopener noreferrer">WhatsApp {brand.name}</a></>
+            {(waHref || igHref) ? (
+              <>
+                ¿Consultas?{' '}
+                {waHref && <a href={waHref} target="_blank" rel="noopener noreferrer">WhatsApp {brand.name}</a>}
+                {waHref && igHref && ' · '}
+                {igHref && <a href={igHref} target="_blank" rel="noopener noreferrer">Instagram</a>}
+              </>
             ) : (
               <>{brand.name}</>
             )}
