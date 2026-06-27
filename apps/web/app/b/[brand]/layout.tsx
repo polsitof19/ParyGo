@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Bricolage_Grotesque, Hanken_Grotesk, Archivo, Inter, Instrument_Serif } from 'next/font/google';
+import { Bricolage_Grotesque, Hanken_Grotesk, Archivo, Inter, Instrument_Serif, Fredoka, Nunito } from 'next/font/google';
 import { createClient } from '@/lib/supabase/server';
 import { brandColor, brandInk, contrastOn, withAlpha } from './brandTheme';
 import { optimizedImage } from '@/lib/imageUrl';
@@ -16,6 +16,10 @@ const hanken = Hanken_Grotesk({ weight: ['400', '500', '600', '700'], subsets: [
 const archivo = Archivo({ weight: ['500', '600', '700', '800', '900'], subsets: ['latin'], variable: '--font-archivo', display: 'swap' });
 const inter = Inter({ weight: ['400', '500', '600'], subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 const instrument = Instrument_Serif({ weight: '400', style: 'italic', subsets: ['latin'], variable: '--font-instrument', display: 'swap' });
+// Landing de marca (.bl) — estilo limpio/pastel/juvenil. Solo se usan dentro de .bl
+// (vía --bl-disp/--bl-body); el checkout (.c-*) mantiene Bricolage/Hanken.
+const fredoka = Fredoka({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-fredoka', display: 'swap' });
+const nunito = Nunito({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], style: ['normal', 'italic'], variable: '--font-nunito', display: 'swap' });
 
 // Layout de las páginas públicas por marca. El middleware reescribe
 // <slug>.parygo.com/* → /b/<slug>/*, así que este segmento recibe el slug.
@@ -47,7 +51,7 @@ export default async function BrandLayout({
 
   return (
     <div
-      className={`client-shell ${bricolage.variable} ${hanken.variable} ${archivo.variable} ${inter.variable} ${instrument.variable}`}
+      className={`client-shell ${bricolage.variable} ${hanken.variable} ${archivo.variable} ${inter.variable} ${instrument.variable} ${fredoka.variable} ${nunito.variable}`}
       style={
         {
           '--brand': primary,
