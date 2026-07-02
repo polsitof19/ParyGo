@@ -22,6 +22,8 @@ const phaseSchema = z.object({
 
 const ticketTypeSchema = z.object({
   name: z.string().min(1).max(80),
+  // Descripción opcional del tipo (solo presentación en el checkout).
+  description: z.string().max(280).optional().or(z.literal('')),
   price_cents: z.number().int().min(0),
   capacity: z.number().int().min(0),
   is_unlimited: z.boolean(),

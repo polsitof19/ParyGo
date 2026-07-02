@@ -341,6 +341,15 @@ export function EventCheckoutPanel({
 
   const activeStep = mpCheckout ? 2 : step;
   const lineItems = selectedTypes.map((t) => ({ id: t.id, name: t.name, q: qty[t.id]!, amount: qty[t.id]! * t.active_price_cents }));
+  // Línea de confianza del rail: refleja los métodos REALES de la marca (mismas
+  // banderas que las pestañas de pago). Evita prometer un método no configurado.
+  const payLabel = brand.yape_number && mpConfigured
+    ? 'Pago con Yape o tarjeta'
+    : brand.yape_number
+      ? 'Pago con Yape'
+      : mpConfigured
+        ? 'Pago con tarjeta'
+        : 'Pago seguro';
 
   // CTA del rail según paso (paso 1 = Continuar; paso 2 = submit del form).
   const railCta = mpCheckout ? null : step === 1 ? (
@@ -407,9 +416,9 @@ export function EventCheckoutPanel({
                         ) : cur === 0 ? (
                           <button type="button" onClick={() => inc(t)} aria-label={`Sumar ${t.name}`} className="c-qbtn c-qbtn--add"><Plus className="h-4 w-4" /></button>
                         ) : (
-                          <div className="c-qty">
+                          <div className="c-qty" aria-live="polite">
                             <button type="button" onClick={() => dec(t)} aria-label={`Restar ${t.name}`} className="c-qbtn"><Minus className="h-4 w-4" /></button>
-                            <span className="c-qval">{cur}</span>
+                            <span key={cur} className="c-qval">{cur}</span>
                             <button type="button" onClick={() => inc(t)} aria-label={`Sumar ${t.name}`} className="c-qbtn c-qbtn--add"><Plus className="h-4 w-4" /></button>
                           </div>
                         )}
@@ -591,7 +600,7 @@ export function EventCheckoutPanel({
           <SummaryRail
             event={event} lineItems={lineItems} applied={applied} bulkSavings={bulkSavings}
             finalTotal={finalTotal} countdownLabel={countdownLabel} secondsLeft={secondsLeft}
-            totalItems={totalItems} isYape={isYape && step === 2} cta={railCta}
+            totalItems={totalItems} isYape={isYape && step === 2} cta={railCta} payLabel={payLabel}
           />
         </aside>
       </div>
@@ -670,7 +679,7 @@ function HeroCard({ event, brand, shareUrl }: { event: Event; brand: Brand; shar
         {event.min_age > 0 && <div className="c-hcard__age">+{event.min_age}</div>}
       </div>
       <div className="c-hcard__body">
-        <span className="c-live"><span className="dot" /> Vendiendo ahora</span>
+        <span className="c-live"><span className="dot" /> EN VIVO</span>
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img className="c-hcard__brand" src={optimizedImage(logoUrl, { width: 200, quality: 82 })} alt={brand.name} decoding="async" />
@@ -716,9 +725,7 @@ function DondeCard({ event }: { event: Event }) {
         <div className="c-donde__info">
           {event.venue_name && <div className="c-h2">{event.venue_name}</div>}
           {event.venue_address && <p className="c-muted" style={{ marginTop: 4 }}>{event.venue_address}</p>}
-          {event.refund_policy && (
-            <p className="c-donde__refund"><b>DEVOLUCIONES ·</b> {event.refund_policy}</p>
-          )}
+          <p className="c-donde__refund"><b>DEVOLUCIONES ·</b> {event.refund_policy || 'Sin devolución post-pago salvo cancelación del evento.'}</p>
           {event.venue_address && (
             <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="c-donde__link">
               Cómo llegar <ExternalLink className="h-3.5 w-3.5" />
@@ -732,13 +739,13 @@ function DondeCard({ event }: { event: Event }) {
 
 // ============================ Rail de resumen ============================
 function SummaryRail({
-  event, lineItems, applied, bulkSavings, finalTotal, countdownLabel, secondsLeft, totalItems, isYape, cta,
+  event, lineItems, applied, bulkSavings, finalTotal, countdownLabel, secondsLeft, totalItems, isYape, cta, payLabel,
 }: {
   event: Event;
   lineItems: { id: string; name: string; q: number; amount: number }[];
   applied: null | { code: string; discountCents: number; isFree: boolean };
   bulkSavings: number; finalTotal: number; countdownLabel: string | null; secondsLeft: number | null;
-  totalItems: number; isYape: boolean; cta: React.ReactNode;
+  totalItems: number; isYape: boolean; cta: React.ReactNode; payLabel: string;
 }) {
   const cover = event.cover_url ?? null;
   return (
@@ -781,7 +788,7 @@ function SummaryRail({
 
         {cta && <div className="c-rail__cta" style={{ marginTop: 18 }}>{cta}</div>}
         {isYape && <p className="c-rail__cta c-muted-3" style={{ textAlign: 'center', fontSize: 12, marginTop: 10 }}>Después: yapeas y subes tu comprobante.</p>}
-        <p className="c-rail__secure"><Lock className="h-3.5 w-3.5" /> Pago seguro · encriptado de extremo a extremo</p>
+        <p className="c-rail__secure"><Lock className="h-3.5 w-3.5" /> {payLabel}</p>
       </div>
     </div>
   );

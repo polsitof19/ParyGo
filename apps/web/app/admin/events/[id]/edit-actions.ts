@@ -505,8 +505,11 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   const newPriceCents = Math.round(parseFloat(String(formData.get('price_soles') ?? '')) * 100);
   const newCapacity = parseInt(String(formData.get('capacity') ?? ''), 10);
   const sold = tt.sold ?? 0;
+  // Descripción opcional (texto mostrado en el checkout). No afecta precio ni
+  // cantidad; solo presentación. Vacío → null (no deja hueco en la UI).
+  const description = String(formData.get('description') ?? '').trim().slice(0, 280);
 
-  const update: Record<string, unknown> = { name, is_active: isActive };
+  const update: Record<string, unknown> = { name, is_active: isActive, description: description || null };
 
   // --- Descuento por cantidad (bulk): min 0 (off) o 2-50; pct 0-90 ---
   // Tope 10 = máximo por compra (Zod en checkout); umbrales mayores serían inalcanzables.
@@ -563,6 +566,7 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
 
   const name = String(formData.get('name') ?? '').trim().slice(0, 80);
   if (name.length < 1) return { ok: false, message: 'Poné un nombre.' };
+  const description = String(formData.get('description') ?? '').trim().slice(0, 280);
   const isUnlimited = formData.get('is_unlimited') === 'on';
   const priceCents = Math.round(parseFloat(String(formData.get('price_soles') ?? '')) * 100);
   if (!Number.isFinite(priceCents) || priceCents < 0) return { ok: false, message: 'Precio inválido.' };
@@ -578,7 +582,7 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
 
   const { data: created, error } = await admin
     .from('ticket_types')
-    .insert({ event_id: eventId, name, price_cents: priceCents, capacity, is_unlimited: isUnlimited, is_active: true, sort_order: sortOrder, sold: 0, reserved: 0, max_scans: 1, bulk_min_qty: bulkMinQty, bulk_discount_pct: bulkPct })
+    .insert({ event_id: eventId, name, description: description || null, price_cents: priceCents, capacity, is_unlimited: isUnlimited, is_active: true, sort_order: sortOrder, sold: 0, reserved: 0, max_scans: 1, bulk_min_qty: bulkMinQty, bulk_discount_pct: bulkPct })
     .select('id')
     .single();
   if (error || !created) return { ok: false, message: error?.message ?? 'No se pudo crear el tipo.' };

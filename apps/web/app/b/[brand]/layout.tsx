@@ -17,7 +17,8 @@ const archivo = Archivo({ weight: ['500', '600', '700', '800', '900'], subsets: 
 const inter = Inter({ weight: ['400', '500', '600'], subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 const instrument = Instrument_Serif({ weight: '400', style: 'italic', subsets: ['latin'], variable: '--font-instrument', display: 'swap' });
 // Landing de marca (.bl) — estilo limpio/pastel/juvenil. Solo se usan dentro de .bl
-// (vía --bl-disp/--bl-body); el checkout (.c-*) mantiene Bricolage/Hanken.
+// (vía --bl-disp/--bl-body). El checkout del evento (.c-checkout-canvas) usa Archivo
+// para títulos (override en client.css v3); el resto del shell mantiene Bricolage/Hanken.
 const fredoka = Fredoka({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-fredoka', display: 'swap' });
 const nunito = Nunito({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], style: ['normal', 'italic'], variable: '--font-nunito', display: 'swap' });
 

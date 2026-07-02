@@ -59,12 +59,12 @@ export default async function YapeUploadPage({
   }
   if (!order.brand?.yape_number) {
     return (
-      <main className="c-state"><p style={{ color: 'var(--alert)' }}>Este promotor no tiene Yape configurado.</p></main>
+      <main className="c-state c-checkout-canvas"><p style={{ color: 'var(--alert)' }}>Este promotor no tiene Yape configurado.</p></main>
     );
   }
 
   return (
-    <main className="c-narrow" style={{ paddingTop: 32, paddingBottom: 48 }}>
+    <main className="c-narrow c-checkout-canvas" style={{ paddingTop: 32, paddingBottom: 48 }}>
       {/* El comprador sigue dentro del flujo: paso 3 "Pagar con Yape" activo. */}
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 22 }}>
         <CheckoutSteps method="yape_manual" active={3} />

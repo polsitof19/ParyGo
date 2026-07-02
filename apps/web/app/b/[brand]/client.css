@@ -480,3 +480,110 @@
   .client-shell .c-donde { flex-direction: column; }
   .client-shell .c-donde__map { width: 100%; aspect-ratio: 16 / 10; }
 }
+
+/* ============================================================
+   CHECKOUT v3 — rediseño de marca (crema/negro cálido/naranja).
+   Scopeado al FUNNEL de compra: cualquier página que contenga
+   .c-checkout-canvas (entradas + /yape + /confirmación). Se tiñe la
+   página entera vía :has() para que el fondo NO tenga costura, sin
+   tocar la landing de marca (.bl, que NO tiene .c-checkout-canvas)
+   ni el resto del shell. El acento sigue siendo el COLOR DE LA MARCA
+   (--brand); #FF6B35 es solo el default de ParyGo.
+   Solo presentación: no toca selección/precio/pago/emisión/aforo.
+   ============================================================ */
+.client-shell:has(.c-checkout-canvas) {
+  /* Paleta del mockup, retonada para armonizar cremas/inks derivados */
+  --cream: #F5EFE6; --cream-2: #EFE8DC; --cream-3: #E6DBCB;
+  --ink: #16120D; --ink-2: #574E43; --ink-3: #948877;
+  --hairline: rgba(22,18,13,.08);
+  /* títulos en Archivo (ya cargada); el énfasis sigue en Instrument Serif */
+  --display: var(--font-archivo), "Archivo", system-ui, sans-serif;
+  color: var(--ink);
+  /* fondo plano de página (sobrescribe el radial+crema base del shell) */
+  background: var(--cream);
+}
+
+/* — Marcadores de sección "— ELEGÍ TUS ENTRADAS" / "— DÓNDE" — */
+.client-shell .c-checkout-canvas .c-card__title,
+.client-shell .c-checkout-canvas .c-co__sechead .c-card__title {
+  font-size: 12px; font-weight: 800; letter-spacing: 0.14em; color: var(--ink-2);
+}
+.client-shell .c-checkout-canvas .c-co__sechead-meta { letter-spacing: 0.02em; }
+
+/* — Stepper 01 · 02 · 03 (activo en círculo naranja de marca) — */
+.client-shell .c-checkout-canvas .c-stepper__num { width: 28px; height: 28px; font-size: 12px; letter-spacing: -0.02em; }
+.client-shell .c-checkout-canvas .c-stepper__num--on { box-shadow: 0 8px 18px -6px var(--brand), 0 0 0 4px var(--brand-soft); }
+.client-shell .c-checkout-canvas .c-stepper__label { letter-spacing: 0.12em; }
+.client-shell .c-checkout-canvas .c-stepper__line { background: rgba(22,18,13,.16); }
+
+/* — Hero: tarjeta blanca con más aire; badge +18 negro, chip EN VIVO — */
+.client-shell .c-checkout-canvas .c-hcard { border-radius: 24px; padding: 20px; gap: 24px; box-shadow: var(--shadow-md); }
+.client-shell .c-checkout-canvas .c-hcard__age {
+  width: 46px; height: 46px; background: #16120D; color: #F5EFE6; border: 2px solid var(--brand);
+  font-family: var(--display); font-weight: 900; letter-spacing: -0.02em;
+}
+.client-shell .c-checkout-canvas .c-live { letter-spacing: 0.14em; font-weight: 800; }
+.client-shell .c-checkout-canvas .c-hcard__title { line-height: 0.9; }
+
+/* — Tarjetas de entrada: aire, descripción como subtítulo, tap feedback — */
+.client-shell .c-checkout-canvas .c-tt { padding: 20px 22px 20px 26px; }
+.client-shell .c-checkout-canvas .c-tt__name { font-size: 21px; }
+.client-shell .c-checkout-canvas .c-tt__perks { font-size: 14px; color: var(--ink-2); }
+.client-shell .c-checkout-canvas .c-tt--active { box-shadow: 0 0 0 2px var(--brand), var(--shadow-md); }
+
+/* — Contador +/−: scale 0.97 al tap + "tick" al cambiar la cantidad — */
+.client-shell .c-checkout-canvas .c-qbtn:active:not(:disabled) { transform: scale(.97); }
+.client-shell .c-checkout-canvas .c-qval { animation: c-tick .28s var(--ease); }
+@keyframes c-tick { 0% { transform: scale(.62); opacity: .35; } 55% { transform: scale(1.18); } 100% { transform: scale(1); opacity: 1; } }
+
+/* — DÓNDE: refund siempre visible (con fallback), estilo del mockup — */
+.client-shell .c-checkout-canvas .c-donde { border-radius: 18px; }
+.client-shell .c-checkout-canvas .c-donde__refund { font-size: 13px; }
+
+/* ============================================================
+   RAIL DE RESUMEN — TARJETA OSCURA (evento + TU COMPRA + total + CTA)
+   ============================================================ */
+.client-shell .c-checkout-canvas .c-rail {
+  background: #16120D; border-color: rgba(255,255,255,.08);
+  box-shadow: 0 30px 70px -34px rgba(0,0,0,.6);
+}
+.client-shell .c-checkout-canvas .c-rail__head { background: rgba(255,255,255,.04); border-bottom: 1px solid rgba(255,255,255,.08); }
+.client-shell .c-checkout-canvas .c-rail__name { color: #F5EFE6; }
+.client-shell .c-checkout-canvas .c-rail__meta { color: rgba(245,239,230,.66); }
+.client-shell .c-checkout-canvas .c-rail__timer {
+  background: rgba(255,255,255,.06); color: rgba(245,239,230,.9); border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.client-shell .c-checkout-canvas .c-rail__timer svg { color: var(--brand); }
+.client-shell .c-checkout-canvas .c-rail__timer--soon { background: rgba(215,71,47,.18); color: #FFB4A6; }
+.client-shell .c-checkout-canvas .c-rail__label { color: rgba(245,239,230,.55); }
+.client-shell .c-checkout-canvas .c-rail__empty { color: rgba(245,239,230,.6); }
+.client-shell .c-checkout-canvas .c-rail .c-sum__row { color: rgba(245,239,230,.9); }
+.client-shell .c-checkout-canvas .c-rail .c-sum__discount { color: #6FD6A0; }
+.client-shell .c-checkout-canvas .c-rail .c-sum__total { border-top-color: rgba(255,255,255,.14); }
+.client-shell .c-checkout-canvas .c-rail .c-sum__total .l,
+.client-shell .c-checkout-canvas .c-rail .c-sum__total .v { color: #F5EFE6; }
+.client-shell .c-checkout-canvas .c-rail .c-muted-3 { color: rgba(245,239,230,.5); }
+.client-shell .c-checkout-canvas .c-rail__secure { color: rgba(245,239,230,.55); }
+
+/* — CTA "Continuar" sobre la tarjeta OSCURA: contraste blindado —
+   Texto sobre el botón: --on-brand (YIQ, ya legible para cualquier marca).
+   Delineado del botón vs rail oscuro: hairline claro SIEMPRE presente
+   (1.4.11 non-text ≥3:1) → una marca casi-negra no se funde con el rail;
+   una marca clara ya contrasta de sobra. Igual criterio que el header. */
+.client-shell .c-checkout-canvas .c-rail .c-btn--brand {
+  box-shadow: 0 10px 26px -8px var(--brand), inset 0 0 0 1px rgba(245,239,230,.46);
+}
+.client-shell .c-checkout-canvas .c-rail .c-btn--brand:hover:not(:disabled) { box-shadow: 0 14px 30px -8px var(--brand), inset 0 0 0 1px rgba(245,239,230,.55); }
+/* Estado "apagado" (total = 0): neutro sobre el rail, sin glow de marca.
+   Al sumar la primera entrada, se ENCIENDE en color de marca (transición). */
+.client-shell .c-checkout-canvas .c-rail .c-btn--brand:disabled {
+  background: rgba(245,239,230,.1); color: rgba(245,239,230,.5);
+  box-shadow: inset 0 0 0 1px rgba(245,239,230,.14); opacity: 1;
+}
+
+/* — Barra sticky mobile: mismo crema del canvas (sin costura) — */
+@media (max-width: 820px) {
+  .client-shell .c-checkout-canvas .c-mobilecta {
+    background: rgba(245,239,230,.94); border-top-color: var(--cream-3);
+  }
+}

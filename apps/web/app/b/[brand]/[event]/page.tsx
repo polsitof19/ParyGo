@@ -173,7 +173,7 @@ export default async function EventPage({ params, searchParams }: Props) {
     <>
       <EventStructuredData brand={brand} event={event} ticketTypes={ticketTypes} />
 
-      <article style={{ paddingBottom: 64 }}>
+      <article className="c-checkout-canvas" style={{ paddingBottom: 64 }}>
         {/* CHECKOUT (hero, entradas, datos/pago, resumen y "dónde" viven en el panel) */}
         <EventCheckoutPanel
           brand={brand}

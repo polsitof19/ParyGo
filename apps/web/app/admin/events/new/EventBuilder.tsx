@@ -8,7 +8,7 @@ import { createBrandEventAction, type FormState } from './actions';
 const initial: FormState = { ok: false, message: null, fieldErrors: {} };
 
 type Phase = { priceSoles: string; until: string };
-type TT = { name: string; unlimited: boolean; capacity: string; phases: Phase[] };
+type TT = { name: string; description: string; unlimited: boolean; capacity: string; phases: Phase[] };
 
 function nowLocalInput(): string {
   const d = new Date();
@@ -17,7 +17,7 @@ function nowLocalInput(): string {
 }
 const toISO = (local: string): string | null => (local ? new Date(local).toISOString() : null);
 const toCents = (s: string): number => Math.round(parseFloat(s || '0') * 100) || 0;
-const newTT = (): TT => ({ name: '', unlimited: false, capacity: '100', phases: [{ priceSoles: '', until: '' }] });
+const newTT = (): TT => ({ name: '', description: '', unlimited: false, capacity: '100', phases: [{ priceSoles: '', until: '' }] });
 
 export function EventBuilder() {
   const [state, action] = useFormState(createBrandEventAction, initial);
@@ -44,6 +44,7 @@ export function EventBuilder() {
         }));
         return {
           name: tt.name,
+          description: tt.description.trim().slice(0, 280),
           price_cents: phases[0]?.price_cents ?? 0,
           capacity: tt.unlimited ? 0 : parseInt(tt.capacity || '0', 10) || 0,
           is_unlimited: tt.unlimited,
@@ -142,6 +143,12 @@ export function EventBuilder() {
                     <Trash2 className="h-4 w-4" />
                   </button>
                 )}
+              </div>
+
+              <div style={{ marginTop: 12 }}>
+                <label className="s-label">Descripción (opcional)</label>
+                <textarea value={tt.description} onChange={(e) => patchTT(i, { description: e.target.value })} rows={2} maxLength={280} placeholder={'Barra libre toda la noche\nAcceso preferencial'} className="s-input" style={{ resize: 'vertical' }} />
+                <p className="s-hint">Se muestra debajo del nombre en el checkout. Una línea por beneficio.</p>
               </div>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginTop: 12 }}>

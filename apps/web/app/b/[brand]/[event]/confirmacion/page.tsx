@@ -71,7 +71,7 @@ export default async function ConfirmationPage({
 
   if (isFailed) {
     return (
-      <main className="c-state">
+      <main className="c-state c-checkout-canvas">
         <div className="c-confirm__badge" style={{ background: 'var(--alert-bg, rgba(220,38,38,.1))', color: 'var(--alert, #dc2626)' }}><Mail className="h-8 w-8" /></div>
         <span className="c-eyebrow" style={{ color: 'var(--alert, #dc2626)', marginTop: 16, display: 'block' }}>Pago no aprobado</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>No pudimos confirmar tu pago</h1>
@@ -88,7 +88,7 @@ export default async function ConfirmationPage({
 
   if (isPending) {
     return (
-      <main className="c-state">
+      <main className="c-state c-checkout-canvas">
         <div className="c-state__spinner" />
         <span className="c-eyebrow">Procesando pago</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>Estamos confirmando tu pago</h1>
@@ -105,7 +105,7 @@ export default async function ConfirmationPage({
 
   if (isYapeReview) {
     return (
-      <main className="c-state">
+      <main className="c-state c-checkout-canvas">
         <div className="c-confirm__badge" style={{ background: 'var(--warn-bg)', color: 'var(--warn)' }}><Mail className="h-8 w-8" /></div>
         <span className="c-eyebrow" style={{ color: 'var(--warn)', marginTop: 16, display: 'block' }}>Comprobante en revisión</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>Tu Yape se está verificando</h1>
@@ -121,7 +121,7 @@ export default async function ConfirmationPage({
 
   if (isYapeRejected) {
     return (
-      <main className="c-state">
+      <main className="c-state c-checkout-canvas">
         <div className="c-confirm__badge" style={{ background: 'var(--alert-bg, rgba(220,38,38,.1))', color: 'var(--alert, #dc2626)' }}><Mail className="h-8 w-8" /></div>
         <span className="c-eyebrow" style={{ color: 'var(--alert, #dc2626)', marginTop: 16, display: 'block' }}>Comprobante rechazado</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>No pudimos validar tu Yape</h1>
@@ -151,7 +151,7 @@ export default async function ConfirmationPage({
   const calDetails = `Tu entrada para ${event?.name ?? 'el evento'}. Lleva ${event?.require_dni ? 'tu documento de identidad y ' : ''}tu QR (te llegó por email). Entrada por ParyGo.`;
 
   return (
-    <main className="c-narrow" style={{ paddingTop: 48, paddingBottom: 56 }}>
+    <main className="c-narrow c-checkout-canvas" style={{ paddingTop: 48, paddingBottom: 56 }}>
       <div className="c-confirm">
         <div className="c-confirm__badge"><Check className="h-9 w-9" /></div>
         <span className="c-eyebrow" style={{ color: 'var(--ok)' }}>¡Compra confirmada!</span>

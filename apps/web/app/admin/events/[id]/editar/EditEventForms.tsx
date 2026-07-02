@@ -5,7 +5,7 @@ import { useFormState, useFormStatus } from 'react-dom';
 import { toast } from 'sonner';
 import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, type EditState } from '../edit-actions';
 
-export type TtRow = { id: string; name: string; priceCents: number; capacity: number; sold: number; isUnlimited: boolean; isActive: boolean; bulkMinQty: number; bulkDiscountPct: number };
+export type TtRow = { id: string; name: string; description: string; priceCents: number; capacity: number; sold: number; isUnlimited: boolean; isActive: boolean; bulkMinQty: number; bulkDiscountPct: number };
 
 // Campos de descuento por cantidad (compartidos entre crear y editar).
 function BulkFields({ minQty, pct, disabled }: { minQty?: number; pct?: number; disabled?: boolean }) {
@@ -139,6 +139,11 @@ export function TicketTypeEditor({ eventId, tt, readOnly = false }: { eventId: s
           <input name="price_soles" type="number" step="0.5" min={0} defaultValue={(tt.priceCents / 100).toFixed(2)} className="s-input" disabled={hasSales || ro} title={hasSales ? 'No editable: ya tiene ventas' : undefined} />
         </div>
       </div>
+      <div className="s-field">
+        <label className="s-label">Descripción (opcional)</label>
+        <textarea name="description" defaultValue={tt.description} className="s-input" rows={2} maxLength={280} placeholder={'Barra libre toda la noche\nAcceso preferencial'} style={{ resize: 'vertical' }} disabled={ro} />
+        <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Se muestra debajo del nombre en el checkout. Una línea por beneficio. No afecta precio ni cantidad.</p>
+      </div>
       <div className="s-form-grid s-field">
         <div className="s-field">
           <label className="s-label">Capacidad{!tt.isUnlimited && tt.sold > 0 && !ro && <span className="s-muted" style={{ fontWeight: 500 }}> · mín. {tt.sold} (vendidas)</span>}</label>
@@ -164,6 +169,11 @@ export function NewTicketTypeForm({ eventId }: { eventId: string }) {
       <div className="s-form-grid">
         <div className="s-field"><label className="s-label">Nombre</label><input name="name" placeholder="VIP" className="s-input" required /></div>
         <div className="s-field"><label className="s-label">Precio (S/)</label><input name="price_soles" type="number" step="0.5" min={0} placeholder="50" className="s-input" required /></div>
+      </div>
+      <div className="s-field">
+        <label className="s-label">Descripción (opcional)</label>
+        <textarea name="description" className="s-input" rows={2} maxLength={280} placeholder={'Barra libre toda la noche\nAcceso preferencial'} style={{ resize: 'vertical' }} />
+        <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Se muestra debajo del nombre en el checkout. Una línea por beneficio.</p>
       </div>
       <div className="s-form-grid">
         <div className="s-field"><label className="s-label">Capacidad</label><input name="capacity" type="number" min={1} placeholder="100" className="s-input" /></div>

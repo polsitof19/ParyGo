@@ -19,12 +19,12 @@ export default async function EventTicketsEditPage({ params }: { params: { id: s
 
   const { data: tts } = await admin
     .from('ticket_types')
-    .select('id, name, price_cents, capacity, sold, is_unlimited, is_active, sort_order, bulk_min_qty, bulk_discount_pct')
+    .select('id, name, description, price_cents, capacity, sold, is_unlimited, is_active, sort_order, bulk_min_qty, bulk_discount_pct')
     .eq('event_id', event.id)
     .order('sort_order');
 
   const rows: TtRow[] = (tts ?? []).map((t) => ({
-    id: t.id, name: t.name, priceCents: t.price_cents, capacity: t.capacity ?? 0,
+    id: t.id, name: t.name, description: t.description ?? '', priceCents: t.price_cents, capacity: t.capacity ?? 0,
     sold: t.sold ?? 0, isUnlimited: t.is_unlimited, isActive: t.is_active,
     bulkMinQty: t.bulk_min_qty ?? 0, bulkDiscountPct: t.bulk_discount_pct ?? 0,
   }));
