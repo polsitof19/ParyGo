@@ -77,7 +77,7 @@ export default async function BrandDetailPage({
       {/* Cabecera: avatar (color/logo real de la marca) + nombre + dominio + entrar */}
       <header className="s-brandhead">
         {logoUrl ? (
-          <BrandLogo src={logoUrl} alt={`logo de ${brand.name}`} size={52} ring={false} />
+          <BrandLogo src={logoUrl} alt="" size={52} ring={false} />
         ) : (
           <span className="s-avatar s-avatar--lg" style={{ background: primaryColor, color: '#fff' }}>
             {initialOf(brand.name)}
@@ -174,7 +174,7 @@ export default async function BrandDetailPage({
             </p>
           </div>
           {logoUrl ? (
-            <BrandLogo src={logoUrl} alt={`logo de ${brand.name}`} size={40} ring={false} />
+            <BrandLogo src={logoUrl} alt="" size={40} ring={false} />
           ) : (
             <span className="s-avatar" style={{ background: primaryColor, color: '#fff' }}>
               {initialOf(brand.name)}

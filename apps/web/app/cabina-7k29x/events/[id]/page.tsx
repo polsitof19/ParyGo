@@ -83,7 +83,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
             style={{ flex: 'none', marginTop: 2 }}
           >
             {brandLogo ? (
-              <BrandLogo src={brandLogo} alt={`logo de ${brand?.name ?? ''}`} size={52} ring={false} />
+              <BrandLogo src={brandLogo} alt="" size={52} ring={false} />
             ) : (
               <span className="s-avatar s-avatar--lg" style={{ background: brandPrimary, color: '#fff' }}>
                 {brandInitial}
