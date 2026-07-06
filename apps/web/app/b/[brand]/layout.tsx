@@ -10,7 +10,7 @@ import './landing.css';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-const bricolage = Bricolage_Grotesque({ weight: ['700', '800'], subsets: ['latin'], variable: '--font-bricolage', display: 'swap' });
+const bricolage = Bricolage_Grotesque({ weight: ['400', '500', '600', '700', '800'], subsets: ['latin'], variable: '--font-bricolage', display: 'swap' });
 const hanken = Hanken_Grotesk({ weight: ['400', '500', '600', '700'], subsets: ['latin'], variable: '--font-hanken', display: 'swap' });
 // Identidad ParyGo del landing de marca (mockup): Archivo (display), Inter (cuerpo), Instrument Serif (acento itálico).
 const archivo = Archivo({ weight: ['500', '600', '700', '800', '900'], subsets: ['latin'], variable: '--font-archivo', display: 'swap' });

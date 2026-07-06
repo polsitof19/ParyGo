@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Share2, Link2, Check, Instagram } from 'lucide-react';
 
 // =============================================================
 // Compartir evento — WhatsApp / Instagram / copiar link
@@ -48,16 +47,13 @@ export function ShareEvent({ eventName, shareUrl }: { eventName: string; shareUr
   }
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-      <a href={waHref} target="_blank" rel="noopener noreferrer" className="c-btn c-btn--soft" style={{ height: 38, padding: '0 14px', fontSize: 13.5 }}>
-        <Share2 className="h-4 w-4" /> WhatsApp
-      </a>
-      <button type="button" onClick={shareInstagram} className="c-btn c-btn--soft" style={{ height: 38, padding: '0 14px', fontSize: 13.5 }}>
-        <Instagram className="h-4 w-4" /> Instagram
-      </button>
-      <button type="button" onClick={copyLink} className="c-btn c-btn--soft" style={{ height: 38, padding: '0 14px', fontSize: 13.5 }}>
-        {copied ? <><Check className="h-4 w-4" /> Copiado</> : <><Link2 className="h-4 w-4" /> Copiar link</>}
-      </button>
+    <div className="c-sharelinks">
+      <span className="c-sharelinks__lead">Compartir —</span>
+      <a href={waHref} target="_blank" rel="noopener noreferrer" className="c-textlink c-textlink--muted">WhatsApp</a>
+      <span aria-hidden className="c-sharelinks__dot">·</span>
+      <button type="button" onClick={shareInstagram} className="c-textlink c-textlink--muted">Instagram</button>
+      <span aria-hidden className="c-sharelinks__dot">·</span>
+      <button type="button" onClick={copyLink} className="c-textlink c-textlink--muted">{copied ? 'Copiado' : 'Copiar link'}</button>
     </div>
   );
 }

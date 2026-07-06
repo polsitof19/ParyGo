@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Minus, Plus, Loader2, Clock, Lock, ArrowRight, TrendingUp, ExternalLink } from 'lucide-react';
+import { Minus, Plus, Loader2, Clock, Lock, ArrowRight, TrendingUp } from 'lucide-react';
 import { formatPEN } from '@/lib/utils';
 import { optimizedImage } from '@/lib/imageUrl';
 import { startCheckout, previewPromo, type CheckoutInput } from './actions';
@@ -384,10 +384,8 @@ export function EventCheckoutPanel({
 
               {/* ENTRADAS */}
               <section>
-                <div className="c-co__sechead">
-                  <span className="c-card__title" style={{ margin: 0 }}>— Elegí tus entradas</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div className="c-sechead"><span className="c-sechead__t">Elegí tus entradas</span></div>
+                <div className="c-ttlist">
                   {sorted.map((t, i) => {
                     const soldOut = t.soldOut;
                     const cur = qty[t.id] ?? 0;
@@ -395,55 +393,49 @@ export function EventCheckoutPanel({
                     const ttStyle = { '--i': i, ...(t.color_hex ? { '--tt-accent': t.color_hex } : {}) } as React.CSSProperties;
                     return (
                       <article key={t.id} className={`c-tt ${cur > 0 ? 'c-tt--active' : ''} ${soldOut ? 'c-tt--out' : ''}`} style={ttStyle}>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-                            <h3 className="c-tt__name">{t.name}</h3>
-                            <span className="c-tt__price">{formatPEN(t.active_price_cents)}</span>
-                          </div>
+                        <div className="c-tt__main">
+                          <h3 className="c-tt__name">{t.name}</h3>
                           {perks.length > 0 && (
-                            <ul className="c-tt__perks">{perks.map((p, idx) => <li key={idx}><span style={{ color: 'var(--brand-ink)' }}>·</span> {p}</li>)}</ul>
+                            <ul className="c-tt__perks">{perks.map((p, idx) => <li key={idx}>{p}</li>)}</ul>
                           )}
                           {t.bulk_min_qty > 0 && t.bulk_discount_pct > 0 && (
-                            <p style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: 'var(--brand-ink)' }}>
-                              🎟️ Lleva {t.bulk_min_qty}+ y pagas {t.bulk_discount_pct}% menos
-                            </p>
+                            <p className="c-tt__bulk">Llevá {t.bulk_min_qty}+ y pagás {t.bulk_discount_pct}% menos</p>
                           )}
                           {!soldOut && <PhaseTiming tt={t} />}
                         </div>
-                        {soldOut ? (
-                          <span className="c-soldout">Agotado</span>
-                        ) : cur === 0 ? (
-                          <button type="button" onClick={() => inc(t)} aria-label={`Sumar ${t.name}`} className="c-qbtn c-qbtn--add"><Plus className="h-4 w-4" /></button>
-                        ) : (
-                          <div className="c-qty" aria-live="polite">
-                            <button type="button" onClick={() => dec(t)} aria-label={`Restar ${t.name}`} className="c-qbtn"><Minus className="h-4 w-4" /></button>
-                            <span key={cur} className="c-qval">{cur}</span>
-                            <button type="button" onClick={() => inc(t)} aria-label={`Sumar ${t.name}`} className="c-qbtn c-qbtn--add"><Plus className="h-4 w-4" /></button>
-                          </div>
-                        )}
+                        <div className="c-tt__right">
+                          <span className="c-tt__price">{formatPEN(t.active_price_cents)}</span>
+                          {soldOut ? (
+                            <span className="c-soldout">Agotado</span>
+                          ) : cur === 0 ? (
+                            <button type="button" onClick={() => inc(t)} aria-label={`Agregar ${t.name}`} className="c-add">Agregar</button>
+                          ) : (
+                            <div className="c-qty" aria-live="polite">
+                              <button type="button" onClick={() => dec(t)} aria-label={`Restar ${t.name}`} className="c-qbtn"><Minus className="h-4 w-4" /></button>
+                              <span key={cur} className="c-qval">{cur}</span>
+                              <button type="button" onClick={() => inc(t)} aria-label={`Sumar ${t.name}`} className="c-qbtn c-qbtn--add"><Plus className="h-4 w-4" /></button>
+                            </div>
+                          )}
+                        </div>
                       </article>
                     );
                   })}
                 </div>
 
                 {/* Código de promotor (opcional): se aplica en el paso 2 con el email. */}
-                <div style={{ marginTop: 16 }}>
+                <div className="c-promorow">
                   {showPromo ? (
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', maxWidth: 440 }}>
-                      <input value={promoInput} onChange={(e) => setPromoInput(e.target.value)} placeholder="Código de promotor" autoCapitalize="characters" maxLength={32} className="c-input" style={{ textTransform: 'uppercase', letterSpacing: '0.04em' }} />
-                    </div>
+                    <input value={promoInput} onChange={(e) => setPromoInput(e.target.value)} placeholder="Código de promotor" autoCapitalize="characters" maxLength={32} className="c-input" style={{ textTransform: 'uppercase', letterSpacing: '0.04em', maxWidth: 300 }} />
                   ) : (
-                    <button type="button" onClick={() => setShowPromo(true)} className="c-promo-toggle">
-                      <span aria-hidden className="c-promo-toggle__plus">+</span> ¿Tenés un código de promotor?
+                    <button type="button" onClick={() => setShowPromo(true)} className="c-textlink">
+                      ¿Tenés un código de promotor? Ingresalo acá
                     </button>
                   )}
                 </div>
-              </section>
 
-              {/* Compartir — fila compacta, después de elegir entradas (fuera del hero) */}
-              <div className="c-sharerow">
+                {/* Compartir — enlaces de texto, después del selector (fuera del hero) */}
                 <ShareEvent eventName={event.name} shareUrl={shareUrl} />
-              </div>
+              </section>
 
               <DondeCard event={event} />
             </div>
@@ -633,32 +625,30 @@ export function EventCheckoutPanel({
   );
 }
 
-// ============================ Stepper ============================
+// ============================ Stepper (texto plano, sin círculos) ============================
 function Stepper({ active, onGoStep1 }: { active: number; onGoStep1: () => void }) {
   const steps = [
-    { n: 1, label: 'ENTRADAS' },
-    { n: 2, label: 'DATOS' },
-    { n: 3, label: '¡LISTO!' },
+    { n: 1, label: 'Entradas' },
+    { n: 2, label: 'Datos' },
+    { n: 3, label: '¡Listo!' },
   ];
   return (
     <div className="c-stepper" aria-label="Pasos de la compra">
       {steps.map((s, i) => {
-        const done = active > s.n;
         const on = active === s.n;
         const clickable = s.n === 1 && active > 1;
         return (
           <span key={s.n} style={{ display: 'contents' }}>
-            {i > 0 && <span className="c-stepper__line" aria-hidden />}
+            {i > 0 && <span className="c-stepper__sep" aria-hidden>—</span>}
             <button
               type="button"
-              className="c-stepper__item"
+              className={`c-stepper__item ${on ? 'c-stepper__item--on' : ''}`}
               onClick={clickable ? onGoStep1 : undefined}
               aria-current={on ? 'step' : undefined}
               style={{ cursor: clickable ? 'pointer' : 'default' }}
               disabled={!clickable}
             >
-              <span className={`c-stepper__num ${on ? 'c-stepper__num--on' : done ? 'c-stepper__num--done' : ''}`}>{done ? '✓' : '0' + s.n}</span>
-              <span className={`c-stepper__label ${on || done ? 'c-stepper__label--on' : ''}`}>{s.label}</span>
+              <span className="c-stepper__n">{'0' + s.n}</span> {s.label}
             </button>
           </span>
         );
@@ -667,31 +657,31 @@ function Stepper({ active, onGoStep1 }: { active: number; onGoStep1: () => void 
   );
 }
 
-// ============================ Hero (tarjeta compacta) ============================
+// ============================ Hero (compacto, contenido sobre papel, sin caja) ============================
 function HeroCard({ event }: { event: Event }) {
   const cover = event.cover_url ?? null;
   return (
-    <section className="c-hcard">
-      <div className="c-hcard__poster">
+    <section className="c-hero2">
+      <div className="c-hero2__thumb">
         {cover ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={optimizedImage(cover, { width: 240, quality: 82 })} alt={`Flyer de ${event.name}`} decoding="async" />
         ) : (
-          <div className="c-hcard__poster-fallback"><span>{event.name}</span></div>
+          <div className="c-hero2__thumb-ph" aria-hidden />
         )}
       </div>
-      <div className="c-hcard__body">
-        <h1 className="c-hcard__title">
+      <div className="c-hero2__body">
+        <h1 className="c-hero2__title">
           {event.name}
           {' '}
-          <span className="c-hcard__live"><span className="dot" /> EN VIVO</span>
+          <span className="c-hero2__live"><span className="dot" /> En vivo</span>
         </h1>
-        {event.description && <p className="c-hcard__lineup">{event.description}</p>}
-        <div className="c-hcard__meta">
-          <span>◆ {fmtDateShort(event.starts_at)} · {fmtTime(event.starts_at)}</span>
-          {event.venue_name && <span>◆ {event.venue_name}</span>}
-          {event.min_age > 0 && <span className="c-hcard__agepill">+{event.min_age}</span>}
-        </div>
+        {event.description && <p className="c-hero2__sub">{event.description}</p>}
+        <p className="c-hero2__meta">
+          {fmtDateShort(event.starts_at)} · {fmtTime(event.starts_at)}
+          {event.venue_name ? ` · ${event.venue_name}` : ''}
+          {event.min_age > 0 ? ` · +${event.min_age}` : ''}
+        </p>
       </div>
     </section>
   );
@@ -707,7 +697,7 @@ function DondeCard({ event }: { event: Event }) {
       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue_address ?? '')}`;
   return (
     <section>
-      <div className="c-card__title">— Dónde</div>
+      <div className="c-sechead"><span className="c-sechead__t">Dónde</span></div>
       <div className="c-donde">
         {event.venue_address && (
           <div className="c-donde__map">
@@ -720,14 +710,14 @@ function DondeCard({ event }: { event: Event }) {
           </div>
         )}
         <div className="c-donde__info">
-          {event.venue_name && <div className="c-h2">{event.venue_name}</div>}
-          {event.venue_address && <p className="c-muted" style={{ marginTop: 4 }}>{event.venue_address}</p>}
-          <p className="c-donde__refund"><b>DEVOLUCIONES ·</b> {event.refund_policy || 'Sin devolución post-pago salvo cancelación del evento.'}</p>
+          {event.venue_name && <div className="c-donde__venue">{event.venue_name}</div>}
+          {event.venue_address && <p className="c-donde__addr">{event.venue_address}</p>}
           {event.venue_address && (
             <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="c-donde__link">
-              Cómo llegar <ExternalLink className="h-3.5 w-3.5" />
+              Cómo llegar →
             </a>
           )}
+          <p className="c-donde__refund"><b>Devoluciones ·</b> {event.refund_policy || 'Sin devolución post-pago salvo cancelación del evento.'}</p>
         </div>
       </div>
     </section>
@@ -773,7 +763,7 @@ function SummaryRail({
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
               {lineItems.map((l) => (
-                <div key={l.id} className="c-sum__row"><span>{l.q}× {l.name}</span><span className="v">{formatPEN(l.amount)}</span></div>
+                <div key={l.id} className="c-sum__row"><span>{l.name} × {l.q}</span><span className="v">{formatPEN(l.amount)}</span></div>
               ))}
               {applied && <div className="c-sum__row c-sum__discount"><span>Código {applied.code}</span><span className="v">−{formatPEN(applied.discountCents)}</span></div>}
               {!applied && bulkSavings > 0 && <div className="c-sum__row c-sum__discount"><span>Descuento por cantidad</span><span className="v">−{formatPEN(bulkSavings)}</span></div>}
