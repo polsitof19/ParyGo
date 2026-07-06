@@ -10,6 +10,7 @@ import { LoadPackForm } from './LoadPackForm';
 import { EditBrandingForm } from './EditBrandingForm';
 import { EditBrandBasicsForm } from './EditBrandBasicsForm';
 import { brandColor } from '@/lib/brandColors';
+import { BrandLogo } from '@/components/BrandLogo';
 import { publicEnv } from '@/lib/env';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { DangerDeleteButton } from '@/components/manage/DangerDeleteButton';
@@ -75,17 +76,13 @@ export default async function BrandDetailPage({
 
       {/* Cabecera: avatar (color/logo real de la marca) + nombre + dominio + entrar */}
       <header className="s-brandhead">
-        <span
-          className="s-avatar s-avatar--lg"
-          style={{ background: logoUrl ? 'var(--white)' : primaryColor, color: '#fff', overflow: 'hidden' }}
-        >
-          {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt={`logo de ${brand.name}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            initialOf(brand.name)
-          )}
-        </span>
+        {logoUrl ? (
+          <BrandLogo src={logoUrl} alt={`logo de ${brand.name}`} size={52} ring={false} />
+        ) : (
+          <span className="s-avatar s-avatar--lg" style={{ background: primaryColor, color: '#fff' }}>
+            {initialOf(brand.name)}
+          </span>
+        )}
         <div className="s-brandhead__id">
           <h1 className="s-h1">
             {brand.name}
@@ -176,14 +173,13 @@ export default async function BrandDetailPage({
               Logo y color de la marca. Cambian al instante en su página pública. El dueño también puede editarlos desde su panel.
             </p>
           </div>
-          <span className="s-avatar" style={{ background: logoUrl ? 'var(--white)' : primaryColor, color: '#fff', overflow: 'hidden' }}>
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt={`logo de ${brand.name}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              initialOf(brand.name)
-            )}
-          </span>
+          {logoUrl ? (
+            <BrandLogo src={logoUrl} alt={`logo de ${brand.name}`} size={40} ring={false} />
+          ) : (
+            <span className="s-avatar" style={{ background: primaryColor, color: '#fff' }}>
+              {initialOf(brand.name)}
+            </span>
+          )}
         </div>
         <div style={{ marginTop: 14 }}>
           <EditBrandingForm brandId={brand.id} primaryColor={primaryColor} logoUrl={logoUrl} />

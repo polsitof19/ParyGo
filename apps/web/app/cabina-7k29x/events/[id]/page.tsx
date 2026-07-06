@@ -4,6 +4,7 @@ import { ChevronLeft, ExternalLink } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { formatPEN } from '@/lib/utils';
 import { brandColor } from '@/lib/brandColors';
+import { BrandLogo } from '@/components/BrandLogo';
 import { publicEnv } from '@/lib/env';
 import { TicketTypesEditor } from './TicketTypesEditor';
 import { TogglePublishedButton } from './TogglePublishedButton';
@@ -78,15 +79,15 @@ export default async function EventDetailPage({ params }: { params: { id: string
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, minWidth: 0 }}>
           <Link
             href={`/cabina-7k29x/brands/${brand?.slug ?? ''}`}
-            className="s-avatar s-avatar--lg"
             aria-label={`Marca ${brand?.name ?? ''}`}
-            style={{ background: brandLogo ? 'var(--white)' : brandPrimary, color: '#fff', overflow: 'hidden', marginTop: 2 }}
+            style={{ flex: 'none', marginTop: 2 }}
           >
             {brandLogo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={brandLogo} alt={`logo de ${brand?.name ?? ''}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <BrandLogo src={brandLogo} alt={`logo de ${brand?.name ?? ''}`} size={52} ring={false} />
             ) : (
-              brandInitial
+              <span className="s-avatar s-avatar--lg" style={{ background: brandPrimary, color: '#fff' }}>
+                {brandInitial}
+              </span>
             )}
           </Link>
           <div style={{ minWidth: 0 }}>
