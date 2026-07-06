@@ -155,7 +155,7 @@ export default async function ConfirmationPage({
       : event?.venue_address
         ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue_address)}`
         : null;
-  const calDetails = `Tu entrada para ${event?.name ?? 'el evento'}. Lleva ${event?.require_dni ? 'tu documento de identidad y ' : ''}tu QR (te llegó por email). Entrada por ParyGo.`;
+  const calDetails = `Tu entrada para ${event?.name ?? 'el evento'}. Llevá ${event?.require_dni ? 'tu documento de identidad y ' : ''}tu QR (te llegó por email). Entrada por ParyGo.`;
 
   return (
     <main className="c-narrow c-checkout-canvas" style={{ paddingTop: 40, paddingBottom: 56 }}>
