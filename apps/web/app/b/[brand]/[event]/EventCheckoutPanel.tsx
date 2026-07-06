@@ -380,13 +380,12 @@ export function EventCheckoutPanel({
             </div>
           ) : step === 1 ? (
             <div className="c-stepwrap" key="step1">
-              <HeroCard event={event} brand={brand} shareUrl={shareUrl} />
+              <HeroCard event={event} />
 
               {/* ENTRADAS */}
               <section>
                 <div className="c-co__sechead">
                   <span className="c-card__title" style={{ margin: 0 }}>— Elegí tus entradas</span>
-                  {event.venue_name && <span className="c-co__sechead-meta">{fmtDateShort(event.starts_at)} · {event.venue_name}</span>}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {sorted.map((t, i) => {
@@ -440,6 +439,11 @@ export function EventCheckoutPanel({
                   )}
                 </div>
               </section>
+
+              {/* Compartir — fila compacta, después de elegir entradas (fuera del hero) */}
+              <div className="c-sharerow">
+                <ShareEvent eventName={event.name} shareUrl={shareUrl} />
+              </div>
 
               <DondeCard event={event} />
             </div>
@@ -663,37 +667,30 @@ function Stepper({ active, onGoStep1 }: { active: number; onGoStep1: () => void 
   );
 }
 
-// ============================ Hero (tarjeta enmarcada) ============================
-function HeroCard({ event, brand, shareUrl }: { event: Event; brand: Brand; shareUrl: string }) {
-  const logoUrl = (brand.theme_json as { logo_url?: string | null } | null)?.logo_url ?? null;
+// ============================ Hero (tarjeta compacta) ============================
+function HeroCard({ event }: { event: Event }) {
   const cover = event.cover_url ?? null;
   return (
     <section className="c-hcard">
       <div className="c-hcard__poster">
         {cover ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={optimizedImage(cover, { width: 360, quality: 82 })} alt={`Flyer de ${event.name}`} decoding="async" />
+          <img src={optimizedImage(cover, { width: 240, quality: 82 })} alt={`Flyer de ${event.name}`} decoding="async" />
         ) : (
           <div className="c-hcard__poster-fallback"><span>{event.name}</span></div>
         )}
-        {event.min_age > 0 && <div className="c-hcard__age">+{event.min_age}</div>}
       </div>
       <div className="c-hcard__body">
-        <span className="c-live"><span className="dot" /> EN VIVO</span>
-        {logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className="c-hcard__brand" src={optimizedImage(logoUrl, { width: 200, quality: 82 })} alt={brand.name} decoding="async" />
-        ) : (
-          <span className="c-hcard__by">por {brand.name}</span>
-        )}
-        <h1 className="c-hcard__title">{event.name}</h1>
+        <h1 className="c-hcard__title">
+          {event.name}
+          {' '}
+          <span className="c-hcard__live"><span className="dot" /> EN VIVO</span>
+        </h1>
         {event.description && <p className="c-hcard__lineup">{event.description}</p>}
         <div className="c-hcard__meta">
           <span>◆ {fmtDateShort(event.starts_at)} · {fmtTime(event.starts_at)}</span>
           {event.venue_name && <span>◆ {event.venue_name}</span>}
-        </div>
-        <div style={{ marginTop: 14 }}>
-          <ShareEvent eventName={event.name} shareUrl={shareUrl} />
+          {event.min_age > 0 && <span className="c-hcard__agepill">+{event.min_age}</span>}
         </div>
       </div>
     </section>

@@ -109,7 +109,7 @@
 .client-shell .c-card__title { font-family: var(--display); font-size: 13px; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; color: var(--brand-ink); margin-bottom: 14px; }
 
 /* ticket type row (selección) */
-.client-shell .c-tt { position: relative; overflow: hidden; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 16px; background: var(--white); border: 1px solid var(--hairline); border-radius: var(--r-card); padding: 18px 20px 18px 24px; box-shadow: var(--shadow-sm); transition: border-color .2s, box-shadow .2s var(--ease), transform .2s var(--ease), background-color .2s; animation: c-tt-in .4s var(--ease) both; animation-delay: calc(var(--i, 0) * 55ms); }
+.client-shell .c-tt { position: relative; overflow: hidden; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px; background: var(--white); border: 1px solid var(--hairline); border-radius: var(--r-card); padding: 15px 18px 15px 22px; box-shadow: var(--shadow-sm); transition: border-color .2s, box-shadow .2s var(--ease), transform .2s var(--ease), background-color .2s; animation: c-tt-in .4s var(--ease) both; animation-delay: calc(var(--i, 0) * 55ms); }
 /* banda de color por tipo de entrada (color_hex; cae a la marca) */
 .client-shell .c-tt::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--tt-accent, var(--brand)); border-radius: var(--r-card) 0 0 var(--r-card); }
 .client-shell .c-tt:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
@@ -121,7 +121,7 @@
 @keyframes c-tt-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 /* badge sold-out sólido (en vez de solo opacar) */
 .client-shell .c-soldout { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: var(--r-pill); background: var(--ink); color: var(--white); font-size: 11.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
-.client-shell .c-tt__name { font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: -0.01em; line-height: 1; }
+.client-shell .c-tt__name { font-family: var(--display); font-weight: 800; font-size: 19px; letter-spacing: -0.01em; line-height: 1.05; }
 .client-shell .c-tt__price { font-weight: 700; color: var(--brand-ink); font-variant-numeric: tabular-nums; }
 .client-shell .c-tt__perks { margin-top: 6px; font-size: 13.5px; color: var(--ink-2); }
 .client-shell .c-tt__perks li { display: flex; gap: 6px; }
@@ -271,8 +271,9 @@
   .client-shell .c-checkout-grid aside { position: static !important; }
 }
 @media (max-width: 640px) {
-  .client-shell .c-tt { grid-template-columns: 1fr; }
-  .client-shell .c-tt .c-qty { justify-self: start; }
+  /* La tarjeta de entrada queda SIEMPRE horizontal (nombre/precio a la izq,
+     control a la der). Sin apilar: evita la tarjeta alta y vacía con el "+"
+     suelto abajo-izquierda. */
   .client-shell .c-doc { grid-template-columns: 110px 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -398,8 +399,7 @@
 .client-shell .c-co__grid { display: grid; grid-template-columns: minmax(0,1fr) 366px; gap: clamp(22px,3vw,38px); align-items: start; }
 .client-shell .c-co__main { min-width: 0; display: flex; flex-direction: column; gap: clamp(24px,3vw,34px); }
 .client-shell .c-co__rail { position: sticky; top: 92px; }
-.client-shell .c-co__sechead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-.client-shell .c-co__sechead-meta { font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.client-shell .c-co__sechead { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
 .client-shell .c-co__back { align-self: flex-start; margin-top: 4px; background: none; border: none; padding: 6px 2px; font-family: var(--body); font-size: 14px; font-weight: 600; color: var(--ink-3); cursor: pointer; transition: color .15s; }
 .client-shell .c-co__back:hover { color: var(--ink); }
 
@@ -413,21 +413,26 @@
 .client-shell .c-stepper__label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; color: var(--ink-3); transition: color .3s; }
 .client-shell .c-stepper__label--on { color: var(--ink); font-weight: 700; }
 
-/* hero en tarjeta enmarcada */
-.client-shell .c-hcard { display: flex; gap: 22px; background: var(--white); border: 1px solid var(--hairline); border-radius: 22px; padding: 18px; box-shadow: var(--shadow-sm); }
-.client-shell .c-hcard__poster { position: relative; flex: 0 0 auto; width: 168px; }
-.client-shell .c-hcard__poster img, .client-shell .c-hcard__poster-fallback { width: 168px; height: 224px; border-radius: 14px; display: block; object-fit: cover; object-position: top; box-shadow: 0 22px 40px -18px rgba(35,28,23,.5); }
-.client-shell .c-hcard__poster-fallback { display: grid; place-items: center; padding: 14px; text-align: center; background: radial-gradient(120% 90% at 80% 0%, var(--brand-soft), transparent 60%), linear-gradient(160deg, var(--cream-2), var(--cream-3)); }
-.client-shell .c-hcard__poster-fallback span { font-family: var(--display); font-weight: 800; font-size: 22px; color: var(--brand-ink); }
-.client-shell .c-hcard__age { position: absolute; top: -10px; right: -10px; width: 44px; height: 44px; border-radius: 50%; background: var(--ink); color: var(--cream); display: grid; place-items: center; font-family: var(--display); font-size: 14px; font-weight: 800; border: 2px solid var(--brand); box-shadow: 0 6px 14px -4px rgba(35,28,23,.5); }
-.client-shell .c-hcard__body { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
-.client-shell .c-hcard__brand { display: block; height: 28px; width: auto; max-width: 150px; object-fit: contain; border-radius: 6px; }
-.client-shell .c-hcard__by { font-size: 13px; font-weight: 600; color: var(--ink-2); }
-.client-shell .c-hcard__title { font-family: var(--display); font-weight: 800; font-size: clamp(32px,4.4vw,54px); line-height: 0.92; letter-spacing: -0.03em; margin: 2px 0 0; }
-.client-shell .c-hcard__lineup { font-family: var(--font-instrument), Georgia, serif; font-style: italic; font-size: clamp(16px,2vw,20px); line-height: 1.2; color: var(--ink-2); margin: 0; }
-.client-shell .c-hcard__meta { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+/* hero compacto: miniatura del flyer + título/meta (sin logo de marca) */
+.client-shell .c-hcard { display: flex; align-items: center; gap: 16px; background: var(--white); border: 1px solid var(--hairline); border-radius: 18px; padding: 14px; box-shadow: var(--shadow-sm); }
+.client-shell .c-hcard__poster { position: relative; flex: 0 0 auto; width: 108px; }
+.client-shell .c-hcard__poster img, .client-shell .c-hcard__poster-fallback { width: 100%; aspect-ratio: 3 / 4; border-radius: 12px; display: block; object-fit: cover; object-position: center; box-shadow: 0 14px 26px -14px rgba(35,28,23,.45); }
+.client-shell .c-hcard__poster-fallback { display: grid; place-items: center; padding: 10px; text-align: center; background: radial-gradient(120% 90% at 80% 0%, var(--brand-soft), transparent 60%), linear-gradient(160deg, var(--cream-2), var(--cream-3)); }
+.client-shell .c-hcard__poster-fallback span { font-family: var(--display); font-weight: 800; font-size: 14px; line-height: 1.15; color: var(--brand-ink); overflow: hidden; }
+.client-shell .c-hcard__body { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+.client-shell .c-hcard__title { font-family: var(--display); font-weight: 800; font-size: clamp(22px,3.4vw,34px); line-height: 1.02; letter-spacing: -0.02em; margin: 0; }
+/* EN VIVO — micro-badge inline junto al título (sin línea propia) */
+.client-shell .c-hcard__live { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; margin-left: 8px; font-family: var(--body); font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--brand-ink); white-space: nowrap; }
+.client-shell .c-hcard__live .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); animation: c-pulse 2s var(--ease) infinite; }
+.client-shell .c-hcard__lineup { font-family: var(--font-instrument), Georgia, serif; font-style: italic; font-size: clamp(15px,1.8vw,18px); line-height: 1.25; color: var(--ink-2); margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.client-shell .c-hcard__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 2px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
 .client-shell .c-hcard__meta span { display: inline-flex; align-items: center; gap: 6px; }
 .client-shell .c-hcard__meta span::first-letter { color: var(--brand); }
+/* +18 — pill discreta al lado de fecha/lugar (nunca sobre el flyer chico) */
+.client-shell .c-hcard__agepill { height: 22px; padding: 0 9px; border-radius: var(--r-pill); background: var(--ink); color: var(--cream); font-family: var(--display); font-size: 12px; font-weight: 800; letter-spacing: 0; }
+.client-shell .c-hcard__meta span.c-hcard__agepill::first-letter { color: inherit; }
+/* fila compacta de compartir (fuera del hero, tras elegir entradas) */
+.client-shell .c-sharerow { margin: 14px 0 4px; }
 
 /* código de promotor (toggle) */
 .client-shell .c-promo-toggle { display: inline-flex; align-items: center; gap: 9px; background: none; border: none; padding: 6px 2px; font-family: var(--body); font-size: 14px; font-weight: 600; color: var(--ink-2); cursor: pointer; transition: color .15s; }
@@ -472,10 +477,7 @@
   .client-shell .c-rail__cta { display: none; }
 }
 @media (max-width: 600px) {
-  .client-shell .c-hcard { flex-direction: column; align-items: flex-start; }
-  .client-shell .c-hcard__poster { width: 140px; }
-  .client-shell .c-hcard__poster img, .client-shell .c-hcard__poster-fallback { width: 140px; height: 186px; }
-  .client-shell .c-hcard__body { width: 100%; }
+  .client-shell .c-hcard__poster { width: 84px; }
   .client-shell .c-donde { flex-direction: column; }
   .client-shell .c-donde__map { width: 100%; aspect-ratio: 16 / 10; }
 }
@@ -507,7 +509,6 @@
 .client-shell .c-checkout-canvas .c-co__sechead .c-card__title {
   font-size: 12px; font-weight: 800; letter-spacing: 0.14em; color: var(--ink-2);
 }
-.client-shell .c-checkout-canvas .c-co__sechead-meta { letter-spacing: 0.02em; }
 
 /* — Stepper 01 · 02 · 03 (activo en círculo naranja de marca) — */
 .client-shell .c-checkout-canvas .c-stepper__num { width: 28px; height: 28px; font-size: 12px; letter-spacing: -0.02em; }
@@ -515,18 +516,18 @@
 .client-shell .c-checkout-canvas .c-stepper__label { letter-spacing: 0.12em; }
 .client-shell .c-checkout-canvas .c-stepper__line { background: rgba(22,18,13,.16); }
 
-/* — Hero: tarjeta blanca con más aire; badge +18 negro, chip EN VIVO — */
-.client-shell .c-checkout-canvas .c-hcard { border-radius: 24px; padding: 20px; gap: 24px; box-shadow: var(--shadow-md); }
-.client-shell .c-checkout-canvas .c-hcard__age {
-  width: 46px; height: 46px; background: #16120D; color: #F5EFE6; border: 2px solid var(--brand);
+/* — Hero compacto: tarjeta blanca, +18 pill negra, EN VIVO inline — */
+.client-shell .c-checkout-canvas .c-hcard { border-radius: 18px; padding: 16px; gap: 18px; box-shadow: var(--shadow-md); }
+.client-shell .c-checkout-canvas .c-hcard__agepill {
+  background: #16120D; color: #F5EFE6;
   font-family: var(--display); font-weight: 900; letter-spacing: -0.02em;
 }
-.client-shell .c-checkout-canvas .c-live { letter-spacing: 0.14em; font-weight: 800; }
-.client-shell .c-checkout-canvas .c-hcard__title { line-height: 0.9; }
+.client-shell .c-checkout-canvas .c-hcard__live { letter-spacing: 0.12em; font-weight: 800; }
+.client-shell .c-checkout-canvas .c-hcard__title { line-height: 1.0; }
 
-/* — Tarjetas de entrada: aire, descripción como subtítulo, tap feedback — */
-.client-shell .c-checkout-canvas .c-tt { padding: 20px 22px 20px 26px; }
-.client-shell .c-checkout-canvas .c-tt__name { font-size: 21px; }
+/* — Tarjetas de entrada: horizontales, compactas, tap feedback — */
+.client-shell .c-checkout-canvas .c-tt { padding: 15px 20px 15px 24px; }
+.client-shell .c-checkout-canvas .c-tt__name { font-size: 19px; }
 .client-shell .c-checkout-canvas .c-tt__perks { font-size: 14px; color: var(--ink-2); }
 .client-shell .c-checkout-canvas .c-tt--active { box-shadow: 0 0 0 2px var(--brand), var(--shadow-md); }
 

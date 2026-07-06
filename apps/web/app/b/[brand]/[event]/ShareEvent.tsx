@@ -48,7 +48,7 @@ export function ShareEvent({ eventName, shareUrl }: { eventName: string; shareUr
   }
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
       <a href={waHref} target="_blank" rel="noopener noreferrer" className="c-btn c-btn--soft" style={{ height: 38, padding: '0 14px', fontSize: 13.5 }}>
         <Share2 className="h-4 w-4" /> WhatsApp
       </a>
