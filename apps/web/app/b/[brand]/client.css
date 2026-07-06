@@ -73,8 +73,6 @@
 .client-shell .c-hero--tint .c-hero__bg { background:
   radial-gradient(120% 90% at 85% 0%, var(--brand-soft), transparent 60%),
   linear-gradient(180deg, var(--cream-2), var(--cream)); }
-.client-shell .c-live { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--brand-ink); }
-.client-shell .c-live .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 4px var(--brand-soft); animation: c-pulse 2s var(--ease) infinite; }
 @keyframes c-pulse { 0%,100% { opacity: 1 } 50% { opacity: .45 } }
 .client-shell .c-hero h1 { font-family: var(--display); font-weight: 800; font-size: clamp(34px, 7vw, 64px); line-height: 1.0; letter-spacing: -0.03em; margin: 14px 0 0; max-width: 16ch; }
 .client-shell .c-hero__desc { margin-top: 14px; max-width: 52ch; font-size: clamp(15px,2.2vw,18px); color: var(--ink-2); }
@@ -82,7 +80,6 @@
 .client-shell .c-chip { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; border-radius: var(--r-pill); background: var(--white); border: 1px solid var(--cream-3); font-size: 13px; font-weight: 600; color: var(--ink); box-shadow: var(--shadow); }
 .client-shell .c-hero--img h1, .client-shell .c-hero--img .c-hero__desc { color: #fff; }
 .client-shell .c-hero--img .c-chip { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.28); color: #fff; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
-.client-shell .c-hero--img .c-live { color: #fff; }
 /* Logo / firma de la marca sobre el hero */
 .client-shell .c-hero__brand { display: block; height: 30px; width: auto; max-width: 160px; object-fit: contain; margin-top: 14px; border-radius: 6px; }
 .client-shell .c-hero__by { display: block; margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
@@ -382,7 +379,6 @@
   .client-shell .c-hero__inner--poster { display: block; }
   .client-shell .c-hero__inner { padding-top: 28px; padding-bottom: 10px; }
   .client-shell .c-hero--img h1, .client-shell .c-hero--img .c-hero__desc { color: var(--ink); }
-  .client-shell .c-hero--img .c-live { color: var(--brand-ink); }
   .client-shell .c-hero--img .c-hero__by { color: var(--ink-2); text-shadow: none; }
   .client-shell .c-hero--img .c-chip { background: var(--white); border-color: var(--cream-3); color: var(--ink); -webkit-backdrop-filter: none; backdrop-filter: none; }
   .client-shell .c-hero--img .c-hero__brand { filter: none; }
@@ -399,7 +395,6 @@
 .client-shell .c-co__grid { display: grid; grid-template-columns: minmax(0,1fr) 366px; gap: clamp(22px,3vw,38px); align-items: start; }
 .client-shell .c-co__main { min-width: 0; display: flex; flex-direction: column; gap: clamp(24px,3vw,34px); }
 .client-shell .c-co__rail { position: sticky; top: 92px; }
-.client-shell .c-co__sechead { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
 .client-shell .c-co__back { align-self: flex-start; margin-top: 4px; background: none; border: none; padding: 6px 2px; font-family: var(--body); font-size: 14px; font-weight: 600; color: var(--ink-3); cursor: pointer; transition: color .15s; }
 .client-shell .c-co__back:hover { color: var(--ink); }
 
@@ -412,27 +407,6 @@
 .client-shell .c-stepper__num--done { background: var(--ink); color: var(--cream); box-shadow: none; }
 .client-shell .c-stepper__label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; color: var(--ink-3); transition: color .3s; }
 .client-shell .c-stepper__label--on { color: var(--ink); font-weight: 700; }
-
-/* hero compacto: miniatura del flyer + título/meta (sin logo de marca) */
-.client-shell .c-hcard { display: flex; align-items: center; gap: 16px; background: var(--white); border: 1px solid var(--hairline); border-radius: 18px; padding: 14px; box-shadow: var(--shadow-sm); }
-.client-shell .c-hcard__poster { position: relative; flex: 0 0 auto; width: 108px; }
-.client-shell .c-hcard__poster img, .client-shell .c-hcard__poster-fallback { width: 100%; aspect-ratio: 3 / 4; border-radius: 12px; display: block; object-fit: cover; object-position: center; box-shadow: 0 14px 26px -14px rgba(35,28,23,.45); }
-.client-shell .c-hcard__poster-fallback { display: grid; place-items: center; padding: 10px; text-align: center; background: radial-gradient(120% 90% at 80% 0%, var(--brand-soft), transparent 60%), linear-gradient(160deg, var(--cream-2), var(--cream-3)); }
-.client-shell .c-hcard__poster-fallback span { font-family: var(--display); font-weight: 800; font-size: 14px; line-height: 1.15; color: var(--brand-ink); overflow: hidden; }
-.client-shell .c-hcard__body { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
-.client-shell .c-hcard__title { font-family: var(--display); font-weight: 800; font-size: clamp(22px,3.4vw,34px); line-height: 1.02; letter-spacing: -0.02em; margin: 0; }
-/* EN VIVO — micro-badge inline junto al título (sin línea propia) */
-.client-shell .c-hcard__live { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; margin-left: 8px; font-family: var(--body); font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--brand-ink); white-space: nowrap; }
-.client-shell .c-hcard__live .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); animation: c-pulse 2s var(--ease) infinite; }
-.client-shell .c-hcard__lineup { font-family: var(--font-instrument), Georgia, serif; font-style: italic; font-size: clamp(15px,1.8vw,18px); line-height: 1.25; color: var(--ink-2); margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.client-shell .c-hcard__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 2px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
-.client-shell .c-hcard__meta span { display: inline-flex; align-items: center; gap: 6px; }
-.client-shell .c-hcard__meta span::first-letter { color: var(--brand); }
-/* +18 — pill discreta al lado de fecha/lugar (nunca sobre el flyer chico) */
-.client-shell .c-hcard__agepill { height: 22px; padding: 0 9px; border-radius: var(--r-pill); background: var(--ink); color: var(--cream); font-family: var(--display); font-size: 12px; font-weight: 800; letter-spacing: 0; }
-.client-shell .c-hcard__meta span.c-hcard__agepill::first-letter { color: inherit; }
-/* fila compacta de compartir (fuera del hero, tras elegir entradas) */
-.client-shell .c-sharerow { margin: 14px 0 4px; }
 
 /* código de promotor (toggle) */
 .client-shell .c-promo-toggle { display: inline-flex; align-items: center; gap: 9px; background: none; border: none; padding: 6px 2px; font-family: var(--body); font-size: 14px; font-weight: 600; color: var(--ink-2); cursor: pointer; transition: color .15s; }
@@ -477,7 +451,6 @@
   .client-shell .c-rail__cta { display: none; }
 }
 @media (max-width: 600px) {
-  .client-shell .c-hcard__poster { width: 84px; }
   .client-shell .c-donde { flex-direction: column; }
   .client-shell .c-donde__map { width: 100%; aspect-ratio: 16 / 10; }
 }
@@ -579,7 +552,7 @@
 .client-shell .c-checkout-canvas .c-phase { margin-top: 6px; }
 .client-shell .c-checkout-canvas .c-phase__now { background: none; color: var(--ink-2); padding: 0; border-radius: 0; font-size: 12px; font-weight: 500; }
 .client-shell .c-checkout-canvas .c-rise { color: var(--ink-2); font-weight: 500; }
-.client-shell .c-checkout-canvas .c-soldout { background: none; color: var(--ink-3); padding: 0; height: auto; font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.client-shell .c-checkout-canvas .c-soldout { background: none; color: rgba(22,18,13,.72); padding: 0; height: auto; font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; }
 
 /* — Morph "Agregar" ↔ [− n +] (mismo ancho reservado, sin CLS) — */
 .client-shell .c-checkout-canvas .c-add {
@@ -590,6 +563,9 @@
 }
 .client-shell .c-checkout-canvas .c-add:hover { background: var(--ink); color: var(--cream); }
 .client-shell .c-checkout-canvas .c-add:active { transform: scale(.93); }
+/* Foco de teclado: anillo con offset para no ser recortado por overflow:hidden del .c-ttlist */
+.client-shell .c-checkout-canvas .c-add:focus-visible,
+.client-shell .c-checkout-canvas .c-textlink:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; border-radius: 4px; }
 .client-shell .c-checkout-canvas .c-qty { gap: 9px; min-width: 112px; justify-content: flex-end; }
 .client-shell .c-checkout-canvas .c-qbtn { width: 31px; height: 31px; border: 1.5px solid var(--line); background: transparent; color: var(--ink); }
 .client-shell .c-checkout-canvas .c-qbtn:hover:not(:disabled) { border-color: var(--ink); }
