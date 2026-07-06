@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LogOut } from 'lucide-react';
+import { BrandLogo } from '@/components/BrandLogo';
 
 const NAV = [
   { href: '/admin', label: 'Inicio' },
@@ -21,16 +22,7 @@ export function AdminTopbar({ brandName, email, logoUrl }: { brandName: string; 
     <header className="s-topbar">
       <div className="s-topbar__inner">
         <Link href="/admin" className="s-logo" style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-          {logoUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={logoUrl}
-              alt=""
-              width={28}
-              height={28}
-              style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'contain', flexShrink: 0 }}
-            />
-          )}
+          {logoUrl && <BrandLogo src={logoUrl} alt="" size={28} ring={false} />}
           {brandName}
           <span className="dot">.</span>
           <span className="tag">Tu panel</span>

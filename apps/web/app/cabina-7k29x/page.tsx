@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { optimizedImage } from '@/lib/imageUrl';
+import { BrandLogo } from '@/components/BrandLogo';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { setBrandArchivedAction } from './brands/[slug]/actions';
 
@@ -15,14 +15,10 @@ const initialOf = (name: string) => (name.trim()[0] ?? '?').toUpperCase();
 
 // Avatar de marca: logo real si está subido; si no, color de marca (o hash) + inicial.
 function BrandAvatar({ name, slug, logoUrl, color }: { name: string; slug: string; logoUrl: string | null; color: string | null }) {
+  if (logoUrl) return <BrandLogo src={logoUrl} alt="" size={40} ring={false} />;
   return (
-    <span className="s-avatar" style={{ background: logoUrl ? 'var(--white)' : (color || bgFor(slug)), overflow: 'hidden' }}>
-      {logoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={optimizedImage(logoUrl, { width: 96, quality: 80 })} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} decoding="async" />
-      ) : (
-        initialOf(name)
-      )}
+    <span className="s-avatar" style={{ background: color || bgFor(slug) }}>
+      {initialOf(name)}
     </span>
   );
 }

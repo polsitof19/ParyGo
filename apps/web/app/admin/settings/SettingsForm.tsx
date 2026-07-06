@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { toast } from 'sonner';
 import { updateBrandSettingsAction, type SettingsState } from './actions';
+import { BrandLogo } from '@/components/BrandLogo';
 
 const initial: SettingsState = { ok: false, message: null };
 
@@ -90,8 +91,7 @@ export function SettingsForm(props: Props) {
         <Field label="Logo (PNG, JPG o WEBP · máx 2MB)" htmlFor="logo" error={err.logo}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {props.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={props.logoUrl} alt="logo actual" style={{ height: 48, width: 48, borderRadius: '50%', border: '1px solid var(--cream-3)', objectFit: 'cover' }} />
+              <BrandLogo src={props.logoUrl} alt="logo actual" size={48} ring={false} />
             ) : (
               <span className="s-avatar" style={{ background: 'var(--cream-2)', color: 'var(--ink-3)', fontSize: 10 }}>—</span>
             )}
