@@ -2,9 +2,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Check, Mail, ArrowRight, MapPin, Ticket as TicketIcon, ExternalLink } from 'lucide-react';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { generateQrSvg } from '@/lib/qr';
 import { formatPEN, formatEventDate, whatsappLink } from '@/lib/utils';
 import { ConfirmationPoller } from './ConfirmationPoller';
 import { AddToCalendar } from './AddToCalendar';
+import { DownloadQrButton } from '../../DownloadQrButton';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -76,11 +78,11 @@ export default async function ConfirmationPage({
         <span className="c-eyebrow" style={{ color: 'var(--alert, #dc2626)', marginTop: 16, display: 'block' }}>Pago no aprobado</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>No pudimos confirmar tu pago</h1>
         <p className="c-muted" style={{ marginTop: 10 }}>
-          MercadoPago no aprobó el pago. No se generó ningún cargo definitivo. Puedes intentar de nuevo con otro método o tarjeta.
+          MercadoPago no aprobó el pago. No se generó ningún cargo definitivo. Podés intentar de nuevo con otro método o tarjeta.
         </p>
         <a href="/" className="c-btn c-btn--brand" style={{ marginTop: 18 }}>Volver a intentar</a>
         {brand?.whatsapp_e164 && (
-          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 14, color: 'var(--brand-ink)', fontWeight: 600 }}>¿Necesitas ayuda? WhatsApp soporte</a>
+          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 14, color: 'var(--brand-ink)', fontWeight: 600 }}>¿Necesitás ayuda? WhatsApp soporte</a>
         )}
       </main>
     );
@@ -93,7 +95,7 @@ export default async function ConfirmationPage({
         <span className="c-eyebrow">Procesando pago</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>Estamos confirmando tu pago</h1>
         <p className="c-muted" style={{ marginTop: 10 }}>
-          Suele tardar menos de 1 minuto. Esta página se actualiza sola. Si pasan más de 5 minutos sin novedad, escríbenos por WhatsApp.
+          Suele tardar menos de 1 minuto. Esta página se actualiza sola. Si pasan más de 5 minutos sin novedad, escribinos por WhatsApp.
         </p>
         {brand?.whatsapp_e164 && (
           <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand-ink)', fontWeight: 600 }}>WhatsApp soporte</a>
@@ -126,7 +128,7 @@ export default async function ConfirmationPage({
         <span className="c-eyebrow" style={{ color: 'var(--alert, #dc2626)', marginTop: 16, display: 'block' }}>Comprobante rechazado</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>No pudimos validar tu Yape</h1>
         <p className="c-muted" style={{ marginTop: 10 }}>
-          {brand?.name ?? 'El promotor'} no pudo confirmar tu comprobante, así que no se emitió ninguna entrada y no quedó ningún cargo de nuestra parte. Si crees que es un error, escribe al organizador con tu comprobante a mano.
+          {brand?.name ?? 'El promotor'} no pudo confirmar tu comprobante, así que no se emitió ninguna entrada y no quedó ningún cargo de nuestra parte. Si creés que es un error, escribí al organizador con tu comprobante a mano.
         </p>
         {brand?.whatsapp_e164 && (
           <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand-ink)', fontWeight: 600 }}>Escribir al organizador por WhatsApp</a>
@@ -139,6 +141,11 @@ export default async function ConfirmationPage({
   const tickets = order.tickets ?? [];
   const firstTicket = tickets[0];
   const ticketUrl = firstTicket ? `/t/${firstTicket.qr_code}` : null;
+  // QR inline: reusa el mismo generador que /t. El payload es el qr_code, que ya
+  // está en el payload de esta página (link permanente, ticketUrl, WhatsApp) →
+  // no expone datos nuevos. Mismo control de acceso que arriba (brand.slug === params.brand).
+  const qrSvg = firstTicket ? await generateQrSvg(firstTicket.qr_code) : null;
+  const isMulti = tickets.length > 1;
 
   // "Cómo llegar": mismo criterio que la página del evento (maps_url > coords > dirección).
   const mapsHref = event?.venue_maps_url?.startsWith('https://')
@@ -151,7 +158,7 @@ export default async function ConfirmationPage({
   const calDetails = `Tu entrada para ${event?.name ?? 'el evento'}. Lleva ${event?.require_dni ? 'tu documento de identidad y ' : ''}tu QR (te llegó por email). Entrada por ParyGo.`;
 
   return (
-    <main className="c-narrow c-checkout-canvas" style={{ paddingTop: 48, paddingBottom: 56 }}>
+    <main className="c-narrow c-checkout-canvas" style={{ paddingTop: 40, paddingBottom: 56 }}>
       <div className="c-confirm">
         <div className="c-confirm__badge"><Check className="h-9 w-9" /></div>
         <span className="c-eyebrow" style={{ color: 'var(--ok)' }}>¡Compra confirmada!</span>
@@ -159,29 +166,30 @@ export default async function ConfirmationPage({
         <p className="c-muted">{event?.name}{event?.starts_at ? ` · ${formatEventDate(event.starts_at)}` : ''}</p>
       </div>
 
-      {ticketUrl && (
-        <div style={{ marginTop: 28 }}>
-          <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginBottom: 10 }}>Tu link permanente (guárdalo en favoritos)</p>
-          <div className="c-linkpill">
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14 }}>parygo.com/t/{firstTicket!.qr_code.slice(0, 8)}…</span>
-            <Link href={ticketUrl} className="c-btn c-btn--brand" style={{ height: 40, padding: '0 16px' }}>Ver mi entrada <ArrowRight className="h-4 w-4" /></Link>
-          </div>
+      {/* HERO: el QR es lo único importante en esta pantalla. */}
+      {firstTicket && qrSvg && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginTop: 26 }}>
+          {isMulti && (
+            <span className="c-eyebrow" style={{ color: 'var(--ink-2)' }}>
+              Entrada 1 de {tickets.length} · {firstTicket.ticket_type_name}
+            </span>
+          )}
+          <div className="c-qr" role="img" aria-label="QR de tu entrada" dangerouslySetInnerHTML={{ __html: qrSvg }} />
+          <p style={{ fontWeight: 700, fontSize: 16, textAlign: 'center' }}>Mostrá este QR en la puerta.</p>
+          {isMulti ? (
+            <Link href={`/pedido/${order.id}`} className="c-btn c-btn--brand">
+              Ver mis {tickets.length} entradas <ArrowRight className="h-4 w-4" />
+            </Link>
+          ) : (
+            <DownloadQrButton qrCode={firstTicket.qr_code} fileName={firstTicket.ticket_number} />
+          )}
         </div>
       )}
 
-      <div className="c-card" style={{ marginTop: 22 }}>
-        <p className="c-card__title">Resumen</p>
-        <Row label="Comprador">{order.buyer_name}</Row>
-        <Row label="Total">{formatPEN(order.total_cents)}</Row>
-        <Row label="Entradas">
-          <ul style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {tickets.map((t) => <li key={t.id} style={{ fontSize: 13.5 }}>{t.ticket_number} · {t.ticket_type_name}</li>)}
-          </ul>
-        </Row>
-      </div>
+      {/* ----- Secundario, más quieto, debajo del QR ----- */}
 
       {/* Antes de ir: calendario + cómo llegar + qué llevar */}
-      <div className="c-card" style={{ marginTop: 16 }}>
+      <div className="c-card" style={{ marginTop: 26 }}>
         <p className="c-card__title">Antes de ir</p>
         {event?.starts_at && (
           <div style={{ marginTop: 4, marginBottom: 12 }}>
@@ -203,29 +211,50 @@ export default async function ConfirmationPage({
         <ul style={{ listStyle: 'none', margin: '12px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
           <li style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13.5, color: 'var(--ink-2)' }}>
             <TicketIcon className="h-4 w-4" style={{ flexShrink: 0, marginTop: 1, color: 'var(--brand-ink)' }} />
-            Muestra tu QR en la puerta (desde el email o tu link permanente).
+            También tenés tu QR en el email y en tu link permanente.
           </li>
           {event?.require_dni && (
             <li style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13.5, color: 'var(--ink-2)' }}>
               <Check className="h-4 w-4" style={{ flexShrink: 0, marginTop: 1, color: 'var(--brand-ink)' }} />
-              Lleva tu documento de identidad (te lo pueden pedir en la puerta).
+              Llevá tu documento de identidad (te lo pueden pedir en la puerta).
             </li>
           )}
         </ul>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10, marginTop: 18 }}>
-        {firstTicket && brand?.whatsapp_e164 && (
-          <a href={whatsappLink(brand.whatsapp_e164.replace(/[^\d]/g, ''), `Hola, te paso mi entrada para ${event?.name}: https://${brand.slug}.parygo.com/t/${firstTicket.qr_code}`)} target="_blank" rel="noopener noreferrer" className="c-btn c-btn--soft">
-            📲 Enviarme a WhatsApp
-          </a>
-        )}
-        {ticketUrl && <Link href={ticketUrl} className="c-btn c-btn--soft">Ver mi QR</Link>}
+      {/* Resumen del pedido */}
+      <div className="c-card" style={{ marginTop: 16 }}>
+        <p className="c-card__title">Resumen</p>
+        <Row label="Comprador">{order.buyer_name}</Row>
+        <Row label="Total">{formatPEN(order.total_cents)}</Row>
+        <Row label="Entradas">
+          <ul style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {tickets.map((t) => <li key={t.id} style={{ fontSize: 13.5 }}>{t.ticket_number} · {t.ticket_type_name}</li>)}
+          </ul>
+        </Row>
       </div>
 
+      {/* Link permanente + compartir: acciones de respaldo, jerarquía baja */}
+      {ticketUrl && (
+        <div style={{ marginTop: 16 }}>
+          <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginBottom: 10 }}>Tu link permanente (guardalo en favoritos)</p>
+          <div className="c-linkpill">
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14 }}>parygo.com/t/{firstTicket!.qr_code.slice(0, 8)}…</span>
+            <Link href={ticketUrl} className="c-btn c-btn--soft" style={{ height: 40, padding: '0 16px' }}>Abrir <ArrowRight className="h-4 w-4" /></Link>
+          </div>
+          {firstTicket && brand?.whatsapp_e164 && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
+              <a href={whatsappLink(brand.whatsapp_e164.replace(/[^\d]/g, ''), `Hola, te paso mi entrada para ${event?.name}: https://${brand.slug}.parygo.com/t/${firstTicket.qr_code}`)} target="_blank" rel="noopener noreferrer" className="c-btn c-btn--soft">
+                📲 Enviarme a WhatsApp
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+
       <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginTop: 18 }}>
-        También te enviamos el QR por email. Si no llega en 5 min, revisa spam o usa el link permanente.{' '}
-        <Link href="/reenviar" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>¿No lo encuentras? Reenviar a mi email</Link>
+        También te enviamos el QR por email. Si no llega en 5 min, revisá spam o usá el link permanente.{' '}
+        <Link href="/reenviar" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>¿No lo encontrás? Reenviar a mi email</Link>
       </p>
     </main>
   );
