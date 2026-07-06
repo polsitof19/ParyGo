@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Bricolage_Grotesque, Hanken_Grotesk, Archivo, Inter, Instrument_Serif, Fredoka, Nunito } from 'next/font/google';
 import { createClient } from '@/lib/supabase/server';
 import { brandColor, brandInk, contrastOn, withAlpha } from './brandTheme';
-import { optimizedImage } from '@/lib/imageUrl';
+import { BrandLogo } from '@/components/BrandLogo';
 import './client.css';
 import './landing.css';
 
@@ -66,8 +66,7 @@ export default async function BrandLayout({
         <div className="c-header__inner">
           <Link href="/" className="c-lockup" aria-label={brand.name}>
             {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={optimizedImage(logoUrl, { width: 120, quality: 88 })} alt="" className="c-lockup__logo" loading="eager" decoding="async" />
+              <BrandLogo src={logoUrl} alt="" size={36} eager ring />
             ) : (
               <span className="c-lockup__mark"><span /></span>
             )}
