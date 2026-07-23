@@ -13,13 +13,28 @@ MercadoPago + Yape (pagos) · Cloudflare Pages (parygo-app) + Worker
 supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se registran.
 
 ## Infra — reglas duras
-- Branch de trabajo: refactor/monorepo. NUNCA merge ni push a main (main = landing).
+- Branch de trabajo: refactor/monorepo. NUNCA push a main. main quedó CONGELADA/
+  legacy (landing pre-monorepo, commit viejo) — no es fuente de verdad de nada.
 - Supabase mdxtpevisjiqpeklhxdv = ÚNICO proyecto = PRODUCCIÓN. Cuidado con DDL.
 - SUPABASE_ACCESS_TOKEN vive en apps/web/.env.local (gitignored). Nunca commitearlo,
   nunca imprimirlo, nunca escribirlo a otro archivo.
 - Cliente piloto = "Tío Code" (slug code), evento "Almighty" VENDIENDO EN VIVO.
   Saldo de eventos de Code = 3. JAMÁS romper la venta de Almighty ni tocar Code/
   Almighty en tests. Brand de pruebas = "demotest" (is_published=false).
+
+## Deploy (Cloudflare Pages) — cómo llega a producción
+- Landing (parygo.com): proyecto Pages "parygo" (dominios parygo.pages.dev,
+  parygo.com, hoesky.parygo.com). Production branch = refactor/monorepo (cambiado
+  el 2026-07-22; antes era main). Push a refactor/monorepo → build + deploy a
+  parygo.com. Cualquier OTRA branch → deploy Preview (URL *.pages.dev con hash),
+  NO toca producción.
+- App (app.parygo.com): proyecto Pages "parygo-app" (parygo-app.pages.dev).
+- Router de subdominios *.parygo.com: Worker "parygo-brand-router".
+- Verificar deploys sin dashboard: `npx wrangler pages deployment list
+  --project-name=parygo` (Production vs Preview, branch, commit, URL).
+- Alternativa quirúrgica (publicar sin depender de la Git-integration):
+  build local (`npm run build:landing` → apps/landing/out) y luego
+  `npx wrangler pages deploy apps/landing/out --project-name=parygo --branch=refactor/monorepo`.
 
 ## Orden seguro OBLIGATORIO por cada cambio
 Plan/Explore (diseñar antes de codear) → migración vía Management API
