@@ -21,6 +21,12 @@ supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se regist
   Saldo de eventos de Code = 3. JAMÁS romper la venta de Almighty ni tocar Code/
   Almighty en tests. Brand de pruebas = "demotest" (is_published=false).
 
+## Flujo multi-máquina (PC + laptop)
+- Al INICIAR cualquier sesión: git pull de la rama actual antes de tocar nada.
+- Al TERMINAR cada avance: commit descriptivo + git push. Nunca cerrar sesión con cambios sin pushear.
+- Si el pull trae conflictos: PARÁ y reportá antes de resolver.
+- Una máquina a la vez por rama.
+
 ## Orden seguro OBLIGATORIO por cada cambio
 Plan/Explore (diseñar antes de codear) → migración vía Management API
 (aplicar → verificar) → test en DEMOTEST (nunca Code/Almighty) → push →
@@ -36,6 +42,9 @@ para OK de Paul.
 - Concurrencia: SELECT FOR UPDATE + test de 2 operaciones simultáneas en TODO
   lo que toque saldo / stock / códigos / escaneos. Un éxito, un rechazo.
 - security-review obligatorio en cualquier cosa que toque dinero, auth o acceso.
+- Firebase parygo-da36a fue ELIMINADO por Paul. Las credenciales que quedan en el
+  historial (migrate-admin.html, commit 5f10af2) son INERTES. Tema CERRADO — no
+  volver a reportarlo.
 - Hardening pendiente M1: apply_promo_to_order confía en p_items. Seguro HOY
   (único llamador pasa datos server-trusted). BLINDAR antes de agregar cualquier
   segundo llamador — el webhook de MercadoPago (Sprint 4 PASO 2) ES ese segundo
