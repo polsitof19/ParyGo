@@ -22,7 +22,6 @@ export function Footer() {
             <h4>Ayuda</h4>
             <ul>
               <li><a href={CTA.final} target="_blank" rel="noopener noreferrer">WhatsApp</a></li>
-              <li><a href="mailto:hola@parygo.com">hola@parygo.com</a></li>
               <li><a href="mailto:parygoasistencia@gmail.com">parygoasistencia@gmail.com</a></li>
               <li><a href="#precios">Preguntas frecuentes</a></li>
             </ul>
