@@ -19,9 +19,9 @@
   --display: var(--font-bricolage), "Bricolage Grotesque", "Fredoka", system-ui, sans-serif;
   --body: var(--font-hanken), "Hanken Grotesk", "Nunito", system-ui, -apple-system, sans-serif;
 
-  --maxw: 1240px;
+  --maxw: 1180px;
   --pad-x: clamp(22px, 5vw, 72px);
-  --pad-y: clamp(80px, 11vw, 150px);
+  --pad-y: clamp(80px, 11vw, 112px);
 
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -71,8 +71,9 @@ h1, h2, h3, h4, p { margin: 0; }
   font-family: var(--display);
   font-weight: 800;
   /* Floor de 40px (no 52) para que el título gigante NO desborde en celulares
-     de 320–390px; escala fluido con el viewport hasta 124px en desktop. */
-  font-size: clamp(40px, 11vw, 124px);
+     de 320–390px; escala fluido con el viewport hasta 92px en desktop (bajado
+     de 124px: en pantallas anchas se veía desproporcionado). Mobile intacto. */
+  font-size: clamp(40px, 11vw, 92px);
   line-height: 0.95;
   letter-spacing: -0.03em;
   overflow-wrap: break-word;
@@ -80,7 +81,7 @@ h1, h2, h3, h4, p { margin: 0; }
 .h2 {
   font-family: var(--display);
   font-weight: 800;
-  font-size: clamp(34px, 6.4vw, 80px);
+  font-size: clamp(34px, 6.4vw, 56px);
   line-height: 1.0;
   letter-spacing: -0.03em;
   text-wrap: balance;
@@ -89,12 +90,12 @@ h1, h2, h3, h4, p { margin: 0; }
 .h3 {
   font-family: var(--display);
   font-weight: 700;
-  font-size: clamp(24px, 3vw, 38px);
+  font-size: clamp(24px, 3vw, 32px);
   line-height: 1.05;
   letter-spacing: -0.02em;
 }
 .lede {
-  font-size: clamp(18px, 1.6vw, 22px);
+  font-size: clamp(18px, 1.6vw, 20px);
   line-height: 1.5;
   color: var(--ink-2);
   max-width: 46ch;
@@ -422,8 +423,8 @@ h1, h2, h3, h4, p { margin: 0; }
    ============================================================ */
 .hero {
   position: relative;
-  padding-top: clamp(120px, 16vw, 180px);
-  padding-bottom: clamp(60px, 8vw, 90px);
+  padding-top: clamp(120px, 16vw, 136px);
+  padding-bottom: clamp(60px, 8vw, 70px);
   overflow: hidden;
 }
 .hero__blobs { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
@@ -498,7 +499,7 @@ h1, h2, h3, h4, p { margin: 0; }
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  max-width: 540px;
+  max-width: 460px;
   justify-self: end;
 }
 .hero__visual canvas { display: block; width: 100% !important; height: 100% !important; position: relative; z-index: 2; }
@@ -547,7 +548,7 @@ h1, h2, h3, h4, p { margin: 0; }
 .section__head {
   display: flex; flex-direction: column; gap: 20px;
   max-width: 720px;
-  margin-bottom: clamp(48px, 6vw, 72px);
+  margin-bottom: clamp(48px, 6vw, 56px);
 }
 .section__head.center { margin-left: auto; margin-right: auto; text-align: center; align-items: center; }
 
@@ -1000,7 +1001,7 @@ h1, h2, h3, h4, p { margin: 0; }
 }
 .final__inner { position: relative; z-index: 1; }
 .final h2 { color: #fff; margin-bottom: 18px; }
-.final p { color: rgba(255,255,255,0.92); font-size: clamp(17px,1.6vw,21px); max-width: 42ch; margin: 0 auto 36px; }
+.final p { color: rgba(255,255,255,0.92); font-size: clamp(17px,1.6vw,20px); max-width: 42ch; margin: 0 auto 36px; }
 .final__ctas { display: flex; gap: 16px; justify-content: center; align-items: center; flex-wrap: wrap; }
 .final .btn-primary {
   background: var(--white);
