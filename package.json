@@ -13,7 +13,8 @@
     "build:web": "npm --workspace apps/web run build",
     "lint:web": "npm --workspace apps/web run lint",
     "dev": "npm run dev:web",
-    "build": "npm run build:web"
+    "build": "npm run build:web",
+    "test:hooks": "node .claude/hooks/__tests__/run.js"
   },
   "engines": {
     "node": ">=20.0.0"
