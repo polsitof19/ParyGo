@@ -117,6 +117,17 @@ function normalizeWords(s) {
   return s.replace(/[\\'"]/g, '');
 }
 
+/**
+ * Saca redirecciones (2>&1, > log.txt, >>out, <in) con su destino incluido.
+ * Son rutinarias y no cambian a qué rama se empuja, pero traen `>`/`<`, que si
+ * no marcarían el segmento como "no verificable" y mandarían un push normal al
+ * modo conservador. git no admite `<` ni `>` en nombres de rama, así que
+ * sacarlas no puede ocultar un destino.
+ */
+function stripRedirections(s) {
+  return s.replace(/\d*(?:>>?|<)\s*&?\s*[^\s|;&]*/g, ' ');
+}
+
 /** Parte la línea en comandos shell sueltos: así el push no se contamina con
  *  el texto de un `git commit -m "..."` encadenado antes. */
 function shellSegments(cmd) {
@@ -190,7 +201,8 @@ function subcommandHidden(tokens, gi) {
  * Analiza UN segmento que menciona un push.
  * Devuelve {verdict: 'block'|'ask'|'pass', reason}.
  */
-function analyzePushSegment(seg, cwd, wholeCmd) {
+function analyzePushSegment(rawSeg, cwd, wholeCmd) {
+  const seg = stripRedirections(rawSeg);
   const tokens = tokenize(seg);
   // Se tolera puntuación de shell pegada al token: `(git` de un subshell,
   // `\git` de un escape. Sin esto el segmento no se reconocería como git.
