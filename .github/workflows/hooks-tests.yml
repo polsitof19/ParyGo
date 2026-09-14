@@ -5,13 +5,21 @@ name: hooks
 # congelada, y sus dos modos de falla son caros y opuestos: dejar pasar un push
 # prohibido, o bloquear trabajo legítimo. Hasta acá dependía de que alguien se
 # acordara de correr la suite a mano.
+#
+# El filtro incluye además el propio workflow (para que un cambio acá se
+# autovalide en vez de pasar desapercibido) y package.json (que define el script
+# test:hooks: si se rompe ahí, la suite deja de correr sin que nadie se entere).
 on:
   push:
     paths:
       - '.claude/hooks/**'
+      - '.github/workflows/hooks-tests.yml'
+      - 'package.json'
   pull_request:
     paths:
       - '.claude/hooks/**'
+      - '.github/workflows/hooks-tests.yml'
+      - 'package.json'
 
 permissions:
   contents: read
