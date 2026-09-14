@@ -90,6 +90,21 @@ function functionalCases(ON_WORK, ON_MAIN) {
     ['variable como destino', P + ' origin $BRANCH', ON_WORK, 'ASK'],
     ['sustitución como destino', P + ' origin "${TARGET}"', ON_WORK, 'ASK'],
 
+    // ---- regla 1b: merge por destino real.
+    //      `git merge <x>` fusiona x HACIA la rama actual: el argumento es el
+    //      ORIGEN y la rama actual es el DESTINO. Nunca bloquea, como mucho pregunta. ----
+    ['merge estando parado en la rama congelada (escribe en ella)', 'git merge refactor/monorepo', ON_MAIN, 'ASK'],
+    ['merge sin argumentos parado en la rama congelada', 'git merge --no-ff otra-rama', ON_MAIN, 'ASK'],
+    ['merge que trae la rama congelada como origen', 'git merge main', ON_WORK, 'ASK'],
+    ['merge que trae origin/main como origen', 'git merge origin/main', ON_WORK, 'ASK'],
+    ['merge entre dos ramas normales desde la de trabajo', 'git merge feat/checkout-redesign', ON_WORK, 'PASS'],
+    ['merge de una rama con main en el nombre', 'git merge feat/main-menu', ON_WORK, 'PASS'],
+    ['el falso positivo viejo: la palabra viene del mensaje de commit',
+      'git commit -m "docs: main quedó congelada" && git merge feat/checkout-redesign', ON_WORK, 'PASS'],
+    ['merge -C a un repo parado en la rama congelada', 'git -C ' + ON_MAIN + ' merge otra-rama', ON_WORK, 'ASK'],
+    ['merge no verificable que menciona la rama congelada', 'git merge "$RAMA" # viene de main', ON_WORK, 'ASK'],
+    ['merge no verificable sin indicio de la rama congelada', 'git merge "$RAMA"', ON_WORK, 'PASS'],
+
     // ---- regla 2 (DDL sobre la venta en vivo): no debe haber regresión ----
     ['DDL destructivo sobre almighty', 'psql -c "drop table almighty_scans"', ON_WORK, 'ASK'],
     ['truncate contra el ref de producción', 'psql mdxtpevisjiqpeklhxdv -c "truncate tickets"', ON_WORK, 'ASK'],

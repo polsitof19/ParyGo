@@ -362,6 +362,95 @@ function analyzePushSegment(rawSeg, cwd, wholeCmd) {
   return { verdict: 'pass' };
 }
 
+/**
+ * Analiza UN segmento que menciona un merge.
+ *
+ * OJO con cuál es el destino: `git merge <x>` fusiona x HACIA LA RAMA ACTUAL.
+ * El argumento es el ORIGEN, no el destino. Entonces:
+ *   - estar parado en la rama congelada y mergear => se escribe en ella: ASK.
+ *   - `git merge main` desde la rama de trabajo => escribe en la de trabajo,
+ *     no en main. Bajo el criterio de destino eso no es peligroso; se avisa
+ *     igual pero por otro motivo (CLAUDE.md dice que la rama congelada no es
+ *     fuente de verdad, así que traerla es casi siempre un accidente).
+ *
+ * Esta regla nunca bloquea: como mucho pregunta.
+ */
+function analyzeMergeSegment(rawSeg, cwd, wholeCmd) {
+  const seg = stripRedirections(rawSeg);
+  const tokens = tokenize(seg);
+  const gi = tokens.findIndex((t) => {
+    const n = t.replace(/^[\\('"`{]+/, '');
+    return n === 'git' || /(?:^|\/)git$/.test(n);
+  });
+  let mi = -1;
+  if (gi !== -1) {
+    for (let i = gi + 1; i < tokens.length; i++) {
+      if (tokens[i] === 'merge') {
+        mi = i;
+        break;
+      }
+    }
+  }
+
+  const hasGit = gi !== -1;
+  const hasVerb = /\bmerge\b/.test(normalizeWords(seg));
+  const relevante = hasVerb
+    ? hasGit || INDIRECT.test(seg)
+    : hasGit && subcommandHidden(tokens, gi);
+  if (!relevante) return { verdict: 'pass' };
+
+  let suspicious = SHELL_META.test(seg) || INDIRECT.test(seg) || gi === -1 || mi === -1;
+  if (!suspicious) {
+    for (let i = 0; i < gi; i++) if (ENV_ASSIGN.test(tokens[i])) suspicious = true;
+    for (let i = gi + 1; i < mi; i++) if (UNSAFE_GLOBAL_OPT.test(tokens[i])) suspicious = true;
+  }
+
+  if (suspicious) {
+    // Sin poder parsear, solo se pregunta si hay algún indicio de la rama
+    // congelada. Esta regla es ASK-only: no tiene sentido interrogar por cada
+    // merge entrecomillado que no la menciona en ningún lado.
+    return SACRED_WORD.test(normalizeWords(wholeCmd))
+      ? {
+          verdict: 'ask',
+          reason: 'git merge no verificable que menciona la rama congelada. Confirmá que no estás fusionando hacia ella.',
+        }
+      : { verdict: 'pass' };
+  }
+
+  // `git -C <path> merge` opera sobre otro repo: la rama actual es la de ESE repo.
+  let repoDir = cwd;
+  for (let i = gi + 1; i < mi; i++) {
+    const t = tokens[i];
+    if ((t === '-C' || t === '--git-dir') && tokens[i + 1] !== undefined) {
+      repoDir = cwd === null ? null : path.resolve(cwd, tokens[i + 1]);
+    }
+    const m = t.match(/^--git-dir=(.+)$/);
+    if (m) repoDir = cwd === null ? null : path.resolve(cwd, m[1]);
+  }
+
+  // Destino real del merge = rama actual.
+  const br = currentBranch(repoDir);
+  if (br !== null && SACRED_LEAF.test(br)) {
+    return {
+      verdict: 'ask',
+      reason: 'git merge estando parado en ' + br + ': el merge escribe en esa rama. Confirmá.',
+    };
+  }
+
+  // La rama congelada como ORIGEN explícito del merge.
+  const fuentes = tokens.slice(mi + 1).filter((a) => !a.startsWith('-'));
+  const sagrada = fuentes.find((f) => SACRED_LEAF.test(f));
+  if (sagrada) {
+    return {
+      verdict: 'ask',
+      reason:
+        'git merge que trae ' + sagrada + ' como origen. Esa rama está congelada y no es fuente de verdad. Confirmá.',
+    };
+  }
+
+  return { verdict: 'pass' };
+}
+
 (async () => {
   let payload = {};
   try {
@@ -394,7 +483,9 @@ function analyzePushSegment(rawSeg, cwd, wholeCmd) {
     }
     // Prefiltro barato sobre el texto NORMALIZADO (si no, `git p\ush` se saltea
     // sin analizar). Quién es realmente un push lo decide analyzePushSegment.
-    if (!PUSH_VERB.test(normalizeWords(seg)) && !/\bgit\b/.test(seg)) continue;
+    const norm = normalizeWords(seg);
+    if (!PUSH_VERB.test(norm) && !/\bmerge\b/.test(norm) && !/\bgit\b/.test(seg)) continue;
+
     let res;
     try {
       res = analyzePushSegment(seg, effectiveCwd, cmd);
@@ -406,13 +497,19 @@ function analyzePushSegment(rawSeg, cwd, wholeCmd) {
     }
     if (res.verdict === 'block') block(res.reason);
     if (res.verdict === 'ask') ask(res.reason);
+
+    // Regla 1b: merge, por destino real (la rama actual). Nunca bloquea.
+    let mres;
+    try {
+      mres = analyzeMergeSegment(seg, effectiveCwd, cmd);
+    } catch (_) {
+      mres = SACRED_WORD.test(normalizeWords(cmd))
+        ? { verdict: 'ask', reason: 'no se pudo parsear el git merge y menciona la rama congelada. Confirmá.' }
+        : { verdict: 'pass' };
+    }
+    if (mres.verdict === 'ask') ask(mres.reason);
   }
 
-  // merge que fusiona hacia la rama sagrada
-  const isMerge = /\bgit\s+merge\b/.test(c);
-  if (isMerge && SACRED_WORD.test(normalizeWords(c))) {
-    ask('git merge que menciona la rama de landing. Confirmá que NO estás fusionando hacia ella.');
-  }
   // moverse a la rama sagrada: defensivo, para que no se haga merge/commit silencioso ahí
   if (/\bgit\s+(checkout|switch)\s+(-\S+\s+)*(main|master)\b/.test(c)) {
     ask('te estás moviendo a la rama de landing. Confirmá (riesgo: merge/commit accidental ahí).');
