@@ -8,7 +8,7 @@ Paul nunca toca la plata de las entradas. Compradores NO se loguean.
 
 ## Stack
 Next.js 14 App Router (Edge) · Supabase (RLS, pg_cron) · Resend (email) ·
-MercadoPago + Yape (pagos) · Cloudflare Pages (parygo-app) + Worker
+MercadoPago + Yape (pagos) · Cloudflare Pages (landing + app) + Worker
 (parygo-brand-router para *.parygo.com). Monorepo: apps/landing + apps/web +
 supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se registran.
 
@@ -28,7 +28,19 @@ supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se regist
   el 2026-07-22; antes era main). Push a refactor/monorepo → build + deploy a
   parygo.com. Cualquier OTRA branch → deploy Preview (URL *.pages.dev con hash),
   NO toca producción.
-- App (app.parygo.com): proyecto Pages "parygo-app" (parygo-app.pages.dev).
+- App (app.parygo.com): NOMBRE DEL PROYECTO SIN CONFIRMAR. Este archivo decía
+  "parygo-app" pero apps/web/wrangler.toml declara name = "parygo-web". No
+  coinciden y nadie verificó cuál existe en Cloudflare. Antes de usar cualquiera
+  de los dos en un comando: `npx wrangler pages project list`.
+- App — QUÉ DISPARA SU DEPLOY: DESCONOCIDO, y no se puede deducir del repo. El
+  comentario de apps/web/wrangler.toml dice que el directorio raíz, el comando de
+  build y los bindings de DNS se configuran EN EL DASHBOARD, no en el archivo.
+  O sea que el production branch del proyecto de la app solo se ve en Cloudflare.
+  CONSECUENCIA PRÁCTICA: un push a refactor/monorepo que toque apps/web (el
+  checkout, o sea lo que cobra) puede estar saliendo a producción o no, y desde
+  el repo es imposible saberlo. Resolver con `wrangler pages deployment list` del
+  proyecto real y anotar acá el branch, la próxima vez que alguien tenga la CLI
+  autenticada. Hasta entonces, no dar por desplegado ningún cambio de apps/web.
 - Router de subdominios *.parygo.com: Worker "parygo-brand-router".
 - Verificar deploys sin dashboard: `npx wrangler pages deployment list
   --project-name=parygo` (Production vs Preview, branch, commit, URL).
