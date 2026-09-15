@@ -142,6 +142,27 @@ export default async function EventPage({ params, searchParams }: Props) {
   if (!data) notFound();
   const { brand, event, ticketTypes, mpConfigured, mpPublicKey } = data;
 
+  // Guarda de evento pasado: un link viejo de un evento ya terminado NO debe
+  // dejar comprar. Si hay ends_at usamos eso; si no, 18h tras el inicio.
+  // El corte REAL vive en startCheckout (server): esto es la cara visible.
+  // El fallback de 18h tiene que seguir IGUAL al de startCheckout — si se
+  // cambia uno sin el otro, la pantalla y el corte real se desincronizan.
+  // El razonamiento detrás del número está documentado allá.
+  const overAt = event.ends_at ? Date.parse(event.ends_at) : Date.parse(event.starts_at) + 18 * 3600 * 1000;
+  const ended = Number.isFinite(overAt) && overAt < Date.now();
+  if (ended) {
+    return (
+      <main className="c-state">
+        <span className="c-eyebrow">{brand.name}</span>
+        <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>Este evento ya terminó</h1>
+        <p className="c-muted" style={{ marginTop: 10 }}>Mirá los próximos eventos de {brand.name}.</p>
+        <div style={{ marginTop: 20 }}>
+          <a className="c-btn c-btn--brand" href="/">Ver otros eventos</a>
+        </div>
+      </main>
+    );
+  }
+
   // B5 — link propio por promotor: ?ref=CÓDIGO pre-rellena el campo de RR.PP.
   // Solo prefill (la lógica de promo no cambia); si es inválido, el campo es
   // editable y el checkout no se rompe. Sanitizamos a [A-Za-z0-9_-] máx 32.

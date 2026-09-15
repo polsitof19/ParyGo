@@ -94,7 +94,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // 1. Verify event + ticket types in one query (server-trusted).
   const { data: event } = await admin
     .from('events')
-    .select('id, slug, name, brand_id, is_published, min_age, archived_at, require_age_confirmation, require_dni, collect_attendee_names')
+    .select('id, slug, name, brand_id, is_published, min_age, archived_at, starts_at, ends_at, require_age_confirmation, require_dni, collect_attendee_names')
     .eq('id', parsed.data.eventId)
     .maybeSingle();
   if (!event || !event.is_published || event.archived_at) {
@@ -130,6 +130,21 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     .maybeSingle();
   if (!brandRow || brandRow.archived_at) {
     return { ok: false, message: 'Evento no disponible.' };
+  }
+  // Guarda de evento pasado (misma regla que la página): un evento ya terminado
+  // no acepta compras, aunque el link viejo siga publicado. ends_at si existe;
+  // si no, 18h tras el inicio.
+  //
+  // Por qué 18h y no menos: ends_at es OPCIONAL en los formularios de creación,
+  // así que un evento sin cargar puede quedar colgado del fallback. Una fiesta
+  // en Lima de 10pm a 5am dura 7h; con un fallback corto esta guarda cortaría la
+  // venta EN PLENA FIESTA, sin error visible para el promotor. El costo de
+  // quedarse corto (perder ventas reales) es mucho peor que el de quedarse
+  // largo (alguien compra unas horas después de terminado → reembolso puntual).
+  // No bajar este número sin hacer ends_at obligatorio primero.
+  const overAt = event.ends_at ? Date.parse(event.ends_at) : Date.parse(event.starts_at) + 18 * 3600 * 1000;
+  if (Number.isFinite(overAt) && overAt < Date.now()) {
+    return { ok: false, message: 'Este evento ya terminó.' };
   }
 
   const ticketTypeIds = parsed.data.items.map((i) => i.ticketTypeId);
