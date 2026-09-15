@@ -42,6 +42,25 @@ supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se regist
 - Si el pull trae conflictos: PARÁ y reportá antes de resolver.
 - Una máquina a la vez por rama.
 
+## Pagos — estado real (audit 2026-09-15)
+- Yape manual: COMPLETO punta a punta. Comprobante público → revisión en panel
+  (autenticada, scoped por marca, transición de estado atómica) → emisión →
+  email. Es el camino que cobra hoy.
+- MercadoPago: IMPLEMENTADO y endurecido, no bloqueado. Webhook en
+  /api/webhooks/mp/[brandId]: HMAC obligatorio sin bypass de entorno, re-fetch
+  del pago contra la API de MP, verificación del monto contra el total congelado,
+  settle_mp_payment atómico (0025), idempotencia por mp_payment_id, anti-replay
+  de 5 min, comparación en tiempo constante.
+- PENDIENTE OPERATIVO (único): mp_webhook_secret NO tiene UI de carga ni de
+  rotación. Se genera aleatorio al crear la marca en el panel super, se guarda
+  encriptado (0034) y nunca se muestra; la columna en texto plano se borró (0044).
+  Para que MP firme con un secret que la app reconozca hace falta un UPDATE
+  manual vía RPC service-role. Sin eso, todo webhook de MP responde 401
+  webhook_secret_missing y NINGUNA venta por MP se liquida.
+- Precios y montos: siempre server-side. El cliente manda tipo y cantidad, nunca
+  importe. Fase activa vía get_event_active_prices, congelada en order_items.
+  Bulk topeado a 90% por constraint (0051). Anti-sobreventa atómico (0031).
+
 ## Orden seguro OBLIGATORIO por cada cambio
 Plan/Explore (diseñar antes de codear) → migración vía Management API
 (aplicar → verificar) → test en DEMOTEST (nunca Code/Almighty) → push →
@@ -60,13 +79,15 @@ para OK de Paul.
 - Firebase parygo-da36a fue ELIMINADO por Paul. Las credenciales que quedan en el
   historial (migrate-admin.html, commit 5f10af2) son INERTES. Tema CERRADO — no
   volver a reportarlo.
-- Hardening pendiente M1: apply_promo_to_order confía en p_items. Seguro HOY
-  (único llamador pasa datos server-trusted). BLINDAR antes de agregar cualquier
-  segundo llamador — el webhook de MercadoPago (Sprint 4 PASO 2) ES ese segundo
-  llamador. No agregar MP sin blindar M1 primero.
+- M1 CERRADO (0020). apply_promo_to_order ya NO confía en p_items: deriva tipo y
+  cantidad de order_items, y la base de precio de order_items.base_price_cents,
+  congelada por trigger en cada INSERT (cierra el vector de inyectar una base
+  falsa por INSERT directo). p_items quedó vestigial: se sigue pasando por compat
+  two-phase y el RPC lo ignora. El bloqueo que este archivo imponía sobre
+  MercadoPago está LEVANTADO — no volver a reportarlo como pendiente.
 
 ## Migraciones
-Incrementales, idempotentes, numeradas (vamos por 0019). Backwards-compatible
+Incrementales, idempotentes, numeradas (vamos por 0052). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
 para no romper la app vieja desplegada.
 
