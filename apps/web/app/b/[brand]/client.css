@@ -471,11 +471,18 @@
   --cream: #F5EFE6; --cream-2: #EFE8DC; --cream-3: #E6DBCB;
   --white: #FFFDF9;                    /* superficie */
   --ink: #16120D;                      /* tinta */
-  --ink-2: rgba(22,18,13,.55);         /* texto medio */
-  --ink-3: rgba(22,18,13,.35);         /* texto tenue */
+  /* Tinta media/tenue: los alfas están MEDIDOS, no elegidos a ojo. El texto se
+     compone contra el papel antes de compararse, así que el alfa manda el
+     contraste real. Peor caso siempre sobre --cream (#F5EFE6), que es el fondo
+     más oscuro de los dos. Piso para AA 4.5:1 en ambos: alfa .59.
+       .55 (valor anterior) → 3.97:1 papel / 4.10:1 superficie  ← FALLABA AA
+       .35 (valor anterior) → 2.23:1 papel / 2.26:1 superficie  ← FALLABA AA
+     No bajar estos alfas sin volver a medir. */
+  --ink-2: rgba(22,18,13,.70);         /* texto medio — 6.53:1 papel / 6.90:1 superficie */
+  --ink-3: rgba(22,18,13,.62);         /* texto tenue — 4.98:1 papel / 5.19:1 superficie */
   --line: rgba(22,18,13,.13);          /* línea fina */
   --hairline: rgba(22,18,13,.13);
-  --sel: rgba(22,18,13,.035);          /* tinte de selección */
+  --sel: rgba(22,18,13,.05);           /* tinte de selección de fila */
   --spring: cubic-bezier(.34,1.56,.64,1);
   /* una sola familia en todo el funnel (reemplaza Archivo + Instrument) */
   --display: var(--font-bricolage), "Bricolage Grotesque", system-ui, sans-serif;
@@ -532,17 +539,25 @@
 .client-shell .c-checkout-canvas .c-ttlist { background: var(--white); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 .client-shell .c-checkout-canvas .c-ttlist .c-tt {
   border: none; border-radius: 0; box-shadow: none; background: transparent;
-  padding: 16px; min-height: 74px; overflow: visible;
+  padding: 18px 16px; min-height: 74px; overflow: visible;
   transition: background-color .25s, box-shadow .25s;
 }
 .client-shell .c-checkout-canvas .c-ttlist .c-tt::before { display: none; }
 .client-shell .c-checkout-canvas .c-ttlist .c-tt + .c-tt { border-top: 1px solid var(--line); }
 .client-shell .c-checkout-canvas .c-ttlist .c-tt:hover { transform: none; box-shadow: none; }
-.client-shell .c-checkout-canvas .c-ttlist .c-tt--active { background: var(--sel); box-shadow: inset 3px 0 0 0 var(--ink); }
-.client-shell .c-checkout-canvas .c-tt__main { min-width: 0; }
+.client-shell .c-checkout-canvas .c-ttlist .c-tt--active { background: var(--sel); box-shadow: inset 4px 0 0 0 var(--ink); }
+/* Columna con gap propio: el ritmo interno lo manda el gap, no los margin-top
+   sueltos de cada hijo (que se anulan abajo). Un solo número para ajustar. */
+.client-shell .c-checkout-canvas .c-tt__main { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.client-shell .c-checkout-canvas .c-tt__main > .c-tt__perks,
+.client-shell .c-checkout-canvas .c-tt__main > .c-tt__bulk,
+.client-shell .c-checkout-canvas .c-tt__main > .c-phase,
+.client-shell .c-checkout-canvas .c-tt__main > .c-stock { margin-top: 0; }
 .client-shell .c-checkout-canvas .c-tt__right { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 10px; min-width: 112px; }
 .client-shell .c-checkout-canvas .c-tt__name { font-family: var(--display); font-size: 16.5px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; }
-.client-shell .c-checkout-canvas .c-tt__price { font-size: 15px; font-weight: 600; color: var(--ink-2); font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
+/* Precio: tinta plena y 700. Es el dato que el comprador viene a buscar; en
+   --ink-2 competía con las perks. tnum se mantiene (columna de dígitos estable). */
+.client-shell .c-checkout-canvas .c-tt__price { font-size: 15px; font-weight: 700; color: var(--ink); font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
 .client-shell .c-checkout-canvas .c-tt__perks { margin-top: 4px; font-size: 12.5px; color: var(--ink-2); }
 .client-shell .c-checkout-canvas .c-tt__perks li { display: block; }
 .client-shell .c-checkout-canvas .c-tt__bulk { margin-top: 6px; font-size: 12.5px; font-weight: 500; color: var(--ink-2); }
@@ -574,6 +589,18 @@
 .client-shell .c-checkout-canvas .c-qbtn svg { width: 15px; height: 15px; }
 .client-shell .c-checkout-canvas .c-qval { width: auto; min-width: 22px; font-family: var(--display); font-size: 15.5px; font-weight: 700; animation: c-pop-n .28s var(--spring); }
 @keyframes c-pop-n { 0% { transform: scale(1); } 50% { transform: scale(1.35); } 100% { transform: scale(1); } }
+
+/* Entrada del morph: cuando monta [− n +] (al agregar) o cuando vuelve
+   "Agregar" (al llegar a cero), el control entra con fade + 4px de subida.
+   SIN fill-mode a propósito: fijar el estado final pisaría el `transform` de
+   :active/:hover y se perdería el feedback de pulsación. Lo apaga solo el
+   bloque global de prefers-reduced-motion (animation: none !important sobre
+   .client-shell *), por eso acá no se repite la regla.
+   Nota: siendo CSS puro, esto también corre en el primer render de la lista;
+   a 120ms/4px es un asentamiento apenas perceptible, no una entrada. */
+@keyframes c-morph-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.client-shell .c-checkout-canvas .c-ttlist .c-add,
+.client-shell .c-checkout-canvas .c-ttlist .c-qty { animation: c-morph-in 120ms var(--ease); }
 
 /* — Pop de totales (sticky + rail) al actualizar — */
 .client-shell .c-checkout-canvas .c-amount { animation: c-pop-t .28s var(--spring); }
@@ -629,7 +656,12 @@
 .client-shell .c-checkout-canvas .c-rail__timer svg { color: rgba(245,239,230,.7); }
 .client-shell .c-checkout-canvas .c-rail__timer--soon { background: rgba(215,71,47,.18); color: #FFB4A6; }
 .client-shell .c-checkout-canvas .c-rail__label { color: rgba(245,239,230,.55); font-size: 10.5px; letter-spacing: 0.14em; }
-.client-shell .c-checkout-canvas .c-rail__empty { color: rgba(245,239,230,.6); font-size: 13px; }
+/* Rail vacío: recuadro punteado hairline en papel .25 sobre la tinta del rail.
+   Da forma de "espacio a llenar" sin sumar una caja sólida más. */
+.client-shell .c-checkout-canvas .c-rail__empty {
+  color: rgba(245,239,230,.6); font-size: 13px;
+  border: 1px dotted rgba(245,239,230,.25); border-radius: 10px; padding: 14px 16px;
+}
 .client-shell .c-checkout-canvas .c-rail .c-sum__row { color: rgba(245,239,230,.85); font-size: 13px; font-weight: 500; }
 .client-shell .c-checkout-canvas .c-rail .c-sum__row .v { font-feature-settings: "tnum"; }
 .client-shell .c-checkout-canvas .c-rail .c-sum__discount { color: #6FD6A0; }
