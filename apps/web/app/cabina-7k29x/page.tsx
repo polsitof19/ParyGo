@@ -146,13 +146,13 @@ export default async function SuperHome() {
 
   const quickActions = (r: BrandRow) => (
     <span className="s-rowacts">
-      <Link href={`/cabina-7k29x/brands/${r.slug}`} className="s-iconbtn" title="Recargar saldo" aria-label={`Recargar saldo de ${r.name}`}>
+      <Link href={`/cabina-7k29x/brands/${r.slug}`} className="s-rowbtn" title="Recargar saldo" aria-label={`Recargar saldo de ${r.name}`}>
         <Wallet />
       </Link>
-      <Link href={`/cabina-7k29x/events?brand=${r.slug}`} className="s-iconbtn" title="Ver eventos" aria-label={`Ver eventos de ${r.name}`}>
+      <Link href={`/cabina-7k29x/events?brand=${r.slug}`} className="s-rowbtn" title="Ver eventos" aria-label={`Ver eventos de ${r.name}`}>
         <CalendarDays />
       </Link>
-      <EnterBrandButton brandId={r.id} variant="icon" />
+      <EnterBrandButton brandId={r.id} brandName={r.name} variant="icon" />
     </span>
   );
 

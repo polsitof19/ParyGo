@@ -354,7 +354,6 @@
 .super-shell .s-stat--alert .s-stat__label::before {
   content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none;
 }
-.super-shell .s-stat__value--alert { color: var(--ink); }
 /* Especificidad: la regla base es `.s-stat--alert .s-stat__value` (descendiente),
    así que `.s-stat__value` sola no le gana aunque venga después. Hay que repetir
    el selector completo o el número queda en rojo. */
@@ -381,18 +380,21 @@
 .super-shell .s-cellmeta--none { color: var(--ink-3); }
 .super-shell .s-cellmeta .nm { display: block; color: var(--ink); font-weight: 500; }
 
-/* Acciones rápidas por fila. z-index para ganarle al ::after del row-link. */
+/* Acciones rápidas por fila. z-index para ganarle al ::after del row-link.
+   Clase PROPIA (s-rowbtn) y no s-iconbtn: ese nombre ya era del botón de cerrar
+   sesión del topbar, y reusarlo lo convertía en un cuadrado de 32px sin que
+   nadie lo pidiera. */
 .super-shell .s-rowacts { display: flex; align-items: center; justify-content: flex-end; gap: 6px; position: relative; z-index: 2; }
-.super-shell .s-iconbtn {
+.super-shell .s-rowbtn {
   width: 32px; height: 32px; display: grid; place-items: center; flex: none;
   border: 1px solid var(--line); border-radius: var(--r-ctl);
   background: var(--surface); color: var(--ink-2); cursor: pointer;
   transition: border-color .18s, color .18s, transform .22s var(--spring);
 }
-.super-shell .s-iconbtn:hover { border-color: var(--ink); color: var(--ink); transform: translateY(-1px); }
-.super-shell .s-iconbtn:active { transform: scale(.94); }
-.super-shell .s-iconbtn svg { width: 15px; height: 15px; }
-.super-shell .s-iconbtn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.super-shell .s-rowbtn:hover { border-color: var(--ink); color: var(--ink); transform: translateY(-1px); }
+.super-shell .s-rowbtn:active { transform: scale(.94); }
+.super-shell .s-rowbtn svg { width: 15px; height: 15px; }
+.super-shell .s-rowbtn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
 /* — Cards móviles: misma lógica que la tabla, sin borde de alerta. —
    La card dejó de ser un <Link> entero: ahora es __main (el link) + __side
@@ -443,14 +445,18 @@
 
 /* — Errores, banners y hints: punto de color + texto en tinta.
      --alert como texto mide 4.35:1 sobre blanco y --ok 3.38:1: tampoco son AA. — */
+/* flex, NO inline-flex: dos <p class="s-err"> hermanos (logo + color en los
+   formularios de branding) se pondrían uno al lado del otro si fueran cajas
+   inline. Dentro de un contenedor flex el item se blockifica igual, así que
+   esto no rompe el formulario de contraseña. */
 .super-shell .s-err {
-  display: inline-flex; align-items: center; gap: 7px; color: var(--ink);
+  display: flex; align-items: center; gap: 7px; color: var(--ink);
 }
 .super-shell .s-err::before {
   content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--alert); flex: none;
 }
 .super-shell .s-hint--ok {
-  display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2);
+  display: flex; align-items: center; gap: 7px; color: var(--ink-2);
 }
 .super-shell .s-hint--ok::before {
   content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none;
@@ -473,6 +479,12 @@
 .super-shell .s-btn--danger-soft::before {
   content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--alert); flex: none;
 }
+
+/* — Link dentro de un párrafo. Como `.super-shell a` quita el subrayado, sin
+     esto el link no se distingue del texto. Subrayado, no color: el acento no
+     es portante de texto. — */
+.super-shell .s-textlink { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; text-decoration-color: var(--line); }
+.super-shell .s-textlink:hover { text-decoration-color: var(--ink); }
 
 /* — URL pública de marca/evento: era --peri (4.17:1 sobre blanco, no AA). — */
 .super-shell .s-brandhead__url { color: var(--ink-2); }
