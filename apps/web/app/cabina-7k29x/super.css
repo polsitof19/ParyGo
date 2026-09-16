@@ -355,6 +355,10 @@
   content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none;
 }
 .super-shell .s-stat__value--alert { color: var(--ink); }
+/* Especificidad: la regla base es `.s-stat--alert .s-stat__value` (descendiente),
+   así que `.s-stat__value` sola no le gana aunque venga después. Hay que repetir
+   el selector completo o el número queda en rojo. */
+.super-shell .s-stat--alert .s-stat__value { color: var(--ink); }
 
 /* — Tabla: hairlines, hover con tinte, sin fila pintada. — */
 .super-shell .s-card--flush { border-color: var(--line); box-shadow: none; }
@@ -397,10 +401,16 @@
 .super-shell .s-brandcard { grid-template-columns: 1fr auto; align-items: start; border-color: var(--line); border-radius: var(--r-card); }
 .super-shell .s-brandcard--alert { border-color: var(--line); box-shadow: none; }
 .super-shell .s-brandcard__main {
-  display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center;
+  display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start;
   min-width: 0; color: inherit;
 }
 .super-shell .s-brandcard__side { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; flex: none; }
+/* Debajo de ~460px la columna lateral se come el ancho del texto: pasa a ser
+   una fila propia abajo de la card. */
+@media (max-width: 460px) {
+  .super-shell .s-brandcard { grid-template-columns: 1fr; gap: 12px; }
+  .super-shell .s-brandcard__side { flex-direction: row; align-items: center; justify-content: space-between; width: 100%; }
+}
 .super-shell .s-brandcard .meta { display: block; color: var(--ink-2); }
 .super-shell .s-cardflags { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; }
 
