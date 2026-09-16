@@ -473,13 +473,21 @@
   --ink: #16120D;                      /* tinta */
   /* Tinta media/tenue: los alfas están MEDIDOS, no elegidos a ojo. El texto se
      compone contra el papel antes de compararse, así que el alfa manda el
-     contraste real. Peor caso siempre sobre --cream (#F5EFE6), que es el fondo
-     más oscuro de los dos. Piso para AA 4.5:1 en ambos: alfa .59.
-       .55 (valor anterior) → 3.97:1 papel / 4.10:1 superficie  ← FALLABA AA
-       .35 (valor anterior) → 2.23:1 papel / 2.26:1 superficie  ← FALLABA AA
-     No bajar estos alfas sin volver a medir. */
-  --ink-2: rgba(22,18,13,.70);         /* texto medio — 6.53:1 papel / 6.90:1 superficie */
-  --ink-3: rgba(22,18,13,.62);         /* texto tenue — 4.98:1 papel / 5.19:1 superficie */
+     contraste real.
+     OJO con cuál es el peor caso: no es --cream. Estos tokens también pintan
+     texto sobre --cream-2 y --cream-3 dentro de este mismo scope (p. ej.
+     .c-step b = fondo cream-2 + color ink-3, que renderiza CheckoutSteps).
+     El fondo más ajustado es --cream-3 (#E6DBCB). Ratios en el PEOR de los
+     cuatro papeles del scope:
+       --ink-2 .70 → 5.98:1   (sobre cream 6.53, white 6.90, cream-2 6.34)
+       --ink-3 .62 → 4.65:1   (sobre cream 4.98, white 5.19, cream-2 4.87)
+     Valores anteriores, que FALLABAN AA en todos los fondos:
+       .55 → 3.97:1 sobre cream · .35 → 2.23:1 sobre cream
+     Piso para AA 4.5:1 contando los cuatro papeles: alfa .610. --ink-3 está a
+     solo 10 milésimas de ese piso, así que NO bajarlo. Al medir de nuevo, medir
+     contra cream-3, no contra cream. */
+  --ink-2: rgba(22,18,13,.70);         /* texto medio — peor caso 5.98:1 */
+  --ink-3: rgba(22,18,13,.62);         /* texto tenue — peor caso 4.65:1 */
   --line: rgba(22,18,13,.13);          /* línea fina */
   --hairline: rgba(22,18,13,.13);
   --sel: rgba(22,18,13,.05);           /* tinte de selección de fila */
@@ -547,24 +555,25 @@
 .client-shell .c-checkout-canvas .c-ttlist .c-tt:hover { transform: none; box-shadow: none; }
 .client-shell .c-checkout-canvas .c-ttlist .c-tt--active { background: var(--sel); box-shadow: inset 4px 0 0 0 var(--ink); }
 /* Columna con gap propio: el ritmo interno lo manda el gap, no los margin-top
-   sueltos de cada hijo (que se anulan abajo). Un solo número para ajustar. */
+   sueltos de cada hijo. Esos margin-top se ponen en 0 EN LA PROPIA REGLA del
+   hijo dentro de este scope (más abajo), no con un override aparte: un selector
+   de hijo directo dejaría de matchear si mañana alguien envuelve uno de estos
+   nodos en un div, y volverían a sumarse margin + gap sin que nada avise.
+   Las reglas base fuera de este scope (líneas ~123/127) siguen intactas porque
+   las usa la landing de marca. */
 .client-shell .c-checkout-canvas .c-tt__main { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.client-shell .c-checkout-canvas .c-tt__main > .c-tt__perks,
-.client-shell .c-checkout-canvas .c-tt__main > .c-tt__bulk,
-.client-shell .c-checkout-canvas .c-tt__main > .c-phase,
-.client-shell .c-checkout-canvas .c-tt__main > .c-stock { margin-top: 0; }
 .client-shell .c-checkout-canvas .c-tt__right { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 10px; min-width: 112px; }
 .client-shell .c-checkout-canvas .c-tt__name { font-family: var(--display); font-size: 16.5px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; }
 /* Precio: tinta plena y 700. Es el dato que el comprador viene a buscar; en
    --ink-2 competía con las perks. tnum se mantiene (columna de dígitos estable). */
 .client-shell .c-checkout-canvas .c-tt__price { font-size: 15px; font-weight: 700; color: var(--ink); font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
-.client-shell .c-checkout-canvas .c-tt__perks { margin-top: 4px; font-size: 12.5px; color: var(--ink-2); }
+.client-shell .c-checkout-canvas .c-tt__perks { margin-top: 0; font-size: 12.5px; color: var(--ink-2); }
 .client-shell .c-checkout-canvas .c-tt__perks li { display: block; }
-.client-shell .c-checkout-canvas .c-tt__bulk { margin-top: 6px; font-size: 12.5px; font-weight: 500; color: var(--ink-2); }
+.client-shell .c-checkout-canvas .c-tt__bulk { margin-top: 0; font-size: 12.5px; font-weight: 500; color: var(--ink-2); }
 .client-shell .c-checkout-canvas .c-tt--out .c-tt__price { text-decoration: line-through; color: var(--ink-3); }
 
 /* Fases/urgencia y sold-out: texto plano, sin pastillas de color */
-.client-shell .c-checkout-canvas .c-phase { margin-top: 6px; }
+.client-shell .c-checkout-canvas .c-phase { margin-top: 0; }
 .client-shell .c-checkout-canvas .c-phase__now { background: none; color: var(--ink-2); padding: 0; border-radius: 0; font-size: 12px; font-weight: 500; }
 .client-shell .c-checkout-canvas .c-rise { color: var(--ink-2); font-weight: 500; }
 .client-shell .c-checkout-canvas .c-soldout { background: none; color: rgba(22,18,13,.72); padding: 0; height: auto; font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; }
@@ -592,10 +601,11 @@
 
 /* Entrada del morph: cuando monta [− n +] (al agregar) o cuando vuelve
    "Agregar" (al llegar a cero), el control entra con fade + 4px de subida.
-   SIN fill-mode a propósito: fijar el estado final pisaría el `transform` de
-   :active/:hover y se perdería el feedback de pulsación. Lo apaga solo el
-   bloque global de prefers-reduced-motion (animation: none !important sobre
-   .client-shell *), por eso acá no se repite la regla.
+   Sin fill-mode porque no hace falta: el estado en reposo ya es igual al
+   keyframe `to` (opacity 1, sin desplazamiento), así que fijarlo no aportaría
+   nada y solo agregaría una capa más peleando con :active/:hover.
+   Lo apaga el bloque global de prefers-reduced-motion (animation: none
+   !important sobre .client-shell *), por eso acá no se repite la regla.
    Nota: siendo CSS puro, esto también corre en el primer render de la lista;
    a 120ms/4px es un asentamiento apenas perceptible, no una entrada. */
 @keyframes c-morph-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
