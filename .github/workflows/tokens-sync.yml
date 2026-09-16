@@ -1,0 +1,39 @@
+name: tokens
+
+# parygo-tokens.css vive DUPLICADO en apps/landing y apps/web porque son dos
+# apps Next separadas y compartir un CSS entre ellas exige un workspace nuevo.
+# Este workflow es lo único que impide que las dos copias se separen en
+# silencio. Se borra cuando el archivo migre a packages/ui.
+#
+# El filtro incluye el propio workflow y el script, para que un cambio en
+# cualquiera de los dos se autovalide en vez de pasar desapercibido.
+on:
+  push:
+    paths:
+      - 'apps/*/app/styles/parygo-tokens.css'
+      - 'scripts/check-tokens-sync.js'
+      - '.github/workflows/tokens-sync.yml'
+      - 'package.json'
+  pull_request:
+    paths:
+      - 'apps/*/app/styles/parygo-tokens.css'
+      - 'scripts/check-tokens-sync.js'
+      - '.github/workflows/tokens-sync.yml'
+      - 'package.json'
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: npm run test:tokens
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      # Sin npm install: el script usa solo builtins de Node (fs, path, crypto).
+      - run: npm run test:tokens

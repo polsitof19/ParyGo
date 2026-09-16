@@ -98,6 +98,28 @@ para OK de Paul.
   two-phase y el RPC lo ignora. El bloqueo que este archivo imponía sobre
   MercadoPago está LEVANTADO — no volver a reportarlo como pendiente.
 
+## Sistema de diseño — reglas duras
+- Fuente única: apps/*/app/styles/parygo-tokens.css, extraído de la landing y
+  corregido para pasar AA. Está DUPLICADO en apps/landing y apps/web a propósito
+  (dos apps Next separadas); `npm run test:tokens` falla si divergen y corre en
+  CI. Si tocás una copia, tocá la otra. Migra a packages/ui cuando el deploy de
+  la app esté verificado.
+- --accent y --peri son DECORATIVOS: puntos, barras, anillos de foco, trazos,
+  blobs, rellenos sin texto. NUNCA color de texto ni texto blanco encima.
+  Razón: en páginas públicas de marca --accent toma var(--brand), elegido por el
+  promotor, y no hay forma de garantizar contraste sobre un color arbitrario.
+- Botón primario = TINTA sobre acento (5.91:1 medido). Blanco sobre naranja da
+  2.85:1 y FALLA AA — no usarlo nunca.
+- Única excepción documentada: la palabra de acento del h1 de la landing
+  (display ≥56px) usa --accent-deep #E8552A con el subrayado ondulado como
+  segunda señal. Medido 3.41:1, sobre el mínimo 3:1 de texto grande. Por debajo
+  de 56px el mínimo es 4.5:1 y no llega: no usarlo ahí.
+- --ink-2 y --ink-3 son ALFA de la tinta, no grises hex, para que el contraste
+  no dependa de sobre qué papel caigan. Piso medido para AA en las cuatro
+  superficies: alfa .630. No bajarlos sin volver a medir contra --paper-3.
+- Los semánticos (--ok, --warn, --alert) fallan AA como color de texto sobre
+  papel: el texto de un estado va en --ink y el color lo lleva el punto.
+
 ## Migraciones
 Incrementales, idempotentes, numeradas (vamos por 0052). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)

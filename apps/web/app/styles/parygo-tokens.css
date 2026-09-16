@@ -1,0 +1,98 @@
+/* ============================================================
+   SISTEMA DE DISEÑO PARYGO — fuente única de verdad.
+
+   Extraído de la landing (apps/landing/app/globals.css) y corregido
+   para pasar AA 4.5:1. Todas las superficies de parygo comparten estos
+   tokens: landing, super admin, panel del organizador y checkout. Lo
+   ÚNICO que cambia entre superficies es --accent.
+
+   ⚠ ESTE ARCHIVO ESTÁ DUPLICADO A PROPÓSITO en:
+       apps/landing/app/styles/parygo-tokens.css
+       apps/web/app/styles/parygo-tokens.css
+   Son dos apps Next separadas y compartir CSS entre ellas exigiría un
+   workspace nuevo. El test `npm run test:tokens` falla si divergen: si
+   tocás uno, tocá el otro. Se migra a packages/ui cuando el deploy de la
+   app esté verificado.
+
+   ------------------------------------------------------------
+   REGLA DURA DEL SISTEMA — no negociable
+   ------------------------------------------------------------
+   --accent y --peri son DECORATIVOS. Nunca portan texto.
+
+     SÍ:  puntos, barras de 4px, anillos de foco, trazos, blobs,
+          subrayado ondulado, rellenos SIN texto encima.
+     NO:  color de texto, ni texto blanco sobre ellos.
+
+   Botón primario = TINTA sobre acento (medido 5.91:1). Nunca blanco
+   sobre acento (2.85:1, falla AA).
+
+   El motivo no es estético: en las páginas públicas de cada marca
+   --accent toma var(--brand), que elige el promotor y puede ser
+   cualquier color. No hay forma de garantizar contraste sobre un color
+   arbitrario, así que la única regla segura es no apoyar texto ahí.
+
+   ÚNICA EXCEPCIÓN, documentada y acotada: la palabra de acento del h1
+   de la landing (display ≥56px) usa --accent-deep y lleva el subrayado
+   ondulado como SEGUNDA señal, para no depender solo del color.
+   Medido: #E8552A sobre #FBF7F0 = 3.41:1, por encima del mínimo 3:1
+   que WCAG pide para texto grande. No usar --accent-deep por debajo de
+   56px: ahí el mínimo es 4.5:1 y no llega.
+   ============================================================ */
+
+.pg {
+  /* — Papel. Cuatro superficies, de más clara a más oscura. — */
+  --paper: #FBF7F0;
+  --paper-2: #F4EDE1;
+  --paper-3: #EFE6D6;
+  --surface: #FFFFFF;
+
+  /* — Tinta. Los niveles medio y tenue son ALFA de la tinta, no grises
+       hex fijos: así se componen contra cualquier papel y el contraste
+       no depende de sobre cuál caigan.
+       Medido sobre las CUATRO superficies de arriba; el peor caso
+       siempre es --paper-3 (#EFE6D6), la más oscura.
+       Piso para AA 4.5:1 en las cuatro: alfa .630.
+       Los grises hex que traía la landing FALLABAN: #A89B8C daba 2.19:1.
+       No bajar estos alfas sin volver a medir contra --paper-3. — */
+  --ink: #231C17;                      /* 13.57:1 peor caso */
+  --ink-2: rgba(35, 28, 23, 0.70);     /*  5.59:1 peor caso */
+  --ink-3: rgba(35, 28, 23, 0.66);     /*  4.94:1 peor caso */
+  --line: rgba(35, 28, 23, 0.13);      /* hairline */
+  --sel: rgba(35, 28, 23, 0.05);       /* tinte de fila/selección */
+
+  /* — Acento. DECORATIVO (ver regla dura arriba).
+       En superficies parygo: el naranja de marca.
+       En páginas públicas de una marca: el layout lo pisa con
+       var(--brand), el color que eligió el promotor. — */
+  --accent: #FF6A3D;
+  --accent-deep: #E8552A;              /* hover de relleno · h1 de la landing */
+  --peri: #5B6CFF;                     /* DECORATIVO. Falla AA en los tres
+                                          roles (texto 3.91, con blanco 4.17,
+                                          con tinta 4.03). Solo blobs y puntos. */
+
+  /* — Tipografía. Dos familias, como la landing. — */
+  --display: var(--font-bricolage), "Bricolage Grotesque", system-ui, sans-serif;
+  --body: var(--font-hanken), "Hanken Grotesk", system-ui, sans-serif;
+
+  /* — Radios. — */
+  --r-pill: 999px;
+  --r-card: 14px;
+  --r-ctl: 9px;
+
+  /* — Curvas. Ya eran idénticas en la landing y en el checkout; acá
+       quedan con un nombre solo. --spring es el antiguo --bounce. — */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* — Elevación. Tinta, nunca negro puro. — */
+  --shadow-sm: 0 1px 2px rgba(35, 28, 23, 0.05), 0 6px 16px -12px rgba(35, 28, 23, 0.28);
+  --shadow-md: 0 2px 6px rgba(35, 28, 23, 0.05), 0 18px 40px -22px rgba(35, 28, 23, 0.40);
+  --shadow-lg: 0 4px 12px rgba(35, 28, 23, 0.06), 0 40px 80px -34px rgba(35, 28, 23, 0.50);
+
+  /* — Semánticos. Solo para el PUNTO de estado y bordes, no para texto:
+       los tres fallan AA como color de texto sobre papel. El texto de un
+       estado va en --ink; el color lo lleva el punto. — */
+  --ok: #2E9E6B;
+  --warn: #C7791A;
+  --alert: #D7472F;
+}
