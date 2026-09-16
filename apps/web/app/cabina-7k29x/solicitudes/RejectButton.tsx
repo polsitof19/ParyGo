@@ -22,7 +22,7 @@ export function RejectButton({ requestId }: { requestId: string }) {
 function Submit() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className="s-btn s-btn--soft s-btn--sm" disabled={pending} style={{ color: 'var(--alert)' }}>
+    <button type="submit" className="s-btn s-btn--danger-soft s-btn--sm" disabled={pending}>
       {pending ? 'Rechazando…' : 'Rechazar'}
     </button>
   );

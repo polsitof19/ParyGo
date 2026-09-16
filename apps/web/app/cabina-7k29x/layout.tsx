@@ -2,6 +2,10 @@ import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { SuperTopbar } from './SuperTopbar';
+// Tokens compartidos de parygo PRIMERO: super.css se apoya en ellos y los
+// especializa. El orden importa — si se invierte, super.css define variables
+// que el archivo de tokens pisa después.
+import '../styles/parygo-tokens.css';
 import './super.css';
 
 export const runtime = 'edge';
@@ -33,7 +37,8 @@ export default async function SuperLayout({ children }: { children: React.ReactN
     .eq('status', 'pending');
 
   return (
-    <div className={`super-shell ${bricolage.variable} ${hanken.variable}`}>
+    // `pg` trae los tokens compartidos; `super-shell` los especializa.
+    <div className={`pg super-shell ${bricolage.variable} ${hanken.variable}`}>
       <SuperTopbar email={user.email} pendingRequests={pendingRequests ?? 0} />
       <main className="s-wrap">{children}</main>
     </div>

@@ -3,19 +3,23 @@
    TODO bajo .super-shell para NO afectar el resto de apps/web
    (admin del dueño, scan, públicas, tokens globales).
    ============================================================ */
+/* Los valores ya NO viven acá: vienen de parygo-tokens.css (.pg, que el layout
+   pone en el mismo elemento). Lo que queda son ALIAS de los nombres internos
+   que usan las reglas de más abajo, para no reescribir el archivo entero.
+   --ink, --ink-2, --ink-3, --line, --sel, --ease, --spring y los radios se
+   heredan de .pg sin redefinirse: si se redefinieran acá, ganarían por orden
+   de cascada y el sistema compartido dejaría de mandar. */
 .super-shell {
-  --cream: #FBF7F0; --cream-2: #F4EDE1; --cream-3: #EFE6D6;
-  --ink: #231C17; --ink-2: #6B5F54; --ink-3: #A89B8C;
-  --tangerine: #FF6A3D; --tangerine-deep: #E8552A; --peri: #5B6CFF; --white: #FFFFFF;
-  --ok: #2E9E6B; --ok-bg: #E6F4EC; --warn: #C7791A; --warn-bg: #FBEEDD;
-  --alert: #D7472F; --alert-bg: #FBE9E5; --info: #5B6CFF; --info-bg: #E9ECFF;
-  --display: var(--font-bricolage), "Bricolage Grotesque", system-ui, sans-serif;
-  --body: var(--font-hanken), "Hanken Grotesk", system-ui, sans-serif;
-  --r-card: 18px; --r-ctl: 12px; --r-pill: 999px;
+  --cream: var(--paper); --cream-2: var(--paper-2); --cream-3: var(--paper-3);
+  --white: var(--surface);
+  --tangerine: var(--accent); --tangerine-deep: var(--accent-deep);
+  /* Fondos tenues de estado: solo para banners y botones soft, NUNCA detrás de
+     texto de color (los semánticos fallan AA como texto — ver tokens). */
+  --ok-bg: #E6F4EC; --warn-bg: #FBEEDD; --alert-bg: #FBE9E5;
+  --info: var(--peri); --info-bg: #E9ECFF;
   --pad: clamp(16px, 4vw, 40px);
-  --shadow-card: 0 1px 2px rgba(35,28,23,.04), 0 8px 24px -18px rgba(35,28,23,.22);
-  --shadow-pop: 0 12px 32px -16px rgba(35,28,23,.30);
-  --ease: cubic-bezier(.22,1,.36,1);
+  --shadow-card: var(--shadow-sm);
+  --shadow-pop: var(--shadow-md);
 
   min-height: 100vh;
   background: var(--cream);
@@ -299,3 +303,172 @@
   .super-shell .s-table tbody tr:nth-child(4), .super-shell .s-event-row:nth-child(4), .super-shell .s-brandcard:nth-child(4) { animation-delay: .11s }
   .super-shell .s-table tbody tr:nth-child(n+5), .super-shell .s-event-row:nth-child(n+5), .super-shell .s-brandcard:nth-child(n+5) { animation-delay: .14s }
 }
+
+/* ============================================================
+   SISTEMA PARYGO — adopción en el super admin.
+   Va al final a propósito: misma especificidad que las reglas de
+   arriba, gana por orden de cascada. Así la adopción es un bloque
+   legible y reversible, en vez de ediciones desparramadas.
+   ============================================================ */
+
+/* — Botón primario: TINTA sobre acento. Blanco sobre naranja daba 2.85:1 y
+     fallaba AA; tinta sobre el mismo naranja da 5.91:1 y conserva el color
+     de marca exacto. Regla del sistema, no preferencia. — */
+.super-shell .s-btn--primary { background: var(--accent); color: var(--ink); box-shadow: none; }
+.super-shell .s-btn--primary:hover:not(:disabled) { background: var(--accent-deep); color: var(--ink); box-shadow: none; transform: translateY(-1px); }
+.super-shell .s-btn--primary:active:not(:disabled) { transform: scale(.97); }
+.super-shell .s-btn { border-radius: var(--r-pill); transition: background-color .18s, border-color .18s, color .18s, transform .22s var(--spring); }
+.super-shell .s-btn--soft:hover:not(:disabled) { border-color: var(--ink); transform: translateY(-1px); }
+.super-shell .s-btn--soft:active:not(:disabled),
+.super-shell .s-btn--ghost:active:not(:disabled) { transform: scale(.97); }
+/* --peri es decorativo: el botón "peri" pasa a soft con punto. */
+.super-shell .s-btn--peri { background: var(--surface); color: var(--ink); border-color: var(--paper-3); box-shadow: none; }
+.super-shell .s-btn--peri:hover:not(:disabled) { background: var(--surface); border-color: var(--ink); }
+
+/* — Estado = PUNTO + texto en tinta. Sin pastilla de color: los semánticos
+     fallan AA como color de texto, así que el color lo lleva el punto y el
+     texto va en tinta. — */
+.super-shell .s-badge {
+  background: none; padding: 0; height: auto; gap: 7px;
+  font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--ink-2);
+}
+.super-shell .s-badge::before { width: 7px; height: 7px; flex: none; }
+.super-shell .s-badge--ok::before { background: var(--ok); }
+.super-shell .s-badge--warn::before { background: var(--warn); }
+.super-shell .s-badge--alert::before { background: var(--alert); }
+.super-shell .s-badge--info::before { background: var(--peri); }
+.super-shell .s-badge--draft { color: var(--ink-3); }
+.super-shell .s-badge--draft::before { background: none; box-shadow: inset 0 0 0 1.5px var(--ink-3); }
+
+/* — Stats: el color aparece SOLO cuando hay algo que hacer. En cero, una
+     tarjeta accionable se ve igual de neutra que una informativa. — */
+.super-shell .s-stat { border-color: var(--line); border-radius: var(--r-card); box-shadow: none; gap: 6px; }
+.super-shell .s-stat__label { color: var(--ink-3); letter-spacing: 0.09em; }
+.super-shell .s-stat__value { font-variant-numeric: tabular-nums; color: var(--ink); }
+.super-shell a.s-stat { transition: border-color .18s, transform .22s var(--spring); }
+.super-shell a.s-stat:hover { border-color: var(--ink); transform: translateY(-1px); }
+/* Accionable con trabajo pendiente: punto de acento antes del label. El número
+   sigue en tinta — el color señala, no grita. */
+.super-shell .s-stat--alert { border-color: var(--line); background: var(--surface); }
+.super-shell .s-stat--alert .s-stat__label { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2); }
+.super-shell .s-stat--alert .s-stat__label::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none;
+}
+.super-shell .s-stat__value--alert { color: var(--ink); }
+
+/* — Tabla: hairlines, hover con tinte, sin fila pintada. — */
+.super-shell .s-card--flush { border-color: var(--line); box-shadow: none; }
+.super-shell .s-table thead th { border-bottom-color: var(--line); color: var(--ink-3); padding: 13px 20px; }
+.super-shell .s-table tbody td { border-top-color: var(--line); padding: 14px 20px; }
+.super-shell .s-table tbody tr { transition: background-color .18s; }
+.super-shell .s-table tbody tr:hover { background: var(--sel); }
+/* La alerta ya NO pinta la fila: la señal es el punto en la celda que falla. */
+.super-shell .s-table tbody tr.s-row--alert { background: none; box-shadow: none; }
+.super-shell .s-table tbody tr.s-row--alert:hover { background: var(--sel); }
+.super-shell .s-cell-brand .sl { color: var(--ink-3); }
+.super-shell .s-saldo-num { font-family: var(--display); font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; }
+
+/* Señal de problema dentro de la celda: punto de acento + texto en tinta. */
+.super-shell .s-flag { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.super-shell .s-flag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
+
+/* Densidad: última venta y próximo evento. */
+.super-shell .s-cellmeta { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.super-shell .s-cellmeta--none { color: var(--ink-3); }
+.super-shell .s-cellmeta .nm { display: block; color: var(--ink); font-weight: 500; }
+
+/* Acciones rápidas por fila. z-index para ganarle al ::after del row-link. */
+.super-shell .s-rowacts { display: flex; align-items: center; justify-content: flex-end; gap: 6px; position: relative; z-index: 2; }
+.super-shell .s-iconbtn {
+  width: 32px; height: 32px; display: grid; place-items: center; flex: none;
+  border: 1px solid var(--line); border-radius: var(--r-ctl);
+  background: var(--surface); color: var(--ink-2); cursor: pointer;
+  transition: border-color .18s, color .18s, transform .22s var(--spring);
+}
+.super-shell .s-iconbtn:hover { border-color: var(--ink); color: var(--ink); transform: translateY(-1px); }
+.super-shell .s-iconbtn:active { transform: scale(.94); }
+.super-shell .s-iconbtn svg { width: 15px; height: 15px; }
+.super-shell .s-iconbtn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* — Cards móviles: misma lógica que la tabla, sin borde de alerta. —
+   La card dejó de ser un <Link> entero: ahora es __main (el link) + __side
+   (estado y acciones rápidas), porque un botón no puede vivir dentro de un
+   link. De ahí las dos columnas en vez de las tres originales. */
+.super-shell .s-brandcard { grid-template-columns: 1fr auto; align-items: start; border-color: var(--line); border-radius: var(--r-card); }
+.super-shell .s-brandcard--alert { border-color: var(--line); box-shadow: none; }
+.super-shell .s-brandcard__main {
+  display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center;
+  min-width: 0; color: inherit;
+}
+.super-shell .s-brandcard__side { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; flex: none; }
+.super-shell .s-brandcard .meta { display: block; color: var(--ink-2); }
+.super-shell .s-cardflags { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; }
+
+/* — Filas de evento y líneas clave-valor. — */
+.super-shell .s-event-row { border-color: var(--line); border-radius: var(--r-ctl); }
+.super-shell .s-event-row:hover { border-color: var(--ink); background: var(--sel); }
+.super-shell .s-row-line { border-top-color: var(--line); }
+.super-shell .s-row-line .k { color: var(--ink-3); }
+
+/* — Cards, inputs y foco. — */
+.super-shell .s-card { border-color: var(--line); border-radius: var(--r-card); box-shadow: var(--shadow-sm); }
+.super-shell .s-input { border-color: var(--line); border-radius: var(--r-ctl); background: var(--paper); }
+.super-shell .s-input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px var(--sel); background: var(--surface); }
+.super-shell .s-label .req { color: var(--ink-2); }
+
+/* — Eyebrow: tinta + punto de acento (nunca texto en acento). — */
+.super-shell .eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: var(--ink-2); font-weight: 600; letter-spacing: 0.09em;
+}
+.super-shell .eyebrow::before {
+  content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none;
+}
+
+/* — Contadores del topbar: pastilla neutra. --warn como texto mide 3.18:1
+     sobre --paper y 2.97:1 sobre --warn-bg: ninguna llega a AA (4.5:1). El
+     número va en tinta y la pastilla solo lo agrupa. — */
+.super-shell .s-nav-count,
+.super-shell .s-support-link .count { background: var(--paper-3); color: var(--ink); }
+
+/* — Errores, banners y hints: punto de color + texto en tinta.
+     --alert como texto mide 4.35:1 sobre blanco y --ok 3.38:1: tampoco son AA. — */
+.super-shell .s-err {
+  display: inline-flex; align-items: center; gap: 7px; color: var(--ink);
+}
+.super-shell .s-err::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--alert); flex: none;
+}
+.super-shell .s-hint--ok {
+  display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2);
+}
+.super-shell .s-hint--ok::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none;
+}
+.super-shell .s-banner {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink);
+  border-radius: var(--r-ctl);
+}
+.super-shell .s-banner::before {
+  content: ""; width: 8px; height: 8px; border-radius: 50%; flex: none;
+}
+.super-shell .s-banner--ok::before { background: var(--ok); }
+.super-shell .s-banner--err::before { background: var(--alert); }
+
+/* — Destructivo suave (rechazar solicitud): la señal es el punto, no el texto
+     rojo. Antes iba con color inline var(--alert) sobre blanco = 4.35:1. — */
+.super-shell .s-btn--danger-soft { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.super-shell .s-btn--danger-soft:hover:not(:disabled) { background: var(--sel); border-color: var(--ink); }
+.super-shell .s-btn--danger-soft::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--alert); flex: none;
+}
+
+/* — URL pública de marca/evento: era --peri (4.17:1 sobre blanco, no AA). — */
+.super-shell .s-brandhead__url { color: var(--ink-2); }
+.super-shell .s-brandhead__url:hover { color: var(--ink); }
+
+/* — Excepción documentada: el punto del wordmark (.s-logo .dot) sigue en
+     --accent. Es un glifo decorativo de la marca, no texto que alguien lea
+     para entender algo: si no se distingue, no se pierde información.
+     Es la ÚNICA cosa en acento dentro del panel. — */

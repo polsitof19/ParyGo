@@ -15,13 +15,10 @@ import { publicEnv } from '@/lib/env';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { DangerDeleteButton } from '@/components/manage/DangerDeleteButton';
 import { setBrandArchivedAction, deleteBrandAction } from './actions';
+import { onColor, bgFor, initialOf } from '../../on-color';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
-
-const AVATAR_BG = ['#FF6A3D', '#5B6CFF', '#E8552A', '#2E9E6B', '#C7791A', '#8A5BFF'];
-const bgFor = (s: string) => AVATAR_BG[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_BG.length];
-const initialOf = (name: string) => (name.trim()[0] ?? '?').toUpperCase();
 
 export default async function BrandDetailPage({
   params,
@@ -79,7 +76,7 @@ export default async function BrandDetailPage({
         {logoUrl ? (
           <BrandLogo src={logoUrl} alt="" size={52} ring={false} />
         ) : (
-          <span className="s-avatar s-avatar--lg" style={{ background: primaryColor, color: '#fff' }}>
+          <span className="s-avatar s-avatar--lg" style={{ background: primaryColor, color: onColor(primaryColor) }}>
             {initialOf(brand.name)}
           </span>
         )}
@@ -118,7 +115,7 @@ export default async function BrandDetailPage({
           <span className="s-stat__label">Dueño</span>
           {owner ? (
             <span className="s-stat__owner">
-              <span className="s-avatar s-avatar--sm" style={{ background: bgFor(owner) }}>{initialOf(owner)}</span>
+              <span className="s-avatar s-avatar--sm" style={{ background: bgFor(owner), color: onColor(bgFor(owner)) }}>{initialOf(owner)}</span>
               <span className="s-stat__owner-email">{owner}</span>
             </span>
           ) : (
@@ -176,7 +173,7 @@ export default async function BrandDetailPage({
           {logoUrl ? (
             <BrandLogo src={logoUrl} alt="" size={40} ring={false} />
           ) : (
-            <span className="s-avatar" style={{ background: primaryColor, color: '#fff' }}>
+            <span className="s-avatar" style={{ background: primaryColor, color: onColor(primaryColor) }}>
               {initialOf(brand.name)}
             </span>
           )}
@@ -238,7 +235,7 @@ export default async function BrandDetailPage({
             {admins.map((m) => (
               <li key={m.id} className="s-owner-row">
                 <div className="s-owner-row__id">
-                  <span className="s-avatar s-avatar--sm" style={{ background: bgFor(m.display_name ?? m.id) }}>
+                  <span className="s-avatar s-avatar--sm" style={{ background: bgFor(m.display_name ?? m.id), color: onColor(bgFor(m.display_name ?? m.id)) }}>
                     {initialOf(m.display_name ?? '?')}
                   </span>
                   <span className="s-owner-row__email">

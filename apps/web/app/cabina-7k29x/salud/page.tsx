@@ -136,7 +136,8 @@ export default async function SaludPage() {
         </div>
         <div className="s-card">
           <p className="s-card__title">Integridad de stock</p>
-          <p style={{ fontFamily: 'var(--display)', fontWeight: 800, fontSize: 30, color: oversell > 0 ? 'var(--alert)' : 'var(--ok)' }}>{oversell}</p>
+          <p style={{ fontFamily: 'var(--display)', fontWeight: 800, fontSize: 30 }}>{oversell}</p>
+          {oversell > 0 && <span className="s-flag">Revisar de inmediato</span>}
           <p className="s-muted" style={{ fontSize: 12.5, marginTop: 2 }}>Tipos con <code>sold &gt; capacidad</code> (oversell). Debe ser 0.</p>
         </div>
       </div>

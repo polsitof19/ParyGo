@@ -13,6 +13,7 @@ import { EventCoverUploader } from '../../../admin/events/[id]/EventCoverUploade
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { DangerDeleteButton } from '@/components/manage/DangerDeleteButton';
 import { setEventArchivedAction, deleteEventAction } from '../../../admin/events/[id]/edit-actions';
+import { onColor } from '../../on-color';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -85,7 +86,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
             {brandLogo ? (
               <BrandLogo src={brandLogo} alt="" size={52} ring={false} />
             ) : (
-              <span className="s-avatar s-avatar--lg" style={{ background: brandPrimary, color: '#fff' }}>
+              <span className="s-avatar s-avatar--lg" style={{ background: brandPrimary, color: onColor(brandPrimary) }}>
                 {brandInitial}
               </span>
             )}
