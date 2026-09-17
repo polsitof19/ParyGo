@@ -330,7 +330,7 @@
      texto va en tinta. — */
 .super-shell .s-badge {
   background: none; padding: 0; height: auto; gap: 7px;
-  font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--ink-2);
+  color: var(--ink-2);
 }
 .super-shell .s-badge::before { width: 7px; height: 7px; flex: none; }
 .super-shell .s-badge--ok::before { background: var(--ok); }
@@ -343,7 +343,7 @@
 /* — Stats: el color aparece SOLO cuando hay algo que hacer. En cero, una
      tarjeta accionable se ve igual de neutra que una informativa. — */
 .super-shell .s-stat { border-color: var(--line); border-radius: var(--r-card); box-shadow: none; gap: 6px; }
-.super-shell .s-stat__label { color: var(--ink-3); letter-spacing: 0.09em; }
+.super-shell .s-stat__label { color: var(--ink-3); }
 .super-shell .s-stat__value { font-variant-numeric: tabular-nums; color: var(--ink); }
 .super-shell a.s-stat { transition: border-color .18s, transform .22s var(--spring); }
 .super-shell a.s-stat:hover { border-color: var(--ink); transform: translateY(-1px); }
@@ -369,10 +369,10 @@
 .super-shell .s-table tbody tr.s-row--alert { background: none; box-shadow: none; }
 .super-shell .s-table tbody tr.s-row--alert:hover { background: var(--sel); }
 .super-shell .s-cell-brand .sl { color: var(--ink-3); }
-.super-shell .s-saldo-num { font-family: var(--display); font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; }
+.super-shell .s-saldo-num { font-variant-numeric: tabular-nums; }
 
 /* Señal de problema dentro de la celda: punto de acento + texto en tinta. */
-.super-shell .s-flag { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.super-shell .s-flag { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.02em; color: var(--ink-2); }
 .super-shell .s-flag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
 
 /* Densidad: última venta y próximo evento. */
@@ -431,7 +431,7 @@
 /* — Eyebrow: tinta + punto de acento (nunca texto en acento). — */
 .super-shell .eyebrow {
   display: inline-flex; align-items: center; gap: 8px;
-  color: var(--ink-2); font-weight: 600; letter-spacing: 0.09em;
+  color: var(--ink-2);
 }
 .super-shell .eyebrow::before {
   content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none;
