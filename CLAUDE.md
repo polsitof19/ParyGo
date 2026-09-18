@@ -18,9 +18,13 @@ supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se regist
 - Supabase mdxtpevisjiqpeklhxdv = ÚNICO proyecto = PRODUCCIÓN. Cuidado con DDL.
 - SUPABASE_ACCESS_TOKEN vive en apps/web/.env.local (gitignored). Nunca commitearlo,
   nunca imprimirlo, nunca escribirlo a otro archivo.
-- Cliente piloto = "Tío Code" (slug code), evento "Almighty" VENDIENDO EN VIVO.
-  Saldo de eventos de Code = 3. JAMÁS romper la venta de Almighty ni tocar Code/
-  Almighty en tests. Brand de pruebas = "demotest" (is_published=false).
+- Cliente piloto = "Tío Code" (slug code). Su evento "Almighty" TERMINÓ el
+  2026-06-21 SIN VENTAS (0 órdenes pagas) y está despublicado. Saldo de eventos
+  de Code = 3. Sigue siendo cliente real: NO tocar Code/Almighty en tests.
+- La venta real probada en producción es la de "hoesky" (órdenes pagas con
+  tickets emitidos, verificado 2026-09-17). Tampoco se toca en tests.
+- Brand de pruebas = "demotest" (se deja ARCHIVADA; `node e2e/cleanup.mjs`
+  la re-archiva tras el E2E).
 
 ## Deploy (Cloudflare Pages) — cómo llega a producción
 - Landing (parygo.com): proyecto Pages "parygo" (dominios parygo.pages.dev,
