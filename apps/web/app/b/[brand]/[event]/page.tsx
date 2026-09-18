@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv, publicEnv } from '@/lib/env';
 import { formatPEN } from '@/lib/utils';
+import { isPubliclyOffered } from '@/lib/publicTicketGuard';
 import { EventCheckoutPanel } from './EventCheckoutPanel';
 import { EventStructuredData } from './EventStructuredData';
 
@@ -78,6 +79,10 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
       soldOut: !t.is_unlimited && (t.capacity - t.sold) <= 0,
     };
   });
+  // Tipos S/0 (p. ej. "Cortesía") no se ofrecen al público: se emiten desde el
+  // panel. El server (reserva y checkout) aplica la misma regla en
+  // lib/publicTicketGuard — esto es solo la presentación.
+  const publicTicketTypes = ticketTypesWithPhase.filter((t) => isPubliclyOffered(t.active_price_cents));
 
   // MercadoPago: the card option only shows if THIS brand configured MP creds.
   // The public_key (inherently public) is read server-side and handed to the
@@ -102,7 +107,7 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
   return {
     brand,
     event,
-    ticketTypes: ticketTypesWithPhase,
+    ticketTypes: publicTicketTypes,
     // MP is only really usable if BOTH the creds and the decrypted public_key are present.
     mpConfigured: mpConfigured && Boolean(mpPublicKey),
     mpPublicKey,

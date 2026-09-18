@@ -125,6 +125,17 @@ const val = await newCtx('validator', { session: valSess, viewport: { width: 460
 Object.assign(PAGES, { super: sup, buyer, validator: val });
 // Los botones de compra existen duplicados (rail desktop + barra mobile): solo el visible.
 const vis = (loc) => loc.filter({ visible: true }).first();
+// Re-envía una server action capturada con otros argumentos (mismo action id,
+// mismos headers de Next). Devuelve el texto crudo de la respuesta RSC.
+async function replayAction(page, captured, args) {
+  const keep = ['next-action', 'next-router-state-tree', 'content-type', 'accept', 'x-parygo-brand-slug'];
+  const headers = Object.fromEntries(Object.entries(captured.headers).filter(([k]) => keep.includes(k)));
+  const resp = await page.request.post(captured.url, { headers, data: JSON.stringify(args) });
+  return { status: resp.status(), text: await resp.text() };
+}
+const holdsOn = async (ticketTypeId) =>
+  ((await svc.from('stock_reservations').select('quantity, expires_at').eq('ticket_type_id', ticketTypeId)).data ?? [])
+    .filter((r) => Date.parse(r.expires_at) > Date.now()).reduce((a, r) => a + r.quantity, 0);
 const toastLog = async (page) => page.evaluate(() => window.__toastLog || []).catch(() => []);
 
 // =====================================================================
@@ -326,6 +337,13 @@ if (!S.eventId) {
     for (const [t, n] of Object.entries(items)) {
       for (let i = 0; i < n; i++) { await vis(p.getByRole('button', { name: `Sumar ${t}` })).click(); await sleep(250); }
     }
+    await sleep(1500); // la reserva del carrito corre con debounce de 400ms
+    const contBtn = vis(p.getByRole('button', { name: /^Continuar/ }));
+    if (await contBtn.isDisabled()) {
+      // El server no reservó (sin cupo / no disponible) y el carrito quedó en 0.
+      if (shots) await shot(p, tag, 'carrito-vacio');
+      return { res: 'carrito-vacio', orderId: null, url: p.url(), toasts: await toastLog(p), continuarDisabled: true };
+    }
     const railStep1 = (await p.locator('.c-rail').first().innerText().catch(() => '')).replace(/\s+/g, ' ');
     if (shots) await shot(p, tag, 'seleccion');
     if (promo) {
@@ -349,6 +367,9 @@ if (!S.eventId) {
     const promoOn = (await p.locator('.c-promo-on').innerText().catch(() => '')).replace(/\s+/g, ' ');
     if (shots) await shot(p, tag, 'paso2-lleno');
     const tBefore = await toasts(p);
+    // Capturamos el request real de la server action startCheckout para poder
+    // re-enviarlo alterado (tests de server: un request armado a mano).
+    const ckReqP = p.waitForRequest((q) => q.method() === 'POST' && !!q.headers()['next-action'] && (q.postData() || '').includes('"buyerEmail"'), { timeout: 30000 }).catch(() => null);
     await vis(p.locator('button[type=submit][form="checkout-form"]')).click();
     const res = await Promise.race([
       p.waitForURL(/\/yape\?order=|\/confirmacion\?order=/, { timeout: 30000 }).then(() => 'nav'),
@@ -358,7 +379,9 @@ if (!S.eventId) {
     await sleep(800);
     const orderId = new URL(p.url()).searchParams.get('order');
     const all = [...new Set([...(await toastLog(p)), ...(await toasts(p))])];
-    return { res, orderId, url: p.url(), railStep1, rail, promoOn, toasts: all };
+    const ck = await ckReqP;
+    const checkoutReq = ck ? { url: ck.url(), headers: ck.headers(), body: ck.postData() } : null;
+    return { res, orderId, url: p.url(), railStep1, rail, promoOn, toasts: all, checkoutReq };
   }
   async function uploadYape(tag, shots = false) {
     const p = buyer.page;
@@ -410,6 +433,7 @@ if (!S.eventId) {
     check('C', 'promo aplicada en UI (-S/18, total S/72)', /18/.test(r.promoOn) && /72/.test(r.rail), `${r.promoOn} | ${r.rail.slice(0, 160)}`);
     check('C', 'checkout redirige a /yape?order=', r.res === 'nav' && /\/yape\?order=/.test(r.url), `${r.res} ${r.url} ${r.toasts.join('|')}`);
     S.orders.C = r.orderId;
+    S.checkoutReq = r.checkoutReq;
     if (r.orderId) {
       const o = await dbOrder(r.orderId);
       check('C', 'orden server-side: total 7200, desc 1800, promo ligado', o.total_cents === 7200 && o.discount_cents === 1800 && !!o.promo_code_id, JSON.stringify(o));
@@ -463,6 +487,37 @@ if (!S.eventId) {
 
   // =====================================================================
   await step('F', 'Cortesía gratis: sin pago, respeta stock 10', async () => {
+    // ---- Bug 3: un tipo S/0 en evento pago no se ofrece ni puede retener cupo ----
+    const pb = buyer.page;
+    await go(pb, `/${EVENT_SLUG}`);
+    const cortVisible = await pb.getByText('Cortesía', { exact: true }).count();
+    const sumarCort = await pb.getByRole('button', { name: 'Sumar Cortesía' }).count();
+    await shot(pb, 'F', 'publico-sin-cortesia');
+    check('F', 'bug3: la Cortesía S/0 NO aparece en la página pública de un evento pago', cortVisible === 0 && sumarCort === 0, `texto=${cortVisible} sumar=${sumarCort}`);
+    // Capturo la server action real de reserva (al sumar 1 General) y la re-envío con la Cortesía.
+    const resReqP = pb.waitForRequest((q) => q.method() === 'POST' && !!q.headers()['next-action'] && (q.postData() || '').includes(S.types.General), { timeout: 20000 });
+    await vis(pb.getByRole('button', { name: 'Sumar General' })).click();
+    const rq = await resReqP;
+    const reserveReq = { url: rq.url(), headers: rq.headers(), body: rq.postData() };
+    const [sid] = JSON.parse(reserveReq.body);
+    await sleep(1500);
+    const cortHold0 = await holdsOn(S.types['Cortesía']);
+    const rr = await replayAction(pb, reserveReq, [sid, S.types['Cortesía'], 5]);
+    const cortHold1 = await holdsOn(S.types['Cortesía']);
+    check('F', 'bug3: reserva armada a mano de la Cortesía → rechazada, 0 cupo retenido', cortHold1 === cortHold0 && cortHold1 === 0 && /no disponible/i.test(rr.text), `status=${rr.status} holds ${cortHold0}→${cortHold1} · ${rr.text.slice(-160)}`);
+    await vis(pb.getByRole('button', { name: 'Restar General' })).click();
+    await sleep(1200);
+    if (S.checkoutReq) {
+      const base = JSON.parse(S.checkoutReq.body)[0];
+      const emailF = `e2e-f-forjado-${STAMP}@test.local`;
+      const r1 = await replayAction(pb, S.checkoutReq, [{ ...base, buyerEmail: emailF, promoCode: '', items: [{ ticketTypeId: S.types['Cortesía'], quantity: 1 }] }]);
+      const emailP = `e2e-f-promo-${STAMP}@test.local`;
+      const gHold0 = await holdsOn(S.types.General);
+      const r2 = await replayAction(pb, S.checkoutReq, [{ ...base, buyerEmail: emailP, promoCode: 'NOEXISTE99', items: [{ ticketTypeId: S.types.General, quantity: 2 }] }]);
+      const { data: forged } = await svc.from('orders').select('id,status').in('buyer_email', [emailF, emailP]);
+      check('F', 'bug3: checkout armado a mano con la Cortesía → "no disponible", sin orden', /no disponible/i.test(r1.text) && (forged ?? []).length === 0, r1.text.slice(-160));
+      check('F', 'bug3: código promo inválido se rechaza ANTES de crear orden/reservar', /inválido/i.test(r2.text) && (forged ?? []).length === 0 && (await holdsOn(S.types.General)) <= gHold0, `${r2.text.slice(-120)} · órdenes=${JSON.stringify(forged)}`);
+    } else note('F', 'no se capturó el request de checkout en C: se saltean los replays de checkout');
     // F1: el organizador emite 10 cortesías (camino previsto). F2: la 11ª se rechaza.
     const p = adm.page;
     await go(p, `/admin/events/${S.eventId}/editar`);
@@ -559,8 +614,27 @@ if (!S.eventId) {
     await shot(buyer.page, 'H', 'sexta-con-pendientes');
     const { data: h6 } = await svc.from('orders').select('id,status').eq('event_id', S.eventId).eq('buyer_email', `e2e-h6-${STAMP}@test.local`);
     check('H', '6ª VIP NO se vende (anti-sobreventa: sin orden, sin ticket)', !r2.orderId && (h6 ?? []).every((o) => o.status === 'failed'), `${r2.res} · órdenes=${JSON.stringify(h6)}`);
-    const crudo = /Array must|element(s)|violates|Expected|Required/i.test(r2.toasts.join(' '));
-    check('H', '6ª VIP falla con mensaje claro en español (sin error técnico)', /agot|no quedan/i.test(r2.toasts.join(' ')) && !crudo, r2.toasts.join(' | '));
+    const crudo = /Array must|element(s)|violates|Expected|Required|invalid/i.test(r2.toasts.join(' '));
+    check('H', 'bug2: 6ª VIP → "No quedan suficientes entradas de VIP." (sin error técnico)', r2.toasts.some((t) => /No quedan suficientes entradas de VIP/.test(t)) && !crudo, r2.toasts.join(' | '));
+    check('H', 'bug2: con el carrito vacío no se puede avanzar a pagar (Continuar deshabilitado)', r2.continuarDisabled === true, `res=${r2.res}`);
+    await shot(buyer.page, 'H', 'sexta-carrito-vacio');
+    // Paso 2 → volver → vaciar: el botón de pagar también se deshabilita.
+    await go(buyer.page, `/${EVENT_SLUG}`);
+    await vis(buyer.page.getByRole('button', { name: 'Sumar General' })).click();
+    await sleep(1200);
+    await vis(buyer.page.getByRole('button', { name: /^Continuar/ })).click();
+    await buyer.page.locator('#buyer_name').waitFor();
+    await buyer.page.getByRole('button', { name: /Volver a entradas/ }).click();
+    await vis(buyer.page.getByRole('button', { name: 'Restar General' })).click();
+    await sleep(800);
+    const payDisabled = await buyer.page.locator('button[type=submit][form="checkout-form"]').evaluateAll((els) => els.every((e) => e.disabled));
+    const contDisabled = await vis(buyer.page.getByRole('button', { name: /^Continuar/ })).isDisabled();
+    check('H', 'bug2: carrito en 0 → Continuar y pagar deshabilitados', contDisabled && payDisabled, `continuar=${contDisabled} pagar=${payDisabled}`);
+    if (S.checkoutReq) {
+      const base = JSON.parse(S.checkoutReq.body)[0];
+      const rr = await replayAction(buyer.page, S.checkoutReq, [{ ...base, buyerEmail: `e2e-h-vacio-${STAMP}@test.local`, promoCode: '', items: [] }]);
+      check('H', 'bug2: checkout armado con 0 entradas → "Elegí al menos una entrada." (español)', /Elegí al menos una entrada/.test(rr.text) && !/Array must/.test(rr.text), rr.text.slice(-140));
+    }
     await go(buyer.page, `/${EVENT_SLUG}`);
     const soldOutWithHolds = await buyer.page.locator('.c-soldout').count();
     note('H', `Con 1 VIP pagada + 4 en revisión (holds), la página pública muestra "Agotado" en VIP: ${soldOutWithHolds > 0 ? 'sí' : 'NO (sigue ofreciendo Sumar VIP)'}`);
