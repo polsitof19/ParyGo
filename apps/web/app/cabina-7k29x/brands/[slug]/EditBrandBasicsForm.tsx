@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useFormFeedback } from '@/components/useFormFeedback';
 import { updateBrandBasicsAction, type BrandBasicsState } from './actions';
 
 const initial: BrandBasicsState = { ok: false, message: null };
@@ -20,7 +21,7 @@ export function EditBrandBasicsForm({
   yapeNumber: string | null;
   yapeHolder: string | null;
 }) {
-  const [state, action] = useFormState(updateBrandBasicsAction, initial);
+  const [state, action] = useFormFeedback(updateBrandBasicsAction, initial);
 
   return (
     <form action={action} className="s-stack" style={{ gap: 12, marginTop: 14 }}>

@@ -174,6 +174,8 @@ await step('A', 'Super admin: login, desarchivar demotest, cargar saldo, stats',
   const packMsg = await p.locator('form:has(#pack-select) .s-hint--ok, form:has(#pack-select) .s-err').first().innerText().catch(() => '(sin mensaje en UI)');
   const afterPack = await dbBrand();
   check('A', 'pack 1 cargado (saldo +1)', afterPack.event_balance === before.event_balance + 1, `${before.event_balance} → ${afterPack.event_balance} · "${packMsg}"`);
+  const packToast = (await toastLog(p)).find((t) => /Pack|saldo|cargad/i.test(t));
+  check('A', 'bug5: "Cargar pack" muestra confirmación', !!packToast || /cargad|saldo/i.test(packMsg), packToast ?? packMsg);
   await go(p, `/cabina-7k29x/brands/${BRAND}`);
   // Paul setea la contraseña fija del brand_admin de demotest (la usa el paso B).
   const pwdForm = p.locator('form.s-pwd-form').first();
@@ -185,7 +187,8 @@ await step('A', 'Super admin: login, desarchivar demotest, cargar saldo, stats',
   const pwdMsg = await pwdForm.locator('.s-hint--ok, .s-err').first().innerText().catch(() => '');
   const { error: pwdErr } = await anon().auth.signInWithPassword({ email: ADMIN_EMAIL, password: ADMIN_PASS });
   check('A', 'super admin setea contraseña del brand_admin demotest (login con la nueva funciona)', !pwdErr, pwdErr?.message ?? 'ok');
-  if (!pwdMsg) note('A', 'UX: tras "Setear contraseña" la UI NO muestra "Contraseña actualizada." (el cambio sí se aplica). Mismo patrón en "Cargar pack": no aparece mensaje de éxito; solo cambia el número de saldo.');
+  const pwdToast = (await toastLog(p)).find((t) => /Contraseña actualizada/.test(t));
+  check('A', 'bug5: "Setear contraseña" muestra "Contraseña actualizada."', !!pwdToast || /actualizada/i.test(pwdMsg), pwdToast ?? (pwdMsg || '(sin mensaje)'));
   const saldoUi = (await p.locator('.s-stat').first().innerText()).replace(/\s+/g, ' ');
   check('A', 'UI muestra saldo nuevo', saldoUi.includes(String(afterPack.event_balance)), saldoUi);
   await shot(p, 'A', 'marca-despues');

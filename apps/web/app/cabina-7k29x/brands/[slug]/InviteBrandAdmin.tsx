@@ -1,12 +1,13 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useFormFeedback } from '@/components/useFormFeedback';
 import { inviteBrandAdminAction, type InviteState } from './actions';
 
 const initial: InviteState = { ok: false, message: null };
 
 export function InviteBrandAdmin({ brandId, brandName }: { brandId: string; brandName: string }) {
-  const [state, action] = useFormState(inviteBrandAdminAction, initial);
+  const [state, action] = useFormFeedback(inviteBrandAdminAction, initial);
 
   return (
     <form action={action} className="s-form-row">
