@@ -483,7 +483,7 @@ if (!S.eventId) {
     await shot(p, 'C', 'marca-landing');
     // La landing destaca un solo "próximo evento": con varias corridas publicadas puede ser otro E2E.
     check('C', 'landing de marca muestra marca + evento publicado', /Demo Test/.test(landing) && /E2E Septiembre/.test(landing), landing.slice(0, 200));
-    if (/desde S\/ 0\b/.test(landing)) note('C', 'Cosmético: la landing dice "Entradas desde S/ 0" porque cuenta el tipo Cortesía (S/0) como precio mínimo.');
+    check('C', 'cosmético 7: la landing no dice "desde S/ 0" (la Cortesía no cuenta) y muestra "desde S/ 20"', !/desde S\/ 0\b/.test(landing) && /desde S\/ 20\b/.test(landing), (landing.match(/desde S\/ \d+/g) ?? []).join(' | '));
     const email = `e2e-c-${STAMP}@test.local`;
     S.buyerC = email;
     const r = await buy({ items: { General: 2, VIP: 1 }, email, name: `Comprador C ${STAMP}`, promo: PROMO, tag: 'C', shots: true });
@@ -594,6 +594,13 @@ if (!S.eventId) {
       return (await form.locator('.s-banner--ok, .s-banner--err').first().innerText().catch(() => '(sin mensaje en el form)')).replace(/\s+/g, ' ');
     };
     const m1 = await emitir(10);
+    const { data: clog } = await svc.from('events_log').select('payload').eq('event_id', S.eventId).eq('type', 'courtesy_issued').order('created_at', { ascending: false }).limit(1);
+    const cp = clog?.[0]?.payload ?? {};
+    if (env.RESEND_API_KEY) {
+      check('F', 'cosmético 8: log de cortesía email_sent coincide con el envío real', cp.email_sent === (cp.email_status === 'sent' || cp.email_status === 'already_sent'), JSON.stringify(cp));
+    } else {
+      check('F', 'cosmético 8: sin API key el log dice email_sent=false (skipped) y el mensaje no dice "enviadas"', cp.email_sent === false && cp.email_status === 'skipped' && /no se envió/.test(m1), `${JSON.stringify(cp)} · "${m1}"`);
+    }
     await shot(p, 'F', 'cortesias-10');
     const c1 = await typeBy('Cortesía');
     const { data: ctk } = await svc.from('tickets').select('id, order_id').eq('ticket_type_id', S.types['Cortesía']);
