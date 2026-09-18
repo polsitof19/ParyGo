@@ -7,7 +7,7 @@ import { serverEnv, publicEnv } from '@/lib/env';
 import { createMercadoPagoPreference } from '@/lib/mercadopago';
 import { issueTicketsForOrder } from '@/lib/tickets';
 import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
-import { checkPublicTicketType } from '@/lib/publicTicketGuard';
+import { checkPublicTicketType, eventOverAt } from '@/lib/publicTicketGuard';
 
 export type CheckoutInput = {
   eventId: string;
@@ -146,7 +146,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // quedarse corto (perder ventas reales) es mucho peor que el de quedarse
   // largo (alguien compra unas horas después de terminado → reembolso puntual).
   // No bajar este número sin hacer ends_at obligatorio primero.
-  const overAt = event.ends_at ? Date.parse(event.ends_at) : Date.parse(event.starts_at) + 18 * 3600 * 1000;
+  const overAt = eventOverAt(event.starts_at, event.ends_at);
   if (Number.isFinite(overAt) && overAt < Date.now()) {
     return { ok: false, message: 'Este evento ya terminó.' };
   }

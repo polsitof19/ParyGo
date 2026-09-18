@@ -10,10 +10,10 @@ const initial: FormState = { ok: false, message: null, fieldErrors: {} };
 type Phase = { priceSoles: string; until: string };
 type TT = { name: string; description: string; unlimited: boolean; capacity: string; phases: Phase[] };
 
+// "Ahora" en hora de Lima (UTC-5 fijo) para el min de los datetime-local, igual
+// que el server (no la zona horaria de la compu del promotor).
 function nowLocalInput(): string {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 16);
 }
 // datetime-local → ISO en hora de Lima (UTC-5 fijo), igual que el server con
 // starts_at/ends_at. No depende de la zona horaria de la compu del promotor.

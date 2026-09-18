@@ -21,22 +21,24 @@ export function limaToIso(v: string | null | undefined): string | null {
 // inicio de hace 10 min se acepta (evento que arranca ya), uno de ayer no.
 const PAST_GRACE_MS = 10 * 60 * 1000;
 
+export type WindowError = { field: 'starts_at' | 'ends_at'; message: string };
+
 export function validateEventWindow(input: {
   startsIso: string;
   endsIso: string | null;
   requireFutureStart: boolean;
   now?: number;
-}): string | null {
+}): WindowError | null {
   const now = input.now ?? Date.now();
   const start = Date.parse(input.startsIso);
-  if (!Number.isFinite(start)) return 'Fecha de inicio inválida.';
+  if (!Number.isFinite(start)) return { field: 'starts_at', message: 'Fecha de inicio inválida.' };
   if (input.requireFutureStart && start < now - PAST_GRACE_MS) {
-    return 'La fecha de inicio ya pasó. Elegí una fecha futura.';
+    return { field: 'starts_at', message: 'La fecha de inicio ya pasó. Elegí una fecha futura.' };
   }
   if (input.endsIso) {
     const end = Date.parse(input.endsIso);
-    if (!Number.isFinite(end)) return 'Fecha de fin inválida.';
-    if (end <= start) return 'La hora de fin tiene que ser posterior al inicio.';
+    if (!Number.isFinite(end)) return { field: 'ends_at', message: 'Fecha de fin inválida.' };
+    if (end <= start) return { field: 'ends_at', message: 'La hora de fin tiene que ser posterior al inicio.' };
   }
   return null;
 }

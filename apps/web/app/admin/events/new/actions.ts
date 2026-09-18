@@ -90,7 +90,7 @@ export async function createBrandEventAction(
   }
   const windowErr = validateEventWindow({ startsIso, endsIso, requireFutureStart: true });
   if (windowErr) {
-    return { ok: false, message: windowErr, fieldErrors: /fin/.test(windowErr) ? { ends_at: windowErr } : { starts_at: windowErr } };
+    return { ok: false, message: windowErr.message, fieldErrors: { [windowErr.field]: windowErr.message } };
   }
   const pricingErr = validateTicketTypePricing(
     parsedTT.data.map((t) => ({

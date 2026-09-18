@@ -54,7 +54,12 @@ export async function checkPublicTicketType(admin: Admin, ticketTypeId: string):
   if (!brand || brand.archived_at) return { ok: false, message: 'Evento no disponible.' };
 
   // Precio ACTIVO (fase vigente) del tipo, misma fuente que el checkout.
-  const { data: activePrices } = await admin.rpc('get_event_active_prices', { p_event_id: event.id });
+  const { data: activePrices, error: apErr } = await admin.rpc('get_event_active_prices', { p_event_id: event.id });
+  if (apErr) {
+    // Sin precio activo confiable no se decide: fail-closed (no se ofrece).
+    console.error('[checkPublicTicketType] get_event_active_prices failed', { eventId: event.id, error: apErr.message });
+    return unavailable;
+  }
   const activePriceCents = (activePrices ?? []).find((r) => r.ticket_type_id === tt.id)?.active_price_cents ?? tt.price_cents;
   if (!isPubliclyOffered(activePriceCents)) return unavailable;
 

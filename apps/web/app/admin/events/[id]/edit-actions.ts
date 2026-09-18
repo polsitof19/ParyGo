@@ -81,7 +81,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
     : current?.ends_at ?? null;
   if (dateChanging) {
     const windowErr = validateEventWindow({ startsIso, endsIso, requireFutureStart: true });
-    if (windowErr) return { ok: false, message: windowErr };
+    if (windowErr) return { ok: false, message: windowErr.message };
   }
   if (dateChanging && current?.is_published) {
     const { count: soldCount } = await admin
@@ -210,7 +210,7 @@ export async function postponeEventAction(
   // con el mismo delta (antes quedaba ends_at < starts_at → "terminado", sin venta).
   const endsIso = shiftEnd(oldStartsAt, startsIso, (ev.ends_at as string | null) ?? null);
   const windowErr = validateEventWindow({ startsIso, endsIso, requireFutureStart: true });
-  if (windowErr) return { ok: false, message: windowErr };
+  if (windowErr) return { ok: false, message: windowErr.message };
 
   // Mover la fecha. NO se tocan tickets ni órdenes.
   const { error: updErr } = await admin
@@ -340,9 +340,9 @@ export async function cloneEventAction(eventId: string): Promise<{ ok: boolean; 
   if (cloneWindowErr) {
     return {
       ok: false,
-      message: /ya pasó/.test(cloneWindowErr)
+      message: cloneWindowErr.field === 'starts_at'
         ? 'Este evento ya pasó: el clon copiaría fechas y fases vencidas (y gastaría 1 de saldo). Creá uno nuevo desde "Crear evento".'
-        : cloneWindowErr,
+        : cloneWindowErr.message,
     };
   }
 
@@ -557,29 +557,29 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
     update.capacity = newCapacity;
   }
 
+  // Fases del tipo: una sola lectura (conteo para la regla de preventa y precios
+  // para la regla de S/0 más abajo).
+  const { data: phaseRows } = await admin.from('ticket_type_price_phases').select('price_cents').eq('ticket_type_id', ttId);
+
   // --- Precio: con ventas, congelado; sin ventas, editable salvo preventa ---
   if (Number.isFinite(newPriceCents) && newPriceCents !== tt.price_cents) {
     if (sold > 0) {
       return { ok: false, message: 'No se puede cambiar el precio de un tipo que ya tiene ventas (el precio queda congelado para quienes ya compraron).' };
     }
     if (newPriceCents < 0) return { ok: false, message: 'Precio inválido.' };
-    const { count: phaseCount } = await admin
-      .from('ticket_type_price_phases')
-      .select('id', { count: 'exact', head: true })
-      .eq('ticket_type_id', ttId);
-    if ((phaseCount ?? 0) > 1) {
+    const phaseCount = (phaseRows ?? []).length;
+    if (phaseCount > 1) {
       return { ok: false, message: 'Este tipo tiene fases de preventa; el precio se gestiona por fases (no editable acá).' };
     }
     update.price_cents = newPriceCents;
     // Si hay UNA fase base (sin ventas), la alineamos para que el precio activo coincida.
-    if ((phaseCount ?? 0) === 1) {
+    if (phaseCount === 1) {
       await admin.from('ticket_type_price_phases').update({ price_cents: newPriceCents }).eq('ticket_type_id', ttId);
     }
   }
 
   // Reglas de precio sobre el estado RESULTANTE (precio/fases + ilimitado). La
   // confirmación de S/0 solo se pide si el precio PASA a 0 en esta edición.
-  const { data: phaseRows } = await admin.from('ticket_type_price_phases').select('price_cents').eq('ticket_type_id', ttId);
   const priceChanged = typeof update.price_cents === 'number';
   const resultingPrices = priceChanged
     ? [update.price_cents as number]

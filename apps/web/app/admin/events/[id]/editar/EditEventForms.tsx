@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useFormFeedback } from '@/components/useFormFeedback';
-import { toast } from 'sonner';
 import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, type EditState } from '../edit-actions';
 
 export type TtRow = { id: string; name: string; description: string; priceCents: number; capacity: number; sold: number; isUnlimited: boolean; isActive: boolean; bulkMinQty: number; bulkDiscountPct: number };
@@ -39,10 +38,8 @@ export function EditEventForm(p: { eventId: string; name: string; description: s
   const [state, action] = useFormFeedback(updateEventAction, initial);
   const dateRef = useRef<HTMLInputElement>(null);
   const ro = Boolean(p.readOnly);
-  // Feedback inmediato en mobile: el Banner al pie suele quedar fuera de viewport.
-  useEffect(() => {
-    if (state.ok && state.message) toast.success(state.message);
-  }, [state.ok, state.message]);
+  // El toast de resultado (también en mobile, donde el Banner queda fuera de
+  // viewport) lo dispara useFormFeedback.
   const dateLocked = Boolean(p.isPublished && p.hasSales) || ro;
   // Publicado SIN ventas: la fecha se puede cambiar pero avisamos antes de guardar.
   // Publicado CON ventas: input readOnly + el server rechaza igual (defensa real).

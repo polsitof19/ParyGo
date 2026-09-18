@@ -53,6 +53,7 @@ export async function reserveStock(
         available,
       };
     }
+    console.error('[reserveStock] create_or_refresh_stock_reservation failed', { ticketTypeId, error: msg });
     return { ok: false, kind: 'invalid', message: 'No se pudo reservar. Intentá de nuevo.' };
   }
   return { ok: true, expiresAt: (data as string | null) ?? null };

@@ -35,7 +35,9 @@ export function TicketTypesEditor({
   function handleSave(formData: FormData) {
     formData.set('event_id', eventId);
     // Precio S/0: confirmación explícita (el server la exige y revalida).
-    if (Number(formData.get('price_soles') ?? '') === 0) {
+    const editedId = String(formData.get('id') ?? '');
+    const wasFree = editedId !== '' && types.find((t) => t.id === editedId)?.price_cents === 0;
+    if (Number(formData.get('price_soles') ?? '') === 0 && !wasFree) {
       const ok = window.confirm('Este tipo cuesta S/ 0. Los tipos gratis NO se venden en la página pública: se emiten como cortesías y descuentan del aforo. ¿Confirmás?');
       if (!ok) return;
       formData.set('confirm_free', '1');
