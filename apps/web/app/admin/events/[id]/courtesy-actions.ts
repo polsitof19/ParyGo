@@ -133,6 +133,9 @@ export async function issueCourtesyTicketsAction(
 
   // 5. Email con los N QR al destino (best-effort: los tickets ya existen).
   const emailRes = await sendTicketEmail(order.id);
+  // "Enviado" = salió de verdad (o ya había salido). 'skipped' (p. ej. sin
+  // RESEND_API_KEY) es ok:true pero NO es un envío: no reportarlo como tal.
+  const emailSent = emailRes.ok && (emailRes.status === 'sent' || emailRes.status === 'already_sent');
 
   // 6. Trazabilidad: quién emitió cuántas, de qué tipo, a qué email.
   await admin.from('events_log').insert({
@@ -141,14 +144,14 @@ export async function issueCourtesyTicketsAction(
     order_id: order.id,
     actor_user_id: user.id,
     type: 'courtesy_issued',
-    payload: { ticket_type_id: tt.id, ticket_type_name: tt.name, qty, email, email_sent: emailRes.ok },
+    payload: { ticket_type_id: tt.id, ticket_type_name: tt.name, qty, email, email_sent: emailSent, email_status: emailRes.status },
   });
 
   revalidatePath(`/admin/events/${event.id}`);
   return {
     ok: true,
-    message: emailRes.ok
+    message: emailSent
       ? `Listo: ${qty} ${tt.name} de cortesía enviadas a ${email}.`
-      : `Emitidas ${qty} ${tt.name}, pero el email a ${email} falló — reenvialo desde la orden.`,
+      : `Emitidas ${qty} ${tt.name}, pero el email a ${email} no se envió — reenvialo desde la orden.`,
   };
 }
