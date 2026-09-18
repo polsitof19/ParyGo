@@ -15,7 +15,13 @@ function nowLocalInput(): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-const toISO = (local: string): string | null => (local ? new Date(local).toISOString() : null);
+// datetime-local → ISO en hora de Lima (UTC-5 fijo), igual que el server con
+// starts_at/ends_at. No depende de la zona horaria de la compu del promotor.
+const toISO = (local: string): string | null => {
+  if (!local) return null;
+  const d = new Date(`${local.length === 16 ? `${local}:00` : local}-05:00`);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+};
 const toCents = (s: string): number => Math.round(parseFloat(s || '0') * 100) || 0;
 const newTT = (): TT => ({ name: '', description: '', unlimited: false, capacity: '100', phases: [{ priceSoles: '', until: '' }] });
 

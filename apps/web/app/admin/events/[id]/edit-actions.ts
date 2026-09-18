@@ -153,7 +153,7 @@ export async function setEventPublishedAction(
       return { ok: false, message: 'Agregá al menos un tipo de entrada activo antes de publicar.' };
     }
     // Guard: no publicar un evento que ya terminó (nadie podría comprar).
-    const { data: ev } = await admin.from('events').select('starts_at, ends_at').eq('id', eventId).maybeSingle();
+    const { data: ev } = await admin.from('events').select('starts_at, ends_at').eq('id', eventId).eq('brand_id', brandId).maybeSingle();
     if (ev && eventOverAt(ev.starts_at, ev.ends_at) < Date.now()) {
       return { ok: false, message: 'Este evento ya terminó. Cambiá la fecha antes de publicarlo.' };
     }
@@ -334,6 +334,17 @@ export async function cloneEventAction(eventId: string): Promise<{ ok: boolean; 
     .eq('brand_id', brandId)
     .maybeSingle();
   if (!ev) return { ok: false, message: 'Evento no encontrado.' };
+  // El clon copia fechas y fases del original y gasta 1 de saldo: validar ANTES
+  // del RPC. Un evento que ya pasó (o con fin antes del inicio) no se clona.
+  const cloneWindowErr = validateEventWindow({ startsIso: ev.starts_at, endsIso: ev.ends_at, requireFutureStart: true });
+  if (cloneWindowErr) {
+    return {
+      ok: false,
+      message: /ya pasó/.test(cloneWindowErr)
+        ? 'Este evento ya pasó: el clon copiaría fechas y fases vencidas (y gastaría 1 de saldo). Creá uno nuevo desde "Crear evento".'
+        : cloneWindowErr,
+    };
+  }
 
   const { data: types } = await admin
     .from('ticket_types')
