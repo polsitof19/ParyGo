@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { limaToIso, validateEventWindow } from '@/lib/eventValidation';
 
 export type FormState = {
   ok: boolean;
@@ -56,13 +57,19 @@ export async function createEventAction(
 
   const admin = createAdminClient();
 
-  const startsAt = new Date(parsed.data.starts_at);
-  if (Number.isNaN(startsAt.getTime())) {
+  // Fechas en hora de Lima (explícito: en Cloudflare el server corre en UTC).
+  // Se valida ANTES de consumir saldo.
+  const startsIso = limaToIso(parsed.data.starts_at);
+  if (!startsIso) {
     return { ok: false, message: 'Fecha de inicio inválida.', fieldErrors: { starts_at: 'Inválida' } };
   }
-  const endsAt = parsed.data.ends_at ? new Date(parsed.data.ends_at) : null;
-  if (endsAt && Number.isNaN(endsAt.getTime())) {
+  const endsIso = parsed.data.ends_at ? limaToIso(parsed.data.ends_at) : null;
+  if (parsed.data.ends_at && !endsIso) {
     return { ok: false, message: 'Fecha de fin inválida.', fieldErrors: { ends_at: 'Inválida' } };
+  }
+  const windowErr = validateEventWindow({ startsIso, endsIso, requireFutureStart: true });
+  if (windowErr) {
+    return { ok: false, message: windowErr, fieldErrors: /fin/.test(windowErr) ? { ends_at: windowErr } : { starts_at: windowErr } };
   }
 
   // Creating an event consumes 1 from the brand's event balance. The RPC does
@@ -76,8 +83,8 @@ export async function createEventAction(
       slug: parsed.data.slug,
       name: parsed.data.name,
       description: parsed.data.description || null,
-      starts_at: startsAt.toISOString(),
-      ends_at: endsAt?.toISOString() ?? null,
+      starts_at: startsIso,
+      ends_at: endsIso,
       venue_name: parsed.data.venue_name || null,
       venue_address: parsed.data.venue_address || null,
       venue_lat: maybeFloat(parsed.data.venue_lat),

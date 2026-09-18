@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { Plus, Trash2 } from 'lucide-react';
 import { createBrandEventAction, type FormState } from './actions';
@@ -25,6 +25,26 @@ export function EventBuilder() {
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [coverName, setCoverName] = useState<string | null>(null);
   const min = nowLocalInput();
+  const confirmFreeRef = useRef<HTMLInputElement>(null);
+
+  // Tipos S/0: ilimitado → bloqueado; con aforo → confirmación explícita (el
+  // server exige confirm_free=1 y vuelve a validar todo).
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    const free = tts.filter((t) => t.phases.some((ph) => toCents(ph.priceSoles) === 0));
+    const freeUnlimited = free.find((t) => t.unlimited);
+    if (freeUnlimited) {
+      e.preventDefault();
+      window.alert(`"${freeUnlimited.name || 'Un tipo'}" no puede ser gratis e ilimitado a la vez. Poné un cupo o un precio.`);
+      return;
+    }
+    if (confirmFreeRef.current) confirmFreeRef.current.value = '';
+    if (free.length) {
+      const names = free.map((t) => `"${t.name || 'sin nombre'}"`).join(', ');
+      const ok = window.confirm(`${names} cuesta S/ 0. Los tipos gratis NO se venden en tu página: se emiten desde "Cortesías" y descuentan del aforo. ¿Confirmás?`);
+      if (!ok) { e.preventDefault(); return; }
+      if (confirmFreeRef.current) confirmFreeRef.current.value = '1';
+    }
+  }
 
   function onCover(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0] ?? null;
@@ -60,8 +80,9 @@ export function EventBuilder() {
     setTts((s) => s.map((t, k) => (k === i ? { ...t, phases: t.phases.map((ph, m) => (m === j ? { ...ph, ...p } : ph)) } : t)));
 
   return (
-    <form action={action} className="s-stack" style={{ gap: 16 }}>
+    <form action={action} onSubmit={onSubmit} className="s-stack" style={{ gap: 16 }}>
       <input type="hidden" name="ticket_types_json" value={JSON.stringify(serialized)} />
+      <input type="hidden" name="confirm_free" ref={confirmFreeRef} defaultValue="" />
 
       {/* Evento */}
       <section className="s-card">

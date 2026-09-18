@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { uploadEventCover } from '@/lib/brandAssets';
+import { limaToIso, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
 
 export type FormState = {
   ok: boolean;
@@ -77,14 +78,29 @@ export async function createBrandEventAction(
     return { ok: false, message: parsedTT.error.errors[0]?.message ?? 'Revisá los tipos de entrada.' };
   }
 
-  const startsAt = new Date(parsedEvent.data.starts_at);
-  if (Number.isNaN(startsAt.getTime())) {
+  // Fechas en hora de Lima (explícito: en Cloudflare el server corre en UTC).
+  // Todo se valida ANTES de subir el flyer y de consumir saldo.
+  const startsIso = limaToIso(parsedEvent.data.starts_at);
+  if (!startsIso) {
     return { ok: false, message: 'Fecha de inicio inválida.', fieldErrors: { starts_at: 'Inválida' } };
   }
-  const endsAt = parsedEvent.data.ends_at ? new Date(parsedEvent.data.ends_at) : null;
-  if (endsAt && Number.isNaN(endsAt.getTime())) {
+  const endsIso = parsedEvent.data.ends_at ? limaToIso(parsedEvent.data.ends_at) : null;
+  if (parsedEvent.data.ends_at && !endsIso) {
     return { ok: false, message: 'Fecha de fin inválida.', fieldErrors: { ends_at: 'Inválida' } };
   }
+  const windowErr = validateEventWindow({ startsIso, endsIso, requireFutureStart: true });
+  if (windowErr) {
+    return { ok: false, message: windowErr, fieldErrors: /fin/.test(windowErr) ? { ends_at: windowErr } : { starts_at: windowErr } };
+  }
+  const pricingErr = validateTicketTypePricing(
+    parsedTT.data.map((t) => ({
+      name: t.name,
+      isUnlimited: t.is_unlimited,
+      pricesCents: [t.price_cents, ...t.phases.map((p) => p.price_cents)],
+    })),
+    { freeConfirmed: formData.get('confirm_free') === '1' }
+  );
+  if (pricingErr) return { ok: false, message: pricingErr };
 
   const admin = createAdminClient();
 
@@ -106,8 +122,8 @@ export async function createBrandEventAction(
       slug: parsedEvent.data.slug,
       name: parsedEvent.data.name,
       description: parsedEvent.data.description || null,
-      starts_at: startsAt.toISOString(),
-      ends_at: endsAt?.toISOString() ?? null,
+      starts_at: startsIso,
+      ends_at: endsIso,
       venue_name: parsedEvent.data.venue_name || null,
       venue_address: parsedEvent.data.venue_address || null,
       cover_url: coverUrl,

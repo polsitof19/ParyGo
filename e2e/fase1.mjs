@@ -78,7 +78,12 @@ const browser = await chromium.launch({ headless: true });
 const ctxOpts = { timezoneId: TZ, locale: 'es-PE' };
 const consoleErrors = [];
 function wire(page, tag) {
-  page.on('dialog', (d) => d.accept().catch(() => {}));
+  page.__dialogs = [];
+  page.on('dialog', (d) => {
+    page.__dialogs.push(`${d.type()}: ${d.message()}`);
+    if (page.__dismissNext && d.type() === 'confirm') { page.__dismissNext = false; d.dismiss().catch(() => {}); return; }
+    d.accept().catch(() => {});
+  });
   page.on('pageerror', (e) => consoleErrors.push(`${tag} pageerror: ${e.message.slice(0, 200)}`));
   page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(`${tag} console: ${m.text().slice(0, 200)}`); });
   return page;
@@ -232,7 +237,8 @@ await step('B', 'Organizador: crear evento, entradas, promo, preventa, publicar,
       const t = types[i];
       await card.locator('input[placeholder="General / VIP"]').fill(t.name);
       if (t.desc) await card.locator('textarea').fill(t.desc);
-      await card.locator('div:has(> label:text-is("Cupo")) > input').fill(String(t.capacity));
+      if (t.unlimited) await card.getByText('Stock ilimitado').click();
+      else await card.locator('div:has(> label:text-is("Cupo")) > input').fill(String(t.capacity));
       for (let j = 0; j < t.phases.length; j++) {
         if (j > 0) await card.getByRole('button', { name: 'Fase', exact: true }).click();
         if (bypassMin) await p.evaluate(() => document.querySelectorAll('input[type=datetime-local]').forEach((i) => i.removeAttribute('min')));
@@ -252,7 +258,11 @@ await step('B', 'Organizador: crear evento, entradas, promo, preventa, publicar,
   });
   await shot(p, 'B', 'builder-lleno');
   const balBefore = (await dbBrand()).event_balance;
+  const createReqP = p.waitForRequest((q) => q.method() === 'POST' && !!q.headers()['next-action'] && q.url().includes('/admin/events/new'), { timeout: 45000 }).catch(() => null);
   await p.getByRole('button', { name: 'Crear evento' }).click();
+  const createReq = await createReqP;
+  S.createReq = createReq ? { url: createReq.url(), headers: createReq.headers(), body: createReq.postDataBuffer()?.toString('utf8') ?? '' } : null;
+  check('B', 'bug4: crear con un tipo S/0 con aforo pide confirmación', p.__dialogs.some((d) => /confirm: .*Cortesía.*S\/ 0/.test(d)), p.__dialogs.join(' | '));
   await p.waitForURL(/\/admin\/events\/[0-9a-f-]{36}/, { timeout: 45000 }).catch(() => {});
   const m = p.url().match(/\/admin\/events\/([0-9a-f-]{36})/);
   if (!m) {
@@ -298,31 +308,79 @@ await step('B', 'Organizador: crear evento, entradas, promo, preventa, publicar,
   await go(p, `/admin/events/${S.eventId}`);
   await shot(p, 'B', 'publicado');
 
-  // Evento con fecha pasada: ¿se puede crear? ¿se puede comprar?
-  const pastStart = new Date(now.getTime() - 3 * day);
+  // ---- Bug 4: validaciones de evento en el server (antes de consumir saldo) ----
+  // Re-envío el request real de "Crear evento" alterado. Ninguno debe crear
+  // evento ni descontar saldo.
+  if (S.createReq?.body) {
+    const replayCreate = async (label, mutate) => {
+      const slug = `e2e-inval-${STAMP}-${label}`;
+      let body = S.createReq.body.split(EVENT_SLUG).join(slug);
+      body = mutate(body);
+      const bal0 = (await dbBrand()).event_balance;
+      const keep = ['next-action', 'next-router-state-tree', 'content-type', 'accept'];
+      const headers = Object.fromEntries(Object.entries(S.createReq.headers).filter(([k]) => keep.includes(k)));
+      const resp = await p.request.post(S.createReq.url, { headers, data: Buffer.from(body, 'utf8') });
+      const text = await resp.text();
+      const { data: evs } = await svc.from('events').select('id').eq('slug', slug);
+      const bal1 = (await dbBrand()).event_balance;
+      return { text, created: (evs ?? []).length, balDelta: bal1 - bal0 };
+    };
+    const lastMsg = (t) => (t.match(/"message":"([^"]+)"/g) ?? []).pop() ?? t.slice(-160);
+    const r1 = await replayCreate('pasado', (b) => b.split(limaLocal(starts)).join(limaLocal(new Date(now.getTime() - 3 * day))));
+    check('B', 'bug4: server rechaza crear con inicio pasado (sin evento, sin gastar saldo)', /ya pasó/.test(r1.text) && !r1.created && r1.balDelta === 0, `${lastMsg(r1.text)} · creados=${r1.created} Δsaldo=${r1.balDelta}`);
+    const r2 = await replayCreate('finantes', (b) => b.split(limaLocal(ends)).join(limaLocal(new Date(starts.getTime() - 3600000))));
+    check('B', 'bug4: server rechaza fin <= inicio', /posterior al inicio/.test(r2.text) && !r2.created && r2.balDelta === 0, `${lastMsg(r2.text)} · creados=${r2.created} Δsaldo=${r2.balDelta}`);
+    const r3 = await replayCreate('gratisinf', (b) => b.replace('"capacity":10,"is_unlimited":false', '"capacity":0,"is_unlimited":true'));
+    check('B', 'bug4: server rechaza tipo S/0 + ilimitado', /gratis e ilimitado/.test(r3.text) && !r3.created && r3.balDelta === 0, `${lastMsg(r3.text)} · creados=${r3.created} Δsaldo=${r3.balDelta}`);
+    const r4 = await replayCreate('sinconfirm', (b) => b.replace(/(name="[^"]*confirm_free"\r\n\r\n)1/, '$1'));
+    check('B', 'bug4: server exige confirmación para tipo S/0 con aforo', /Confirmá que/.test(r4.text) && !r4.created && r4.balDelta === 0, `${lastMsg(r4.text)} · creados=${r4.created} Δsaldo=${r4.balDelta}`);
+  } else note('B', 'no se capturó el request de crear evento: se saltean los replays del bug 4');
+
+  // UI: S/0 + ilimitado se frena antes de enviar (alerta, sin navegar).
+  p.__dialogs = [];
   await fillBuilder({
-    name: `E2E Pasado ${STAMP}`, slug: PAST_SLUG, startsAt: pastStart, endsAt: new Date(pastStart.getTime() + 6 * 3600000), bypassMin: true,
-    types: [{ name: 'General', capacity: 10, phases: [{ price: 20 }] }],
+    name: `E2E Inval ${STAMP}`, slug: `e2e-inval-${STAMP}-ui`, startsAt: starts, endsAt: ends,
+    types: [{ name: 'Gratis', unlimited: true, phases: [{ price: 0 }] }],
   });
   await p.getByRole('button', { name: 'Crear evento' }).click();
-  await p.waitForURL(/\/admin\/events\/[0-9a-f-]{36}/, { timeout: 30000 }).catch(() => {});
-  const pm = p.url().match(/\/admin\/events\/([0-9a-f-]{36})/);
-  if (pm) {
-    S.pastEventId = pm[1];
-    note('B', 'El server ACEPTA crear un evento con fecha de inicio pasada (solo el atributo min del input lo frena en la UI). Consume saldo.');
+  await sleep(1500);
+  await shot(p, 'B', 'builder-gratis-ilimitado');
+  check('B', 'bug4: builder frena S/0 + ilimitado con alerta', p.__dialogs.some((d) => /alert: .*gratis e ilimitado/.test(d)) && /\/admin\/events\/new/.test(p.url()), p.__dialogs.join(' | '));
+
+  // Editar: mover el inicio corre el fin con el mismo delta; al pasado se rechaza.
+  const ev0 = (await svc.from('events').select('starts_at, ends_at').eq('id', S.eventId).single()).data;
+  await go(p, `/admin/events/${S.eventId}/editar`);
+  await p.fill('#ev-date', limaLocal(new Date(Date.parse(ev0.starts_at) + day)));
+  await p.getByRole('button', { name: 'Guardar evento' }).click();
+  await sleep(3500);
+  const ev1 = (await svc.from('events').select('starts_at, ends_at').eq('id', S.eventId).single()).data;
+  const durOk = Date.parse(ev1.ends_at) - Date.parse(ev1.starts_at) === Date.parse(ev0.ends_at) - Date.parse(ev0.starts_at);
+  check('B', 'bug4: editar la fecha (+1 día) corre el fin igual (misma duración)', Date.parse(ev1.starts_at) - Date.parse(ev0.starts_at) === day && durOk, `${ev0.starts_at}→${ev1.starts_at} · fin ${ev0.ends_at}→${ev1.ends_at}`);
+  await go(p, `/admin/events/${S.eventId}/editar`);
+  await p.fill('#ev-date', limaLocal(new Date(now.getTime() - 2 * day)));
+  await p.getByRole('button', { name: 'Guardar evento' }).click();
+  await sleep(3500);
+  const editMsg = (await p.locator('.s-banner--err, .s-banner--ok').allInnerTexts()).join(' | ');
+  const ev2 = (await svc.from('events').select('starts_at').eq('id', S.eventId).single()).data;
+  await shot(p, 'B', 'editar-fecha-pasada');
+  check('B', 'bug4: editar la fecha al pasado se rechaza', /ya pasó/.test(editMsg) && ev2.starts_at === ev1.starts_at, `${editMsg} · starts=${ev2.starts_at}`);
+
+  // Evento con fecha pasada: no se puede publicar ni comprar. Uso el evento viejo
+  // de demotest (fiesta-prueba, junio, borrador).
+  const { data: oldEv } = await svc.from('events').select('id, slug, is_published').eq('brand_id', BRAND_ID).eq('slug', 'fiesta-prueba').maybeSingle();
+  if (oldEv) {
+    await go(p, `/admin/events/${oldEv.id}`);
+    const t0 = (await toastLog(p)).length;
     await p.getByRole('button', { name: /Publicar evento/ }).click().catch(() => {});
-    await sleep(2500);
-    const pastPub = (await svc.from('events').select('is_published').eq('id', S.pastEventId).single()).data?.is_published;
-    await go(buyer.page, `/${PAST_SLUG}`);
+    await sleep(3000);
+    const pubMsgs = (await toastLog(p)).slice(t0).join(' | ');
+    const oldPub = (await svc.from('events').select('is_published').eq('id', oldEv.id).single()).data.is_published;
+    await shot(p, 'B', 'publicar-evento-pasado');
+    check('B', 'bug4: no se puede publicar un evento que ya terminó', !oldPub && /ya terminó/.test(pubMsgs), `publicado=${oldPub} · ${pubMsgs}`);
+    await go(buyer.page, `/${oldEv.slug}`);
     const txt = await bodyText(buyer.page);
     await shot(buyer.page, 'B', 'evento-pasado-publico');
-    const sumar = await buyer.page.getByRole('button', { name: /Sumar/ }).count();
-    check('B', 'evento pasado NO se puede comprar (página "ya terminó", sin selector)', /ya terminó/i.test(txt) && sumar === 0, `publicado=${pastPub} · sumar=${sumar} · "${txt.slice(0, 140)}"`);
-  } else {
-    const err = await p.locator('.s-banner--err, .s-err').allInnerTexts();
-    await shot(p, 'B', 'pasado-rechazado');
-    note('B', `Crear evento pasado rechazado por el server: ${err.join(' | ')}`);
-    check('B', 'evento pasado no se puede crear/comprar', true, err.join(' | '));
+    check('B', 'evento pasado NO se puede comprar (sin selector de entradas)', (await buyer.page.getByRole('button', { name: /Sumar/ }).count()) === 0, txt.slice(0, 140));
   }
 });
 
@@ -559,6 +617,11 @@ if (!S.eventId) {
     await go(p, '/scan');
     await sleep(2500);
     await shot(p, 'G', 'scan-inicio');
+    // Bug 6: la puerta solo lista eventos publicados y no archivados.
+    const opts = await p.locator('select option').allInnerTexts();
+    const { data: hidden } = await svc.from('events').select('name, is_published, archived_at').eq('brand_id', BRAND_ID).or('is_published.eq.false,archived_at.not.is.null');
+    const leaked = (hidden ?? []).filter((e) => opts.includes(e.name)).map((e) => e.name);
+    check('G', 'bug6: /scan lista el evento publicado y ningún borrador/archivado', opts.includes(`E2E Septiembre ${STAMP}`) && leaked.length === 0, `opciones=${JSON.stringify(opts)} · filtrados=${leaked.join(',') || 'ninguno'}`);
     const qr = S.ticketsC?.find((t) => t.ticket_type_name === 'General')?.qr_code;
     if (!qr) throw new Error('sin QR de E');
     const revisar = async (code) => {
