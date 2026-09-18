@@ -161,8 +161,7 @@ await step('A', 'Super admin: login, desarchivar demotest, cargar saldo, stats',
 
   if (before.archived_at) {
     await p.getByRole('button', { name: 'Desarchivar' }).click();
-    await p.waitForFunction(() => !document.body.innerText.includes('Desarchivar') || false, null, { timeout: 20000 }).catch(() => {});
-    await sleep(1500);
+    for (let i = 0; i < 40 && (await dbBrand()).archived_at; i++) await sleep(500);
   }
   const afterArch = await dbBrand();
   check('A', 'demotest desarchivada (DB archived_at=null)', afterArch.archived_at === null, afterArch.archived_at);
@@ -380,6 +379,15 @@ await step('B', 'Organizador: crear evento, entradas, promo, preventa, publicar,
     const oldPub = (await svc.from('events').select('is_published').eq('id', oldEv.id).single()).data.is_published;
     await shot(p, 'B', 'publicar-evento-pasado');
     check('B', 'bug4: no se puede publicar un evento que ya terminó', !oldPub && /ya terminó/.test(pubMsgs), `publicado=${oldPub} · ${pubMsgs}`);
+    await go(p, `/admin/events/${oldEv.id}/editar`);
+    const balC0 = (await dbBrand()).event_balance;
+    const tc = (await toastLog(p)).length;
+    await p.getByRole('button', { name: /Clonar como borrador/ }).click();
+    await sleep(3500);
+    const cloneMsgs = (await toastLog(p)).slice(tc).join(' | ');
+    const balC1 = (await dbBrand()).event_balance;
+    await shot(p, 'B', 'clonar-evento-pasado');
+    check('B', 'bug4 (review): clonar un evento pasado se rechaza sin gastar saldo', /ya pasó/.test(cloneMsgs) && balC1 === balC0, `${cloneMsgs} · saldo ${balC0}→${balC1}`);
     await go(buyer.page, `/${oldEv.slug}`);
     const txt = await bodyText(buyer.page);
     await shot(buyer.page, 'B', 'evento-pasado-publico');
@@ -395,10 +403,17 @@ if (!S.eventId) {
     const p = buyer.page;
     await go(p, `/${EVENT_SLUG}`);
     if (shots) await shot(p, tag, 'evento');
+    // La reserva del carrito es una server action con debounce de 400 ms: esperar
+    // a que vuelva su respuesta antes de mirar el estado del botón.
+    let lastReserve = null;
+    const onResp = (r) => { if (r.request().method() === 'POST' && r.request().headers()['next-action'] && (r.request().postData() || '').startsWith('["')) lastReserve = Date.now(); };
+    p.on('response', onResp);
     for (const [t, n] of Object.entries(items)) {
       for (let i = 0; i < n; i++) { await vis(p.getByRole('button', { name: `Sumar ${t}` })).click(); await sleep(250); }
     }
-    await sleep(1500); // la reserva del carrito corre con debounce de 400ms
+    const tWait = Date.now();
+    while (Date.now() - tWait < 12000 && (!lastReserve || Date.now() - lastReserve < 800)) await sleep(200);
+    p.off('response', onResp);
     const contBtn = vis(p.getByRole('button', { name: /^Continuar/ }));
     if (await contBtn.isDisabled()) {
       // El server no reservó (sin cupo / no disponible) y el carrito quedó en 0.
@@ -591,7 +606,8 @@ if (!S.eventId) {
       await form.getByRole('button', { name: 'Emitiendo…' }).waitFor({ timeout: 5000 }).catch(() => {});
       await form.getByRole('button', { name: /Emitir y enviar/ }).waitFor({ timeout: 60000 });
       await sleep(800);
-      return (await form.locator('.s-banner--ok, .s-banner--err').first().innerText().catch(() => '(sin mensaje en el form)')).replace(/\s+/g, ' ');
+      const inline = (await form.locator('.s-banner--ok, .s-banner--err').first().innerText().catch(() => '')).replace(/\s+/g, ' ');
+      return inline || (await toastLog(p)).filter((t) => /cortesía|cupo/i.test(t)).pop() || '(sin mensaje)';
     };
     const m1 = await emitir(10);
     const { data: clog } = await svc.from('events_log').select('payload').eq('event_id', S.eventId).eq('type', 'courtesy_issued').order('created_at', { ascending: false }).limit(1);

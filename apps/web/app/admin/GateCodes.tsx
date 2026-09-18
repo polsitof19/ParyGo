@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useFormFeedback } from '@/components/useFormFeedback';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { generateGateCodeAction, revokeGateCodeAction, type GateCodeState } from './actions';
@@ -17,7 +18,7 @@ type ActiveCode = {
 };
 
 export function GateCodes({ codes }: { codes: ActiveCode[] }) {
-  const [state, action] = useFormState(generateGateCodeAction, initial);
+  const [state, action] = useFormFeedback(generateGateCodeAction, initial);
 
   return (
     <div className="space-y-4">
@@ -77,7 +78,7 @@ function GenButton() {
 }
 
 function RevokeButton({ id }: { id: string }) {
-  const [, action] = useFormState(revokeGateCodeAction, initial);
+  const [, action] = useFormFeedback(revokeGateCodeAction, initial);
   return (
     <form action={action}>
       <input type="hidden" name="code_id" value={id} />

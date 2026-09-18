@@ -1,12 +1,13 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useFormFeedback } from '@/components/useFormFeedback';
 import { inviteValidatorAction, type InviteValidatorState } from './actions';
 
 const initial: InviteValidatorState = { ok: false, message: null };
 
 export function InviteValidator() {
-  const [state, action] = useFormState(inviteValidatorAction, initial);
+  const [state, action] = useFormFeedback(inviteValidatorAction, initial);
   return (
     <form action={action} className="s-form-row">
       <div className="s-form-row__field">

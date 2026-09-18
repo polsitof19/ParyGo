@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useFormFeedback } from '@/components/useFormFeedback';
 import { toast } from 'sonner';
 import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, type EditState } from '../edit-actions';
 
@@ -35,7 +36,7 @@ function Submit({ label }: { label: string }) {
 }
 
 export function EditEventForm(p: { eventId: string; name: string; description: string; startsLocal: string; venueName: string; venueAddress: string; venueMapsUrl: string; requireAgeConfirmation: boolean; requireDni: boolean; sendReminder: boolean; collectAttendeeNames: boolean; allowTransfer: boolean; minAge: number; isPublished?: boolean; hasSales?: boolean; readOnly?: boolean }) {
-  const [state, action] = useFormState(updateEventAction, initial);
+  const [state, action] = useFormFeedback(updateEventAction, initial);
   const dateRef = useRef<HTMLInputElement>(null);
   const ro = Boolean(p.readOnly);
   // Feedback inmediato en mobile: el Banner al pie suele quedar fuera de viewport.
@@ -144,7 +145,7 @@ function guardFreePrice(e: React.FormEvent<HTMLFormElement>, previousPriceCents?
 }
 
 export function TicketTypeEditor({ eventId, tt, readOnly = false }: { eventId: string; tt: TtRow; readOnly?: boolean }) {
-  const [state, action] = useFormState(updateTicketTypeAction, initial);
+  const [state, action] = useFormFeedback(updateTicketTypeAction, initial);
   const hasSales = tt.sold > 0;
   const ro = readOnly;
   return (
@@ -187,7 +188,7 @@ export function TicketTypeEditor({ eventId, tt, readOnly = false }: { eventId: s
 }
 
 export function NewTicketTypeForm({ eventId }: { eventId: string }) {
-  const [state, action] = useFormState(createTicketTypeAction, initial);
+  const [state, action] = useFormFeedback(createTicketTypeAction, initial);
   return (
     <form action={action} onSubmit={(e) => guardFreePrice(e)} className="s-stack" style={{ gap: 12 }} key={state.ok ? Math.random() : 'f'}>
       <input type="hidden" name="event_id" value={eventId} />

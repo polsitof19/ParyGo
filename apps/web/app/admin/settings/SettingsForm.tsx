@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useFormFeedback } from '@/components/useFormFeedback';
 import { toast } from 'sonner';
 import { updateBrandSettingsAction, type SettingsState } from './actions';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -24,7 +25,7 @@ type Props = {
 };
 
 export function SettingsForm(props: Props) {
-  const [state, action] = useFormState(updateBrandSettingsAction, initial);
+  const [state, action] = useFormFeedback(updateBrandSettingsAction, initial);
   const [primary, setPrimary] = useState(props.primaryColor);
   const [secondary, setSecondary] = useState(props.secondaryColor);
   const err = state.fieldErrors ?? {};

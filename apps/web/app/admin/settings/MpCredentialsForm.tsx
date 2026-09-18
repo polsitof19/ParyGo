@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useFormFeedback } from '@/components/useFormFeedback';
 import { updateMpCredentialsAction, type SettingsState } from './actions';
 
 const initial: SettingsState = { ok: false, message: null };
@@ -12,7 +13,7 @@ type Props = {
 };
 
 export function MpCredentialsForm({ hasAccessToken, hasPublicKey, readOnly = false }: Props) {
-  const [state, action] = useFormState(updateMpCredentialsAction, initial);
+  const [state, action] = useFormFeedback(updateMpCredentialsAction, initial);
   const err = state.fieldErrors ?? {};
   const configured = hasAccessToken && hasPublicKey;
 
