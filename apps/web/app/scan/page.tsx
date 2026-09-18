@@ -25,6 +25,10 @@ export default async function ScanPage() {
     .from('events')
     .select('id, name, starts_at')
     .eq('brand_id', brand.id)
+    // Solo eventos vigentes para la puerta: publicados y no archivados. Un
+    // borrador o un evento archivado no tiene gente para validar.
+    .eq('is_published', true)
+    .is('archived_at', null)
     .order('starts_at', { ascending: false });
 
   return (
