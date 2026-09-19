@@ -12,12 +12,14 @@ on:
     paths:
       - 'apps/*/app/styles/parygo-tokens.css'
       - 'scripts/check-tokens-sync.js'
+      - 'scripts/check-tokens-contrast.js'
       - '.github/workflows/tokens-sync.yml'
       - 'package.json'
   pull_request:
     paths:
       - 'apps/*/app/styles/parygo-tokens.css'
       - 'scripts/check-tokens-sync.js'
+      - 'scripts/check-tokens-contrast.js'
       - '.github/workflows/tokens-sync.yml'
       - 'package.json'
 
@@ -35,5 +37,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      # Sin npm install: el script usa solo builtins de Node (fs, path, crypto).
+      # Sin npm install: los scripts usan solo builtins de Node (fs, path, crypto).
       - run: npm run test:tokens
+      # Contraste AA de los tokens que portan texto (falla si alguno baja).
+      - run: npm run test:contrast

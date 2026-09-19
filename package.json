@@ -15,7 +15,8 @@
     "dev": "npm run dev:web",
     "build": "npm run build:web",
     "test:hooks": "node .claude/hooks/__tests__/run.js",
-    "test:tokens": "node scripts/check-tokens-sync.js"
+    "test:tokens": "node scripts/check-tokens-sync.js",
+    "test:contrast": "node scripts/check-tokens-contrast.js"
   },
   "engines": {
     "node": ">=20.0.0"
