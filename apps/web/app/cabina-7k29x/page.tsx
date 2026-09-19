@@ -202,7 +202,7 @@ export default async function SuperHome() {
       ) : (
         <>
           {/* Desktop: tabla densa */}
-          <div className="s-table-wrap">
+          <div className="s-table-wrap s-table-wrap--brands">
             <div className="s-card s-card--flush">
               <table className="s-table">
                 <thead>
@@ -247,7 +247,7 @@ export default async function SuperHome() {
                       </td>
                       <td>
                         {r.owner
-                          ? <span className="s-muted">{r.owner}</span>
+                          ? <span className="s-muted s-cell-ellipsis" title={r.owner}>{r.owner}</span>
                           : <span className="s-flag">Sin dueño</span>}
                       </td>
                       <td>

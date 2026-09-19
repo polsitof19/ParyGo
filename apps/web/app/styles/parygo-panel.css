@@ -59,7 +59,8 @@
 /* ---------- Card ---------- */
 .pg-panel .s-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow-sm); padding: 24px 26px; }
 .pg-panel .s-card--lg { padding: 30px; }
-.pg-panel .s-card--flush { padding: 0; overflow: hidden; box-shadow: none; }
+/* overflow-x auto (no hidden): una tabla ancha se desliza en vez de recortarse. */
+.pg-panel .s-card--flush { padding: 0; overflow-x: auto; overflow-y: hidden; box-shadow: none; }
 .pg-panel .s-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
 .pg-panel .s-card__title { font-family: var(--display); font-weight: 700; font-size: 19px; letter-spacing: -0.01em; }
 .pg-panel .s-card__desc { color: var(--ink-2); font-size: 14px; line-height: 1.45; margin-top: 2px; }
@@ -220,10 +221,11 @@
    Hairlines, hover con tinte, sin filas pintadas: la alerta es un punto en la
    celda que falla y el ORDEN (alertas arriba). */
 .pg-panel .s-table { width: 100%; border-collapse: collapse; }
-.pg-panel .s-table thead th { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); text-align: left; padding: 13px 20px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.pg-panel .s-table thead th { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); text-align: left; padding: 13px 16px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .pg-panel .s-table thead th.num { text-align: right; }
-.pg-panel .s-table tbody td { padding: 14px 20px; border-top: 1px solid var(--line); vertical-align: middle; }
+.pg-panel .s-table tbody td { padding: 14px 16px; border-top: 1px solid var(--line); vertical-align: middle; }
 .pg-panel .s-table tbody tr:first-child td { border-top: 0; }
+.pg-panel .s-table :is(th, td):last-child { padding-right: 12px; }
 .pg-panel .s-table tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .pg-panel .s-table tbody tr { cursor: pointer; position: relative; transition: background-color .18s; }
 .pg-panel .s-table tbody tr:hover { background: var(--sel); }
@@ -236,13 +238,13 @@
 .pg-panel .s-saldo-num { font-family: var(--display); font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
 .pg-panel .s-cellmeta { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .pg-panel .s-cellmeta--none { color: var(--ink-3); }
-.pg-panel .s-cellmeta .nm { display: block; color: var(--ink); font-weight: 500; }
+.pg-panel .s-cellmeta .nm { display: block; color: var(--ink); font-weight: 500; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Acciones rápidas por fila (recargar saldo · ver eventos · entrar como marca).
    z-index para ganarle al ::after del link de la fila. */
-.pg-panel .s-rowacts { display: flex; align-items: center; justify-content: flex-end; gap: 6px; position: relative; z-index: 2; }
+.pg-panel .s-rowacts { display: flex; align-items: center; justify-content: flex-end; gap: 4px; position: relative; z-index: 2; }
 .pg-panel .s-rowbtn {
-  width: 32px; height: 32px; display: grid; place-items: center; flex: none;
+  width: 30px; height: 30px; display: grid; place-items: center; flex: none;
   border: 1px solid var(--line); border-radius: var(--r-ctl);
   background: var(--surface); color: var(--ink-2); cursor: pointer;
   transition: border-color .18s, color .18s, transform .22s var(--spring);
@@ -259,10 +261,11 @@
 .pg-panel .s-brandcard .nm { font-size: 15px; font-weight: 600; }
 .pg-panel .s-brandcard .meta { display: block; font-size: 13px; color: var(--ink-2); margin-top: 1px; }
 .pg-panel .s-cardflags { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; }
-@media (max-width: 760px) {
-  .pg-panel .s-table-wrap { display: none; }
-  .pg-panel .s-brandcards { display: flex; }
-}
+/* Tablas: se deslizan en horizontal si no entran (nunca se ocultan). El
+   cambio tabla → cards de la lista de marcas es propio del super admin. */
+.pg-panel .s-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* Celda con texto largo (email, nombre de evento): una línea con "…". */
+.pg-panel .s-cell-ellipsis { display: inline-block; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
 @media (max-width: 460px) {
   .pg-panel .s-brandcard { grid-template-columns: 1fr; }
   .pg-panel .s-brandcard__side { flex-direction: row; align-items: center; justify-content: space-between; width: 100%; }

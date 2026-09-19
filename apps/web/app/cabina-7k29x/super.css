@@ -42,3 +42,9 @@
 /* ---------- Salud ---------- */
 .super-shell .s-bignum { font-family: var(--display); font-weight: 800; font-size: 30px; line-height: 1.1; font-variant-numeric: tabular-nums; margin-top: 6px; }
 
+
+/* Lista de marcas: en móvil la tabla se reemplaza por cards (solo acá). */
+@media (max-width: 760px) {
+  .super-shell .s-table-wrap--brands { display: none; }
+  .super-shell .s-brandcards { display: flex; }
+}

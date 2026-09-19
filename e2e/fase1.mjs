@@ -704,7 +704,7 @@ if (!S.eventId) {
     await shot(buyer.page, 'H', 'sexta-con-pendientes');
     const { data: h6 } = await svc.from('orders').select('id,status').eq('event_id', S.eventId).eq('buyer_email', `e2e-h6-${STAMP}@test.local`);
     check('H', '6ª VIP NO se vende (anti-sobreventa: sin orden, sin ticket)', !r2.orderId && (h6 ?? []).every((o) => o.status === 'failed'), `${r2.res} · órdenes=${JSON.stringify(h6)}`);
-    const crudo = /Array must|element(s)|violates|Expected|Required|invalid/i.test(r2.toasts.join(' '));
+    const crudo = /Array must|element\(s\)|violates|Expected|Required|invalid/i.test(r2.toasts.join(' '));
     check('H', 'bug2: 6ª VIP → "No quedan suficientes entradas de VIP." (sin error técnico)', r2.toasts.some((t) => /No quedan suficientes entradas de VIP/.test(t)) && !crudo, r2.toasts.join(' | '));
     check('H', 'bug2: con el carrito vacío no se puede avanzar a pagar (Continuar deshabilitado)', r2.continuarDisabled === true, `res=${r2.res}`);
     await shot(buyer.page, 'H', 'sexta-carrito-vacio');
@@ -784,13 +784,13 @@ if (!S.eventId) {
     // Estructura del panel (handoff): 4 grupos, "En la puerta", cortesías con historial.
     await go(p, `/admin/events/${S.eventId}`);
     const groups = await p.locator('.a-nav__label').allInnerTexts();
-    const navTxt = (await p.locator('.a-nav').innerText()).replace(/s+/g, ' ');
+    const navTxt = (await p.locator('.a-nav').innerText()).replace(/\s+/g, ' ');
     check('J', 'nav del evento en 4 grupos, con "En la puerta" (no "Accesos")', groups.length === 4 && /En la puerta/.test(navTxt) && !/Accesos/.test(navTxt), groups.join(' | '));
-    const pulse = (await p.locator('.a-pulse').innerText().catch(() => '')).replace(/s+/g, ' ');
+    const pulse = (await p.locator('.a-pulse').innerText().catch(() => '')).replace(/\s+/g, ' ');
     check('J', 'Resumen arranca con "¿cómo va?" (vendidas / recaudado / cuándo / entraron)', /VENDIDAS/i.test(pulse) && /RECAUDADO/i.test(pulse) && /CUÁNDO/i.test(pulse), pulse.slice(0, 160));
     await go(p, `/admin/events/${S.eventId}/cortesias`);
     const cort = await bodyText(p, 2000);
-    check('J', 'Cortesías muestra lo emitido (10 entradas)', /10 entradas de cortesía/.test(cort), (cort.match(/d+ entradas? de cortesía[^.]*/) ?? [''])[0]);
+    check('J', 'Cortesías muestra lo emitido (10 entradas)', /10 entradas de cortesía/.test(cort), (cort.match(/\d+ entradas? de cortesía[^.]*/) ?? [''])[0]);
     await go(p, `/admin/events/${S.eventId}`);
     await shot(p, 'J', 'resumen');
     const rows = await p.locator('table.a-typetable tbody tr').allInnerTexts();

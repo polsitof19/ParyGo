@@ -88,13 +88,17 @@ export default async function AdminHomePage() {
   // traían las pagadas dos veces (una para sumar, otra para recuperación).
   const eventNameById = new Map((events ?? []).map((e) => [e.id, e.name] as const));
   const eventIds = (events ?? []).map((e) => e.id);
-  const [{ data: paidRows }, { data: ticketOrderRows }, { count: activeTypeCount }, { data: mpStatus }] = await Promise.all([
+  const [{ data: paidRows }, { data: ticketOrderRows }, { count: activeTypeCount }, { data: mpStatus }, { data: validTicketRows }] = await Promise.all([
     adminCli.from('orders').select('id, buyer_name, total_cents, created_at, event_id, payment_method').eq('brand_id', brand.id).eq('status', 'paid'),
     adminCli.from('tickets').select('order_id').eq('brand_id', brand.id),
     eventIds.length
       ? adminCli.from('ticket_types').select('id', { count: 'exact', head: true }).in('event_id', eventIds).eq('is_active', true)
       : Promise.resolve({ count: 0 } as { count: number | null }),
     adminCli.rpc('get_brand_mp_status', { p_brand_id: brand.id }),
+    // Solo entradas válidas (no anuladas) para "Vendidas" — misma regla que el
+    // Resumen del evento. ticketOrderRows (sin filtrar) sigue siendo para la
+    // detección de órdenes pagadas sin tickets.
+    adminCli.from('tickets').select('order_id').eq('brand_id', brand.id).is('invalidated_at', null),
   ]);
   const mpRow = Array.isArray(mpStatus) ? mpStatus[0] : null;
   const mpConfigured = Boolean(mpRow?.has_access_token && mpRow?.has_public_key);
@@ -113,7 +117,7 @@ export default async function AdminHomePage() {
   // "¿Cómo va?" a nivel marca. Vendidas = entradas de órdenes pagadas que NO son
   // cortesía (las cortesías no son venta).
   const saleOrderIds = new Set(paidOrderRows.filter((o) => o.payment_method !== 'courtesy').map((o) => o.id));
-  const soldTickets = (ticketOrderRows ?? []).filter((t) => saleOrderIds.has(t.order_id as string)).length;
+  const soldTickets = (validTicketRows ?? []).filter((t) => saleOrderIds.has(t.order_id as string)).length;
   const nowMs = Date.now();
   // Próximo evento = el publicado, no archivado, más cercano que todavía no pasó.
   const nextEvent = activeEvents
