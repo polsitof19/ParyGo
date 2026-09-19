@@ -38,9 +38,8 @@ supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se regist
   refactor/monorepo, p. ej. 465e450 → 64492e55.parygo-app.pages.dev). O sea:
   PUSH A refactor/monorepo = DEPLOY A PRODUCCIÓN DE LA APP (checkout incluido).
   Cualquier otra branch → Preview (<hash>.parygo-app.pages.dev), no toca prod.
-  OJO: apps/web/wrangler.toml dice name = "parygo-web", pero ese proyecto NO
-  existe en Cloudflare; el real es "parygo-app". Build/root/bindings se
-  configuran en el dashboard, no en ese archivo.
+  apps/web/wrangler.toml usa name = "parygo-app" (antes decía "parygo-web", un
+  proyecto que no existe). Build/root/bindings se configuran en el dashboard.
 - Un push a refactor/monorepo despliega LOS DOS proyectos (landing y app).
 - Router de subdominios *.parygo.com: Worker "parygo-brand-router" (sirve
   <marca>.parygo.com desde la app). Nota: hoesky.parygo.com figura además como
@@ -147,6 +146,10 @@ para no romper la app vieja desplegada.
   activo lo resuelve get_event_active_prices contra now() (Lima UTC-5). Se cobra
   server-side y se CONGELA en order_items.unit_price_cents.
 - Stock: ticket_types.is_unlimited (max_scans NULL = ilimitado).
+- Escaneo (DECIDIDO 2026-09-18): UN SOLO escaneo por QR. El 2º escaneo es
+  "YA USADO" y no pasa: es anti-fraude (un QR reenviado por WhatsApp no entra
+  dos veces). El builder crea los tipos con max_scans=1. Reingreso configurable
+  por tipo queda como FEATURE FUTURA con migración; no reportarlo como bug.
 - Códigos promo: por evento, tipos percent/fixed(por-orden)/free, límites
   ilimitado/N/por-email, tracking por RR.PP. (label + ventas por código), sin
   comisiones automáticas. Descuento sobre fase activa, congelado, server-side.
