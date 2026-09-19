@@ -86,8 +86,7 @@ export function DangerDeleteButton({
 
   return (
     <div
-      className="s-card"
-      style={{ borderColor: 'var(--alert)', boxShadow: 'inset 3px 0 0 var(--alert)' }}
+      className="s-card s-card--confirm-danger"
     >
       <p className="s-card__desc" style={{ marginBottom: 10 }}>
         Esta acción es permanente y no se puede deshacer. Para confirmar, escribe el

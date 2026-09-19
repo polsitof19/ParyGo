@@ -126,7 +126,7 @@ export default async function SaludPage() {
           <span className="s-stat__value">{yapePending}</span>
           <span className="s-stat__sub">Órdenes en <code>pending_yape_review</code> en toda la plataforma.</span>
         </div>
-        <div className={`s-stat${oversell > 0 ? ' s-stat--alert' : ''}`}>
+        <div className={`s-stat${oversell > 0 ? ' s-stat--alert s-stat--crit' : ''}`}>
           <span className="s-stat__label">Integridad de stock</span>
           <span className="s-stat__value">{oversell}</span>
           <span className="s-stat__sub">Tipos con <code>sold &gt; capacidad</code> (oversell). Debe ser 0.</span>

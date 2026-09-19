@@ -130,6 +130,9 @@
 .super-shell .s-stat__hint { font-size: 13px; color: var(--ink-2); }
 .super-shell .s-stat--alert .s-stat__label { color: var(--ink-2); }
 .super-shell .s-stat--alert .s-stat__label::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
+/* Crítico (integridad de datos, p. ej. oversell): punto de ALERTA, distinto del
+   acento de "tarea pendiente". Sigue sin texto en color. */
+.super-shell .s-stat--crit .s-stat__label::before { background: var(--alert); }
 /* Inventario (informativo) vs trabajo: el inventario no invita al clic. */
 .super-shell a.s-stat { transition: border-color .18s, transform .22s var(--spring); }
 .super-shell a.s-stat:hover { border-color: var(--ink); transform: translateY(-2px); }
@@ -210,6 +213,11 @@
 .super-shell .s-stack { display: flex; flex-direction: column; gap: 28px; }
 .super-shell .s-stack--tight { gap: 10px; }
 .super-shell .s-section { margin-top: 22px; }
+/* Tarjetas hermanas en la raíz de una página (ficha de marca, evento): antes
+   quedaban pegadas borde contra borde. Solo a nivel .s-wrap para no sumar
+   margen dentro de .s-stack (que ya usa gap). */
+.super-shell .s-wrap > :is(.s-card, .s-grid-2) + :is(.s-card, .s-grid-2) { margin-top: 18px; }
+.super-shell .s-wrap > .s-card.s-section { margin-top: 22px; }
 
 /* ---------- Tabla de marcas ----------
    Hairlines, hover con tinte, sin filas pintadas: la alerta es un punto en la
@@ -340,8 +348,11 @@
 .super-shell .s-owner-row__email { font-size: 14px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Zona de gestión: borde de tinta (no rojo), la señal es el contenido. */
 .super-shell .s-card--danger { border-color: var(--ink-3); }
+/* Confirmación de borrado (DangerDeleteButton) dentro de la zona de gestión:
+   mismo lenguaje, borde de tinta + punto de alerta en el título del paso. */
+.super-shell .s-card--confirm-danger { border-color: var(--ink); box-shadow: inset 3px 0 0 var(--alert); }
 /* Ancla de "recargar saldo": que no quede tapada por el topbar sticky. */
-.super-shell [id] { scroll-margin-top: 84px; }
+.super-shell .s-anchor { scroll-margin-top: 84px; }
 
 /* ---------- Solicitudes ---------- */
 .super-shell .s-req { padding: 16px 18px; }

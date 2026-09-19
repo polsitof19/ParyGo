@@ -136,7 +136,7 @@ export default async function BrandDetailPage({
 
       <div className="s-grid-2">
         {/* Cargar saldo — ancla #saldo: la acción rápida "Recargar saldo" de Marcas llega acá. */}
-        <div className="s-card" id="saldo">
+        <div className="s-card s-anchor" id="saldo">
           <h2 className="s-h2">Cargar saldo</h2>
           <p className="s-card__desc">
             Cada evento creado consume 1. En 0 no se puede crear hasta cargar un pack.

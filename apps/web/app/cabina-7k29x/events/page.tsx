@@ -17,8 +17,11 @@ export default async function EventsListPage({ searchParams }: { searchParams?: 
     .from('events')
     .select('id, slug, name, starts_at, is_published, brand:brands!inner(slug, name)')
     .order('starts_at', { ascending: false });
-  if (brandSlug) query = query.eq('brands.slug', brandSlug);
-  const { data: events } = await query;
+  // Filtro sobre el recurso embebido por su ALIAS (brand), la forma canónica.
+  if (brandSlug) query = query.eq('brand.slug', brandSlug);
+  const { data: events, error } = await query;
+  // Un error no debe verse como "sin eventos": que salte al error boundary.
+  if (error) throw new Error(`No se pudieron cargar los eventos: ${error.message}`);
 
   const filteredName = brandSlug
     ? (() => { const b = events?.[0]?.brand; const r = Array.isArray(b) ? b[0] : b; return r?.name ?? brandSlug; })()

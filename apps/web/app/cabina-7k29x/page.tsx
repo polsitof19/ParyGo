@@ -218,7 +218,7 @@ export default async function SuperHome() {
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr key={r.id} className={isAlert(r) ? 's-row--alert' : undefined}>
+                    <tr key={r.id}>
                       <td>
                         <Link href={`/cabina-7k29x/brands/${r.slug}`} className="s-cell-brand s-rowlink" aria-label={`Abrir ${r.name}`}>
                           <BrandAvatar name={r.name} slug={r.slug} logoUrl={r.logoUrl} color={r.color} />
@@ -266,7 +266,7 @@ export default async function SuperHome() {
           {/* Móvil: cards */}
           <div className="s-brandcards">
             {rows.map((r) => (
-              <div key={r.id} className={`s-brandcard${isAlert(r) ? ' s-brandcard--alert' : ''}`}>
+              <div key={r.id} className="s-brandcard">
                 <Link href={`/cabina-7k29x/brands/${r.slug}`} className="s-brandcard__main" aria-label={`Abrir ${r.name}`}>
                   <BrandAvatar name={r.name} slug={r.slug} logoUrl={r.logoUrl} color={r.color} />
                   <span style={{ minWidth: 0 }}>
