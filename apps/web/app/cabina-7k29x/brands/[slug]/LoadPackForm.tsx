@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useFormFeedback } from '@/components/useFormFeedback';
 import { loadPackAction, type PackState } from './actions';
 
 const initial: PackState = { ok: false, message: null };
@@ -19,7 +20,7 @@ export function LoadPackForm({
   brandId: string;
   slug: string;
 }) {
-  const [state, action] = useFormState(loadPackAction, initial);
+  const [state, action] = useFormFeedback(loadPackAction, initial);
 
   return (
     <form action={action} className="s-form-row">

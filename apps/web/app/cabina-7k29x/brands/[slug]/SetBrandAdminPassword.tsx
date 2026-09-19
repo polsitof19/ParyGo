@@ -1,12 +1,13 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useFormFeedback } from '@/components/useFormFeedback';
 import { setBrandAdminPasswordAction, type SetBrandPwdState } from './actions';
 
 const init: SetBrandPwdState = { ok: false, message: null };
 
 export function SetBrandAdminPassword({ brandId, userId, slug }: { brandId: string; userId: string; slug: string }) {
-  const [state, action] = useFormState(setBrandAdminPasswordAction, init);
+  const [state, action] = useFormFeedback(setBrandAdminPasswordAction, init);
   return (
     <form action={action} className="s-pwd-form">
       <input type="hidden" name="brand_id" value={brandId} />

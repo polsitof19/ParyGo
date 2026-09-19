@@ -18,9 +18,13 @@ supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se regist
 - Supabase mdxtpevisjiqpeklhxdv = ÚNICO proyecto = PRODUCCIÓN. Cuidado con DDL.
 - SUPABASE_ACCESS_TOKEN vive en apps/web/.env.local (gitignored). Nunca commitearlo,
   nunca imprimirlo, nunca escribirlo a otro archivo.
-- Cliente piloto = "Tío Code" (slug code), evento "Almighty" VENDIENDO EN VIVO.
-  Saldo de eventos de Code = 3. JAMÁS romper la venta de Almighty ni tocar Code/
-  Almighty en tests. Brand de pruebas = "demotest" (is_published=false).
+- Cliente piloto = "Tío Code" (slug code). Su evento "Almighty" TERMINÓ el
+  2026-06-21 SIN VENTAS (0 órdenes pagas) y está despublicado. Saldo de eventos
+  de Code = 3. Sigue siendo cliente real: NO tocar Code/Almighty en tests.
+- La venta real probada en producción es la de "hoesky" (órdenes pagas con
+  tickets emitidos, verificado 2026-09-17). Tampoco se toca en tests.
+- Brand de pruebas = "demotest" (se deja ARCHIVADA; `node e2e/cleanup.mjs`
+  la re-archiva tras el E2E).
 
 ## Deploy (Cloudflare Pages) — cómo llega a producción
 - Landing (parygo.com): proyecto Pages "parygo" (dominios parygo.pages.dev,
@@ -28,22 +32,23 @@ supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se regist
   el 2026-07-22; antes era main). Push a refactor/monorepo → build + deploy a
   parygo.com. Cualquier OTRA branch → deploy Preview (URL *.pages.dev con hash),
   NO toca producción.
-- App (app.parygo.com): NOMBRE DEL PROYECTO SIN CONFIRMAR. Este archivo decía
-  "parygo-app" pero apps/web/wrangler.toml declara name = "parygo-web". No
-  coinciden y nadie verificó cuál existe en Cloudflare. Antes de usar cualquiera
-  de los dos en un comando: `npx wrangler pages project list`.
-- App — QUÉ DISPARA SU DEPLOY: DESCONOCIDO, y no se puede deducir del repo. El
-  comentario de apps/web/wrangler.toml dice que el directorio raíz, el comando de
-  build y los bindings de DNS se configuran EN EL DASHBOARD, no en el archivo.
-  O sea que el production branch del proyecto de la app solo se ve en Cloudflare.
-  CONSECUENCIA PRÁCTICA: un push a refactor/monorepo que toque apps/web (el
-  checkout, o sea lo que cobra) puede estar saliendo a producción o no, y desde
-  el repo es imposible saberlo. Resolver con `wrangler pages deployment list` del
-  proyecto real y anotar acá el branch, la próxima vez que alguien tenga la CLI
-  autenticada. Hasta entonces, no dar por desplegado ningún cambio de apps/web.
-- Router de subdominios *.parygo.com: Worker "parygo-brand-router".
+- App (app.parygo.com): proyecto Pages "parygo-app" (dominios parygo-app.pages.dev,
+  app.parygo.com). Production branch = refactor/monorepo (VERIFICADO 2026-09-18
+  con `wrangler pages project list` + `deployment list`: deploys "Production" de
+  refactor/monorepo, p. ej. 465e450 → 64492e55.parygo-app.pages.dev). O sea:
+  PUSH A refactor/monorepo = DEPLOY A PRODUCCIÓN DE LA APP (checkout incluido).
+  Cualquier otra branch → Preview (<hash>.parygo-app.pages.dev), no toca prod.
+  OJO: apps/web/wrangler.toml dice name = "parygo-web", pero ese proyecto NO
+  existe en Cloudflare; el real es "parygo-app". Build/root/bindings se
+  configuran en el dashboard, no en ese archivo.
+- Un push a refactor/monorepo despliega LOS DOS proyectos (landing y app).
+- Router de subdominios *.parygo.com: Worker "parygo-brand-router" (sirve
+  <marca>.parygo.com desde la app). Nota: hoesky.parygo.com figura además como
+  dominio del proyecto de la landing "parygo", pero hoy sirve la página de la
+  marca Hoesky (verificado 2026-09-18); no tocarlo sin revisar el dashboard.
 - Verificar deploys sin dashboard: `npx wrangler pages deployment list
-  --project-name=parygo` (Production vs Preview, branch, commit, URL).
+  --project-name=parygo-app` (app) o `--project-name=parygo` (landing):
+  Production vs Preview, branch, commit, URL. Requiere `npx wrangler login`.
 - Alternativa quirúrgica (publicar sin depender de la Git-integration):
   build local (`npm run build:landing` → apps/landing/out) y luego
   `npx wrangler pages deploy apps/landing/out --project-name=parygo --branch=refactor/monorepo`.

@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useFormFeedback } from '@/components/useFormFeedback';
 import {
   generatePersonalCodeAction,
   revokeGateCodeAction,
@@ -38,9 +39,9 @@ export function ValidatorManager({ validators }: { validators: Validator[] }) {
 }
 
 function ValidatorRow({ v }: { v: Validator }) {
-  const [codeState, codeAction] = useFormState(generatePersonalCodeAction, codeInit);
-  const [, revokeAction] = useFormState(revokeGateCodeAction, codeInit);
-  const [pwdState, pwdAction] = useFormState(setValidatorPasswordAction, pwdInit);
+  const [codeState, codeAction] = useFormFeedback(generatePersonalCodeAction, codeInit);
+  const [, revokeAction] = useFormFeedback(revokeGateCodeAction, codeInit);
+  const [pwdState, pwdAction] = useFormFeedback(setValidatorPasswordAction, pwdInit);
 
   const shownCode = codeState.ok ? codeState.code : v.code;
 

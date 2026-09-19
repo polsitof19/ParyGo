@@ -1,14 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useFormFeedback } from '@/components/useFormFeedback';
 import { issueCourtesyTicketsAction, type CourtesyState } from '../courtesy-actions';
 
 const initial: CourtesyState = { ok: false, message: null };
 type TT = { id: string; name: string };
 
 export function CourtesyForm({ eventId, ticketTypes }: { eventId: string; ticketTypes: TT[] }) {
-  const [state, action] = useFormState(issueCourtesyTicketsAction, initial);
+  const [state, action] = useFormFeedback(issueCourtesyTicketsAction, initial);
   const [typeId, setTypeId] = useState(ticketTypes[0]?.id ?? '');
   const [qty, setQty] = useState(1);
   const [email, setEmail] = useState('');

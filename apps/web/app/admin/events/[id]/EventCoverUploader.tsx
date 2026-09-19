@@ -1,14 +1,15 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useFormFeedback } from '@/components/useFormFeedback';
 import { ImagePlus } from 'lucide-react';
 import { setEventCoverAction, type CoverState } from './cover-actions';
 
 const initial: CoverState = { ok: false, message: null };
 
 export function EventCoverUploader({ eventId, currentUrl, readOnly = false }: { eventId: string; currentUrl: string | null; readOnly?: boolean }) {
-  const [state, action] = useFormState(setEventCoverAction, initial);
+  const [state, action] = useFormFeedback(setEventCoverAction, initial);
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);

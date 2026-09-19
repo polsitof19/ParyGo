@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
-import { toast } from 'sonner';
+import { useRef } from 'react';
+import { useFormStatus } from 'react-dom';
+import { useFormFeedback } from '@/components/useFormFeedback';
 import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, type EditState } from '../edit-actions';
 
 export type TtRow = { id: string; name: string; description: string; priceCents: number; capacity: number; sold: number; isUnlimited: boolean; isActive: boolean; bulkMinQty: number; bulkDiscountPct: number };
@@ -35,13 +35,11 @@ function Submit({ label }: { label: string }) {
 }
 
 export function EditEventForm(p: { eventId: string; name: string; description: string; startsLocal: string; venueName: string; venueAddress: string; venueMapsUrl: string; requireAgeConfirmation: boolean; requireDni: boolean; sendReminder: boolean; collectAttendeeNames: boolean; allowTransfer: boolean; minAge: number; isPublished?: boolean; hasSales?: boolean; readOnly?: boolean }) {
-  const [state, action] = useFormState(updateEventAction, initial);
+  const [state, action] = useFormFeedback(updateEventAction, initial);
   const dateRef = useRef<HTMLInputElement>(null);
   const ro = Boolean(p.readOnly);
-  // Feedback inmediato en mobile: el Banner al pie suele quedar fuera de viewport.
-  useEffect(() => {
-    if (state.ok && state.message) toast.success(state.message);
-  }, [state.ok, state.message]);
+  // El toast de resultado (también en mobile, donde el Banner queda fuera de
+  // viewport) lo dispara useFormFeedback.
   const dateLocked = Boolean(p.isPublished && p.hasSales) || ro;
   // Publicado SIN ventas: la fecha se puede cambiar pero avisamos antes de guardar.
   // Publicado CON ventas: input readOnly + el server rechaza igual (defensa real).
@@ -119,14 +117,39 @@ export function EditEventForm(p: { eventId: string; name: string; description: s
   );
 }
 
+// Precio S/0 en un tipo: ilimitado → bloqueado; con aforo → confirmación explícita
+// (confirm_free=1). El server exige lo mismo y revalida; esto es solo UX.
+// `previousPriceCents` = precio actual del tipo (no se reconfirma si ya era 0).
+function guardFreePrice(e: React.FormEvent<HTMLFormElement>, previousPriceCents?: number) {
+  const form = e.currentTarget;
+  const priceEl = form.elements.namedItem('price_soles') as HTMLInputElement | null;
+  const hidden = form.elements.namedItem('confirm_free') as HTMLInputElement | null;
+  if (hidden) hidden.value = '';
+  if (!priceEl || priceEl.disabled || priceEl.value === '') return;
+  if (Math.round(parseFloat(priceEl.value) * 100) !== 0) return;
+  const unlimited = (form.elements.namedItem('is_unlimited') as HTMLInputElement | null)?.checked;
+  if (unlimited) {
+    e.preventDefault();
+    window.alert('Un tipo no puede ser gratis e ilimitado a la vez. Poné un cupo o un precio.');
+    return;
+  }
+  if (previousPriceCents === 0) return;
+  if (!window.confirm('Este tipo cuesta S/ 0. Los tipos gratis NO se venden en tu página: se emiten desde "Cortesías" y descuentan del aforo. ¿Confirmás?')) {
+    e.preventDefault();
+    return;
+  }
+  if (hidden) hidden.value = '1';
+}
+
 export function TicketTypeEditor({ eventId, tt, readOnly = false }: { eventId: string; tt: TtRow; readOnly?: boolean }) {
-  const [state, action] = useFormState(updateTicketTypeAction, initial);
+  const [state, action] = useFormFeedback(updateTicketTypeAction, initial);
   const hasSales = tt.sold > 0;
   const ro = readOnly;
   return (
-    <form action={action}>
+    <form action={action} onSubmit={(e) => guardFreePrice(e, tt.priceCents)}>
       <input type="hidden" name="event_id" value={eventId} />
       <input type="hidden" name="ticket_type_id" value={tt.id} />
+      <input type="hidden" name="confirm_free" defaultValue="" />
       <div className="s-card__head" style={{ marginBottom: 10 }}>
         <span className="a-evrow__name" style={{ fontSize: 16 }}>{tt.name}</span>
         <span className="s-muted" style={{ fontSize: 13 }}>{tt.isUnlimited ? 'Ilimitado' : `${tt.sold}/${tt.capacity} vendidas`}</span>
@@ -162,10 +185,11 @@ export function TicketTypeEditor({ eventId, tt, readOnly = false }: { eventId: s
 }
 
 export function NewTicketTypeForm({ eventId }: { eventId: string }) {
-  const [state, action] = useFormState(createTicketTypeAction, initial);
+  const [state, action] = useFormFeedback(createTicketTypeAction, initial);
   return (
-    <form action={action} className="s-stack" style={{ gap: 12 }} key={state.ok ? Math.random() : 'f'}>
+    <form action={action} onSubmit={(e) => guardFreePrice(e)} className="s-stack" style={{ gap: 12 }} key={state.ok ? Math.random() : 'f'}>
       <input type="hidden" name="event_id" value={eventId} />
+      <input type="hidden" name="confirm_free" defaultValue="" />
       <div className="s-form-grid">
         <div className="s-field"><label className="s-label">Nombre</label><input name="name" placeholder="VIP" className="s-input" required /></div>
         <div className="s-field"><label className="s-label">Precio (S/)</label><input name="price_soles" type="number" step="0.5" min={0} placeholder="50" className="s-input" required /></div>

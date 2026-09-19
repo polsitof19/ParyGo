@@ -194,7 +194,8 @@ export function EventCheckoutPanel({
         if (!res.ok) {
           // Mensaje SIN número (no exponer cuántas quedan). Si el server informa
           // el máximo disponible, ajustamos el stepper en silencio.
-          toast.error('No quedan suficientes entradas de este tipo.');
+          const name = sorted.find((t) => t.id === ticketTypeId)?.name;
+          toast.error(res.kind === 'stock' && name ? `No quedan suficientes entradas de ${name}.` : res.message);
           if (typeof res.available === 'number') {
             setQty((q) => ({ ...q, [ticketTypeId]: res.available! }));
             next[ticketTypeId] = res.available!;
@@ -212,6 +213,9 @@ export function EventCheckoutPanel({
 
   const totalCents = useMemo(() => sorted.reduce((acc, t) => { const q = qty[t.id] ?? 0; return acc + q * bulkUnitPrice(t, q); }, 0), [qty, sorted]);
   const totalItems = useMemo(() => Object.values(qty).reduce((a, b) => a + b, 0), [qty]);
+  // Si el carrito quedó vacío estando en el paso 2 (p. ej. se agotó lo elegido),
+  // volver a elegir entradas: no tiene sentido pagar 0 entradas.
+  useEffect(() => { if (step === 2 && totalItems === 0 && !mpCheckout) setStep(1); }, [step, totalItems, mpCheckout]);
 
   function inc(t: TicketType) {
     const current = qty[t.id] ?? 0;
@@ -305,6 +309,7 @@ export function EventCheckoutPanel({
   const isYape = method === 'yape_manual' && !applied?.isFree;
 
   function submitCheckout(form: HTMLFormElement) {
+    if (itemsForPromo.length === 0) { toast.error('Elegí al menos una entrada.'); setStep(1); return; }
     const fd = new FormData(form);
     // Confirmación de edad: solo se exige si el evento la pide (configurable).
     const ageOk = event.require_age_confirmation ? fd.get('age_ok') === '1' : true;
@@ -357,7 +362,7 @@ export function EventCheckoutPanel({
       Continuar <ArrowRight className="h-4 w-4" />
     </button>
   ) : (
-    <button type="submit" form="checkout-form" className="c-btn c-btn--brand c-btn--block c-btn--lg" disabled={isPending}>
+    <button type="submit" form="checkout-form" className="c-btn c-btn--brand c-btn--block c-btn--lg" disabled={isPending || totalItems === 0}>
       {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
       {!isPending && method === 'mercadopago' && !applied?.isFree && <Lock className="h-4 w-4" />}
       {ctaLabel}
@@ -617,7 +622,7 @@ export function EventCheckoutPanel({
               Continuar <ArrowRight className="h-4 w-4" />
             </button>
           ) : (
-            <button type="submit" form="checkout-form" className="c-btn c-btn--brand" disabled={isPending}>
+            <button type="submit" form="checkout-form" className="c-btn c-btn--brand" disabled={isPending || totalItems === 0}>
               {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               {!isPending && method === 'mercadopago' && !applied?.isFree && <Lock className="h-4 w-4" />}
               {ctaLabel}

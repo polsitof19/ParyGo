@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { solesToCents } from '@/lib/utils';
+import { validateTicketTypePricing } from '@/lib/eventValidation';
+import { eventOverAt } from '@/lib/publicTicketGuard';
 
 type TicketTypeRow = {
   id: string;
@@ -55,6 +57,20 @@ export async function upsertTicketTypeAction(formData: FormData): Promise<Upsert
   const sortOrder = parsed.data.sort_order ? parseInt(parsed.data.sort_order, 10) : 0;
 
   const admin = createAdminClient();
+
+  // S/0: solo con confirmación explícita, y solo si el precio PASA a 0 (alta o
+  // edición que lo cambia). Los tipos de la cabina no son ilimitados.
+  let previousPrice: number | null = null;
+  if (parsed.data.id) {
+    const { data: prev } = await admin.from('ticket_types').select('price_cents').eq('id', parsed.data.id).maybeSingle();
+    previousPrice = prev?.price_cents ?? null;
+  }
+  const becomingFree = priceCents === 0 && previousPrice !== 0;
+  const pricingErr = validateTicketTypePricing(
+    [{ name: parsed.data.name, isUnlimited: false, pricesCents: [priceCents] }],
+    { freeConfirmed: !becomingFree || formData.get('confirm_free') === '1' }
+  );
+  if (pricingErr) return { ok: false, message: pricingErr };
 
   const payload = {
     event_id: parsed.data.event_id,
@@ -130,6 +146,11 @@ export async function setEventPublishedAction(
       .eq('is_active', true);
     if (!count || count === 0) {
       return { ok: false, message: 'Agregá al menos un tipo de entrada activo antes de publicar.' };
+    }
+    // Guard: no publicar un evento que ya terminó (nadie podría comprar).
+    const { data: ev } = await admin.from('events').select('starts_at, ends_at').eq('id', eventId).maybeSingle();
+    if (ev && eventOverAt(ev.starts_at, ev.ends_at) < Date.now()) {
+      return { ok: false, message: 'Este evento ya terminó. Cambiá la fecha antes de publicarlo.' };
     }
   }
 

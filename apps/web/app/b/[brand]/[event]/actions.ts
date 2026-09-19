@@ -7,6 +7,7 @@ import { serverEnv, publicEnv } from '@/lib/env';
 import { createMercadoPagoPreference } from '@/lib/mercadopago';
 import { issueTicketsForOrder } from '@/lib/tickets';
 import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
+import { checkPublicTicketType, eventOverAt } from '@/lib/publicTicketGuard';
 
 export type CheckoutInput = {
   eventId: string;
@@ -49,9 +50,9 @@ export type CheckoutResult =
 const schema = z.object({
   eventId: z.string().uuid(),
   brandId: z.string().uuid(),
-  buyerName: z.string().min(2).max(120),
-  buyerEmail: z.string().email(),
-  buyerPhone: z.string().min(7).max(20),
+  buyerName: z.string().trim().min(2, 'Ingresá tu nombre.').max(120, 'El nombre es muy largo.'),
+  buyerEmail: z.string().email('Ingresá un email válido.'),
+  buyerPhone: z.string().min(7, 'Ingresá un teléfono válido.').max(20, 'Ingresá un teléfono válido.'),
   buyerDocType: z.enum(['dni', 'ce', 'passport']),
   // El formato del documento se valida server-side MÁS ABAJO, solo si el evento
   // pide DNI (require_dni). Acá lo dejamos laxo para no romper cuando el evento
@@ -64,19 +65,22 @@ const schema = z.object({
     .array(
       z.object({
         ticketTypeId: z.string().uuid(),
-        quantity: z.number().int().min(1).max(10),
+        quantity: z.number().int().min(1, 'Elegí al menos una entrada.').max(10, 'Máximo 10 entradas por tipo.'),
         attendeeNames: z.array(z.string().trim().max(120)).max(10).optional(),
       })
     )
-    .min(1),
-  sessionId: z.string().min(8).max(64),
+    .min(1, 'Elegí al menos una entrada.')
+    .max(20, 'Demasiados tipos de entrada en una compra.'),
+  sessionId: z.string().min(8, 'Sesión inválida. Recargá la página.').max(64, 'Sesión inválida. Recargá la página.'),
   promoCode: z.string().min(2).max(32).optional().or(z.literal('')),
 });
 
 export async function startCheckout(input: CheckoutInput): Promise<CheckoutResult> {
-  const parsed = schema.safeParse(input);
+  // errorMap de parse: los mensajes definidos en el schema (en español) ganan;
+  // cualquier default de zod (en inglés) cae al genérico. Nunca texto crudo.
+  const parsed = schema.safeParse(input, { errorMap: () => ({ message: 'Revisá tus datos e intentá de nuevo.' }) });
   if (!parsed.success) {
-    return { ok: false, message: parsed.error.errors[0]?.message ?? 'Datos inválidos' };
+    return { ok: false, message: parsed.error.errors[0]?.message ?? 'Revisá tus datos e intentá de nuevo.' };
   }
 
   const admin = createAdminClient();
@@ -142,9 +146,18 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // quedarse corto (perder ventas reales) es mucho peor que el de quedarse
   // largo (alguien compra unas horas después de terminado → reembolso puntual).
   // No bajar este número sin hacer ends_at obligatorio primero.
-  const overAt = event.ends_at ? Date.parse(event.ends_at) : Date.parse(event.starts_at) + 18 * 3600 * 1000;
+  const overAt = eventOverAt(event.starts_at, event.ends_at);
   if (Number.isFinite(overAt) && overAt < Date.now()) {
     return { ok: false, message: 'Este evento ya terminó.' };
+  }
+
+  // Mismo guard que la reserva del carrito: un tipo que no se vende al público
+  // (S/0 en evento pago, inactivo, de otro evento) se rechaza ANTES de crear la
+  // orden y de reservar stock.
+  for (const item of parsed.data.items) {
+    const check = await checkPublicTicketType(admin, item.ticketTypeId);
+    if (!check.ok) return { ok: false, message: check.message };
+    if (check.eventId !== event.id) return { ok: false, message: 'Tipo de entrada no disponible.' };
   }
 
   const ticketTypeIds = parsed.data.items.map((i) => i.ticketTypeId);
@@ -243,6 +256,21 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
         term: referUrl.searchParams.get('utm_term'),
       }
     : { source: null, medium: null, campaign: null, content: null, term: null };
+
+  // Código promo: pre-validación de solo lectura ANTES de crear la orden y de
+  // reservar stock, así un código inválido/vencido/agotado no retiene cupo ni
+  // un instante. El monto autoritativo lo sigue calculando apply_promo_to_order.
+  const promoCodeInput = (parsed.data.promoCode ?? '').trim();
+  if (promoCodeInput) {
+    const { data: pv, error: pvErr } = await admin.rpc('preview_promo', {
+      p_event_id: event.id,
+      p_code: promoCodeInput,
+      p_email: parsed.data.buyerEmail.toLowerCase(),
+      p_items: parsed.data.items.map((i) => ({ ticket_type_id: i.ticketTypeId, quantity: i.quantity })),
+    });
+    const r = pv as { ok?: boolean; reason?: string } | null;
+    if (pvErr || !r?.ok) return { ok: false, message: mapPromoError(`PROMO_${r?.reason ?? ''}`) };
+  }
 
   // 4. Insert order + order_items in a "transaction" (best-effort, no real BEGIN
   //    available in supabase-js; safe enough because of the unique constraints).

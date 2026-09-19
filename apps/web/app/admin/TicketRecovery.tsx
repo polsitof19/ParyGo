@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useFormFeedback } from '@/components/useFormFeedback';
 import { AlertTriangle } from 'lucide-react';
 import { reissueTicketsAction, type ReissueState } from './actions';
 import { formatPEN } from '@/lib/utils';
@@ -41,7 +42,7 @@ export function TicketRecovery({ orders }: { orders: StuckOrder[] }) {
 }
 
 function RecoveryRow({ order }: { order: StuckOrder }) {
-  const [state, action] = useFormState(reissueTicketsAction, initial);
+  const [state, action] = useFormFeedback(reissueTicketsAction, initial);
   return (
     <li className="s-defrow" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', border: '1px solid var(--cream-3)', borderRadius: 'var(--r-ctl, 12px)', padding: '12px 14px' }}>
       <div style={{ minWidth: 0 }}>

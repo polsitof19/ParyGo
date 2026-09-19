@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useFormFeedback } from '@/components/useFormFeedback';
 import { BrandingFields } from '../BrandingFields';
 import { updateBrandBrandingAction, type BrandingState } from './actions';
 
@@ -15,7 +16,7 @@ export function EditBrandingForm({
   primaryColor: string;
   logoUrl: string | null;
 }) {
-  const [state, action] = useFormState(updateBrandBrandingAction, initial);
+  const [state, action] = useFormFeedback(updateBrandBrandingAction, initial);
 
   return (
     <form action={action}>

@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
-import { toast } from 'sonner';
+import { useState } from 'react';
+import { useFormStatus } from 'react-dom';
+import { useFormFeedback } from '@/components/useFormFeedback';
 import { updateBrandSettingsAction, type SettingsState } from './actions';
 import { BrandLogo } from '@/components/BrandLogo';
 
@@ -24,15 +24,13 @@ type Props = {
 };
 
 export function SettingsForm(props: Props) {
-  const [state, action] = useFormState(updateBrandSettingsAction, initial);
+  const [state, action] = useFormFeedback(updateBrandSettingsAction, initial);
   const [primary, setPrimary] = useState(props.primaryColor);
   const [secondary, setSecondary] = useState(props.secondaryColor);
   const err = state.fieldErrors ?? {};
   const ro = Boolean(props.readOnly);
-  // Feedback inmediato en mobile: el Banner al pie suele quedar fuera de viewport.
-  useEffect(() => {
-    if (state.ok && state.message) toast.success(state.message);
-  }, [state.ok, state.message]);
+  // El toast de resultado (también en mobile, donde el Banner queda fuera de
+  // viewport) lo dispara useFormFeedback.
 
   return (
     <form action={action} className="s-stack" style={{ gap: 16 }}>

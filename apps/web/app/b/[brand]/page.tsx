@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Calendar, MapPin, ShieldCheck, ArrowRight, Instagram } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { formatPEN } from '@/lib/utils';
+import { isPubliclyOffered } from '@/lib/publicTicketGuard';
 import { optimizedImage } from '@/lib/imageUrl';
 
 export const runtime = 'edge';
@@ -73,14 +74,20 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
   const up = (upcoming ?? []) as EvRow[];
   const pastEvents = (past ?? []) as EvRow[];
 
-  // "desde S/X" por evento próximo = mínimo de los tipos activos.
+  // "desde S/X" por evento próximo = mínimo de los tipos activos que se venden al
+  // público (isPubliclyOffered). Un tipo S/0 (p. ej. "Cortesía") no está a la
+  // venta, así que "desde S/ 0" sería falso. Si no hay ninguno, no se muestra.
   const upIds = up.map((e) => e.id);
   const fromByEvent = new Map<string, number>();
   if (upIds.length) {
     const { data: tts } = await supabase.from('ticket_types').select('event_id, price_cents, is_active').in('event_id', upIds).eq('is_active', true);
+    const pricesByEvent = new Map<string, number[]>();
     for (const t of (tts ?? []) as { event_id: string; price_cents: number }[]) {
-      const cur = fromByEvent.get(t.event_id);
-      if (cur === undefined || t.price_cents < cur) fromByEvent.set(t.event_id, t.price_cents);
+      pricesByEvent.set(t.event_id, [...(pricesByEvent.get(t.event_id) ?? []), t.price_cents]);
+    }
+    for (const [eventId, prices] of pricesByEvent) {
+      const offered = prices.filter((p) => isPubliclyOffered(p));
+      if (offered.length) fromByEvent.set(eventId, Math.min(...offered));
     }
   }
 

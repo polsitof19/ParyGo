@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { limaToIso, shiftEnd, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
+import { eventOverAt } from '@/lib/publicTicketGuard';
 import { isImpersonating } from '@/lib/impersonation';
 import { formatEventDate } from '@/lib/utils';
 
@@ -22,12 +24,8 @@ async function authEvent(eventId: string, userId: string, isSuper: boolean, memb
   return ok ? (ev.brand_id as string) : null;
 }
 
-// Convierte un valor datetime-local (hora de Lima) a UTC ISO. Lima = UTC-5 fijo.
-function limaToIso(v: string): string | null {
-  const raw = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v) ? `${v}:00-05:00` : v;
-  const d = new Date(raw);
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
-}
+// limaToIso (datetime-local en hora de Lima → UTC ISO) vive en lib/eventValidation,
+// compartido con la creación de eventos.
 
 const eventSchema = z.object({
   name: z.string().min(2).max(120),
@@ -70,12 +68,21 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   // — la gente compró con esta fecha. Aplica al dueño Y al super admin.
   const { data: current } = await admin
     .from('events')
-    .select('starts_at, is_published')
+    .select('starts_at, ends_at, is_published')
     .eq('id', eventId)
     .maybeSingle();
   const dateChanging = current?.starts_at
     ? new Date(current.starts_at).getTime() !== new Date(startsIso).getTime()
     : true;
+  // Si cambia el inicio: no puede quedar en el pasado, y el fin se corre con el
+  // mismo delta (sin esto ends_at quedaba antes del inicio → evento "terminado").
+  const endsIso = dateChanging && current?.starts_at
+    ? shiftEnd(current.starts_at, startsIso, current.ends_at ?? null)
+    : current?.ends_at ?? null;
+  if (dateChanging) {
+    const windowErr = validateEventWindow({ startsIso, endsIso, requireFutureStart: true });
+    if (windowErr) return { ok: false, message: windowErr.message };
+  }
   if (dateChanging && current?.is_published) {
     const { count: soldCount } = await admin
       .from('ticket_types')
@@ -93,6 +100,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
       name: parsed.data.name,
       description: parsed.data.description || null,
       starts_at: startsIso,
+      ends_at: endsIso,
       venue_name: parsed.data.venue_name || null,
       venue_address: parsed.data.venue_address || null,
       venue_maps_url: parsed.data.venue_maps_url || null,
@@ -144,6 +152,11 @@ export async function setEventPublishedAction(
     if (!count || count === 0) {
       return { ok: false, message: 'Agregá al menos un tipo de entrada activo antes de publicar.' };
     }
+    // Guard: no publicar un evento que ya terminó (nadie podría comprar).
+    const { data: ev } = await admin.from('events').select('starts_at, ends_at').eq('id', eventId).eq('brand_id', brandId).maybeSingle();
+    if (ev && eventOverAt(ev.starts_at, ev.ends_at) < Date.now()) {
+      return { ok: false, message: 'Este evento ya terminó. Cambiá la fecha antes de publicarlo.' };
+    }
   }
 
   const { error } = await admin
@@ -183,7 +196,7 @@ export async function postponeEventAction(
   const admin = createAdminClient();
   const { data: ev } = await admin
     .from('events')
-    .select('id, name, starts_at, venue_name')
+    .select('id, name, starts_at, ends_at, venue_name')
     .eq('id', eventId)
     .eq('brand_id', brandId)
     .maybeSingle();
@@ -193,11 +206,16 @@ export async function postponeEventAction(
   if (new Date(oldStartsAt).getTime() === new Date(startsIso).getTime()) {
     return { ok: false, message: 'Esa es la misma fecha. Elegí una distinta.' };
   }
+  // Postergar = mover a una fecha FUTURA conservando la duración: el fin se corre
+  // con el mismo delta (antes quedaba ends_at < starts_at → "terminado", sin venta).
+  const endsIso = shiftEnd(oldStartsAt, startsIso, (ev.ends_at as string | null) ?? null);
+  const windowErr = validateEventWindow({ startsIso, endsIso, requireFutureStart: true });
+  if (windowErr) return { ok: false, message: windowErr.message };
 
   // Mover la fecha. NO se tocan tickets ni órdenes.
   const { error: updErr } = await admin
     .from('events')
-    .update({ starts_at: startsIso })
+    .update({ starts_at: startsIso, ends_at: endsIso })
     .eq('id', eventId)
     .eq('brand_id', brandId);
   if (updErr) return { ok: false, message: updErr.message };
@@ -316,6 +334,17 @@ export async function cloneEventAction(eventId: string): Promise<{ ok: boolean; 
     .eq('brand_id', brandId)
     .maybeSingle();
   if (!ev) return { ok: false, message: 'Evento no encontrado.' };
+  // El clon copia fechas y fases del original y gasta 1 de saldo: validar ANTES
+  // del RPC. Un evento que ya pasó (o con fin antes del inicio) no se clona.
+  const cloneWindowErr = validateEventWindow({ startsIso: ev.starts_at, endsIso: ev.ends_at, requireFutureStart: true });
+  if (cloneWindowErr) {
+    return {
+      ok: false,
+      message: cloneWindowErr.field === 'starts_at'
+        ? 'Este evento ya pasó: el clon copiaría fechas y fases vencidas (y gastaría 1 de saldo). Creá uno nuevo desde "Crear evento".'
+        : cloneWindowErr.message,
+    };
+  }
 
   const { data: types } = await admin
     .from('ticket_types')
@@ -528,25 +557,39 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
     update.capacity = newCapacity;
   }
 
+  // Fases del tipo: una sola lectura (conteo para la regla de preventa y precios
+  // para la regla de S/0 más abajo).
+  const { data: phaseRows } = await admin.from('ticket_type_price_phases').select('price_cents').eq('ticket_type_id', ttId);
+
   // --- Precio: con ventas, congelado; sin ventas, editable salvo preventa ---
   if (Number.isFinite(newPriceCents) && newPriceCents !== tt.price_cents) {
     if (sold > 0) {
       return { ok: false, message: 'No se puede cambiar el precio de un tipo que ya tiene ventas (el precio queda congelado para quienes ya compraron).' };
     }
     if (newPriceCents < 0) return { ok: false, message: 'Precio inválido.' };
-    const { count: phaseCount } = await admin
-      .from('ticket_type_price_phases')
-      .select('id', { count: 'exact', head: true })
-      .eq('ticket_type_id', ttId);
-    if ((phaseCount ?? 0) > 1) {
+    const phaseCount = (phaseRows ?? []).length;
+    if (phaseCount > 1) {
       return { ok: false, message: 'Este tipo tiene fases de preventa; el precio se gestiona por fases (no editable acá).' };
     }
     update.price_cents = newPriceCents;
     // Si hay UNA fase base (sin ventas), la alineamos para que el precio activo coincida.
-    if ((phaseCount ?? 0) === 1) {
+    if (phaseCount === 1) {
       await admin.from('ticket_type_price_phases').update({ price_cents: newPriceCents }).eq('ticket_type_id', ttId);
     }
   }
+
+  // Reglas de precio sobre el estado RESULTANTE (precio/fases + ilimitado). La
+  // confirmación de S/0 solo se pide si el precio PASA a 0 en esta edición.
+  const priceChanged = typeof update.price_cents === 'number';
+  const resultingPrices = priceChanged
+    ? [update.price_cents as number]
+    : [tt.price_cents, ...(phaseRows ?? []).map((p) => p.price_cents)];
+  const becomingFree = priceChanged && update.price_cents === 0;
+  const pricingErr = validateTicketTypePricing(
+    [{ name, isUnlimited: (update.is_unlimited as boolean | undefined) ?? tt.is_unlimited, pricesCents: resultingPrices }],
+    { freeConfirmed: !becomingFree || formData.get('confirm_free') === '1' }
+  );
+  if (pricingErr) return { ok: false, message: pricingErr };
 
   const { error } = await admin.from('ticket_types').update(update).eq('id', ttId).eq('event_id', eventId);
   if (error) return { ok: false, message: error.message };
@@ -572,6 +615,11 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
   if (!Number.isFinite(priceCents) || priceCents < 0) return { ok: false, message: 'Precio inválido.' };
   const capacity = isUnlimited ? 0 : parseInt(String(formData.get('capacity') ?? ''), 10);
   if (!isUnlimited && (!Number.isFinite(capacity) || capacity < 1)) return { ok: false, message: 'Capacidad inválida.' };
+  const pricingErr = validateTicketTypePricing(
+    [{ name, isUnlimited, pricesCents: [priceCents] }],
+    { freeConfirmed: formData.get('confirm_free') === '1' }
+  );
+  if (pricingErr) return { ok: false, message: pricingErr };
   const bulkMinQtyRaw = Math.max(0, Math.min(10, parseInt(String(formData.get('bulk_min_qty') ?? '0'), 10) || 0));
   const bulkMinQty = bulkMinQtyRaw >= 2 ? bulkMinQtyRaw : 0;
   const bulkPct = bulkMinQty ? Math.max(0, Math.min(90, parseInt(String(formData.get('bulk_discount_pct') ?? '0'), 10) || 0)) : 0;
