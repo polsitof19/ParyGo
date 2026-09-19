@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Calendar, Plus, ScanLine, Settings, ArrowRight, Bell } from 'lucide-react';
+import { Calendar, Plus, ScanLine, Settings, ArrowRight } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createClient } from '@/lib/supabase/server';
@@ -14,6 +14,7 @@ import { LowBalanceNotice } from './LowBalanceNotice';
 import { publicEnv } from '@/lib/env';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { setEventArchivedAction } from './events/[id]/edit-actions';
+import { QuickActions } from './events/[id]/QuickActions';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -88,7 +89,7 @@ export default async function AdminHomePage() {
   const eventNameById = new Map((events ?? []).map((e) => [e.id, e.name] as const));
   const eventIds = (events ?? []).map((e) => e.id);
   const [{ data: paidRows }, { data: ticketOrderRows }, { count: activeTypeCount }, { data: mpStatus }] = await Promise.all([
-    adminCli.from('orders').select('id, buyer_name, total_cents, created_at, event_id').eq('brand_id', brand.id).eq('status', 'paid'),
+    adminCli.from('orders').select('id, buyer_name, total_cents, created_at, event_id, payment_method').eq('brand_id', brand.id).eq('status', 'paid'),
     adminCli.from('tickets').select('order_id').eq('brand_id', brand.id),
     eventIds.length
       ? adminCli.from('ticket_types').select('id', { count: 'exact', head: true }).in('event_id', eventIds).eq('is_active', true)
@@ -97,7 +98,7 @@ export default async function AdminHomePage() {
   ]);
   const mpRow = Array.isArray(mpStatus) ? mpStatus[0] : null;
   const mpConfigured = Boolean(mpRow?.has_access_token && mpRow?.has_public_key);
-  const paidOrderRows = (paidRows ?? []) as { id: string; buyer_name: string | null; total_cents: number | null; created_at: string; event_id: string }[];
+  const paidOrderRows = (paidRows ?? []) as { id: string; buyer_name: string | null; total_cents: number | null; created_at: string; event_id: string; payment_method: string }[];
 
   // Ventas por evento + total (exacto, mismos montos que antes).
   const salesByEvent = new Map<string, number>();
@@ -108,6 +109,20 @@ export default async function AdminHomePage() {
   }
 
   const ordersWithTickets = new Set((ticketOrderRows ?? []).map((t) => t.order_id as string));
+
+  // "¿Cómo va?" a nivel marca. Vendidas = entradas de órdenes pagadas que NO son
+  // cortesía (las cortesías no son venta).
+  const saleOrderIds = new Set(paidOrderRows.filter((o) => o.payment_method !== 'courtesy').map((o) => o.id));
+  const soldTickets = (ticketOrderRows ?? []).filter((t) => saleOrderIds.has(t.order_id as string)).length;
+  const nowMs = Date.now();
+  // Próximo evento = el publicado, no archivado, más cercano que todavía no pasó.
+  const nextEvent = activeEvents
+    .filter((e) => e.is_published && Date.parse(e.starts_at) > nowMs - 12 * 3600 * 1000)
+    .sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at))[0] ?? null;
+  const nextDays = nextEvent ? Math.ceil((Date.parse(nextEvent.starts_at) - nowMs) / 86400000) : null;
+  const nextWhen = nextDays === null ? null : nextDays <= 0 ? 'hoy' : nextDays === 1 ? 'mañana' : `en ${nextDays} días`;
+  const nextPublicUrl = nextEvent ? `https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${nextEvent.slug}` : null;
+  const firstPendingEvent = (events ?? []).find((e) => (pendingByEvent.get(e.id) ?? 0) > 0) ?? null;
   const stuckOrders = paidOrderRows
     .filter((o) => !ordersWithTickets.has(o.id))
     .map((o) => ({ id: o.id, buyerName: o.buyer_name, totalCents: o.total_cents ?? 0, createdAt: o.created_at, eventName: eventNameById.get(o.event_id) ?? 'Evento' }));
@@ -134,10 +149,9 @@ export default async function AdminHomePage() {
       <div className="s-pagehead">
         <div>
           <span className="eyebrow">{brand.name} · tu panel</span>
-          <h1 className="s-h1" style={{ marginTop: 8 }}>Tus eventos</h1>
+          <h1 className="s-h1">Tus eventos</h1>
           <p className="s-card__desc">
             {events?.length ?? 0} evento{events?.length === 1 ? '' : 's'} · {publishedCount} publicado{publishedCount === 1 ? '' : 's'}
-            {totalPending > 0 && <> · <span style={{ color: 'var(--alert)' }}>{totalPending} Yape por revisar</span></>}
           </p>
         </div>
         {impersonating ? null : canCreate ? (
@@ -151,31 +165,57 @@ export default async function AdminHomePage() {
         )}
       </div>
 
-      {/* Panorama: lo que importa cada día — saldo, publicados, Yape esperando, ventas */}
-      <div className="s-stats-4" style={{ marginBottom: 22 }}>
+      {/* ¿Cómo va? — lo que importa, en 5 segundos. */}
+      <div className="a-pulse">
         <div className="s-stat">
+          <span className="s-stat__label">Vendidas</span>
+          <span className="s-stat__value">{soldTickets}</span>
+          <span className="s-stat__sub">entradas, todos tus eventos</span>
+        </div>
+        <div className="s-stat">
+          <span className="s-stat__label">Recaudado</span>
+          <span className="s-stat__value">{formatPEN(totalSalesCents)}</span>
+          <span className="s-stat__sub">confirmado en tus cuentas</span>
+        </div>
+        {nextEvent ? (
+          <Link href={`/admin/events/${nextEvent.id}`} className="s-stat">
+            <span className="s-stat__label">Próximo evento</span>
+            <span className="s-stat__value s-stat__value--text">{nextEvent.name}</span>
+            <span className="s-stat__sub">{nextWhen} · {formatPEN(salesByEvent.get(nextEvent.id) ?? 0)} vendido</span>
+          </Link>
+        ) : (
+          <div className="s-stat">
+            <span className="s-stat__label">Próximo evento</span>
+            <span className="s-stat__value s-stat__value--text">Ninguno publicado</span>
+            <span className="s-stat__sub">{canCreate ? 'creá o publicá uno' : 'pedí un pack para crear'}</span>
+          </div>
+        )}
+        <div className={`s-stat${balance === 0 ? ' s-stat--alert' : ''}`}>
           <span className="s-stat__label">Saldo de eventos</span>
           <span className="s-stat__value">{balance}</span>
           <span className="s-stat__sub">{canCreate ? 'podés crear más' : 'sin saldo — pedí un pack'}</span>
         </div>
-        <div className="s-stat">
-          <span className="s-stat__label">Eventos publicados</span>
-          <span className="s-stat__value">{publishedCount}</span>
-          <span className="s-stat__sub">de {events?.length ?? 0} en total</span>
-        </div>
-        <Link href={firstPendingEventHref(events, pendingByEvent)} className={`s-stat${totalPending > 0 ? ' s-stat--alert' : ''}`} style={{ textDecoration: 'none' }}>
-          <span className="s-stat__label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <Bell className="h-3 w-3" /> Yape por revisar
-          </span>
-          <span className="s-stat__value">{totalPending}</span>
-          <span className="s-stat__sub">{totalPending > 0 ? 'plata esperando aprobación' : 'todo al día'}</span>
-        </Link>
-        <div className="s-stat">
-          <span className="s-stat__label">Ventas pagadas</span>
-          <span className="s-stat__value" style={{ fontSize: 26 }}>{formatPEN(totalSalesCents)}</span>
-          <span className="s-stat__sub">acumulado de la marca</span>
-        </div>
       </div>
+
+      {/* Tarea: solo si hay Yapes pendientes (punto de acento). */}
+      {totalPending > 0 && (
+        <div className="a-task" role="status">
+          <span className="a-task__txt">
+            <span>
+              <strong>Tenés {totalPending} Yape{totalPending === 1 ? '' : 's'} por revisar</strong>
+              <span className="a-task__sub">Plata esperando tu aprobación · hay gente esperando su QR.</span>
+            </span>
+          </span>
+          {firstPendingEvent && (
+            <Link href={`/admin/events/${firstPendingEvent.id}/yape`} className="s-btn s-btn--primary s-btn--sm">Revisar ahora</Link>
+          )}
+        </div>
+      )}
+
+      {/* Acciones rápidas del próximo evento */}
+      {nextEvent && (
+        <QuickActions eventId={nextEvent.id} publicUrl={nextPublicUrl} isPublished={!!nextEvent.is_published} readOnly={impersonating} />
+      )}
 
       {/* Aviso de saldo bajo (solo dueño): empuja a pedir packs cuando queda ≤1. */}
       {!impersonating && (
@@ -235,8 +275,9 @@ export default async function AdminHomePage() {
                     {start.toLocaleString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
                   </span>
                   <div className="a-evcard__foot">
-                    <span className="a-evcard__sales">{formatPEN(sales)} <span className="s-muted" style={{ fontWeight: 500 }}>vendido</span></span>
-                    {pend > 0 && <span className="s-badge s-badge--alert">{pend} Yape</span>}
+                    {sales > 0 && <span className="a-evcard__sales">{formatPEN(sales)} <span className="s-muted" style={{ fontWeight: 500 }}>vendido</span></span>}
+                    {pend > 0 && <span className="s-badge s-badge--todo">{pend} Yape por revisar</span>}
+                    {pend === 0 && sales === 0 && e.is_published && !past && <span className="s-muted s-small">Aún no vendiste · compartí tu link</span>}
                     <ArrowRight className="h-4 w-4 a-evcard__go" />
                   </div>
                 </div>
@@ -247,17 +288,14 @@ export default async function AdminHomePage() {
       )}
 
       {/* Archivados — fuera del flujo normal; solo lectura + desarchivar */}
+      {/* Plegados: no compiten con los eventos activos (antes eran N filas con N botones). */}
       {archivedEvents.length > 0 && (
-        <div className="s-card" style={{ marginTop: 22 }}>
-          <div className="s-card__head">
-            <div>
-              <h2 className="s-h2">Archivados</h2>
-              <p className="s-card__desc">
-                {archivedEvents.length} evento{archivedEvents.length === 1 ? '' : 's'} archivado{archivedEvents.length === 1 ? '' : 's'}.
-                No se venden ni aparecen en público. Podés desarchivarlos cuando quieras.
-              </p>
-            </div>
-          </div>
+        <details className="a-accordion s-section">
+          <summary>
+            <span className="a-accordion__title">Archivados ({archivedEvents.length})</span>
+            <span className="a-accordion__hint">No se venden ni aparecen en público. Podés desarchivarlos cuando quieras.</span>
+          </summary>
+          <div className="a-accordion__body">
           <ul className="s-event-list">
             {archivedEvents.map((e) => (
               <li key={e.id} className="s-event-row">
@@ -272,7 +310,8 @@ export default async function AdminHomePage() {
               </li>
             ))}
           </ul>
-        </div>
+          </div>
+        </details>
       )}
 
       {/* Configuración de la marca (resumen) */}
@@ -315,7 +354,7 @@ export default async function AdminHomePage() {
               <h2 className="s-h2">Staff de puerta</h2>
               <p className="s-card__desc">Invitá a tu staff a validar entradas. Solo ven el escáner, nada más de tu panel.</p>
             </div>
-            <Link href="/scan" className="s-btn s-btn--peri s-btn--sm">
+            <Link href="/scan" className="s-btn s-btn--soft s-btn--sm">
               <ScanLine className="h-4 w-4" /> Abrir escáner
             </Link>
           </div>
@@ -330,15 +369,6 @@ export default async function AdminHomePage() {
       )}
     </>
   );
-}
-
-// Lleva el clic del KPI de Yape al primer evento con pendientes (atajo útil).
-function firstPendingEventHref(
-  events: { id: string }[] | null,
-  pendingByEvent: Map<string, number>
-): string {
-  const ev = (events ?? []).find((e) => (pendingByEvent.get(e.id) ?? 0) > 0);
-  return ev ? `/admin/events/${ev.id}` : '/admin';
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {

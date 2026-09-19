@@ -6,6 +6,7 @@ import { SuperTopbar } from './SuperTopbar';
 // especializa. El orden importa — si se invierte, super.css define variables
 // que el archivo de tokens pisa después.
 import '../styles/parygo-tokens.css';
+import '../styles/parygo-panel.css';
 import './super.css';
 
 export const runtime = 'edge';
@@ -37,8 +38,9 @@ export default async function SuperLayout({ children }: { children: React.ReactN
     .eq('status', 'pending');
 
   return (
-    // `pg` trae los tokens compartidos; `super-shell` los especializa.
-    <div className={`pg super-shell ${bricolage.variable} ${hanken.variable}`}>
+    // `pg` = tokens · `pg-panel` = componentes compartidos con el panel del
+    // organizador · `super-shell` = lo propio del super admin.
+    <div className={`pg pg-panel super-shell ${bricolage.variable} ${hanken.variable}`}>
       <SuperTopbar email={user.email} pendingRequests={pendingRequests ?? 0} />
       <main className="s-wrap">{children}</main>
     </div>

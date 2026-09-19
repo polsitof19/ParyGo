@@ -106,7 +106,7 @@ export function ClientsTable({ rows, eventId, eventName, impersonating = false }
               </div>
               <ul className="s-stack" style={{ gap: 6, listStyle: 'none', margin: '10px 0 0', padding: 0 }}>
                 {r.tickets.map((t) => (
-                  <li key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', borderTop: '1px solid var(--cream-3)', paddingTop: 8 }}>
+                  <li key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', borderTop: '1px solid var(--line)', paddingTop: 8 }}>
                     <span style={{ fontSize: 13.5 }}>
                       <strong>{t.number}</strong> · {t.typeName}
                       {t.voided && <span className="s-badge s-badge--alert" style={{ marginLeft: 8 }}>Anulada</span>}
@@ -158,7 +158,7 @@ function VoidButton({ ticketId, number }: { ticketId: string; number: string }) 
       }}
     >
       <input type="hidden" name="ticket_id" value={ticketId} />
-      {state.message && <span className="s-muted" style={{ fontSize: 12, marginRight: 8, color: state.ok ? 'var(--ok)' : 'var(--alert)' }}>{state.ok ? '✓' : state.message}</span>}
+      {state.message && <span className="s-muted" style={{ fontSize: 12, marginRight: 8, color: 'var(--ink-2)' }}>{state.ok ? '✓' : state.message}</span>}
       <VoidSubmit />
     </form>
   );
@@ -166,7 +166,7 @@ function VoidButton({ ticketId, number }: { ticketId: string; number: string }) 
 function VoidSubmit() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className="s-btn s-btn--ghost s-btn--sm" disabled={pending} style={{ color: 'var(--alert)' }}>
+    <button type="submit" className="s-btn s-btn--danger-soft s-btn--sm" disabled={pending}>
       <Ban className="h-3.5 w-3.5" /> {pending ? 'Anulando…' : 'Anular'}
     </button>
   );

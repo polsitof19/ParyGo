@@ -21,10 +21,10 @@ const initial: ReissueState = { ok: false, message: null };
 // idempotente y solo opera sobre órdenes ya pagadas de la propia marca.
 export function TicketRecovery({ orders }: { orders: StuckOrder[] }) {
   return (
-    <div className="s-card" style={{ marginBottom: 22, borderColor: 'var(--alert, #dc2626)' }}>
+    <div className="s-card s-card--confirm-danger" style={{ marginBottom: 22 }}>
       <div className="s-card__head">
         <div>
-          <h2 className="s-h2" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--alert, #dc2626)' }}>
+          <h2 className="s-h2" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <AlertTriangle className="h-5 w-5" /> Órdenes pagadas sin tickets
           </h2>
           <p className="s-card__desc">
@@ -44,7 +44,7 @@ export function TicketRecovery({ orders }: { orders: StuckOrder[] }) {
 function RecoveryRow({ order }: { order: StuckOrder }) {
   const [state, action] = useFormFeedback(reissueTicketsAction, initial);
   return (
-    <li className="s-defrow" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', border: '1px solid var(--cream-3)', borderRadius: 'var(--r-ctl, 12px)', padding: '12px 14px' }}>
+    <li className="s-defrow" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', border: '1px solid var(--line)', borderRadius: 'var(--r-ctl, 12px)', padding: '12px 14px' }}>
       <div style={{ minWidth: 0 }}>
         <p style={{ fontWeight: 700 }}>{order.buyerName ?? 'Comprador'}</p>
         <p className="s-muted" style={{ fontSize: 13 }}>

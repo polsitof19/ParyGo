@@ -16,8 +16,7 @@ export function LowBalanceNotice({ balance, brandName, supportWhatsapp }: { bala
       className="s-card"
       style={{
         marginBottom: 18,
-        borderColor: sinSaldo ? 'var(--alert)' : 'var(--tangerine)',
-        borderWidth: 1.5,
+        boxShadow: `inset 3px 0 0 ${sinSaldo ? 'var(--alert)' : 'var(--accent)'}, var(--shadow-sm)`,
         display: 'flex',
         gap: 12,
         alignItems: 'flex-start',
@@ -25,7 +24,7 @@ export function LowBalanceNotice({ balance, brandName, supportWhatsapp }: { bala
       }}
       role="status"
     >
-      <AlertTriangle className="h-5 w-5" style={{ flexShrink: 0, marginTop: 2, color: sinSaldo ? 'var(--alert)' : 'var(--tangerine)' }} />
+      <AlertTriangle className="h-5 w-5" style={{ flexShrink: 0, marginTop: 2, color: 'var(--ink-2)' }} />
       <div style={{ minWidth: 0, flex: 1 }}>
         <p style={{ fontWeight: 700 }}>
           {sinSaldo ? 'Te quedaste sin saldo de eventos' : 'Te queda 1 evento de saldo'}

@@ -111,7 +111,7 @@ export function EventBuilder() {
             <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
               {coverPreview && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={coverPreview} alt="" style={{ width: 90, height: 120, objectFit: 'cover', borderRadius: 'var(--r-ctl)', border: '1px solid var(--cream-3)', flexShrink: 0 }} />
+                <img src={coverPreview} alt="" style={{ width: 90, height: 120, objectFit: 'cover', borderRadius: 'var(--r-ctl)', border: '1px solid var(--line)', flexShrink: 0 }} />
               )}
               <div style={{ flex: 1, minWidth: 180 }}>
                 <input id="cover" name="cover" type="file" accept="image/png,image/jpeg,image/webp" onChange={onCover} className="s-input" style={{ paddingTop: 9 }} />
@@ -159,7 +159,7 @@ export function EventBuilder() {
 
         <div className="s-stack" style={{ gap: 14, marginTop: 14 }}>
           {tts.map((tt, i) => (
-            <div key={i} className="s-card" style={{ background: 'var(--cream)', boxShadow: 'none' }}>
+            <div key={i} className="s-card" style={{ background: 'var(--paper)', boxShadow: 'none' }}>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
                 <div style={{ flex: 1 }}>
                   <label className="s-label">Nombre del tipo</label>
@@ -201,7 +201,7 @@ export function EventBuilder() {
                 </div>
                 <div className="s-stack" style={{ gap: 8 }}>
                   {tt.phases.map((ph, j) => (
-                    <div key={j} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 8, alignItems: 'end', padding: 12, border: '1px solid var(--cream-3)', borderRadius: 'var(--r-ctl)', background: 'var(--white)' }}>
+                    <div key={j} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 8, alignItems: 'end', padding: 12, border: '1px solid var(--line)', borderRadius: 'var(--r-ctl)', background: 'var(--surface)' }}>
                       <div>
                         <label className="s-label" style={{ fontSize: 11 }}>Precio (S/)</label>
                         <input type="number" step="0.5" min={0} value={ph.priceSoles} onChange={(e) => patchPhase(i, j, { priceSoles: e.target.value })} placeholder="30" required className="s-input" />

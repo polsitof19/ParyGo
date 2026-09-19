@@ -22,8 +22,8 @@ export function PostponeEvent({ eventId, startsLocal }: { eventId: string; start
   };
 
   return (
-    <div className="s-card" style={{ borderColor: 'var(--tangerine)' }}>
-      <h3 className="s-h2" style={{ fontSize: 16, display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+    <div className="s-card">
+      <h3 className="s-h3" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
         <CalendarClock className="h-4 w-4" /> Postergar evento
       </h3>
       <p className="s-card__desc" style={{ marginTop: 6 }}>

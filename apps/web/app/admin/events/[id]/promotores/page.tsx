@@ -3,13 +3,16 @@ import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
+import { PromoCodeManager, type PromoCodeRow, type PromoSales } from '../PromoCodeManager';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 // =============================================================
-// A1 — Panel de promotores (RR.PP.) · SOLO LECTURA
+// Promotores (RR.PP.) — UN solo lugar: crear/gestionar códigos + ranking.
 // =============================================================
+// Antes los códigos se CREABAN en un acordeón del Resumen y se MEDÍAN acá (el
+// propio empty state decía "cargalos en la pestaña Resumen"). Ver handoff.
 // Por cada código de promotor del evento: nombre (label), entradas colocadas,
 // recaudado y ranking. Lee promo_codes + promo_redemptions (consumidas) — NO
 // agrega tracking nuevo (lotes por promotor siguen diferidos). Scopeado a la
@@ -32,10 +35,15 @@ export default async function PromotersPage({ params }: { params: { id: string }
   if (!event || event.brand_id !== ctx.brandId) notFound();
 
   // Todos los códigos del evento (así mostramos también los que aún no vendieron).
-  const { data: codes } = await admin
-    .from('promo_codes')
-    .select('id, code, label')
-    .eq('event_id', event.id);
+  // Columnas completas: las usa también el gestor de códigos (crear/revocar/enviar).
+  const [{ data: codes }, { data: types }] = await Promise.all([
+    admin
+      .from('promo_codes')
+      .select('id, code, label, discount_type, discount_value, max_uses, use_count, per_email_limit, applies_to_all, expires_at, is_active, created_at')
+      .eq('event_id', event.id)
+      .order('created_at', { ascending: false }),
+    admin.from('ticket_types').select('id, name').eq('event_id', event.id).order('sort_order'),
+  ]);
 
   // Canjes CONSUMIDOS (= órdenes pagadas que usaron un código). Traemos el monto
   // de la orden (recaudado) y las cantidades de order_items (entradas colocadas).
@@ -81,42 +89,60 @@ export default async function PromotersPage({ params }: { params: { id: string }
   const totalRecaudado = rows.reduce((s, r) => s + r.recaudadoCents, 0);
   const totalClicks = rows.reduce((s, r) => s + r.clicks, 0);
 
+  // Ventas por código para el gestor (mismo agregado que el ranking).
+  const sales: PromoSales = {};
+  for (const r of rows) sales[r.codeId] = { entries: r.entradas, soldCents: r.recaudadoCents, discountCents: r.descuentoCents };
+
   return (
     <>
       <div style={{ marginBottom: 14 }}>
-        <span className="eyebrow">Promotores</span>
-        <h2 className="s-h2" style={{ marginTop: 2 }}>Ventas por RR.PP.</h2>
-        <p className="s-card__desc">
-          {rows.length} código{rows.length === 1 ? '' : 's'} · {totalClicks} clic{totalClicks === 1 ? '' : 's'} · {totalEntradas} entrada{totalEntradas === 1 ? '' : 's'} colocadas · {formatPEN(totalRecaudado)} recaudado
-        </p>
+        <span className="eyebrow">Ventas y pagos</span>
+        <h2 className="s-h2" style={{ marginTop: 6 }}>Promotores</h2>
+        <p className="s-card__desc">Creá códigos para tus RR.PP. y mirá cuánto vendió cada uno.</p>
       </div>
 
-      {rows.length === 0 ? (
-        <div className="s-card"><p className="s-empty">Todavía no creaste códigos de promotor para este evento. Cargalos en la pestaña Resumen del evento.</p></div>
-      ) : (
-        <div className="s-stack" style={{ gap: 10 }}>
-          {rows.map((r, i) => (
-            <div key={r.codeId} className="s-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-              <div style={{ width: 30, textAlign: 'center', fontWeight: 800, fontFamily: 'var(--display)', color: i < 3 ? 'var(--brand-ink)' : 'var(--ink-3)' }}>
-                #{i + 1}
-              </div>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <p style={{ fontWeight: 700 }}>{r.label || r.code}</p>
-                <p className="s-muted" style={{ fontSize: 13 }}>
-                  Código <strong>{r.code}</strong>
-                  {' · '}{r.clicks} clic{r.clicks === 1 ? '' : 's'}
-                  {r.clicks > 0 && <> · {Math.round((r.entradas / r.clicks) * 100)}% conversión</>}
-                  {r.descuentoCents > 0 && <> · {formatPEN(r.descuentoCents)} en descuentos</>}
-                </p>
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <p style={{ fontWeight: 800, fontFamily: 'var(--display)' }}>{formatPEN(r.recaudadoCents)}</p>
-                <p className="s-muted" style={{ fontSize: 13 }}>{r.entradas} entrada{r.entradas === 1 ? '' : 's'}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* 1) Crear y gestionar códigos */}
+      <PromoCodeManager
+        eventId={event.id}
+        ticketTypes={(types ?? []).map((t) => ({ id: t.id, name: t.name }))}
+        codes={(codes ?? []) as PromoCodeRow[]}
+        sales={sales}
+        impersonating={ctx.impersonating}
+      />
+
+      {/* 2) Ranking */}
+      <div className="s-section">
+        <h3 className="s-h3" style={{ marginBottom: 4 }}>Ranking</h3>
+        <p className="s-card__desc" style={{ marginBottom: 12 }}>
+          {rows.length} código{rows.length === 1 ? '' : 's'} · {totalClicks} clic{totalClicks === 1 ? '' : 's'} · {totalEntradas} entrada{totalEntradas === 1 ? '' : 's'} colocadas · {formatPEN(totalRecaudado)} recaudado
+        </p>
+        {rows.length === 0 ? (
+          <div className="s-card"><p className="s-empty">Todavía no hay códigos. Creá el primero arriba y compartí el link de tu promotor.</p></div>
+        ) : (
+          <div className="s-card s-card--flush">
+            <ol className="a-rank">
+              {rows.map((r, i) => (
+                <li key={r.codeId} className="a-rank__row">
+                  <span className={`a-rank__pos${i < 3 && r.recaudadoCents > 0 ? ' a-rank__pos--top' : ''}`}>#{i + 1}</span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <p className="a-rank__name">{r.label || r.code}</p>
+                    <p className="s-muted s-small">
+                      Código <strong>{r.code}</strong>
+                      {' · '}{r.clicks} clic{r.clicks === 1 ? '' : 's'}
+                      {r.clicks > 0 && <> · {Math.round((r.entradas / r.clicks) * 100)}% conversión</>}
+                      {r.descuentoCents > 0 && <> · {formatPEN(r.descuentoCents)} en descuentos</>}
+                    </p>
+                  </div>
+                  <div className="a-rank__num">
+                    <p className="a-rank__money">{formatPEN(r.recaudadoCents)}</p>
+                    <p className="s-muted s-small">{r.entradas} entrada{r.entradas === 1 ? '' : 's'}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+      </div>
     </>
   );
 }

@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Gift, ShieldAlert } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -7,7 +9,6 @@ import { EditEventForm } from './EditEventForms';
 import { PostponeEvent } from './PostponeEvent';
 import { CancelEvent } from './CancelEvent';
 import { CloneEventButton } from './CloneEventButton';
-import { CourtesyForm } from './CourtesyForm';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { DangerDeleteButton } from '@/components/manage/DangerDeleteButton';
 import { setEventArchivedAction, deleteEventAction } from '../edit-actions';
@@ -45,19 +46,12 @@ export default async function EditEventPage({ params }: { params: { id: string }
   const hasSales = (soldCount ?? 0) > 0;
   const canDelete = (orderCount ?? 0) === 0 && (ticketCount ?? 0) === 0;
 
-  // Tipos activos para el selector de cortesías.
-  const { data: courtesyTypes } = await admin
-    .from('ticket_types')
-    .select('id, name')
-    .eq('event_id', event.id)
-    .eq('is_active', true)
-    .order('sort_order');
 
   return (
     <>
       <div style={{ marginBottom: 14 }}>
-        <span className="eyebrow">Editar evento</span>
-        <h2 className="s-h2" style={{ marginTop: 2 }}>Datos del evento</h2>
+        <span className="eyebrow">Mi evento</span>
+        <h2 className="s-h2" style={{ marginTop: 6 }}>Datos del evento</h2>
         <p className="s-card__desc">
           {impersonating
             ? 'Estás viendo este evento en solo lectura. No puedes editarlo desde aquí.'
@@ -65,7 +59,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
         </p>
       </div>
       {impersonating && (
-        <p className="s-banner" style={{ background: 'var(--cream-2)', color: 'var(--ink-2)', marginBottom: 14 }} role="status">
+        <p className="s-banner" style={{ marginBottom: 14 }} role="status">
           Solo lectura — los datos se muestran tal cual, sin posibilidad de editarlos.
         </p>
       )}
@@ -90,81 +84,74 @@ export default async function EditEventPage({ params }: { params: { id: string }
         />
       </div>
 
-      {/* Postergar: solo cuando hay ventas (fecha bloqueada arriba) y no en solo lectura. */}
-      {event.is_published && hasSales && !impersonating && (
-        <div style={{ marginTop: 16 }}>
-          <PostponeEvent eventId={event.id} startsLocal={toLimaLocal(event.starts_at)} />
-        </div>
-      )}
-
-      {/* Clonar evento (cualquier evento, no en solo lectura). */}
-      {!impersonating && (
-        <div style={{ marginTop: 16 }}>
-          <CloneEventButton eventId={event.id} />
-        </div>
-      )}
-
-      {/* Cancelar evento: despublica + avisa por email. No en solo lectura. */}
-      {!impersonating && !event.archived_at && (
-        <div style={{ marginTop: 16 }}>
-          <CancelEvent eventId={event.id} eventName={event.name} cancelled={!!event.cancelled_at} />
-        </div>
-      )}
-
-      {/* Cortesías / VIP: emitir N entradas gratis a un email. Escritura → oculto
-          en solo lectura (el action además deniega impersonación server-side). */}
-      {!impersonating && (
-        <>
-          <h2 className="s-h2" style={{ margin: '24px 0 12px' }}>Cortesías</h2>
-          <div className="s-card">
-            <p className="s-card__desc" style={{ marginBottom: 14 }}>
-              Emití entradas de cortesía de un tipo y enviáselas por email a quien quieras (ej. invitados, prensa, RR.PP.). Son entradas reales, escaneables en puerta, y <strong>descuentan del aforo</strong>.
-            </p>
-            <CourtesyForm eventId={event.id} ticketTypes={courtesyTypes ?? []} />
-          </div>
-        </>
-      )}
-
       <h2 className="s-h2" style={{ margin: '24px 0 12px' }}>Flyer</h2>
       <div className="s-card"><EventCoverUploader eventId={event.id} currentUrl={event.cover_url} readOnly={impersonating} /></div>
 
-      {/* Zona de gestión — archivar / eliminar. Todo escritura → oculto en solo lectura. */}
+      {/* Las cortesías ya no viven acá: no son "editar el evento". */}
       {!impersonating && (
-        <>
-          <h2 className="s-h2" style={{ margin: '24px 0 12px' }}>Zona de gestión</h2>
-          <div className="s-card">
-            <div className="s-card__head">
-              <div>
-                <h3 className="s-h2" style={{ fontSize: 16 }}>Archivar evento</h3>
-                <p className="s-card__desc">
-                  {event.archived_at
-                    ? 'Este evento está archivado: no se vende y no aparece en público. Puedes desarchivarlo cuando quieras.'
-                    : 'Al archivar deja de venderse y desaparece del público, pero conservas todo su historial. Es reversible.'}
-                </p>
+        <p className="s-card__desc" style={{ marginTop: 14 }}>
+          ¿Buscás las cortesías? Ahora están en <Link href={`/admin/events/${event.id}/cortesias`} className="s-textlink"><Gift className="h-3.5 w-3.5" style={{ display: 'inline', verticalAlign: '-2px' }} /> Ventas y pagos → Cortesías</Link>.
+        </p>
+      )}
+
+      {/* Zona de gestión — lo raro o destructivo, PLEGADO al final para que no
+          conviva con la edición diaria: postergar, clonar, cancelar, archivar,
+          eliminar. Todo escritura → oculto en solo lectura. */}
+      {!impersonating && (
+        <details className="a-accordion a-accordion--danger" style={{ marginTop: 24 }}>
+          <summary>
+            <span className="a-accordion__title"><ShieldAlert className="h-4 w-4" /> Zona de gestión</span>
+            <span className="a-accordion__hint">Postergar, clonar, cancelar, archivar o eliminar el evento</span>
+          </summary>
+          <div className="a-accordion__body">
+            {/* Postergar: solo cuando hay ventas (la fecha de arriba queda bloqueada). */}
+            {event.is_published && hasSales && (
+              <div style={{ marginTop: 16 }}>
+                <PostponeEvent eventId={event.id} startsLocal={toLimaLocal(event.starts_at)} />
               </div>
-              <ArchiveToggle
+            )}
+            <div style={{ marginTop: 16 }}>
+              <CloneEventButton eventId={event.id} />
+            </div>
+            {!event.archived_at && (
+              <div style={{ marginTop: 16 }}>
+                <CancelEvent eventId={event.id} eventName={event.name} cancelled={!!event.cancelled_at} />
+              </div>
+            )}
+            <div className="s-card" style={{ marginTop: 16 }}>
+              <div className="s-card__head">
+                <div>
+                  <h3 className="s-h3">Archivar evento</h3>
+                  <p className="s-card__desc">
+                    {event.archived_at
+                      ? 'Este evento está archivado: no se vende y no aparece en público. Puedes desarchivarlo cuando quieras.'
+                      : 'Al archivar deja de venderse y desaparece del público, pero conservas todo su historial. Es reversible.'}
+                  </p>
+                </div>
+                <ArchiveToggle
+                  id={event.id}
+                  archived={!!event.archived_at}
+                  action={setEventArchivedAction}
+                  noun="el evento"
+                />
+              </div>
+
+              <div className="s-divider" />
+
+              <h3 className="s-h3">Eliminar definitivamente</h3>
+              <p className="s-card__desc" style={{ marginBottom: 12 }}>
+                Borra el evento para siempre. Solo es posible si no tiene ninguna venta.
+              </p>
+              <DangerDeleteButton
                 id={event.id}
-                archived={!!event.archived_at}
-                action={setEventArchivedAction}
+                name={event.name}
+                action={deleteEventAction}
+                canDelete={canDelete}
                 noun="el evento"
               />
             </div>
-
-            <div className="s-divider" />
-
-            <h3 className="s-h2" style={{ fontSize: 16 }}>Eliminar definitivamente</h3>
-            <p className="s-card__desc" style={{ marginBottom: 12 }}>
-              Borra el evento para siempre. Solo es posible si no tiene ninguna venta.
-            </p>
-            <DangerDeleteButton
-              id={event.id}
-              name={event.name}
-              action={deleteEventAction}
-              canDelete={canDelete}
-              noun="el evento"
-            />
           </div>
-        </>
+        </details>
       )}
     </>
   );

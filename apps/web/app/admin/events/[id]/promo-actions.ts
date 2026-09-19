@@ -182,6 +182,7 @@ export async function createPromoCode(input: CreatePromoInput): Promise<CreateRe
   }
 
   revalidatePath(`/admin/events/${input.eventId}`);
+  revalidatePath(`/admin/events/${input.eventId}/promotores`);
   return { ok: true, id: data as string };
 }
 
@@ -213,5 +214,6 @@ export async function revokePromoCode(promoCodeId: string, eventId: string): Pro
   }
 
   revalidatePath(`/admin/events/${eventId}`);
+  revalidatePath(`/admin/events/${eventId}/promotores`);
   return { ok: true };
 }

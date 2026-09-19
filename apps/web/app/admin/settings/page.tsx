@@ -58,7 +58,7 @@ export default async function AdminSettingsPage() {
       </header>
 
       {impersonating && (
-        <p className="s-banner" style={{ background: 'var(--cream-2)', color: 'var(--ink-2)', marginBottom: 16 }} role="status">
+        <p className="s-banner" style={{ background: 'var(--paper-2)', color: 'var(--ink-2)', marginBottom: 16 }} role="status">
           Solo lectura — los datos se muestran tal cual, sin posibilidad de editarlos.
         </p>
       )}

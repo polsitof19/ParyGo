@@ -118,8 +118,8 @@ export default async function EventAccessPage({ params }: { params: { id: string
     <>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
         <div>
-          <span className="eyebrow">Puerta</span>
-          <h2 className="s-h2" style={{ marginTop: 2 }}>Accesos en vivo</h2>
+          <span className="eyebrow">Puerta y equipo · En la puerta</span>
+          <h2 className="s-h2" style={{ marginTop: 6 }}>Control de puerta en vivo</h2>
           <p className="s-card__desc">Quién ya ingresó y quién falta. Solo entradas válidas (no anuladas).</p>
         </div>
         <LiveRefresh seconds={25} />
@@ -148,7 +148,7 @@ export default async function EventAccessPage({ params }: { params: { id: string
               {typeRows.map(([name, r]) => {
                 const p = r.total > 0 ? Math.round((r.entered / r.total) * 100) : 0;
                 return (
-                  <li key={name} style={{ padding: '12px 16px', borderTop: '1px solid var(--cream-3)' }}>
+                  <li key={name} style={{ padding: '12px 16px', borderTop: '1px solid var(--line)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
                       <span style={{ fontWeight: 600 }}>{name}</span>
                       <span className="s-muted" style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>{r.entered} / {r.total} · {p}%</span>
@@ -173,7 +173,7 @@ export default async function EventAccessPage({ params }: { params: { id: string
             )}
             <ul className="s-stack" style={{ gap: 0, listStyle: 'none', margin: 0, padding: 0 }}>
               {inside.map((t) => (
-                <li key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 16px', borderTop: '1px solid var(--cream-3)' }}>
+                <li key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 16px', borderTop: '1px solid var(--line)' }}>
                   <span style={{ minWidth: 0 }}>
                     <span style={{ fontWeight: 600 }}>{t.attendee_name ?? '—'}</span>
                     <span className="s-muted" style={{ fontSize: 13 }}> · {t.ticket_type_name} · {t.ticket_number}</span>
@@ -192,7 +192,7 @@ export default async function EventAccessPage({ params }: { params: { id: string
       <section style={{ marginTop: 24 }}>
         <h2 className="s-h2" style={{ marginBottom: 12 }}>Falta ingresar <span className="s-badge s-badge--draft" style={{ marginLeft: 8 }}>{outsideTotal}</span></h2>
         {outsideTotal === 0 ? (
-          <div className="s-card"><p className="s-empty">{totalValid === 0 ? 'No hay entradas válidas todavía.' : 'Todos los que tienen entrada ya ingresaron. 🎉'}</p></div>
+          <div className="s-card"><p className="s-empty">{totalValid === 0 ? 'No hay entradas válidas todavía.' : 'Todos los que tienen entrada ya ingresaron.'}</p></div>
         ) : (
           <div className="s-card" style={{ padding: 0 }}>
             {outsideTotal > outside.length && (
@@ -200,7 +200,7 @@ export default async function EventAccessPage({ params }: { params: { id: string
             )}
             <ul className="s-stack" style={{ gap: 0, listStyle: 'none', margin: 0, padding: 0 }}>
               {outside.map((t) => (
-                <li key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 16px', borderTop: '1px solid var(--cream-3)' }}>
+                <li key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 16px', borderTop: '1px solid var(--line)' }}>
                   <span style={{ minWidth: 0 }}>
                     <span style={{ fontWeight: 600 }}>{t.attendee_name ?? '—'}</span>
                     <span className="s-muted" style={{ fontSize: 13 }}> · {t.ticket_type_name} · {t.ticket_number}</span>
@@ -215,7 +215,7 @@ export default async function EventAccessPage({ params }: { params: { id: string
       {/* Intentos rechazados en puerta */}
       <section style={{ marginTop: 24 }}>
         <h2 className="s-h2" style={{ marginBottom: 6, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <XCircle className="h-4 w-4" style={{ color: 'var(--alert)' }} /> Intentos rechazados
+          <XCircle className="h-4 w-4" style={{ color: 'var(--ink-2)' }} /> Intentos rechazados
           <span className="s-badge s-badge--alert" style={{ marginLeft: 4 }}>{rejectRows.length}</span>
         </h2>
         <p className="s-card__desc" style={{ marginBottom: 12 }}>
@@ -223,12 +223,12 @@ export default async function EventAccessPage({ params }: { params: { id: string
           la previsualización de solo lectura y los QR inexistentes no se guardan, así que esto es un piso, no el total exacto.
         </p>
         {rejectRows.length === 0 ? (
-          <div className="s-card"><p className="s-empty">Ningún intento rechazado registrado. 👌</p></div>
+          <div className="s-card"><p className="s-empty">Ningún intento rechazado registrado.</p></div>
         ) : (
           <div className="s-card" style={{ padding: 0 }}>
             <ul className="s-stack" style={{ gap: 0, listStyle: 'none', margin: 0, padding: 0 }}>
               {rejectRows.map((r) => (
-                <li key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 16px', borderTop: '1px solid var(--cream-3)' }}>
+                <li key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 16px', borderTop: '1px solid var(--line)' }}>
                   <span style={{ minWidth: 0 }}>
                     <span className="s-badge s-badge--alert">{REJECT_LABELS[r.result] ?? r.result}</span>
                     {r.ticketNumber && <span className="s-muted" style={{ fontSize: 13 }}> · {r.typeName} · {r.ticketNumber}</span>}
