@@ -38,7 +38,7 @@ export default async function SolicitudesPage() {
       <header className="s-pagehead">
         <div>
           <span className="eyebrow">Onboarding</span>
-          <h1 className="s-h1" style={{ marginTop: 8 }}>Solicitudes de acceso</h1>
+          <h1 className="s-h1">Solicitudes de acceso</h1>
           <p className="s-card__desc">
             {pending.length} pendiente{pending.length === 1 ? '' : 's'}. Aprobar crea la marca con el alta de siempre (vos ponés subdominio y contraseña). El saldo se carga aparte.
           </p>
@@ -48,21 +48,22 @@ export default async function SolicitudesPage() {
       {pending.length === 0 ? (
         <div className="s-card"><p className="s-empty">No hay solicitudes pendientes.</p></div>
       ) : (
-        <div className="s-stack" style={{ gap: 10 }}>
+        <div className="s-stack s-stack--tight">
           {pending.map((r) => (
-            <div key={r.id} className="s-card" style={{ padding: '14px 16px' }}>
-              <div className="s-card__head" style={{ alignItems: 'flex-start' }}>
+            <div key={r.id} className="s-card s-req">
+              <div className="s-card__head" style={{ marginBottom: 0 }}>
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ fontWeight: 800, fontSize: 16 }}>{r.brand_name}</p>
-                  <p className="s-muted" style={{ fontSize: 13, wordBreak: 'break-word' }}>
+                  <p className="s-req__name">{r.brand_name}</p>
+                  <p className="s-req__meta">
                     {r.contact_name} · {r.contact_email}{r.contact_phone ? ` · ${r.contact_phone}` : ''}
                   </p>
-                  <p className="s-muted" style={{ fontSize: 12.5 }}>Recibida {fmt(r.created_at)}</p>
+                  <p className="s-req__meta">Recibida {fmt(r.created_at)}</p>
                 </div>
-                <span className="s-badge s-badge--draft" style={{ whiteSpace: 'nowrap' }}>Pendiente</span>
+                {/* Pendiente = hay algo que hacer: punto de acento. */}
+                <span className="s-badge s-badge--todo">Pendiente</span>
               </div>
-              {r.event_info && <p style={{ fontSize: 14, marginTop: 8, color: 'var(--ink-2)', whiteSpace: 'pre-wrap' }}>{r.event_info}</p>}
-              <div style={{ display: 'flex', gap: 10, marginTop: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              {r.event_info && <p className="s-req__note">{r.event_info}</p>}
+              <div className="s-req__actions">
                 <Link
                   href={`/cabina-7k29x/brands/new?request=${r.id}&name=${encodeURIComponent(r.brand_name)}&email=${encodeURIComponent(r.contact_email)}`}
                   className="s-btn s-btn--primary s-btn--sm"
@@ -77,12 +78,12 @@ export default async function SolicitudesPage() {
       )}
 
       {resolved.length > 0 && (
-        <div className="s-card" style={{ marginTop: 22 }}>
-          <h2 className="s-h2">Historial</h2>
-          <ul className="s-event-list" style={{ marginTop: 8 }}>
+        <div className="s-card s-section">
+          <h2 className="s-h2" style={{ marginBottom: 8 }}>Historial</h2>
+          <ul className="s-hlist">
             {resolved.map((r) => (
-              <li key={r.id} className="s-event-row">
-                <div className="s-event-row__main" style={{ cursor: 'default' }}>
+              <li key={r.id} className="s-hlist__row">
+                <div className="s-event-row__main">
                   <span className="s-event-row__name">{r.brand_name}</span>
                   <span className="s-event-row__date">{r.contact_email} · {fmt(r.created_at)}</span>
                 </div>

@@ -13,6 +13,7 @@ import { EventCoverUploader } from '../../../admin/events/[id]/EventCoverUploade
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { DangerDeleteButton } from '@/components/manage/DangerDeleteButton';
 import { setEventArchivedAction, deleteEventAction } from '../../../admin/events/[id]/edit-actions';
+import { onColor } from '../../on-color';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -85,7 +86,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
             {brandLogo ? (
               <BrandLogo src={brandLogo} alt="" size={52} ring={false} />
             ) : (
-              <span className="s-avatar s-avatar--lg" style={{ background: brandPrimary, color: '#fff' }}>
+              <span className="s-avatar s-avatar--lg" style={{ background: brandPrimary, color: onColor(brandPrimary) }}>
                 {brandInitial}
               </span>
             )}
@@ -93,11 +94,11 @@ export default async function EventDetailPage({ params }: { params: { id: string
           <div style={{ minWidth: 0 }}>
           <span className="eyebrow">
             Evento · {brand?.name ?? brand?.slug}
-            <span className={`s-badge ${event.is_published ? 's-badge--ok' : 's-badge--draft'}`} style={{ marginLeft: 10, verticalAlign: 'middle' }}>
+            <span className={`s-badge s-badge--inline ${event.is_published ? 's-badge--ok' : 's-badge--draft'}`}>
               {event.is_published ? 'Publicado' : 'Borrador'}
             </span>
             {event.archived_at && (
-              <span className="s-badge s-badge--draft" style={{ marginLeft: 8, verticalAlign: 'middle' }}>
+              <span className="s-badge s-badge--draft s-badge--inline">
                 Archivado
               </span>
             )}
@@ -121,7 +122,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
       <div className="s-stats">
         <div className="s-stat">
           <span className="s-stat__label">Ventas pagadas</span>
-          <span className="s-stat__value" style={{ fontSize: 26 }}>{formatPEN(grossCents)}</span>
+          <span className="s-stat__value s-stat__value--money">{formatPEN(grossCents)}</span>
         </div>
         <div className="s-stat">
           <span className="s-stat__label">Órdenes pagadas</span>
@@ -175,7 +176,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
       )}
 
       {/* Zona de gestión — archivar / eliminar */}
-      <div className="s-card" style={{ marginTop: 22 }}>
+      <div className="s-card s-card--danger s-section">
         <div className="s-card__head">
           <div>
             <h2 className="s-h2">Zona de gestión</h2>
@@ -195,7 +196,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
 
         <div className="s-divider" />
 
-        <h3 className="s-h2" style={{ fontSize: 16 }}>Eliminar definitivamente</h3>
+        <h3 className="s-h3">Eliminar definitivamente</h3>
         <p className="s-card__desc" style={{ marginBottom: 12 }}>
           Borra el evento para siempre. Solo es posible si no tiene ninguna venta.
         </p>

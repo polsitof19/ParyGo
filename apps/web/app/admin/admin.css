@@ -492,3 +492,6 @@
   .admin-shell .a-publish { transition: background-color .3s var(--ease), border-color .3s var(--ease); }
   .admin-shell .a-publish__txt > svg { transition: color .3s var(--ease); }
 }
+
+/* Confirmación de borrado (DangerDeleteButton): antes era un style inline. */
+.admin-shell .s-card--confirm-danger { border-color: var(--alert); box-shadow: inset 3px 0 0 var(--alert); }

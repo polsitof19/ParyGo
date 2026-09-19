@@ -10,7 +10,7 @@
 # bindings (app.parygo.com, *.parygo.com) are configured in the dashboard,
 # not here.
 
-name = "parygo-web"
+name = "parygo-app" # el proyecto real en Cloudflare Pages (verificado 2026-09-18)
 compatibility_date = "2025-05-01"
 # nodejs_compat lets us call APIs like Buffer that some transitive deps
 # expect even though we don't use them directly. Required for the

@@ -69,84 +69,76 @@ export default async function SaludPage() {
 
   return (
     <>
-      <div style={{ marginBottom: 16 }}>
-        <span className="eyebrow">Plataforma</span>
-        <h1 className="s-h2" style={{ marginTop: 2 }}>Salud y observabilidad</h1>
-        <p className="s-card__desc">Estado en vivo de la plataforma. Solo lectura.</p>
+      <header className="s-pagehead">
+        <div>
+          <span className="eyebrow">Plataforma</span>
+          <h1 className="s-h1">Salud</h1>
+          <p className="s-card__desc">Estado en vivo de la plataforma. Solo lectura.</p>
+        </div>
+      </header>
+
+      {/* Alertas: punto de color + texto en tinta. Sin alertas, una sola nota ok. */}
+      <div className="s-notices" role="status">
+        {alerts.length > 0
+          ? alerts.map((a, i) => <p key={i} className={`s-notice s-notice--${a.tone}`}>{a.text}</p>)
+          : <p className="s-notice s-notice--ok">Todo en orden — sin alertas.</p>}
       </div>
 
-      {/* Alertas (si hay) — dot de color del sistema, sin emojis */}
-      {alerts.length > 0 && (
-        <div className="s-stack" style={{ gap: 8, marginBottom: 16 }}>
-          {alerts.map((a, i) => (
-            <div key={i} className="s-card" style={{ padding: '12px 16px', borderLeft: `4px solid var(--${a.tone})`, display: 'flex', gap: 10, alignItems: 'center' }}>
-              <span style={{ width: 10, height: 10, borderRadius: '50%', background: `var(--${a.tone})`, flexShrink: 0 }} />
-              <span style={{ fontSize: 14, fontWeight: 600 }}>{a.text}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      {alerts.length === 0 && (
-        <div className="s-card" style={{ padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center' }}>
-          <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--ok)', flexShrink: 0 }} />
-          <span style={{ fontSize: 14, fontWeight: 600 }}>Todo en orden — sin alertas.</span>
-        </div>
-      )}
-
-      {/* KPIs */}
+      {/* Actividad: inventario, sin color. */}
       <div className="s-stats-4" style={{ marginBottom: 16 }}>
-        <Kpi label="Marcas activas" value={String(brandsActive)} />
-        <Kpi label="Eventos publicados" value={String(eventsPublished)} />
-        <Kpi label="Órdenes pagadas hoy" value={String(ordersToday)} sub="horario Lima" />
-        <Kpi label="Entradas emitidas hoy" value={String(ticketsToday)} sub="horario Lima" />
+        <Kpi label="Marcas activas" value={brandsActive} />
+        <Kpi label="Eventos publicados" value={eventsPublished} />
+        <Kpi label="Órdenes pagadas hoy" value={ordersToday} sub="horario Lima" />
+        <Kpi label="Entradas emitidas hoy" value={ticketsToday} sub="horario Lima" />
       </div>
 
-      {/* Cola de emails */}
+      {/* Cola de emails: el punto aparece solo si hay fallidos. */}
       <div className="s-card" style={{ marginBottom: 16 }}>
-        <p className="s-card__title">Cola de emails (notification_jobs)</p>
-        <div className="s-stats-4" style={{ marginTop: 4 }}>
-          <Kpi label="Pendientes" value={String(njPending)} sub="por enviar / en proceso" />
-          <Kpi label="Fallidos" value={String(njFailed.length)} sub="últimos 14 días" />
-          <Kpi label="Enviados" value={String(njSent14d)} sub="últimos 14 días" />
+        <h2 className="s-card__title">Cola de emails</h2>
+        <p className="s-card__desc">notification_jobs · últimos 14 días</p>
+        <div className="s-stats-4" style={{ marginTop: 14 }}>
+          <Kpi label="Pendientes" value={njPending} sub="por enviar / en proceso" />
+          <Kpi label="Fallidos" value={njFailed.length} sub="últimos 14 días" todo={njFailed.length > 0} />
+          <Kpi label="Enviados" value={njSent14d} sub="últimos 14 días" />
         </div>
         {failedList.length > 0 && (
-          <div style={{ marginTop: 14 }}>
-            <p className="s-muted" style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>Últimos fallidos</p>
-            <div className="s-stack" style={{ gap: 6 }}>
+          <div style={{ marginTop: 18 }}>
+            <p className="s-section-lead">Últimos fallidos</p>
+            <ul className="s-hlist">
               {failedList.map((j, i) => (
-                <div key={i} style={{ borderTop: '1px solid var(--cream-3)', paddingTop: 6, fontSize: 13 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                <li key={i}>
+                  <div className="s-hlist__row">
                     <strong>{j.kind}</strong>
-                    <span className="s-muted" style={{ fontSize: 12 }}>{new Date(j.created_at).toLocaleString('es-PE', { timeZone: 'America/Lima' })} · {j.attempts ?? 0} intento(s)</span>
+                    <span className="s-muted s-small">{new Date(j.created_at).toLocaleString('es-PE', { timeZone: 'America/Lima' })} · {j.attempts ?? 0} intento(s)</span>
                   </div>
-                  {j.last_error && <p className="s-muted" style={{ fontSize: 12, marginTop: 2, wordBreak: 'break-word' }}>{j.last_error.slice(0, 200)}</p>}
-                </div>
+                  {j.last_error && <p className="s-muted s-small" style={{ marginTop: 2, wordBreak: 'break-word' }}>{j.last_error.slice(0, 200)}</p>}
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         )}
       </div>
 
-      {/* Pagos por revisar + integridad */}
-      <div className="s-form-grid" style={{ gap: 12 }}>
-        <div className="s-card">
-          <p className="s-card__title">Pagos Yape por revisar</p>
-          <p style={{ fontFamily: 'var(--display)', fontWeight: 800, fontSize: 30 }}>{yapePending}</p>
-          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 2 }}>Órdenes en <code>pending_yape_review</code> en toda la plataforma.</p>
+      {/* Pagos por revisar + integridad: el punto aparece solo si hay algo. */}
+      <div className="s-form-grid" style={{ gap: 14 }}>
+        <div className={`s-stat${yapePending > 0 ? ' s-stat--alert' : ''}`}>
+          <span className="s-stat__label">Pagos Yape por revisar</span>
+          <span className="s-stat__value">{yapePending}</span>
+          <span className="s-stat__sub">Órdenes en <code>pending_yape_review</code> en toda la plataforma.</span>
         </div>
-        <div className="s-card">
-          <p className="s-card__title">Integridad de stock</p>
-          <p style={{ fontFamily: 'var(--display)', fontWeight: 800, fontSize: 30, color: oversell > 0 ? 'var(--alert)' : 'var(--ok)' }}>{oversell}</p>
-          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 2 }}>Tipos con <code>sold &gt; capacidad</code> (oversell). Debe ser 0.</p>
+        <div className={`s-stat${oversell > 0 ? ' s-stat--alert s-stat--crit' : ''}`}>
+          <span className="s-stat__label">Integridad de stock</span>
+          <span className="s-stat__value">{oversell}</span>
+          <span className="s-stat__sub">Tipos con <code>sold &gt; capacidad</code> (oversell). Debe ser 0.</span>
         </div>
       </div>
     </>
   );
 }
 
-function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function Kpi({ label, value, sub, todo = false }: { label: string; value: number; sub?: string; todo?: boolean }) {
   return (
-    <div className="s-stat">
+    <div className={`s-stat${todo ? ' s-stat--alert' : ''}`}>
       <span className="s-stat__label">{label}</span>
       <span className="s-stat__value">{value}</span>
       {sub && <span className="s-stat__sub">{sub}</span>}

@@ -14,7 +14,7 @@ export function RejectButton({ requestId }: { requestId: string }) {
     >
       <input type="hidden" name="request_id" value={requestId} />
       <Submit />
-      {state.message && !state.ok && <span className="s-muted" style={{ fontSize: 12, marginLeft: 8 }}>{state.message}</span>}
+      {state.message && !state.ok && <span className="s-err" style={{ marginTop: 0 }}>{state.message}</span>}
     </form>
   );
 }
@@ -22,7 +22,7 @@ export function RejectButton({ requestId }: { requestId: string }) {
 function Submit() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className="s-btn s-btn--soft s-btn--sm" disabled={pending} style={{ color: 'var(--alert)' }}>
+    <button type="submit" className="s-btn s-btn--danger-soft s-btn--sm" disabled={pending}>
       {pending ? 'Rechazando…' : 'Rechazar'}
     </button>
   );

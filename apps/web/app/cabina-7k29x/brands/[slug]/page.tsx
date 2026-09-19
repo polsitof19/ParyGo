@@ -15,13 +15,10 @@ import { publicEnv } from '@/lib/env';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { DangerDeleteButton } from '@/components/manage/DangerDeleteButton';
 import { setBrandArchivedAction, deleteBrandAction } from './actions';
+import { onColor, bgFor, initialOf } from '../../on-color';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
-
-const AVATAR_BG = ['#FF6A3D', '#5B6CFF', '#E8552A', '#2E9E6B', '#C7791A', '#8A5BFF'];
-const bgFor = (s: string) => AVATAR_BG[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_BG.length];
-const initialOf = (name: string) => (name.trim()[0] ?? '?').toUpperCase();
 
 export default async function BrandDetailPage({
   params,
@@ -79,7 +76,7 @@ export default async function BrandDetailPage({
         {logoUrl ? (
           <BrandLogo src={logoUrl} alt="" size={52} ring={false} />
         ) : (
-          <span className="s-avatar s-avatar--lg" style={{ background: primaryColor, color: '#fff' }}>
+          <span className="s-avatar s-avatar--lg" style={{ background: primaryColor, color: onColor(primaryColor) }}>
             {initialOf(brand.name)}
           </span>
         )}
@@ -87,7 +84,7 @@ export default async function BrandDetailPage({
           <h1 className="s-h1">
             {brand.name}
             {brand.archived_at && (
-              <span className="s-badge s-badge--draft" style={{ marginLeft: 10, verticalAlign: 'middle' }}>
+              <span className="s-badge s-badge--draft s-badge--inline">
                 Archivada
               </span>
             )}
@@ -118,11 +115,11 @@ export default async function BrandDetailPage({
           <span className="s-stat__label">Dueño</span>
           {owner ? (
             <span className="s-stat__owner">
-              <span className="s-avatar s-avatar--sm" style={{ background: bgFor(owner) }}>{initialOf(owner)}</span>
+              <span className="s-avatar s-avatar--sm" style={{ background: bgFor(owner), color: onColor(bgFor(owner)) }}>{initialOf(owner)}</span>
               <span className="s-stat__owner-email">{owner}</span>
             </span>
           ) : (
-            <span className="s-badge s-badge--alert" style={{ marginTop: 6 }}>Sin dueño</span>
+            <span className="s-flag" style={{ marginTop: 6 }}>Sin dueño</span>
           )}
         </div>
       </div>
@@ -138,8 +135,8 @@ export default async function BrandDetailPage({
       </div>
 
       <div className="s-grid-2">
-        {/* Cargar saldo */}
-        <div className="s-card">
+        {/* Cargar saldo — ancla #saldo: la acción rápida "Recargar saldo" de Marcas llega acá. */}
+        <div className="s-card s-anchor" id="saldo">
           <h2 className="s-h2">Cargar saldo</h2>
           <p className="s-card__desc">
             Cada evento creado consume 1. En 0 no se puede crear hasta cargar un pack.
@@ -176,7 +173,7 @@ export default async function BrandDetailPage({
           {logoUrl ? (
             <BrandLogo src={logoUrl} alt="" size={40} ring={false} />
           ) : (
-            <span className="s-avatar" style={{ background: primaryColor, color: '#fff' }}>
+            <span className="s-avatar" style={{ background: primaryColor, color: onColor(primaryColor) }}>
               {initialOf(brand.name)}
             </span>
           )}
@@ -238,7 +235,7 @@ export default async function BrandDetailPage({
             {admins.map((m) => (
               <li key={m.id} className="s-owner-row">
                 <div className="s-owner-row__id">
-                  <span className="s-avatar s-avatar--sm" style={{ background: bgFor(m.display_name ?? m.id) }}>
+                  <span className="s-avatar s-avatar--sm" style={{ background: bgFor(m.display_name ?? m.id), color: onColor(bgFor(m.display_name ?? m.id)) }}>
                     {initialOf(m.display_name ?? '?')}
                   </span>
                   <span className="s-owner-row__email">
@@ -268,7 +265,7 @@ export default async function BrandDetailPage({
       </div>
 
       {/* Zona de gestión — archivar / eliminar marca (solo super admin) */}
-      <div className="s-card" style={{ borderColor: 'var(--alert)' }}>
+      <div className="s-card s-card--danger">
         <div className="s-card__head">
           <div>
             <h2 className="s-h2">Zona de gestión</h2>
@@ -288,7 +285,7 @@ export default async function BrandDetailPage({
 
         <div className="s-divider" />
 
-        <h3 className="s-h2" style={{ fontSize: 16 }}>Eliminar definitivamente</h3>
+        <h3 className="s-h3">Eliminar definitivamente</h3>
         <p className="s-card__desc" style={{ marginBottom: 12 }}>
           Borra la marca para siempre. Solo es posible si está vacía: sin eventos, sin ventas.
         </p>
