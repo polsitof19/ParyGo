@@ -146,7 +146,7 @@ export default async function SuperHome() {
 
   const quickActions = (r: BrandRow) => (
     <span className="s-rowacts">
-      <Link href={`/cabina-7k29x/brands/${r.slug}`} className="s-rowbtn" title="Recargar saldo" aria-label={`Recargar saldo de ${r.name}`}>
+      <Link href={`/cabina-7k29x/brands/${r.slug}#saldo`} className="s-rowbtn" title="Recargar saldo" aria-label={`Recargar saldo de ${r.name}`}>
         <Wallet />
       </Link>
       <Link href={`/cabina-7k29x/events?brand=${r.slug}`} className="s-rowbtn" title="Ver eventos" aria-label={`Ver eventos de ${r.name}`}>
@@ -161,7 +161,7 @@ export default async function SuperHome() {
       <div className="s-pagehead">
         <div>
           <span className="eyebrow">Plataforma</span>
-          <h1 className="s-h1" style={{ marginTop: 8 }}>Marcas</h1>
+          <h1 className="s-h1">Marcas</h1>
           <p className="s-card__desc">
             {rows.length} marca{rows.length === 1 ? '' : 's'}
             {noOwner > 0 && <> · {noOwner} sin dueño</>}
@@ -301,7 +301,7 @@ export default async function SuperHome() {
 
       {/* Archivadas — sección aparte, solo lectura + desarchivar */}
       {archivedRows.length > 0 && (
-        <div className="s-card" style={{ marginTop: 22 }}>
+        <div className="s-card s-section">
           <div className="s-card__head">
             <div>
               <h2 className="s-h2">Archivadas</h2>

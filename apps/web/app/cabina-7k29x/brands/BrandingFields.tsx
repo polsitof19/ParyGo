@@ -50,9 +50,9 @@ export function BrandingFields({
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {previewLogo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={previewLogo} alt="preview del logo" style={{ height: 52, width: 52, borderRadius: '50%', border: '1px solid var(--cream-3)', objectFit: 'cover', background: 'var(--white)' }} />
+            <img src={previewLogo} alt="preview del logo" style={{ height: 52, width: 52, borderRadius: '50%', border: '1px solid var(--line)', objectFit: 'cover', background: 'var(--surface)' }} />
           ) : (
-            <span className="s-avatar" style={{ background: 'var(--cream-2)', color: 'var(--ink-3)', fontSize: 10 }}>—</span>
+            <span className="s-avatar" style={{ background: 'var(--paper-2)', color: 'var(--ink-3)', fontSize: 10 }}>—</span>
           )}
           <input id="logo" name="logo" type="file" accept={ACCEPT} onChange={onFile} className="s-input" style={{ paddingTop: 9 }} />
         </div>
@@ -67,7 +67,7 @@ export function BrandingFields({
             value={color}
             onChange={(e) => onPicker(e.target.value)}
             aria-label="Selector de color"
-            style={{ height: 42, width: 52, cursor: 'pointer', borderRadius: 8, border: '1px solid var(--cream-3)', background: 'transparent', flexShrink: 0 }}
+            style={{ height: 42, width: 52, cursor: 'pointer', borderRadius: 8, border: '1px solid var(--line)', background: 'transparent', flexShrink: 0 }}
           />
           <input
             type="text"
@@ -86,7 +86,7 @@ export function BrandingFields({
 
       <div className="s-field">
         <p className="s-label">Vista previa (contraste automático)</p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', background: '#FBF7F0', border: '1px solid var(--cream-3)', borderRadius: 12, padding: '14px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 12, padding: '14px 16px' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 40, padding: '0 18px', borderRadius: 999, background: safe, color: onColor, fontWeight: 700, fontSize: 14 }}>
             Comprar entradas
           </span>

@@ -84,7 +84,7 @@ export default async function BrandDetailPage({
           <h1 className="s-h1">
             {brand.name}
             {brand.archived_at && (
-              <span className="s-badge s-badge--draft" style={{ marginLeft: 10, verticalAlign: 'middle' }}>
+              <span className="s-badge s-badge--draft s-badge--inline">
                 Archivada
               </span>
             )}
@@ -119,7 +119,7 @@ export default async function BrandDetailPage({
               <span className="s-stat__owner-email">{owner}</span>
             </span>
           ) : (
-            <span className="s-badge s-badge--alert" style={{ marginTop: 6 }}>Sin dueño</span>
+            <span className="s-flag" style={{ marginTop: 6 }}>Sin dueño</span>
           )}
         </div>
       </div>
@@ -135,8 +135,8 @@ export default async function BrandDetailPage({
       </div>
 
       <div className="s-grid-2">
-        {/* Cargar saldo */}
-        <div className="s-card">
+        {/* Cargar saldo — ancla #saldo: la acción rápida "Recargar saldo" de Marcas llega acá. */}
+        <div className="s-card" id="saldo">
           <h2 className="s-h2">Cargar saldo</h2>
           <p className="s-card__desc">
             Cada evento creado consume 1. En 0 no se puede crear hasta cargar un pack.
@@ -265,7 +265,7 @@ export default async function BrandDetailPage({
       </div>
 
       {/* Zona de gestión — archivar / eliminar marca (solo super admin) */}
-      <div className="s-card" style={{ borderColor: 'var(--alert)' }}>
+      <div className="s-card s-card--danger">
         <div className="s-card__head">
           <div>
             <h2 className="s-h2">Zona de gestión</h2>
@@ -285,7 +285,7 @@ export default async function BrandDetailPage({
 
         <div className="s-divider" />
 
-        <h3 className="s-h2" style={{ fontSize: 16 }}>Eliminar definitivamente</h3>
+        <h3 className="s-h3">Eliminar definitivamente</h3>
         <p className="s-card__desc" style={{ marginBottom: 12 }}>
           Borra la marca para siempre. Solo es posible si está vacía: sin eventos, sin ventas.
         </p>
