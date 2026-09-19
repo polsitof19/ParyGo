@@ -287,8 +287,8 @@ await step('B', 'Organizador: crear evento, entradas, promo, preventa, publicar,
   check('B', 'preventa con subida (General 20 → 30)', gp.length === 2 && gp[0].price_cents === 2000 && gp[1].price_cents === 3000, JSON.stringify(gp.map((x) => [x.price_cents, x.ends_at])));
 
   // Promo 20%
-  await go(p, `/admin/events/${S.eventId}`);
-  if (!(await p.locator('#promo_code').isVisible())) await p.getByText('Códigos de RR.PP.').first().click();
+  await go(p, `/admin/events/${S.eventId}/promotores`);
+  // Los códigos RR.PP. viven en Ventas y pagos → Promotores (antes: acordeón del Resumen).
   await p.fill('#promo_code', PROMO);
   await p.fill('#promo_label', 'RRPP E2E');
   await p.selectOption('#promo_discount_type', 'percent');
@@ -382,6 +382,7 @@ await step('B', 'Organizador: crear evento, entradas, promo, preventa, publicar,
     await go(p, `/admin/events/${oldEv.id}/editar`);
     const balC0 = (await dbBrand()).event_balance;
     const tc = (await toastLog(p)).length;
+    await p.getByText('Zona de gestión').first().click(); // plegada por defecto
     await p.getByRole('button', { name: /Clonar como borrador/ }).click();
     await sleep(3500);
     const cloneMsgs = (await toastLog(p)).slice(tc).join(' | ');
@@ -596,7 +597,7 @@ if (!S.eventId) {
     } else note('F', 'no se capturó el request de checkout en C: se saltean los replays de checkout');
     // F1: el organizador emite 10 cortesías (camino previsto). F2: la 11ª se rechaza.
     const p = adm.page;
-    await go(p, `/admin/events/${S.eventId}/editar`);
+    await go(p, `/admin/events/${S.eventId}/cortesias`);
     const emitir = async (qty) => {
       await p.selectOption('#ct_type', { label: 'Cortesía' });
       await p.fill('#ct_qty', String(qty));
@@ -622,7 +623,7 @@ if (!S.eventId) {
     const { data: ctk } = await svc.from('tickets').select('id, order_id').eq('ticket_type_id', S.types['Cortesía']);
     const { data: corders } = await svc.from('orders').select('id,total_cents,status,payment_method').eq('event_id', S.eventId).eq('payment_method', 'courtesy');
     check('F', '10 cortesías emitidas sin pago (orden courtesy total 0, paid)', ctk.length === 10 && corders.every((o) => o.total_cents === 0 && o.status === 'paid'), `${m1} · tickets=${ctk.length} sold=${c1.sold} orders=${JSON.stringify(corders)}`);
-    await go(p, `/admin/events/${S.eventId}/editar`);
+    await go(p, `/admin/events/${S.eventId}/cortesias`);
     const m2 = await emitir(1);
     await shot(p, 'F', 'cortesia-11-rechazada');
     const { data: ctk2 } = await svc.from('tickets').select('id').eq('ticket_type_id', S.types['Cortesía']);
@@ -703,7 +704,7 @@ if (!S.eventId) {
     await shot(buyer.page, 'H', 'sexta-con-pendientes');
     const { data: h6 } = await svc.from('orders').select('id,status').eq('event_id', S.eventId).eq('buyer_email', `e2e-h6-${STAMP}@test.local`);
     check('H', '6ª VIP NO se vende (anti-sobreventa: sin orden, sin ticket)', !r2.orderId && (h6 ?? []).every((o) => o.status === 'failed'), `${r2.res} · órdenes=${JSON.stringify(h6)}`);
-    const crudo = /Array must|element(s)|violates|Expected|Required|invalid/i.test(r2.toasts.join(' '));
+    const crudo = /Array must|element\(s\)|violates|Expected|Required|invalid/i.test(r2.toasts.join(' '));
     check('H', 'bug2: 6ª VIP → "No quedan suficientes entradas de VIP." (sin error técnico)', r2.toasts.some((t) => /No quedan suficientes entradas de VIP/.test(t)) && !crudo, r2.toasts.join(' | '));
     check('H', 'bug2: con el carrito vacío no se puede avanzar a pagar (Continuar deshabilitado)', r2.continuarDisabled === true, `res=${r2.res}`);
     await shot(buyer.page, 'H', 'sexta-carrito-vacio');
@@ -780,6 +781,16 @@ if (!S.eventId) {
   // =====================================================================
   await step('J', 'Panel: ventas en tiempo real y asistentes', async () => {
     const p = adm.page;
+    // Estructura del panel (handoff): 4 grupos, "En la puerta", cortesías con historial.
+    await go(p, `/admin/events/${S.eventId}`);
+    const groups = await p.locator('.a-nav__label').allInnerTexts();
+    const navTxt = (await p.locator('.a-nav').innerText()).replace(/\s+/g, ' ');
+    check('J', 'nav del evento en 4 grupos, con "En la puerta" (no "Accesos")', groups.length === 4 && /En la puerta/.test(navTxt) && !/Accesos/.test(navTxt), groups.join(' | '));
+    const pulse = (await p.locator('.a-pulse').innerText().catch(() => '')).replace(/\s+/g, ' ');
+    check('J', 'Resumen arranca con "¿cómo va?" (vendidas / recaudado / cuándo / entraron)', /VENDIDAS/i.test(pulse) && /RECAUDADO/i.test(pulse) && /CUÁNDO/i.test(pulse), pulse.slice(0, 160));
+    await go(p, `/admin/events/${S.eventId}/cortesias`);
+    const cort = await bodyText(p, 2000);
+    check('J', 'Cortesías muestra lo emitido (10 entradas)', /10 entradas de cortesía/.test(cort), (cort.match(/\d+ entradas? de cortesía[^.]*/) ?? [''])[0]);
     await go(p, `/admin/events/${S.eventId}`);
     await shot(p, 'J', 'resumen');
     const rows = await p.locator('table.a-typetable tbody tr').allInnerTexts();

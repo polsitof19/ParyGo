@@ -12,8 +12,8 @@ import { PublishControl } from './PublishControl';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-// Layout compartido de un evento: back + cabecera + pestañas. Cada apartado
-// (resumen/editar/entradas/clientes/accesos/yape) renderiza solo su contenido.
+// Layout compartido de un evento: back + cabecera + navegación en 4 grupos.
+// Cada apartado renderiza solo su contenido.
 export default async function EventLayout({
   children,
   params,
@@ -69,7 +69,7 @@ export default async function EventLayout({
         <div>
           <span className="eyebrow">
             Evento
-            <span className={`s-badge ${event.is_published ? 's-badge--ok' : 's-badge--draft'}`} style={{ marginLeft: 10, verticalAlign: 'middle' }}>
+            <span className={`s-badge s-badge--inline ${event.is_published ? 's-badge--ok' : 's-badge--draft'}`}>
               {event.is_published ? 'Publicado' : 'Borrador'}
             </span>
           </span>
@@ -79,7 +79,7 @@ export default async function EventLayout({
             {event.venue_name && <> · {event.venue_name}</>}
           </p>
           {brandUrl && event.is_published && (
-            <a href={brandUrl} target="_blank" rel="noopener noreferrer" className="s-brandhead__url" style={{ marginTop: 6 }}>
+            <a href={brandUrl} target="_blank" rel="noopener noreferrer" className="a-publink">
               Ver página pública <ExternalLink className="h-3 w-3" />
             </a>
           )}

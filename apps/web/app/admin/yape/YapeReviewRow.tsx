@@ -98,7 +98,6 @@ export function YapeReviewRow({
             role="alert"
             style={{
               marginBottom: 12, display: 'flex', alignItems: 'flex-start', gap: 8,
-              ...(duplicateWarning === 'pending' ? { background: 'var(--warn-bg, #fff4e5)', color: 'var(--warn, #9a6700)' } : {}),
             }}
           >
             <X className="h-4 w-4" style={{ flexShrink: 0, marginTop: 2 }} />
@@ -138,11 +137,11 @@ export function YapeReviewRow({
         </p>
 
         {impersonating ? (
-          <p className="s-banner" style={{ marginTop: 16, background: 'var(--cream-2)', color: 'var(--ink-2)' }} role="status">
+          <p className="s-banner" style={{ marginTop: 16, background: 'var(--paper-2)', color: 'var(--ink-2)' }} role="status">
             Solo lectura — no puedes aprobar ni rechazar comprobantes desde aquí.
           </p>
         ) : showReject ? (
-          <div className="s-card" style={{ marginTop: 14, borderColor: 'var(--alert)', background: 'var(--alert-bg)' }}>
+          <div className="s-card a-reject-box">
             <label className="s-label">Motivo del rechazo</label>
             <input
               className="s-input"
@@ -153,8 +152,7 @@ export function YapeReviewRow({
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               <button
                 type="button"
-                className="s-btn s-btn--primary"
-                style={{ background: 'var(--alert)', boxShadow: 'none' }}
+                className="s-btn s-btn--danger"
                 disabled={pending}
                 onClick={() => {
                   start(async () => {

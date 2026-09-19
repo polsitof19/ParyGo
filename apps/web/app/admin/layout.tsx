@@ -5,6 +5,9 @@ import { ownerBrandContext } from '@/lib/impersonation';
 import { createClient } from '@/lib/supabase/server';
 import { AdminTopbar } from './AdminTopbar';
 import { ImpersonationBanner } from './ImpersonationBanner';
+// Orden: tokens → base compartida de paneles → lo propio del organizador.
+import '../styles/parygo-tokens.css';
+import '../styles/parygo-panel.css';
 import './admin.css';
 
 export const runtime = 'edge';
@@ -51,7 +54,7 @@ export default async function AdminLayout({
   const logoUrl = (brand?.theme_json as { logo_url?: string | null } | null)?.logo_url ?? null;
 
   return (
-    <div className={`admin-shell ${bricolage.variable} ${hanken.variable}`}>
+    <div className={`pg pg-panel admin-shell ${bricolage.variable} ${hanken.variable}`}>
       {ctx.impersonating && <ImpersonationBanner brandName={brand?.name ?? 'la marca'} />}
       <AdminTopbar brandName={brand?.name ?? 'Tu marca'} email={user.email} logoUrl={logoUrl} />
       <main className="s-wrap">{children}</main>

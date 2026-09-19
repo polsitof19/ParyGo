@@ -35,10 +35,10 @@ export function MpCredentialsForm({ hasAccessToken, hasPublicKey, readOnly = fal
       </p>
 
       {!configured && !readOnly && (
-        <details style={{ background: 'var(--cream-2)', borderRadius: 12, border: '1px solid var(--cream-3)', marginBottom: 14, padding: '10px 14px' }}>
+        <details style={{ background: 'var(--paper-2)', borderRadius: 12, border: '1px solid var(--line)', marginBottom: 14, padding: '10px 14px' }}>
           <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>¿Cómo consigo mis credenciales?</summary>
           <ol style={{ margin: '10px 0 0', paddingLeft: 18, fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink-2)' }}>
-            <li>Entrá a tu <a href="https://www.mercadopago.com.pe/developers/panel/app" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>panel de desarrolladores de MercadoPago</a> con la cuenta donde querés recibir la plata.</li>
+            <li>Entrá a tu <a href="https://www.mercadopago.com.pe/developers/panel/app" target="_blank" rel="noopener noreferrer" className="s-textlink" style={{ fontWeight: 600 }}>panel de desarrolladores de MercadoPago</a> con la cuenta donde querés recibir la plata.</li>
             <li>Creá una aplicación (o usá una existente) y abrí <strong>Credenciales de producción</strong>.</li>
             <li>Copiá el <strong>Access Token</strong> y la <strong>Public Key</strong> (empiezan con <code>APP_USR-</code>) y pegalos acá abajo.</li>
           </ol>

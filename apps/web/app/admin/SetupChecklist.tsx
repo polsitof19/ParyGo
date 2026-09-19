@@ -28,11 +28,11 @@ export function SetupChecklist({ steps, brandName }: { steps: SetupStep[]; brand
   const pct = Math.round((doneCount / total) * 100);
 
   return (
-    <div className="s-card" style={{ marginBottom: 22, borderColor: 'var(--brand-ink)', borderWidth: 1.5 }}>
+    <div className="s-card" style={{ marginBottom: 22, boxShadow: 'inset 3px 0 0 var(--accent), var(--shadow-sm)' }}>
       <div className="s-card__head" style={{ alignItems: 'flex-start' }}>
         <div>
           <h2 className="s-h2" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <Rocket className="h-4 w-4" style={{ color: 'var(--brand-ink)' }} /> Primeros pasos
+            <Rocket className="h-4 w-4" style={{ color: 'var(--ink-2)' }} /> Primeros pasos
           </h2>
           <p className="s-card__desc">
             Dejá tu primer evento listo para vender. Vas {doneCount} de {total}.
@@ -42,8 +42,8 @@ export function SetupChecklist({ steps, brandName }: { steps: SetupStep[]; brand
       </div>
 
       {/* Barra de progreso */}
-      <div style={{ height: 8, borderRadius: 999, background: 'var(--cream-2)', overflow: 'hidden', margin: '4px 0 14px' }} aria-hidden="true">
-        <div style={{ width: `${pct}%`, height: '100%', background: 'var(--brand-ink)', transition: 'width .3s' }} />
+      <div style={{ height: 8, borderRadius: 999, background: 'var(--paper-2)', overflow: 'hidden', margin: '4px 0 14px' }} aria-hidden="true">
+        <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent)', transition: 'width .3s' }} />
       </div>
 
       <ol className="s-stack" style={{ gap: 8, listStyle: 'none', margin: 0, padding: 0 }}>
@@ -54,8 +54,8 @@ export function SetupChecklist({ steps, brandName }: { steps: SetupStep[]; brand
               key={s.key}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
-                borderRadius: 12, border: '1px solid var(--cream-3)',
-                background: s.done ? 'var(--cream)' : isNext ? 'var(--cream-2)' : 'transparent',
+                borderRadius: 12, border: '1px solid var(--line)',
+                background: s.done ? 'var(--paper)' : isNext ? 'var(--paper-2)' : 'transparent',
                 opacity: s.done ? 0.72 : 1,
               }}
             >
@@ -64,7 +64,7 @@ export function SetupChecklist({ steps, brandName }: { steps: SetupStep[]; brand
                 style={{
                   flexShrink: 0, width: 26, height: 26, borderRadius: '50%',
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  background: s.done ? 'var(--ok, #16a34a)' : 'var(--cream-3)',
+                  background: s.done ? 'var(--ok, #16a34a)' : 'var(--line)',
                   color: s.done ? '#fff' : 'var(--ink-3)', fontWeight: 700, fontSize: 13,
                 }}
               >

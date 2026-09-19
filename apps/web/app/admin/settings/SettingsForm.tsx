@@ -69,9 +69,9 @@ export function SettingsForm(props: Props) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               {props.yapeQrUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={props.yapeQrUrl} alt="QR de Yape actual" style={{ height: 64, width: 64, borderRadius: 10, border: '1px solid var(--cream-3)', objectFit: 'cover' }} />
+                <img src={props.yapeQrUrl} alt="QR de Yape actual" style={{ height: 64, width: 64, borderRadius: 10, border: '1px solid var(--line)', objectFit: 'cover' }} />
               ) : (
-                <span className="s-avatar" style={{ background: 'var(--cream-2)', color: 'var(--ink-3)', fontSize: 10, borderRadius: 10 }}>QR</span>
+                <span className="s-avatar" style={{ background: 'var(--paper-2)', color: 'var(--ink-3)', fontSize: 10, borderRadius: 10 }}>QR</span>
               )}
               <input id="yape_qr" name="yape_qr" type="file" accept="image/png,image/jpeg,image/webp" className="s-input" style={{ paddingTop: 9 }} disabled={ro} />
             </div>
@@ -91,7 +91,7 @@ export function SettingsForm(props: Props) {
             {props.logoUrl ? (
               <BrandLogo src={props.logoUrl} alt="logo actual" size={48} ring={false} />
             ) : (
-              <span className="s-avatar" style={{ background: 'var(--cream-2)', color: 'var(--ink-3)', fontSize: 10 }}>—</span>
+              <span className="s-avatar" style={{ background: 'var(--paper-2)', color: 'var(--ink-3)', fontSize: 10 }}>—</span>
             )}
             <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp" className="s-input" style={{ paddingTop: 9 }} disabled={ro} />
           </div>
@@ -100,13 +100,13 @@ export function SettingsForm(props: Props) {
         <div className="s-form-grid s-field">
           <Field label="Color primario" htmlFor="primary_color" error={err.primary_color}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input type="color" name="primary_color" id="primary_color" value={primary} onChange={(e) => setPrimary(e.target.value)} disabled={ro} style={{ height: 40, width: 56, cursor: ro ? 'default' : 'pointer', borderRadius: 8, border: '1px solid var(--cream-3)', background: 'transparent' }} />
+              <input type="color" name="primary_color" id="primary_color" value={primary} onChange={(e) => setPrimary(e.target.value)} disabled={ro} style={{ height: 40, width: 56, cursor: ro ? 'default' : 'pointer', borderRadius: 8, border: '1px solid var(--line)', background: 'transparent' }} />
               <span className="s-muted" style={{ fontSize: 13 }}>{primary}</span>
             </div>
           </Field>
           <Field label="Color secundario" htmlFor="secondary_color" error={err.secondary_color}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input type="color" name="secondary_color" id="secondary_color" value={secondary} onChange={(e) => setSecondary(e.target.value)} disabled={ro} style={{ height: 40, width: 56, cursor: ro ? 'default' : 'pointer', borderRadius: 8, border: '1px solid var(--cream-3)', background: 'transparent' }} />
+              <input type="color" name="secondary_color" id="secondary_color" value={secondary} onChange={(e) => setSecondary(e.target.value)} disabled={ro} style={{ height: 40, width: 56, cursor: ro ? 'default' : 'pointer', borderRadius: 8, border: '1px solid var(--line)', background: 'transparent' }} />
               <span className="s-muted" style={{ fontSize: 13 }}>{secondary}</span>
             </div>
           </Field>

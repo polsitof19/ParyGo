@@ -186,7 +186,7 @@ export function PromoCodeManager({
             <span>Solo algunas entradas</span>
           </label>
           {!appliesToAll && (
-            <div style={{ marginTop: 8, padding: 12, border: '1px dashed var(--cream-3)', borderRadius: 'var(--r-ctl)' }}>
+            <div style={{ marginTop: 8, padding: 12, border: '1px dashed var(--line)', borderRadius: 'var(--r-ctl)' }}>
               {ticketTypes.length === 0 ? (
                 <p className="s-hint">Este evento no tiene tipos de entrada.</p>
               ) : (

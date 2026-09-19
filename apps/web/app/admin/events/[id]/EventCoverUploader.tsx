@@ -30,7 +30,7 @@ export function EventCoverUploader({ eventId, currentUrl, readOnly = false }: { 
         <div
           style={{
             width: 132, height: 176, borderRadius: 'var(--r-ctl)', overflow: 'hidden', flexShrink: 0,
-            border: '1px solid var(--cream-3)', background: 'var(--cream-2)', display: 'grid', placeItems: 'center',
+            border: '1px solid var(--line)', background: 'var(--paper-2)', display: 'grid', placeItems: 'center',
           }}
         >
           {shown ? (

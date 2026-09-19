@@ -139,7 +139,7 @@ export default async function ReportePage({ params }: { params: { id: string } }
         {typeRows.length === 0 ? <p className="s-empty">No hay tipos de entrada.</p> : (
           <div className="s-stack" style={{ gap: 8, marginTop: 8 }}>
             {typeRows.map((r) => (
-              <div key={r.id} style={{ borderTop: '1px solid var(--cream-3)', paddingTop: 8 }}>
+              <div key={r.id} style={{ borderTop: '1px solid var(--line)', paddingTop: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                   <strong>{r.name}</strong>
                   <span>{formatPEN(r.recaudadoCents)}</span>
@@ -181,7 +181,7 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub?: string
 
 function Line({ left, right }: { left: string; right: string }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, borderTop: '1px solid var(--cream-3)', paddingTop: 6 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, borderTop: '1px solid var(--line)', paddingTop: 6 }}>
       <span className="s-muted" style={{ fontSize: 13.5 }}>{left}</span>
       <strong style={{ fontSize: 14 }}>{right}</strong>
     </div>

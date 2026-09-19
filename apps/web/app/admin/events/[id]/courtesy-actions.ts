@@ -148,6 +148,7 @@ export async function issueCourtesyTicketsAction(
   });
 
   revalidatePath(`/admin/events/${event.id}`);
+  revalidatePath(`/admin/events/${event.id}/cortesias`);
   return {
     ok: true,
     message: emailSent

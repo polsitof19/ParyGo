@@ -14,8 +14,8 @@ export function CancelEvent({ eventId, eventName, cancelled }: { eventId: string
 
   if (cancelled) {
     return (
-      <div className="s-card" style={{ borderColor: 'var(--alert, #D7472F)' }}>
-        <h3 className="s-h2" style={{ fontSize: 16, display: 'inline-flex', gap: 8, alignItems: 'center', color: 'var(--alert, #D7472F)' }}>
+      <div className="s-card s-card--confirm-danger">
+        <h3 className="s-h3" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
           <Ban className="h-4 w-4" /> Evento cancelado
         </h3>
         <p className="s-card__desc" style={{ marginTop: 6 }}>Este evento está cancelado: no se vende y no aparece en público. Ya se avisó por email a los compradores.</p>
@@ -34,8 +34,8 @@ export function CancelEvent({ eventId, eventName, cancelled }: { eventId: string
   };
 
   return (
-    <div className="s-card" style={{ borderColor: 'var(--alert, #D7472F)' }}>
-      <h3 className="s-h2" style={{ fontSize: 16, display: 'inline-flex', gap: 8, alignItems: 'center', color: 'var(--alert, #D7472F)' }}>
+    <div className="s-card s-card--confirm-danger">
+      <h3 className="s-h3" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
         <Ban className="h-4 w-4" /> Cancelar evento
       </h3>
       <p className="s-card__desc" style={{ marginTop: 6 }}>
@@ -47,7 +47,7 @@ export function CancelEvent({ eventId, eventName, cancelled }: { eventId: string
         <textarea id="cancel-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} rows={2} className="s-input" style={{ resize: 'vertical' }} placeholder="Ej: problemas con el local" />
       </div>
       <div className="s-form-actions" style={{ marginTop: 12 }}>
-        <button type="button" className="s-btn s-btn--sm" style={{ background: 'var(--alert, #D7472F)', color: '#fff' }} disabled={pending} onClick={onCancel}>
+        <button type="button" className="s-btn s-btn--danger s-btn--sm" disabled={pending} onClick={onCancel}>
           {pending ? 'Cancelando…' : 'Cancelar evento y avisar a los compradores'}
         </button>
       </div>

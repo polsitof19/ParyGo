@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Bell, Tag } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
 import { YapeReviewRow } from '@/app/admin/yape/YapeReviewRow';
-import { PromoCodeManager, type PromoCodeRow, type PromoSales } from './PromoCodeManager';
+import { publicEnv } from '@/lib/env';
+import { QuickActions } from './QuickActions';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -18,7 +18,11 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
   const impersonating = ctx.impersonating;
 
   const admin = createAdminClient();
-  const { data: event } = await admin.from('events').select('id, brand_id').eq('id', params.id).maybeSingle();
+  const { data: event } = await admin
+    .from('events')
+    .select('id, brand_id, slug, starts_at, ends_at, is_published, brand:brands ( slug )')
+    .eq('id', params.id)
+    .maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
 
   type ProofRow = {
@@ -35,8 +39,7 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
     { data: pendData },
     { data: activePrices },
     { data: rejected },
-    { data: promoCodes },
-    { data: promoOrders },
+    { data: ticketRows },
   ] = await Promise.all([
     admin.from('orders').select('id, total_cents, payment_method, created_at').eq('event_id', event.id).eq('status', 'paid'),
     admin.from('ticket_types').select('id, name, price_cents, capacity, sold, is_unlimited, is_active, sort_order').eq('event_id', event.id).order('sort_order'),
@@ -53,8 +56,9 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
       .from('yape_proofs')
       .select('id, amount_cents, reject_reason, reviewed_at, order:orders!yape_proofs_order_id_fkey ( buyer_name, buyer_email, event_id )')
       .eq('brand_id', event.brand_id).eq('status', 'rejected').order('reviewed_at', { ascending: false }).limit(50),
-    admin.from('promo_codes').select('id, code, label, discount_type, discount_value, max_uses, use_count, per_email_limit, applies_to_all, expires_at, is_active, created_at').eq('event_id', event.id).order('created_at', { ascending: false }),
-    admin.from('orders').select('id, promo_code_id, total_cents, discount_cents').eq('event_id', event.id).eq('status', 'paid').not('promo_code_id', 'is', null),
+    // Tickets válidos del evento: para separar entradas VENDIDAS de cortesías
+    // (ticket_types.sold cuenta las dos cosas juntas).
+    admin.from('tickets').select('order_id').eq('event_id', event.id).is('invalidated_at', null),
   ]);
 
   const paidRows = (paid ?? []) as { id: string; total_cents: number | null; payment_method: string; created_at: string }[];
@@ -106,12 +110,11 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
     if (ap.next_price_cents != null && ap.next_starts_at) nextByType.set(ap.ticket_type_id, { cents: ap.next_price_cents, at: ap.next_starts_at });
   }
 
-  const promoOrderRows = (promoOrders ?? []) as { id: string; promo_code_id: string | null; total_cents: number | null; discount_cents: number | null }[];
 
   // ---- OLA 2: queries que dependen de la ola 1, en paralelo ----
   const paidIds = paidRows.map((o) => o.id);
   const pendOrderIds = pendingProofs.map((p) => p.order?.id).filter((x): x is string => !!x);
-  const [recItems, phaseRows, pendItems, promoTickets, pendingReview] = await Promise.all([
+  const [recItems, phaseRows, pendItems, pendingReview] = await Promise.all([
     paidIds.length > 0
       ? admin.from('order_items').select('ticket_type_id, subtotal_cents').in('order_id', paidIds).then((r) => r.data)
       : Promise.resolve(null),
@@ -125,9 +128,6 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
       : Promise.resolve(null),
     pendOrderIds.length > 0
       ? admin.from('order_items').select('order_id, ticket_type_name, quantity').in('order_id', pendOrderIds).then((r) => r.data)
-      : Promise.resolve(null),
-    promoOrderRows.length > 0
-      ? admin.from('tickets').select('order_id').eq('event_id', event.id).is('invalidated_at', null).in('order_id', promoOrderRows.map((o) => o.id)).then((r) => r.data)
       : Promise.resolve(null),
     Promise.all(
       pendingProofs.map(async (p) => {
@@ -186,31 +186,96 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
   const rejectedRows = ((rejected ?? []) as unknown as { id: string; amount_cents: number; reject_reason: string | null; reviewed_at: string | null; order: { buyer_name: string; buyer_email: string; event_id: string } | null }[])
     .filter((r) => r.order?.event_id === event.id);
 
-  // Promos.
-  const ticketsPerOrder = new Map<string, number>();
-  for (const t of (promoTickets ?? []) as { order_id: string }[]) ticketsPerOrder.set(t.order_id, (ticketsPerOrder.get(t.order_id) ?? 0) + 1);
-  const promoSales: PromoSales = {};
-  for (const o of promoOrderRows) {
-    if (!o.promo_code_id) continue;
-    const agg = promoSales[o.promo_code_id] ?? { entries: 0, soldCents: 0, discountCents: 0 };
-    agg.entries += ticketsPerOrder.get(o.id) ?? 0; agg.soldCents += o.total_cents ?? 0; agg.discountCents += o.discount_cents ?? 0;
-    promoSales[o.promo_code_id] = agg;
+  // ---- "¿Cómo va?" — la franja de arriba ----
+  // Vendidas = entradas de órdenes pagadas que NO son cortesía; las cortesías
+  // se cuentan aparte (antes "Cortesías" mostraba la cantidad de ÓRDENES, no de
+  // entradas: 1 envío de 10 cortesías se veía como "1").
+  const courtesyOrderIds = new Set(paidRows.filter((o) => o.payment_method === 'courtesy').map((o) => o.id));
+  const paidOrderIds = new Set(paidRows.map((o) => o.id));
+  let soldTickets = 0;
+  let courtesyTickets = 0;
+  for (const t of (ticketRows ?? []) as { order_id: string }[]) {
+    if (!paidOrderIds.has(t.order_id)) continue;
+    if (courtesyOrderIds.has(t.order_id)) courtesyTickets += 1;
+    else soldTickets += 1;
   }
+  const soldPct = capTotal > 0 ? Math.min(100, Math.round((soldCapped / capTotal) * 100)) : null;
+  const startsMs = Date.parse(event.starts_at);
+  const endsMs = event.ends_at ? Date.parse(event.ends_at) : startsMs + 18 * 3600 * 1000;
+  const days = Math.ceil((startsMs - Date.now()) / 86400000);
+  const when = Date.now() > endsMs ? 'Terminó'
+    : Date.now() >= startsMs ? 'Es hoy — en curso'
+    : days <= 0 ? 'Hoy'
+    : days === 1 ? 'Mañana'
+    : `En ${days} días`;
+  const whenSub = new Date(event.starts_at).toLocaleString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' });
+  const brandSlug = (Array.isArray(event.brand) ? event.brand[0] : event.brand)?.slug ?? null;
+  const publicUrl = brandSlug ? `https://${brandSlug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${event.slug}` : null;
+  const noSalesYet = event.is_published && soldTickets === 0 && Date.now() < endsMs;
 
   return (
     <>
-      {/* Aprobar Yape — lo primero accionable, arriba de todo. La aprobación REAL
-          (no un banner): cada comprobante con sus botones Aprobar/Rechazar inline. */}
+      {/* 1) ¿Cómo va? — cuatro números, en 5 segundos. */}
+      <div className="a-pulse">
+        <div className="s-stat">
+          <span className="s-stat__label">Vendidas</span>
+          <span className="s-stat__value">{soldTickets}</span>
+          <span className="s-stat__sub">
+            {soldPct !== null ? `${soldPct}% del aforo ocupado` : 'aforo ilimitado'}
+            {courtesyTickets > 0 && ` · +${courtesyTickets} cortesía${courtesyTickets === 1 ? '' : 's'}`}
+          </span>
+          {soldPct !== null && <div className="a-meter" aria-hidden="true"><div className="a-meter__fill" style={{ width: `${soldPct}%` }} /></div>}
+        </div>
+        <div className="s-stat">
+          <span className="s-stat__label">Recaudado</span>
+          <span className="s-stat__value">{formatPEN(confirmedCents)}</span>
+          <span className="s-stat__sub">{pendingCount > 0 ? `+ ${formatPEN(pendingCents)} por aprobar` : 'confirmado en tus cuentas'}</span>
+        </div>
+        <div className="s-stat">
+          <span className="s-stat__label">Cuándo</span>
+          <span className="s-stat__value s-stat__value--text">{when}</span>
+          <span className="s-stat__sub">{whenSub}</span>
+        </div>
+        <div className="s-stat">
+          <span className="s-stat__label">Entraron</span>
+          <span className="s-stat__value">{totalScanned}</span>
+          <span className="s-stat__sub">escaneados en puerta</span>
+        </div>
+      </div>
+
+      {/* 2) Tarea: solo si hay Yapes pendientes (punto de acento). */}
       {pendingCount > 0 && (
-        <section className="a-yape-inline" aria-labelledby="yape-inline-title">
+        <div className="a-task" role="status">
+          <span className="a-task__txt">
+            <span>
+              <strong>{pendingCount} Yape{pendingCount === 1 ? '' : 's'} por revisar</strong>
+              <span className="a-task__sub">{formatPEN(pendingCents)} esperando tu aprobación · hay gente esperando su QR.</span>
+            </span>
+          </span>
+          <a href="#yape-inline-title" className="s-btn s-btn--primary s-btn--sm">Revisar ahora</a>
+        </div>
+      )}
+
+      {/* 3) Acciones rápidas */}
+      <QuickActions eventId={event.id} publicUrl={publicUrl} isPublished={!!event.is_published} readOnly={impersonating} />
+
+      {noSalesYet && pendingCount === 0 && (
+        <p className="s-notice" style={{ marginBottom: 16 }}>Aún no vendiste. Compartí tu link en historias y grupos: es lo que más mueve la venta.</p>
+      )}
+
+      {/* Alertas del evento: punto + texto en tinta. */}
+      {alerts.length > 0 && (
+        <ul className="a-chips">
+          {alerts.map((al, i) => <li key={i} className={`a-chip a-chip--${al.tone}`}>{al.text}</li>)}
+        </ul>
+      )}
+
+      {/* Aprobar Yape inline — la aprobación REAL, con Aprobar/Rechazar por comprobante. */}
+      {pendingCount > 0 && (
+        <section className="a-yape-inline s-section" aria-labelledby="yape-inline-title">
           <div className="a-yape-inline__head">
-            <h2 id="yape-inline-title" className="s-h2" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              <Bell className="h-5 w-5" style={{ color: 'var(--tangerine)' }} />
-              Yapes para aprobar <span className="s-badge s-badge--alert">{pendingCount}</span>
-            </h2>
-            <p className="s-card__desc" style={{ margin: '4px 0 0' }}>
-              {formatPEN(pendingCents)} esperando tu aprobación · hay gente esperando su QR.
-            </p>
+            <h2 id="yape-inline-title" className="s-h2">Yapes para aprobar</h2>
+            <p className="s-card__desc">Revisá el monto y el N° de operación contra tu app de Yape antes de aprobar.</p>
           </div>
           <div className="s-stack" style={{ gap: 14 }}>
             {pendingReview.map((p) => (
@@ -239,44 +304,37 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
         </section>
       )}
 
-      {/* Alertas visuales */}
-      {alerts.length > 0 && (
-        <div className="a-alerts">
-          {alerts.map((al, i) => <span key={i} className={`a-alert a-alert--${al.tone}`}>{al.text}</span>)}
-        </div>
-      )}
-
-      {/* Cuadre de dinero — "este es tu dinero" */}
-      <section style={{ marginTop: 24 }}>
+      {/* Tu dinero */}
+      <section className="s-section">
         <h2 className="s-h2" style={{ marginBottom: 12 }}>Tu dinero</h2>
         <div className="s-card">
           <p className="s-card__desc" style={{ marginBottom: 14 }}>Esto debería estar en tu cuenta de <strong>Yape / MercadoPago</strong>. ParyGo no toca tu plata: cada cobro va directo a tu cuenta.</p>
           <div className="a-money">
             <div className="a-money__cell"><span className="s-stat__label">Yape aprobado</span><span className="a-money__v">{formatPEN(byMethod.yape.cents)}</span><span className="s-stat__sub">{byMethod.yape.count} órdenes</span></div>
             <div className="a-money__cell"><span className="s-stat__label">MercadoPago</span><span className="a-money__v">{formatPEN(byMethod.mp.cents)}</span><span className="s-stat__sub">{byMethod.mp.count} órdenes</span></div>
-            {byMethod.courtesy.count > 0 && (
-              <div className="a-money__cell"><span className="s-stat__label">Cortesías</span><span className="a-money__v">{byMethod.courtesy.count}</span><span className="s-stat__sub">entregadas gratis</span></div>
+            {courtesyTickets > 0 && (
+              <div className="a-money__cell"><span className="s-stat__label">Cortesías</span><span className="a-money__v">{courtesyTickets}</span><span className="s-stat__sub">entradas gratis entregadas</span></div>
             )}
             <div className="a-money__cell a-money__cell--total"><span className="s-stat__label">Total confirmado</span><span className="a-money__v">{formatPEN(confirmedCents)}</span><span className="s-stat__sub">ya en tus cuentas</span></div>
           </div>
           {pendingCount > 0 && (
             <div className="a-money__pending">
-              <span>⏳ <strong>Yape pendiente de aprobar: {formatPEN(pendingCents)}</strong> ({pendingCount}). No cuenta como confirmado hasta que lo apruebes — cuadralo con tu app de Yape.</span>
+              <span><strong>Yape pendiente de aprobar: {formatPEN(pendingCents)}</strong>&nbsp;({pendingCount}). No cuenta como confirmado hasta que lo apruebes.</span>
               <Link href={`/admin/events/${event.id}/yape`} className="s-btn s-btn--soft s-btn--sm">Revisar Yape</Link>
             </div>
           )}
         </div>
       </section>
 
-      {/* Tabla por tipo de entrada */}
-      <section style={{ marginTop: 24 }}>
+      {/* Entradas por tipo */}
+      <section className="s-section">
         <h2 className="s-h2" style={{ marginBottom: 12 }}>Entradas por tipo</h2>
         {types.length === 0 ? (
           <div className="s-card"><p className="s-empty">Este evento no tiene tipos de entrada todavía.</p></div>
         ) : (
-          <div className="s-card" style={{ padding: 0, overflowX: 'auto' }}>
-            <table className="s-table a-typetable">
-              <thead><tr><th>Tipo</th><th className="num">Capacidad</th><th className="num">Vendidas</th><th className="num">Libres</th><th className="num">Escaneados</th><th className="num">Recaudado</th></tr></thead>
+          <div className="s-card s-card--flush" style={{ overflowX: 'auto' }}>
+            <table className="a-typetable">
+              <thead><tr><th>Tipo</th><th className="num">Capacidad</th><th className="num">Emitidas</th><th className="num">Libres</th><th className="num">Escaneados</th><th className="num">Recaudado</th></tr></thead>
               <tbody>
                 {types.map((t) => {
                   const sold = t.sold ?? 0;
@@ -287,8 +345,8 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
                   return (
                     <tr key={t.id}>
                       <td>
-                        <strong>{t.name}</strong>{!t.is_active && <span className="s-badge s-badge--draft" style={{ marginLeft: 6 }}>inactivo</span>}
-                        {phase && <div style={{ fontSize: 12, color: 'var(--tangerine)', fontWeight: 600 }}>{phase}</div>}
+                        <strong>{t.name}</strong>{!t.is_active && <span className="s-badge s-badge--draft s-badge--inline">inactivo</span>}
+                        {phase && <span className="a-phase">{phase}</span>}
                       </td>
                       <td className="num">{t.is_unlimited ? '∞' : t.capacity}</td>
                       <td className="num">{sold}</td>
@@ -301,7 +359,7 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
               </tbody>
               <tfoot>
                 <tr>
-                  <td><strong>Total</strong></td>
+                  <td>Total</td>
                   <td className="num">{capTotal > 0 ? capTotal : (hasUnlimited ? '∞' : '—')}</td>
                   <td className="num">{totalSold}</td>
                   <td className="num">{capTotal > 0 ? Math.max(0, capTotal - soldCapped) : '—'}</td>
@@ -316,15 +374,15 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
 
       {/* Ventas por día */}
       {paidRows.length > 0 && byDay.length > 0 && (
-        <section style={{ marginTop: 24 }}>
+        <section className="s-section">
           <h2 className="s-h2" style={{ marginBottom: 12 }}>Ventas por día</h2>
           <div className="s-card">
-            <div className="s-stack" style={{ gap: 6 }}>
+            <div className="a-days">
               {byDay.map(([day, cents]) => (
-                <div key={day} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span className="s-muted" style={{ fontSize: 12.5, width: 64, flexShrink: 0 }}>{day}</span>
-                  <div className="a-bar" style={{ flex: 1 }}><div className="a-bar__fill" style={{ width: `${Math.round((cents / maxDay) * 100)}%` }} /></div>
-                  <span style={{ fontSize: 12.5, width: 72, textAlign: 'right', flexShrink: 0 }}>{formatPEN(cents)}</span>
+                <div key={day} className="a-days__row">
+                  <span className="a-days__k">{day}</span>
+                  <div className="a-bar"><div className="a-bar__fill" style={{ width: `${Math.round((cents / maxDay) * 100)}%` }} /></div>
+                  <span className="a-days__v">{formatPEN(cents)}</span>
                 </div>
               ))}
             </div>
@@ -334,34 +392,26 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
 
       {/* Yapes rechazados */}
       {rejectedRows.length > 0 && (
-        <section style={{ marginTop: 24 }}>
-          <h2 className="s-h2" style={{ marginBottom: 12 }}>Yapes rechazados <span className="s-badge s-badge--draft" style={{ marginLeft: 8 }}>{rejectedRows.length}</span></h2>
-          <div className="s-card" style={{ padding: 0 }}>
-            <ul className="s-stack" style={{ gap: 0, listStyle: 'none', margin: 0, padding: 0 }}>
+        <section className="s-section">
+          <h2 className="s-h2" style={{ marginBottom: 12 }}>Yapes rechazados <span className="s-badge s-badge--draft s-badge--inline">{rejectedRows.length}</span></h2>
+          <div className="s-card">
+            <ul className="s-hlist">
               {rejectedRows.map((r) => (
-                <li key={r.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', padding: '12px 16px', borderTop: '1px solid var(--cream-3)' }}>
-                  <span style={{ minWidth: 0 }}><span style={{ fontWeight: 600 }}>{r.order?.buyer_name ?? '—'}</span><span className="s-muted" style={{ fontSize: 13 }}> · {r.order?.buyer_email}</span>{r.reject_reason && <div className="s-muted" style={{ fontSize: 12.5 }}>Motivo: {r.reject_reason}</div>}</span>
-                  <span className="s-muted" style={{ fontSize: 12.5, textAlign: 'right', flexShrink: 0 }}>{formatPEN(r.amount_cents)}<br />{r.reviewed_at && new Date(r.reviewed_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}</span>
+                <li key={r.id} className="s-hlist__row">
+                  <span style={{ minWidth: 0 }}>
+                    <strong>{r.order?.buyer_name ?? '—'}</strong><span className="s-muted s-small"> · {r.order?.buyer_email}</span>
+                    {r.reject_reason && <span className="s-muted s-small" style={{ display: 'block' }}>Motivo: {r.reject_reason}</span>}
+                  </span>
+                  <span className="s-muted s-small" style={{ textAlign: 'right', flexShrink: 0 }}>
+                    {formatPEN(r.amount_cents)}<br />
+                    {r.reviewed_at && new Date(r.reviewed_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
+                  </span>
                 </li>
               ))}
             </ul>
           </div>
         </section>
       )}
-
-      {/* Códigos promocionales — sección secundaria, colapsada por defecto. */}
-      <details className="a-accordion" style={{ marginTop: 24 }}>
-        <summary className="a-accordion__summary">
-          <span className="a-accordion__title">
-            <Tag className="h-4 w-4" /> Códigos de RR.PP.
-            {(promoCodes?.length ?? 0) > 0 && <span className="s-badge s-badge--draft">{promoCodes!.length}</span>}
-          </span>
-          <span className="a-accordion__hint">Códigos de descuento y seguimiento de ventas por promotor</span>
-        </summary>
-        <div className="a-accordion__body">
-          <PromoCodeManager eventId={event.id} ticketTypes={types.map((t) => ({ id: t.id, name: t.name }))} codes={(promoCodes ?? []) as PromoCodeRow[]} sales={promoSales} impersonating={impersonating} />
-        </div>
-      </details>
     </>
   );
 }
