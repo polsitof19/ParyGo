@@ -28,9 +28,10 @@ function srgbToLinear(c: number): number {
 function luminance(hex: string): number | null {
   const m = /^#?([0-9a-f]{6}|[0-9a-f]{3})$/i.exec(hex.trim());
   if (!m) return null;
-  let h = m[1];
-  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
-  const [r, g, b] = [0, 2, 4].map((i) => srgbToLinear(parseInt(h.slice(i, i + 2), 16)));
+  let h = m[1] ?? '';
+  if (h.length === 3) h = h.split('').map((ch) => ch + ch).join('');
+  const ch = (i: number) => srgbToLinear(parseInt(h.slice(i, i + 2), 16));
+  const r = ch(0), g = ch(2), b = ch(4);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
@@ -54,6 +55,6 @@ export function onColor(bg: string | null | undefined): string {
 // marca sigue cayendo en el mismo slot.
 export const AVATAR_BG = ['#FF6A3D', '#5667F2', '#E8552A', '#2E9E6B', '#C7791A', '#8356F2'];
 
-export const bgFor = (s: string) => AVATAR_BG[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_BG.length];
+export const bgFor = (s: string): string => AVATAR_BG[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_BG.length] ?? '#FF6A3D';
 
 export const initialOf = (name: string) => (name.trim()[0] ?? '?').toUpperCase();
