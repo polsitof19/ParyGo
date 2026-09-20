@@ -19,7 +19,7 @@ export function ResendForm() {
           id="email" name="email" type="email" required autoComplete="email" inputMode="email"
           placeholder="tu@email.com" className="c-input"
         />
-        <p className="c-help">Usá el mismo email con el que compraste. Te reenviamos tus QR ahí.</p>
+        <p className="c-help">Usa el mismo email con el que compraste. Te reenviamos tus QR ahí.</p>
       </div>
       {state.message && (
         <p

@@ -154,7 +154,7 @@ function VoidButton({ ticketId, number }: { ticketId: string; number: string }) 
     <form
       action={action}
       onSubmit={(e) => {
-        if (!confirm(`¿Anular la entrada ${number}? Su QR dejará de valer en puerta. La devolución del dinero la gestionás vos por tu Yape/MercadoPago.`)) e.preventDefault();
+        if (!confirm(`¿Anular la entrada ${number}? Su QR dejará de valer en puerta. La devolución del dinero la gestionas tú por tu Yape/MercadoPago.`)) e.preventDefault();
       }}
     >
       <input type="hidden" name="ticket_id" value={ticketId} />

@@ -126,7 +126,7 @@ function renderText(p: { newName: string; eventName: string; dateLabel: string; 
     p.dateLabel ? `Cuándo: ${p.dateLabel}${p.venue ? ' · ' + p.venue : ''}` : '',
     '',
     `Tu entrada: ${p.ticketUrl}`,
-    'Mostrá el QR en la puerta. La entrada anterior quedó anulada.',
+    'Muestra el QR en la puerta. La entrada anterior quedó anulada.',
     '',
     `Enviado por ${p.brand.name} vía ParyGo.`,
   ].filter((l) => l !== '');

@@ -27,7 +27,7 @@ export function Header() {
         </nav>
         <div className="header__cta">
           <span className="header__login-hint" aria-hidden="true">
-            ¿Organizás eventos?
+            ¿Organizas eventos?
           </span>
           <a
             href={SITE.loginUrl}

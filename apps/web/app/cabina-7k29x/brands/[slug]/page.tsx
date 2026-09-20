@@ -103,7 +103,7 @@ export default async function BrandDetailPage({
           <span className="s-stat__label">Saldo de eventos</span>
           <span className="s-stat__value">{balance}</span>
           <span className="s-stat__hint">
-            {balance === 0 ? 'Cargá un pack para crear eventos' : `evento${balance === 1 ? '' : 's'} por crear`}
+            {balance === 0 ? 'Carga un pack para crear eventos' : `evento${balance === 1 ? '' : 's'} por crear`}
           </span>
         </div>
         <div className="s-stat">
@@ -149,7 +149,7 @@ export default async function BrandDetailPage({
         {/* Configuración / contacto — editable por super admin */}
         <div className="s-card">
           <h2 className="s-h2">Configuración</h2>
-          <p className="s-card__desc">Nombre, contacto y datos de cobro Yape. El slug ({brand.slug}) no se edita acá. MercadoPago lo gestiona el dueño desde su panel.</p>
+          <p className="s-card__desc">Nombre, contacto y datos de cobro Yape. El slug ({brand.slug}) no se edita aquí. MercadoPago lo gestiona el dueño desde su panel.</p>
           <EditBrandBasicsForm
             brandId={brand.id}
             name={brand.name}
@@ -198,7 +198,7 @@ export default async function BrandDetailPage({
         </div>
 
         {!events || events.length === 0 ? (
-          <p className="s-empty">Sin eventos todavía. Creá el primero.</p>
+          <p className="s-empty">Sin eventos todavía. Crea el primero.</p>
         ) : (
           <ul className="s-event-list">
             {events.map((e) => (

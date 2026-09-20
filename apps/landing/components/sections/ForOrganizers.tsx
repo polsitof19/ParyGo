@@ -7,12 +7,12 @@ type Point = { title: string; desc: string; icon: React.ReactNode };
 const POINTS: Point[] = [
   {
     title: 'La plata es tuya, directa',
-    desc: 'Cobrás con TU Yape o TU MercadoPago. ParyGo nunca toca el dinero de tus entradas.',
+    desc: 'Cobras con TU Yape o TU MercadoPago. ParyGo nunca toca el dinero de tus entradas.',
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="3" /><path d="M2 10h20" /></svg>,
   },
   {
     title: 'Cero comisión por entrada',
-    desc: 'No te cobramos un porcentaje de tus ventas. Pagás un precio fijo por evento y listo.',
+    desc: 'No te cobramos un porcentaje de tus ventas. Pagas un precio fijo por evento y listo.',
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M8 12h8" /></svg>,
   },
   {
@@ -21,8 +21,8 @@ const POINTS: Point[] = [
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>,
   },
   {
-    title: 'Pagás por evento',
-    desc: 'Comprás un pack de eventos cuando lo necesitás. Sin suscripción ni ataduras.',
+    title: 'Pagas por evento',
+    desc: 'Compras un pack de eventos cuando lo necesitas. Sin suscripción ni ataduras.',
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" /></svg>,
   },
 ];
@@ -37,7 +37,7 @@ export function ForOrganizers() {
             Tu evento, <span className="accent">tu marca, tu plata</span>.
           </h2>
           <p style={{ color: 'var(--ink-2)', maxWidth: 580, margin: '14px auto 0', fontSize: '1.05rem', lineHeight: 1.55 }}>
-            ParyGo es la plataforma para que vendas las entradas de tus eventos con tu propia marca, cobrando vos directo. Sin intermediarios entre tu público y tu cuenta.
+            ParyGo es la plataforma para que vendas las entradas de tus eventos con tu propia marca, cobrando tú directo. Sin intermediarios entre tu público y tu cuenta.
           </p>
         </div>
 
@@ -53,10 +53,10 @@ export function ForOrganizers() {
 
         <div style={{ textAlign: 'center', marginTop: 32 }} className="reveal">
           <a href={CTA.requestAccess} className="btn btn-primary btn-lg" target="_blank" rel="noopener noreferrer">
-            Pedí acceso
+            Pide acceso
           </a>
           <p style={{ color: 'var(--ink-3)', marginTop: 12, fontSize: 14 }}>
-            Sumamos organizadores de a pocos para acompañar bien a cada uno. Contanos de tu evento y te damos acceso.
+            Sumamos organizadores de a pocos para acompañar bien a cada uno. Cuéntanos de tu evento y te damos acceso.
           </p>
         </div>
       </div>

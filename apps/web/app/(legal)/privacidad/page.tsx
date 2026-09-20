@@ -19,7 +19,7 @@ export default function PrivacidadPage() {
       <h2>1. Qué datos pedimos</h2>
       <ul>
         <li><strong>Para comprar:</strong> tu nombre, email y WhatsApp. Algunos eventos también piden un documento de identidad (DNI/CE) para validar el ingreso en puerta.</li>
-        <li><strong>Del pago:</strong> si pagás por Yape, los datos de tu comprobante (número de operación, titular, monto). ParyGo no almacena datos de tu tarjeta — eso lo procesa MercadoPago.</li>
+        <li><strong>Del pago:</strong> si pagas por Yape, los datos de tu comprobante (número de operación, titular, monto). ParyGo no almacena datos de tu tarjeta — eso lo procesa MercadoPago.</li>
         <li>Datos técnicos mínimos (por ejemplo, la IP) para seguridad y prevención de abuso.</li>
       </ul>
 
@@ -53,9 +53,9 @@ export default function PrivacidadPage() {
 
       <h2>6. Tus derechos y contacto</h2>
       <p>
-        Podés pedir acceso, corrección o eliminación de tus datos. Como el organizador es el
+        Puedes pedir acceso, corrección o eliminación de tus datos. Como el organizador es el
         responsable de los datos de su evento, lo más rápido es escribirle a él (su WhatsApp está en la
-        página del evento); también podés contactar a ParyGo por los canales publicados.
+        página del evento); también puedes contactar a ParyGo por los canales publicados.
       </p>
 
       <div className="legal-note">

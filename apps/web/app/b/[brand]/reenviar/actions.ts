@@ -6,7 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
 
 // =============================================================
-// "Reenviá mi entrada" self-service (TANDA 2, Grupo C) — buyer-facing + PII
+// "Reenvía mi entrada" self-service (TANDA 2, Grupo C) — buyer-facing + PII
 // =============================================================
 // El comprador que perdió el email pone su email → se le reenvían SUS QR.
 // CANDADOS DE SEGURIDAD:
@@ -25,7 +25,7 @@ import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const NEUTRAL =
-  'Si hay entradas asociadas a ese email, te las reenviamos. Revisá tu correo (y la carpeta de spam).';
+  'Si hay entradas asociadas a ese email, te las reenviamos. Revisa tu correo (y la carpeta de spam).';
 const MAX_PER_EMAIL = 3; // por hora
 const MAX_PER_IP = 10; // por hora
 const WINDOW_MS = 3_600_000;
@@ -36,7 +36,7 @@ export async function resendMyTickets(_prev: ResendResult, formData: FormData): 
   const brand = await requireBrand(); // 404 si no hay marca (host inválido)
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   if (!EMAIL_RE.test(email) || email.length > 200) {
-    return { ok: false, message: 'Ingresá un email válido.' };
+    return { ok: false, message: 'Ingresa un email válido.' };
   }
 
   const admin = createAdminClient();

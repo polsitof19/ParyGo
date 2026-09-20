@@ -12,7 +12,7 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 // Transferir/regalar la entrada cuyo QR (link) tiene quien ejecuta. La posesión
 // del qr_code ES la autorización (los compradores no se loguean). Rate-limit por
-// entrada + IP; el reemití-QR es atómico server-side (transfer_ticket). Best-effort
+// entrada + IP; el reemite-QR es atómico server-side (transfer_ticket). Best-effort
 // en el email: si falla, igual la entrada quedó transferida (el nuevo dueño puede
 // reenviársela desde /reenviar… no — usa el link; mostramos el resultado claro).
 export async function transferTicketAction(_prev: TransferState, formData: FormData): Promise<TransferState> {
@@ -21,7 +21,7 @@ export async function transferTicketAction(_prev: TransferState, formData: FormD
   const newEmail = String(formData.get('new_email') ?? '').trim().toLowerCase();
 
   if (!UUID_RE.test(qr)) return { ok: false, message: 'Entrada inválida.' };
-  if (newName.length < 2 || newName.length > 120) return { ok: false, message: 'Poné el nombre del nuevo dueño.' };
+  if (newName.length < 2 || newName.length > 120) return { ok: false, message: 'Pon el nombre del nuevo dueño.' };
   if (!EMAIL_RE.test(newEmail) || newEmail.length > 200) return { ok: false, message: 'Email del nuevo dueño inválido.' };
 
   const admin = createAdminClient();
@@ -33,7 +33,7 @@ export async function transferTicketAction(_prev: TransferState, formData: FormD
     p_key: qr, p_ip: ip, p_max_key: 3, p_max_ip: 10, p_window_secs: 3600,
   });
   if (rlErr || allowed !== true) {
-    return { ok: false, message: 'Hiciste demasiadas transferencias. Probá de nuevo en un rato.' };
+    return { ok: false, message: 'Hiciste demasiadas transferencias. Prueba de nuevo en un rato.' };
   }
 
   const { data: res, error } = await admin.rpc('transfer_ticket', { p_qr_code: qr, p_new_name: newName });
@@ -46,7 +46,7 @@ export async function transferTicketAction(_prev: TransferState, formData: FormD
       : reason === 'not_allowed' ? 'Este evento no permite transferir entradas.'
       : reason === 'event_started' ? 'El evento ya empezó; ya no se puede transferir.'
       : reason === 'not_found' ? 'Entrada no encontrada.'
-      : reason === 'no_name' ? 'Poné el nombre del nuevo dueño.'
+      : reason === 'no_name' ? 'Pon el nombre del nuevo dueño.'
       : 'No se pudo transferir la entrada.';
     return { ok: false, message: msg };
   }

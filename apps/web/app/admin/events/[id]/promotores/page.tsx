@@ -98,7 +98,7 @@ export default async function PromotersPage({ params }: { params: { id: string }
       <div style={{ marginBottom: 14 }}>
         <span className="eyebrow">Ventas y pagos</span>
         <h2 className="s-h2" style={{ marginTop: 6 }}>Promotores</h2>
-        <p className="s-card__desc">Creá códigos para tus RR.PP. y mirá cuánto vendió cada uno.</p>
+        <p className="s-card__desc">Crea códigos para tus RR.PP. y mira cuánto vendió cada uno.</p>
       </div>
 
       {/* 1) Crear y gestionar códigos */}
@@ -117,7 +117,7 @@ export default async function PromotersPage({ params }: { params: { id: string }
           {rows.length} código{rows.length === 1 ? '' : 's'} · {totalClicks} clic{totalClicks === 1 ? '' : 's'} · {totalEntradas} entrada{totalEntradas === 1 ? '' : 's'} colocadas · {formatPEN(totalRecaudado)} recaudado
         </p>
         {rows.length === 0 ? (
-          <div className="s-card"><p className="s-empty">Todavía no hay códigos. Creá el primero arriba y compartí el link de tu promotor.</p></div>
+          <div className="s-card"><p className="s-empty">Todavía no hay códigos. Crea el primero arriba y comparte el link de tu promotor.</p></div>
         ) : (
           <div className="s-card s-card--flush">
             <ol className="a-rank">

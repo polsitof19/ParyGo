@@ -48,7 +48,7 @@ export function SettingsForm(props: Props) {
           <Field label="Instagram (usuario o link)" htmlFor="instagram" error={err.instagram}>
             <input id="instagram" name="instagram" defaultValue={props.instagram} placeholder="@tumarca" className="s-input" disabled={ro} />
           </Field>
-          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Aparece en tu página pública. Podés poner @usuario o el link completo.</p>
+          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Aparece en tu página pública. Puedes poner @usuario o el link completo.</p>
         </div>
       </section>
 
@@ -65,7 +65,7 @@ export function SettingsForm(props: Props) {
         </div>
         <div className="s-field">
           <Field label="QR de Yape (PNG, JPG o WEBP · máx 2MB · opcional)" htmlFor="yape_qr" error={err.yape_qr}>
-            <p className="s-card__desc" style={{ marginBottom: 8 }}>Si lo subís, tus compradores lo ven en el paso de pago y escanean directo desde su Yape.</p>
+            <p className="s-card__desc" style={{ marginBottom: 8 }}>Si lo subes, tus compradores lo ven en el paso de pago y escanean directo desde su Yape.</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               {props.yapeQrUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -120,7 +120,7 @@ export function SettingsForm(props: Props) {
 
       <section className="s-card">
         <p className="s-section-lead" style={{ marginBottom: 6 }}>Avisos por email de Yape</p>
-        <p className="s-card__desc" style={{ marginBottom: 14 }}>Recordatorios automáticos por email. No cambian cómo aprobás los Yapes — solo avisan/recuerdan. Desactivados por defecto.</p>
+        <p className="s-card__desc" style={{ marginBottom: 14 }}>Recordatorios automáticos por email. No cambian cómo apruebas los Yapes — solo avisan/recuerdan. Desactivados por defecto.</p>
         <label className="s-check" style={{ display: 'flex', gap: 9, alignItems: 'flex-start', marginBottom: 12 }}>
           <input type="checkbox" name="notify_yape_recovery" defaultChecked={props.notifyYapeRecovery} disabled={ro} style={{ marginTop: 3 }} />
           <span>

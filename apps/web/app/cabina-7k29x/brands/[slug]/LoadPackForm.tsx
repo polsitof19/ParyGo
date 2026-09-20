@@ -27,7 +27,7 @@ export function LoadPackForm({
       <input type="hidden" name="brand_id" value={brandId} />
       <input type="hidden" name="slug" value={slug} />
       <div className="s-form-row__field">
-        <label htmlFor="pack-select" className="s-label">Elegí un pack</label>
+        <label htmlFor="pack-select" className="s-label">Elige un pack</label>
         <select id="pack-select" name="pack" defaultValue="3" className="s-input s-select">
           {PACK_OPTIONS.map((o) => (
             <option key={o.pack} value={o.pack}>

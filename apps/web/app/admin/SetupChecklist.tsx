@@ -35,7 +35,7 @@ export function SetupChecklist({ steps, brandName }: { steps: SetupStep[]; brand
             <Rocket className="h-4 w-4" style={{ color: 'var(--ink-2)' }} /> Primeros pasos
           </h2>
           <p className="s-card__desc">
-            Dejá tu primer evento listo para vender. Vas {doneCount} de {total}.
+            Deja tu primer evento listo para vender. Vas {doneCount} de {total}.
           </p>
         </div>
         <span className="s-badge s-badge--ok" style={{ whiteSpace: 'nowrap' }}>{doneCount}/{total} listo</span>

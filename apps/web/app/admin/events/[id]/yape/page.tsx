@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 type ProofRow = {
   id: string; amount_cents: number; operation_number: string; payer_name: string;
   security_code: string; receipt_url: string; created_at: string;
-  order: { id: string; buyer_name: string; buyer_email: string; buyer_phone: string; total_cents: number; event_id: string; event: { name: string } | null } | null;
+  order: { id: string; buyer_name: string; buyer_email: string; buyer_phone: string; total_cents: number; event_id: string } | null;
 };
 
 export default async function EventYapePage({ params }: { params: { id: string } }) {
@@ -28,7 +28,7 @@ export default async function EventYapePage({ params }: { params: { id: string }
   const { data } = await admin
     .from('yape_proofs')
     .select(`id, amount_cents, operation_number, payer_name, security_code, receipt_url, created_at,
-      order:orders!yape_proofs_order_id_fkey ( id, buyer_name, buyer_email, buyer_phone, total_cents, event_id, event:events ( name ) )`)
+      order:orders!yape_proofs_order_id_fkey ( id, buyer_name, buyer_email, buyer_phone, total_cents, event_id )`)
     .eq('brand_id', event.brand_id)
     .eq('status', 'pending_review')
     .order('created_at', { ascending: true });
@@ -95,10 +95,16 @@ export default async function EventYapePage({ params }: { params: { id: string }
       {withUrls.length === 0 ? (
         <div className="s-card"><p className="s-empty">No hay comprobantes pendientes. 🎉 Los nuevos aparecen solos (refresco automático).</p></div>
       ) : (
-        <div className="s-stack" style={{ gap: 14 }}>
-          {withUrls.map((p) => (
-            <div key={p.id} className="s-card">
+        <>
+          {/* La instrucción va UNA vez arriba de la lista, no repetida en cada fila. */}
+          <p className="s-card__desc" style={{ marginBottom: 12 }}>
+            Abre tu Yape → Movimientos y busca cada transferencia. Si el monto, el N° de operación y el nombre coinciden, aprueba.
+            Toca una fila para ver la captura y el detalle.
+          </p>
+          <div>
+            {withUrls.map((p) => (
               <YapeReviewRow
+                key={p.id}
                 proofId={p.id}
                 receiptUrl={p.signedReceiptUrl}
                 amountCents={p.amount_cents}
@@ -110,16 +116,15 @@ export default async function EventYapePage({ params }: { params: { id: string }
                 buyerName={p.order?.buyer_name ?? ''}
                 buyerEmail={p.order?.buyer_email ?? ''}
                 buyerPhone={p.order?.buyer_phone ?? ''}
-                eventName={p.order?.event?.name ?? ''}
                 createdAt={p.created_at}
                 total={formatPEN(p.order?.total_cents ?? 0)}
                 items={p.items}
                 impersonating={impersonating}
                 duplicateWarning={dupWarningByProof.get(p.id) ?? null}
               />
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
     </>
   );

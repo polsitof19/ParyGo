@@ -25,7 +25,7 @@ export function ValidatorManager({ validators }: { validators: Validator[] }) {
   if (validators.length === 0) {
     return (
       <p className="s-card__desc">
-        Todavía no invitaste validadores. Usá el campo de abajo para invitar al primero por email.
+        Todavía no invitaste validadores. Usa el campo de abajo para invitar al primero por email.
       </p>
     );
   }
@@ -69,7 +69,7 @@ function ValidatorRow({ v }: { v: Validator }) {
       </div>
       {codeState.message && !codeState.ok && <p className="s-err">{codeState.message}</p>}
 
-      {/* Setear contraseña */}
+      {/* Guardar contraseña */}
       <form action={pwdAction} className="s-form-row">
         <input type="hidden" name="user_id" value={v.user_id} />
         <div className="s-form-row__field">
@@ -98,7 +98,7 @@ function PwdBtn() {
   const { pending } = useFormStatus();
   return (
     <button type="submit" className="s-btn s-btn--ghost s-btn--sm" disabled={pending}>
-      {pending ? 'Guardando…' : 'Setear contraseña'}
+      {pending ? 'Guardando…' : 'Guardar contraseña'}
     </button>
   );
 }

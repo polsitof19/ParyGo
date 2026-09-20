@@ -179,15 +179,15 @@ await step('A', 'Super admin: login, desarchivar demotest, cargar saldo, stats',
   // Paul setea la contraseña fija del brand_admin de demotest (la usa el paso B).
   const pwdForm = p.locator('form.s-pwd-form').first();
   await pwdForm.locator('input[name="password"]').fill(ADMIN_PASS);
-  await pwdForm.getByRole('button', { name: /Setear contraseña/ }).click();
+  await pwdForm.getByRole('button', { name: /Guardar contraseña/ }).click();
   await sleep(500);
-  await pwdForm.getByRole('button', { name: /Setear contraseña/ }).waitFor({ timeout: 30000 });
+  await pwdForm.getByRole('button', { name: /Guardar contraseña/ }).waitFor({ timeout: 30000 });
   await sleep(1500);
   const pwdMsg = await pwdForm.locator('.s-hint--ok, .s-err').first().innerText().catch(() => '');
   const { error: pwdErr } = await anon().auth.signInWithPassword({ email: ADMIN_EMAIL, password: ADMIN_PASS });
   check('A', 'super admin setea contraseña del brand_admin demotest (login con la nueva funciona)', !pwdErr, pwdErr?.message ?? 'ok');
   const pwdToast = (await toastLog(p)).find((t) => /Contraseña actualizada/.test(t));
-  check('A', 'bug5: "Setear contraseña" muestra "Contraseña actualizada."', !!pwdToast || /actualizada/i.test(pwdMsg), pwdToast ?? (pwdMsg || '(sin mensaje)'));
+  check('A', 'bug5: "Guardar contraseña" muestra "Contraseña actualizada."', !!pwdToast || /actualizada/i.test(pwdMsg), pwdToast ?? (pwdMsg || '(sin mensaje)'));
   const saldoUi = (await p.locator('.s-stat').first().innerText()).replace(/\s+/g, ' ');
   check('A', 'UI muestra saldo nuevo', saldoUi.includes(String(afterPack.event_balance)), saldoUi);
   await shot(p, 'A', 'marca-despues');
@@ -335,7 +335,7 @@ await step('B', 'Organizador: crear evento, entradas, promo, preventa, publicar,
     const r3 = await replayCreate('gratisinf', (b) => b.replace('"capacity":10,"is_unlimited":false', '"capacity":0,"is_unlimited":true'));
     check('B', 'bug4: server rechaza tipo S/0 + ilimitado', /gratis e ilimitado/.test(r3.text) && !r3.created && r3.balDelta === 0, `${lastMsg(r3.text)} · creados=${r3.created} Δsaldo=${r3.balDelta}`);
     const r4 = await replayCreate('sinconfirm', (b) => b.replace(/(name="[^"]*confirm_free"\r\n\r\n)1/, '$1'));
-    check('B', 'bug4: server exige confirmación para tipo S/0 con aforo', /Confirmá que/.test(r4.text) && !r4.created && r4.balDelta === 0, `${lastMsg(r4.text)} · creados=${r4.created} Δsaldo=${r4.balDelta}`);
+    check('B', 'bug4: server exige confirmación para tipo S/0 con aforo', /Confirma que/.test(r4.text) && !r4.created && r4.balDelta === 0, `${lastMsg(r4.text)} · creados=${r4.created} Δsaldo=${r4.balDelta}`);
   } else note('B', 'no se capturó el request de crear evento: se saltean los replays del bug 4');
 
   // UI: S/0 + ilimitado se frena antes de enviar (alerta, sin navegar).
@@ -424,7 +424,7 @@ if (!S.eventId) {
     const railStep1 = (await p.locator('.c-rail').first().innerText().catch(() => '')).replace(/\s+/g, ' ');
     if (shots) await shot(p, tag, 'seleccion');
     if (promo) {
-      await p.getByText('¿Tenés un código de promotor?').click().catch(() => {});
+      await p.getByText('¿Tienes un código de promotor?').click().catch(() => {});
       await p.locator('input[placeholder="Código de promotor"]').fill(promo).catch(() => {});
     }
     await vis(p.getByRole('button', { name: /^Continuar/ })).click();
@@ -476,10 +476,15 @@ if (!S.eventId) {
   async function review(email, action, reason = 'Monto no coincide (E2E)') {
     const p = adm.page;
     await go(p, `/admin/events/${S.eventId}/yape`);
-    const card = p.locator('.s-card').filter({ hasText: email }).filter({ has: p.getByRole('button', { name: /Aprobar y emitir QR/ }) }).last();
+    // Filas compactas: el email del comprador vive en el detalle, así que hay que
+    // desplegarlas para poder elegir la del comprador que toca.
+    const toggles = p.locator('.a-yrow__toggle');
+    const openable = await toggles.count();
+    for (let i = 0; i < openable; i++) await toggles.nth(i).click();
+    const card = p.locator('.a-yrow').filter({ hasText: email }).last();
     await card.waitFor({ timeout: 20000 });
     if (action === 'approve') {
-      await card.getByRole('button', { name: /Aprobar y emitir QR/ }).click();
+      await card.getByRole('button', { name: /^Aprobar$/ }).click();
     } else {
       await card.getByRole('button', { name: 'Rechazar' }).click();
       // la tarjeta pierde el botón "Aprobar" al abrir el panel de rechazo → locators a nivel página (hay uno solo abierto)
@@ -723,7 +728,7 @@ if (!S.eventId) {
     if (S.checkoutReq) {
       const base = JSON.parse(S.checkoutReq.body)[0];
       const rr = await replayAction(buyer.page, S.checkoutReq, [{ ...base, buyerEmail: `e2e-h-vacio-${STAMP}@test.local`, promoCode: '', items: [] }]);
-      check('H', 'bug2: checkout armado con 0 entradas → "Elegí al menos una entrada." (español)', /Elegí al menos una entrada/.test(rr.text) && !/Array must/.test(rr.text), rr.text.slice(-140));
+      check('H', 'bug2: checkout armado con 0 entradas → "Elige al menos una entrada." (español)', /Elige al menos una entrada/.test(rr.text) && !/Array must/.test(rr.text), rr.text.slice(-140));
     }
     await go(buyer.page, `/${EVENT_SLUG}`);
     const soldOutWithHolds = await buyer.page.locator('.c-soldout').count();

@@ -121,7 +121,7 @@ export async function deleteTicketTypeAction(
     .single();
   if (!tt) return { ok: false, message: 'No encontrado' };
   if ((tt.sold ?? 0) > 0) {
-    return { ok: false, message: 'No se puede borrar: ya tiene ventas. Desactivá en su lugar.' };
+    return { ok: false, message: 'No se puede borrar: ya tiene ventas. Desactiva en su lugar.' };
   }
 
   const { error } = await admin.from('ticket_types').delete().eq('id', id);
@@ -145,12 +145,12 @@ export async function setEventPublishedAction(
       .eq('event_id', eventId)
       .eq('is_active', true);
     if (!count || count === 0) {
-      return { ok: false, message: 'Agregá al menos un tipo de entrada activo antes de publicar.' };
+      return { ok: false, message: 'Agrega al menos un tipo de entrada activo antes de publicar.' };
     }
     // Guard: no publicar un evento que ya terminó (nadie podría comprar).
     const { data: ev } = await admin.from('events').select('starts_at, ends_at').eq('id', eventId).maybeSingle();
     if (ev && eventOverAt(ev.starts_at, ev.ends_at) < Date.now()) {
-      return { ok: false, message: 'Este evento ya terminó. Cambiá la fecha antes de publicarlo.' };
+      return { ok: false, message: 'Este evento ya terminó. Cambia la fecha antes de publicarlo.' };
     }
   }
 

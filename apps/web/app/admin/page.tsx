@@ -6,8 +6,6 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
 import { optimizedImage } from '@/lib/imageUrl';
-import { InviteValidator } from './InviteValidator';
-import { ValidatorManager } from './ValidatorManager';
 import { TicketRecovery } from './TicketRecovery';
 import { SetupChecklist, type SetupStep } from './SetupChecklist';
 import { LowBalanceNotice } from './LowBalanceNotice';
@@ -57,29 +55,24 @@ export default async function AdminHomePage() {
     const ev = p.order?.event_id;
     if (ev) pendingByEvent.set(ev, (pendingByEvent.get(ev) ?? 0) + 1);
   }
-  const totalPending = (pendingProofs ?? []).length;
-  const publishedCount = (events ?? []).filter((e) => e.is_published).length;
   // Separar activos de archivados: los archivados van en su propia sección al final.
   const activeEvents = (events ?? []).filter((e) => !e.archived_at);
   const archivedEvents = (events ?? []).filter((e) => e.archived_at);
+  // Publicados = solo entre los ACTIVOS. Un evento archivado no está publicado
+  // para nadie (no se vende ni aparece), contarlo inflaba el número.
+  const publishedCount = activeEvents.filter((e) => e.is_published).length;
+  // La tarea de Yapes mira solo eventos activos: un pendiente de un evento
+  // archivado no es trabajo de hoy y mandaba a una pantalla vacía.
+  const activeEventIds = new Set(activeEvents.map((e) => e.id));
+  let totalPending = 0;
+  let pendingEventCount = 0;
+  for (const [eventId, n] of pendingByEvent) {
+    if (!activeEventIds.has(eventId)) continue;
+    totalPending += n;
+    pendingEventCount += 1;
+  }
 
-  // Validadores de la marca + su código personal activo (service-role).
   const adminCli = createAdminClient();
-  const nowIso = new Date().toISOString();
-  const [{ data: members }, { data: codes }] = await Promise.all([
-    adminCli.from('brand_members').select('user_id, display_name').eq('brand_id', brand.id).eq('role', 'validator'),
-    adminCli.from('validator_codes').select('id, user_id, code, expires_at').eq('brand_id', brand.id).gt('expires_at', nowIso),
-  ]);
-  const validators = (members ?? []).map((m) => {
-    const c = (codes ?? []).find((x) => x.user_id === m.user_id);
-    return {
-      user_id: m.user_id,
-      display_name: m.display_name,
-      code: c?.code ?? null,
-      code_id: c?.id ?? null,
-      expires_at: c?.expires_at ?? null,
-    };
-  });
 
   // Recuperación: órdenes PAGADAS sin tickets (red de seguridad del flujo Yape no
   // atómico). Scopeado por brand.id con service-role. Normalmente vacío.
@@ -126,7 +119,7 @@ export default async function AdminHomePage() {
   const nextDays = nextEvent ? Math.ceil((Date.parse(nextEvent.starts_at) - nowMs) / 86400000) : null;
   const nextWhen = nextDays === null ? null : nextDays <= 0 ? 'hoy' : nextDays === 1 ? 'mañana' : `en ${nextDays} días`;
   const nextPublicUrl = nextEvent ? `https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${nextEvent.slug}` : null;
-  const firstPendingEvent = (events ?? []).find((e) => (pendingByEvent.get(e.id) ?? 0) > 0) ?? null;
+  const firstPendingEvent = activeEvents.find((e) => (pendingByEvent.get(e.id) ?? 0) > 0) ?? null;
   const stuckOrders = paidOrderRows
     .filter((o) => !ordersWithTickets.has(o.id))
     .map((o) => ({ id: o.id, buyerName: o.buyer_name, totalCents: o.total_cents ?? 0, createdAt: o.created_at, eventName: eventNameById.get(o.event_id) ?? 'Evento' }));
@@ -142,10 +135,10 @@ export default async function AdminHomePage() {
   const hasTickets = (activeTypeCount ?? 0) > 0;
   const firstEventId = activeEvents[0]?.id ?? (events ?? [])[0]?.id ?? null;
   const setupSteps: SetupStep[] = [
-    { key: 'cobro', title: 'Configurá tu cobro', desc: 'Cargá tu Yape (o tus credenciales de tarjeta) para recibir los pagos.', done: cobroReady, href: '/admin/settings', cta: 'Configurar' },
-    { key: 'evento', title: 'Creá tu primer evento', desc: 'Nombre, fecha y lugar. Te toma un par de minutos.', done: hasEvent, href: '/admin/events/new', cta: 'Crear' },
-    { key: 'entradas', title: 'Cargá tus entradas', desc: 'Definí tipos de entrada, precios y cupos.', done: hasTickets, href: firstEventId ? `/admin/events/${firstEventId}/entradas` : '/admin/events/new', cta: 'Cargar' },
-    { key: 'publicar', title: 'Publicá tu evento', desc: 'Cuando esté listo, ponelo en vivo para empezar a vender.', done: publishedCount > 0, href: firstEventId ? `/admin/events/${firstEventId}` : '/admin/events/new', cta: 'Publicar' },
+    { key: 'cobro', title: 'Configura tu cobro', desc: 'Carga tu Yape (o tus credenciales de tarjeta) para recibir los pagos.', done: cobroReady, href: '/admin/settings', cta: 'Configurar' },
+    { key: 'evento', title: 'Crea tu primer evento', desc: 'Nombre, fecha y lugar. Te toma un par de minutos.', done: hasEvent, href: '/admin/events/new', cta: 'Crear' },
+    { key: 'entradas', title: 'Carga tus entradas', desc: 'Define tipos de entrada, precios y cupos.', done: hasTickets, href: firstEventId ? `/admin/events/${firstEventId}/entradas` : '/admin/events/new', cta: 'Cargar' },
+    { key: 'publicar', title: 'Publica tu evento', desc: 'Cuando esté listo, ponlo en vivo para empezar a vender.', done: publishedCount > 0, href: firstEventId ? `/admin/events/${firstEventId}` : '/admin/events/new', cta: 'Publicar' },
   ];
 
   return (
@@ -155,7 +148,8 @@ export default async function AdminHomePage() {
           <span className="eyebrow">{brand.name} · tu panel</span>
           <h1 className="s-h1">Tus eventos</h1>
           <p className="s-card__desc">
-            {events?.length ?? 0} evento{events?.length === 1 ? '' : 's'} · {publishedCount} publicado{publishedCount === 1 ? '' : 's'}
+            {activeEvents.length} activo{activeEvents.length === 1 ? '' : 's'} · {publishedCount} publicado{publishedCount === 1 ? '' : 's'}
+            {archivedEvents.length > 0 && ` · ${archivedEvents.length} archivado${archivedEvents.length === 1 ? '' : 's'}`}
           </p>
         </div>
         {impersonating ? null : canCreate ? (
@@ -191,13 +185,13 @@ export default async function AdminHomePage() {
           <div className="s-stat">
             <span className="s-stat__label">Próximo evento</span>
             <span className="s-stat__value s-stat__value--text">Ninguno publicado</span>
-            <span className="s-stat__sub">{canCreate ? 'creá o publicá uno' : 'pedí un pack para crear'}</span>
+            <span className="s-stat__sub">{canCreate ? 'crea o publica uno' : 'pide un pack para crear'}</span>
           </div>
         )}
         <div className={`s-stat${balance === 0 ? ' s-stat--alert' : ''}`}>
-          <span className="s-stat__label">Saldo de eventos</span>
+          <span className="s-stat__label">Eventos disponibles</span>
           <span className="s-stat__value">{balance}</span>
-          <span className="s-stat__sub">{canCreate ? 'podés crear más' : 'sin saldo — pedí un pack'}</span>
+          <span className="s-stat__sub">{canCreate ? `puedes crear ${balance} más` : 'sin saldo — pide un pack'}</span>
         </div>
       </div>
 
@@ -206,7 +200,10 @@ export default async function AdminHomePage() {
         <div className="a-task" role="status">
           <span className="a-task__txt">
             <span>
-              <strong>Tenés {totalPending} Yape{totalPending === 1 ? '' : 's'} por revisar</strong>
+              <strong>
+                Tienes {totalPending} Yape{totalPending === 1 ? '' : 's'} por revisar
+                {pendingEventCount > 1 && ` en ${pendingEventCount} eventos`}
+              </strong>
               <span className="a-task__sub">Plata esperando tu aprobación · hay gente esperando su QR.</span>
             </span>
           </span>
@@ -216,9 +213,16 @@ export default async function AdminHomePage() {
         </div>
       )}
 
-      {/* Acciones rápidas del próximo evento */}
-      {nextEvent && (
+      {/* Acciones rápidas del próximo evento. Sin próximo evento queda igual el
+          acceso al escáner: es lo único que se hace desde la home sin abrir nada. */}
+      {nextEvent ? (
         <QuickActions eventId={nextEvent.id} publicUrl={nextPublicUrl} isPublished={!!nextEvent.is_published} readOnly={impersonating} />
+      ) : (
+        <div className="a-quick" role="group" aria-label="Acciones rápidas">
+          <Link href="/scan" className="s-btn s-btn--soft s-btn--sm">
+            <ScanLine aria-hidden="true" /> Abrir escáner
+          </Link>
+        </div>
       )}
 
       {/* Aviso de saldo bajo (solo dueño): empuja a pedir packs cuando queda ≤1. */}
@@ -239,13 +243,13 @@ export default async function AdminHomePage() {
         <div className="s-card">
           <p className="s-empty">
             {canCreate
-              ? 'Todavía no creaste ningún evento. Usá “Crear evento” para arrancar.'
-              : 'No tenés eventos. Cuando ParyGo te cargue saldo vas a poder crear el primero.'}
+              ? 'Todavía no creaste ningún evento. Usa “Crear evento” para arrancar.'
+              : 'No tienes eventos. Cuando ParyGo te cargue saldo vas a poder crear el primero.'}
           </p>
         </div>
       ) : activeEvents.length === 0 ? (
         <div className="s-card">
-          <p className="s-empty">Todos tus eventos están archivados. Mirá la sección “Archivados” más abajo.</p>
+          <p className="s-empty">Todos tus eventos están archivados. Mira la sección “Archivados” más abajo.</p>
         </div>
       ) : (
         <div className="a-evgrid">
@@ -281,7 +285,7 @@ export default async function AdminHomePage() {
                   <div className="a-evcard__foot">
                     {sales > 0 && <span className="a-evcard__sales">{formatPEN(sales)} <span className="s-muted" style={{ fontWeight: 500 }}>vendido</span></span>}
                     {pend > 0 && <span className="s-badge s-badge--todo">{pend} Yape por revisar</span>}
-                    {pend === 0 && sales === 0 && e.is_published && !past && <span className="s-muted s-small">Aún no vendiste · compartí tu link</span>}
+                    {pend === 0 && sales === 0 && e.is_published && !past && <span className="s-muted s-small">Aún no vendiste · comparte tu link</span>}
                     <ArrowRight className="h-4 w-4 a-evcard__go" />
                   </div>
                 </div>
@@ -297,7 +301,7 @@ export default async function AdminHomePage() {
         <details className="a-accordion s-section">
           <summary>
             <span className="a-accordion__title">Archivados ({archivedEvents.length})</span>
-            <span className="a-accordion__hint">No se venden ni aparecen en público. Podés desarchivarlos cuando quieras.</span>
+            <span className="a-accordion__hint">No se venden ni aparecen en público. Puedes desarchivarlos cuando quieras.</span>
           </summary>
           <div className="a-accordion__body">
           <ul className="s-event-list">
@@ -349,28 +353,6 @@ export default async function AdminHomePage() {
         </div>
       </div>
 
-      {/* Staff de puerta — gestión de validadores (códigos, contraseñas, invitar)
-          es todo escritura → la card completa se oculta en solo lectura. */}
-      {!impersonating && (
-        <div className="s-card" style={{ marginTop: 14 }}>
-          <div className="s-card__head">
-            <div>
-              <h2 className="s-h2">Staff de puerta</h2>
-              <p className="s-card__desc">Invitá a tu staff a validar entradas. Solo ven el escáner, nada más de tu panel.</p>
-            </div>
-            <Link href="/scan" className="s-btn s-btn--soft s-btn--sm">
-              <ScanLine className="h-4 w-4" /> Abrir escáner
-            </Link>
-          </div>
-          <div style={{ marginTop: 14 }}>
-            <p className="eyebrow" style={{ marginBottom: 10 }}>Tus validadores · contraseña + código personal de puerta</p>
-            <ValidatorManager validators={validators} />
-          </div>
-          <div className="s-divider" />
-          <p className="eyebrow" style={{ marginBottom: 10 }}>Invitar nuevo validador (por email)</p>
-          <InviteValidator />
-        </div>
-      )}
     </>
   );
 }

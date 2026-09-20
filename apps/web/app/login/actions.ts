@@ -45,7 +45,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     p_max_per_id: 5, p_max_per_ip: 5, p_window_minutes: 15,
   });
   if ((rl as { blocked?: boolean } | null)?.blocked) {
-    return { ok: false, message: 'Demasiados intentos. Esperá unos minutos e intentá de nuevo.' };
+    return { ok: false, message: 'Demasiados intentos. Espera unos minutos e intenta de nuevo.' };
   }
 
   // Contraseña obligatoria para TODOS los roles, incluido el super admin. Sin

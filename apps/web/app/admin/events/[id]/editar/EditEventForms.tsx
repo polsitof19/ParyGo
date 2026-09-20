@@ -69,10 +69,10 @@ export function EditEventForm(p: { eventId: string; name: string; description: s
         <input id="ev-vname" name="venue_name" defaultValue={p.venueName} className="s-input" disabled={ro} /></div>
       <div className="s-field"><label className="s-label" htmlFor="ev-vaddr">Dirección</label>
         <input id="ev-vaddr" name="venue_address" defaultValue={p.venueAddress} className="s-input" disabled={ro} />
-        <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Si la cargás, mostramos el mapa de Google en la página pública.</p></div>
+        <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Si la cargas, mostramos el mapa de Google en la página pública.</p></div>
       <div className="s-field"><label className="s-label" htmlFor="ev-vmaps">Enlace de Google Maps (opcional)</label>
         <input id="ev-vmaps" name="venue_maps_url" type="url" defaultValue={p.venueMapsUrl} placeholder="https://maps.app.goo.gl/..." className="s-input" disabled={ro} />
-        <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Para el botón "Cómo llegar". Pegá el enlace de tu local (debe empezar con https://).</p></div>
+        <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Para el botón "Cómo llegar". Pega el enlace de tu local (debe empezar con https://).</p></div>
       <details className="s-details">
         <summary>Opciones del checkout y avisos (avanzado)</summary>
         <div className="s-field" style={{ marginTop: 12 }}>
@@ -80,35 +80,35 @@ export function EditEventForm(p: { eventId: string; name: string; description: s
             <input type="checkbox" name="require_age_confirmation" defaultChecked={p.requireAgeConfirmation} disabled={ro} />
             <span>Pedir confirmación de edad (+{p.minAge}) en el checkout</span>
           </label>
-          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Activalo si tu evento lo requiere legalmente (ej. alcohol).</p>
+          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Actívalo si tu evento lo requiere legalmente (ej. alcohol).</p>
         </div>
         <div className="s-field">
           <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
             <input type="checkbox" name="require_dni" defaultChecked={p.requireDni} disabled={ro} />
             <span>Pedir documento de identidad (DNI/CE) en el checkout</span>
           </label>
-          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto activado. Sirve para validar identidad en la puerta. Desactivalo si no lo necesitás.</p>
+          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto activado. Sirve para validar identidad en la puerta. Desactívalo si no lo necesitas.</p>
         </div>
         <div className="s-field">
           <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
             <input type="checkbox" name="send_reminder" defaultChecked={p.sendReminder} disabled={ro} />
             <span>Enviar recordatorio por email ~24h antes del evento</span>
           </label>
-          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Si lo activás, cada comprador con entrada válida recibe un recordatorio automático el día previo (una sola vez).</p>
+          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Si lo activas, cada comprador con entrada válida recibe un recordatorio automático el día previo (una sola vez).</p>
         </div>
         <div className="s-field">
           <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
             <input type="checkbox" name="collect_attendee_names" defaultChecked={p.collectAttendeeNames} disabled={ro} />
             <span>Pedir el nombre de cada asistente en el checkout</span>
           </label>
-          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Si lo activás, el comprador puede poner un nombre por entrada (aparece en cada QR). Opcional para el comprador.</p>
+          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Si lo activas, el comprador puede poner un nombre por entrada (aparece en cada QR). Opcional para el comprador.</p>
         </div>
         <div className="s-field">
           <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
             <input type="checkbox" name="allow_transfer" defaultChecked={p.allowTransfer} disabled={ro} />
             <span>Permitir transferir / regalar entradas</span>
           </label>
-          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Si lo activás, cada comprador puede pasar su entrada a otra persona desde su QR (se reemite el QR y se avisa al nuevo dueño por email).</p>
+          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto desactivado. Si lo activas, cada comprador puede pasar su entrada a otra persona desde su QR (se reemite el QR y se avisa al nuevo dueño por email).</p>
         </div>
       </details>
       <Banner state={state} />
@@ -130,11 +130,11 @@ function guardFreePrice(e: React.FormEvent<HTMLFormElement>, previousPriceCents?
   const unlimited = (form.elements.namedItem('is_unlimited') as HTMLInputElement | null)?.checked;
   if (unlimited) {
     e.preventDefault();
-    window.alert('Un tipo no puede ser gratis e ilimitado a la vez. Poné un cupo o un precio.');
+    window.alert('Un tipo no puede ser gratis e ilimitado a la vez. Pon un cupo o un precio.');
     return;
   }
   if (previousPriceCents === 0) return;
-  if (!window.confirm('Este tipo cuesta S/ 0. Los tipos gratis NO se venden en tu página: se emiten desde "Cortesías" y descuentan del aforo. ¿Confirmás?')) {
+  if (!window.confirm('Este tipo cuesta S/ 0. Los tipos gratis NO se venden en tu página: se emiten desde "Cortesías" y descuentan del aforo. ¿Confirmas?')) {
     e.preventDefault();
     return;
   }

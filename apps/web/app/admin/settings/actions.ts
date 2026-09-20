@@ -45,7 +45,7 @@ export async function updateBrandSettingsAction(
   // A brand_admin can only ever edit their own brand.
   const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
   if (!membership) {
-    return { ok: false, message: 'No tenés acceso de promotor.' };
+    return { ok: false, message: 'No tienes acceso de promotor.' };
   }
   const brandId = membership.brandId;
 
@@ -64,7 +64,7 @@ export async function updateBrandSettingsAction(
       const p = e.path.join('.');
       if (p) fieldErrors[p] = e.message;
     }
-    return { ok: false, message: 'Revisá los campos marcados.', fieldErrors };
+    return { ok: false, message: 'Revisa los campos marcados.', fieldErrors };
   }
 
   const admin = createAdminClient();
@@ -88,7 +88,7 @@ export async function updateBrandSettingsAction(
   if (file instanceof File && file.size > 0) {
     const ext = LOGO_TYPES[file.type];
     if (!ext) {
-      return { ok: false, message: 'Logo: usá PNG, JPG o WEBP.', fieldErrors: { logo: 'Tipo no permitido' } };
+      return { ok: false, message: 'Logo: usa PNG, JPG o WEBP.', fieldErrors: { logo: 'Tipo no permitido' } };
     }
     if (file.size > 2 * 1024 * 1024) {
       return { ok: false, message: 'El logo supera 2 MB.', fieldErrors: { logo: 'Muy grande' } };
@@ -114,7 +114,7 @@ export async function updateBrandSettingsAction(
   if (qrFile instanceof File && qrFile.size > 0) {
     const ext = LOGO_TYPES[qrFile.type];
     if (!ext) {
-      return { ok: false, message: 'QR de Yape: usá PNG, JPG o WEBP.', fieldErrors: { yape_qr: 'Tipo no permitido' } };
+      return { ok: false, message: 'QR de Yape: usa PNG, JPG o WEBP.', fieldErrors: { yape_qr: 'Tipo no permitido' } };
     }
     if (qrFile.size > 2 * 1024 * 1024) {
       return { ok: false, message: 'El QR supera 2 MB.', fieldErrors: { yape_qr: 'Muy grande' } };
@@ -207,7 +207,7 @@ export async function updateMpCredentialsAction(
   // ENFORCEMENT: el brand sale de la sesión, NUNCA del form.
   const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
   if (!membership) {
-    return { ok: false, message: 'No tenés acceso de promotor.' };
+    return { ok: false, message: 'No tienes acceso de promotor.' };
   }
   const brandId = membership.brandId;
   const admin = createAdminClient();
@@ -243,7 +243,7 @@ export async function updateMpCredentialsAction(
       const p = e.path.join('.');
       if (p) fieldErrors[p] = e.message;
     }
-    return { ok: false, message: 'Revisá las credenciales.', fieldErrors };
+    return { ok: false, message: 'Revisa las credenciales.', fieldErrors };
   }
 
   // Validación REAL contra MercadoPago antes de persistir (evita guardar un
@@ -269,5 +269,5 @@ export async function updateMpCredentialsAction(
   });
 
   revalidatePath('/admin/settings');
-  return { ok: true, message: 'Credenciales de MercadoPago validadas y guardadas. Ya podés cobrar con tarjeta.' };
+  return { ok: true, message: 'Credenciales de MercadoPago validadas y guardadas. Ya puedes cobrar con tarjeta.' };
 }

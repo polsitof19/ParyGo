@@ -48,7 +48,7 @@ export function EventCoverUploader({ eventId, currentUrl, readOnly = false }: { 
           ) : (
             <>
               <p className="s-card__desc" style={{ marginBottom: 10 }}>
-                Subí el flyer del evento (PNG, JPG o WEBP · vertical o cuadrado · máx 10 MB). Se ve grande en la portada del evento y en tu página de marca.
+                Sube el flyer del evento (PNG, JPG o WEBP · vertical o cuadrado · máx 10 MB). Se ve grande en la portada del evento y en tu página de marca.
               </p>
               <input ref={inputRef} type="file" name="cover" accept="image/png,image/jpeg,image/webp" onChange={onPick} className="s-input" style={{ paddingTop: 9 }} />
               {fileName && <p className="s-hint">{fileName}</p>}

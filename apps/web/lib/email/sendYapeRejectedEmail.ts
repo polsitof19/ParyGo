@@ -26,7 +26,7 @@ export async function sendYapeRejectedEmail(orderId: string, reason: string | nu
     `Hola ${escapeHtml(order.buyer_name ?? '')}, revisamos tu comprobante de Yape para <strong>${escapeHtml(eventName)}</strong> y no pudimos aprobarlo.`,
   ];
   if (reason) paragraphs.push(`Motivo: <strong>${escapeHtml(reason)}</strong>.`);
-  paragraphs.push('No se generó ningún cargo de nuestra parte. Podés intentar la compra de nuevo o escribirnos si creés que fue un error.');
+  paragraphs.push('No se generó ningún cargo de nuestra parte. Puedes intentar la compra de nuevo o escribirnos si crees que fue un error.');
 
   const { html } = renderWarmEmail({
     brandName,
@@ -46,7 +46,7 @@ export async function sendYapeRejectedEmail(orderId: string, reason: string | nu
     `Pago no aprobado — ${eventName}`,
     `Hola ${order.buyer_name ?? ''}, no pudimos aprobar tu comprobante de Yape.`,
     reason ? `Motivo: ${reason}` : '',
-    `Podés intentar de nuevo: ${eventUrl}`,
+    `Puedes intentar de nuevo: ${eventUrl}`,
     `Enviado por ${brandName} via ParyGo.`,
   ].filter(Boolean).join('\n');
 

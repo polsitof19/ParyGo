@@ -33,7 +33,7 @@ export function validateEventWindow(input: {
   const start = Date.parse(input.startsIso);
   if (!Number.isFinite(start)) return { field: 'starts_at', message: 'Fecha de inicio inválida.' };
   if (input.requireFutureStart && start < now - PAST_GRACE_MS) {
-    return { field: 'starts_at', message: 'La fecha de inicio ya pasó. Elegí una fecha futura.' };
+    return { field: 'starts_at', message: 'La fecha de inicio ya pasó. Elige una fecha futura.' };
   }
   if (input.endsIso) {
     const end = Date.parse(input.endsIso);
@@ -73,10 +73,10 @@ export function validateTicketTypePricing(
     if (t.pricesCents.some((p) => !Number.isFinite(p) || p < 0)) return `"${label}": precio inválido.`;
     const hasFree = t.pricesCents.some((p) => p === 0);
     if (hasFree && t.isUnlimited) {
-      return `"${label}" no puede ser gratis e ilimitado a la vez. Poné un aforo (cupo) o un precio.`;
+      return `"${label}" no puede ser gratis e ilimitado a la vez. Pon un aforo (cupo) o un precio.`;
     }
     if (hasFree && !opts.freeConfirmed) {
-      return `"${label}" tiene precio S/ 0. Confirmá que es gratis: no se ofrece en tu página salvo que todo el evento sea gratis, y se emite desde "Cortesías".`;
+      return `"${label}" tiene precio S/ 0. Confirma que es gratis: no se ofrece en tu página salvo que todo el evento sea gratis, y se emite desde "Cortesías".`;
     }
   }
   return null;

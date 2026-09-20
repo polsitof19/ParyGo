@@ -23,7 +23,7 @@ export function impersonatedBrandId(): string | null {
 // ¿Hay una sesión de impersonación activa (cookie presente)? Las guardas de
 // ESCRITURA que permiten al super admin (authEvent, authorizeEventBrandAdmin,
 // setEventCoverAction) deben DENEGAR el camino super-admin cuando esto es true:
-// mientras "ves" una marca, no podés escribir como nadie (modo solo lectura).
+// mientras "ves" una marca, no puedes escribir como nadie (modo solo lectura).
 // Un brand_admin nunca recibe esta cookie; si la forjara, solo se auto-denegaría
 // sus propios writes (su camino real es por membresía, que no se ve afectado).
 export function isImpersonating(): boolean {

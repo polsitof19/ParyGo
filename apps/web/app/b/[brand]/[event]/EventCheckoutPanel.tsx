@@ -309,7 +309,7 @@ export function EventCheckoutPanel({
   const isYape = method === 'yape_manual' && !applied?.isFree;
 
   function submitCheckout(form: HTMLFormElement) {
-    if (itemsForPromo.length === 0) { toast.error('Elegí al menos una entrada.'); setStep(1); return; }
+    if (itemsForPromo.length === 0) { toast.error('Elige al menos una entrada.'); setStep(1); return; }
     const fd = new FormData(form);
     // Confirmación de edad: solo se exige si el evento la pide (configurable).
     const ageOk = event.require_age_confirmation ? fd.get('age_ok') === '1' : true;
@@ -390,7 +390,7 @@ export function EventCheckoutPanel({
               {/* ENTRADAS */}
               <section>
                 <div className="c-co__sechead">
-                  <span className="c-card__title" style={{ margin: 0 }}>— Elegí tus entradas</span>
+                  <span className="c-card__title" style={{ margin: 0 }}>— Elige tus entradas</span>
                   {event.venue_name && <span className="c-co__sechead-meta">{fmtDateShort(event.starts_at)} · {event.venue_name}</span>}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -440,7 +440,7 @@ export function EventCheckoutPanel({
                     </div>
                   ) : (
                     <button type="button" onClick={() => setShowPromo(true)} className="c-promo-toggle">
-                      <span aria-hidden className="c-promo-toggle__plus">+</span> ¿Tenés un código de promotor?
+                      <span aria-hidden className="c-promo-toggle__plus">+</span> ¿Tienes un código de promotor?
                     </button>
                   )}
                 </div>
@@ -776,7 +776,7 @@ function SummaryRail({
       <div className="c-rail__body">
         <p className="c-rail__label">Tu compra</p>
         {totalItems === 0 ? (
-          <p className="c-rail__empty">Aún no elegiste entradas. Sumá al menos una para continuar.</p>
+          <p className="c-rail__empty">Aún no elegiste entradas. Suma al menos una para continuar.</p>
         ) : (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>

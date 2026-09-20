@@ -43,7 +43,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   const user = await requireSession();
   const eventId = String(formData.get('event_id') ?? '');
   const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
-  if (!brandId) return { ok: false, message: 'No tenés permiso sobre este evento.' };
+  if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   const parsed = eventSchema.safeParse({
     name: formData.get('name'), description: formData.get('description') ?? '',
@@ -51,7 +51,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
     venue_address: formData.get('venue_address') ?? '', venue_maps_url: formData.get('venue_maps_url') ?? '',
     min_age: formData.get('min_age') ?? '',
   });
-  if (!parsed.success) return { ok: false, message: 'Revisá los campos (el enlace de Maps debe empezar con https://).' };
+  if (!parsed.success) return { ok: false, message: 'Revisa los campos (el enlace de Maps debe empezar con https://).' };
   const requireAge = formData.get('require_age_confirmation') === 'on';
   const requireDni = formData.get('require_dni') === 'on';
   const sendReminder = formData.get('send_reminder') === 'on';
@@ -139,7 +139,7 @@ export async function setEventPublishedAction(
 ): Promise<{ ok: boolean; message?: string }> {
   const user = await requireSession();
   const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
-  if (!brandId) return { ok: false, message: 'No tenés permiso sobre este evento.' };
+  if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   const admin = createAdminClient();
   // Guard: no publicar un evento sin al menos un tipo de entrada activo.
@@ -150,12 +150,12 @@ export async function setEventPublishedAction(
       .eq('event_id', eventId)
       .eq('is_active', true);
     if (!count || count === 0) {
-      return { ok: false, message: 'Agregá al menos un tipo de entrada activo antes de publicar.' };
+      return { ok: false, message: 'Agrega al menos un tipo de entrada activo antes de publicar.' };
     }
     // Guard: no publicar un evento que ya terminó (nadie podría comprar).
     const { data: ev } = await admin.from('events').select('starts_at, ends_at').eq('id', eventId).eq('brand_id', brandId).maybeSingle();
     if (ev && eventOverAt(ev.starts_at, ev.ends_at) < Date.now()) {
-      return { ok: false, message: 'Este evento ya terminó. Cambiá la fecha antes de publicarlo.' };
+      return { ok: false, message: 'Este evento ya terminó. Cambia la fecha antes de publicarlo.' };
     }
   }
 
@@ -188,7 +188,7 @@ export async function postponeEventAction(
 ): Promise<{ ok: boolean; message?: string; queued?: number }> {
   const user = await requireSession();
   const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
-  if (!brandId) return { ok: false, message: 'No tenés permiso sobre este evento.' };
+  if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   const startsIso = limaToIso(newStartsAtLima);
   if (!startsIso) return { ok: false, message: 'Fecha/hora inválida.' };
@@ -204,7 +204,7 @@ export async function postponeEventAction(
 
   const oldStartsAt = ev.starts_at as string;
   if (new Date(oldStartsAt).getTime() === new Date(startsIso).getTime()) {
-    return { ok: false, message: 'Esa es la misma fecha. Elegí una distinta.' };
+    return { ok: false, message: 'Esa es la misma fecha. Elige una distinta.' };
   }
   // Postergar = mover a una fecha FUTURA conservando la duración: el fin se corre
   // con el mismo delta (antes quedaba ends_at < starts_at → "terminado", sin venta).
@@ -265,7 +265,7 @@ export async function cancelEventAction(
 ): Promise<{ ok: boolean; message?: string; queued?: number }> {
   const user = await requireSession();
   const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
-  if (!brandId) return { ok: false, message: 'No tenés permiso sobre este evento.' };
+  if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   const cleanReason = (reason ?? '').trim().slice(0, 500);
 
@@ -324,7 +324,7 @@ export async function cancelEventAction(
 export async function cloneEventAction(eventId: string): Promise<{ ok: boolean; message?: string }> {
   const user = await requireSession();
   const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
-  if (!brandId) return { ok: false, message: 'No tenés permiso sobre este evento.' };
+  if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   const admin = createAdminClient();
   const { data: ev } = await admin
@@ -341,7 +341,7 @@ export async function cloneEventAction(eventId: string): Promise<{ ok: boolean; 
     return {
       ok: false,
       message: cloneWindowErr.field === 'starts_at'
-        ? 'Este evento ya pasó: el clon copiaría fechas y fases vencidas (y gastaría 1 de saldo). Creá uno nuevo desde "Crear evento".'
+        ? 'Este evento ya pasó: el clon copiaría fechas y fases vencidas (y gastaría 1 de saldo). Crea uno nuevo desde "Crear evento".'
         : cloneWindowErr.message,
     };
   }
@@ -402,11 +402,11 @@ export async function cloneEventAction(eventId: string): Promise<{ ok: boolean; 
   if (error || !newId) {
     const msg = error?.message ?? '';
     if (msg.includes('INSUFFICIENT_BALANCE')) {
-      return { ok: false, message: 'No tenés saldo de eventos para clonar. Pedí un pack a ParyGo.' };
+      return { ok: false, message: 'No tienes saldo de eventos para clonar. Pide un pack a ParyGo.' };
     }
     if (error?.code === '23505') {
-      // Colisión de slug (rarísima por el sufijo random) → reintentá el botón.
-      return { ok: false, message: 'No se pudo generar el borrador. Probá de nuevo.' };
+      // Colisión de slug (rarísima por el sufijo random) → reintenta el botón.
+      return { ok: false, message: 'No se pudo generar el borrador. Prueba de nuevo.' };
     }
     return { ok: false, message: msg || 'No se pudo clonar el evento.' };
   }
@@ -436,7 +436,7 @@ export async function setEventArchivedAction(
 ): Promise<{ ok: boolean; message?: string }> {
   const user = await requireSession();
   const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
-  if (!brandId) return { ok: false, message: 'No tenés permiso sobre este evento.' };
+  if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   const admin = createAdminClient();
   const update = archived
@@ -466,7 +466,7 @@ export async function deleteEventAction(
 ): Promise<{ ok: boolean; message?: string }> {
   const user = await requireSession();
   const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
-  if (!brandId) return { ok: false, message: 'No tenés permiso sobre este evento.' };
+  if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   const admin = createAdminClient();
   const { data: ev } = await admin
@@ -480,13 +480,13 @@ export async function deleteEventAction(
     return { ok: false, message: 'El nombre no coincide. Escribilo igual para confirmar.' };
   }
 
-  // Guard de historial: 0 órdenes Y 0 tickets, o se rechaza (archivá en su lugar).
+  // Guard de historial: 0 órdenes Y 0 tickets, o se rechaza (archiva en su lugar).
   const [{ count: orders }, { count: tickets }] = await Promise.all([
     admin.from('orders').select('id', { count: 'exact', head: true }).eq('event_id', eventId),
     admin.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', eventId),
   ]);
   if ((orders ?? 0) > 0 || (tickets ?? 0) > 0) {
-    return { ok: false, message: 'No se puede eliminar: tiene ventas. Archivá en su lugar.' };
+    return { ok: false, message: 'No se puede eliminar: tiene ventas. Archiva en su lugar.' };
   }
 
   // Log ANTES de borrar (events_log.event_id queda SET NULL al borrar el evento).
@@ -518,7 +518,7 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   const ttId = String(formData.get('ticket_type_id') ?? '');
   const eventId = String(formData.get('event_id') ?? '');
   const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
-  if (!brandId) return { ok: false, message: 'No tenés permiso.' };
+  if (!brandId) return { ok: false, message: 'No tienes permiso.' };
 
   const admin = createAdminClient();
   const { data: tt } = await admin
@@ -552,7 +552,7 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
     update.is_unlimited = true;
   } else {
     if (!Number.isFinite(newCapacity) || newCapacity < 1) return { ok: false, message: 'Capacidad inválida.' };
-    if (newCapacity < sold) return { ok: false, message: `No podés bajar la capacidad por debajo de lo vendido (${sold}).` };
+    if (newCapacity < sold) return { ok: false, message: `No puedes bajar la capacidad por debajo de lo vendido (${sold}).` };
     update.is_unlimited = false;
     update.capacity = newCapacity;
   }
@@ -569,7 +569,7 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
     if (newPriceCents < 0) return { ok: false, message: 'Precio inválido.' };
     const phaseCount = (phaseRows ?? []).length;
     if (phaseCount > 1) {
-      return { ok: false, message: 'Este tipo tiene fases de preventa; el precio se gestiona por fases (no editable acá).' };
+      return { ok: false, message: 'Este tipo tiene fases de preventa; el precio se gestiona por fases (no editable aquí).' };
     }
     update.price_cents = newPriceCents;
     // Si hay UNA fase base (sin ventas), la alineamos para que el precio activo coincida.
@@ -605,10 +605,10 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
   const user = await requireSession();
   const eventId = String(formData.get('event_id') ?? '');
   const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
-  if (!brandId) return { ok: false, message: 'No tenés permiso.' };
+  if (!brandId) return { ok: false, message: 'No tienes permiso.' };
 
   const name = String(formData.get('name') ?? '').trim().slice(0, 80);
-  if (name.length < 1) return { ok: false, message: 'Poné un nombre.' };
+  if (name.length < 1) return { ok: false, message: 'Pon un nombre.' };
   const description = String(formData.get('description') ?? '').trim().slice(0, 280);
   const isUnlimited = formData.get('is_unlimited') === 'on';
   const priceCents = Math.round(parseFloat(String(formData.get('price_soles') ?? '')) * 100);

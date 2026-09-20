@@ -44,7 +44,7 @@ export default async function EventsListPage({ searchParams }: { searchParams?: 
       </div>
 
       {!events || events.length === 0 ? (
-        <div className="s-card"><p className="s-empty">Sin eventos todavía. Creá una marca primero, después un evento.</p></div>
+        <div className="s-card"><p className="s-empty">Sin eventos todavía. Crea una marca primero, después un evento.</p></div>
       ) : (
         <div className="s-card">
           <ul className="s-event-list" style={{ marginTop: 0 }}>

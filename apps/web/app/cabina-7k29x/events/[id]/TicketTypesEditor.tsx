@@ -38,7 +38,7 @@ export function TicketTypesEditor({
     const editedId = String(formData.get('id') ?? '');
     const wasFree = editedId !== '' && types.find((t) => t.id === editedId)?.price_cents === 0;
     if (Number(formData.get('price_soles') ?? '') === 0 && !wasFree) {
-      const ok = window.confirm('Este tipo cuesta S/ 0. Los tipos gratis NO se venden en la página pública: se emiten como cortesías y descuentan del aforo. ¿Confirmás?');
+      const ok = window.confirm('Este tipo cuesta S/ 0. Los tipos gratis NO se venden en la página pública: se emiten como cortesías y descuentan del aforo. ¿Confirmas?');
       if (!ok) return;
       formData.set('confirm_free', '1');
     }
@@ -78,7 +78,7 @@ export function TicketTypesEditor({
   return (
     <div className="s-stack" style={{ gap: 14 }}>
       {types.length === 0 && !creating && (
-        <div className="s-card"><p className="s-empty">Sin tipos de entrada todavía. Agregá uno para empezar.</p></div>
+        <div className="s-card"><p className="s-empty">Sin tipos de entrada todavía. Agrega uno para empezar.</p></div>
       )}
 
       {types.map((t) => (

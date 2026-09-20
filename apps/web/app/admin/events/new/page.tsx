@@ -37,7 +37,7 @@ export default async function NewBrandEventPage() {
         <span className="eyebrow">Nuevo evento · {brand.name}</span>
         <h1 className="s-h1" style={{ marginTop: 8 }}>Crear evento</h1>
         <p className="s-card__desc">
-          Consume 1 de tu saldo ({brand.event_balance} disponible{brand.event_balance === 1 ? '' : 's'}). El evento se crea en borrador; lo publicás cuando esté listo.
+          Consume 1 de tu saldo ({brand.event_balance} disponible{brand.event_balance === 1 ? '' : 's'}). El evento se crea en borrador; lo publicas cuando esté listo.
         </p>
       </header>
       <EventBuilder />

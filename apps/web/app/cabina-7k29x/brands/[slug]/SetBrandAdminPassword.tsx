@@ -32,7 +32,7 @@ function Btn() {
   const { pending } = useFormStatus();
   return (
     <button type="submit" className="s-btn s-btn--ghost s-btn--sm" disabled={pending}>
-      {pending ? '…' : 'Setear contraseña'}
+      {pending ? '…' : 'Guardar contraseña'}
     </button>
   );
 }

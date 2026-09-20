@@ -19,7 +19,7 @@ export async function sendPromoCodeByEmailAction(
 ): Promise<SendCodeResult> {
   const user = await requireSession();
   const brandId = await authorizeEventBrandAdmin(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
-  if (!brandId) return { ok: false, message: 'No tenés permiso sobre este evento.' };
+  if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   const to = (email ?? '').trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { ok: false, message: 'Email inválido.' };
@@ -36,7 +36,7 @@ export async function sendPromoCodeByEmailAction(
   }
 
   const res = await sendPromoCodeEmail(promoCodeId, to);
-  if (!res.ok) return { ok: false, message: 'No se pudo enviar el email. Probá de nuevo.' };
+  if (!res.ok) return { ok: false, message: 'No se pudo enviar el email. Prueba de nuevo.' };
   if (res.status === 'skipped') return { ok: false, message: 'El email no está configurado.' };
 
   await admin.from('events_log').insert({
@@ -144,7 +144,7 @@ export async function createPromoCode(input: CreatePromoInput): Promise<CreateRe
   if (!appliesToAll) {
     ticketTypeIds = (input.ticketTypeIds ?? []).filter(Boolean);
     if (ticketTypeIds.length === 0) {
-      return { ok: false, message: 'Elegí al menos un tipo de entrada o aplicá a todas.' };
+      return { ok: false, message: 'Elige al menos un tipo de entrada o aplica a todas.' };
     }
     // Enforce that every ticket type belongs to this event.
     const { data: validTypes } = await admin
@@ -178,7 +178,7 @@ export async function createPromoCode(input: CreatePromoInput): Promise<CreateRe
     if ((error as { code?: string }).code === '23505') {
       return { ok: false, message: 'Ya existe un código con ese nombre en este evento.' };
     }
-    return { ok: false, message: 'No se pudo crear el código. Intentá de nuevo.' };
+    return { ok: false, message: 'No se pudo crear el código. Intenta de nuevo.' };
   }
 
   revalidatePath(`/admin/events/${input.eventId}`);

@@ -22,7 +22,7 @@ export async function redeemGateCodeAction(
   formData: FormData
 ): Promise<RedeemState> {
   const code = String(formData.get('code') ?? '').toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 8);
-  if (code.length !== 8) return { ok: false, message: 'Ingresá el código de 8 caracteres.' };
+  if (code.length !== 8) return { ok: false, message: 'Ingresa el código de 8 caracteres.' };
 
   const admin = createAdminClient();
 
@@ -32,7 +32,7 @@ export async function redeemGateCodeAction(
     p_max_per_id: 999, p_max_per_ip: 10, p_window_minutes: 15,
   });
   if ((rl as { blocked?: boolean } | null)?.blocked) {
-    return { ok: false, message: 'Demasiados intentos. Esperá unos minutos.' };
+    return { ok: false, message: 'Demasiados intentos. Espera unos minutos.' };
   }
 
   // 1) Atomic redeem (validates + bumps use_count). The code IS the credential.
@@ -50,11 +50,11 @@ export async function redeemGateCodeAction(
 
   const { data: link, error: lErr } = await admin.auth.admin.generateLink({ type: 'magiclink', email });
   const tokenHash = link?.properties?.hashed_token;
-  if (lErr || !tokenHash) return { ok: false, message: 'No se pudo iniciar sesión. Reintentá.' };
+  if (lErr || !tokenHash) return { ok: false, message: 'No se pudo iniciar sesión. Reintenta.' };
 
   const supabase = createClient(); // @supabase/ssr → writes sb-* auth cookies
   const { error: vErr } = await supabase.auth.verifyOtp({ type: 'magiclink', token_hash: tokenHash });
-  if (vErr) return { ok: false, message: 'No se pudo iniciar sesión. Reintentá.' };
+  if (vErr) return { ok: false, message: 'No se pudo iniciar sesión. Reintenta.' };
 
   redirect('/scan');
 }
