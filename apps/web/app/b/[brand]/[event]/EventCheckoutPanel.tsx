@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Minus, Plus, Loader2, Clock, Lock, ArrowRight, TrendingUp, ExternalLink } from 'lucide-react';
 import { formatPEN } from '@/lib/utils';
@@ -147,7 +147,28 @@ export function EventCheckoutPanel({
   );
 
   const [qty, setQty] = useState<Record<string, number>>({});
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStepRaw] = useState<1 | 2>(1);
+  // Morph entre pasos: el contenido que se va se desvanece 120ms (fade + 4px)
+  // antes de que entre el nuevo, en vez de cortarse de golpe. `step` sigue
+  // siendo la verdad para la lógica; `shownStep` es lo que se está pintando.
+  const [shownStep, setShownStep] = useState<1 | 2>(1);
+  const [leaving, setLeaving] = useState(false);
+  const setStep = useCallback((next: 1 | 2) => {
+    setStepRaw((prev) => {
+      if (prev === next) return prev;
+      setLeaving(true);
+      return next;
+    });
+  }, []);
+  useEffect(() => {
+    if (!leaving) return;
+    // prefers-reduced-motion: sin espera, el cambio es inmediato.
+    const reduce = typeof window !== 'undefined'
+      && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) { setShownStep(step); setLeaving(false); return; }
+    const t = setTimeout(() => { setShownStep(step); setLeaving(false); }, 120);
+    return () => clearTimeout(t);
+  }, [leaving, step]);
   // Código de RR.PP. (promo_codes) — opcional. Se ingresa en el paso 1 o 2 y se
   // aplica en el paso 2 junto al email. B5: pre-rellena con ?ref del promotor.
   const [promoInput, setPromoInput] = useState(refCode.toUpperCase());
@@ -383,8 +404,8 @@ export function EventCheckoutPanel({
                 <MercadoPagoWallet publicKey={mpPublicKey} preferenceId={mpCheckout.preferenceId} initPoint={mpCheckout.initPoint} />
               </div>
             </div>
-          ) : step === 1 ? (
-            <div className="c-stepwrap" key="step1">
+          ) : shownStep === 1 ? (
+            <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}`} key="step1">
               <HeroCard event={event} brand={brand} shareUrl={shareUrl} />
 
               {/* ENTRADAS */}
@@ -449,7 +470,7 @@ export function EventCheckoutPanel({
               <DondeCard event={event} />
             </div>
           ) : (
-            <div className="c-stepwrap" key="step2">
+            <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}`} key="step2">
               <form
                 id="checkout-form"
                 onSubmit={(e) => { e.preventDefault(); submitCheckout(e.currentTarget); }}

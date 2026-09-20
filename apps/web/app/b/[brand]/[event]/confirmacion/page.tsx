@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { Check, Mail, ArrowRight, MapPin, Ticket as TicketIcon, ExternalLink } from 'lucide-react';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateQrSvg } from '@/lib/qr';
-import { formatPEN, formatEventDate, whatsappLink } from '@/lib/utils';
+import { formatPEN, formatEventDate } from '@/lib/utils';
 import { ConfirmationPoller } from './ConfirmationPoller';
 import { AddToCalendar } from './AddToCalendar';
 import { TicketPass } from '../../TicketPass';

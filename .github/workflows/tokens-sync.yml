@@ -13,6 +13,8 @@ on:
       - 'apps/*/app/styles/parygo-tokens.css'
       - 'scripts/check-tokens-sync.js'
       - 'scripts/check-tokens-contrast.js'
+      - 'scripts/check-brand-contrast.mjs'
+      - 'apps/web/lib/brandColors.ts'
       - '.github/workflows/tokens-sync.yml'
       - 'package.json'
   pull_request:
@@ -20,6 +22,8 @@ on:
       - 'apps/*/app/styles/parygo-tokens.css'
       - 'scripts/check-tokens-sync.js'
       - 'scripts/check-tokens-contrast.js'
+      - 'scripts/check-brand-contrast.mjs'
+      - 'apps/web/lib/brandColors.ts'
       - '.github/workflows/tokens-sync.yml'
       - 'package.json'
 

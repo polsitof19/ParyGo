@@ -16,10 +16,7 @@ type Props = {
 };
 
 type BrandTheme = {
-  primary_color?: string;
-  secondary_color?: string;
   logo_url?: string | null;
-  cover_url?: string | null;
 };
 
 type TicketView = {
@@ -30,7 +27,7 @@ type TicketView = {
   attendee_name: string | null;
   validated_at: string | null;
   invalidated_at: string | null;
-  event: { name: string; starts_at: string; venue_name: string | null; venue_address: string | null; cover_url: string | null; cancelled_at: string | null; allow_transfer: boolean } | null;
+  event: { name: string; starts_at: string; venue_name: string | null; cancelled_at: string | null; allow_transfer: boolean } | null;
   brand: {
     slug: string;
     name: string;
@@ -49,7 +46,7 @@ async function loadTicket(brandSlug: string, qrCode: string): Promise<TicketView
     .from('tickets')
     .select(`
       id, qr_code, ticket_type_name, ticket_number, attendee_name, validated_at, invalidated_at,
-      event:events ( name, starts_at, venue_name, venue_address, cover_url, cancelled_at, allow_transfer ),
+      event:events ( name, starts_at, venue_name, cancelled_at, allow_transfer ),
       brand:brands ( slug, name, whatsapp_e164, theme_json )
     `)
     .eq('qr_code', qrCode)

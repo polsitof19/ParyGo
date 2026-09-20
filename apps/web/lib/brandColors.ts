@@ -94,6 +94,10 @@ function mix(rgb: [number, number, number], target: [number, number, number], m:
   return [rgb[0] + (target[0] - rgb[0]) * m, rgb[1] + (target[1] - rgb[1]) * m, rgb[2] + (target[2] - rgb[2]) * m];
 }
 
+// ⚠ Si tocás esta función, tocá también su copia en
+// scripts/check-brand-contrast.mjs (el CI corre en Node 20 y sin npm install,
+// así que no puede importar este .ts). Ese test falla si las dos se separan.
+//
 // RELLENO de marca apto para llevar texto (botón primario, círculo del paso
 // activo, banda del ticket). La regla del sistema es que el color de marca no
 // porta texto "a ojo", porque el promotor elige cualquier color: acá el par
