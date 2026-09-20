@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Bricolage_Grotesque, Hanken_Grotesk, Archivo, Inter, Instrument_Serif, Fredoka, Nunito } from 'next/font/google';
+import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { createClient } from '@/lib/supabase/server';
 import { brandColor, brandFillPair, brandInk, withAlpha } from './brandTheme';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -15,16 +15,6 @@ export const dynamic = 'force-dynamic';
 
 const bricolage = Bricolage_Grotesque({ weight: ['700', '800'], subsets: ['latin'], variable: '--font-bricolage', display: 'swap' });
 const hanken = Hanken_Grotesk({ weight: ['400', '500', '600', '700'], subsets: ['latin'], variable: '--font-hanken', display: 'swap' });
-// Identidad ParyGo del landing de marca (mockup): Archivo (display), Inter (cuerpo), Instrument Serif (acento itálico).
-const archivo = Archivo({ weight: ['500', '600', '700', '800', '900'], subsets: ['latin'], variable: '--font-archivo', display: 'swap' });
-const inter = Inter({ weight: ['400', '500', '600'], subsets: ['latin'], variable: '--font-inter', display: 'swap' });
-const instrument = Instrument_Serif({ weight: '400', style: 'italic', subsets: ['latin'], variable: '--font-instrument', display: 'swap' });
-// Landing de marca (.bl) — estilo limpio/pastel/juvenil. Solo se usan dentro de .bl
-// (vía --bl-disp/--bl-body). El checkout del evento (.c-checkout-canvas) usa Archivo
-// para títulos (override en client.css v3); el resto del shell mantiene Bricolage/Hanken.
-const fredoka = Fredoka({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-fredoka', display: 'swap' });
-const nunito = Nunito({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], style: ['normal', 'italic'], variable: '--font-nunito', display: 'swap' });
-
 // Layout de las páginas públicas por marca. El middleware reescribe
 // <slug>.parygo.com/* → /b/<slug>/*, así que este segmento recibe el slug.
 export default async function BrandLayout({
@@ -58,7 +48,7 @@ export default async function BrandLayout({
 
   return (
     <div
-      className={`pg client-shell ${bricolage.variable} ${hanken.variable} ${archivo.variable} ${inter.variable} ${instrument.variable} ${fredoka.variable} ${nunito.variable}`}
+      className={`pg client-shell ${bricolage.variable} ${hanken.variable}`}
       style={
         {
           '--brand': primary,

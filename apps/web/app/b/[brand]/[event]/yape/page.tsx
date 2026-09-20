@@ -3,7 +3,6 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
 import { YapeUploadForm } from './YapeUploadForm';
 import { CopyButton } from './CopyButton';
-import { CheckoutSteps } from '../CheckoutSteps';
 import { publicEnv } from '@/lib/env';
 
 export const runtime = 'edge';
@@ -64,61 +63,49 @@ export default async function YapeUploadPage({
   }
 
   return (
-    <main className="c-narrow c-checkout-canvas" style={{ paddingTop: 32, paddingBottom: 48 }}>
-      {/* El comprador sigue dentro del flujo: paso 3 "Pagar con Yape" activo. */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 22 }}>
-        <CheckoutSteps method="yape_manual" active={3} />
-      </div>
-      <div style={{ textAlign: 'center' }}>
-        <span className="c-eyebrow">Pago con Yape</span>
-        <h1 className="c-h1" style={{ fontSize: 28, marginTop: 8 }}>
-          Yapea {formatPEN(order.total_cents)} a {order.brand.yape_holder ?? order.brand.name}
-        </h1>
-        <p className="c-muted" style={{ marginTop: 8 }}>
-          Yapea al número de abajo y después sube los datos del comprobante. Te mandamos tu QR cuando el promotor confirme.
-        </p>
+    <main className="b-buy c-checkout-canvas" style={{ paddingTop: 26 }}>
+      <div className="b-blobs" aria-hidden="true"><span /><span /></div>
+
+      <div className="b-head">
+        <h1 className="b-head__t">Yapea {formatPEN(order.total_cents)}</h1>
+        <p className="b-head__s">A {order.brand.yape_holder ?? order.brand.name}. Después subes tu comprobante y te mandamos tu QR.</p>
       </div>
 
-      <div className="c-card" style={{ marginTop: 22 }}>
-        <p className="c-card__title">1 · Yapea a este número</p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <p style={{ fontFamily: 'var(--display)', fontWeight: 800, fontSize: 'clamp(34px,9vw,46px)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', color: 'var(--brand-ink)', margin: 0 }}>{order.brand.yape_number}</p>
+      <div className="b-panel">
+        <p className="b-panel__t">1 · Yapea a este número</p>
+        <div className="b-yapenum">
+          <span>{order.brand.yape_number}</span>
           <CopyButton value={order.brand.yape_number} label="Número" />
         </div>
-        <p className="c-muted" style={{ marginTop: 6 }}>Titular: <strong style={{ color: 'var(--ink)' }}>{order.brand.yape_holder ?? order.brand.name}</strong></p>
-        <p className="c-muted" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <span>Monto exacto: <strong style={{ color: 'var(--ink)' }}>{formatPEN(order.total_cents)}</strong></span>
-          <CopyButton value={(order.total_cents / 100).toFixed(2)} label="Monto" />
-        </p>
+        <div className="b-resumen"><span>Titular</span><b style={{ fontFamily: 'var(--body)', fontWeight: 700 }}>{order.brand.yape_holder ?? order.brand.name}</b></div>
+        <div className="b-resumen">
+          <span>Monto exacto</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+            <b>{formatPEN(order.total_cents)}</b>
+            <CopyButton value={(order.total_cents / 100).toFixed(2)} label="Monto" />
+          </span>
+        </div>
 
         {order.brand.theme_json?.yape_qr_url && (
-          <div style={{ marginTop: 16, borderRadius: 16, border: '1px solid #E7D9F2', background: '#F6F0FB', padding: 14, textAlign: 'center' }}>
+          <div className="b-yapeqr">
             {/* Morado Yape + nombre en TEXTO (no falsificamos el logo del BCP) */}
-            <p style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontWeight: 800, letterSpacing: '-0.01em', color: '#742384', fontSize: 15 }}>
-              <span aria-hidden style={{ display: 'inline-block', width: 9, height: 9, borderRadius: '50%', background: '#742384' }} />
-              Escanea con Yape
-            </p>
-            {/* Ampliable: tocar abre el QR a tamaño completo en mobile */}
-            <a href={order.brand.theme_json.yape_qr_url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 10 }}>
+            <p className="b-yapeqr__t"><span aria-hidden /> Escanea con Yape</p>
+            <a href={order.brand.theme_json.yape_qr_url} target="_blank" rel="noopener noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={order.brand.theme_json.yape_qr_url}
-                alt={`QR de Yape de ${order.brand.yape_holder ?? order.brand.name}`}
-                style={{ width: 'min(260px, 70vw)', aspectRatio: '1 / 1', objectFit: 'contain', borderRadius: 12, background: '#fff', border: '1px solid #E7D9F2', margin: '0 auto' }}
-              />
+              <img src={order.brand.theme_json.yape_qr_url} alt={`QR de Yape de ${order.brand.yape_holder ?? order.brand.name}`} />
             </a>
-            <p className="c-muted" style={{ marginTop: 8, fontSize: 12 }}>Toca el QR para ampliarlo</p>
+            <p className="c-help" style={{ textAlign: 'center' }}>Toca el QR para ampliarlo</p>
           </div>
         )}
 
-        <p style={{ marginTop: 12, borderRadius: 'var(--r-ctl)', background: 'var(--warn-bg)', color: 'var(--warn)', padding: '11px 14px', fontSize: 13, fontWeight: 500 }}>
-          ⚠️ Yapea el monto exacto. Si yapeas de menos o de más, el promotor puede rechazar el comprobante.
-        </p>
+        <p className="b-aviso">Yapea el monto exacto. Si yapeas de menos o de más, el organizador puede rechazar el comprobante.</p>
       </div>
 
-      <div className="c-card" style={{ marginTop: 14 }}>
-        <p className="c-card__title">2 · Sube los datos del comprobante</p>
-        <p className="c-muted" style={{ marginBottom: 14 }}>Después de yapear, abre &quot;Movimientos&quot; en tu app Yape, abre esta transferencia y copia los datos. También adjunta la captura.</p>
+      <div className="b-panel">
+        <p className="b-panel__t">2 · Sube tu comprobante</p>
+        <p className="c-help" style={{ marginTop: -6, marginBottom: 14 }}>
+          Abre Movimientos en tu app de Yape, entra a esta transferencia y copia los datos. Adjunta también la captura.
+        </p>
         <YapeUploadForm
           orderId={order.id}
           brandId={order.brand.slug}
@@ -130,7 +117,10 @@ export default async function YapeUploadPage({
 
       {order.brand.whatsapp_e164 && (
         <p className="c-foot">
-          ¿Algún problema? <a href={`https://wa.me/${order.brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>WhatsApp soporte</a>
+          ¿Algún problema?{' '}
+          <a href={`https://wa.me/${order.brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink)', fontWeight: 700, textDecoration: 'underline' }}>
+            Escribe al organizador
+          </a>
         </p>
       )}
     </main>
