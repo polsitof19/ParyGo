@@ -24,7 +24,7 @@ export function CancelEvent({ eventId, eventName, cancelled }: { eventId: string
   }
 
   const onCancel = () => {
-    const typed = window.prompt(`Vas a CANCELAR "${eventName}". Esto lo despublica y manda un email de cancelación a TODOS los compradores. No se puede deshacer.\n\nEscribí CANCELAR para confirmar:`);
+    const typed = window.prompt(`Vas a CANCELAR "${eventName}". Esto lo despublica y manda un email de cancelación a TODOS los compradores. No se puede deshacer.\n\nEscribe CANCELAR para confirmar:`);
     if ((typed ?? '').trim().toUpperCase() !== 'CANCELAR') return;
     start(async () => {
       const res = await cancelEventAction(eventId, reason);
