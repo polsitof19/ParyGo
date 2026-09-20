@@ -1,27 +1,32 @@
 /* ============================================================
    Sitio público del comprador — identidad cálida parygo,
    caracterizada por el color de la marca. Scopeado bajo .client-shell.
-   Base SIEMPRE crema; --brand (primary_color) + --on-brand (texto legible
-   sobre la marca, calculado por luminancia) los inyecta el layout inline.
+   Base SIEMPRE crema; el layout inyecta --brand (primary_color) y el par
+   --brand-fill/--on-fill, medido a AA para los rellenos que llevan texto.
    ============================================================ */
+/* Los valores vienen de parygo-tokens.css (.pg, que el layout monta junto con
+   .client-shell). Acá solo: los ALIAS que usa el CSS del comprador (--cream*,
+   --white, --hairline) y lo propio de esta superficie — el acento ES el color
+   de la marca. La especificidad doble (.pg.client-shell) gana contra .pg sin
+   depender del orden en que Next junte los CSS. */
+.pg.client-shell {
+  --accent: var(--brand);
+  --accent-deep: var(--brand-deep);
+}
 .client-shell {
-  --cream: #FBF7F0; --cream-2: #F4EDE1; --cream-3: #EFE6D6; --white: #FFFFFF;
-  --ink: #231C17; --ink-2: #6B5F54; --ink-3: #A89B8C;
-  --ok: #2E9E6B; --ok-bg: #E6F4EC; --warn: #C7791A; --warn-bg: #FBEEDD;
-  --alert: #D7472F; --alert-bg: #FBE9E5;
-  /* defaults; el layout los sobrescribe con los de la marca */
-  --brand: #FF6A3D; --on-brand: #FFFFFF; --brand-soft: rgba(255,106,61,.12);
-  --display: var(--font-bricolage), "Bricolage Grotesque", system-ui, sans-serif;
-  --body: var(--font-hanken), "Hanken Grotesk", system-ui, sans-serif;
-  --r-card: 18px; --r-ctl: 12px; --r-pill: 999px;
-  --pad: clamp(16px, 4vw, 32px);
-  /* 3 niveles de elevación (reposo / hover / foco) en vez de una sombra plana */
-  --shadow-sm: 0 1px 2px rgba(35,28,23,.05), 0 6px 16px -12px rgba(35,28,23,.28);
-  --shadow-md: 0 2px 6px rgba(35,28,23,.05), 0 18px 40px -22px rgba(35,28,23,.40);
-  --shadow-lg: 0 4px 12px rgba(35,28,23,.06), 0 40px 80px -34px rgba(35,28,23,.50);
+  --cream: var(--paper); --cream-2: var(--paper-2); --cream-3: var(--paper-3); --white: var(--surface);
+  --hairline: var(--line);
+  --ok-bg: #E6F4EC; --warn-bg: #FBEEDD; --alert-bg: #FBE9E5;
+  /* Defaults por si el layout no inyectó marca (fallback tangerina parygo). */
+  --brand: #FF6A3D; --brand-fill: #FF6A3D; --on-fill: #231C17;
+  --brand-soft: rgba(255,106,61,.12); --brand-deep: #E8552A;
+  /* Compat: el color de marca NO porta texto (regla dura del sistema). Lo que
+     antes se tintaba con la marca ahora va en tinta; el color aparece como
+     punto, barra, anillo de foco o relleno con su texto medido. */
+  --brand-ink: var(--ink);
+  --on-brand: var(--on-fill);
   --shadow: var(--shadow-md); /* alias retro-compat */
-  --hairline: rgba(35,28,23,.07);
-  --ease: cubic-bezier(.22,1,.36,1);
+  --pad: clamp(16px, 4vw, 32px);
 
   min-height: 100vh;
   /* Lienzo tintado con un toque de la marca arriba → cada evento se siente propio */
@@ -49,17 +54,21 @@
 .client-shell .c-muted { color: var(--ink-2); }
 .client-shell .c-muted-3 { color: var(--ink-3); }
 
-/* header — barra con el COLOR de cada marca (lockup), compartido. El cuerpo del
-   landing rediseñado (.bl) es crema/naranja; SOLO esta barra toma --brand. */
-.client-shell .c-header { position: sticky; top: 0; z-index: 50; background: var(--brand); border-bottom: 1px solid rgba(0,0,0,.10); }
+/* header */
+/* La barra ya NO se rellena con el color de la marca: ahí iba el nombre en
+   texto, y sobre un color elegido por el promotor no hay contraste garantizado
+   (un tangerina con blanco da 2.85:1). La marca sigue presente como barra de
+   4px arriba —decorativa, sin texto encima—, el anillo del logo y el tinte del
+   lienzo; el nombre va en tinta. */
+.client-shell .c-header { position: sticky; top: 0; z-index: 50; background: rgba(251,247,240,.88); -webkit-backdrop-filter: saturate(150%) blur(12px); backdrop-filter: saturate(150%) blur(12px); border-bottom: 1px solid var(--line); box-shadow: inset 0 4px 0 var(--brand); }
 .client-shell .c-header__inner { max-width: 1120px; margin: 0 auto; height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 28px; }
 .client-shell .c-lockup { display: inline-flex; align-items: center; gap: 11px; min-width: 0; }
 .client-shell .c-lockup__mark { width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(150deg,#1f1a14,#3a3128); display: grid; place-items: center; flex: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), 0 1px 2px rgba(0,0,0,.18); }
 .client-shell .c-lockup__mark > span { width: 13px; height: 13px; border-radius: 50%; background: #FF6B35; box-shadow: 0 0 0 3px rgba(255,107,53,.18); }
-.client-shell .c-lockup__name { font-family: var(--font-archivo), system-ui, sans-serif; font-weight: 700; font-size: 19px; letter-spacing: -0.01em; line-height: 1; color: var(--on-brand); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.client-shell .c-powered { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--on-brand); opacity: .7; flex-shrink: 0; }
+.client-shell .c-lockup__name { font-family: var(--font-archivo), system-ui, sans-serif; font-weight: 700; font-size: 19px; letter-spacing: -0.01em; line-height: 1; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.client-shell .c-powered { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--ink-3); flex-shrink: 0; }
 .client-shell .c-powered a { text-decoration: none; }
-.client-shell .c-powered b { font-family: var(--font-archivo), system-ui, sans-serif; font-weight: 700; color: var(--on-brand); }
+.client-shell .c-powered b { font-family: var(--font-archivo), system-ui, sans-serif; font-weight: 700; color: var(--ink-2); }
 .client-shell .c-powered a:hover b { opacity: .82; }
 .client-shell .c-powered__dot { width: 4px; height: 4px; border-radius: 50%; background: #FF6B35; margin-left: -2px; }
 @media (max-width: 860px) { .client-shell .c-powered { display: none; } }
@@ -100,7 +109,7 @@
 .client-shell .c-step { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
 .client-shell .c-step b { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--cream-2); color: var(--ink-3); font-size: 11px; font-weight: 800; }
 .client-shell .c-step--on { color: var(--ink); }
-.client-shell .c-step--on b { background: var(--brand); color: var(--on-brand); }
+.client-shell .c-step--on b { background: var(--brand-fill); color: var(--on-fill); }
 .client-shell .c-step--done b { background: var(--ok); color: #fff; }
 .client-shell .c-step__line { flex: 1; min-width: 14px; height: 2px; background: var(--cream-3); border-radius: 2px; }
 
@@ -109,11 +118,12 @@
 .client-shell .c-card__title { font-family: var(--display); font-size: 13px; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; color: var(--brand-ink); margin-bottom: 14px; }
 
 /* ticket type row (selección) */
-.client-shell .c-tt { position: relative; overflow: hidden; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 16px; background: var(--white); border: 1px solid var(--hairline); border-radius: var(--r-card); padding: 18px 20px 18px 24px; box-shadow: var(--shadow-sm); transition: border-color .2s, box-shadow .2s var(--ease), transform .2s var(--ease), background-color .2s; animation: c-tt-in .4s var(--ease) both; animation-delay: calc(var(--i, 0) * 55ms); }
+.client-shell .c-tt { position: relative; overflow: hidden; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 20px; padding-block: 18px; background: var(--white); border: 1px solid var(--hairline); border-radius: var(--r-card); padding: 18px 20px 18px 24px; box-shadow: var(--shadow-sm); transition: border-color .2s, box-shadow .2s var(--ease), transform .2s var(--ease), background-color .2s; animation: c-tt-in .4s var(--ease) both; animation-delay: calc(var(--i, 0) * 55ms); }
 /* banda de color por tipo de entrada (color_hex; cae a la marca) */
-.client-shell .c-tt::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--tt-accent, var(--brand)); border-radius: var(--r-card) 0 0 var(--r-card); }
+.client-shell .c-tt::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--tt-accent, var(--brand)); border-radius: var(--r-card) 0 0 var(--r-card); transition: width .18s var(--ease); }
 .client-shell .c-tt:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
-.client-shell .c-tt--active { border-color: var(--brand); background: var(--brand-soft); box-shadow: 0 0 0 2px var(--brand), var(--shadow-md); }
+.client-shell .c-tt--active { border-color: var(--line); background: var(--sel); box-shadow: var(--shadow-md); }
+.client-shell .c-tt--active::before { width: 4px; background: var(--brand); }
 .client-shell .c-tt--out { background: var(--cream); box-shadow: none; }
 .client-shell .c-tt--out::before { filter: grayscale(1); opacity: .5; }
 .client-shell .c-tt--out .c-tt__price { text-decoration: line-through; color: var(--ink-3); }
@@ -122,7 +132,7 @@
 /* badge sold-out sólido (en vez de solo opacar) */
 .client-shell .c-soldout { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: var(--r-pill); background: var(--ink); color: var(--white); font-size: 11.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
 .client-shell .c-tt__name { font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: -0.01em; line-height: 1; }
-.client-shell .c-tt__price { font-weight: 700; color: var(--brand-ink); font-variant-numeric: tabular-nums; }
+.client-shell .c-tt__price { font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
 .client-shell .c-tt__perks { margin-top: 6px; font-size: 13.5px; color: var(--ink-2); }
 .client-shell .c-tt__perks li { display: flex; gap: 6px; }
 .client-shell .c-rise { margin-top: 6px; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--warn); }
@@ -139,7 +149,7 @@
 .client-shell .c-qbtn:hover:not(:disabled) { border-color: var(--ink); }
 .client-shell .c-qbtn:active:not(:disabled) { transform: scale(.92); }
 .client-shell .c-qbtn:disabled { opacity: .3; cursor: not-allowed; }
-.client-shell .c-qbtn--add { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+.client-shell .c-qbtn--add { background: var(--brand-fill); border-color: var(--brand-fill); color: var(--on-fill); }
 .client-shell .c-qval { width: 30px; text-align: center; font-family: var(--display); font-weight: 800; font-size: 19px; font-variant-numeric: tabular-nums; }
 
 /* sticky total bar (paso 1) */
@@ -152,7 +162,7 @@
 /* buttons */
 .client-shell .c-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: 15px; height: 48px; padding: 0 22px; border-radius: var(--r-pill); border: 1.5px solid transparent; cursor: pointer; white-space: nowrap; transition: filter .2s, transform .2s var(--ease), box-shadow .2s, border-color .2s, background-color .2s; }
 .client-shell .c-btn:disabled { opacity: .65; cursor: not-allowed; }
-.client-shell .c-btn--brand { background: var(--brand); color: var(--on-brand); box-shadow: 0 10px 24px -10px var(--brand); }
+.client-shell .c-btn--brand { background: var(--brand-fill); color: var(--on-fill); box-shadow: 0 10px 24px -10px var(--brand); }
 .client-shell .c-btn--brand:hover:not(:disabled) { filter: brightness(1.05); transform: translateY(-1px); }
 .client-shell .c-btn--brand:active:not(:disabled) { transform: translateY(0) scale(.99); }
 .client-shell .c-btn--soft { background: var(--white); color: var(--ink); border-color: var(--cream-3); }
@@ -300,8 +310,8 @@
 .client-shell .c-seals .c-seal { font-weight: 600; }
 
 /* transición animada entre paso 1 y paso 2 */
-.client-shell .c-stepwrap { animation: c-stepin .34s var(--ease) both; }
-@keyframes c-stepin { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.client-shell .c-stepwrap { animation: c-stepin .12s var(--ease) both; }
+@keyframes c-stepin { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
 /* countdown de urgencia como pill destacado cuando el precio sube */
 .client-shell .c-phase__now { background: var(--brand-soft); color: var(--brand-ink); padding: 4px 10px; border-radius: var(--r-pill); align-self: flex-start; }
@@ -408,7 +418,7 @@
 .client-shell .c-stepper__line { width: 22px; height: 1px; background: rgba(35,28,23,.2); }
 .client-shell .c-stepper__item { display: inline-flex; align-items: center; gap: 9px; background: none; border: none; padding: 0; }
 .client-shell .c-stepper__num { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 12px; font-weight: 800; color: var(--ink-3); box-shadow: inset 0 0 0 1.5px rgba(35,28,23,.18); transition: all .3s var(--ease); }
-.client-shell .c-stepper__num--on { background: var(--brand); color: var(--on-brand); box-shadow: 0 6px 15px -4px var(--brand); }
+.client-shell .c-stepper__num--on { background: var(--brand-fill); color: var(--on-fill); box-shadow: 0 6px 15px -4px var(--brand); }
 .client-shell .c-stepper__num--done { background: var(--ink); color: var(--cream); box-shadow: none; }
 .client-shell .c-stepper__label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; color: var(--ink-3); transition: color .3s; }
 .client-shell .c-stepper__label--on { color: var(--ink); font-weight: 700; }
@@ -454,12 +464,12 @@
 .client-shell .c-rail__head { display: flex; gap: 14px; padding: 18px; background: var(--ink); color: var(--cream); }
 .client-shell .c-rail__head img { width: 54px; height: 72px; object-fit: cover; object-position: top; border-radius: 9px; flex: 0 0 auto; box-shadow: 0 10px 20px -8px rgba(0,0,0,.6); }
 .client-shell .c-rail__name { font-family: var(--display); font-size: 21px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.02; }
-.client-shell .c-rail__meta { font-size: 12px; color: rgba(245,239,230,.72); margin-top: 4px; }
+.client-shell .c-rail__meta { font-size: 12px; color: rgba(251,247,240,.72); margin-top: 4px; }
 .client-shell .c-rail__timer { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 11px; background: var(--brand-soft); color: var(--brand-ink); font-size: 12.5px; font-weight: 600; border-bottom: 1px solid var(--hairline); }
 .client-shell .c-rail__timer--soon { background: var(--alert-bg); color: var(--alert); }
 .client-shell .c-rail__body { padding: 20px; }
 .client-shell .c-rail__label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 14px; }
-.client-shell .c-rail__empty { padding: 4px 0 8px; font-size: 14px; color: var(--ink-3); line-height: 1.4; }
+.client-shell .c-rail__empty { padding: 14px 16px; border: 1.5px dashed var(--line); border-radius: var(--r-ctl); font-size: 14px; color: var(--ink-3); line-height: 1.4; }
 .client-shell .c-rail__secure { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 14px; font-size: 11.5px; color: var(--ink-3); }
 
 @media (max-width: 900px) {
@@ -491,15 +501,13 @@
    Solo presentación: no toca selección/precio/pago/emisión/aforo.
    ============================================================ */
 .client-shell:has(.c-checkout-canvas) {
-  /* Paleta del mockup, retonada para armonizar cremas/inks derivados */
-  --cream: #F5EFE6; --cream-2: #EFE8DC; --cream-3: #E6DBCB;
-  --ink: #16120D; --ink-2: #574E43; --ink-3: #948877;
-  --hairline: rgba(22,18,13,.08);
-  /* títulos en Archivo (ya cargada); el énfasis sigue en Instrument Serif */
+  /* La paleta es la del sistema (parygo-tokens): el funnel ya NO retona cremas
+     ni tintas por su cuenta. Lo propio del checkout es la tipografía de
+     títulos —Archivo— y el fondo plano. */
   --display: var(--font-archivo), "Archivo", system-ui, sans-serif;
   color: var(--ink);
   /* fondo plano de página (sobrescribe el radial+crema base del shell) */
-  background: var(--cream);
+  background: var(--paper);
 }
 
 /* — Marcadores de sección "— ELEGÍ TUS ENTRADAS" / "— DÓNDE" — */
@@ -518,7 +526,7 @@
 /* — Hero: tarjeta blanca con más aire; badge +18 negro, chip EN VIVO — */
 .client-shell .c-checkout-canvas .c-hcard { border-radius: 24px; padding: 20px; gap: 24px; box-shadow: var(--shadow-md); }
 .client-shell .c-checkout-canvas .c-hcard__age {
-  width: 46px; height: 46px; background: #16120D; color: #F5EFE6; border: 2px solid var(--brand);
+  width: 46px; height: 46px; background: var(--ink); color: var(--paper); border: 2px solid var(--brand);
   font-family: var(--display); font-weight: 900; letter-spacing: -0.02em;
 }
 .client-shell .c-checkout-canvas .c-live { letter-spacing: 0.14em; font-weight: 800; }
@@ -543,26 +551,26 @@
    RAIL DE RESUMEN — TARJETA OSCURA (evento + TU COMPRA + total + CTA)
    ============================================================ */
 .client-shell .c-checkout-canvas .c-rail {
-  background: #16120D; border-color: rgba(255,255,255,.08);
+  background: var(--ink); border-color: rgba(255,255,255,.08);
   box-shadow: 0 30px 70px -34px rgba(0,0,0,.6);
 }
 .client-shell .c-checkout-canvas .c-rail__head { background: rgba(255,255,255,.04); border-bottom: 1px solid rgba(255,255,255,.08); }
-.client-shell .c-checkout-canvas .c-rail__name { color: #F5EFE6; }
-.client-shell .c-checkout-canvas .c-rail__meta { color: rgba(245,239,230,.66); }
+.client-shell .c-checkout-canvas .c-rail__name { color: #FBF7F0; }
+.client-shell .c-checkout-canvas .c-rail__meta { color: rgba(251,247,240,.66); }
 .client-shell .c-checkout-canvas .c-rail__timer {
-  background: rgba(255,255,255,.06); color: rgba(245,239,230,.9); border-bottom: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.06); color: rgba(251,247,240,.9); border-bottom: 1px solid rgba(255,255,255,.08);
 }
 .client-shell .c-checkout-canvas .c-rail__timer svg { color: var(--brand); }
 .client-shell .c-checkout-canvas .c-rail__timer--soon { background: rgba(215,71,47,.18); color: #FFB4A6; }
-.client-shell .c-checkout-canvas .c-rail__label { color: rgba(245,239,230,.55); }
-.client-shell .c-checkout-canvas .c-rail__empty { color: rgba(245,239,230,.6); }
-.client-shell .c-checkout-canvas .c-rail .c-sum__row { color: rgba(245,239,230,.9); }
+.client-shell .c-checkout-canvas .c-rail__label { color: rgba(251,247,240,.55); }
+.client-shell .c-checkout-canvas .c-rail__empty { color: rgba(251,247,240,.62); border-color: rgba(251,247,240,.22); }
+.client-shell .c-checkout-canvas .c-rail .c-sum__row { color: rgba(251,247,240,.9); }
 .client-shell .c-checkout-canvas .c-rail .c-sum__discount { color: #6FD6A0; }
 .client-shell .c-checkout-canvas .c-rail .c-sum__total { border-top-color: rgba(255,255,255,.14); }
 .client-shell .c-checkout-canvas .c-rail .c-sum__total .l,
-.client-shell .c-checkout-canvas .c-rail .c-sum__total .v { color: #F5EFE6; }
-.client-shell .c-checkout-canvas .c-rail .c-muted-3 { color: rgba(245,239,230,.5); }
-.client-shell .c-checkout-canvas .c-rail__secure { color: rgba(245,239,230,.55); }
+.client-shell .c-checkout-canvas .c-rail .c-sum__total .v { color: #FBF7F0; }
+.client-shell .c-checkout-canvas .c-rail .c-muted-3 { color: rgba(251,247,240,.5); }
+.client-shell .c-checkout-canvas .c-rail__secure { color: rgba(251,247,240,.55); }
 
 /* — CTA "Continuar" sobre la tarjeta OSCURA: contraste blindado —
    Texto sobre el botón: --on-brand (YIQ, ya legible para cualquier marca).
@@ -570,19 +578,77 @@
    (1.4.11 non-text ≥3:1) → una marca casi-negra no se funde con el rail;
    una marca clara ya contrasta de sobra. Igual criterio que el header. */
 .client-shell .c-checkout-canvas .c-rail .c-btn--brand {
-  box-shadow: 0 10px 26px -8px var(--brand), inset 0 0 0 1px rgba(245,239,230,.46);
+  box-shadow: 0 10px 26px -8px var(--brand), inset 0 0 0 1px rgba(251,247,240,.46);
 }
-.client-shell .c-checkout-canvas .c-rail .c-btn--brand:hover:not(:disabled) { box-shadow: 0 14px 30px -8px var(--brand), inset 0 0 0 1px rgba(245,239,230,.55); }
+.client-shell .c-checkout-canvas .c-rail .c-btn--brand:hover:not(:disabled) { box-shadow: 0 14px 30px -8px var(--brand), inset 0 0 0 1px rgba(251,247,240,.55); }
 /* Estado "apagado" (total = 0): neutro sobre el rail, sin glow de marca.
    Al sumar la primera entrada, se ENCIENDE en color de marca (transición). */
 .client-shell .c-checkout-canvas .c-rail .c-btn--brand:disabled {
-  background: rgba(245,239,230,.1); color: rgba(245,239,230,.5);
-  box-shadow: inset 0 0 0 1px rgba(245,239,230,.14); opacity: 1;
+  background: rgba(251,247,240,.1); color: rgba(251,247,240,.5);
+  box-shadow: inset 0 0 0 1px rgba(251,247,240,.14); opacity: 1;
 }
 
 /* — Barra sticky mobile: mismo crema del canvas (sin costura) — */
 @media (max-width: 820px) {
   .client-shell .c-checkout-canvas .c-mobilecta {
-    background: rgba(245,239,230,.94); border-top-color: var(--cream-3);
+    background: rgba(251,247,240,.94); border-top-color: var(--cream-3);
   }
 }
+
+/* ============================================================
+   LA ENTRADA (.c-pass) — /t/[uuid] y el cierre de la confirmación.
+   Es una ENTRADA, no un recibo: el QR manda y está arriba del fold en
+   teléfono (mínimo 240px). Debajo, los datos que el de la puerta va a
+   mirar y una sola instrucción. La marca arriba, parygo abajo.
+   ============================================================ */
+.client-shell .c-pass { max-width: 420px; margin: 0 auto; }
+.client-shell .c-pass__card {
+  position: relative; overflow: hidden; background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--r-card);
+  box-shadow: var(--shadow-md); border-top: 4px solid var(--brand);
+}
+/* Cabecera: quién organiza. El color de marca es la barra de arriba y el
+   anillo del logo; el nombre va en tinta. */
+.client-shell .c-pass__brand { display: flex; align-items: center; gap: 10px; padding: 14px 18px 0; }
+.client-shell .c-pass__brand img { width: 30px; height: 30px; border-radius: 8px; object-fit: contain; background: var(--paper); box-shadow: 0 0 0 1.5px var(--brand); flex: none; }
+.client-shell .c-pass__brandname { font-weight: 700; font-size: 14px; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.client-shell .c-pass__type { margin-left: auto; flex: none; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+
+/* QR: lo primero y lo más grande. */
+.client-shell .c-pass__qrwrap { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px 18px 20px; }
+.client-shell .c-pass__qr { width: clamp(240px, 62vw, 288px); height: clamp(240px, 62vw, 288px); background: #fff; border-radius: 14px; padding: 12px; box-shadow: 0 0 0 1px var(--line); }
+.client-shell .c-pass__qr svg { width: 100%; height: 100%; display: block; }
+.client-shell .c-pass__say { font-family: var(--display); font-weight: 800; font-size: 17px; letter-spacing: -0.01em; text-align: center; }
+
+/* Troquel + datos */
+.client-shell .c-pass__perf { position: relative; height: 1px; border-top: 1.5px dashed var(--paper-3); }
+.client-shell .c-pass__perf::before, .client-shell .c-pass__perf::after { content: ""; position: absolute; top: 50%; width: 22px; height: 22px; border-radius: 50%; background: var(--paper); transform: translateY(-50%); }
+.client-shell .c-pass__perf::before { left: -11px; }
+.client-shell .c-pass__perf::after { right: -11px; }
+.client-shell .c-pass__data { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.client-shell .c-pass__who { font-family: var(--display); font-weight: 800; font-size: 22px; line-height: 1.1; letter-spacing: -0.02em; }
+.client-shell .c-pass__row { display: flex; gap: 10px; font-size: 14px; color: var(--ink-2); }
+.client-shell .c-pass__row svg { width: 16px; height: 16px; flex: none; margin-top: 2px; color: var(--ink-3); }
+.client-shell .c-pass__row b { font-weight: 600; color: var(--ink); }
+.client-shell .c-pass__code { font-size: 12.5px; color: var(--ink-3); letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+
+/* Estado (usada / en revisión / cancelada): punto + texto en tinta. */
+.client-shell .c-pass__state { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-ctl); background: var(--surface); font-size: 14px; line-height: 1.45; }
+.client-shell .c-pass__state::before { content: ""; width: 9px; height: 9px; border-radius: 50%; flex: none; margin-top: 6px; background: var(--ink-3); }
+.client-shell .c-pass__state--used::before { background: var(--ok); }
+.client-shell .c-pass__state--wait::before { background: var(--warn); }
+.client-shell .c-pass__state--dead::before { background: var(--alert); }
+.client-shell .c-pass__state b { font-weight: 700; }
+
+/* Acciones: guardar y compartir, una al lado de la otra. */
+.client-shell .c-pass__actions { display: flex; gap: 10px; margin-top: 14px; }
+.client-shell .c-pass__actions > * { flex: 1; }
+@media (max-width: 380px) { .client-shell .c-pass__actions { flex-direction: column; } }
+.client-shell .c-pass__foot { text-align: center; font-size: 12px; color: var(--ink-3); margin-top: 18px; }
+.client-shell .c-pass__foot b { font-weight: 700; color: var(--ink-2); }
+.client-shell .c-pass__foot .c-powered__dot { display: inline-block; vertical-align: 1px; margin-left: 1px; }
+
+/* Salida del morph entre pasos: el contenido que se va se desvanece 4px hacia
+   arriba en 120ms antes de que entre el siguiente (ver EventCheckoutPanel). */
+.client-shell .c-stepwrap--out { animation: c-stepout .12s var(--ease) both; }
+@keyframes c-stepout { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-4px); } }

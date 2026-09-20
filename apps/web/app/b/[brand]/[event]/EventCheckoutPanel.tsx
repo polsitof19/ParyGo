@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Minus, Plus, Loader2, Clock, Lock, ArrowRight, TrendingUp, ExternalLink } from 'lucide-react';
 import { formatPEN } from '@/lib/utils';
@@ -147,7 +147,28 @@ export function EventCheckoutPanel({
   );
 
   const [qty, setQty] = useState<Record<string, number>>({});
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStepRaw] = useState<1 | 2>(1);
+  // Morph entre pasos: el contenido que se va se desvanece 120ms (fade + 4px)
+  // antes de que entre el nuevo, en vez de cortarse de golpe. `step` sigue
+  // siendo la verdad para la lógica; `shownStep` es lo que se está pintando.
+  const [shownStep, setShownStep] = useState<1 | 2>(1);
+  const [leaving, setLeaving] = useState(false);
+  const setStep = useCallback((next: 1 | 2) => {
+    setStepRaw((prev) => {
+      if (prev === next) return prev;
+      setLeaving(true);
+      return next;
+    });
+  }, []);
+  useEffect(() => {
+    if (!leaving) return;
+    // prefers-reduced-motion: sin espera, el cambio es inmediato.
+    const reduce = typeof window !== 'undefined'
+      && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) { setShownStep(step); setLeaving(false); return; }
+    const t = setTimeout(() => { setShownStep(step); setLeaving(false); }, 120);
+    return () => clearTimeout(t);
+  }, [leaving, step]);
   // Código de RR.PP. (promo_codes) — opcional. Se ingresa en el paso 1 o 2 y se
   // aplica en el paso 2 junto al email. B5: pre-rellena con ?ref del promotor.
   const [promoInput, setPromoInput] = useState(refCode.toUpperCase());
@@ -285,7 +306,7 @@ export function EventCheckoutPanel({
         return;
       }
       setApplied({ code, finalCents: res.totalFinalCents, discountCents: res.totalDiscountCents, isFree: res.isFree });
-      toast.success(res.isFree ? '¡Entrada gratis con el código!' : `Código aplicado: -${formatPEN(res.totalDiscountCents)}`);
+      toast.success(res.isFree ? 'Entrada gratis con el código' : `Código aplicado: -${formatPEN(res.totalDiscountCents)}`);
     } catch {
       toast.error('No se pudo verificar el código (red). Intenta de nuevo.');
     } finally {
@@ -305,7 +326,7 @@ export function EventCheckoutPanel({
       ? 'Obtener entrada gratis'
       : method === 'mercadopago'
         ? `Pagar ${formatPEN(finalTotal)}`
-        : 'Ir a pagar con Yape';
+        : 'Pagar con Yape';
   const isYape = method === 'yape_manual' && !applied?.isFree;
 
   function submitCheckout(form: HTMLFormElement) {
@@ -383,8 +404,8 @@ export function EventCheckoutPanel({
                 <MercadoPagoWallet publicKey={mpPublicKey} preferenceId={mpCheckout.preferenceId} initPoint={mpCheckout.initPoint} />
               </div>
             </div>
-          ) : step === 1 ? (
-            <div className="c-stepwrap" key="step1">
+          ) : shownStep === 1 ? (
+            <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}`} key="step1">
               <HeroCard event={event} brand={brand} shareUrl={shareUrl} />
 
               {/* ENTRADAS */}
@@ -449,7 +470,7 @@ export function EventCheckoutPanel({
               <DondeCard event={event} />
             </div>
           ) : (
-            <div className="c-stepwrap" key="step2">
+            <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}`} key="step2">
               <form
                 id="checkout-form"
                 onSubmit={(e) => { e.preventDefault(); submitCheckout(e.currentTarget); }}
@@ -573,7 +594,7 @@ export function EventCheckoutPanel({
                     <div className="c-promo-on">
                       <div>
                         <span style={{ fontWeight: 700, color: 'var(--brand-ink)' }}>{applied.code}</span>
-                        <p className="c-muted" style={{ fontSize: 12.5, marginTop: 2 }}>{applied.isFree ? '¡Entrada gratis!' : `Descuento: -${formatPEN(applied.discountCents)}`}</p>
+                        <p className="c-muted" style={{ fontSize: 12.5, marginTop: 2 }}>{applied.isFree ? 'Entrada gratis' : `Descuento: -${formatPEN(applied.discountCents)}`}</p>
                       </div>
                       <button type="button" className="c-btn c-btn--ghost" onClick={() => { setApplied(null); setPromoInput(''); }}>Quitar</button>
                     </div>
@@ -639,7 +660,7 @@ function Stepper({ active, onGoStep1 }: { active: number; onGoStep1: () => void 
   const steps = [
     { n: 1, label: 'ENTRADAS' },
     { n: 2, label: 'DATOS' },
-    { n: 3, label: '¡LISTO!' },
+    { n: 3, label: 'LISTO' },
   ];
   return (
     <div className="c-stepper" aria-label="Pasos de la compra">

@@ -204,7 +204,7 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
 
       <footer className="bl-foot">
         <div className="bl-foot-in">
-          <span className="pg">parygo<i>.</i></span>
+          <span className="bl-wordmark">parygo<i>.</i></span>
           <div className="bl-foot-q">
             {(waHref || igHref) ? (
               <>

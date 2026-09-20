@@ -3,10 +3,10 @@ import { notFound } from 'next/navigation';
 import { Check, Mail, ArrowRight, MapPin, Ticket as TicketIcon, ExternalLink } from 'lucide-react';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateQrSvg } from '@/lib/qr';
-import { formatPEN, formatEventDate, whatsappLink } from '@/lib/utils';
+import { formatPEN, formatEventDate } from '@/lib/utils';
 import { ConfirmationPoller } from './ConfirmationPoller';
 import { AddToCalendar } from './AddToCalendar';
-import { DownloadQrButton } from '../../DownloadQrButton';
+import { TicketPass } from '../../TicketPass';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -30,7 +30,7 @@ export default async function ConfirmationPage({
     total_cents: number;
     buyer_name: string;
     event: { name: string; starts_at: string; ends_at: string | null; venue_name: string | null; venue_address: string | null; venue_maps_url: string | null; venue_lat: number | null; venue_lng: number | null; require_dni: boolean } | null;
-    brand: { slug: string; name: string; whatsapp_e164: string | null } | null;
+    brand: { slug: string; name: string; whatsapp_e164: string | null; theme_json: { logo_url?: string | null } | null } | null;
     tickets: { id: string; qr_code: string; ticket_type_name: string; ticket_number: string }[];
   };
   const orderResult = await admin
@@ -39,7 +39,7 @@ export default async function ConfirmationPage({
       id, status, payment_method, total_cents,
       buyer_name,
       event:events ( name, starts_at, ends_at, venue_name, venue_address, venue_maps_url, venue_lat, venue_lng, require_dni ),
-      brand:brands ( slug, name, whatsapp_e164 ),
+      brand:brands ( slug, name, whatsapp_e164, theme_json ),
       tickets ( id, qr_code, ticket_type_name, ticket_number )
     `)
     .eq('id', searchParams.order)
@@ -75,14 +75,14 @@ export default async function ConfirmationPage({
     return (
       <main className="c-state c-checkout-canvas">
         <div className="c-confirm__badge" style={{ background: 'var(--alert-bg, rgba(220,38,38,.1))', color: 'var(--alert, #dc2626)' }}><Mail className="h-8 w-8" /></div>
-        <span className="c-eyebrow" style={{ color: 'var(--alert, #dc2626)', marginTop: 16, display: 'block' }}>Pago no aprobado</span>
+        <span className="c-eyebrow" style={{ color: 'var(--ink-2)', marginTop: 16, display: 'block' }}>Pago no aprobado</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>No pudimos confirmar tu pago</h1>
         <p className="c-muted" style={{ marginTop: 10 }}>
           MercadoPago no aprobó el pago. No se generó ningún cargo definitivo. Puedes intentar de nuevo con otro método o tarjeta.
         </p>
         <a href="/" className="c-btn c-btn--brand" style={{ marginTop: 18 }}>Volver a intentar</a>
         {brand?.whatsapp_e164 && (
-          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 14, color: 'var(--brand-ink)', fontWeight: 600 }}>¿Necesitas ayuda? WhatsApp soporte</a>
+          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 14, color: 'var(--ink)', fontWeight: 600, textDecoration: 'underline' }}>¿Necesitas ayuda? WhatsApp soporte</a>
         )}
       </main>
     );
@@ -98,7 +98,7 @@ export default async function ConfirmationPage({
           Suele tardar menos de 1 minuto. Esta página se actualiza sola. Si pasan más de 5 minutos sin novedad, escríbenos por WhatsApp.
         </p>
         {brand?.whatsapp_e164 && (
-          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand-ink)', fontWeight: 600 }}>WhatsApp soporte</a>
+          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--ink)', fontWeight: 600, textDecoration: 'underline' }}>WhatsApp soporte</a>
         )}
         <ConfirmationPoller />
       </main>
@@ -109,13 +109,13 @@ export default async function ConfirmationPage({
     return (
       <main className="c-state c-checkout-canvas">
         <div className="c-confirm__badge" style={{ background: 'var(--warn-bg)', color: 'var(--warn)' }}><Mail className="h-8 w-8" /></div>
-        <span className="c-eyebrow" style={{ color: 'var(--warn)', marginTop: 16, display: 'block' }}>Comprobante en revisión</span>
-        <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>Tu Yape se está verificando</h1>
+        <span className="c-eyebrow" style={{ color: 'var(--ink-2)', marginTop: 16, display: 'block' }}>Comprobante en revisión</span>
+        <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>Tu Yape está en revisión</h1>
         <p className="c-muted" style={{ marginTop: 10 }}>
-          {brand?.name ?? 'El promotor'} está revisando tu comprobante. Te avisamos por email + WhatsApp apenas se apruebe. Suele tomar 5–15 minutos en horario operativo.
+          Te avisamos por email apenas {brand?.name ?? 'el organizador'} lo apruebe. Suele tomar entre 5 y 15 minutos en horario de atención.
         </p>
         {brand?.whatsapp_e164 && (
-          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand-ink)', fontWeight: 600 }}>¿Pasó algo? WhatsApp soporte</a>
+          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--ink)', fontWeight: 600, textDecoration: 'underline' }}>¿Pasó algo? WhatsApp soporte</a>
         )}
       </main>
     );
@@ -125,13 +125,13 @@ export default async function ConfirmationPage({
     return (
       <main className="c-state c-checkout-canvas">
         <div className="c-confirm__badge" style={{ background: 'var(--alert-bg, rgba(220,38,38,.1))', color: 'var(--alert, #dc2626)' }}><Mail className="h-8 w-8" /></div>
-        <span className="c-eyebrow" style={{ color: 'var(--alert, #dc2626)', marginTop: 16, display: 'block' }}>Comprobante rechazado</span>
+        <span className="c-eyebrow" style={{ color: 'var(--ink-2)', marginTop: 16, display: 'block' }}>Comprobante rechazado</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>No pudimos validar tu Yape</h1>
         <p className="c-muted" style={{ marginTop: 10 }}>
           {brand?.name ?? 'El promotor'} no pudo confirmar tu comprobante, así que no se emitió ninguna entrada y no quedó ningún cargo de nuestra parte. Si crees que es un error, escribe al organizador con tu comprobante a mano.
         </p>
         {brand?.whatsapp_e164 && (
-          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand-ink)', fontWeight: 600 }}>Escribir al organizador por WhatsApp</a>
+          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--ink)', fontWeight: 600, textDecoration: 'underline' }}>Escribir al organizador por WhatsApp</a>
         )}
       </main>
     );
@@ -146,6 +146,7 @@ export default async function ConfirmationPage({
   // no expone datos nuevos. Mismo control de acceso que arriba (brand.slug === params.brand).
   const qrSvg = firstTicket ? await generateQrSvg(firstTicket.qr_code) : null;
   const isMulti = tickets.length > 1;
+  const brandLogoUrl = brand?.theme_json?.logo_url ?? null;
 
   // "Cómo llegar": mismo criterio que la página del evento (maps_url > coords > dirección).
   const mapsHref = event?.venue_maps_url?.startsWith('https://')
@@ -161,27 +162,40 @@ export default async function ConfirmationPage({
     <main className="c-narrow c-checkout-canvas" style={{ paddingTop: 40, paddingBottom: 56 }}>
       <div className="c-confirm">
         <div className="c-confirm__badge"><Check className="h-9 w-9" /></div>
-        <span className="c-eyebrow" style={{ color: 'var(--ok)' }}>¡Compra confirmada!</span>
-        <h1>¡Tu entrada está lista!</h1>
+        <span className="c-eyebrow" style={{ color: 'var(--ink-2)' }}>Compra confirmada</span>
+        <h1>Tu entrada está lista</h1>
         <p className="c-muted">{event?.name}{event?.starts_at ? ` · ${formatEventDate(event.starts_at)}` : ''}</p>
       </div>
 
-      {/* HERO: el QR es lo único importante en esta pantalla. */}
+      {/* La ENTRADA, no un recibo: la misma pieza que vive en /t/[uuid]. */}
       {firstTicket && qrSvg && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginTop: 26 }}>
+        <div style={{ marginTop: 26 }}>
           {isMulti && (
-            <span className="c-eyebrow" style={{ color: 'var(--ink-2)' }}>
-              Entrada 1 de {tickets.length} · {firstTicket.ticket_type_name}
-            </span>
+            <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginBottom: 10 }}>
+              Entrada 1 de {tickets.length}
+            </p>
           )}
-          <div className="c-qr" role="img" aria-label="QR de tu entrada" dangerouslySetInnerHTML={{ __html: qrSvg }} />
-          <p style={{ fontWeight: 700, fontSize: 16, textAlign: 'center' }}>Muestra este QR en la puerta.</p>
-          {isMulti ? (
-            <Link href={`/pedido/${order.id}`} className="c-btn c-btn--brand">
-              Ver mis {tickets.length} entradas <ArrowRight className="h-4 w-4" />
-            </Link>
-          ) : (
-            <DownloadQrButton qrCode={firstTicket.qr_code} fileName={firstTicket.ticket_number} />
+          <TicketPass
+            qrSvg={qrSvg}
+            qrCode={firstTicket.qr_code}
+            ticketNumber={firstTicket.ticket_number}
+            ticketTypeName={firstTicket.ticket_type_name}
+            attendeeName={order.buyer_name}
+            eventName={event?.name ?? 'Tu entrada'}
+            startsAt={event?.starts_at ?? null}
+            venueName={event?.venue_name ?? null}
+            brandName={brand?.name ?? 'parygo'}
+            brandLogoUrl={brandLogoUrl}
+            brandWhatsapp={brand?.whatsapp_e164 ?? null}
+            shareUrl={`https://${brand?.slug}.parygo.com/t/${firstTicket.qr_code}`}
+            showFooter={false}
+          />
+          {isMulti && (
+            <p style={{ display: 'flex', justifyContent: 'center', marginTop: 14 }}>
+              <Link href={`/pedido/${order.id}`} className="c-btn c-btn--soft">
+                Ver mis {tickets.length} entradas <ArrowRight className="h-4 w-4" />
+              </Link>
+            </p>
           )}
         </div>
       )}
@@ -234,27 +248,21 @@ export default async function ConfirmationPage({
         </Row>
       </div>
 
-      {/* Link permanente + compartir: acciones de respaldo, jerarquía baja */}
-      {ticketUrl && (
+      {/* Link permanente: respaldo, jerarquía baja. Guardar y compartir ya viven
+          en la entrada de arriba, así que acá no se repiten. */}
+      {ticketUrl && firstTicket && (
         <div style={{ marginTop: 16 }}>
           <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginBottom: 10 }}>Tu link permanente (guárdalo en favoritos)</p>
           <div className="c-linkpill">
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14 }}>parygo.com/t/{firstTicket!.qr_code.slice(0, 8)}…</span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14 }}>parygo.com/t/{firstTicket.qr_code.slice(0, 8)}…</span>
             <Link href={ticketUrl} className="c-btn c-btn--soft" style={{ height: 40, padding: '0 16px' }}>Abrir <ArrowRight className="h-4 w-4" /></Link>
           </div>
-          {firstTicket && brand?.whatsapp_e164 && (
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
-              <a href={whatsappLink(brand.whatsapp_e164.replace(/[^\d]/g, ''), `Hola, te paso mi entrada para ${event?.name}: https://${brand.slug}.parygo.com/t/${firstTicket.qr_code}`)} target="_blank" rel="noopener noreferrer" className="c-btn c-btn--soft">
-                📲 Enviarme a WhatsApp
-              </a>
-            </div>
-          )}
         </div>
       )}
 
       <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginTop: 18 }}>
         También te enviamos el QR por email. Si no llega en 5 min, revisa spam o usa el link permanente.{' '}
-        <Link href="/reenviar" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>¿No lo encuentras? Reenviar a mi email</Link>
+        <Link href="/reenviar" style={{ color: 'var(--ink)', fontWeight: 600, textDecoration: 'underline' }}>¿No lo encuentras? Reenviar a mi email</Link>
       </p>
     </main>
   );

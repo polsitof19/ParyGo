@@ -2,8 +2,11 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Bricolage_Grotesque, Hanken_Grotesk, Archivo, Inter, Instrument_Serif, Fredoka, Nunito } from 'next/font/google';
 import { createClient } from '@/lib/supabase/server';
-import { brandColor, brandInk, contrastOn, withAlpha } from './brandTheme';
+import { brandColor, brandFillPair, brandInk, withAlpha } from './brandTheme';
 import { BrandLogo } from '@/components/BrandLogo';
+// Orden: tokens del sistema primero; client.css los alias y los pisa donde el
+// sitio del comprador manda (el acento ES el color de la marca).
+import '../../styles/parygo-tokens.css';
 import './client.css';
 import './landing.css';
 
@@ -43,7 +46,10 @@ export default async function BrandLayout({
 
   const theme = (brand.theme_json ?? {}) as { primary_color?: string; logo_url?: string | null };
   const primary = brandColor(theme.primary_color);
-  const onBrand = contrastOn(primary);
+  // Par relleno+texto del color de marca, medido a AA 4.5:1 (ver brandColors).
+  // El color crudo (--brand) queda solo para puntos, barras y anillos: nunca
+  // lleva texto "a ojo" porque el promotor elige cualquier color.
+  const { fill: brandFill, on: onFill } = brandFillPair(theme.primary_color);
   const brandSoft = withAlpha(primary, 0.12);
   // Variante legible del color de marca para texto/acento sobre crema (oscurece
   // los colores muy claros como el amarillo; deja intactos los medios/oscuros).
@@ -52,13 +58,14 @@ export default async function BrandLayout({
 
   return (
     <div
-      className={`client-shell ${bricolage.variable} ${hanken.variable} ${archivo.variable} ${inter.variable} ${instrument.variable} ${fredoka.variable} ${nunito.variable}`}
+      className={`pg client-shell ${bricolage.variable} ${hanken.variable} ${archivo.variable} ${inter.variable} ${instrument.variable} ${fredoka.variable} ${nunito.variable}`}
       style={
         {
           '--brand': primary,
-          '--on-brand': onBrand,
+          '--brand-fill': brandFill,
+          '--on-fill': onFill,
           '--brand-soft': brandSoft,
-          '--brand-ink': brandTextInk,
+          '--brand-deep': brandTextInk,
         } as React.CSSProperties
       }
     >

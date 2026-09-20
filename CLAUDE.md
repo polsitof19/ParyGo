@@ -123,6 +123,17 @@ para OK de Paul.
   superficies: alfa .630. No bajarlos sin volver a medir contra --paper-3.
 - Los semánticos (--ok, --warn, --alert) fallan AA como color de texto sobre
   papel: el texto de un estado va en --ink y el color lo lleva el punto.
+- Sitio del comprador (app/b/[brand]): monta `pg client-shell` y usa los mismos
+  tokens; client.css solo alias (--cream*/--white/--hairline) + --accent =
+  var(--brand). El COLOR DE MARCA NUNCA PORTA TEXTO: contrastOn (YIQ) no
+  garantizaba nada (con el tangerina daba blanco sobre naranja = 2.85:1). Lo
+  único que lleva texto encima es el par que devuelve `brandFillPair()`
+  (--brand-fill/--on-fill), medido a 4.5:1; el color crudo queda para puntos,
+  barra de fila activa, anillo de foco y la barra de 4px del header.
+  `npm run test:contrast` verifica ese par contra 13 colores de marca.
+- Estado de las superficies: landing, super admin, panel del organizador y
+  checkout/entrada YA están en el sistema. La entrada del comprador (QR) vive
+  en app/b/[brand]/TicketPass.tsx, compartida por /t/[uuid] y la confirmación.
 
 ## Migraciones
 Incrementales, idempotentes, numeradas (vamos por 0052). Backwards-compatible

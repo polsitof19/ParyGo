@@ -85,8 +85,10 @@
 /* ---- FOOTER ---- */
 .client-shell .bl-foot{position:relative;z-index:1;margin-top:80px;border-top:1px solid var(--line)}
 .client-shell .bl-foot-in{max-width:1120px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:18px;padding:34px 28px}
-.client-shell .bl-foot .pg{font-family:var(--bl-disp);font-weight:600;font-size:17px;color:var(--ink)}
-.client-shell .bl-foot .pg i{color:var(--accent);font-style:normal}
+/* .pg quedó reservada como scope del sistema de diseño (parygo-tokens.css):
+   el wordmark del pie usa su propia clase para no colisionar. */
+.client-shell .bl-foot .bl-wordmark{font-family:var(--bl-disp);font-weight:600;font-size:17px;color:var(--ink)}
+.client-shell .bl-foot .bl-wordmark i{color:var(--accent);font-style:normal}
 .client-shell .bl-foot-q{font-family:var(--bl-body);font-size:14px;color:var(--ink2)}
 .client-shell .bl-foot-q a{color:var(--ink);font-weight:700;text-decoration:none;border-bottom:1.5px solid var(--accent);padding-bottom:1px}
 .client-shell .bl-foot-q a:hover{color:var(--accent2)}
