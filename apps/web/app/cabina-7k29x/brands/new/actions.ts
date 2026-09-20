@@ -116,7 +116,7 @@ export async function createBrandAction(
   });
   if (wsErr) {
     await admin.from('brands').delete().eq('id', brand.id);
-    return { ok: false, message: 'No se pudo guardar el secreto del webhook. Intentá de nuevo.' };
+    return { ok: false, message: 'No se pudo guardar el secreto del webhook. Intenta de nuevo.' };
   }
 
   // Step 3: store MP credentials encrypted (if provided). Si falla → rollback.
@@ -250,7 +250,7 @@ export async function createBrandWithOwnerAction(
     if (raw.includes('already') || raw.includes('registered') || raw.includes('exist')) {
       return {
         ok: false,
-        message: 'Ya existe un usuario con ese email. Creá la marca y asignalo como dueño desde la vista de la marca.',
+        message: 'Ya existe un usuario con ese email. Crea la marca y asígnalo como dueño desde la vista de la marca.',
         fieldErrors: { owner_email: 'Email ya registrado' },
       };
     }

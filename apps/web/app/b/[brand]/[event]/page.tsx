@@ -160,7 +160,7 @@ export default async function EventPage({ params, searchParams }: Props) {
       <main className="c-state">
         <span className="c-eyebrow">{brand.name}</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>Este evento ya terminó</h1>
-        <p className="c-muted" style={{ marginTop: 10 }}>Mirá los próximos eventos de {brand.name}.</p>
+        <p className="c-muted" style={{ marginTop: 10 }}>Mira los próximos eventos de {brand.name}.</p>
         <div style={{ marginTop: 20 }}>
           <a className="c-btn c-btn--brand" href="/">Ver otros eventos</a>
         </div>

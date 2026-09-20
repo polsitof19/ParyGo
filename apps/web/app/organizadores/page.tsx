@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Pedir acceso · ParyGo para organizadores',
-  description: 'Vendé las entradas de tus eventos con tu propia marca, cobrando vos directo. Pedí acceso a ParyGo.',
+  description: 'Vende las entradas de tus eventos con tu propia marca, cobrando tú directo. Pide acceso a ParyGo.',
 };
 
 const bricolage = Bricolage_Grotesque({ weight: ['700', '800'], subsets: ['latin'], variable: '--font-bricolage', display: 'swap' });
@@ -20,7 +20,7 @@ export default function OrganizadoresPage() {
       <div className="auth-wrap">
         <div className="auth-brand">parygo<span className="dot">.</span></div>
         <RequestAccessForm />
-        <p className="auth-legal">Creás una solicitud — no se crea nada todavía. Revisamos cada caso a mano antes de dar acceso.</p>
+        <p className="auth-legal">Creas una solicitud — no se crea nada todavía. Revisamos cada caso a mano antes de dar acceso.</p>
       </div>
     </main>
   );

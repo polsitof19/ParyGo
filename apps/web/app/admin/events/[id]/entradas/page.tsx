@@ -37,7 +37,7 @@ export default async function EventTicketsEditPage({ params }: { params: { id: s
         <p className="s-card__desc">
           {impersonating
             ? 'Solo lectura: los tipos de entrada se muestran tal cual, sin posibilidad de editarlos.'
-            : 'El precio de los que ya compraron queda congelado. Podés subir capacidad y crear tipos nuevos.'}
+            : 'El precio de los que ya compraron queda congelado. Puedes subir capacidad y crear tipos nuevos.'}
         </p>
       </div>
 

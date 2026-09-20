@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Check, X, Loader2 } from 'lucide-react';
+import { Check, X, Loader2, ChevronRight, ExternalLink } from 'lucide-react';
 import { formatPEN } from '@/lib/utils';
 import { approveYapeProof, rejectYapeProof } from './actions';
 
@@ -18,7 +18,6 @@ type Props = {
   buyerName: string;
   buyerEmail: string;
   buyerPhone: string;
-  eventName: string;
   createdAt: string;
   total: string;
   items?: { name: string; quantity: number }[];
@@ -29,6 +28,10 @@ type Props = {
   duplicateWarning?: 'approved' | 'pending' | null;
 };
 
+// Fila compacta de revisión: lo que se compara de un vistazo contra la app de
+// Yape (pagador · monto · N° operación · hora) y los dos botones. El comprobante
+// y el detalle se despliegan — ver la captura ES la verificación, pero con 8
+// pendientes no entra nada en pantalla si cada uno abre una imagen de 280px.
 export function YapeReviewRow({
   proofId,
   receiptUrl,
@@ -41,7 +44,6 @@ export function YapeReviewRow({
   buyerName,
   buyerEmail,
   buyerPhone,
-  eventName,
   createdAt,
   total,
   items = [],
@@ -49,8 +51,10 @@ export function YapeReviewRow({
   duplicateWarning = null,
 }: Props) {
   const [pending, start] = useTransition();
+  const [open, setOpen] = useState(false);
   const [showReject, setShowReject] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [receiptBroken, setReceiptBroken] = useState(false);
   const [done, setDone] = useState<null | 'approved' | 'rejected'>(null);
 
   if (done === 'approved') {
@@ -68,117 +72,38 @@ export function YapeReviewRow({
     );
   }
 
+  const bodyId = `yape-detalle-${proofId}`;
+  const expanded = open || showReject;
+  const hora = new Date(createdAt).toLocaleString('es-PE', {
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima',
+  });
+
   return (
-    <div className="a-yape">
-      {/* Comprobante */}
-      <div>
-        {receiptUrl ? (
-          <a href={receiptUrl} target="_blank" rel="noopener noreferrer">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={receiptUrl} alt="Comprobante Yape" className="a-receipt" />
-          </a>
-        ) : (
-          <div className="a-receipt a-receipt--empty">Sin captura</div>
-        )}
-        <p className="s-hint" style={{ marginTop: 6 }}>
-          Subido {new Date(createdAt).toLocaleString('es-PE', { timeZone: 'America/Lima' })}
-        </p>
-      </div>
+    <div className={`a-yrow${expanded ? ' a-yrow--open' : ''}`}>
+      <div className="a-yrow__head">
+        <button
+          type="button"
+          className="a-yrow__toggle"
+          aria-expanded={expanded}
+          // El detalle se monta solo al desplegar (si no, cargaría la captura de
+          // todas las filas), así que aria-controls apunta a algo que existe.
+          aria-controls={expanded ? bodyId : undefined}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <ChevronRight className="a-yrow__chev" aria-hidden="true" />
+          <span className="a-yrow__payer">{payerName || buyerName || '—'}</span>
+          <span className={`a-yrow__amt${amountMatches ? '' : ' a-yrow__amt--bad'}`}>{formatPEN(amountCents)}</span>
+          <span className="a-yrow__op">Op. {operationNumber}</span>
+          <span className="a-yrow__time">{hora}</span>
+          {duplicateWarning && <span className="a-chip a-chip--deny">N° repetido</span>}
+          {!amountMatches && <span className="a-chip a-chip--warn">Esperado {formatPEN(expectedAmountCents)}</span>}
+        </button>
 
-      {/* Datos a verificar contra la app de Yape */}
-      <div>
-        <div style={{ marginBottom: 12 }}>
-          <p className="a-evrow__name" style={{ fontSize: 17 }}>{eventName}</p>
-          <p className="s-card__desc">{buyerName} · {buyerEmail} · {buyerPhone}</p>
-        </div>
-
-        {duplicateWarning && (
-          <p
-            className={duplicateWarning === 'approved' ? 's-banner s-banner--err' : 's-banner'}
-            role="alert"
-            style={{
-              marginBottom: 12, display: 'flex', alignItems: 'flex-start', gap: 8,
-            }}
-          >
-            <X className="h-4 w-4" style={{ flexShrink: 0, marginTop: 2 }} />
-            <span>
-              <strong>Ojo: N° de operación repetido.</strong>{' '}
-              {duplicateWarning === 'approved'
-                ? 'Este número de operación ya se usó en un comprobante APROBADO de tu marca. Podría ser un comprobante reutilizado — verificá en tu Yape antes de aprobar.'
-                : 'Este número de operación aparece en otro comprobante pendiente. Revisá ambos antes de aprobar para no duplicar.'}
-            </span>
-          </p>
-        )}
-
-        <div className="a-verify-box">
-          <Verify label="Monto" value={formatPEN(amountCents)} expected={formatPEN(expectedAmountCents)} ok={amountMatches} />
-          <Verify label="N° operación" value={operationNumber} />
-          <Verify label="Nombre pagador" value={payerName} />
-          <Verify label="Código seguridad" value={securityCode} />
-        </div>
-
-        {/* Resumen de lo que se está aprobando: cuántas entradas y total. */}
-        {items.length > 0 && (
-          <div className="a-yape-summary" role="group" aria-label="Resumen de entradas a aprobar">
-            <span className="a-yape-summary__count">
-              {items.map((it, i) => (
-                <span key={i}>
-                  {i > 0 && <span className="a-yape-summary__plus"> + </span>}
-                  <strong>{it.quantity}</strong> {it.name}
-                </span>
-              ))}
-            </span>
-            <span className="a-yape-summary__total">{total} en total</span>
-          </div>
-        )}
-
-        <p className="s-hint" style={{ marginTop: 10 }}>
-          Abrí tu Yape → Movimientos → buscá esta transferencia y verificá los 4 campos. Si todo coincide, aprobá.
-        </p>
-
-        {impersonating ? (
-          <p className="s-banner" style={{ marginTop: 16, background: 'var(--paper-2)', color: 'var(--ink-2)' }} role="status">
-            Solo lectura — no puedes aprobar ni rechazar comprobantes desde aquí.
-          </p>
-        ) : showReject ? (
-          <div className="s-card a-reject-box">
-            <label className="s-label">Motivo del rechazo</label>
-            <input
-              className="s-input"
-              placeholder="Ej: monto no coincide / no encuentro el comprobante / nombre distinto"
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-            />
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button
-                type="button"
-                className="s-btn s-btn--danger"
-                disabled={pending}
-                onClick={() => {
-                  start(async () => {
-                    const res = await rejectYapeProof(proofId, rejectReason);
-                    if (res.ok) {
-                      toast.success('Rechazado');
-                      setDone('rejected');
-                    } else {
-                      toast.error(res.message ?? 'Error');
-                    }
-                  });
-                }}
-              >
-                {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Confirmar rechazo
-              </button>
-              <button type="button" className="s-btn s-btn--ghost" onClick={() => setShowReject(false)}>
-                Cancelar
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 16 }}>
+        {!impersonating && !showReject && (
+          <div className="a-yrow__acts">
             <button
               type="button"
-              className="s-btn s-btn--primary"
+              className="s-btn s-btn--primary s-btn--sm"
               disabled={pending}
               onClick={() => {
                 if (!confirm(`Aprobar y enviar ${total} en entradas a ${buyerEmail}?`)) return;
@@ -193,14 +118,135 @@ export function YapeReviewRow({
                 });
               }}
             >
-              <Check className="h-4 w-4" /> Aprobar y emitir QR
+              <Check aria-hidden="true" /> Aprobar
             </button>
-            <button type="button" className="s-btn s-btn--soft" disabled={pending} onClick={() => setShowReject(true)}>
-              <X className="h-4 w-4" /> Rechazar
+            <button
+              type="button"
+              className="s-btn s-btn--soft s-btn--sm"
+              disabled={pending}
+              onClick={() => { setShowReject(true); setOpen(true); }}
+            >
+              <X aria-hidden="true" /> Rechazar
             </button>
           </div>
         )}
       </div>
+
+      {expanded && (
+        <div id={bodyId} className="a-yrow__body">
+          <div className="a-yape">
+            {/* Comprobante */}
+            <div>
+              {receiptUrl && !receiptBroken ? (
+                <a href={receiptUrl} target="_blank" rel="noopener noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={receiptUrl}
+                    alt="Comprobante Yape"
+                    className="a-receipt"
+                    onError={() => setReceiptBroken(true)}
+                  />
+                </a>
+              ) : (
+                <div className="a-receipt a-receipt--empty">
+                  <span>{receiptUrl ? 'No se pudo mostrar la captura' : 'Sin captura'}</span>
+                  {receiptUrl && (
+                    <a href={receiptUrl} target="_blank" rel="noopener noreferrer" className="s-textlink">
+                      <ExternalLink aria-hidden="true" style={{ width: 13, height: 13, display: 'inline', verticalAlign: '-2px' }} /> Abrir el archivo
+                    </a>
+                  )}
+                </div>
+              )}
+              <p className="s-hint" style={{ marginTop: 6 }}>Subido {hora}</p>
+            </div>
+
+            {/* Datos a verificar contra la app de Yape */}
+            <div>
+              <p className="s-card__desc" style={{ marginBottom: 12 }}>{buyerName} · {buyerEmail} · {buyerPhone}</p>
+
+              {duplicateWarning && (
+                <p
+                  className={duplicateWarning === 'approved' ? 's-banner s-banner--err' : 's-banner'}
+                  role="alert"
+                  style={{ marginBottom: 12, display: 'flex', alignItems: 'flex-start', gap: 8 }}
+                >
+                  <X className="h-4 w-4" style={{ flexShrink: 0, marginTop: 2 }} />
+                  <span>
+                    <strong>Ojo: N° de operación repetido.</strong>{' '}
+                    {duplicateWarning === 'approved'
+                      ? 'Este número de operación ya se usó en un comprobante APROBADO de tu marca. Podría ser un comprobante reutilizado — verifica en tu Yape antes de aprobar.'
+                      : 'Este número de operación aparece en otro comprobante pendiente. Revisa ambos antes de aprobar para no duplicar.'}
+                  </span>
+                </p>
+              )}
+
+              <div className="a-verify-box">
+                <Verify label="Monto" value={formatPEN(amountCents)} expected={formatPEN(expectedAmountCents)} ok={amountMatches} />
+                <Verify label="N° operación" value={operationNumber} />
+                <Verify label="Nombre pagador" value={payerName} />
+                <Verify label="Código seguridad" value={securityCode} />
+              </div>
+
+              {/* Resumen de lo que se está aprobando: cuántas entradas y total. */}
+              {items.length > 0 && (
+                <div className="a-yape-summary" role="group" aria-label="Resumen de entradas a aprobar">
+                  <span className="a-yape-summary__count">
+                    {items.map((it, i) => (
+                      <span key={i}>
+                        {i > 0 && <span className="a-yape-summary__plus"> + </span>}
+                        <strong>{it.quantity}</strong> {it.name}
+                      </span>
+                    ))}
+                  </span>
+                  <span className="a-yape-summary__total">{total} en total</span>
+                </div>
+              )}
+
+              {impersonating && (
+                <p className="s-banner" style={{ marginTop: 16, background: 'var(--paper-2)', color: 'var(--ink-2)' }} role="status">
+                  Solo lectura — no puedes aprobar ni rechazar comprobantes desde aquí.
+                </p>
+              )}
+
+              {showReject && (
+                <div className="s-card a-reject-box">
+                  <label className="s-label">Motivo del rechazo</label>
+                  <input
+                    className="s-input"
+                    placeholder="Ej: monto no coincide / no encuentro el comprobante / nombre distinto"
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                  />
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                    <button
+                      type="button"
+                      className="s-btn s-btn--danger"
+                      disabled={pending}
+                      onClick={() => {
+                        start(async () => {
+                          const res = await rejectYapeProof(proofId, rejectReason);
+                          if (res.ok) {
+                            toast.success('Rechazado');
+                            setDone('rejected');
+                          } else {
+                            toast.error(res.message ?? 'Error');
+                          }
+                        });
+                      }}
+                    >
+                      {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                      Confirmar rechazo
+                    </button>
+                    <button type="button" className="s-btn s-btn--ghost" onClick={() => setShowReject(false)}>
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

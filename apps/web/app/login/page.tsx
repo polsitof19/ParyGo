@@ -38,7 +38,7 @@ export default function LoginPage({
 
         <div className="auth-card">
           <p className="auth-eyebrow">Acceso</p>
-          <h1 className="auth-h1">Iniciá sesión</h1>
+          <h1 className="auth-h1">Inicia sesión</h1>
           <p className="auth-sub">Organizadores y staff entran con su email y contraseña.</p>
 
           <LoginForm next={searchParams.next} />
@@ -56,7 +56,7 @@ export default function LoginPage({
             </a>
           </p>
         )}
-        <p className="auth-legal">Al continuar aceptás los <a href="/terminos">Términos</a> y la <a href="/privacidad">Política de Privacidad</a>.</p>
+        <p className="auth-legal">Al continuar aceptas los <a href="/terminos">Términos</a> y la <a href="/privacidad">Política de Privacidad</a>.</p>
       </div>
     </main>
   );

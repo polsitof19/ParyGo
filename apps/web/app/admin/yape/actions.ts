@@ -74,7 +74,7 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
       return {
         ok: false,
         message:
-          'No hay cupo: el evento se agotó. No se emitieron entradas. Rechazá esta orden y reembolsá el Yape.',
+          'No hay cupo: el evento se agotó. No se emitieron entradas. Rechaza esta orden y reembolsa el Yape.',
       };
     }
     return { ok: false, message: `Tickets fallaron: ${issue.error}` };

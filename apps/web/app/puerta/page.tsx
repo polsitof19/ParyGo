@@ -22,10 +22,10 @@ export default function PuertaPage() {
           <div className="k-gate__badge"><ScanLine className="h-7 w-7" /></div>
           <span className="k-eyebrow">Puerta</span>
           <h1 className="k-h1" style={{ marginTop: 4 }}>Acceso de staff</h1>
-          <p className="k-muted" style={{ marginTop: 6, marginBottom: 20 }}>Ingresá tu código personal de 8 caracteres.</p>
+          <p className="k-muted" style={{ marginTop: 6, marginBottom: 20 }}>Ingresa tu código personal de 8 caracteres.</p>
           <RedeemForm />
           <p className="k-muted" style={{ marginTop: 18, fontSize: 12.5 }}>
-            ¿Sos organizador? <a href="/login" style={{ color: 'var(--tangerine)', fontWeight: 600 }}>Entrá por email</a>
+            ¿Eres organizador? <a href="/login" style={{ color: 'var(--tangerine)', fontWeight: 600 }}>Entra por email</a>
           </p>
         </div>
       </main>

@@ -50,9 +50,9 @@ export type CheckoutResult =
 const schema = z.object({
   eventId: z.string().uuid(),
   brandId: z.string().uuid(),
-  buyerName: z.string().trim().min(2, 'Ingresá tu nombre.').max(120, 'El nombre es muy largo.'),
-  buyerEmail: z.string().email('Ingresá un email válido.'),
-  buyerPhone: z.string().min(7, 'Ingresá un teléfono válido.').max(20, 'Ingresá un teléfono válido.'),
+  buyerName: z.string().trim().min(2, 'Ingresa tu nombre.').max(120, 'El nombre es muy largo.'),
+  buyerEmail: z.string().email('Ingresa un email válido.'),
+  buyerPhone: z.string().min(7, 'Ingresa un teléfono válido.').max(20, 'Ingresa un teléfono válido.'),
   buyerDocType: z.enum(['dni', 'ce', 'passport']),
   // El formato del documento se valida server-side MÁS ABAJO, solo si el evento
   // pide DNI (require_dni). Acá lo dejamos laxo para no romper cuando el evento
@@ -65,22 +65,22 @@ const schema = z.object({
     .array(
       z.object({
         ticketTypeId: z.string().uuid(),
-        quantity: z.number().int().min(1, 'Elegí al menos una entrada.').max(10, 'Máximo 10 entradas por tipo.'),
+        quantity: z.number().int().min(1, 'Elige al menos una entrada.').max(10, 'Máximo 10 entradas por tipo.'),
         attendeeNames: z.array(z.string().trim().max(120)).max(10).optional(),
       })
     )
-    .min(1, 'Elegí al menos una entrada.')
+    .min(1, 'Elige al menos una entrada.')
     .max(20, 'Demasiados tipos de entrada en una compra.'),
-  sessionId: z.string().min(8, 'Sesión inválida. Recargá la página.').max(64, 'Sesión inválida. Recargá la página.'),
+  sessionId: z.string().min(8, 'Sesión inválida. Recarga la página.').max(64, 'Sesión inválida. Recarga la página.'),
   promoCode: z.string().min(2).max(32).optional().or(z.literal('')),
 });
 
 export async function startCheckout(input: CheckoutInput): Promise<CheckoutResult> {
   // errorMap de parse: los mensajes definidos en el schema (en español) ganan;
   // cualquier default de zod (en inglés) cae al genérico. Nunca texto crudo.
-  const parsed = schema.safeParse(input, { errorMap: () => ({ message: 'Revisá tus datos e intentá de nuevo.' }) });
+  const parsed = schema.safeParse(input, { errorMap: () => ({ message: 'Revisa tus datos e intenta de nuevo.' }) });
   if (!parsed.success) {
-    return { ok: false, message: parsed.error.errors[0]?.message ?? 'Revisá tus datos e intentá de nuevo.' };
+    return { ok: false, message: parsed.error.errors[0]?.message ?? 'Revisa tus datos e intenta de nuevo.' };
   }
 
   const admin = createAdminClient();

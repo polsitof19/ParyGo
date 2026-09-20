@@ -40,13 +40,13 @@ export function EventBuilder() {
     const freeUnlimited = free.find((t) => t.unlimited);
     if (freeUnlimited) {
       e.preventDefault();
-      window.alert(`"${freeUnlimited.name || 'Un tipo'}" no puede ser gratis e ilimitado a la vez. Poné un cupo o un precio.`);
+      window.alert(`"${freeUnlimited.name || 'Un tipo'}" no puede ser gratis e ilimitado a la vez. Pon un cupo o un precio.`);
       return;
     }
     if (confirmFreeRef.current) confirmFreeRef.current.value = '';
     if (free.length) {
       const names = free.map((t) => `"${t.name || 'sin nombre'}"`).join(', ');
-      const ok = window.confirm(`${names} cuesta S/ 0. Los tipos gratis NO se venden en tu página: se emiten desde "Cortesías" y descuentan del aforo. ¿Confirmás?`);
+      const ok = window.confirm(`${names} cuesta S/ 0. Los tipos gratis NO se venden en tu página: se emiten desde "Cortesías" y descuentan del aforo. ¿Confirmas?`);
       if (!ok) { e.preventDefault(); return; }
       if (confirmFreeRef.current) confirmFreeRef.current.value = '1';
     }

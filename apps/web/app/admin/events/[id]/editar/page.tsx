@@ -90,7 +90,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
       {/* Las cortesías ya no viven acá: no son "editar el evento". */}
       {!impersonating && (
         <p className="s-card__desc" style={{ marginTop: 14 }}>
-          ¿Buscás las cortesías? Ahora están en <Link href={`/admin/events/${event.id}/cortesias`} className="s-textlink"><Gift className="h-3.5 w-3.5" style={{ display: 'inline', verticalAlign: '-2px' }} /> Ventas y pagos → Cortesías</Link>.
+          ¿Buscas las cortesías? Ahora están en <Link href={`/admin/events/${event.id}/cortesias`} className="s-textlink"><Gift className="h-3.5 w-3.5" style={{ display: 'inline', verticalAlign: '-2px' }} /> Ventas y pagos → Cortesías</Link>.
         </p>
       )}
 

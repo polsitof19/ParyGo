@@ -36,12 +36,12 @@ export async function sendPromoCodeEmail(codeId: string, toEmail: string): Promi
     eyebrow: 'Código de promotor',
     title: eventName,
     paragraphs: [
-      `Sos promotor de <strong>${escapeHtml(brandName)}</strong>. Este es tu código para vender entradas de <strong>${escapeHtml(eventName)}</strong>: lo comparten tus contactos al comprar y aplica <strong>${escapeHtml(discountText(code.discount_type, code.discount_value))}</strong>.`,
-      `Tenés ${escapeHtml(usesLeft)}.`,
+      `Eres promotor de <strong>${escapeHtml(brandName)}</strong>. Este es tu código para vender entradas de <strong>${escapeHtml(eventName)}</strong>: lo comparten tus contactos al comprar y aplica <strong>${escapeHtml(discountText(code.discount_type, code.discount_value))}</strong>.`,
+      `Tienes ${escapeHtml(usesLeft)}.`,
     ],
     highlight: { label: 'Tu código', value: code.code },
     button: { label: 'Ir al evento →', url: eventUrl },
-    footerHtml: `<p style="margin:0;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:12.5px;line-height:1.5;color:#6B5F54">Compartí el link del evento; tus invitados ingresan el código <strong>${escapeHtml(code.code)}</strong> al comprar.</p>`,
+    footerHtml: `<p style="margin:0;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:12.5px;line-height:1.5;color:#6B5F54">Comparte el link del evento; tus invitados ingresan el código <strong>${escapeHtml(code.code)}</strong> al comprar.</p>`,
   });
 
   const text = [

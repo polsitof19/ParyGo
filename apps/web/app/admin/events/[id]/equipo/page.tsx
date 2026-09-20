@@ -4,8 +4,7 @@ import { ScanLine } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { ValidatorManager } from '../../../ValidatorManager';
-import { InviteValidator } from '../../../InviteValidator';
+import { TeamPanel } from '../../../TeamPanel';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -23,16 +22,6 @@ export default async function EventTeamPage({ params }: { params: { id: string }
   const { data: event } = await admin.from('events').select('id, brand_id').eq('id', params.id).maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
 
-  const nowIso = new Date().toISOString();
-  const [{ data: members }, { data: codes }] = await Promise.all([
-    admin.from('brand_members').select('user_id, display_name').eq('brand_id', ctx.brandId).eq('role', 'validator'),
-    admin.from('validator_codes').select('id, user_id, code, expires_at').eq('brand_id', ctx.brandId).gt('expires_at', nowIso),
-  ]);
-  const validators = (members ?? []).map((m) => {
-    const c = (codes ?? []).find((x) => x.user_id === m.user_id);
-    return { user_id: m.user_id, display_name: m.display_name, code: c?.code ?? null, code_id: c?.id ?? null, expires_at: c?.expires_at ?? null };
-  });
-
   return (
     <>
       <div className="s-pagehead" style={{ marginBottom: 14 }}>
@@ -49,17 +38,7 @@ export default async function EventTeamPage({ params }: { params: { id: string }
         </Link>
       </div>
 
-      {ctx.impersonating ? (
-        <p className="s-banner" role="status">Solo lectura — la gestión del equipo no está disponible desde aquí.</p>
-      ) : (
-        <div className="s-card">
-          <p className="s-section-lead">Tus validadores · contraseña + código personal</p>
-          <ValidatorManager validators={validators} />
-          <div className="s-divider" />
-          <p className="s-section-lead">Invitar nuevo validador (por email)</p>
-          <InviteValidator />
-        </div>
-      )}
+      <TeamPanel brandId={ctx.brandId} impersonating={ctx.impersonating} />
     </>
   );
 }

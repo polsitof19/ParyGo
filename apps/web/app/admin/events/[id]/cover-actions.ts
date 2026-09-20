@@ -21,7 +21,7 @@ export async function setEventCoverAction(
 
   const eventId = String(formData.get('event_id') ?? '');
   const file = formData.get('cover');
-  if (!(file instanceof File) || file.size === 0) return { ok: false, message: 'Elegí una imagen.' };
+  if (!(file instanceof File) || file.size === 0) return { ok: false, message: 'Elige una imagen.' };
 
   const admin = createAdminClient();
   const { data: ev } = await admin
@@ -35,7 +35,7 @@ export async function setEventCoverAction(
   const authorized =
     (user.isSuperAdmin && !isImpersonating()) ||
     user.brandMemberships.some((m) => m.brandId === ev.brand_id && m.role === 'brand_admin');
-  if (!authorized) return { ok: false, message: 'No tenés permiso sobre este evento.' };
+  if (!authorized) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   const brand = Array.isArray(ev.brand) ? ev.brand[0] : ev.brand;
   if (!brand?.slug) return { ok: false, message: 'Marca no encontrada.' };

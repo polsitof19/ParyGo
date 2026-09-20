@@ -17,7 +17,7 @@ export default function SuperError({
       <span className="eyebrow">Error del panel</span>
       <h1 className="s-h1" style={{ marginTop: 8 }}>Algo se rompió</h1>
       <p className="s-card__desc" style={{ marginTop: 8 }}>
-        Probá recargar. Si persiste, revisá los logs en Supabase / Cloudflare.
+        Prueba recargar. Si persiste, revisa los logs en Supabase / Cloudflare.
       </p>
       {error.digest && (
         <p className="s-hint" style={{ marginTop: 10 }}>Ref: {error.digest}</p>

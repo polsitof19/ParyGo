@@ -37,7 +37,7 @@ export function NewEventForm({
             defaultValue={preselected?.id ?? ''}
             className="s-input s-select"
           >
-            <option value="" disabled>Elegí marca</option>
+            <option value="" disabled>Elige marca</option>
             {brands.map((b) => (
               <option key={b.id} value={b.id}>{b.name} ({b.slug})</option>
             ))}

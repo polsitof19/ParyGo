@@ -136,7 +136,7 @@ export async function updateBrandBrandingAction(
       const p = e.path.join('.');
       if (p) fieldErrors[p] = e.message;
     }
-    return { ok: false, message: 'Revisá los campos marcados.', fieldErrors };
+    return { ok: false, message: 'Revisa los campos marcados.', fieldErrors };
   }
 
   const admin = createAdminClient();
@@ -234,7 +234,7 @@ export async function updateBrandBasicsAction(
       const p = e.path.join('.');
       if (p) fieldErrors[p] = e.message;
     }
-    return { ok: false, message: 'Revisá los campos marcados.', fieldErrors };
+    return { ok: false, message: 'Revisa los campos marcados.', fieldErrors };
   }
 
   const admin = createAdminClient();
@@ -325,10 +325,10 @@ export async function deleteBrandAction(
     admin.from('tickets').select('id', { count: 'exact', head: true }).eq('brand_id', brandId),
   ]);
   if ((orders ?? 0) > 0 || (tickets ?? 0) > 0) {
-    return { ok: false, message: 'No se puede eliminar: tiene ventas. Archivá en su lugar.' };
+    return { ok: false, message: 'No se puede eliminar: tiene ventas. Archiva en su lugar.' };
   }
   if ((events ?? 0) > 0) {
-    return { ok: false, message: 'Borrá o archivá sus eventos primero (la marca tiene eventos).' };
+    return { ok: false, message: 'Borra o archiva sus eventos primero (la marca tiene eventos).' };
   }
 
   await admin.from('events_log').insert({

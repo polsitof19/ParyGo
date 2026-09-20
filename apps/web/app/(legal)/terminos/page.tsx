@@ -14,7 +14,7 @@ export default function TerminosPage() {
       <p>
         ParyGo es una <strong>plataforma tecnológica</strong> que permite a organizadores de eventos
         (cada uno, un &quot;organizador&quot;) vender entradas con su propia marca y cobrar de forma
-        directa. Al usar ParyGo aceptás estos términos.
+        directa. Al usar ParyGo aceptas estos términos.
       </p>
 
       <h2>1. Qué es ParyGo y qué no es</h2>
@@ -27,7 +27,7 @@ export default function TerminosPage() {
       <h2>2. Compra de entradas</h2>
       <ul>
         <li>Cada entrada se entrega como un código QR único, válido para un ingreso (salvo que el evento indique lo contrario).</li>
-        <li>El comprador recibe su QR por email y puede consultarlo con el enlace permanente de su pedido. Si lo perdés, podés pedir el reenvío al mismo email de compra.</li>
+        <li>El comprador recibe su QR por email y puede consultarlo con el enlace permanente de su pedido. Si lo pierdes, puedes pedir el reenvío al mismo email de compra.</li>
         <li>Los precios, fechas, lugar, capacidad y condiciones del evento los define el organizador y pueden cambiar (por ejemplo, una postergación). Si un evento se posterga, tu entrada sigue siendo válida para la nueva fecha.</li>
       </ul>
 
@@ -39,7 +39,7 @@ export default function TerminosPage() {
 
       <h2>4. Ingreso al evento</h2>
       <ul>
-        <li>Para ingresar tenés que presentar tu QR. El organizador puede pedir un documento de identidad si el evento lo requiere.</li>
+        <li>Para ingresar tienes que presentar tu QR. El organizador puede pedir un documento de identidad si el evento lo requiere.</li>
         <li>Una entrada ya escaneada o anulada no permite el ingreso. El organizador es responsable del control de acceso y del aforo.</li>
       </ul>
 
@@ -57,8 +57,8 @@ export default function TerminosPage() {
 
       <h2>7. Contacto</h2>
       <p>
-        Dudas sobre tu compra: escribí al organizador (su WhatsApp aparece en la página del evento).
-        Dudas sobre la plataforma: contactá a ParyGo por los canales publicados.
+        Dudas sobre tu compra: escribe al organizador (su WhatsApp aparece en la página del evento).
+        Dudas sobre la plataforma: contacta a ParyGo por los canales publicados.
       </p>
 
       <div className="legal-note">

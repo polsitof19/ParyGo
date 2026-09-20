@@ -20,7 +20,7 @@ export async function reserveStock(
   quantity: number
 ): Promise<ReserveResult> {
   if (!sessionId || sessionId.length < 8) {
-    return { ok: false, kind: 'invalid', message: 'Sesión inválida. Recargá la página.' };
+    return { ok: false, kind: 'invalid', message: 'Sesión inválida. Recarga la página.' };
   }
   if (!Number.isInteger(quantity) || quantity < 0 || quantity > 10) {
     return { ok: false, kind: 'invalid', message: 'Cantidad inválida.' };
@@ -54,7 +54,7 @@ export async function reserveStock(
       };
     }
     console.error('[reserveStock] create_or_refresh_stock_reservation failed', { ticketTypeId, error: msg });
-    return { ok: false, kind: 'invalid', message: 'No se pudo reservar. Intentá de nuevo.' };
+    return { ok: false, kind: 'invalid', message: 'No se pudo reservar. Intenta de nuevo.' };
   }
   return { ok: true, expiresAt: (data as string | null) ?? null };
 }

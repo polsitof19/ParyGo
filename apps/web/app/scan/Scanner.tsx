@@ -156,7 +156,7 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
       setPreview(pv);
       setPhase('preview');
       // Feedback: si está bloqueado (deny) avisamos fuerte; si es válido, un toque
-      // suave de "escaneado, revisá".
+      // suave de "escaneado, revisa".
       const tone = STATUS[pv.status]?.tone ?? 'deny';
       if (tone === 'deny') feedback('deny');
       else { try { navigator.vibrate?.(40); } catch {} }
@@ -261,8 +261,8 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
               <p className="k-result__sub">reingreso {(pv.scan_count ?? 0) + 1}/{pv.max_scans}</p>
             )}
             {pv.status === 'ALREADY_USED' && pv.first_validated_at && <p className="k-result__sub">primer ingreso {new Date(pv.first_validated_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}</p>}
-            {pv.status === 'OFFLINE_UNKNOWN' && <p className="k-result__sub">No está en la lista precargada. Revisá el documento a mano.</p>}
-            {pv.status === 'OK' && <p className="k-result__sub">Revisá el documento y confirmá el ingreso.</p>}
+            {pv.status === 'OFFLINE_UNKNOWN' && <p className="k-result__sub">No está en la lista precargada. Revisa el documento a mano.</p>}
+            {pv.status === 'OK' && <p className="k-result__sub">Revisa el documento y confirma el ingreso.</p>}
             {pv.offline && <p className="k-result__off">offline · se sincronizará</p>}
           </div>
 
@@ -318,7 +318,7 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
             )}
           </div>
           {cameraError && cameraOn && (
-            <p className="k-camerr" role="alert">No se pudo usar la cámara ({cameraError}). Usá el código manual abajo.</p>
+            <p className="k-camerr" role="alert">No se pudo usar la cámara ({cameraError}). Usa el código manual abajo.</p>
           )}
 
           <div className="k-row">

@@ -24,7 +24,7 @@ export function CancelEvent({ eventId, eventName, cancelled }: { eventId: string
   }
 
   const onCancel = () => {
-    const typed = window.prompt(`Vas a CANCELAR "${eventName}". Esto lo despublica y manda un email de cancelación a TODOS los compradores. No se puede deshacer.\n\nEscribí CANCELAR para confirmar:`);
+    const typed = window.prompt(`Vas a CANCELAR "${eventName}". Esto lo despublica y manda un email de cancelación a TODOS los compradores. No se puede deshacer.\n\nEscribe CANCELAR para confirmar:`);
     if ((typed ?? '').trim().toUpperCase() !== 'CANCELAR') return;
     start(async () => {
       const res = await cancelEventAction(eventId, reason);
@@ -40,7 +40,7 @@ export function CancelEvent({ eventId, eventName, cancelled }: { eventId: string
       </h3>
       <p className="s-card__desc" style={{ marginTop: 6 }}>
         Si el evento no se hará, cancelalo: deja de venderse, desaparece del público y se <strong>avisa por email</strong> a todos los compradores.
-        Las entradas y los pagos no se tocan — los reembolsos los coordinás vos. <strong>No se puede deshacer.</strong>
+        Las entradas y los pagos no se tocan — los reembolsos los coordinas tú. <strong>No se puede deshacer.</strong>
       </p>
       <div className="s-field" style={{ marginTop: 12 }}>
         <label className="s-label" htmlFor="cancel-reason">Motivo (opcional, se incluye en el email)</label>

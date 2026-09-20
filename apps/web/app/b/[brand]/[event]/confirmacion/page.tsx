@@ -78,11 +78,11 @@ export default async function ConfirmationPage({
         <span className="c-eyebrow" style={{ color: 'var(--alert, #dc2626)', marginTop: 16, display: 'block' }}>Pago no aprobado</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>No pudimos confirmar tu pago</h1>
         <p className="c-muted" style={{ marginTop: 10 }}>
-          MercadoPago no aprobó el pago. No se generó ningún cargo definitivo. Podés intentar de nuevo con otro método o tarjeta.
+          MercadoPago no aprobó el pago. No se generó ningún cargo definitivo. Puedes intentar de nuevo con otro método o tarjeta.
         </p>
         <a href="/" className="c-btn c-btn--brand" style={{ marginTop: 18 }}>Volver a intentar</a>
         {brand?.whatsapp_e164 && (
-          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 14, color: 'var(--brand-ink)', fontWeight: 600 }}>¿Necesitás ayuda? WhatsApp soporte</a>
+          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 14, color: 'var(--brand-ink)', fontWeight: 600 }}>¿Necesitas ayuda? WhatsApp soporte</a>
         )}
       </main>
     );
@@ -95,7 +95,7 @@ export default async function ConfirmationPage({
         <span className="c-eyebrow">Procesando pago</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>Estamos confirmando tu pago</h1>
         <p className="c-muted" style={{ marginTop: 10 }}>
-          Suele tardar menos de 1 minuto. Esta página se actualiza sola. Si pasan más de 5 minutos sin novedad, escribinos por WhatsApp.
+          Suele tardar menos de 1 minuto. Esta página se actualiza sola. Si pasan más de 5 minutos sin novedad, escríbenos por WhatsApp.
         </p>
         {brand?.whatsapp_e164 && (
           <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand-ink)', fontWeight: 600 }}>WhatsApp soporte</a>
@@ -128,7 +128,7 @@ export default async function ConfirmationPage({
         <span className="c-eyebrow" style={{ color: 'var(--alert, #dc2626)', marginTop: 16, display: 'block' }}>Comprobante rechazado</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>No pudimos validar tu Yape</h1>
         <p className="c-muted" style={{ marginTop: 10 }}>
-          {brand?.name ?? 'El promotor'} no pudo confirmar tu comprobante, así que no se emitió ninguna entrada y no quedó ningún cargo de nuestra parte. Si creés que es un error, escribí al organizador con tu comprobante a mano.
+          {brand?.name ?? 'El promotor'} no pudo confirmar tu comprobante, así que no se emitió ninguna entrada y no quedó ningún cargo de nuestra parte. Si crees que es un error, escribe al organizador con tu comprobante a mano.
         </p>
         {brand?.whatsapp_e164 && (
           <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand-ink)', fontWeight: 600 }}>Escribir al organizador por WhatsApp</a>
@@ -155,7 +155,7 @@ export default async function ConfirmationPage({
       : event?.venue_address
         ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue_address)}`
         : null;
-  const calDetails = `Tu entrada para ${event?.name ?? 'el evento'}. Llevá ${event?.require_dni ? 'tu documento de identidad y ' : ''}tu QR (te llegó por email). Entrada por ParyGo.`;
+  const calDetails = `Tu entrada para ${event?.name ?? 'el evento'}. Lleva ${event?.require_dni ? 'tu documento de identidad y ' : ''}tu QR (te llegó por email). Entrada por ParyGo.`;
 
   return (
     <main className="c-narrow c-checkout-canvas" style={{ paddingTop: 40, paddingBottom: 56 }}>
@@ -175,7 +175,7 @@ export default async function ConfirmationPage({
             </span>
           )}
           <div className="c-qr" role="img" aria-label="QR de tu entrada" dangerouslySetInnerHTML={{ __html: qrSvg }} />
-          <p style={{ fontWeight: 700, fontSize: 16, textAlign: 'center' }}>Mostrá este QR en la puerta.</p>
+          <p style={{ fontWeight: 700, fontSize: 16, textAlign: 'center' }}>Muestra este QR en la puerta.</p>
           {isMulti ? (
             <Link href={`/pedido/${order.id}`} className="c-btn c-btn--brand">
               Ver mis {tickets.length} entradas <ArrowRight className="h-4 w-4" />
@@ -211,12 +211,12 @@ export default async function ConfirmationPage({
         <ul style={{ listStyle: 'none', margin: '12px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
           <li style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13.5, color: 'var(--ink-2)' }}>
             <TicketIcon className="h-4 w-4" style={{ flexShrink: 0, marginTop: 1, color: 'var(--brand-ink)' }} />
-            También tenés tu QR en el email y en tu link permanente.
+            También tienes tu QR en el email y en tu link permanente.
           </li>
           {event?.require_dni && (
             <li style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13.5, color: 'var(--ink-2)' }}>
               <Check className="h-4 w-4" style={{ flexShrink: 0, marginTop: 1, color: 'var(--brand-ink)' }} />
-              Llevá tu documento de identidad (te lo pueden pedir en la puerta).
+              Lleva tu documento de identidad (te lo pueden pedir en la puerta).
             </li>
           )}
         </ul>
@@ -237,7 +237,7 @@ export default async function ConfirmationPage({
       {/* Link permanente + compartir: acciones de respaldo, jerarquía baja */}
       {ticketUrl && (
         <div style={{ marginTop: 16 }}>
-          <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginBottom: 10 }}>Tu link permanente (guardalo en favoritos)</p>
+          <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginBottom: 10 }}>Tu link permanente (guárdalo en favoritos)</p>
           <div className="c-linkpill">
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14 }}>parygo.com/t/{firstTicket!.qr_code.slice(0, 8)}…</span>
             <Link href={ticketUrl} className="c-btn c-btn--soft" style={{ height: 40, padding: '0 16px' }}>Abrir <ArrowRight className="h-4 w-4" /></Link>
@@ -253,8 +253,8 @@ export default async function ConfirmationPage({
       )}
 
       <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginTop: 18 }}>
-        También te enviamos el QR por email. Si no llega en 5 min, revisá spam o usá el link permanente.{' '}
-        <Link href="/reenviar" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>¿No lo encontrás? Reenviar a mi email</Link>
+        También te enviamos el QR por email. Si no llega en 5 min, revisa spam o usa el link permanente.{' '}
+        <Link href="/reenviar" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>¿No lo encuentras? Reenviar a mi email</Link>
       </p>
     </main>
   );

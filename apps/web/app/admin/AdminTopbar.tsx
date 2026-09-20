@@ -8,6 +8,7 @@ import { BrandLogo } from '@/components/BrandLogo';
 const NAV = [
   { href: '/admin', label: 'Inicio' },
   { href: '/admin/settings', label: 'Configuración' },
+  { href: '/admin/equipo', label: 'Equipo' },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {

@@ -15,13 +15,13 @@ export function CourtesyForm({ eventId, ticketTypes }: { eventId: string; ticket
   const [email, setEmail] = useState('');
 
   if (ticketTypes.length === 0) {
-    return <p className="s-card__desc">Creá un tipo de entrada activo antes de emitir cortesías.</p>;
+    return <p className="s-card__desc">Crea un tipo de entrada activo antes de emitir cortesías.</p>;
   }
   const typeName = ticketTypes.find((t) => t.id === typeId)?.name ?? '';
 
   // Confirmación clara antes de emitir entradas reales.
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    const ok = window.confirm(`Vas a emitir ${qty} ${typeName} de cortesía y enviarlas a ${email}. Ocupan lugar real (descuentan del aforo). ¿Confirmás?`);
+    const ok = window.confirm(`Vas a emitir ${qty} ${typeName} de cortesía y enviarlas a ${email}. Ocupan lugar real (descuentan del aforo). ¿Confirmas?`);
     if (!ok) e.preventDefault();
   }
 

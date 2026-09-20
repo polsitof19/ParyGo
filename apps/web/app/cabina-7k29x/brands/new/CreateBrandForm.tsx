@@ -68,7 +68,7 @@ export function CreateBrandForm({ requestId, initialName = '', initialEmail = ''
           />
           <span className="s-slug-suffix">.parygo.com</span>
         </div>
-        <p className="s-hint">Se genera del nombre. Podés editarlo: solo minúsculas, números y guiones.</p>
+        <p className="s-hint">Se genera del nombre. Puedes editarlo: solo minúsculas, números y guiones.</p>
         {state.fieldErrors?.slug && <p className="s-err">{state.fieldErrors.slug}</p>}
       </div>
 
@@ -113,14 +113,14 @@ export function CreateBrandForm({ requestId, initialName = '', initialEmail = ''
             {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
-        <p className="s-hint">La fijás vos y se la pasás al promotor.</p>
+        <p className="s-hint">La fijas tú y se la pasas al promotor.</p>
         {state.fieldErrors?.owner_password && <p className="s-err">{state.fieldErrors.owner_password}</p>}
       </div>
 
       <div className="s-divider" />
       <p className="s-section-lead">Marca visual (opcional)</p>
       <p className="s-hint" style={{ marginTop: 2, marginBottom: 12 }}>
-        Si no cargás logo ni color, la marca usa los valores por defecto (los puede cambiar después el dueño o vos).
+        Si no cargas logo ni color, la marca usa los valores por defecto (los puede cambiar después el dueño o tú).
       </p>
       <BrandingFields defaultColor="#FF1F8F" />
       {state.fieldErrors?.logo && <p className="s-err">{state.fieldErrors.logo}</p>}

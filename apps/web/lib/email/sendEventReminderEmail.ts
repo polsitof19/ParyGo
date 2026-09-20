@@ -2,7 +2,7 @@
 // Recordatorio PRE-EVENTO (≈24h antes)
 // =============================================================
 // Email TRANSACCIONAL al comprador con entrada válida: "tu evento es pronto, ya
-// tenés tu QR". No reenvía el QR en el cuerpo (privacidad) — enlaza al reenvío.
+// tienes tu QR". No reenvía el QR en el cuerpo (privacidad) — enlaza al reenvío.
 // Tematizado con logo + color de la marca. Best-effort: nunca lanza; devuelve
 // ok/razón por destinatario. Edge-safe (fetch). El caller (worker de la cola)
 // manda UN email por comprador; esta función no conoce ni expone la lista.
@@ -137,8 +137,8 @@ function renderText(p: { buyerName: string; eventName: string; dateLabel: string
     `Hola ${p.buyerName || ''}, te recordamos que ${p.eventName} es pronto. ¡Te esperamos!`,
     `Cuándo: ${p.dateLabel}${p.venue ? ' · ' + p.venue : ''}`,
     '',
-    'Tu entrada ya está lista. Usá el QR que recibiste al comprar.',
-    `¿No lo encontrás? Reenviátelo: ${p.resendUrl}`,
+    'Tu entrada ya está lista. Usa el QR que recibiste al comprar.',
+    `¿No lo encuentras? Pídelo de nuevo: ${p.resendUrl}`,
   ];
   if (p.brand.whatsapp_e164) lines.push('', `WhatsApp ${p.brand.name}: ${p.brand.whatsapp_e164}`);
   lines.push('', `Enviado por ${p.brand.name} vía ParyGo.`);

@@ -9,7 +9,7 @@ type FeedbackState = { ok: boolean; message: string | null };
 //
 // Por qué: en la ficha de marca de la cabina, las actions hacen revalidatePath
 // de la misma página y el mensaje inline de useFormState no llegaba a verse
-// (verificado en prod: "Setear contraseña" aplicaba el cambio sin ninguna
+// (verificado en prod: "Guardar contraseña" aplicaba el cambio sin ninguna
 // confirmación). El toast se dispara en el cliente apenas vuelve el resultado,
 // antes del re-render, así que la confirmación no depende de que el estado del
 // formulario sobreviva. El mensaje inline se mantiene cuando sí sobrevive.

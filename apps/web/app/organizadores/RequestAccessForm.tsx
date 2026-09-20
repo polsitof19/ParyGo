@@ -25,8 +25,8 @@ export function RequestAccessForm() {
   return (
     <form action={action} className="auth-card">
       <p className="auth-eyebrow">Pedir acceso</p>
-      <h1 className="auth-h1">Contanos de tu evento</h1>
-      <p className="auth-sub">Te damos acceso para vender con tu propia marca, cobrando vos directo.</p>
+      <h1 className="auth-h1">Cuéntanos de tu evento</h1>
+      <p className="auth-sub">Te damos acceso para vender con tu propia marca, cobrando tú directo.</p>
 
       {/* Honeypot anti-bot: oculto para humanos. */}
       <div style={{ position: 'absolute', left: '-9999px' }} aria-hidden="true">
@@ -57,8 +57,8 @@ export function RequestAccessForm() {
       </div>
 
       <div className="auth-field">
-        <label htmlFor="event_info" className="auth-label">Contanos un poco <span style={{ fontWeight: 400, opacity: 0.6 }}>(opcional)</span></label>
-        <textarea id="event_info" name="event_info" maxLength={1000} rows={3} placeholder="Qué tipo de eventos hacés, cada cuánto, dónde…" className="auth-input" style={{ minHeight: 76, resize: 'vertical' }} />
+        <label htmlFor="event_info" className="auth-label">Cuéntanos un poco <span style={{ fontWeight: 400, opacity: 0.6 }}>(opcional)</span></label>
+        <textarea id="event_info" name="event_info" maxLength={1000} rows={3} placeholder="Qué tipo de eventos haces, cada cuánto, dónde…" className="auth-input" style={{ minHeight: 76, resize: 'vertical' }} />
       </div>
 
       {state.message && !state.ok && <p className="auth-banner">{state.message}</p>}

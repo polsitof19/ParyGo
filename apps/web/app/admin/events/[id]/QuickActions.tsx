@@ -26,10 +26,10 @@ export function QuickActions({
     try {
       await navigator.clipboard.writeText(publicUrl);
       setCopied(true);
-      toast.success('Link copiado. Pegalo en tu historia o en WhatsApp.');
+      toast.success('Link copiado. Pégalo en tu historia o en WhatsApp.');
       setTimeout(() => setCopied(false), 2200);
     } catch {
-      toast.error('No se pudo copiar. Mantené apretado el link de la página pública.');
+      toast.error('No se pudo copiar. Mantén apretado el link de la página pública.');
     }
   }
 
@@ -51,7 +51,7 @@ export function QuickActions({
         </Link>
       )}
       <Link href="/scan" className="s-btn s-btn--soft s-btn--sm">
-        <ScanLine aria-hidden="true" /> Abrir puerta
+        <ScanLine aria-hidden="true" /> Abrir escáner
       </Link>
     </div>
   );

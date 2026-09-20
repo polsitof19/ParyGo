@@ -155,7 +155,7 @@ export async function preloadEventAction(eventId: string): Promise<PreloadResult
     .maybeSingle();
   if (!ev) return { ok: false, message: 'Evento no encontrado.' };
   if (!user.isSuperAdmin && !validatableBrandIds(user).includes(ev.brand_id)) {
-    return { ok: false, message: 'No tenés acceso a este evento.' };
+    return { ok: false, message: 'No tienes acceso a este evento.' };
   }
 
   const { data: tickets } = await admin

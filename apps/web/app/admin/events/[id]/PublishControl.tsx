@@ -36,8 +36,8 @@ export function PublishControl({ eventId, isPublished, impersonating = false }: 
         <div className="a-publish__txt">
           <EyeOff className="h-5 w-5" />
           <span>
-            <strong>Borrador — solo vos lo ves.</strong>
-            <span className="a-publish__sub">Publicá para que aparezca en tu página y la gente pueda comprar.</span>
+            <strong>Borrador — solo tú lo ves.</strong>
+            <span className="a-publish__sub">Publica para que aparezca en tu página y la gente pueda comprar.</span>
           </span>
         </div>
         <button type="button" className="s-btn s-btn--primary" disabled={pending} onClick={() => flip(true)}>

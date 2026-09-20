@@ -28,7 +28,7 @@ export function CloneEventButton({ eventId }: { eventId: string }) {
         <Copy className="h-4 w-4" /> Clonar evento
       </h3>
       <p className="s-card__desc" style={{ marginTop: 6 }}>
-        Creá un borrador nuevo con los mismos datos, tipos de entrada y precios. Ideal para tu próxima
+        Crea un borrador nuevo con los mismos datos, tipos de entrada y precios. Ideal para tu próxima
         fecha. Usa 1 evento de tu saldo; el evento original no se toca.
       </p>
       <div className="s-form-actions" style={{ marginTop: 12 }}>

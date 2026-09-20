@@ -80,7 +80,7 @@ export async function voidTicketAction(
 
   revalidatePath(`/admin/events/${tk.event_id}/clientes`);
   revalidatePath(`/admin/events/${tk.event_id}`);
-  return { ok: true, message: 'Entrada anulada. Su QR ya no vale en puerta. La devolución del dinero la gestionás vos por tu Yape/MercadoPago.' };
+  return { ok: true, message: 'Entrada anulada. Su QR ya no vale en puerta. La devolución del dinero la gestionas tú por tu Yape/MercadoPago.' };
 }
 
 // =============================================================
@@ -218,7 +218,7 @@ export async function generateGateCodeAction(
 ): Promise<GateCodeState> {
   const user = await requireSession();
   const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) return { ok: false, message: 'No tenés acceso de promotor.' };
+  if (!membership) return { ok: false, message: 'No tienes acceso de promotor.' };
   const brandId = membership.brandId;
   const label = (String(formData.get('device_label') ?? '').trim() || 'Puerta').slice(0, 40);
 
@@ -274,7 +274,7 @@ export async function inviteValidatorAction(
   // ENFORCEMENT: brand from the session, never the form. A brand_admin can only
   // add validators to THEIR OWN brand.
   const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) return { ok: false, message: 'No tenés acceso de promotor.' };
+  if (!membership) return { ok: false, message: 'No tienes acceso de promotor.' };
   const brandId = membership.brandId;
 
   const parsed = schema.safeParse({ email: formData.get('email') });

@@ -31,8 +31,8 @@ export function LowBalanceNotice({ balance, brandName, supportWhatsapp }: { bala
         </p>
         <p className="s-muted" style={{ fontSize: 13.5, marginTop: 2 }}>
           {sinSaldo
-            ? 'Para crear un evento nuevo necesitás cargar un pack. Escribinos y te lo activamos.'
-            : 'Cuando uses este último, vas a necesitar un pack nuevo para seguir creando eventos. Pedí más cuando quieras.'}
+            ? 'Para crear un evento nuevo necesitas cargar un pack. Escríbenos y te lo activamos.'
+            : 'Cuando uses este último, vas a necesitar un pack nuevo para seguir creando eventos. Pide más cuando quieras.'}
         </p>
       </div>
       <a href={href} target="_blank" rel="noopener noreferrer" className="s-btn s-btn--primary s-btn--sm" style={{ flexShrink: 0 }}>

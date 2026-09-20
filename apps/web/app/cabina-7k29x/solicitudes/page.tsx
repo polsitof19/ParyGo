@@ -40,7 +40,7 @@ export default async function SolicitudesPage() {
           <span className="eyebrow">Onboarding</span>
           <h1 className="s-h1">Solicitudes de acceso</h1>
           <p className="s-card__desc">
-            {pending.length} pendiente{pending.length === 1 ? '' : 's'}. Aprobar crea la marca con el alta de siempre (vos ponés subdominio y contraseña). El saldo se carga aparte.
+            {pending.length} pendiente{pending.length === 1 ? '' : 's'}. Aprobar crea la marca con el alta de siempre (tú pones subdominio y contraseña). El saldo se carga aparte.
           </p>
         </div>
       </header>

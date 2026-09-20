@@ -53,7 +53,7 @@ export async function issueCourtesyTicketsAction(
   const authorized =
     (user.isSuperAdmin && !isImpersonating()) ||
     user.brandMemberships.some((m) => m.brandId === event.brand_id && m.role === 'brand_admin');
-  if (!authorized) return { ok: false, message: 'No tenés permiso sobre este evento.' };
+  if (!authorized) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   // TENANCY: el tipo de entrada debe pertenecer a ESTE evento (no de otro/otra marca).
   const { data: tt } = await admin
@@ -113,8 +113,8 @@ export async function issueCourtesyTicketsAction(
     return {
       ok: false,
       message: agotado
-        ? `No hay cupo para ${qty} cortesías de ${tt.name} (no podés pasar la capacidad del tipo).`
-        : 'No se pudo reservar el cupo. Intentá de nuevo.',
+        ? `No hay cupo para ${qty} cortesías de ${tt.name} (no puedes pasar la capacidad del tipo).`
+        : 'No se pudo reservar el cupo. Intenta de nuevo.',
     };
   }
 

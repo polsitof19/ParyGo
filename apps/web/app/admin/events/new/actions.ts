@@ -52,7 +52,7 @@ export async function createBrandEventAction(
   // ENFORCEMENT: brand from the session membership, NEVER the form.
   const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
   if (!membership) {
-    return { ok: false, message: 'No tenés acceso de promotor.' };
+    return { ok: false, message: 'No tienes acceso de promotor.' };
   }
   const brandId = membership.brandId;
 
@@ -64,7 +64,7 @@ export async function createBrandEventAction(
       const p = e.path.join('.');
       if (p) fieldErrors[p] = e.message;
     }
-    return { ok: false, message: 'Revisá los campos del evento.', fieldErrors };
+    return { ok: false, message: 'Revisa los campos del evento.', fieldErrors };
   }
 
   let ticketTypesRaw: unknown;
@@ -73,9 +73,9 @@ export async function createBrandEventAction(
   } catch {
     return { ok: false, message: 'Tipos de entrada inválidos.' };
   }
-  const parsedTT = z.array(ticketTypeSchema).min(1, 'Agregá al menos un tipo de entrada').safeParse(ticketTypesRaw);
+  const parsedTT = z.array(ticketTypeSchema).min(1, 'Agrega al menos un tipo de entrada').safeParse(ticketTypesRaw);
   if (!parsedTT.success) {
-    return { ok: false, message: parsedTT.error.errors[0]?.message ?? 'Revisá los tipos de entrada.' };
+    return { ok: false, message: parsedTT.error.errors[0]?.message ?? 'Revisa los tipos de entrada.' };
   }
 
   // Fechas en hora de Lima (explícito: en Cloudflare el server corre en UTC).
@@ -136,10 +136,10 @@ export async function createBrandEventAction(
   if (error || !newEventId) {
     const msg = error?.message ?? '';
     if (msg.includes('INSUFFICIENT_BALANCE')) {
-      return { ok: false, message: 'Tu marca no tiene saldo de eventos. Contactá a ParyGo para cargar un pack.' };
+      return { ok: false, message: 'Tu marca no tiene saldo de eventos. Contacta a ParyGo para cargar un pack.' };
     }
     if (msg.includes('NO_TICKET_TYPES')) {
-      return { ok: false, message: 'Agregá al menos un tipo de entrada.' };
+      return { ok: false, message: 'Agrega al menos un tipo de entrada.' };
     }
     if (error?.code === '23505') {
       if (/ttpp_ticket_sort_uniq/.test(msg)) {

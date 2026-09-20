@@ -135,7 +135,7 @@ function renderText(p: { buyerName: string; eventName: string; dateLabel: string
   ];
   if (p.reason) lines.push('', `Motivo: ${p.reason}`);
   lines.push('', p.brand.whatsapp_e164
-    ? `Para coordinar la devolución de tu pago, escribí a ${p.brand.name}: ${p.brand.whatsapp_e164}`
+    ? `Para coordinar la devolución de tu pago, escribe a ${p.brand.name}: ${p.brand.whatsapp_e164}`
     : `${p.brand.name} se contactará por la devolución de tu pago.`);
   lines.push('', `Enviado por ${p.brand.name} vía ParyGo.`);
   return lines.join('\n');

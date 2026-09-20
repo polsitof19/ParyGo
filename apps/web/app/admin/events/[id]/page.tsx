@@ -28,7 +28,7 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
   type ProofRow = {
     id: string; amount_cents: number; operation_number: string; payer_name: string;
     security_code: string; receipt_url: string; created_at: string;
-    order: { id: string; buyer_name: string; buyer_email: string; buyer_phone: string; total_cents: number; event_id: string; event: { name: string } | null } | null;
+    order: { id: string; buyer_name: string; buyer_email: string; buyer_phone: string; total_cents: number; event_id: string } | null;
   };
 
   // ---- OLA 1: queries independientes en paralelo ----
@@ -40,6 +40,7 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
     { data: activePrices },
     { data: rejected },
     { data: ticketRows },
+    { data: mpStatus },
   ] = await Promise.all([
     admin.from('orders').select('id, total_cents, payment_method, created_at').eq('event_id', event.id).eq('status', 'paid'),
     admin.from('ticket_types').select('id, name, price_cents, capacity, sold, is_unlimited, is_active, sort_order').eq('event_id', event.id).order('sort_order'),
@@ -47,7 +48,7 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
     admin
       .from('yape_proofs')
       .select(`id, amount_cents, operation_number, payer_name, security_code, receipt_url, created_at,
-        order:orders!yape_proofs_order_id_fkey ( id, buyer_name, buyer_email, buyer_phone, total_cents, event_id, event:events ( name ) )`)
+        order:orders!yape_proofs_order_id_fkey ( id, buyer_name, buyer_email, buyer_phone, total_cents, event_id )`)
       .eq('brand_id', event.brand_id)
       .eq('status', 'pending_review')
       .order('created_at', { ascending: true }),
@@ -59,8 +60,13 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
     // Tickets válidos del evento: para separar entradas VENDIDAS de cortesías
     // (ticket_types.sold cuenta las dos cosas juntas).
     admin.from('tickets').select('order_id').eq('event_id', event.id).is('invalidated_at', null),
+    // ¿La marca cobra con tarjeta? Si nunca configuró MercadoPago, la caja de MP
+    // en "Tu dinero" es ruido: siempre S/ 0. Solo booleanos (no desencripta).
+    admin.rpc('get_brand_mp_status', { p_brand_id: event.brand_id }),
   ]);
 
+  const mpRow = Array.isArray(mpStatus) ? mpStatus[0] : null;
+  const mpConfigured = Boolean(mpRow?.has_access_token && mpRow?.has_public_key);
   const paidRows = (paid ?? []) as { id: string; total_cents: number | null; payment_method: string; created_at: string }[];
   const paidCents = paidRows.reduce((a, o) => a + (o.total_cents ?? 0), 0);
   const types = ticketTypes ?? [];
@@ -151,7 +157,12 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
       if (phaseByType.has(ph.ticket_type_id)) continue; // ya tomamos la primera activa (menor sort_order)
       const startsOk = !ph.starts_at || ph.starts_at <= nowIso;
       const endsOk = !ph.ends_at || ph.ends_at > nowIso;
-      if (startsOk && endsOk && ph.name) phaseByType.set(ph.ticket_type_id, ph.name);
+      // El nombre lo pone el organizador ("Precio base", "Preventa 1"). Se muestra
+      // como "Precio actual: X", así que se le saca el "Precio " de adelante para
+      // no leer "Precio actual: Precio base".
+      if (!startsOk || !endsOk || !ph.name) continue;
+      const label = ph.name.replace(/^precio\s+/i, '').trim();
+      phaseByType.set(ph.ticket_type_id, label || ph.name.trim());
     }
   }
 
@@ -180,6 +191,9 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
     }
   }
   const confirmedCents = byMethod.yape.cents + byMethod.mp.cents;
+  // MercadoPago solo se muestra si la marca lo tiene configurado (o si ya cobró
+  // algo por ahí en este evento — histórico que no se puede ocultar).
+  const showMp = mpConfigured || byMethod.mp.count > 0;
   const recTotal = [...recByType.values()].reduce((a, b) => a + b, 0);
 
   // Yapes rechazados (lectura).
@@ -260,7 +274,7 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
       <QuickActions eventId={event.id} publicUrl={publicUrl} isPublished={!!event.is_published} readOnly={impersonating} />
 
       {noSalesYet && pendingCount === 0 && (
-        <p className="s-notice" style={{ marginBottom: 16 }}>Aún no vendiste. Compartí tu link en historias y grupos: es lo que más mueve la venta.</p>
+        <p className="s-notice" style={{ marginBottom: 16 }}>Aún no vendiste. Comparte tu link en historias y grupos: es lo que más mueve la venta.</p>
       )}
 
       {/* Alertas del evento: punto + texto en tinta. */}
@@ -275,30 +289,32 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
         <section className="a-yape-inline s-section" aria-labelledby="yape-inline-title">
           <div className="a-yape-inline__head">
             <h2 id="yape-inline-title" className="s-h2">Yapes para aprobar</h2>
-            <p className="s-card__desc">Revisá el monto y el N° de operación contra tu app de Yape antes de aprobar.</p>
+            {/* La instrucción va UNA vez arriba de la lista, no repetida en cada fila. */}
+            <p className="s-card__desc">
+              Abre tu Yape → Movimientos y busca cada transferencia. Si el monto, el N° de operación y el nombre coinciden, aprueba.
+              Toca una fila para ver la captura y el detalle.
+            </p>
           </div>
-          <div className="s-stack" style={{ gap: 14 }}>
+          <div>
             {pendingReview.map((p) => (
-              <div key={p.id} className="s-card">
-                <YapeReviewRow
-                  proofId={p.id}
-                  receiptUrl={p.signedReceiptUrl}
-                  amountCents={p.amount_cents}
-                  expectedAmountCents={p.order?.total_cents ?? 0}
-                  amountMatches={p.amount_cents === p.order?.total_cents}
-                  operationNumber={p.operation_number}
-                  payerName={p.payer_name}
-                  securityCode={p.security_code}
-                  buyerName={p.order?.buyer_name ?? ''}
-                  buyerEmail={p.order?.buyer_email ?? ''}
-                  buyerPhone={p.order?.buyer_phone ?? ''}
-                  eventName={p.order?.event?.name ?? ''}
-                  createdAt={p.created_at}
-                  total={formatPEN(p.order?.total_cents ?? 0)}
-                  items={p.items}
-                  impersonating={impersonating}
-                />
-              </div>
+              <YapeReviewRow
+                key={p.id}
+                proofId={p.id}
+                receiptUrl={p.signedReceiptUrl}
+                amountCents={p.amount_cents}
+                expectedAmountCents={p.order?.total_cents ?? 0}
+                amountMatches={p.amount_cents === p.order?.total_cents}
+                operationNumber={p.operation_number}
+                payerName={p.payer_name}
+                securityCode={p.security_code}
+                buyerName={p.order?.buyer_name ?? ''}
+                buyerEmail={p.order?.buyer_email ?? ''}
+                buyerPhone={p.order?.buyer_phone ?? ''}
+                createdAt={p.created_at}
+                total={formatPEN(p.order?.total_cents ?? 0)}
+                items={p.items}
+                impersonating={impersonating}
+              />
             ))}
           </div>
         </section>
@@ -308,10 +324,12 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
       <section className="s-section">
         <h2 className="s-h2" style={{ marginBottom: 12 }}>Tu dinero</h2>
         <div className="s-card">
-          <p className="s-card__desc" style={{ marginBottom: 14 }}>Esto debería estar en tu cuenta de <strong>Yape / MercadoPago</strong>. ParyGo no toca tu plata: cada cobro va directo a tu cuenta.</p>
+          <p className="s-card__desc" style={{ marginBottom: 14 }}>Esto debería estar en tu cuenta de <strong>{showMp ? 'Yape / MercadoPago' : 'Yape'}</strong>. ParyGo no toca tu plata: cada cobro va directo a tu cuenta.</p>
           <div className="a-money">
             <div className="a-money__cell"><span className="s-stat__label">Yape aprobado</span><span className="a-money__v">{formatPEN(byMethod.yape.cents)}</span><span className="s-stat__sub">{byMethod.yape.count} órdenes</span></div>
-            <div className="a-money__cell"><span className="s-stat__label">MercadoPago</span><span className="a-money__v">{formatPEN(byMethod.mp.cents)}</span><span className="s-stat__sub">{byMethod.mp.count} órdenes</span></div>
+            {showMp && (
+              <div className="a-money__cell"><span className="s-stat__label">MercadoPago</span><span className="a-money__v">{formatPEN(byMethod.mp.cents)}</span><span className="s-stat__sub">{byMethod.mp.count} órdenes</span></div>
+            )}
             {courtesyTickets > 0 && (
               <div className="a-money__cell"><span className="s-stat__label">Cortesías</span><span className="a-money__v">{courtesyTickets}</span><span className="s-stat__sub">entradas gratis entregadas</span></div>
             )}
@@ -346,7 +364,7 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
                     <tr key={t.id}>
                       <td>
                         <strong>{t.name}</strong>{!t.is_active && <span className="s-badge s-badge--draft s-badge--inline">inactivo</span>}
-                        {phase && <span className="a-phase">{phase}</span>}
+                        {phase && <span className="a-phase">Precio actual: {phase}</span>}
                       </td>
                       <td className="num">{t.is_unlimited ? '∞' : t.capacity}</td>
                       <td className="num">{sold}</td>

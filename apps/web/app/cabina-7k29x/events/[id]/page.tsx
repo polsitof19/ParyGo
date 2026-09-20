@@ -141,7 +141,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
 
       <div className="s-card" style={{ marginTop: 22 }}>
         <h2 className="s-h2">Datos del evento</h2>
-        <p className="s-card__desc" style={{ marginBottom: 14 }}>Los cambios se ven al instante en la página pública. El precio y el slug no se editan acá.</p>
+        <p className="s-card__desc" style={{ marginBottom: 14 }}>Los cambios se ven al instante en la página pública. El precio y el slug no se editan aquí.</p>
         <EditEventForm
           eventId={event.id}
           name={event.name}

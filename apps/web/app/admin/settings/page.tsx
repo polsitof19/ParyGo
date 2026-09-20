@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Users } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createClient } from '@/lib/supabase/server';
@@ -53,7 +53,7 @@ export default async function AdminSettingsPage() {
         <p className="s-card__desc">
           {impersonating
             ? 'Estás viendo la configuración de la marca en solo lectura. No puedes editarla desde aquí.'
-            : 'Editá tus datos públicos y de cobro. Los cambios se aplican al instante.'}
+            : 'Edita tus datos públicos y de cobro. Los cambios se aplican al instante.'}
         </p>
       </header>
 
@@ -84,6 +84,19 @@ export default async function AdminSettingsPage() {
           hasPublicKey={Boolean(mp.has_public_key)}
           readOnly={impersonating}
         />
+      </div>
+
+      {/* Equipo de puerta: configuración de la marca, no trabajo del día. */}
+      <div className="s-card" style={{ marginTop: 16 }}>
+        <div className="s-card__head">
+          <div>
+            <h2 className="s-h2">Equipo de puerta</h2>
+            <p className="s-card__desc">Contraseñas y códigos personales de tu staff. Solo ven el escáner.</p>
+          </div>
+          <Link href="/admin/equipo" className="s-btn s-btn--soft s-btn--sm">
+            <Users className="h-4 w-4" /> Gestionar
+          </Link>
+        </div>
       </div>
     </div>
   );

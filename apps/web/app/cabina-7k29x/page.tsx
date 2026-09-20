@@ -196,9 +196,9 @@ export default async function SuperHome() {
       </div>
 
       {allRows.length === 0 ? (
-        <div className="s-card"><p className="s-empty">Todavía no hay marcas. Creá la primera.</p></div>
+        <div className="s-card"><p className="s-empty">Todavía no hay marcas. Crea la primera.</p></div>
       ) : rows.length === 0 ? (
-        <div className="s-card"><p className="s-empty">Todas las marcas están archivadas. Mirá la sección “Archivadas” más abajo.</p></div>
+        <div className="s-card"><p className="s-empty">Todas las marcas están archivadas. Mira la sección “Archivadas” más abajo.</p></div>
       ) : (
         <>
           {/* Desktop: tabla densa */}
@@ -307,7 +307,7 @@ export default async function SuperHome() {
               <h2 className="s-h2">Archivadas</h2>
               <p className="s-card__desc">
                 {archivedRows.length} marca{archivedRows.length === 1 ? '' : 's'} archivada{archivedRows.length === 1 ? '' : 's'}.
-                No aparecen en público y sus eventos no se venden. Podés desarchivarlas cuando quieras.
+                No aparecen en público y sus eventos no se venden. Puedes desarchivarlas cuando quieras.
               </p>
             </div>
           </div>

@@ -126,7 +126,7 @@
 .admin-shell .a-typetable tbody tr { transition: background-color .18s; }
 .admin-shell .a-typetable tbody tr:hover { background: var(--sel); }
 .admin-shell .a-phase { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ink-2); margin-top: 2px; }
-.admin-shell .a-phase::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
+.admin-shell .a-phase::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); flex: none; }
 
 /* ---------- Barras (ventas por día, stock) ---------- */
 .admin-shell .a-bar { height: 7px; border-radius: var(--r-pill); background: var(--paper-2); overflow: hidden; margin-top: 8px; }
@@ -144,7 +144,7 @@
 .admin-shell .a-yape { display: grid; grid-template-columns: 280px 1fr; gap: 22px; }
 @media (max-width: 720px) { .admin-shell .a-yape { grid-template-columns: 1fr; } }
 .admin-shell .a-receipt { width: 100%; border-radius: var(--r-ctl); border: 1px solid var(--line); display: block; }
-.admin-shell .a-receipt--empty { height: 200px; display: grid; place-items: center; background: var(--paper); border-style: dashed; color: var(--ink-3); font-size: 13px; }
+.admin-shell .a-receipt--empty { min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 14px; text-align: center; background: var(--paper); border-style: dashed; color: var(--ink-3); font-size: 13px; }
 .admin-shell .a-verify-box { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-ctl); padding: 6px 14px; }
 .admin-shell .a-verify { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; }
 .admin-shell .a-verify:first-child { border-top: 0; }
@@ -162,6 +162,32 @@
 .admin-shell .a-yape-summary__plus { color: var(--ink-3); font-weight: 700; }
 .admin-shell .a-yape-summary__total { font-family: var(--display); font-weight: 800; font-size: 15px; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .admin-shell .a-reject-box { margin-top: 14px; border-color: var(--ink); box-shadow: inset 3px 0 0 var(--alert); }
+
+/* Fila compacta: pagador · monto · N° operación · hora · botones. El comprobante
+   y el detalle se despliegan; con varios pendientes la lista se lee de corrido. */
+.admin-shell .a-yrow { border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); }
+.admin-shell .a-yrow + .a-yrow { margin-top: 8px; }
+.admin-shell .a-yrow--open { border-color: var(--ink-3); }
+.admin-shell .a-yrow__head { display: flex; align-items: center; gap: 12px; padding: 10px 12px; flex-wrap: wrap; }
+.admin-shell .a-yrow__toggle {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  background: none; border: 0; padding: 4px 0; text-align: left; cursor: pointer; color: var(--ink); font: inherit;
+}
+.admin-shell .a-yrow__chev { width: 16px; height: 16px; flex: none; color: var(--ink-3); transition: transform .18s var(--ease); }
+.admin-shell .a-yrow--open .a-yrow__chev { transform: rotate(90deg); }
+.admin-shell .a-yrow__payer { font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
+.admin-shell .a-yrow__amt { font-family: var(--display); font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+.admin-shell .a-yrow__amt--bad { box-shadow: inset 0 -2px 0 var(--alert); }
+.admin-shell .a-yrow__op,
+.admin-shell .a-yrow__time { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.admin-shell .a-yrow__acts { display: flex; gap: 8px; flex: none; }
+.admin-shell .a-yrow__body { border-top: 1px solid var(--line); padding: 16px 12px 14px; }
+@media (prefers-reduced-motion: reduce) { .admin-shell .a-yrow__chev { transition: none; } }
+@media (max-width: 560px) {
+  .admin-shell .a-yrow__payer { max-width: 100%; }
+  .admin-shell .a-yrow__acts { width: 100%; }
+  .admin-shell .a-yrow__acts .s-btn { flex: 1; }
+}
 
 /* ---------- Varios ---------- */
 .admin-shell .a-code { font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: 0.22em; color: var(--ink); font-variant-numeric: tabular-nums; }

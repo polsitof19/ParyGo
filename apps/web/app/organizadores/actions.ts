@@ -14,7 +14,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 // =============================================================
 
 const schema = z.object({
-  brand_name: z.string().trim().min(2, 'Contanos el nombre de tu marca o evento.').max(120),
+  brand_name: z.string().trim().min(2, 'Cuéntanos el nombre de tu marca o evento.').max(120),
   contact_name: z.string().trim().min(2, 'Tu nombre, porfa.').max(120),
   contact_email: z.string().trim().email('Email inválido.').max(200),
   contact_phone: z.string().trim().max(40).optional().or(z.literal('')),
@@ -24,7 +24,7 @@ const schema = z.object({
 export type RequestAccessState = { ok: boolean; message: string; fieldErrors?: Partial<Record<string, string>> };
 
 const NEUTRAL =
-  '¡Gracias! Recibimos tu solicitud. Si encaja, te contactamos para darte acceso. Revisá tu email y WhatsApp.';
+  '¡Gracias! Recibimos tu solicitud. Si encaja, te contactamos para darte acceso. Revisa tu email y WhatsApp.';
 
 export async function requestAccessAction(_prev: RequestAccessState, formData: FormData): Promise<RequestAccessState> {
   // Honeypot: un campo oculto que un humano nunca llena. Si viene con algo → bot.
@@ -46,7 +46,7 @@ export async function requestAccessAction(_prev: RequestAccessState, formData: F
       const p = e.path.join('.');
       if (p) fieldErrors[p] = e.message;
     }
-    return { ok: false, message: 'Revisá los campos marcados.', fieldErrors };
+    return { ok: false, message: 'Revisa los campos marcados.', fieldErrors };
   }
 
   const ip =
