@@ -148,7 +148,7 @@ export async function sendYapeRecoveryEmail(args: {
 
   const html = shell({ brand: args.brand, primary, ink, eyebrow: 'Te falta un paso', title: `Completa tu entrada`, inner, footer: waButton });
   const text = [
-    `COMPLETÁ TU ENTRADA — ${args.eventName}`, '',
+    `COMPLETA TU ENTRADA — ${args.eventName}`, '',
     `Hola ${args.buyerName || ''}, empezaste tu compra para ${args.eventName} pero no la completaste.`,
     `Sube tu comprobante de Yape aquí: ${resumeUrl}`, '',
     'Si ya pagaste y subiste tu comprobante, ignora este mensaje.',

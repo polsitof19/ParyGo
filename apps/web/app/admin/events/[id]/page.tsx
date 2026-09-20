@@ -160,7 +160,9 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
       // El nombre lo pone el organizador ("Precio base", "Preventa 1"). Se muestra
       // como "Precio actual: X", así que se le saca el "Precio " de adelante para
       // no leer "Precio actual: Precio base".
-      if (startsOk && endsOk && ph.name) phaseByType.set(ph.ticket_type_id, ph.name.replace(/^precio\s+/i, ''));
+      if (!startsOk || !endsOk || !ph.name) continue;
+      const label = ph.name.replace(/^precio\s+/i, '').trim();
+      phaseByType.set(ph.ticket_type_id, label || ph.name.trim());
     }
   }
 

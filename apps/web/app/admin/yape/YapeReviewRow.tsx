@@ -85,7 +85,9 @@ export function YapeReviewRow({
           type="button"
           className="a-yrow__toggle"
           aria-expanded={expanded}
-          aria-controls={bodyId}
+          // El detalle se monta solo al desplegar (si no, cargaría la captura de
+          // todas las filas), así que aria-controls apunta a algo que existe.
+          aria-controls={expanded ? bodyId : undefined}
           onClick={() => setOpen((v) => !v)}
         >
           <ChevronRight className="a-yrow__chev" aria-hidden="true" />
