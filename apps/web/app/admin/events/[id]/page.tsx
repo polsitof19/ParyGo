@@ -157,7 +157,10 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
       if (phaseByType.has(ph.ticket_type_id)) continue; // ya tomamos la primera activa (menor sort_order)
       const startsOk = !ph.starts_at || ph.starts_at <= nowIso;
       const endsOk = !ph.ends_at || ph.ends_at > nowIso;
-      if (startsOk && endsOk && ph.name) phaseByType.set(ph.ticket_type_id, ph.name);
+      // El nombre lo pone el organizador ("Precio base", "Preventa 1"). Se muestra
+      // como "Precio actual: X", así que se le saca el "Precio " de adelante para
+      // no leer "Precio actual: Precio base".
+      if (startsOk && endsOk && ph.name) phaseByType.set(ph.ticket_type_id, ph.name.replace(/^precio\s+/i, ''));
     }
   }
 
