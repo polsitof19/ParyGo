@@ -294,7 +294,6 @@ export function EventCheckoutPanel({
     );
   }
 
-  const activeStep = mpCheckout ? 2 : step;
   const lineItems = selectedTypes.map((t) => ({ id: t.id, name: t.name, q: qty[t.id]!, amount: qty[t.id]! * t.active_price_cents }));
   // Línea de confianza del rail: refleja los métodos REALES de la marca (mismas
   // banderas que las pestañas de pago). Evita prometer un método no configurado.
@@ -305,19 +304,6 @@ export function EventCheckoutPanel({
       : mpConfigured
         ? 'Pago con tarjeta'
         : 'Pago seguro';
-
-  // CTA del rail según paso (paso 1 = Continuar; paso 2 = submit del form).
-  const railCta = mpCheckout ? null : step === 1 ? (
-    <button type="button" className="c-btn c-btn--brand c-btn--block c-btn--lg" disabled={totalItems === 0} onClick={() => setStep(2)}>
-      Continuar <ArrowRight className="h-4 w-4" />
-    </button>
-  ) : (
-    <button type="submit" form="checkout-form" className="c-btn c-btn--brand c-btn--block c-btn--lg" disabled={isPending || totalItems === 0}>
-      {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-      {!isPending && method === 'mercadopago' && !applied?.isFree && <Lock className="h-4 w-4" />}
-      {ctaLabel}
-    </button>
-  );
 
   return (
     <section id="entradas" className="b-buy">
@@ -488,18 +474,19 @@ export function EventCheckoutPanel({
                 </div>
               ))}
               {bulkSavings > 0 && (
-                <div className="b-resumen"><span>Descuento por cantidad</span><span style={{ color: 'var(--ok)' }}>−{formatPEN(bulkSavings)}</span></div>
+                <div className="b-resumen"><span>Descuento por cantidad</span><span className="b-desc">−{formatPEN(bulkSavings)}</span></div>
               )}
               {applied && (
                 <div className="b-resumen">
                   <span>Código {applied.code}</span>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ color: 'var(--ok)' }}>{applied.isFree ? 'Gratis' : `−${formatPEN(applied.discountCents)}`}</span>
+                    <span className="b-desc">{applied.isFree ? 'Gratis' : `−${formatPEN(applied.discountCents)}`}</span>
                     <button type="button" className="b-back" style={{ margin: 0 }} onClick={() => { setApplied(null); setPromoInput(''); }}>Quitar</button>
                   </span>
                 </div>
               )}
               <div className="b-resumen"><span>Total</span><b>{formatPEN(finalTotal)}</b></div>
+              <p className="b-seguro"><Lock aria-hidden="true" /> {payLabel}</p>
 
               {!applied && (
                 showPromo ? (
