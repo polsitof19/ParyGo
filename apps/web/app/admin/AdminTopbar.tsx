@@ -5,10 +5,12 @@ import { usePathname } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 
+// `short` es la etiqueta de teléfono angosto: los tres ítems tienen que entrar
+// sin deslizar en 390px (ver parygo-panel.css, @media 460px).
 const NAV = [
-  { href: '/admin', label: 'Inicio' },
-  { href: '/admin/settings', label: 'Configuración' },
-  { href: '/admin/equipo', label: 'Equipo' },
+  { href: '/admin', label: 'Inicio', short: 'Inicio' },
+  { href: '/admin/settings', label: 'Configuración', short: 'Config' },
+  { href: '/admin/equipo', label: 'Equipo', short: 'Equipo' },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
@@ -36,7 +38,8 @@ export function AdminTopbar({ brandName, email, logoUrl }: { brandName: string; 
               href={item.href}
               aria-current={isActive(pathname, item.href) ? 'page' : undefined}
             >
-              {item.label}
+              <span className="s-nav__long">{item.label}</span>
+              <span className="s-nav__short">{item.short}</span>
             </Link>
           ))}
         </nav>

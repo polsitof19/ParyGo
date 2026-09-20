@@ -319,6 +319,17 @@
   .pg-panel .s-nav a { padding: 7px 11px; white-space: nowrap; }
   .pg-panel .s-topbar__right { flex: none; }
 }
+/* Teléfono angosto: el nav tiene que entrar ENTERO sin deslizar. Se acorta la
+   etiqueta (Configuración → Config) y se aprieta el wordmark, que es lo que
+   más espacio come. La máscara de deslizamiento sobra si ya entra todo. */
+.pg-panel .s-nav__short { display: none; }
+@media (max-width: 460px) {
+  .pg-panel .s-logo { font-size: 18px; max-width: 30vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pg-panel .s-nav { gap: 2px; -webkit-mask-image: none; mask-image: none; }
+  .pg-panel .s-nav a { font-size: 13px; padding: 7px 8px; }
+  .pg-panel .s-nav__long { display: none; }
+  .pg-panel .s-nav__short { display: inline; }
+}
 
 /* ---------- Cabeceras de página ---------- */
 .pg-panel .s-pagehead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 30px; flex-wrap: wrap; }
