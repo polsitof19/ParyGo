@@ -75,3 +75,49 @@ export function brandColor(hex?: string | null): string {
   const rgb = hex ? parseHex(hex) : null;
   return rgb ? (hex as string) : '#FF6A3D';
 }
+
+// Contraste WCAG entre dos rgb.
+function contrastBetween(a: [number, number, number], b: [number, number, number]): number {
+  const la = relLuminance(a);
+  const lb = relLuminance(b);
+  const [hi, lo] = la > lb ? [la, lb] : [lb, la];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+const INK: [number, number, number] = [0x23, 0x1c, 0x17];
+const PAPER: [number, number, number] = [0xfb, 0xf7, 0xf0];
+const INK_HEX = '#231C17';
+const PAPER_HEX = '#FBF7F0';
+
+// Mezcla `rgb` hacia `target` en proporción m (0..1).
+function mix(rgb: [number, number, number], target: [number, number, number], m: number): [number, number, number] {
+  return [rgb[0] + (target[0] - rgb[0]) * m, rgb[1] + (target[1] - rgb[1]) * m, rgb[2] + (target[2] - rgb[2]) * m];
+}
+
+// RELLENO de marca apto para llevar texto (botón primario, círculo del paso
+// activo, banda del ticket). La regla del sistema es que el color de marca no
+// porta texto "a ojo", porque el promotor elige cualquier color: acá el par
+// relleno + texto se calcula para que SIEMPRE llegue a AA 4.5:1.
+//
+// Se prefiere TINTA sobre el relleno (es la regla del sistema). Si el color es
+// oscuro y la tinta no se leería, el texto pasa a papel —forzar tinta ahí
+// obligaría a lavar el color hasta perder la marca—. Y si el color es de tono
+// medio, donde NINGUNA de las dos llega, se corre el relleno lo mínimo hacia
+// el lado que menos lo cambia.
+export function brandFillPair(hex?: string | null): { fill: string; on: string } {
+  const rgb = hex ? parseHex(hex) : null;
+  if (!rgb) return { fill: '#FF6A3D', on: INK_HEX }; // tangerina parygo: 5.91:1
+  const onInk = contrastBetween(rgb, INK);
+  const onPaper = contrastBetween(rgb, PAPER);
+  if (onInk >= 4.5) return { fill: toHex(rgb), on: INK_HEX };
+  if (onPaper >= 4.5) return { fill: toHex(rgb), on: PAPER_HEX };
+  // Tono medio: ninguna de las dos se lee. Se ajusta hacia el lado más cercano.
+  const hacia = onInk >= onPaper ? PAPER : INK;
+  const texto = onInk >= onPaper ? INK : PAPER;
+  const textoHex = onInk >= onPaper ? INK_HEX : PAPER_HEX;
+  for (let m = 0.04; m <= 1.001; m += 0.04) {
+    const mezcla = mix(rgb, hacia, m);
+    if (contrastBetween(mezcla, texto) >= 4.5) return { fill: toHex(mezcla), on: textoHex };
+  }
+  return { fill: toHex(hacia), on: textoHex };
+}

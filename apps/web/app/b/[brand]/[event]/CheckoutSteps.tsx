@@ -2,8 +2,8 @@
 // (clases c-steps / c-step / c-step--on / c-step__line) — sin estado ni lógica,
 // por eso es server-safe y se reusa tanto en el panel cliente como en /yape.
 //
-// - Yape (yape_manual) → 4 pasos: Entradas · Tus datos · Pagar con Yape · ¡Listo!
-// - MP / gratis        → 3 pasos: Entradas · Datos + pago · ¡Listo!
+// - Yape (yape_manual) → 4 pasos: Entradas · Tus datos · Pagar con Yape · Listo
+// - MP / gratis        → 3 pasos: Entradas · Datos + pago · Listo
 //
 // `active` es el número de paso activo (1-based). Pasos <= active quedan "on".
 
@@ -16,8 +16,8 @@ export function CheckoutSteps({
 }) {
   const steps =
     method === 'yape_manual'
-      ? ['Entradas', 'Tus datos', 'Pagar con Yape', '¡Listo!']
-      : ['Entradas', 'Datos + pago', '¡Listo!'];
+      ? ['Entradas', 'Tus datos', 'Pagar con Yape', 'Listo']
+      : ['Entradas', 'Datos + pago', 'Listo'];
 
   return (
     <ol className="c-steps" aria-label="Pasos de la compra">

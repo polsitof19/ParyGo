@@ -285,7 +285,7 @@ export function EventCheckoutPanel({
         return;
       }
       setApplied({ code, finalCents: res.totalFinalCents, discountCents: res.totalDiscountCents, isFree: res.isFree });
-      toast.success(res.isFree ? '¡Entrada gratis con el código!' : `Código aplicado: -${formatPEN(res.totalDiscountCents)}`);
+      toast.success(res.isFree ? 'Entrada gratis con el código' : `Código aplicado: -${formatPEN(res.totalDiscountCents)}`);
     } catch {
       toast.error('No se pudo verificar el código (red). Intenta de nuevo.');
     } finally {
@@ -305,7 +305,7 @@ export function EventCheckoutPanel({
       ? 'Obtener entrada gratis'
       : method === 'mercadopago'
         ? `Pagar ${formatPEN(finalTotal)}`
-        : 'Ir a pagar con Yape';
+        : 'Pagar con Yape';
   const isYape = method === 'yape_manual' && !applied?.isFree;
 
   function submitCheckout(form: HTMLFormElement) {
@@ -573,7 +573,7 @@ export function EventCheckoutPanel({
                     <div className="c-promo-on">
                       <div>
                         <span style={{ fontWeight: 700, color: 'var(--brand-ink)' }}>{applied.code}</span>
-                        <p className="c-muted" style={{ fontSize: 12.5, marginTop: 2 }}>{applied.isFree ? '¡Entrada gratis!' : `Descuento: -${formatPEN(applied.discountCents)}`}</p>
+                        <p className="c-muted" style={{ fontSize: 12.5, marginTop: 2 }}>{applied.isFree ? 'Entrada gratis' : `Descuento: -${formatPEN(applied.discountCents)}`}</p>
                       </div>
                       <button type="button" className="c-btn c-btn--ghost" onClick={() => { setApplied(null); setPromoInput(''); }}>Quitar</button>
                     </div>
@@ -639,7 +639,7 @@ function Stepper({ active, onGoStep1 }: { active: number; onGoStep1: () => void 
   const steps = [
     { n: 1, label: 'ENTRADAS' },
     { n: 2, label: 'DATOS' },
-    { n: 3, label: '¡LISTO!' },
+    { n: 3, label: 'LISTO' },
   ];
   return (
     <div className="c-stepper" aria-label="Pasos de la compra">
