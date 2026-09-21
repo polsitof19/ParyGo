@@ -134,6 +134,16 @@ para OK de Paul.
 - Estado de las superficies: landing, super admin, panel del organizador y
   checkout/entrada YA están en el sistema. La entrada del comprador (QR) vive
   en app/b/[brand]/TicketPass.tsx, compartida por /t/[uuid] y la confirmación.
+- PANELES (organizador + super admin): CERO TARJETAS FLOTANTES. Nada de
+  rectángulos blancos con sombra sobre el papel; la estructura la hacen
+  hairlines (1px --line), jerarquía tipográfica y espacio. `.s-card` ya no es
+  una tarjeta: es un bloque que arranca con border-top. Stats = número 32/800
+  tabular con etiqueta 11px en mayúsculas espaciadas DEBAJO, columnas separadas
+  por hairlines verticales. Tablas y listas como un menú: filas con hairline,
+  sin fondo, tinte suave al pasar. Campos con línea inferior, sin relleno.
+  UN solo botón primario por pantalla (tinta sobre acento, radio 10); el resto
+  son botones de TEXTO (.s-btn--soft/--ghost). Nav en texto con subrayado de
+  2px en el activo, sin pastillas. Nada centrado en toda la app.
 
 ## Migraciones
 Incrementales, idempotentes, numeradas (vamos por 0052). Backwards-compatible
