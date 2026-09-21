@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { formatPEN } from '@/lib/utils';
 import { isPubliclyOffered } from '@/lib/publicTicketGuard';
 import { optimizedImage } from '@/lib/imageUrl';
+import { PieMarca } from './Responsable';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -52,7 +53,7 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
-    .select('id, name')
+    .select('id, name, whatsapp_e164, contact_email')
     .eq('slug', params.brand)
     .is('archived_at', null)
     .maybeSingle();
@@ -104,6 +105,9 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
           {up.map((e) => <EventCard key={e.id} e={e} from={fromByEvent.get(e.id) ?? null} />)}
         </section>
       )}
+
+      {/* Quién responde por los eventos de esta página. */}
+      <PieMarca marca={brand} />
     </main>
   );
 }

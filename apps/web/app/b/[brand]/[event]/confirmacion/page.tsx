@@ -7,6 +7,7 @@ import { formatPEN, formatEventDate } from '@/lib/utils';
 import { ConfirmationPoller } from './ConfirmationPoller';
 import { AddToCalendar } from './AddToCalendar';
 import { TicketPass } from '../../TicketPass';
+import { LineaPago } from '../../Responsable';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -30,7 +31,7 @@ export default async function ConfirmationPage({
     total_cents: number;
     buyer_name: string;
     event: { name: string; starts_at: string; ends_at: string | null; venue_name: string | null; venue_address: string | null; venue_maps_url: string | null; venue_lat: number | null; venue_lng: number | null; require_dni: boolean } | null;
-    brand: { slug: string; name: string; whatsapp_e164: string | null; theme_json: { logo_url?: string | null } | null } | null;
+    brand: { slug: string; name: string; whatsapp_e164: string | null; contact_email: string | null; theme_json: { logo_url?: string | null } | null } | null;
     tickets: { id: string; qr_code: string; ticket_type_name: string; ticket_number: string }[];
   };
   const orderResult = await admin
@@ -39,7 +40,7 @@ export default async function ConfirmationPage({
       id, status, payment_method, total_cents,
       buyer_name,
       event:events ( name, starts_at, ends_at, venue_name, venue_address, venue_maps_url, venue_lat, venue_lng, require_dni ),
-      brand:brands ( slug, name, whatsapp_e164, theme_json ),
+      brand:brands ( slug, name, whatsapp_e164, contact_email, theme_json ),
       tickets ( id, qr_code, ticket_type_name, ticket_number )
     `)
     .eq('id', searchParams.order)
@@ -264,6 +265,9 @@ export default async function ConfirmationPage({
         También te enviamos el QR por email. Si no llega en 5 min, revisa spam o usa el link permanente.{' '}
         <Link href="/reenviar" style={{ color: 'var(--ink)', fontWeight: 600, textDecoration: 'underline' }}>¿No lo encuentras? Reenviar a mi email</Link>
       </p>
+
+      {/* Quién cobró y quién responde por el evento. */}
+      {brand && <LineaPago marca={brand} evento={event?.name} />}
     </main>
   );
 }

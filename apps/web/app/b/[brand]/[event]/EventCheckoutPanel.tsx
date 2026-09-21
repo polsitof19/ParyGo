@@ -9,6 +9,7 @@ import { startCheckout, previewPromo, type CheckoutInput } from './actions';
 import { reserveStock } from '@/lib/reservations';
 import { MercadoPagoWallet } from './MercadoPagoWallet';
 import { ShareEvent } from './ShareEvent';
+import { LineaLegal } from '../Responsable';
 
 const SESSION_STORAGE_KEY = 'parygo-checkout-session';
 
@@ -25,6 +26,9 @@ function readOrCreateSessionId(): string {
 type Brand = {
   id: string; slug: string; name: string;
   yape_number: string | null; yape_holder: string | null;
+  // Contacto del organizador: es quien responde por el evento, así que la
+  // página de compra tiene que poder linkearlo (ver lib/organizador.ts).
+  whatsapp_e164?: string | null; contact_email?: string | null;
   // Supabase tipa theme_json como Json; se narrowing-castea al leer el logo.
   theme_json?: unknown;
 };
@@ -441,7 +445,7 @@ function fraseConfianza(pago: string): string {
 
             <p className="b-trust">{fraseConfianza(payLabel)}</p>
 
-            <MasInfo event={event} />
+            <MasInfo event={event} brand={brand} />
           </div>
 
           {/* Resumen de compra: el único bloque sólido de la página, y el
@@ -752,15 +756,12 @@ function armarEscalera(t: TicketType): Peldano[] {
 
 // ============================ Más información ============================
 // Sección visible (no acordeón): dónde es con su mapa, sobre el evento si el
-// organizador escribió algo, y la línea legal chica al final.
-function MasInfo({ event }: { event: Event }) {
+// organizador escribió algo, y la línea de responsabilidad al final: quién
+// gestiona cancelaciones y devoluciones, con su contacto.
+function MasInfo({ event, brand }: { event: Event; brand: Brand }) {
   const mapsHref = hrefMapa(event);
   const direccion = [event.venue_address, distrito(event.venue_address) ? null : event.venue_name]
     .filter(Boolean).join(', ');
-  const legal = [
-    event.min_age > 0 ? `+${event.min_age}` : null,
-    event.refund_policy?.trim() || 'Sin devolución salvo cancelación del evento',
-  ].filter(Boolean).join(' · ');
 
   return (
     <section className="b-info">
@@ -793,7 +794,7 @@ function MasInfo({ event }: { event: Event }) {
         </div>
       )}
 
-      <p className="b-legal">{legal}</p>
+      <LineaLegal marca={brand} minAge={event.min_age} refundPolicy={event.refund_policy} />
     </section>
   );
 }

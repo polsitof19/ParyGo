@@ -32,6 +32,7 @@ type TicketView = {
     slug: string;
     name: string;
     whatsapp_e164: string | null;
+    contact_email: string | null;
     theme_json: BrandTheme;
   } | null;
 };
@@ -47,7 +48,7 @@ async function loadTicket(brandSlug: string, qrCode: string): Promise<TicketView
     .select(`
       id, qr_code, ticket_type_name, ticket_number, attendee_name, validated_at, invalidated_at,
       event:events ( name, starts_at, venue_name, cancelled_at, allow_transfer ),
-      brand:brands ( slug, name, whatsapp_e164, theme_json )
+      brand:brands ( slug, name, whatsapp_e164, contact_email, theme_json )
     `)
     .eq('qr_code', qrCode)
     .maybeSingle();
@@ -110,18 +111,12 @@ export default async function TicketPage({ params }: Props) {
         brandName={brand?.name ?? 'parygo'}
         brandLogoUrl={brand?.theme_json?.logo_url ?? null}
         brandWhatsapp={brand?.whatsapp_e164 ?? null}
+        brandEmail={brand?.contact_email ?? null}
         shareUrl={ticketUrl}
         state={state}
       />
-
-      {brand?.whatsapp_e164 && (
-        <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginTop: 14 }}>
-          ¿Algún problema?{' '}
-          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink)', fontWeight: 600, textDecoration: 'underline' }}>
-            Escribe al organizador
-          </a>
-        </p>
-      )}
+      {/* El contacto del organizador ya va en el pie de la entrada
+          (LineaEntrada), así que acá no se repite. */}
 
       {/* Transferir/regalar: solo si el evento lo permite, no empezó, y la entrada
           sigue usable (no escaneada, no anulada, evento no cancelado). El corte al

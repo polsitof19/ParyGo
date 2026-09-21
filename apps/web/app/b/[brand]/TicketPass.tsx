@@ -2,6 +2,7 @@ import { Calendar, MapPin } from 'lucide-react';
 import { optimizedImage } from '@/lib/imageUrl';
 import { formatEventDate, whatsappLink } from '@/lib/utils';
 import { SaveTicketImage } from './SaveTicketImage';
+import { LineaEntrada } from './Responsable';
 
 export type PassState =
   | { kind: 'ok' }
@@ -25,6 +26,7 @@ export function TicketPass({
   brandName,
   brandLogoUrl,
   brandWhatsapp,
+  brandEmail = null,
   shareUrl,
   state = { kind: 'ok' },
   showFooter = true,
@@ -40,6 +42,8 @@ export function TicketPass({
   brandName: string;
   brandLogoUrl: string | null;
   brandWhatsapp: string | null;
+  /** Fallback de contacto del organizador cuando no cargó WhatsApp. */
+  brandEmail?: string | null;
   shareUrl: string;
   state?: PassState;
   showFooter?: boolean;
@@ -111,9 +115,14 @@ export function TicketPass({
       </div>
 
       {showFooter && (
-        <p className="c-pass__foot">
-          powered by <b>parygo</b><span className="c-powered__dot" />
-        </p>
+        <>
+          {/* Quién organiza va ANTES del "powered by": el evento es de la
+              marca, ParyGo solo vendió la entrada. */}
+          <LineaEntrada marca={{ name: brandName, whatsapp_e164: brandWhatsapp, contact_email: brandEmail }} />
+          <p className="c-pass__foot">
+            powered by <b>parygo</b><span className="c-powered__dot" />
+          </p>
+        </>
       )}
     </div>
   );

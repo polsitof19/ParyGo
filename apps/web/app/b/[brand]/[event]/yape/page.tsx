@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
 import { YapeUploadForm } from './YapeUploadForm';
 import { CopyButton } from './CopyButton';
+import { LineaPago } from '../../Responsable';
 import { publicEnv } from '@/lib/env';
 
 export const runtime = 'edge';
@@ -35,6 +36,7 @@ export default async function YapeUploadPage({
       yape_number: string | null;
       yape_holder: string | null;
       whatsapp_e164: string | null;
+      contact_email: string | null;
       theme_json: { yape_qr_url?: string | null } | null;
     } | null;
     event: { name: string; slug: string } | null;
@@ -44,7 +46,7 @@ export default async function YapeUploadPage({
     .from('orders')
     .select(`
       id, status, total_cents, buyer_name, payment_method,
-      brand:brands ( slug, name, yape_number, yape_holder, whatsapp_e164, theme_json ),
+      brand:brands ( slug, name, yape_number, yape_holder, whatsapp_e164, contact_email, theme_json ),
       event:events ( name, slug )
     `)
     .eq('id', searchParams.order)
@@ -118,14 +120,9 @@ export default async function YapeUploadPage({
         />
       </div>
 
-      {order.brand.whatsapp_e164 && (
-        <p className="c-foot">
-          ¿Algún problema?{' '}
-          <a href={`https://wa.me/${order.brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink)', fontWeight: 700, textDecoration: 'underline' }}>
-            Escribe al organizador
-          </a>
-        </p>
-      )}
+      {/* A dónde va la plata y a quién escribirle: ParyGo no cobra la entrada,
+          el Yape entra directo a la cuenta del organizador. */}
+      <LineaPago marca={order.brand} evento={order.event?.name} />
     </main>
   );
 }
