@@ -5,7 +5,7 @@
    ============================================================ */
 
 /* ---------- Ficha de marca ---------- */
-.super-shell .s-brandhead { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
+.super-shell .s-brandhead { display: flex; align-items: center; gap: var(--s-s2); margin-bottom: var(--s-s3); flex-wrap: wrap; }
 .super-shell .s-brandhead__id { min-width: 0; }
 /* URL pública: tinta tenue (antes --peri, 4.17:1, no AA). */
 .super-shell .s-brandhead__url { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink-2); margin-top: 4px; }
@@ -13,16 +13,16 @@
 .super-shell .s-brandhead__cta { margin-left: auto; }
 @media (max-width: 560px) { .super-shell .s-brandhead__cta { margin-left: 0; width: 100%; } }
 /* Barra de acciones: una línea entre hairlines, sin relleno beige. */
-.super-shell .s-actionbar { display: flex; align-items: center; justify-content: space-between; gap: 12px 22px; padding: 13px 0; background: none; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0; margin-bottom: 28px; flex-wrap: wrap; }
-.super-shell .s-actionbar__lead { font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
-.super-shell .s-actionbar__btns { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.super-shell .s-actionbar { display: flex; align-items: center; justify-content: space-between; gap: 12px var(--s-s3); padding: 12px 0; background: none; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0; margin-bottom: var(--s-s4); flex-wrap: wrap; }
+.super-shell .s-actionbar__lead { font-size: var(--s-lb); font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
+.super-shell .s-actionbar__btns { display: flex; align-items: center; gap: var(--s-s3); flex-wrap: wrap; }
 .super-shell .s-deflist { display: flex; flex-direction: column; }
-.super-shell .s-defrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
+.super-shell .s-defrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
 .super-shell .s-defrow:first-child { border-top: 0; }
-.super-shell .s-defrow__k { font-size: 13px; color: var(--ink-3); }
-.super-shell .s-defrow__v { font-size: 14px; font-weight: 500; text-align: right; word-break: break-word; }
+.super-shell .s-defrow__k { font-size: var(--s-meta); color: var(--ink-3); }
+.super-shell .s-defrow__v { font-size: var(--s-body); font-weight: 500; text-align: right; word-break: break-word; }
 .super-shell .s-owner-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; }
-.super-shell .s-owner-row { display: flex; flex-direction: column; gap: 12px; padding: 16px 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; }
+.super-shell .s-owner-row { display: flex; flex-direction: column; gap: 12px; padding: var(--s-s2) 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; }
 .super-shell .s-owner-list > li:first-child .s-owner-row,
 .super-shell .s-owner-row:first-child { border-top: 0; }
 .super-shell .s-owner-row__id { display: flex; align-items: center; gap: 10px; }
@@ -36,14 +36,14 @@
 .super-shell .s-anchor { scroll-margin-top: 84px; }
 
 /* ---------- Solicitudes ---------- */
-.super-shell .s-req { padding: 18px 0 0; }
-.super-shell .s-req__name { font-family: var(--display); font-weight: 800; font-size: 18px; letter-spacing: -0.01em; }
-.super-shell .s-req__meta { font-size: 13px; color: var(--ink-2); word-break: break-word; }
+.super-shell .s-req { padding: var(--s-s2) 0 0; }
+.super-shell .s-req__name { font-family: var(--display); font-weight: 700; font-size: var(--s-t3); letter-spacing: -0.01em; }
+.super-shell .s-req__meta { font-size: var(--s-meta); color: var(--ink-2); word-break: break-word; }
 .super-shell .s-req__note { font-size: 14px; color: var(--ink-2); margin-top: 10px; white-space: pre-wrap; }
-.super-shell .s-req__actions { display: flex; gap: 22px; margin-top: 14px; padding-bottom: 4px; align-items: center; flex-wrap: wrap; }
+.super-shell .s-req__actions { display: flex; gap: var(--s-s3); margin-top: var(--s-s2); padding-bottom: 4px; align-items: center; flex-wrap: wrap; }
 
 /* ---------- Salud ---------- */
-.super-shell .s-bignum { font-family: var(--display); font-weight: 800; font-size: 32px; line-height: 1; font-variant-numeric: tabular-nums; margin-top: 6px; }
+.super-shell .s-bignum { font-family: var(--display); font-weight: 800; font-size: var(--s-num); line-height: 1.05; font-variant-numeric: tabular-nums; margin-top: 6px; }
 
 
 /* El wordmark "parygo." no se achica: es corto y fijo. El que se desliza es el
