@@ -298,262 +298,221 @@
 @keyframes c-stepout { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-4px); } }
 
 /* ============================================================
-   COMPRA (.b-*) — mobile-first, una pantalla = una decisión.
-   La referencia es la maqueta "Así se ve" de parygo.com: el flyer manda,
-   arriba el pill de Vendiendo, el nombre y "fecha · lugar" en una línea,
-   y debajo la lista de entradas con su precio. Todo lo demás (mapa,
-   devoluciones, +18, compartir, promotor) vive plegado en "Más
-   información". Radios de 24, botones pill, blobs del color del
-   organizador. El color de marca sigue sin portar texto: acá es blob,
-   punto, borde y relleno de botón con su texto medido.
+   COMPRA — dirección de arte (.b-*)
+   Referencia: DICE / Resident Advisor. CERO tarjetas: nada de fondos
+   blancos flotando, radios ni sombras. La página es papel (o noche) con
+   hairlines, tipografía y una sola pieza de color: el botón de pagar.
+   Todo alineado a la izquierda.
+
+   Dos direcciones conviven vía ?v= :
+     .b-v-a  CLARA  — papel, tinta, la marca como acento.
+     .b-v-b  NOCHE  — fondo #14110E, texto papel, la marca como acento.
+   Los colores del funnel salen de estas cuatro variables semánticas, no
+   de los tokens directos, para que invertir sea cambiar un bloque.
    ============================================================ */
-.client-shell .b-buy { position: relative; max-width: 560px; margin: 0 auto; padding: 0 var(--pad) 40px; }
+.client-shell .b-v-a {
+  --pg-bg: var(--paper);
+  --pg-fg: var(--ink);
+  --pg-fg-2: var(--ink-2);
+  --pg-line: var(--line);
+  /* Fases bloqueadas: atenuadas, pero el precio que viene TIENE que leerse.
+     Medido: .45 da 2.80:1 sobre papel y 4.32:1 sobre noche (los dos por
+     debajo de AA). .62 es el mínimo que pasa en las dos (4.63 y 7.19). */
+  --pg-dim: .62;
+}
+.client-shell .b-v-b {
+  --pg-bg: #14110E;
+  --pg-fg: #FBF7F0;
+  --pg-fg-2: rgba(251, 247, 240, .72);
+  --pg-line: rgba(251, 247, 240, .16);
+  --pg-dim: .62;
+  background: var(--pg-bg);
+  color: var(--pg-fg);
+}
+/* La noche tiñe la página entera, no solo el bloque. */
+.client-shell:has(.b-v-b) { background: #14110E; }
+.client-shell:has(.b-v-b) .c-foot { color: rgba(251, 247, 240, .6); }
+.client-shell:has(.b-v-b) .c-foot a { color: rgba(251, 247, 240, .92); }
 
-/* ---------- Hero compacto ----------
-   El flyer ya lo vieron en Instagram: la página confirma y vende, no vuelve a
-   vender. En teléfono el hero es una banda de ~200px — fondo con el mismo
-   flyer difuminado y teñido de marca, el flyer ENTERO (sin recorte) a la
-   izquierda, y a la derecha el nombre y "fecha · lugar".
-   En escritorio la banda se deshace (display: contents) y el flyer pasa a ser
-   la columna izquierda, grande y entero, con las entradas a la derecha. */
-.client-shell .b-stage { display: grid; gap: 18px; }
-
-.client-shell .b-hero {
-  position: relative; display: flex; align-items: center; gap: 16px;
-  min-height: 196px; padding: 18px 2px;
+.client-shell .b-buy {
+  position: relative; max-width: 560px; margin: 0 auto;
+  padding: 0 var(--pad) 40px; color: var(--pg-fg); text-align: left;
 }
 
-/* El flyer entero, sin recorte. Tocarlo lo abre a pantalla completa. */
-.client-shell .b-flyer { flex: none; border: 0; padding: 0; background: none; cursor: zoom-in; }
-.client-shell .b-flyer img {
-  /* Alto fijo y ancho libre: el flyer conserva SU proporción y no le quedan
-     bandas blancas a los costados. El tope cubre flyers muy anchos. */
-  display: block; height: 128px; width: auto; max-width: 122px; object-fit: contain;
-  border-radius: 12px; background: var(--surface);
-  box-shadow: 2px 2px 0 rgba(35,28,23,.15);
-  transition: transform .26s var(--spring);
+/* ---------- Hero: el flyer a lo ancho, el nombre encima ---------- */
+.client-shell .b-hero { position: relative; margin: 0 calc(var(--pad) * -1); }
+.client-shell .b-hero__shot { display: block; width: 100%; border: 0; padding: 0; background: none; cursor: zoom-in; position: relative; }
+.client-shell .b-hero__shot img { display: block; width: 100%; height: clamp(300px, 82vw, 380px); object-fit: cover; }
+.client-shell .b-hero__shot--ph { height: clamp(300px, 82vw, 380px); background: linear-gradient(160deg, var(--brand-soft), transparent 70%); cursor: default; }
+/* El degradado tiene que apoyar el texto pase lo que pase con el flyer. */
+.client-shell .b-hero__fade {
+  position: absolute; inset: 28% 0 0; display: block;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.35) 45%, rgba(0,0,0,.92));
 }
-.client-shell .b-flyer:hover img { transform: translateY(-2px) scale(1.02); }
-.client-shell .b-flyer:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; border-radius: 14px; }
-.client-shell .b-flyer--ph {
-  width: 96px; height: 128px; border-radius: 12px; display: grid; place-items: center; padding: 8px;
-  text-align: center; font-family: var(--display); font-weight: 800; font-size: 13px; line-height: 1.05;
-  color: var(--ink-3); background: var(--surface); box-shadow: 2px 2px 0 rgba(35,28,23,.15);
+.client-shell .b-v-b .b-hero__fade { background: linear-gradient(180deg, transparent, rgba(20,17,14,.5) 42%, #14110E); }
+.client-shell .b-hero__over { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 var(--pad) 22px; }
+.client-shell .b-kicker {
+  margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+  color: rgba(255,255,255,.88); text-shadow: 0 1px 8px rgba(0,0,0,.8);
 }
-
-.client-shell .b-titles { min-width: 0; }
 .client-shell .b-hero__name {
-  font-family: var(--display); font-weight: 800; font-size: clamp(22px, 6vw, 28px);
-  line-height: 1.04; letter-spacing: -0.03em; color: var(--ink); margin: 8px 0 0;
-  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+  margin: 0; font-family: var(--display); font-weight: 800;
+  font-size: clamp(40px, 11.5vw, 48px); line-height: .95; letter-spacing: -0.035em;
+  color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,.7);
 }
-.client-shell .b-hero__meta { margin: 7px 0 0; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
-/* El pill ya no va sobre una foto: papel, tinta y punto de marca. */
 
-/* Lightbox: el flyer entero a pantalla completa, se cierra tocando. */
+/* Lightbox: el flyer entero. */
 .client-shell .b-lightbox {
   position: fixed; inset: 0; z-index: 90; border: 0; padding: 20px; width: 100%; height: 100%;
   display: grid; place-items: center; cursor: zoom-out;
-  background: rgba(20,14,10,.92); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  background: rgba(10,8,6,.94); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   animation: b-fade .18s var(--ease) both;
 }
-.client-shell .b-lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 14px; }
-.client-shell .b-lightbox__hint { position: absolute; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; text-align: center; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.8); }
+.client-shell .b-lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.client-shell .b-lightbox__hint { position: absolute; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; text-align: center; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.75); }
 @keyframes b-fade { from { opacity: 0 } to { opacity: 1 } }
 
-/* Escritorio: dos columnas. El flyer grande y entero a la izquierda; arriba a
-   la derecha el nombre, y debajo las entradas. */
+/* ---------- Entradas: lista tipo carta ---------- */
+.client-shell .b-tks { margin-top: 26px; }
+.client-shell .b-ty + .b-ty { margin-top: 26px; }
+.client-shell .b-ty--out { opacity: .5; }
+.client-shell .b-lb,
+.client-shell .b-ty__lb {
+  margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--pg-fg-2);
+}
+.client-shell .b-ty__desc { margin: 6px 0 0; font-size: 13.5px; color: var(--pg-fg-2); }
+
+.client-shell .b-ph {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center;
+  gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--pg-line);
+}
+.client-shell .b-ty__lb + .b-ph,
+.client-shell .b-ty__desc + .b-ph { border-top: 1px solid var(--pg-line); margin-top: 12px; }
+.client-shell .b-ph:not(.b-ph--on) { opacity: var(--pg-dim); }
+.client-shell .b-ph__nm { min-width: 0; font-size: 16px; font-weight: 600; color: var(--pg-fg); }
+.client-shell .b-ph__fase { display: block; margin-top: 3px; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--pg-fg-2); }
+.client-shell .b-ph__pr { font-family: var(--display); font-weight: 800; font-size: 20px; color: var(--pg-fg); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.client-shell .b-ph__act { display: inline-flex; align-items: center; justify-content: flex-end; min-width: 92px; }
+.client-shell .b-ph__lock { width: 15px; height: 15px; color: var(--pg-fg-2); }
+.client-shell .b-ph__ago { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--pg-fg-2); }
+
+/* "+" de borde fino, nunca relleno. */
+.client-shell .b-add {
+  width: 36px; height: 36px; display: grid; place-items: center;
+  border: 1px solid var(--pg-fg); border-radius: 4px; background: none; color: var(--pg-fg);
+  font: inherit; line-height: 1; cursor: pointer;
+  transition: transform .18s var(--spring), background-color .18s, color .18s;
+}
+.client-shell .b-add:hover { background: var(--pg-fg); color: var(--pg-bg); }
+.client-shell .b-add:active { transform: scale(.94); }
+.client-shell .b-qty { display: inline-flex; align-items: center; gap: 10px; animation: b-spring .3s var(--spring) both; }
+@keyframes b-spring { from { transform: scale(.85); opacity: .4; } to { transform: scale(1); opacity: 1; } }
+.client-shell .b-qbtn {
+  width: 36px; height: 36px; display: grid; place-items: center; border-radius: 4px;
+  border: 1px solid var(--pg-line); background: none; color: var(--pg-fg); cursor: pointer;
+  transition: transform .18s var(--spring), border-color .18s;
+}
+.client-shell .b-qbtn:hover:not(:disabled) { border-color: var(--pg-fg); }
+.client-shell .b-qbtn:active:not(:disabled) { transform: scale(.92); }
+.client-shell .b-qval { min-width: 20px; text-align: center; font-family: var(--display); font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums; }
+
+/* ---------- Confianza + información ---------- */
+.client-shell .b-trust { margin: 18px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--pg-fg-2); }
+.client-shell .b-info { margin-top: 30px; }
+.client-shell .b-info__b + .b-info__b { margin-top: 26px; }
+.client-shell .b-map { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; margin: 12px calc(var(--pad) * -1) 0; width: calc(100% + var(--pad) * 2); filter: var(--pg-map); }
+.client-shell .b-v-b { --pg-map: invert(1) hue-rotate(180deg) saturate(.6) brightness(.9); }
+.client-shell .b-v-a { --pg-map: none; }
+.client-shell .b-info__dir { margin: 14px 0 0; font-size: 15px; line-height: 1.5; color: var(--pg-fg); }
+.client-shell .b-info__txt { margin: 10px 0 0; font-size: 14.5px; line-height: 1.6; color: var(--pg-fg-2); white-space: pre-line; }
+.client-shell .b-info__link { display: inline-block; margin-top: 12px; font-size: 14.5px; font-weight: 700; color: var(--pg-fg); text-decoration: underline; text-underline-offset: 4px; }
+.client-shell .b-legal { margin: 26px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--pg-fg-2); }
+
+/* ---------- Un solo botón: la barra de pagar ---------- */
+.client-shell .b-cta {
+  position: sticky; bottom: 0; z-index: 30;
+  margin: 26px calc(var(--pad) * -1) 0;
+  padding: 12px var(--pad) calc(12px + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--pg-bg) 94%, transparent);
+  -webkit-backdrop-filter: saturate(150%) blur(12px); backdrop-filter: saturate(150%) blur(12px);
+  border-top: 1px solid var(--pg-line);
+}
+.client-shell .b-cta__t { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.client-shell .b-cta__t .n { font-size: 13px; font-weight: 600; color: var(--pg-fg-2); }
+.client-shell .b-cta__t .n--solo { font-size: 13px; }
+.client-shell .b-cta__t .v { font-family: var(--display); font-weight: 800; font-size: 20px; color: var(--pg-fg); font-variant-numeric: tabular-nums; }
+.client-shell .b-btn {
+  display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%;
+  height: 52px; padding: 0 22px; border: 0; border-radius: 12px;
+  font-family: var(--body); font-weight: 700; font-size: 16px; cursor: pointer;
+  transition: transform .2s var(--spring), filter .2s, opacity .2s;
+}
+.client-shell .b-btn--go { background: var(--brand-fill); color: var(--on-fill); }
+.client-shell .b-btn--go:hover:not(:disabled) { filter: brightness(1.05); }
+.client-shell .b-btn--go:active:not(:disabled) { transform: scale(.99); }
+.client-shell .b-btn:disabled { opacity: .4; cursor: not-allowed; }
+.client-shell .b-btn svg { width: 17px; height: 17px; }
+/* El resto son textos, no botones. */
+.client-shell .b-back {
+  display: inline-block; margin-top: 18px; background: none; border: 0; padding: 0;
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--pg-fg-2);
+  text-decoration: underline; text-underline-offset: 4px; cursor: pointer;
+}
+.client-shell .b-back:hover { color: var(--pg-fg); }
+
+/* ---------- Paso 2: los datos, también sin cajas ---------- */
+.client-shell .b-head { margin: 26px 0 20px; }
+.client-shell .b-head__t { font-family: var(--display); font-weight: 800; font-size: clamp(30px, 8vw, 38px); letter-spacing: -0.03em; line-height: 1; margin: 0; }
+.client-shell .b-head__s { margin: 8px 0 0; font-size: 14.5px; color: var(--pg-fg-2); }
+.client-shell .b-panel { padding: 0; background: none; border: 0; }
+.client-shell .b-panel + .b-panel { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--pg-line); }
+.client-shell .b-panel__t { margin: 0 0 14px; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--pg-fg-2); }
+.client-shell .b-resumen { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 15px; padding: 10px 0; border-bottom: 1px solid var(--pg-line); }
+.client-shell .b-resumen b { font-family: var(--display); font-weight: 800; font-variant-numeric: tabular-nums; }
+.client-shell .b-desc { display: inline-flex; align-items: center; gap: 7px; font-weight: 700; color: var(--pg-fg); font-variant-numeric: tabular-nums; }
+.client-shell .b-desc::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+.client-shell .b-seguro { display: flex; align-items: center; gap: 7px; margin: 14px 0 0; font-size: 12.5px; color: var(--pg-fg-2); }
+.client-shell .b-seguro svg { width: 14px; height: 14px; }
+.client-shell .b-pays { display: flex; gap: 10px; }
+.client-shell .b-pay {
+  flex: 1; min-height: 46px; border-radius: 8px; border: 1px solid var(--pg-line); background: none;
+  font: inherit; font-weight: 700; font-size: 15px; color: var(--pg-fg-2); cursor: pointer;
+  transition: border-color .18s, color .18s;
+}
+.client-shell .b-pay--on { border-color: var(--pg-fg); color: var(--pg-fg); }
+
+/* Campos: sin caja blanca, solo una línea abajo. */
+.client-shell .b-buy .c-input {
+  background: none; border: 0; border-bottom: 1px solid var(--pg-line); border-radius: 0;
+  padding: 0 0 10px; height: 42px; color: var(--pg-fg); font-size: 16px;
+}
+.client-shell .b-buy .c-input:focus { outline: none; border-bottom-color: var(--pg-fg); box-shadow: none; background: none; }
+.client-shell .b-buy .c-input::placeholder { color: var(--pg-fg-2); opacity: .7; }
+.client-shell .b-buy .c-label { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--pg-fg-2); }
+.client-shell .b-buy .c-help { color: var(--pg-fg-2); }
+.client-shell .b-buy .c-check { color: var(--pg-fg); }
+.client-shell .b-buy .c-field + .c-field { margin-top: 20px; }
+.client-shell .b-buy select.c-input { padding-right: 18px; }
+
+/* Escritorio: dos columnas, el flyer a la izquierda sin recorte extra. */
 @media (min-width: 940px) {
   .client-shell .b-buy { max-width: 1040px; }
-  .client-shell .b-stage {
-    grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
-    grid-template-areas: "flyer titles" "flyer list";
-    gap: 10px 36px; align-items: start;
-  }
-  .client-shell .b-hero { display: contents; }
-  .client-shell .b-flyer, .client-shell .b-flyer--ph { grid-area: flyer; }
-  .client-shell .b-flyer { cursor: default; }
-  .client-shell .b-flyer img { width: 100%; max-width: none; height: auto; max-height: 560px; border-radius: 14px; box-shadow: 3px 3px 0 rgba(35,28,23,.15); }
-  .client-shell .b-flyer:hover img { transform: none; }
-  .client-shell .b-flyer--ph { width: 100%; height: 420px; font-size: 26px; border-radius: 20px; }
-  .client-shell .b-titles { grid-area: titles; padding-top: 2px; }
-  .client-shell .b-hero__name { font-size: clamp(30px, 3vw, 40px); }
+  .client-shell .b-stage { display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 1fr); grid-template-areas: "hero list"; gap: 44px; align-items: start; }
+  .client-shell .b-hero { grid-area: hero; margin: 0; position: sticky; top: 92px; }
+  .client-shell .b-hero__shot img, .client-shell .b-hero__shot--ph { height: auto; aspect-ratio: 4 / 5; }
+  .client-shell .b-hero__over { padding: 0 20px 20px; }
   .client-shell .b-list { grid-area: list; }
-  .client-shell .b-tks { margin-top: 14px; }
+  .client-shell .b-tks { margin-top: 0; }
+  .client-shell .b-map { margin-left: 0; margin-right: 0; width: 100%; }
+  .client-shell .b-cta { margin-left: calc(var(--pad) * -1); margin-right: calc(var(--pad) * -1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .client-shell .b-flyer img { transition: none; }
+  .client-shell .b-btn, .client-shell .b-qbtn, .client-shell .b-add, .client-shell .b-qty { transition: none; animation: none; }
   .client-shell .b-lightbox { animation: none; }
 }
 
-/* ---------- Entradas: un solo bloque, filas con hairline ----------
-   Estética de entrada impresa, no de dashboard: nada de tarjetas blancas
-   flotando. Etiqueta del tipo en mayúsculas chicas, escalera de fases debajo
-   —una fila por fase— y los precios alineados a la derecha en tnum.
-   El color de la marca aparece solo en el botón Agregar y en los candados. */
-.client-shell .b-tks {
-  margin-top: 20px; background: var(--surface);
-  border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
-}
-.client-shell .b-ty { padding: 16px 16px 6px; }
-.client-shell .b-ty + .b-ty { border-top: 1px solid var(--line); }
-.client-shell .b-ty--out { opacity: .55; }
-.client-shell .b-lb,
-.client-shell .b-ty__lb {
-  margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .14em;
-  text-transform: uppercase; color: var(--ink-2);
-}
-.client-shell .b-ty__desc { margin: 6px 0 0; font-size: 13.5px; color: var(--ink-3); }
-
-/* Una fila por fase. */
-.client-shell .b-ph {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center;
-  gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); margin-top: 10px;
-}
-.client-shell .b-ty__desc + .b-ph,
-.client-shell .b-ty__lb + .b-ph { margin-top: 12px; }
-.client-shell .b-ph:first-of-type { border-top: 1px solid var(--line); }
-.client-shell .b-ph__nm { font-size: 14px; color: var(--ink-2); min-width: 0; }
-.client-shell .b-ph--on .b-ph__nm { color: var(--ink); font-weight: 600; }
-.client-shell .b-ph__pr {
-  font-family: var(--display); font-weight: 800; font-size: 17px; color: var(--ink-3);
-  font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap;
-}
-.client-shell .b-ph--on .b-ph__pr { font-size: 21px; color: var(--ink); }
-.client-shell .b-ph__act { display: inline-flex; align-items: center; justify-content: flex-end; min-width: 92px; }
-.client-shell .b-ph__lock { width: 16px; height: 16px; color: var(--brand); opacity: .75; }
-.client-shell .b-ph__ago { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
-/* Las fases que no son la vigente no invitan a nada. */
-.client-shell .b-ph:not(.b-ph--on) { opacity: .6; }
-
-/* Agregar / [− n +] — radios chicos, el pill queda solo para el CTA sticky. */
-.client-shell .b-add {
-  height: 40px; padding: 0 18px; border: 0; border-radius: 10px;
-  background: var(--brand-fill); color: var(--on-fill); font: inherit; font-weight: 700; font-size: 14.5px;
-  cursor: pointer; transition: transform .2s var(--spring), filter .2s;
-}
-.client-shell .b-add:hover { filter: brightness(1.04); }
-.client-shell .b-add:active { transform: scale(.96); }
-.client-shell .b-qty { display: inline-flex; align-items: center; gap: 8px; animation: b-spring .3s var(--spring) both; }
-@keyframes b-spring { from { transform: scale(.82); opacity: .4; } to { transform: scale(1); opacity: 1; } }
-.client-shell .b-qbtn {
-  width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px;
-  border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer;
-  transition: transform .18s var(--spring), border-color .18s;
-}
-.client-shell .b-qbtn:hover:not(:disabled) { border-color: var(--ink); }
-.client-shell .b-qbtn:active:not(:disabled) { transform: scale(.92); }
-.client-shell .b-qbtn--add { background: var(--brand-fill); border-color: var(--brand-fill); color: var(--on-fill); }
-.client-shell .b-qval { min-width: 22px; text-align: center; font-family: var(--display); font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums; }
-
-/* Frase de confianza: una línea, en voz de persona. */
-.client-shell .b-trust { margin: 14px 2px 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
-
-/* ---------- Más información: sección visible, misma estética ---------- */
-.client-shell .b-info {
-  margin-top: 18px; background: var(--surface);
-  border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
-}
-.client-shell .b-info__b { padding: 16px; }
-.client-shell .b-info__b + .b-info__b { border-top: 1px solid var(--line); }
-.client-shell .b-map { display: block; width: 100%; aspect-ratio: 16 / 10; border: 0; border-radius: 10px; margin-top: 12px; background: var(--paper-2); }
-.client-shell .b-info__dir { margin: 12px 0 0; font-size: 14.5px; line-height: 1.5; color: var(--ink); }
-.client-shell .b-info__txt { margin: 10px 0 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); white-space: pre-line; }
-.client-shell .b-info__link { display: inline-block; margin-top: 10px; font-size: 14px; font-weight: 700; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
-.client-shell .b-legal { margin: 0; padding: 14px 16px; border-top: 1px solid var(--line); font-size: 12.5px; line-height: 1.5; color: var(--ink-3); }
-
-
-/* CTA sticky: el total siempre a la vista */
-.client-shell .b-cta {
-  position: sticky; bottom: 0; z-index: 30;
-  margin: 18px calc(var(--pad) * -1) 0;
-  padding: 12px var(--pad) calc(12px + env(safe-area-inset-bottom, 0px));
-  display: flex; align-items: center; gap: 14px;
-  background: rgba(251,247,240,.94); -webkit-backdrop-filter: saturate(150%) blur(12px); backdrop-filter: saturate(150%) blur(12px);
-  border-top: 1px solid var(--line);
-}
-.client-shell .b-cta__t { display: flex; flex-direction: column; min-width: 0; }
-.client-shell .b-cta__t .n { font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
-.client-shell .b-cta__t .n--solo { font-size: 15px; font-weight: 700; color: var(--ink-2); }
-.client-shell .b-cta__t .v { font-family: var(--display); font-weight: 800; font-size: 22px; font-variant-numeric: tabular-nums; }
-.client-shell .b-cta .b-btn { margin-left: auto; }
-
-/* Botones pill */
-.client-shell .b-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
-  height: 52px; padding: 0 26px; border: 0; border-radius: var(--r-pill);
-  font-family: var(--body); font-weight: 700; font-size: 16px; cursor: pointer; white-space: nowrap;
-  transition: transform .26s var(--spring), box-shadow .24s var(--ease), background-color .2s, opacity .2s;
-}
-.client-shell .b-btn--go { background: var(--brand-fill); color: var(--on-fill); box-shadow: 0 10px 26px -12px var(--brand); }
-.client-shell .b-btn--go:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 16px 32px -12px var(--brand); }
-.client-shell .b-btn--go:active:not(:disabled) { transform: translateY(0) scale(.99); }
-.client-shell .b-btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
-.client-shell .b-btn--soft { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
-.client-shell .b-btn--soft:hover { box-shadow: inset 0 0 0 1.5px var(--ink); }
-.client-shell .b-btn svg { width: 17px; height: 17px; transition: transform .28s var(--spring); }
-.client-shell .b-btn--go:hover svg { transform: translateX(3px); }
-.client-shell .b-back { display: inline-flex; align-items: center; gap: 7px; margin-top: 16px; background: none; border: 0; padding: 8px 2px; font: inherit; font-weight: 600; font-size: 14px; color: var(--ink-2); cursor: pointer; }
-.client-shell .b-back:hover { color: var(--ink); }
-
-/* Paso 2: tus datos */
-.client-shell .b-head { margin: 4px 0 16px; }
-.client-shell .b-head__t { font-family: var(--display); font-weight: 800; font-size: clamp(26px, 7vw, 32px); letter-spacing: -0.03em; margin: 0; }
-.client-shell .b-head__s { margin: 6px 0 0; font-size: 14.5px; color: var(--ink-2); }
-.client-shell .b-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px 18px; }
-.client-shell .b-panel + .b-panel { margin-top: 12px; }
-.client-shell .b-panel__t { font-family: var(--display); font-weight: 800; font-size: 16px; margin: 0 0 12px; }
-.client-shell .b-resumen { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; padding: 8px 0; }
-.client-shell .b-resumen + .b-resumen { border-top: 1px solid var(--line); }
-.client-shell .b-resumen b { font-family: var(--display); font-weight: 800; font-variant-numeric: tabular-nums; }
-
-/* Pago: dos opciones como pills, no pestañas */
-.client-shell .b-pays { display: flex; gap: 8px; }
-.client-shell .b-pay {
-  flex: 1; min-height: 48px; border-radius: var(--r-pill); border: 1.5px solid var(--line); background: var(--surface);
-  font: inherit; font-weight: 700; font-size: 15px; color: var(--ink-2); cursor: pointer; transition: border-color .18s, color .18s, background-color .18s;
-}
-.client-shell .b-pay--on { border-color: var(--brand); background: var(--sel); color: var(--ink); }
-
-@media (prefers-reduced-motion: reduce) {
-  .client-shell .b-btn, .client-shell .b-qbtn, .client-shell .b-tk, .client-shell .b-btn svg { transition: none; }
-}
-
-/* — Pantalla de pago con Yape — */
-.client-shell .b-yapenum {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  padding: 14px 16px; margin-bottom: 4px;
-  border-radius: 16px; background: var(--paper); border: 1px solid var(--line);
-}
-.client-shell .b-yapenum > span {
-  font-family: var(--display); font-weight: 800; font-size: clamp(30px, 8.5vw, 42px);
-  letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--ink); line-height: 1;
-}
-.client-shell .b-yapeqr { margin-top: 14px; border-radius: 16px; border: 1px solid #E7D9F2; background: #F6F0FB; padding: 14px; text-align: center; }
-.client-shell .b-yapeqr__t { display: inline-flex; align-items: center; gap: 7px; margin: 0; font-weight: 800; letter-spacing: -0.01em; color: #5E1C6C; font-size: 15px; }
-.client-shell .b-yapeqr__t span { width: 9px; height: 9px; border-radius: 50%; background: #742384; }
-.client-shell .b-yapeqr img { width: min(260px, 70vw); aspect-ratio: 1 / 1; object-fit: contain; border-radius: 12px; background: #fff; border: 1px solid #E7D9F2; margin: 10px auto 6px; display: block; }
-/* Aviso: el color va en el punto, el texto en tinta (los semánticos fallan AA). */
-.client-shell .b-aviso {
-  display: flex; align-items: flex-start; gap: 10px; margin: 14px 0 0; padding: 12px 14px;
-  border-radius: 16px; background: var(--paper); border: 1px solid var(--line);
-  font-size: 13.5px; line-height: 1.45; color: var(--ink);
-}
-.client-shell .b-aviso::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--warn); flex: none; margin-top: 6px; }
-
-/* Documento de identidad: tipo + número lado a lado. Se usa cuando el
-   evento pide DNI (require_dni). */
-.client-shell .c-doc { display: grid; grid-template-columns: 130px 1fr; gap: 8px; }
-@media (max-width: 420px) { .client-shell .c-doc { grid-template-columns: 110px 1fr; } }
-
-/* Descuento: el verde va en el punto, el texto en tinta (los semánticos
-   fallan AA como color de texto). */
-.client-shell .b-desc { display: inline-flex; align-items: center; gap: 7px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
-.client-shell .b-desc::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
-/* Señal de confianza bajo el total. */
-.client-shell .b-seguro { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 12px 0 0; font-size: 12.5px; color: var(--ink-3); }
-.client-shell .b-seguro svg { width: 14px; height: 14px; }
 
 /* Pantalla de Yape: titular, QR (con su estado vacío) y monto exacto. */
 .client-shell .b-yapeheld { margin: 10px 0 0; font-size: 14.5px; font-weight: 700; color: var(--ink); }
@@ -563,3 +522,33 @@
 .client-shell .b-yapeqr--vacio p { margin: 0; font-size: 13.5px; }
 .client-shell .b-yapeqr__ph { width: 54px; height: 54px; border-radius: 12px; background: repeating-linear-gradient(45deg, var(--paper-3) 0 6px, var(--paper-2) 6px 12px); }
 .client-shell .c-divider { height: 1px; background: var(--line); margin: 18px 0; }
+
+.client-shell .b-add svg { width: 17px; height: 17px; }
+.client-shell .b-ph__inc { display: block; margin-top: 5px; font-size: 13px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--pg-fg-2); }
+
+/* La noche tiene que llegar hasta los bordes: el body pinta lo que queda
+   fuera del shell (barra de scroll, zona bajo el contenido) y el header es
+   compartido con el resto del sitio. */
+body:has(.b-v-b) { background: #14110E; }
+.client-shell:has(.b-v-b) .c-header { background: rgba(20,17,14,.9); border-bottom-color: rgba(251,247,240,.14); }
+.client-shell:has(.b-v-b) .c-lockup__name { color: #FBF7F0; }
+.client-shell:has(.b-v-b) .c-lockup__ofi { color: rgba(251,247,240,.7); }
+.client-shell:has(.b-v-b) .c-powered { color: rgba(251,247,240,.62); }
+.client-shell:has(.b-v-b) .c-powered b { color: rgba(251,247,240,.9); }
+
+/* Tokens invertidos para la noche: todo lo que en el resto del sitio se
+   escribe con --ink/--ink-2/--ink-3 o --brand-ink (incluidos estilos en
+   línea) queda legible sin tocar cada llamada. El par --brand-fill /
+   --on-fill NO se toca: es el medido. */
+.client-shell:has(.b-v-b) {
+  --ink: #FBF7F0;
+  --ink-2: rgba(251, 247, 240, .72);
+  --ink-3: rgba(251, 247, 240, .62);
+  --brand-ink: #FBF7F0;
+  --line: rgba(251, 247, 240, .16);
+  --sel: rgba(251, 247, 240, .06);
+  --paper: #14110E;
+  --paper-2: #1B1713;
+  --paper-3: #241F1A;
+  --surface: #1B1713;
+}

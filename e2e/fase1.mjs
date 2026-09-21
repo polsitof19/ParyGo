@@ -109,7 +109,13 @@ async function newCtx(tag, { session, brandHeader = false, viewport = { width: 1
 }
 // 'load' + quietud best-effort: hay prefetches RSC de <Link> que en `next start` local no cierran nunca.
 const settle = (page) => page.waitForLoadState('networkidle', { timeout: 6000 }).catch(() => {});
-const go = async (page, path) => { await page.goto(`${BASE}${path}`, { waitUntil: 'load', timeout: 90000 }); await settle(page); };
+// E2E_V=b corre el mismo recorrido sobre la dirección de arte nocturna: se le
+// agrega ?v= a las páginas públicas de la marca (las del panel no la usan).
+const ARTE = process.env.E2E_V ?? '';
+const conArte = (path) => (ARTE && !path.startsWith('/admin') && !path.startsWith('/cabina') && !path.startsWith('/scan')
+  ? path + (path.includes('?') ? '&' : '?') + 'v=' + ARTE
+  : path);
+const go = async (page, path) => { await page.goto(`${BASE}${conArte(path)}`, { waitUntil: 'load', timeout: 90000 }); await settle(page); };
 
 // Comprobante dummy (PNG) para Yape.
 const PROOF = resolve(OUT, 'proof.png');

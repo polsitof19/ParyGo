@@ -73,6 +73,16 @@ function fmtCuando(iso: string): string {
   return `${limpio.charAt(0).toUpperCase()}${limpio.slice(1)} · ${hora}`;
 }
 
+// "JUE 29 OCT · 10:00 PM" para la línea de arriba del nombre.
+function fmtCortoMayus(iso: string): string {
+  const d = new Date(iso);
+  const dia = new Intl.DateTimeFormat('es-PE', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'America/Lima' })
+    .format(d).replace(/[.,]/g, '').trim();
+  const hora = new Intl.DateTimeFormat('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })
+    .format(d).replace(/\s?a\.?\s?m\.?/i, ' am').replace(/\s?p\.?\s?m\.?/i, ' pm').replace(/\s+/g, ' ').trim();
+  return `${dia} · ${hora}`.toUpperCase();
+}
+
 // "27 set" para el fin de la preventa.
 function fmtDia(iso: string): string {
   return new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', timeZone: 'America/Lima' })
@@ -103,10 +113,12 @@ function fmtTime(iso: string): string {
 }
 
 export function EventCheckoutPanel({
-  brand, event, ticketTypes, mpConfigured, mpPublicKey, refCode = '', shareUrl,
+  brand, event, ticketTypes, mpConfigured, mpPublicKey, refCode = '', shareUrl, variant = 'a',
 }: {
   brand: Brand; event: Event; ticketTypes: TicketType[]; mpConfigured: boolean; mpPublicKey: string | null;
   refCode?: string; shareUrl: string;
+  // Dirección de arte a evaluar: 'a' clara, 'b' noche. Solo presentación.
+  variant?: 'a' | 'b';
 }) {
   const sorted = useMemo(
     () => [...ticketTypes].sort((a, b) => a.active_price_cents - b.active_price_cents || a.sort_order - b.sort_order),
@@ -352,7 +364,7 @@ function fraseConfianza(pago: string): string {
 }
 
   return (
-    <section id="entradas" className="b-buy">
+    <section id="entradas" className={`b-buy b-v-${variant}`}>
       {mpCheckout && mpPublicKey ? (
         <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}`}>
           <div className="b-head">
@@ -377,11 +389,13 @@ function fraseConfianza(pago: string): string {
                 const escalera = armarEscalera(t);
                 return (
                   <div key={t.id} className={`b-ty${t.soldOut ? ' b-ty--out' : ''}`}>
-                    <p className="b-ty__lb">{t.name}</p>
-                    {incluye && <p className="b-ty__desc">{incluye}</p>}
                     {escalera.map((f, i) => (
                       <div key={i} className={`b-ph${f.estado === 'vigente' ? ' b-ph--on' : ''}`}>
-                        <span className="b-ph__nm">{f.etiqueta}</span>
+                        <span className="b-ph__nm">
+                          {f.titulo}
+                          {f.sub && <span className="b-ph__fase">{f.sub}</span>}
+                          {f.estado === 'vigente' && incluye && <span className="b-ph__inc">{incluye}</span>}
+                        </span>
                         <span className="b-ph__pr">{formatPEN(f.precio)}</span>
                         <span className="b-ph__act">
                           {f.estado !== 'vigente' ? (
@@ -390,7 +404,7 @@ function fraseConfianza(pago: string): string {
                             <span className="b-ph__ago">Agotada</span>
                           ) : cur === 0 ? (
                             <button type="button" onClick={() => inc(t)} className="b-add" aria-label={`Sumar ${t.name}`}>
-                              Agregar
+                              <Plus aria-hidden="true" />
                             </button>
                           ) : (
                             <span className="b-qty" aria-live="polite">
@@ -595,12 +609,14 @@ function fraseConfianza(pago: string): string {
   );
 }
 
-// ============================ Flyer + nombre + cuándo/dónde ============================
-// El flyer ya lo vio la persona en Instagram: acá confirma dónde está y qué
-// compra. Papel plano, sin degradados: la única marca es la barra de arriba.
+// ============================ Hero: el flyer manda ============================
+// Como en DICE o Resident Advisor: el flyer a lo ancho, oscurecido hacia abajo,
+// y encima el nombre. Arriba del nombre, la línea de cuándo y dónde en
+// mayúsculas chicas. Tocar el flyer lo abre entero (el hero lo recorta).
 function Hero({ event }: { event: Event }) {
   const [zoom, setZoom] = useState(false);
   const donde = [event.venue_name, distrito(event.venue_address)].filter(Boolean).join(' · ');
+  const kicker = [fmtCortoMayus(event.starts_at), donde].filter(Boolean).join(' · ');
 
   useEffect(() => {
     if (!zoom) return;
@@ -612,18 +628,18 @@ function Hero({ event }: { event: Event }) {
   return (
     <header className="b-hero">
       {event.cover_url ? (
-        <button type="button" className="b-flyer" onClick={() => setZoom(true)} aria-label={`Ver el flyer de ${event.name} completo`}>
+        <button type="button" className="b-hero__shot" onClick={() => setZoom(true)} aria-label={`Ver el flyer de ${event.name} completo`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={optimizedImage(event.cover_url, { width: 600, quality: 80 })} alt={`Flyer de ${event.name}`} decoding="async" />
+          <img src={optimizedImage(event.cover_url, { width: 900, quality: 80 })} alt={`Flyer de ${event.name}`} decoding="async" />
+          <span className="b-hero__fade" aria-hidden="true" />
         </button>
       ) : (
-        <div className="b-flyer--ph">{event.name}</div>
+        <div className="b-hero__shot b-hero__shot--ph" aria-hidden="true"><span className="b-hero__fade" /></div>
       )}
 
-      <div className="b-titles">
+      <div className="b-hero__over">
+        <p className="b-kicker">{kicker}</p>
         <h1 className="b-hero__name">{event.name}</h1>
-        <p className="b-hero__meta">{fmtCuando(event.starts_at)}</p>
-        {donde && <p className="b-hero__meta">{donde}</p>}
       </div>
 
       {zoom && event.cover_url && (
@@ -637,17 +653,18 @@ function Hero({ event }: { event: Event }) {
   );
 }
 
+
 // ============================ Escalera de fases ============================
 // Una fila por fase, como en Joinnus/Teleticket: el comprador ve de un vistazo
 // qué precio rige hoy, hasta cuándo, y cuánto va a costar después. Solo la
 // fase vigente se puede comprar; las otras van con candado.
-type Peldano = { etiqueta: string; precio: number; estado: 'pasada' | 'vigente' | 'futura' };
+type Peldano = { titulo: string; sub: string | null; precio: number; estado: 'pasada' | 'vigente' | 'futura' };
 
 function armarEscalera(t: TicketType): Peldano[] {
   const ahora = Date.now();
   if (t.phases.length === 0) {
-    // Tipo sin fases: un solo precio, sin escalera que mostrar.
-    return [{ etiqueta: 'Precio', precio: t.active_price_cents, estado: 'vigente' }];
+    // Tipo sin fases: una sola fila con el nombre del tipo.
+    return [{ titulo: t.name, sub: null, precio: t.active_price_cents, estado: 'vigente' }];
   }
   const ordenadas = [...t.phases].sort((a, b) => a.sort_order - b.sort_order);
   // La vigente es la PRIMERA cuya ventana contiene a ahora (misma regla que
@@ -659,21 +676,24 @@ function armarEscalera(t: TicketType): Peldano[] {
   });
   return ordenadas.map((f, i) => {
     const estado: Peldano['estado'] = i === iVigente ? 'vigente' : i < iVigente || iVigente === -1 ? 'pasada' : 'futura';
-    // Si el organizador no le puso nombre a la fase: las del medio son
-    // preventas numeradas y la última es la tarifa Regular, como se nombran
-    // en Joinnus o Teleticket.
+    // Si el organizador no nombró la fase: las del medio son preventas
+    // numeradas y la última es la Regular, como en Joinnus o Teleticket.
     const ultima = i === ordenadas.length - 1;
     const nombre = f.name?.trim() || (ultima && ordenadas.length > 1 ? 'Regular' : `Preventa ${i + 1}`);
-    let etiqueta = nombre;
-    if (estado === 'vigente' && f.ends_at) etiqueta = `${nombre} · hasta el ${fmtDia(f.ends_at)}`;
-    // La fase que viene solo muestra fecha si empieza OTRO día que el corte de
-    // la anterior: si arrancan el mismo día, repetir la fecha confunde.
+    if (estado === 'vigente') {
+      // La fila que se compra lleva el TIPO arriba y la fase debajo.
+      const sub = f.ends_at ? `${nombre} · hasta el ${fmtDia(f.ends_at)}` : nombre;
+      return { titulo: t.name, sub, precio: f.price_cents, estado };
+    }
+    // La fase que viene solo muestra fecha si empieza OTRO día que el corte
+    // de la anterior: si arrancan el mismo día, repetir la fecha confunde.
+    let sub: string | null = null;
     if (estado === 'futura' && f.starts_at) {
       const previa = ordenadas[i - 1]?.ends_at;
       const mismoDia = previa ? fmtDia(previa) === fmtDia(f.starts_at) : false;
-      if (!mismoDia) etiqueta = `${nombre} · desde el ${fmtDia(f.starts_at)}`;
+      if (!mismoDia) sub = `desde el ${fmtDia(f.starts_at)}`;
     }
-    return { etiqueta, precio: f.price_cents, estado };
+    return { titulo: nombre, sub, precio: f.price_cents, estado };
   });
 }
 

@@ -20,7 +20,7 @@ async function sha256Hex(s: string): Promise<string> {
 
 type Props = {
   params: { brand: string; event: string };
-  searchParams?: { ref?: string | string[] };
+  searchParams?: { ref?: string | string[]; v?: string | string[] };
 };
 
 async function loadEvent(brandSlug: string, eventSlug: string) {
@@ -189,6 +189,10 @@ export default async function EventPage({ params, searchParams }: Props) {
   const refRaw = Array.isArray(searchParams?.ref) ? searchParams?.ref[0] : searchParams?.ref;
   const refCode = (refRaw ?? '').trim().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
 
+  // Dirección de arte a evaluar: ?v=b es la nocturna. Solo presentación.
+  const vRaw = Array.isArray(searchParams?.v) ? searchParams?.v[0] : searchParams?.v;
+  const variant: 'a' | 'b' = vRaw === 'b' ? 'b' : 'a';
+
   // Tracking de clics del link de promotor (?ref). Best-effort: registra un clic
   // por visitante/día atribuido al código (solo si existe). Hasheamos la IP (no
   // se guarda cruda) y nunca rompemos la página si falla. service_role vía RPC.
@@ -214,7 +218,7 @@ export default async function EventPage({ params, searchParams }: Props) {
     <>
       <EventStructuredData brand={brand} event={event} ticketTypes={ticketTypes} />
 
-      <article className="c-checkout-canvas" style={{ paddingBottom: 64 }}>
+      <article className={`c-checkout-canvas b-v-${variant}`} style={{ paddingBottom: 64 }}>
         {/* CHECKOUT (hero, entradas, datos/pago, resumen y "dónde" viven en el panel) */}
         <EventCheckoutPanel
           brand={brand}
@@ -224,6 +228,7 @@ export default async function EventPage({ params, searchParams }: Props) {
           mpPublicKey={mpPublicKey}
           refCode={refCode}
           shareUrl={shareUrl}
+          variant={variant}
         />
 
         {/* SOPORTE */}
