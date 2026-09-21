@@ -465,7 +465,7 @@ if (!S.eventId) {
     await p.locator('#receipt').setInputFiles(PROOF);
     await sleep(400);
     if (shots) await shot(p, tag, 'yape-form');
-    await p.getByRole('button', { name: /Enviar comprobante/i }).click();
+    await p.getByRole('button', { name: /Listo, ya yape/i }).click();
     await p.waitForURL(/\/confirmacion\?order=/, { timeout: 45000 });
     await settle(p);
     if (shots) await shot(p, tag, 'confirmacion');

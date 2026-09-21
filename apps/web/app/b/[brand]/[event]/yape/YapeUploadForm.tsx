@@ -82,12 +82,12 @@ export function YapeUploadForm({ orderId, expectedAmountCents, buyerName }: Prop
         )}
       </div>
 
-      <button type="submit" className="c-btn c-btn--brand c-btn--block c-btn--lg" disabled={pending || !file}>
-        {pending ? <><Loader2 className="h-4 w-4 animate-spin" /> Subiendo…</> : <><Upload className="h-4 w-4" /> Enviar comprobante</>}
+      <button type="submit" className="b-btn b-btn--go" style={{ width: '100%' }} disabled={pending || !file}>
+        {pending ? <><Loader2 className="h-4 w-4 animate-spin" /> Subiendo…</> : <><Upload className="h-4 w-4" /> Listo, ya yapeé</>}
       </button>
 
       <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5 }}>
-        Tu pago queda en revisión. El promotor valida en 5-15 min en horario operativo y te llega un email + WhatsApp con tu QR.
+        Te confirmamos por email en minutos.
       </p>
     </form>
   );

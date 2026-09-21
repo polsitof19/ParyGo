@@ -67,26 +67,24 @@ export default async function YapeUploadPage({
       <div className="b-blobs" aria-hidden="true"><span /><span /></div>
 
       <div className="b-head">
-        <h1 className="b-head__t">Yapea {formatPEN(order.total_cents)}</h1>
-        <p className="b-head__s">A {order.brand.yape_holder ?? order.brand.name}. Después subes tu comprobante y te mandamos tu QR.</p>
+        <h1 className="b-head__t">Yapea y sube tu captura</h1>
       </div>
 
+      {/* 1 · A quién le yapeas */}
       <div className="b-panel">
         <p className="b-panel__t">1 · Yapea a este número</p>
         <div className="b-yapenum">
           <span>{order.brand.yape_number}</span>
-          <CopyButton value={order.brand.yape_number} label="Número" />
+          <CopyButton value={order.brand.yape_number} label="número" />
         </div>
-        <div className="b-resumen"><span>Titular</span><b style={{ fontFamily: 'var(--body)', fontWeight: 700 }}>{order.brand.yape_holder ?? order.brand.name}</b></div>
-        <div className="b-resumen">
-          <span>Monto exacto</span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-            <b>{formatPEN(order.total_cents)}</b>
-            <CopyButton value={(order.total_cents / 100).toFixed(2)} label="Monto" />
-          </span>
-        </div>
+        <p className="b-yapeheld">{order.brand.yape_holder ?? order.brand.name}</p>
+      </div>
 
-        {order.brand.theme_json?.yape_qr_url && (
+      {/* 2 · El QR del organizador. El campo para subirlo llega con la próxima
+             migración; hasta entonces el componente muestra su estado vacío. */}
+      <div className="b-panel">
+        <p className="b-panel__t">2 · O escanea su QR</p>
+        {order.brand.theme_json?.yape_qr_url ? (
           <div className="b-yapeqr">
             {/* Morado Yape + nombre en TEXTO (no falsificamos el logo del BCP) */}
             <p className="b-yapeqr__t"><span aria-hidden /> Escanea con Yape</p>
@@ -96,16 +94,23 @@ export default async function YapeUploadPage({
             </a>
             <p className="c-help" style={{ textAlign: 'center' }}>Toca el QR para ampliarlo</p>
           </div>
+        ) : (
+          <div className="b-yapeqr b-yapeqr--vacio">
+            <span className="b-yapeqr__ph" aria-hidden="true" />
+            <p>QR no disponible, yapea al número</p>
+          </div>
         )}
-
-        <p className="b-aviso">Yapea el monto exacto. Si yapeas de menos o de más, el organizador puede rechazar el comprobante.</p>
       </div>
 
+      {/* 3 · Monto exacto + captura */}
       <div className="b-panel">
-        <p className="b-panel__t">2 · Sube tu comprobante</p>
-        <p className="c-help" style={{ marginTop: -6, marginBottom: 14 }}>
-          Abre Movimientos en tu app de Yape, entra a esta transferencia y copia los datos. Adjunta también la captura.
-        </p>
+        <p className="b-panel__t">3 · Yapea exactamente</p>
+        <div className="b-monto">
+          <span>{formatPEN(order.total_cents)}</span>
+          <CopyButton value={(order.total_cents / 100).toFixed(2)} label="monto" />
+        </div>
+        <p className="b-aviso">Si yapeas de menos o de más, el organizador puede rechazar el comprobante.</p>
+        <div className="c-divider" />
         <YapeUploadForm
           orderId={order.id}
           brandId={order.brand.slug}

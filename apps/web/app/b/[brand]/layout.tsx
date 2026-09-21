@@ -65,11 +65,16 @@ export default async function BrandLayout({
             {logoUrl ? (
               <BrandLogo src={logoUrl} alt="" size={36} eager ring />
             ) : (
-              <span className="c-lockup__mark"><span /></span>
+              // Sin logo: la inicial sobre el color de la marca con su texto
+              // medido (nunca el naranja de parygo, que sería de otra marca).
+              <span className="c-lockup__mark" aria-hidden="true">{(brand.name.trim()[0] ?? '?').toUpperCase()}</span>
             )}
             {/* El nombre se muestra SIEMPRE (con o sin logo): un logo-ícono claro
                 podría fundirse con una barra clara y dejar la marca invisible. */}
-            <span className="c-lockup__name">{brand.name}</span>
+            <span className="c-lockup__txt">
+              <span className="c-lockup__name">{brand.name}</span>
+              <span className="c-lockup__ofi">Venta oficial</span>
+            </span>
           </Link>
           <span className="c-powered">
             powered by{' '}

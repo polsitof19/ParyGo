@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Copy, Check } from 'lucide-react';
 
-// Botón chico para copiar al portapapeles (número de Yape o monto exacto).
+// Botón para copiar al portapapeles. `label` es QUÉ se copia ("número",
+// "monto"): el botón dice "Copiar número" y el aviso, "número copiado".
 // Mismo patrón que ShareEvent: navigator.clipboard.writeText + feedback.
 export function CopyButton({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false);
@@ -28,7 +29,7 @@ export function CopyButton({ value, label }: { value: string; label: string }) {
       className="c-btn c-btn--soft"
       style={{ height: 34, padding: '0 12px', fontSize: 13 }}
     >
-      {copied ? <><Check className="h-4 w-4" /> Copiado</> : <><Copy className="h-4 w-4" /> Copiar</>}
+      {copied ? <><Check className="h-4 w-4" /> Copiado</> : <><Copy className="h-4 w-4" /> Copiar {label}</>}
     </button>
   );
 }

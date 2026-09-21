@@ -60,6 +60,41 @@ function bulkUnitPrice(t: TicketType, q: number): number {
 function fmtDateShort(iso: string): string {
   return new Intl.DateTimeFormat('es-PE', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'America/Lima' }).format(new Date(iso));
 }
+// "Jueves 29 de octubre · 10:00 pm" — como lo diría una persona.
+function fmtCuando(iso: string): string {
+  const d = new Date(iso);
+  const dia = new Intl.DateTimeFormat('es-PE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Lima' }).format(d);
+  const hora = new Intl.DateTimeFormat('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })
+    .format(d).replace(/\s?a\.?\s?m\.?/i, ' am').replace(/\s?p\.?\s?m\.?/i, ' pm').replace(/\s+/g, ' ').trim();
+  const limpio = dia.replace(/,/g, '');
+  return `${limpio.charAt(0).toUpperCase()}${limpio.slice(1)} · ${hora}`;
+}
+
+// "27 set" para el fin de la preventa.
+function fmtDia(iso: string): string {
+  return new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', timeZone: 'America/Lima' })
+    .format(new Date(iso)).replace(/[-.]/g, ' ').trim();
+}
+
+// Distrito de la dirección, si se puede deducir: "Av. X 123, Jesús María,
+// Lima" → "Jesús María". Si la dirección es solo calle + ciudad, no inventa.
+function distrito(dir?: string | null): string | null {
+  const partes = (dir ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+  if (partes.length < 2) return null;
+  const sinCiudad = partes.filter((x) => !/^(lima|per[uú])$/i.test(x));
+  if (sinCiudad.length < 2) return null;
+  return sinCiudad[sinCiudad.length - 1] ?? null;
+}
+
+// Qué incluye, en pocas palabras: las líneas de la descripción unidas y
+// recortadas a 6 palabras, para que la tarjeta no crezca.
+function resumirIncluye(desc?: string | null): string | null {
+  const todo = (desc ?? '').split('\n').map((x) => x.trim()).filter(Boolean).join(' · ');
+  if (!todo) return null;
+  const palabras = todo.split(/\s+/);
+  return palabras.length <= 6 ? todo : `${palabras.slice(0, 6).join(' ')}…`;
+}
+
 function fmtTime(iso: string): string {
   return new Intl.DateTimeFormat('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' }).format(new Date(iso));
 }
@@ -295,15 +330,16 @@ export function EventCheckoutPanel({
   }
 
   const lineItems = selectedTypes.map((t) => ({ id: t.id, name: t.name, q: qty[t.id]!, amount: qty[t.id]! * t.active_price_cents }));
-  // Línea de confianza del rail: refleja los métodos REALES de la marca (mismas
-  // banderas que las pestañas de pago). Evita prometer un método no configurado.
+  // Confianza y CTA reflejan los métodos REALES de la marca: no prometemos un
+  // medio de pago que el organizador no configuró.
   const payLabel = brand.yape_number && mpConfigured
-    ? 'Pago con Yape o tarjeta'
+    ? 'Pagas con Yape o tarjeta'
     : brand.yape_number
-      ? 'Pago con Yape'
+      ? 'Pagas con Yape'
       : mpConfigured
-        ? 'Pago con tarjeta'
+        ? 'Pagas con tarjeta'
         : 'Pago seguro';
+  const ctaMetodo = method === 'mercadopago' ? 'Pagar con tarjeta' : brand.yape_number ? 'Pagar con Yape' : 'Pagar';
 
   return (
     <section id="entradas" className="b-buy">
@@ -322,28 +358,31 @@ export function EventCheckoutPanel({
       ) : shownStep === 1 ? (
         /* ---------- PANTALLA 1: el flyer y las entradas ---------- */
         <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}`} key="step1">
-          <div className="b-stage">
+        <div className="b-stage">
           <Hero event={event} />
 
           <div className="b-list">
-          <ul className="b-tks">
-            {sorted.map((t) => {
-              const soldOut = t.soldOut;
-              const cur = qty[t.id] ?? 0;
-              const desc = (t.description ?? '').split('\n').filter(Boolean).join(' · ');
-              return (
-                <li key={t.id} className={`b-tk${cur > 0 ? ' b-tk--on' : ''}${soldOut ? ' b-tk--out' : ''}`}>
-                  <h2 className="b-tk__nm">{t.name}</h2>
-                  <span className="b-tk__pr">{formatPEN(t.active_price_cents)}</span>
-                  {desc && <p className="b-tk__desc">{desc}</p>}
-                  {!soldOut && <FaseLinea tt={t} />}
-                  {soldOut ? (
-                    <span className="b-tk__out">Agotado</span>
-                  ) : (
-                    <div className="b-tk__act">
-                      {cur === 0 ? (
-                        <button type="button" onClick={() => inc(t)} aria-label={`Sumar ${t.name}`} className="b-qbtn b-qbtn--add">
-                          <Plus aria-hidden="true" />
+            <ul className="b-tks">
+              {sorted.map((t) => {
+                const soldOut = t.soldOut;
+                const cur = qty[t.id] ?? 0;
+                const incluye = resumirIncluye(t.description);
+                const sube = t.next_price_cents != null && t.next_price_cents > t.active_price_cents;
+                return (
+                  <li key={t.id} className={`b-tk${cur > 0 ? ' b-tk--on' : ''}${soldOut ? ' b-tk--out' : ''}`}>
+                    <div className="b-tk__l">
+                      <h2 className="b-tk__nm">{t.name}</h2>
+                      {incluye && <p className="b-tk__desc">{incluye}</p>}
+                      {!soldOut && <FaseLinea tt={t} />}
+                    </div>
+                    <div className="b-tk__r">
+                      <span className="b-tk__pr">{formatPEN(t.active_price_cents)}</span>
+                      {sube && !soldOut && <s className="b-tk__antes">{formatPEN(t.next_price_cents!)}</s>}
+                      {soldOut ? (
+                        <span className="b-tk__out">Agotado</span>
+                      ) : cur === 0 ? (
+                        <button type="button" onClick={() => inc(t)} className="b-add" aria-label={`Sumar ${t.name}`}>
+                          Agregar
                         </button>
                       ) : (
                         <div className="b-qty" aria-live="polite">
@@ -353,15 +392,18 @@ export function EventCheckoutPanel({
                         </div>
                       )}
                     </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+                  </li>
+                );
+              })}
+            </ul>
 
-          <MasInfo event={event} brand={brand} shareUrl={shareUrl} />
+            <Detalles event={event} />
+
+            <p className="b-trust">
+              {payLabel} · Tu QR llega al instante a tu email · Venta oficial
+            </p>
           </div>
-          </div>
+        </div>
         </div>
       ) : (
         /* ---------- PANTALLA 2: tus datos ---------- */
@@ -378,7 +420,7 @@ export function EventCheckoutPanel({
             <div className="b-panel">
               <div className="c-field">
                 <label htmlFor="buyer_name" className="c-label">Nombre y apellido</label>
-                <input id="buyer_name" name="buyer_name" autoComplete="name" required placeholder="María López" className="c-input" />
+                <input id="buyer_name" name="buyer_name" autoComplete="name" required autoFocus placeholder="María López" className="c-input" />
               </div>
               <div className="c-field">
                 <label htmlFor="buyer_email" className="c-label">Email</label>
@@ -399,7 +441,7 @@ export function EventCheckoutPanel({
               </div>
               {event.require_dni && (
                 <div className="c-field">
-                  <label htmlFor="buyer_dni" className="c-label">Documento de identidad</label>
+                  <label htmlFor="buyer_dni" className="c-label">DNI</label>
                   <div className="c-doc">
                     <select aria-label="Tipo de documento" value={docType} onChange={(e) => setDocType(e.target.value as 'dni' | 'ce' | 'passport')} className="c-input">
                       <option value="dni">DNI</option>
@@ -428,7 +470,8 @@ export function EventCheckoutPanel({
               )}
               <div className="c-field">
                 <label className="c-check">
-                  <input type="checkbox" name="marketing_opt_in" value="1" defaultChecked />
+                  {/* Desmarcada por defecto: el consentimiento tiene que ser expreso (Ley 29733). */}
+                  <input type="checkbox" name="marketing_opt_in" value="1" />
                   <span>Quiero enterarme de los próximos eventos de {brand.name}.</span>
                 </label>
               </div>
@@ -518,12 +561,18 @@ export function EventCheckoutPanel({
       {!mpCheckout && (
         <div className="b-cta">
           <div className="b-cta__t">
-            <span className="n">{totalItems === 0 ? 'Elige tu entrada' : `${totalItems} entrada${totalItems === 1 ? '' : 's'}`}</span>
-            <span className="v"><span key={finalTotal} className="c-amount">{formatPEN(shownStep === 1 ? totalCents : finalTotal)}</span></span>
+            {totalItems === 0 ? (
+              <span className="n n--solo">Elige tu entrada</span>
+            ) : (
+              <>
+                <span className="n">{totalItems} entrada{totalItems === 1 ? '' : 's'}</span>
+                <span className="v"><span key={finalTotal} className="c-amount">{formatPEN(shownStep === 1 ? totalCents : finalTotal)}</span></span>
+              </>
+            )}
           </div>
           {shownStep === 1 ? (
             <button type="button" className="b-btn b-btn--go" disabled={totalItems === 0} onClick={() => setStep(2)}>
-              {applied?.isFree ? 'Continuar' : totalItems === 0 ? 'Pagar' : `Pagar ${formatPEN(totalCents)}`} <ArrowRight aria-hidden="true" />
+              {applied?.isFree ? 'Continuar' : ctaMetodo} <ArrowRight aria-hidden="true" />
             </button>
           ) : (
             <button type="submit" form="checkout-form" className="b-btn b-btn--go" disabled={isPending || totalItems === 0}>
@@ -538,14 +587,12 @@ export function EventCheckoutPanel({
   );
 }
 
-// ============================ Flyer + nombre + fecha·lugar ============================
+// ============================ Flyer + nombre + cuándo/dónde ============================
 // El flyer ya lo vio la persona en Instagram: acá confirma dónde está y qué
-// compra. Banda compacta en teléfono (flyer entero chico + datos al lado) y
-// columna izquierda grande en escritorio. Tocar el flyer lo abre completo.
+// compra. Banda compacta en teléfono y columna izquierda en escritorio.
 function Hero({ event }: { event: Event }) {
   const [zoom, setZoom] = useState(false);
-  const cuando = fmtDateShort(event.starts_at);
-  const meta = [cuando, event.venue_name].filter(Boolean).join(' · ');
+  const donde = [event.venue_name, distrito(event.venue_address)].filter(Boolean).join(' · ');
 
   useEffect(() => {
     if (!zoom) return;
@@ -573,9 +620,9 @@ function Hero({ event }: { event: Event }) {
       )}
 
       <div className="b-titles">
-        <span className="b-live">Vendiendo</span>
         <h1 className="b-hero__name">{event.name}</h1>
-        {meta && <p className="b-hero__meta">{meta}</p>}
+        <p className="b-hero__meta">{fmtCuando(event.starts_at)}</p>
+        {donde && <p className="b-hero__meta">{donde}</p>}
       </div>
 
       {zoom && event.cover_url && (
@@ -589,26 +636,23 @@ function Hero({ event }: { event: Event }) {
   );
 }
 
-// ============================ Una línea de preventa ============================
-// Solo el precio vigente y hasta cuándo dura. Nada de tablas de fases.
+// ============================ Anclaje de preventa ============================
+// Una línea honesta: hasta cuándo dura el precio de hoy. El precio de la fase
+// siguiente va tachado al lado del precio, en la columna de la derecha.
 function FaseLinea({ tt }: { tt: TicketType }) {
   const sube = tt.next_price_cents != null && tt.next_price_cents > tt.active_price_cents;
   const bulk = tt.bulk_min_qty > 0 && tt.bulk_discount_pct > 0;
-  if (!tt.active_ends_at || !sube) {
-    return bulk ? <p className="b-tk__fase">Lleva {tt.bulk_min_qty}+ y pagas {tt.bulk_discount_pct}% menos</p> : null;
-  }
-  const hasta = new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', timeZone: 'America/Lima' }).format(new Date(tt.active_ends_at)).replace(/[-.]/g, ' ').trim();
-  return (
-    <p className="b-tk__fase">
-      Preventa hasta {hasta} · después {formatPEN(tt.next_price_cents!)}
-      {bulk && <> · lleva {tt.bulk_min_qty}+ y pagas {tt.bulk_discount_pct}% menos</>}
-    </p>
-  );
+  const partes: string[] = [];
+  if (sube && tt.active_ends_at) partes.push(`Preventa hasta el ${fmtDia(tt.active_ends_at)}`);
+  if (bulk) partes.push(`${tt.bulk_min_qty}+ pagas ${tt.bulk_discount_pct}% menos`);
+  if (partes.length === 0) return null;
+  return <p className="b-tk__fase">{partes.join(' · ')}</p>;
 }
 
-// ============================ Más información (plegado) ============================
-// Mapa, devoluciones, edad mínima y compartir: útil, pero no es la decisión.
-function MasInfo({ event, brand, shareUrl }: { event: Event; brand: Brand; shareUrl: string }) {
+// ============================ Detalles (links chicos) ============================
+// Lo secundario no vive en un acordeón: son tres links bajo las entradas.
+function Detalles({ event }: { event: Event }) {
+  const [abierto, setAbierto] = useState<null | 'dev' | 'desc'>(null);
   const mapsHref = event.venue_maps_url?.startsWith('https://')
     ? event.venue_maps_url
     : event.venue_lat && event.venue_lng
@@ -616,64 +660,26 @@ function MasInfo({ event, brand, shareUrl }: { event: Event; brand: Brand; share
       : event.venue_address
         ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue_address)}`
         : null;
-  const hora = fmtTime(event.starts_at);
+  const devoluciones = event.refund_policy || 'Sin devolución post-pago salvo cancelación del evento.';
 
   return (
-    <details className="b-more">
-      <summary>Más información</summary>
-      <div className="b-more__body">
-        <div>
-          <h3>Cuándo</h3>
-          <p style={{ margin: 0 }}>{fmtDateShort(event.starts_at)} · {hora}{event.min_age > 0 ? ` · +${event.min_age}` : ''}</p>
-        </div>
-
-        {(event.venue_name || event.venue_address) && (
-          <div>
-            <h3>Dónde</h3>
-            <p style={{ margin: 0 }}>
-              {event.venue_name}
-              {event.venue_address && <><br />{event.venue_address}</>}
-            </p>
-            {event.venue_address && (
-              <iframe
-                className="b-more__map"
-                style={{ marginTop: 10 }}
-                src={`https://www.google.com/maps?q=${encodeURIComponent(event.venue_address)}&z=16&output=embed`}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                title={`Mapa de ${event.venue_name ?? 'el lugar'}`}
-              />
-            )}
-            {mapsHref && (
-              <p style={{ margin: '10px 0 0' }}>
-                <a href={mapsHref} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink)', fontWeight: 700, textDecoration: 'underline' }}>
-                  Cómo llegar
-                </a>
-              </p>
-            )}
-          </div>
+    <div className="b-links">
+      <div className="b-links__row">
+        {mapsHref && (
+          <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="b-link">¿Dónde es?</a>
         )}
-
+        {event.min_age > 0 && <span className="b-link b-link--flat">+{event.min_age}</span>}
+        <button type="button" className="b-link" aria-expanded={abierto === 'dev'} onClick={() => setAbierto(abierto === 'dev' ? null : 'dev')}>
+          Devoluciones
+        </button>
         {event.description && (
-          <div>
-            <h3>Sobre el evento</h3>
-            <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{event.description}</p>
-          </div>
+          <button type="button" className="b-link" aria-expanded={abierto === 'desc'} onClick={() => setAbierto(abierto === 'desc' ? null : 'desc')}>
+            Sobre el evento
+          </button>
         )}
-
-        <div>
-          <h3>Devoluciones</h3>
-          <p style={{ margin: 0 }}>{event.refund_policy || 'Sin devolución post-pago salvo cancelación del evento.'}</p>
-        </div>
-
-        <div>
-          <h3>Comparte</h3>
-          <div className="b-more__row" style={{ marginTop: 6 }}>
-            <ShareEvent eventName={event.name} shareUrl={shareUrl} />
-          </div>
-          <p style={{ margin: '10px 0 0', fontSize: 13 }}>Organiza {brand.name}.</p>
-        </div>
       </div>
-    </details>
+      {abierto === 'dev' && <p className="b-links__txt">{devoluciones}</p>}
+      {abierto === 'desc' && event.description && <p className="b-links__txt" style={{ whiteSpace: 'pre-line' }}>{event.description}</p>}
+    </div>
   );
 }
