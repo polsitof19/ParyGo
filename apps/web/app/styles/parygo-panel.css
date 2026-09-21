@@ -10,7 +10,7 @@
      El acento aparece como punto, anillo de foco o relleno con TINTA encima.
    - Estados (ok / warn / alert) = PUNTO de color + texto en tinta.
    - El color aparece solo cuando hay algo que hacer.
-   Tipografía: pesos y tamaños como estaban (pedido de Paul); cuerpo 15px / 1.5.
+   Tipografía: ver el bloque ESCALA de más abajo.
 
    DIRECCIÓN DE ARTE (2026-09-20) — la misma mano que la página de compra:
    CERO TARJETAS FLOTANTES. Nada de rectángulos blancos con sombra sobre el
@@ -21,18 +21,37 @@
      3. espacio (el aire entre bloques es el que agrupa).
    Un solo botón primario por pantalla (tinta sobre acento, radio 10); el resto
    son botones de TEXTO. Nada centrado: todo se alinea a la izquierda.
+
+   ESCALA (2026-09-21). Contenida y FIJA, la misma que la página de compra:
+   nada gigante y nada elástico. Cinco escalones, declarados como variables:
+     t1  título de página     28 → 34
+     t2  título de sección    20 → 24   (700)
+     t3  subtítulo            16        (700)
+     body                     16 → 17   a 1.45
+     meta                     13
+     lb   etiqueta mayúsculas 11
+     num  número de stat      26 → 28   (800)
+   Ritmo de espacio en múltiplos de 8 (s1..s6 = 8/16/24/32/48/64), contenedor
+   de 1120, interlínea de títulos 1.05 y áreas de toque de 44px.
+   La DENSIDAD sube por el relleno de las filas, no por achicar la letra.
    ============================================================ */
 
 .pg-panel {
-  --pad: clamp(16px, 4vw, 40px);
+  --pad: clamp(16px, 4vw, 32px);
+  --s-t1: 28px; --s-t2: 20px; --s-t3: 16px;
+  --s-body: 16px; --s-meta: 13px; --s-lb: 11px; --s-num: 26px;
+  --s-s1: 8px; --s-s2: 16px; --s-s3: 24px; --s-s4: 32px; --s-s5: 48px; --s-s6: 64px;
   min-height: 100vh;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--body);
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: var(--s-body);
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+@media (min-width: 1024px) {
+  .pg-panel { --s-t1: 34px; --s-t2: 24px; --s-body: 17px; --s-num: 28px; }
 }
 .pg-panel *, .pg-panel *::before, .pg-panel *::after { box-sizing: border-box; }
 .pg-panel a { color: inherit; text-decoration: none; }
@@ -46,14 +65,14 @@
   border-radius: var(--r-ctl);
 }
 
-.pg-panel .s-wrap { max-width: 1180px; margin: 0 auto; padding: 36px var(--pad) 64px; }
+.pg-panel .s-wrap { max-width: 1120px; margin: 0 auto; padding: var(--s-s4) var(--pad) var(--s-s6); }
 
 /* ---------- Tipo ---------- */
-.pg-panel .s-h1 { font-family: var(--display); font-weight: 800; font-size: clamp(28px, 3.6vw, 34px); line-height: 1.05; letter-spacing: -0.03em; }
-/* Títulos de sección: Bricolage 800, grandes, a la izquierda. Es la jerarquía
-   la que arma la página ahora que no hay cajas que la armen. */
-.pg-panel .s-h2 { font-family: var(--display); font-weight: 800; font-size: 21px; line-height: 1.2; letter-spacing: -0.02em; }
-.pg-panel .s-h3 { font-family: var(--display); font-weight: 800; font-size: 16px; line-height: 1.25; letter-spacing: -0.01em; }
+.pg-panel .s-h1 { font-family: var(--display); font-weight: 800; font-size: var(--s-t1); line-height: 1.05; letter-spacing: -0.03em; }
+/* Títulos de sección: Bricolage 700 a la izquierda. Es la jerarquía la que
+   arma la página ahora que no hay cajas que la armen — no hace falta 800. */
+.pg-panel .s-h2 { font-family: var(--display); font-weight: 700; font-size: var(--s-t2); line-height: 1.05; letter-spacing: -0.02em; }
+.pg-panel .s-h3 { font-family: var(--display); font-weight: 700; font-size: var(--s-t3); line-height: 1.2; letter-spacing: -0.01em; }
 /* Eyebrow: tinta + punto de acento (nunca texto en acento). */
 .pg-panel .eyebrow {
   display: inline-flex; align-items: center; gap: 8px;
@@ -63,7 +82,7 @@
 .pg-panel .eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
 .pg-panel .s-muted { color: var(--ink-2); }
 .pg-panel .s-muted-3 { color: var(--ink-3); }
-.pg-panel .s-small { font-size: 13px; }
+.pg-panel .s-small { font-size: var(--s-meta); }
 /* Link dentro de un párrafo: subrayado, no color (el acento no porta texto). */
 .pg-panel .s-textlink { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; text-decoration-color: var(--line); transition: text-decoration-color .18s; }
 .pg-panel .s-textlink:hover { text-decoration-color: var(--ink); }
@@ -72,35 +91,40 @@
    Ya no es una tarjeta: es un bloque que ARRANCA con un hairline y respira.
    Sin fondo, sin borde cerrado, sin radio, sin sombra. El título va en
    Bricolage 800 pegado a la línea; el contenido cuelga debajo. */
-.pg-panel .s-card { background: none; border: 0; border-radius: 0; box-shadow: none; padding: 20px 0 0; border-top: 1px solid var(--line); }
-.pg-panel .s-card--lg { padding-top: 24px; }
+.pg-panel .s-card { background: none; border: 0; border-radius: 0; box-shadow: none; padding: var(--s-s3) 0 0; border-top: 1px solid var(--line); }
+.pg-panel .s-card--lg { padding-top: var(--s-s4); }
 /* Una tabla ancha se desliza en vez de recortarse. */
 .pg-panel .s-card--flush { overflow-x: auto; overflow-y: hidden; }
 /* Bloque anidado: la línea ya la puso el de afuera. */
 .pg-panel .s-card .s-card { border-top: 0; padding-top: 0; }
-.pg-panel .s-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-.pg-panel .s-card__title { font-family: var(--display); font-weight: 800; font-size: 20px; letter-spacing: -0.02em; }
-.pg-panel .s-card__desc { color: var(--ink-2); font-size: 14px; line-height: 1.45; margin-top: 3px; }
-.pg-panel .s-divider { height: 1px; background: var(--line); margin: 22px 0 18px; }
-.pg-panel .s-section-lead { font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 12px; }
+.pg-panel .s-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: var(--s-s2); }
+.pg-panel .s-card__title { font-family: var(--display); font-weight: 700; font-size: var(--s-t2); line-height: 1.05; letter-spacing: -0.02em; }
+.pg-panel .s-card__desc { color: var(--ink-2); font-size: var(--s-meta); line-height: 1.45; margin-top: 3px; }
+.pg-panel .s-divider { height: 1px; background: var(--line); margin: var(--s-s3) 0 var(--s-s2); }
+.pg-panel .s-section-lead { font-size: var(--s-lb); font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); margin-bottom: var(--s-s2); }
 /* Vacío: alineado a la izquierda como todo lo demás (nada centrado). */
-.pg-panel .s-empty { text-align: left; color: var(--ink-2); font-size: 14px; padding: 18px 0 22px; }
+.pg-panel .s-empty { text-align: left; color: var(--ink-2); font-size: var(--s-meta); padding: var(--s-s2) 0 var(--s-s3); }
 
 /* ---------- Botones ----------
    UN primario por pantalla: TINTA sobre acento (5.91:1), radio 10. Hover =
    acento profundo (tinta 4.61:1). Nunca blanco sobre naranja (2.85:1).
-   Todo lo demás es TEXTO: sin relleno, sin borde, subrayado al pasar. Mantienen
-   los 40px de alto para que el área de toque no se achique en el teléfono. */
+   Todo lo demás es TEXTO: sin relleno, sin borde, subrayado al pasar. 44px de
+   alto para que el área de toque llegue al mínimo en el teléfono; el chico
+   mide 36 dibujados y estira el área a 44 con un pseudo-elemento anclado a SU
+   caja (left/right 0, no centrado): así crece hacia arriba y abajo, nunca a
+   los costados, y no se monta sobre el botón de al lado. */
 .pg-panel .s-btn {
+  position: relative;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   font-family: var(--body); font-weight: 700; font-size: 14px;
-  height: 40px; padding: 0 2px; border-radius: 10px;
+  height: 44px; padding: 0 2px; border-radius: 10px;
   border: 0; background: none; color: var(--ink); cursor: pointer; white-space: nowrap;
   transition: background-color .18s, color .18s, opacity .18s;
 }
 .pg-panel .s-btn:disabled { cursor: not-allowed; opacity: .7; }
-.pg-panel .s-btn--sm { height: 34px; font-size: 13px; }
-.pg-panel .s-btn--lg { height: 46px; font-size: 15px; }
+.pg-panel .s-btn--sm { height: 36px; font-size: 13px; }
+.pg-panel .s-btn--sm::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+.pg-panel .s-btn--lg { height: 48px; font-size: 15px; }
 .pg-panel .s-btn--block { width: 100%; }
 /* Primario: el único con relleno. */
 .pg-panel .s-btn--primary { background: var(--accent); color: var(--ink); padding: 0 18px; }
@@ -155,11 +179,11 @@
    Neutras por defecto. --alert = hay algo que hacer: punto de acento antes del
    label. El número sigue en tinta: el color señala, no grita. */
 .pg-panel .s-stat { background: none; border: 0; border-radius: 0; box-shadow: none; padding: 0; display: flex; flex-direction: column; gap: 7px; min-width: 0; }
-.pg-panel .s-stat__label { order: 2; font-size: 11px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-3); display: inline-flex; align-items: center; gap: 7px; }
-.pg-panel .s-stat__value { order: 1; font-family: var(--display); font-weight: 800; font-size: 32px; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--ink); }
-.pg-panel .s-stat__value--money { font-size: 28px; }
+.pg-panel .s-stat__label { order: 2; font-size: var(--s-lb); font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-3); display: inline-flex; align-items: center; gap: 7px; }
+.pg-panel .s-stat__value { order: 1; font-family: var(--display); font-weight: 800; font-size: var(--s-num); line-height: 1.05; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--ink); }
+.pg-panel .s-stat__value--money { font-size: calc(var(--s-num) - 2px); }
 .pg-panel .s-stat__sub,
-.pg-panel .s-stat__hint { order: 3; font-size: 13px; color: var(--ink-2); margin-top: -1px; }
+.pg-panel .s-stat__hint { order: 3; font-size: var(--s-meta); color: var(--ink-2); margin-top: -1px; }
 .pg-panel .s-stat > .a-meter { order: 4; }
 .pg-panel .s-stat--alert .s-stat__label { color: var(--ink-2); }
 .pg-panel .s-stat--alert .s-stat__label::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
@@ -176,16 +200,16 @@
    horizontal (el hairline ES la separación). El primero de cada fila no lleva
    línea a la izquierda, y por eso cada breakpoint redefine cuál es "el primero". */
 .pg-panel .s-stats,
-.pg-panel .s-stats-4 { display: grid; gap: 26px 0; margin-bottom: 20px; }
+.pg-panel .s-stats-4 { display: grid; gap: var(--s-s3) 0; margin-bottom: var(--s-s3); }
 .pg-panel .s-stats { grid-template-columns: repeat(3, 1fr); }
 .pg-panel .s-stats-4 { grid-template-columns: repeat(4, 1fr); margin-bottom: 0; }
-.pg-panel :is(.s-stats, .s-stats-4) > * { padding-left: 24px; border-left: 1px solid var(--line); }
+.pg-panel :is(.s-stats, .s-stats-4) > * { padding-left: var(--s-s3); border-left: 1px solid var(--line); }
 .pg-panel .s-stats > :nth-child(3n + 1),
 .pg-panel .s-stats-4 > :nth-child(4n + 1) { padding-left: 0; border-left: 0; }
 @media (max-width: 860px) {
   .pg-panel .s-stats,
   .pg-panel .s-stats-4 { grid-template-columns: 1fr 1fr; }
-  .pg-panel :is(.s-stats, .s-stats-4) > * { padding-left: 20px; border-left: 1px solid var(--line); }
+  .pg-panel :is(.s-stats, .s-stats-4) > * { padding-left: var(--s-s2); border-left: 1px solid var(--line); }
   .pg-panel :is(.s-stats, .s-stats-4) > :nth-child(2n + 1) { padding-left: 0; border-left: 0; }
 }
 
@@ -201,7 +225,7 @@
 .pg-panel .s-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 7px; }
 .pg-panel .s-label .req { color: var(--ink-3); margin-left: 3px; }
 .pg-panel .s-input {
-  width: 100%; height: 42px; padding: 0 2px; background: none;
+  width: 100%; height: 44px; padding: 0 2px; background: none;
   border: 0; border-bottom: 1.5px solid var(--line); border-radius: 0;
   font-family: var(--body); font-size: 15px; color: var(--ink);
   transition: border-color .18s, box-shadow .18s;
@@ -214,7 +238,7 @@
 .pg-panel .s-select { -webkit-appearance: none; appearance: none; cursor: pointer; padding-right: 26px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23231C17' stroke-opacity='.66' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 2px center; }
-.pg-panel .s-hint { font-size: 13px; color: var(--ink-3); margin-top: 6px; }
+.pg-panel .s-hint { font-size: var(--s-meta); color: var(--ink-3); margin-top: var(--s-s1); }
 /* Error / éxito de campo: punto de color + texto en tinta (--alert 4.35:1 y
    --ok 3.38:1 como texto no llegan a AA). flex, no inline-flex: dos errores
    hermanos no deben quedar uno al lado del otro. */
@@ -225,8 +249,8 @@
 .pg-panel .s-hint--ok::before { content: ""; width: 7px; height: 7px; border-radius: 50%; flex: none; }
 .pg-panel .s-err::before { background: var(--alert); }
 .pg-panel .s-hint--ok::before { background: var(--ok); }
-.pg-panel .s-field + .s-field { margin-top: 18px; }
-.pg-panel .s-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 26px; align-items: start; }
+.pg-panel .s-field + .s-field { margin-top: var(--s-s3); }
+.pg-panel .s-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-s3) var(--s-s3); align-items: start; }
 /* Dentro de una grilla el hermano de al lado NO es el de abajo: sin el reset,
    la columna derecha bajaba 18px y las dos etiquetas no alineaban. */
 .pg-panel .s-form-grid > .s-field + .s-field,
@@ -234,7 +258,7 @@
 @media (max-width: 820px) { .pg-panel .s-form-grid { grid-template-columns: 1fr; } }
 /* Acciones del formulario: el primario a la izquierda y el resto como texto,
    separados por aire (ya no hay dos rellenos compitiendo). */
-.pg-panel .s-form-actions { display: flex; align-items: center; justify-content: flex-start; gap: 22px; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.pg-panel .s-form-actions { display: flex; align-items: center; justify-content: flex-start; gap: var(--s-s3); margin-top: var(--s-s4); padding-top: var(--s-s3); border-top: 1px solid var(--line); flex-wrap: wrap; }
 .pg-panel .s-form-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
 .pg-panel .s-form-row__field { flex: 1; min-width: 200px; }
 .pg-panel .s-pwrap { position: relative; }
@@ -252,7 +276,7 @@
 .pg-panel .s-notice {
   display: flex; align-items: center; gap: 11px;
   background: none; border: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0;
-  padding: 12px 0; font-size: 14px; font-weight: 500; color: var(--ink);
+  padding: 12px 0; font-size: var(--s-body); font-weight: 500; color: var(--ink);
 }
 .pg-panel .s-notice { font-weight: 600; }
 /* Avisos consecutivos: una sola línea entre ellos, no dos pegadas. */
@@ -262,22 +286,22 @@
 .pg-panel .s-banner--ok::before, .pg-panel .s-notice--ok::before { background: var(--ok); }
 .pg-panel .s-banner--err::before, .pg-panel .s-notice--alert::before { background: var(--alert); }
 .pg-panel .s-notice--warn::before { background: var(--warn); }
-.pg-panel .s-notices { display: flex; flex-direction: column; gap: 0; margin-bottom: 20px; }
+.pg-panel .s-notices { display: flex; flex-direction: column; gap: 0; margin-bottom: var(--s-s3); }
 
 /* ---------- Grillas ---------- */
 .pg-panel .s-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
 @media (max-width: 880px) { .pg-panel .s-grid-2 { grid-template-columns: 1fr; } }
-.pg-panel .s-stack { display: flex; flex-direction: column; gap: 36px; }
+.pg-panel .s-stack { display: flex; flex-direction: column; gap: var(--s-s4); }
 .pg-panel .s-stack--tight { gap: 10px; }
-.pg-panel .s-section { margin-top: 36px; }
+.pg-panel .s-section { margin-top: var(--s-s4); }
 /* Bloques hermanos en la raíz de una página (ficha de marca, evento): ahora los
    separa AIRE, y cada uno arranca con su hairline. Solo a nivel .s-wrap para no
    sumar margen dentro de .s-stack (que ya usa gap). */
-.pg-panel .s-wrap > :is(.s-card, .s-grid-2) + :is(.s-card, .s-grid-2) { margin-top: 36px; }
-.pg-panel .s-wrap > .s-card.s-section { margin-top: 36px; }
+.pg-panel .s-wrap > :is(.s-card, .s-grid-2) + :is(.s-card, .s-grid-2) { margin-top: var(--s-s4); }
+.pg-panel .s-wrap > .s-card.s-section { margin-top: var(--s-s4); }
 /* En una grilla de dos columnas, las dos secciones arrancan alineadas: el gap
    vertical es aire, el horizontal lo marca la línea de cada bloque. */
-.pg-panel .s-grid-2 { gap: 28px; }
+.pg-panel .s-grid-2 { gap: var(--s-s3); }
 
 /* ---------- Tabla de marcas ----------
    Hairlines, hover con tinte, sin filas pintadas: la alerta es un punto en la
@@ -285,7 +309,7 @@
 .pg-panel .s-table { width: 100%; border-collapse: collapse; }
 .pg-panel .s-table thead th { font-size: 11px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-3); text-align: left; padding: 0 16px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .pg-panel .s-table thead th.num { text-align: right; }
-.pg-panel .s-table tbody td { padding: 15px 16px; border-top: 1px solid var(--line); vertical-align: middle; }
+.pg-panel .s-table tbody td { padding: 12px 16px; border-top: 1px solid var(--line); vertical-align: middle; }
 .pg-panel .s-table tbody tr:first-child td { border-top: 0; }
 /* Sin padding en los extremos: el texto de la tabla cae sobre el mismo margen
    que el título de la sección, y el tinte del hover cubre la fila entera. */
@@ -298,28 +322,32 @@
 .pg-panel .s-rowlink::after { content: ""; position: absolute; inset: 0; z-index: 0; }
 .pg-panel .s-table td > * { position: relative; z-index: 1; }
 .pg-panel .s-cell-brand { display: flex; align-items: center; gap: 12px; }
-.pg-panel .s-cell-brand .nm { font-size: 15px; font-weight: 600; line-height: 1.2; }
-.pg-panel .s-cell-brand .sl { font-size: 13px; color: var(--ink-3); white-space: nowrap; }
+.pg-panel .s-cell-brand .nm { font-size: var(--s-body); font-weight: 600; line-height: 1.2; }
+.pg-panel .s-cell-brand .sl { font-size: var(--s-meta); color: var(--ink-3); white-space: nowrap; }
 .pg-panel .s-saldo-num { font-family: var(--display); font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
-.pg-panel .s-cellmeta { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.pg-panel .s-cellmeta { font-size: var(--s-meta); color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .pg-panel .s-cellmeta--none { color: var(--ink-3); }
-.pg-panel .s-cellmeta .nm { display: block; color: var(--ink); font-weight: 500; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-panel .s-cellmeta .nm { display: block; color: var(--ink); font-weight: 500; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Acciones rápidas por fila (recargar saldo · ver eventos · entrar como marca).
    z-index para ganarle al ::after del link de la fila. */
-.pg-panel .s-rowacts { display: flex; align-items: center; justify-content: flex-end; gap: 2px; position: relative; z-index: 2; }
+.pg-panel .s-rowacts { display: flex; align-items: center; justify-content: flex-end; gap: 0; position: relative; z-index: 2; }
+/* 44×44 REALES, no un pseudo-elemento centrado: con tres botones pegados, un
+   área de toque más grande que el botón se monta sobre la del vecino y un
+   toque al borde dispara la acción equivocada. Acá al lado hay "recargar
+   saldo", que mueve plata: el área que se toca es exactamente la que se ve. */
 .pg-panel .s-rowbtn {
-  width: 32px; height: 32px; display: grid; place-items: center; flex: none;
+  width: 44px; height: 44px; display: grid; place-items: center; flex: none;
   border: 0; border-radius: 8px;
   background: none; color: var(--ink-3); cursor: pointer;
   transition: color .18s, background-color .18s;
 }
 .pg-panel .s-rowbtn:hover { color: var(--ink); background: var(--paper-2); }
-.pg-panel .s-rowbtn svg { width: 15px; height: 15px; }
+.pg-panel .s-rowbtn svg { width: 16px; height: 16px; }
 
 /* Filas móviles de marca: misma lógica que la tabla (hairline, sin caja). */
 .pg-panel .s-brandcards { display: none; flex-direction: column; gap: 0; }
-.pg-panel .s-brandcard { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; padding: 15px 0; background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; }
+.pg-panel .s-brandcard { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; padding: 12px 0; background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; }
 /* La primera SÍ lleva línea: en móvil no hay cabecera de tabla que separe la
    lista de la franja de números. */
 .pg-panel .s-brandcard__main { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; min-width: 0; color: inherit; }
@@ -330,8 +358,11 @@
 /* Tablas: se deslizan en horizontal si no entran (nunca se ocultan). El
    cambio tabla → cards de la lista de marcas es propio del super admin. */
 .pg-panel .s-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-/* Celda con texto largo (email, nombre de evento): una línea con "…". */
-.pg-panel .s-cell-ellipsis { display: inline-block; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+/* Celda con texto largo (email, nombre de evento): una línea con "…". El tope
+   bajó de 190 a 150 a propósito, no por la escala: el contenedor pasó de 1180
+   a 1120 y con los topes viejos la tabla de marcas se cortaba a la derecha
+   (se perdía el tercer botón de la fila). */
+.pg-panel .s-cell-ellipsis { display: inline-block; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
 @media (max-width: 460px) {
   .pg-panel .s-brandcard { grid-template-columns: 1fr; }
   .pg-panel .s-brandcard__side { flex-direction: row; align-items: center; justify-content: space-between; width: 100%; }
@@ -340,7 +371,7 @@
 /* ---------- Listas de filas (eventos, historial, archivadas) ---------- */
 .pg-panel .s-event-list { list-style: none; margin: 6px 0 0; padding: 0; }
 /* Fila de menú: hairline arriba, sin caja, tinte suave al pasar. */
-.pg-panel .s-event-row { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-radius: 0; border: 0; border-top: 1px solid var(--line); transition: background-color .18s; }
+.pg-panel .s-event-row { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-radius: 0; border: 0; border-top: 1px solid var(--line); transition: background-color .18s; }
 .pg-panel .s-event-list > li:first-child .s-event-row,
 .pg-panel .s-event-row:first-child { border-top: 0; }
 .pg-panel .s-event-row:hover { background: var(--sel); }
@@ -356,13 +387,13 @@
 }
 /* Lista con hairlines (sin cajas): historial, fallidos. */
 .pg-panel .s-hlist { list-style: none; margin: 0; padding: 0; }
-.pg-panel .s-hlist > li { padding: 10px 0; border-top: 1px solid var(--line); }
+.pg-panel .s-hlist > li { padding: 12px 0; border-top: 1px solid var(--line); }
 .pg-panel .s-hlist > li:first-child { border-top: 0; }
 .pg-panel .s-hlist__row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 
 /* ---------- Topbar ---------- */
 .pg-panel .s-topbar { position: sticky; top: 0; z-index: 40; background: rgba(251,247,240,.86); -webkit-backdrop-filter: saturate(150%) blur(12px); backdrop-filter: saturate(150%) blur(12px); border-bottom: 1px solid var(--line); }
-.pg-panel .s-topbar__inner { max-width: 1180px; margin: 0 auto; min-height: 60px; display: flex; align-items: center; gap: 14px; padding: 8px var(--pad); flex-wrap: wrap; }
+.pg-panel .s-topbar__inner { max-width: 1120px; margin: 0 auto; min-height: 64px; display: flex; align-items: center; gap: 14px; padding: 8px var(--pad); flex-wrap: wrap; }
 .pg-panel .s-logo { font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: -0.04em; }
 /* Excepción documentada: el punto del wordmark en acento. Glifo decorativo. */
 .pg-panel .s-logo .dot { color: var(--accent); }
@@ -370,7 +401,7 @@
 /* Navegación: TEXTO. El activo se marca con un subrayado de 2px (el acento es
    una línea, no texto — decorativo, permitido). Sin pastillas, sin relleno. */
 .pg-panel .s-nav { display: flex; gap: 22px; margin-left: 18px; flex-wrap: wrap; }
-.pg-panel .s-nav a { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; color: var(--ink-2); padding: 10px 0; border-radius: 0; box-shadow: inset 0 -2px 0 transparent; transition: color .18s, box-shadow .18s; }
+.pg-panel .s-nav a { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; color: var(--ink-2); min-height: 44px; padding: 0; border-radius: 0; box-shadow: inset 0 -2px 0 transparent; transition: color .18s, box-shadow .18s; }
 .pg-panel .s-nav a:hover { color: var(--ink); box-shadow: inset 0 -2px 0 var(--line); }
 .pg-panel .s-nav a[aria-current="page"] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); }
 /* Contador: punto de acento + número en tinta (sin pastilla). */
@@ -378,7 +409,7 @@
 .pg-panel .s-nav-count::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
 .pg-panel .s-topbar__right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
 .pg-panel .s-email { font-size: 13px; color: var(--ink-3); }
-.pg-panel .s-iconbtn { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; border: 0; background: none; color: var(--ink-3); cursor: pointer; transition: color .18s, background-color .18s; }
+.pg-panel .s-iconbtn { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 8px; border: 0; background: none; color: var(--ink-3); cursor: pointer; transition: color .18s, background-color .18s; }
 .pg-panel .s-iconbtn:hover { color: var(--ink); background: var(--paper-2); }
 /* Móvil: una sola fila. El nav se desliza en horizontal en vez de partirse en
    tres renglones (y dejar el botón de salir solo abajo). */
@@ -405,7 +436,7 @@
 /* ---------- Cabeceras de página ----------
    Siempre a la izquierda. El h1 en Bricolage 800 y grande es la única voz alta
    de la pantalla; debajo, aire hasta el primer hairline. */
-.pg-panel .s-pagehead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 34px; flex-wrap: wrap; text-align: left; }
+.pg-panel .s-pagehead { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-s2); margin-bottom: var(--s-s4); flex-wrap: wrap; text-align: left; }
 .pg-panel .s-pagehead .s-h1 { margin-top: 8px; }
 .pg-panel .s-back { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink-2); margin-bottom: 14px; }
 .pg-panel .s-back:hover { color: var(--ink); }

@@ -21,11 +21,11 @@
 .admin-shell .a-nav__group { display: flex; flex-direction: column; gap: 2px; padding: 0 14px; flex: none; }
 .admin-shell .a-nav__group:first-child { padding-left: 0; }
 .admin-shell .a-nav__group + .a-nav__group { border-left: 1px solid var(--line); }
-.admin-shell .a-nav__label { font-size: 11px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); padding: 0 10px; white-space: nowrap; }
+.admin-shell .a-nav__label { font-size: var(--s-lb); font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); padding: 0 10px; white-space: nowrap; }
 .admin-shell .a-nav__items { display: flex; gap: 2px; }
 .admin-shell .a-nav__item {
   position: relative; display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
-  padding: 8px 10px 13px; font-size: 14px; font-weight: 600; color: var(--ink-2);
+  min-height: 44px; padding: 10px 10px 13px; font-size: 14px; font-weight: 600; color: var(--ink-2);
   border-radius: 0; transition: color .18s;
 }
 .admin-shell .a-nav__item:hover { color: var(--ink); }
@@ -43,16 +43,16 @@
 /* ---------- "¿Cómo va?" — franja de 4 números arriba de todo ----------
    Cuatro números grandes separados por hairlines verticales (la regla vive en
    parygo-panel.css, en .s-stats/.s-stats-4; acá replicamos el mismo patrón). */
-.admin-shell .a-pulse { display: grid; grid-template-columns: repeat(4, 1fr); gap: 26px 0; margin-bottom: 26px; }
-.admin-shell .a-pulse > * { padding-left: 24px; border-left: 1px solid var(--line); }
+.admin-shell .a-pulse { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-s3) 0; margin-bottom: var(--s-s3); }
+.admin-shell .a-pulse > * { padding-left: var(--s-s3); border-left: 1px solid var(--line); }
 .admin-shell .a-pulse > :nth-child(4n + 1) { padding-left: 0; border-left: 0; }
 @media (max-width: 860px) {
   .admin-shell .a-pulse { grid-template-columns: 1fr 1fr; }
-  .admin-shell .a-pulse > * { padding-left: 20px; border-left: 1px solid var(--line); }
+  .admin-shell .a-pulse > * { padding-left: var(--s-s2); border-left: 1px solid var(--line); }
   .admin-shell .a-pulse > :nth-child(2n + 1) { padding-left: 0; border-left: 0; }
 }
-.admin-shell .a-pulse .s-stat__value { font-size: 32px; }
-.admin-shell .a-pulse .s-stat__value--text { font-size: 20px; line-height: 1.15; letter-spacing: -0.02em; }
+
+.admin-shell .a-pulse .s-stat__value--text { font-size: calc(var(--s-num) - 8px); line-height: 1.15; letter-spacing: -0.02em; }
 /* Barra de avance (aforo): relleno de acento, sin texto encima. */
 .admin-shell .a-meter { height: 4px; border-radius: var(--r-pill); background: var(--paper-3); overflow: hidden; margin-top: 4px; }
 .admin-shell .a-meter__fill { height: 100%; border-radius: var(--r-pill); background: var(--accent); }
@@ -62,23 +62,23 @@
    fondo, ni borde cerrado, ni sombra. La separan dos hairlines. */
 .admin-shell .a-task {
   display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-  padding: 15px 0; margin-bottom: 26px;
+  padding: 12px 0; margin-bottom: var(--s-s3);
   background: none; border: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
   border-radius: 0; box-shadow: none;
 }
 .admin-shell .a-task__txt { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .admin-shell .a-task__txt::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex: none; }
 .admin-shell .a-task__txt strong { font-weight: 700; }
-.admin-shell .a-task__sub { display: block; font-size: 13px; color: var(--ink-2); }
+.admin-shell .a-task__sub { display: block; font-size: var(--s-meta); color: var(--ink-2); }
 
 /* ---------- Primeros pasos (setup guiado) ----------
    Filas con hairline, sin cajas. El estado es un punto: --ok listo, acento el
    siguiente, hueco lo que todavía no toca. */
-.admin-shell .a-setup { margin-bottom: 30px; }
+.admin-shell .a-setup { margin-bottom: var(--s-s4); }
 .admin-shell .a-setup__meter { height: 3px; background: var(--paper-3); overflow: hidden; margin: 0 0 6px; }
 .admin-shell .a-setup__meter-fill { height: 100%; background: var(--accent); transition: width .3s var(--ease); }
 .admin-shell .a-setup__list { list-style: none; margin: 0; padding: 0; }
-.admin-shell .a-setup__step { display: flex; align-items: center; gap: 14px; padding: 13px 0; border-top: 1px solid var(--line); }
+.admin-shell .a-setup__step { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
 .admin-shell .a-setup__step:first-child { border-top: 0; }
 .admin-shell .a-setup__step--done { opacity: .62; }
 .admin-shell .a-setup__mark { flex: none; width: 16px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--ink-3); font-variant-numeric: tabular-nums; }
@@ -95,7 +95,7 @@
 }
 
 /* ---------- Acciones rápidas: una línea de botones de texto ---------- */
-.admin-shell .a-quick { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 22px; margin-bottom: 30px; }
+.admin-shell .a-quick { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-s1) var(--s-s3); margin-bottom: var(--s-s4); }
 .admin-shell .a-quick .s-btn svg { width: 15px; height: 15px; }
 
 /* ---------- Alertas del evento: punto + texto en tinta ---------- */
@@ -108,7 +108,7 @@
 
 /* ---------- Estado Borrador / Publicado ----------
    Otra línea con punto, no una caja. El punto lo pone el modificador. */
-.admin-shell .a-publish { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 14px 0; margin: 0 0 26px; border-radius: 0; border: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: none; }
+.admin-shell .a-publish { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 12px 0; margin: 0 0 var(--s-s3); border-radius: 0; border: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: none; }
 .admin-shell .a-publish__txt { display: inline-flex; align-items: center; gap: 12px; min-width: 0; font-size: 14px; }
 .admin-shell .a-publish__txt::before { content: ""; width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--ink-3); }
 .admin-shell .a-publish__txt strong { font-weight: 700; }
@@ -127,7 +127,7 @@
 /* ---------- Eventos de la home ----------
    El flyer es CONTENIDO, no una tarjeta: se muestra la imagen y el texto
    cuelga debajo, sobre el papel. Cada uno arranca con su hairline. */
-.admin-shell .a-evgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 30px 26px; }
+.admin-shell .a-evgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--s-s4) var(--s-s3); }
 .admin-shell .a-evcard { display: flex; flex-direction: column; background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; box-shadow: none; padding-top: 14px; color: inherit; transition: opacity .18s; }
 .admin-shell .a-evcard:hover .a-evcard__name { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; }
 .admin-shell .a-evcard--past { opacity: .72; }
@@ -147,8 +147,8 @@
 .admin-shell .a-evcard__go { margin-left: auto; color: var(--ink-3); }
 
 /* ---------- Tu dinero: columnas de números, sin celdas rellenas ---------- */
-.admin-shell .a-money { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 22px 0; }
-.admin-shell .a-money__cell { background: none; border-radius: 0; padding: 0 0 0 24px; border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 3px; }
+.admin-shell .a-money { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--s-s3) 0; }
+.admin-shell .a-money__cell { background: none; border-radius: 0; padding: 0 0 0 var(--s-s3); border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 3px; }
 .admin-shell .a-money__cell:first-child { padding-left: 0; border-left: 0; }
 /* Estas celdas reusan .s-stat__label y .s-stat__sub, que traen `order` propio
    (2 y 3). El número lleva el suyo EXPLÍCITO para no depender de que el 0 por
@@ -157,8 +157,8 @@
 .admin-shell .a-money__v { order: 1; }
 /* El total es el número que manda: punto ok delante de su etiqueta. */
 .admin-shell .a-money__cell--total .s-stat__label::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
-.admin-shell .a-money__v { font-family: var(--display); font-weight: 800; font-size: 28px; line-height: 1; letter-spacing: -0.02em; color: var(--ink); font-variant-numeric: tabular-nums; }
-.admin-shell .a-money__pending { margin-top: 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 14px 0 0; font-size: 14px; color: var(--ink); }
+.admin-shell .a-money__v { font-family: var(--display); font-weight: 800; font-size: var(--s-num); line-height: 1.05; letter-spacing: -0.02em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.admin-shell .a-money__pending { margin-top: var(--s-s3); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: var(--s-s2) 0 0; font-size: var(--s-body); color: var(--ink); }
 .admin-shell .a-money__pending > span { display: inline-flex; align-items: center; gap: 10px; }
 .admin-shell .a-money__pending > span::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
 @media (max-width: 560px) {
@@ -170,7 +170,7 @@
 /* ---------- Tabla por tipo ---------- */
 .admin-shell .a-typetable { width: 100%; border-collapse: collapse; min-width: 520px; }
 .admin-shell .a-typetable th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .10em; text-transform: uppercase; color: var(--ink-3); padding: 0 16px 12px; border-bottom: 1px solid var(--line); }
-.admin-shell .a-typetable td { padding: 15px 16px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.admin-shell .a-typetable td { padding: 12px 16px; border-bottom: 1px solid var(--line); font-size: 14px; }
 .admin-shell .a-typetable :is(th, td):first-child { padding-left: 0; }
 .admin-shell .a-typetable :is(th, td):last-child { padding-right: 0; }
 .admin-shell .a-typetable .num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -225,7 +225,7 @@
 .admin-shell .a-yrow--open { box-shadow: inset 2px 0 0 var(--accent); }
 .admin-shell .a-yrow--open .a-yrow__head,
 .admin-shell .a-yrow--open .a-yrow__body { padding-left: 14px; }
-.admin-shell .a-yrow__head { display: flex; align-items: center; gap: 12px; padding: 12px 0; flex-wrap: wrap; transition: padding-left .18s; }
+.admin-shell .a-yrow__head { display: flex; align-items: center; gap: 12px; padding: var(--s-s1) 0; flex-wrap: wrap; transition: padding-left .18s; }
 .admin-shell .a-yrow__toggle {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   background: none; border: 0; padding: 4px 0; text-align: left; cursor: pointer; color: var(--ink); font: inherit;
@@ -320,17 +320,17 @@
 .admin-shell .s-check input { accent-color: var(--ink); width: 16px; height: 16px; flex: none; }
 /* Lista clave-valor ("Tu marca"). */
 .admin-shell .s-deflist { display: flex; flex-direction: column; margin: 0; }
-.admin-shell .s-defrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
+.admin-shell .s-defrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
 .admin-shell .s-defrow:first-child { border-top: 0; }
-.admin-shell .s-defrow__k { font-size: 13px; color: var(--ink-3); }
-.admin-shell .s-defrow__v { font-size: 14px; font-weight: 500; text-align: right; word-break: break-word; margin: 0; }
+.admin-shell .s-defrow__k { font-size: var(--s-meta); color: var(--ink-3); }
+.admin-shell .s-defrow__v { font-size: var(--s-body); font-weight: 500; text-align: right; word-break: break-word; margin: 0; }
 /* Link a la página pública del evento: tinta, subrayado al hover. */
 .admin-shell .a-publink { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink-2); margin-top: 6px; }
 .admin-shell .a-publink:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
 /* ---------- Ranking de promotores ---------- */
 .admin-shell .a-rank { list-style: none; margin: 0; padding: 0; }
-.admin-shell .a-rank__row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 0; border-top: 1px solid var(--line); transition: background-color .18s; }
+.admin-shell .a-rank__row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 0; border-top: 1px solid var(--line); transition: background-color .18s; }
 .admin-shell .a-rank__row:first-child { border-top: 0; }
 .admin-shell .a-rank__row:hover { background: var(--sel); }
 .admin-shell .a-rank__pos { width: 34px; text-align: center; font-family: var(--display); font-weight: 800; color: var(--ink-3); font-variant-numeric: tabular-nums; }
