@@ -82,7 +82,7 @@ export function ClientsTable({ rows, eventId, eventName, impersonating = false }
         <button type="button" onClick={exportCsv} className="s-btn s-btn--soft" disabled={rows.length === 0} title="Exporta los compradores de esta página">
           <Download className="h-4 w-4" /> CSV (esta página)
         </button>
-        <a href={`/api/admin/events/${eventId}/export-clientes`} className="s-btn" title="Descarga TODOS los compradores pagados del evento">
+        <a href={`/api/admin/events/${eventId}/export-clientes`} className="s-btn s-btn--soft" title="Descarga TODOS los compradores pagados del evento">
           <Download className="h-4 w-4" /> CSV completo
         </a>
       </div>

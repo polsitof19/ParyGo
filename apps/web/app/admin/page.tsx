@@ -208,7 +208,7 @@ export default async function AdminHomePage() {
             </span>
           </span>
           {firstPendingEvent && (
-            <Link href={`/admin/events/${firstPendingEvent.id}/yape`} className="s-btn s-btn--primary s-btn--sm">Revisar ahora</Link>
+            <Link href={`/admin/events/${firstPendingEvent.id}/yape`} className="s-btn s-btn--soft s-btn--sm">Revisar ahora</Link>
           )}
         </div>
       )}

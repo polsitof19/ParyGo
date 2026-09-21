@@ -13,7 +13,7 @@ export default function SuperError({
     console.error('super admin error:', error);
   }, [error]);
   return (
-    <div className="s-card s-card--lg" style={{ maxWidth: 520, margin: '40px auto', textAlign: 'center' }}>
+    <div className="s-card s-card--lg" style={{ maxWidth: 520, marginTop: 40 }}>
       <span className="eyebrow">Error del panel</span>
       <h1 className="s-h1" style={{ marginTop: 8 }}>Algo se rompió</h1>
       <p className="s-card__desc" style={{ marginTop: 8 }}>

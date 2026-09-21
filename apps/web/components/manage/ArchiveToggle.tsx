@@ -55,7 +55,7 @@ export function ArchiveToggle({
   return (
     <button
       type="button"
-      className={`s-btn ${archived ? 's-btn--primary' : 's-btn--soft'}`}
+      className="s-btn s-btn--soft"
       disabled={pending}
       onClick={onClick}
       aria-busy={pending}
