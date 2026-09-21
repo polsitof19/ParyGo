@@ -892,16 +892,6 @@ body:has(.b-c3) { background: #0E0C0A; }
 .client-shell .b2-ty__pr { font-size: 24px; font-variant-numeric: tabular-nums; }
 .client-shell .b2-ty__inc { margin: var(--b-s1) 0 0; font-size: var(--b-meta); color: var(--pg-fg-2); }
 
-/* Los sellos: uno por fase, el vigente entero y los demás apagados. */
-.client-shell .b2-sellos { list-style: none; display: flex; flex-wrap: wrap; gap: var(--b-s1); margin: var(--b-s2) 0 0; padding: 0; }
-.client-shell .b2-sello {
-  flex: 1 1 128px; padding: var(--b-s1) 10px; border: 1px dashed var(--pg-line); border-radius: 6px;
-  opacity: var(--pg-dim);
-}
-.client-shell .b2-sello--on { opacity: 1; border-style: solid; border-color: var(--brand); }
-.client-shell .b2-sello__lb { display: block; font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--pg-fg-2); }
-.client-shell .b2-sello__pr { display: block; margin-top: 2px; font-family: var(--display); font-weight: 800; font-size: var(--b-body); font-variant-numeric: tabular-nums; color: var(--pg-fg); }
-.client-shell .b2-sello__sub { display: block; font-size: 11px; color: var(--pg-fg-2); }
 
 /* El talón: el total y el botón, con el color de la marca. En teléfono es la
    barra de abajo; en escritorio, el pie del boleto. */
@@ -992,9 +982,7 @@ body:has(.b-c3) { background: #0E0C0A; }
    DENTRO de lo atenuado la etiqueta va en tinta, no en tinta tenue: el que
    baja el contraste es el opacity, no el color. */
 .client-shell .b1-line__n:not(.b1-line__n--on) .b1-line__lb,
-.client-shell .b1-line__n:not(.b1-line__n--on) .b1-line__sub,
-.client-shell .b2-sello:not(.b2-sello--on) .b2-sello__lb,
-.client-shell .b2-sello:not(.b2-sello--on) .b2-sello__sub { color: var(--pg-fg); }
+.client-shell .b1-line__n:not(.b1-line__n--on) .b1-line__sub { color: var(--pg-fg); }
 
 /* ---------- CARTEL en escritorio ----------
    En teléfono el afiche ya ocupa la primera pantalla. En escritorio la grilla
@@ -1100,11 +1088,11 @@ body:has(.b-c3) { background: #0E0C0A; }
 /* ---------- 1 · CARTEL ---------- */
 /* Teléfono: el póster conserva su relación vertical (es lo que menos
    recorta) pero con tope, para no comerse dos pantallas. */
-.client-shell .b-c1 { --b-t1: 30px; }
-.client-shell .b-c1 .b-hero__shot img,
-.client-shell .b-c1 .b-hero__shot--ph {
-  height: auto; aspect-ratio: 4 / 5; max-height: 420px;
-}
+/* --flyer-h manda: el bloque del título se apoya sobre el flyer con ESA
+   altura. Cuando la imagen se declaraba aparte (aspect-ratio + max-height)
+   las dos medidas se separaban y el título caía 140px por debajo del flyer,
+   en blanco sobre papel. Una sola fuente de verdad. */
+.client-shell .b-c1 { --b-t1: 30px; --flyer-h: min(125vw, 420px); }
 .client-shell .b-c1 .b1-ty__pr { font-size: 20px; }
 
 @media (min-width: 768px) {
@@ -1257,3 +1245,23 @@ body:has(.b-c3) { background: #0E0C0A; }
 /* El lightbox ya mostraba el flyer entero; ahora la página también, así que
    el aviso pasa a ser lo que de verdad ofrece: verlo en grande. */
 .client-shell .b-lightbox img { object-fit: contain; }
+
+/* ---------- ENTRADA: la línea de tiempo con letra de boleto ----------
+   Es la misma pieza que CARTEL (mismo componente, mismas clases): lo único
+   que cambia es la tipografía, que acá va en mayúsculas espaciadas y números
+   tabulares, como el resto del ticket. */
+.client-shell .b-c2 .b1-line { margin-top: var(--b-s2); }
+.client-shell .b-c2 .b1-line__lb { letter-spacing: .18em; font-size: 10px; }
+.client-shell .b-c2 .b1-line__pr { font-variant-numeric: tabular-nums; }
+.client-shell .b-c2 .b1-line__sub { font-size: 11px; }
+/* Los tres pasos, dentro del boleto: separados por el troquel de puntos. */
+.client-shell .b-c2 .b1-simple { margin-top: var(--b-s4); padding-top: var(--b-s4); border-top: 2px dashed var(--pg-line); }
+.client-shell .b-c2 .b1-h2 { font-size: var(--b-t3); }
+
+/* El bloque del título, por encima de todo el hero.
+   Al darle z-index al flyer (1) y al degradado (2) para armar el difuminado,
+   el título quedó debajo: .b-hero__over es hermano del hero y tenía z-index
+   auto, y el contexto de apilamiento es .b-stage, así que 1 y 2 le ganaban
+   aunque el título vaya después en el DOM. Con un flyer oscuro no se notaba;
+   con uno claro el título desaparecía del todo. */
+.client-shell .b-hero__over { z-index: 3; }

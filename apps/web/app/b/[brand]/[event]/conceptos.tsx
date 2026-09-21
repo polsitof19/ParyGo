@@ -11,7 +11,8 @@
 //              TIEMPO horizontal; hay un chip sticky para volver a comprar y
 //              una sección "Así de simple" que explica el trámite en 3 pasos.
 //   2 ENTRADA  el bloque de compra ES un boleto: troquel, talón lateral con el
-//              total y el botón, tipografía de ticket. Las fases son SELLOS.
+//              total y el botón, tipografía de ticket. Comparte con CARTEL la
+//              línea de tiempo de fases y los tres pasos.
 //   3 NOCHE    editorial oscuro: tipografía enorme, precios gigantes, el color
 //              de la marca solo en el botón y una línea.
 
@@ -234,7 +235,16 @@ export function FasesLinea({ t, escalera, cur, incluye, onInc, onDec }: FilaProp
         </span>
       </div>
 
-      {escalera.length > 1 && (
+      {escalera.length > 1 && <Linea t={t} escalera={escalera} iVig={iVig} />}
+    </div>
+  );
+}
+
+/** La línea de tiempo de fases. La comparten CARTEL y ENTRADA: el riel es un
+ *  hairline, cada etapa un punto, y la vigente lleva el color de la marca en
+ *  el punto y en el tramo —nunca en el texto, que sigue en tinta. */
+function Linea({ t, escalera, iVig }: { t: TicketType; escalera: Peldano[]; iVig: number }) {
+  return (
         <ol className="b1-line" aria-label={`Precios de ${t.name} por etapa`}>
           {escalera.map((f, i) => (
             <li key={i} className={`b1-line__n${i === iVig ? ' b1-line__n--on' : ''}${i < iVig ? ' b1-line__n--past' : ''}`}>
@@ -246,14 +256,12 @@ export function FasesLinea({ t, escalera, cur, incluye, onInc, onDec }: FilaProp
             </li>
           ))}
         </ol>
-      )}
-    </div>
   );
 }
 
-// --------------------------------------------------- 2 · ENTRADA: sellos ---
-// Cabecera de boleto (tipo · precio · acción) y debajo las fases como sellos
-// apilados: el vigente entero, los otros apagados con su fecha.
+// --------------------------------------------- 2 · ENTRADA: línea de tiempo ---
+// Cabecera de boleto (tipo · precio · acción) y debajo la misma línea de
+// tiempo que CARTEL, con la tipografía del boleto.
 export function FasesSellos({ t, escalera, cur, incluye, onInc, onDec }: FilaProps) {
   const vigente = escalera.find((f) => f.estado === 'vigente') ?? escalera[0]!;
   const iVig = escalera.indexOf(vigente);
@@ -268,15 +276,10 @@ export function FasesSellos({ t, escalera, cur, incluye, onInc, onDec }: FilaPro
       </div>
       {incluye && <p className="b2-ty__inc">{incluye}</p>}
       {escalera.length > 1 && (
-        <ul className="b2-sellos">
-          {escalera.map((f, i) => (
-            <li key={i} className={`b2-sello${i === iVig ? ' b2-sello--on' : ''}`}>
-              <span className="b2-sello__lb">{nombreFase(t, f, i, escalera.length)}</span>
-              <span className="b2-sello__pr">{formatPEN(f.precio)}</span>
-              <span className="b2-sello__sub">{i === iVig ? 'Vigente' : (f.sub ?? '—')}</span>
-            </li>
-          ))}
-        </ul>
+        // Misma línea de tiempo que CARTEL: se entiende de un vistazo en qué
+        // etapa estamos y hacia dónde va el precio. Lo que cambia en ENTRADA
+        // es la tipografía, que la pone el CSS del boleto.
+        <Linea t={t} escalera={escalera} iVig={iVig} />
       )}
     </div>
   );

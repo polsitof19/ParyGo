@@ -23,7 +23,7 @@ async function sha256Hex(s: string): Promise<string> {
 
 type Props = {
   params: { brand: string; event: string };
-  searchParams?: { ref?: string | string[]; v?: string | string[]; c?: string | string[] };
+  searchParams?: { ref?: string | string[]; v?: string | string[]; c?: string | string[]; flyer?: string | string[] };
 };
 
 async function loadEvent(brandSlug: string, eventSlug: string) {
@@ -196,6 +196,41 @@ export default async function EventPage({ params, searchParams }: Props) {
   // Solo presentación: no toca precio, stock, pago ni emisión.
   const concepto = leerConcepto(searchParams);
 
+  // ?flyer=<slug> — AYUDA DE PREVIEW: pinta el evento con el flyer de otra
+  // marca para comparar cómo responde cada concepto a paletas distintas (un
+  // degradado oscuro, una captura de Instagram, un fondo plano). El valor es
+  // un SLUG, no una URL: la imagen sale de nuestra propia base, así que no se
+  // puede apuntar a un host de afuera.
+  //
+  // Solo vive en el preview y en local. En parygo.com queda inerte: si no,
+  // cualquiera podría linkear el evento de una marca con el arte de otra.
+  const host = headers().get('host') ?? '';
+  const esPreview = host.endsWith('.pages.dev') || host.startsWith('localhost');
+  const flyerRaw = Array.isArray(searchParams?.flyer) ? searchParams?.flyer[0] : searchParams?.flyer;
+  const flyerSlug = (flyerRaw ?? '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40);
+  let coverUrl = event.cover_url;
+  if (esPreview && flyerSlug && flyerSlug !== brand.slug) {
+    // Se usa el cliente de servicio porque los eventos de las marcas que
+    // sirven de muestra están despublicados y RLS los esconde del cliente
+    // anónimo, que es justo lo que tiene que hacer. Acá solo se lee UNA
+    // columna —la URL de una imagen de nuestro propio bucket— y solo cuando
+    // el host es el preview o localhost.
+    const admin2 = createAdminClient();
+    const { data: otraMarca } = await admin2.from('brands').select('id').eq('slug', flyerSlug).maybeSingle();
+    if (otraMarca?.id) {
+      const { data: otra } = await admin2
+        .from('events')
+        .select('cover_url')
+        .eq('brand_id', otraMarca.id)
+        .not('cover_url', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (otra?.cover_url) coverUrl = otra.cover_url;
+    }
+  }
+  const eventoParaPintar = { ...event, cover_url: coverUrl };
+
   // Tracking de clics del link de promotor (?ref). Best-effort: registra un clic
   // por visitante/día atribuido al código (solo si existe). Hasheamos la IP (no
   // se guarda cruda) y nunca rompemos la página si falla. service_role vía RPC.
@@ -225,11 +260,11 @@ export default async function EventPage({ params, searchParams }: Props) {
         {/* ENTRADA apoya el boleto sobre su propio flyer, difuminado. Va
             FUERA de la sección de compra: dentro, el z-index de la sección
             lo dejaba por encima del fondo blanco del boleto. */}
-        {concepto === 2 && <FondoFlyer url={optimizedImage(event.cover_url, { width: 900, quality: 60 })} />}
+        {concepto === 2 && <FondoFlyer url={optimizedImage(eventoParaPintar.cover_url, { width: 900, quality: 60 })} />}
         {/* CHECKOUT (hero, entradas, datos/pago, resumen y "dónde" viven en el panel) */}
         <EventCheckoutPanel
           brand={brand}
-          event={event}
+          event={eventoParaPintar}
           ticketTypes={panelTypes}
           mpConfigured={mpConfigured}
           mpPublicKey={mpPublicKey}

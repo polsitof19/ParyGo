@@ -338,8 +338,9 @@ function fraseConfianza(pago: string): string {
             </section>
             <p className="b-trust">{fraseConfianza(payLabel)}</p>
 
-            {/* CARTEL explica el trámite en tres pasos antes del mapa. */}
-            {concepto === 1 && <AsiDeSimple conYape={!!brand.yape_number} />}
+            {/* CARTEL y ENTRADA explican el trámite en tres pasos antes del
+                mapa. NOCHE no: ahí el silencio es parte del concepto. */}
+            {concepto !== 3 && <AsiDeSimple conYape={!!brand.yape_number} />}
 
             <MasInfo event={event} brand={brand} />
           </div>
