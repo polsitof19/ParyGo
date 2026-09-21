@@ -53,6 +53,12 @@ export default async function YapeUploadPage({
     .maybeSingle();
   const order = res.data as unknown as OrderView | null;
   if (!order) notFound();
+  // Defensa en profundidad: el subdominio tiene que ser el de la marca de la
+  // orden, igual que en /confirmacion y /t/. El gate real sigue siendo el UUID
+  // de la orden (no enumerable), pero esta página muestra datos de la marca
+  // —nombre, Yape, contacto— y no hay razón para servirlos bajo otro
+  // subdominio. Faltaba desde siempre; las otras tres páginas sí lo tenían.
+  if (order.brand?.slug !== params.brand) notFound();
 
   // If already submitted, redirect to confirmation flow.
   if (order.status !== 'pending_yape_review' || order.payment_method !== 'yape_manual') {

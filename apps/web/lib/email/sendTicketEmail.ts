@@ -276,6 +276,12 @@ function renderHtml(p: {
       )}" style="color:${p.ink};font-weight:600;text-decoration:none">WhatsApp</a></p>`
     : '';
 
+  // Quién responde por el evento, al pie. Se calcula UNA vez: antes se llamaba
+  // a contactoHref tres veces dentro del template y era fácil que una de las
+  // tres se olvidara de escapar.
+  const marcaDelPie = { name: p.brandName, whatsapp_e164: p.brandWhatsapp, contact_email: p.brandEmail };
+  const hrefDelPie = contactoHref(marcaDelPie);
+
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(p.eventName)}</title></head>
 <body style="margin:0;padding:0;background:${CREAM};-webkit-text-size-adjust:100%">
@@ -332,12 +338,14 @@ function renderHtml(p: {
         </td>
       </tr>
     </table>
-    <!-- responsabilidad del organizador (misma línea que el sitio) -->
+    <!-- responsabilidad del organizador (misma línea que el sitio).
+         El href va escapado igual que el texto: es un dato de la BD dentro de
+         un atributo HTML, y este email sale firmado por ParyGo. -->
     <p style="margin:22px 0 0;font-family:${FONT};font-size:11px;line-height:1.5;color:${INK3};text-align:center">${escapeHtml(
-      textoPago({ name: p.brandName, whatsapp_e164: p.brandWhatsapp, contact_email: p.brandEmail })
+      textoPago(marcaDelPie)
     )}${
-      contactoHref({ name: p.brandName, whatsapp_e164: p.brandWhatsapp, contact_email: p.brandEmail })
-        ? ` <a href="${contactoHref({ name: p.brandName, whatsapp_e164: p.brandWhatsapp, contact_email: p.brandEmail })}" style="color:${INK2};text-decoration:underline">&rarr;</a>`
+      hrefDelPie
+        ? ` <a href="${escapeHtml(hrefDelPie)}" style="color:${INK2};text-decoration:underline">&rarr;</a>`
         : '.'
     }</p>
     <!-- pie parygo -->

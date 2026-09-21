@@ -17,12 +17,22 @@ export type MarcaContacto = {
   contact_email?: string | null;
 };
 
+// Forma de email que aceptamos para ARMAR un href. No pretende validar que el
+// email exista: pretende que lo que se concatena en un `href` no pueda romper
+// el atributo ni convertirse en otro esquema. El formulario del panel ya valida
+// con zod al guardar, pero acá no confiamos en eso: el día que un import, un
+// UPDATE a mano o un formulario nuevo escriba esa columna sin pasar por el
+// mismo schema, esto sigue de pie. Es la misma lección de M1 — no confiar en
+// que el otro llamador validó — aplicada a HTML en vez de SQL.
+const EMAIL_SEGURO = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]{1,63}(\.[A-Za-z0-9-]{1,63})+$/;
+
 /** WhatsApp si la marca lo cargó; si no, su email; si no hay ninguno, null. */
 export function contactoHref(marca: MarcaContacto, texto?: string): string | null {
+  // Solo dígitos: whatsapp_e164 nunca aporta caracteres al href.
   const wa = marca.whatsapp_e164?.replace(/[^\d]/g, '');
   if (wa) return texto ? `https://wa.me/${wa}?text=${encodeURIComponent(texto)}` : `https://wa.me/${wa}`;
   const mail = marca.contact_email?.trim();
-  if (mail) return `mailto:${mail}`;
+  if (mail && EMAIL_SEGURO.test(mail)) return `mailto:${encodeURI(mail)}`;
   return null;
 }
 

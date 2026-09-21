@@ -38,6 +38,7 @@ export function SettingsForm(props: Props) {
         <p className="s-section-lead" style={{ marginBottom: 14 }}>Contacto</p>
         <Field label="Email de contacto" htmlFor="contact_email" error={err.contact_email}>
           <input id="contact_email" name="contact_email" type="email" defaultValue={props.contactEmail} placeholder="contacto@tumarca.com" className="s-input" disabled={ro} />
+          <p className="s-hint">Es tu contacto público: lo ven los compradores en la página del evento, al pagar y en la entrada, y es la dirección a la que le responden a tus emails. No es tu email para entrar al panel.</p>
         </Field>
         <div className="s-field">
           <Field label="WhatsApp (formato +51999000111)" htmlFor="whatsapp_e164" error={err.whatsapp_e164}>
