@@ -194,7 +194,7 @@ export default async function EventPage({ params, searchParams }: Props) {
 
   // Concepto de diseño a evaluar (?c=1|2|3, con ?v= como alias viejo).
   // Solo presentación: no toca precio, stock, pago ni emisión.
-  const concepto = leerConcepto(searchParams);
+  const concepto = leerConcepto(searchParams, params.brand);
 
   // ?flyer=<slug> — AYUDA DE PREVIEW: pinta el evento con el flyer de otra
   // marca para comparar cómo responde cada concepto a paletas distintas (un

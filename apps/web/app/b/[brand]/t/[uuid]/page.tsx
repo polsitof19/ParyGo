@@ -72,7 +72,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function TicketPage({ params, searchParams }: Props) {
-  const concepto = leerConcepto(searchParams);
+  const concepto = leerConcepto(searchParams, params.brand);
   const t = await loadTicket(params.brand, params.uuid);
   if (!t) notFound();
 

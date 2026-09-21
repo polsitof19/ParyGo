@@ -23,7 +23,7 @@ export default async function ConfirmationPage({
   searchParams: { order?: string; pendiente?: string; c?: string; v?: string };
 }) {
   if (!searchParams.order || !UUID_RE.test(searchParams.order)) notFound();
-  const concepto = leerConcepto(searchParams);
+  const concepto = leerConcepto(searchParams, params.brand);
 
   const admin = createAdminClient();
   type OrderWithJoins = {

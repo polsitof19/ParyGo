@@ -23,7 +23,7 @@ export default async function YapeUploadPage({
   searchParams: { order?: string; c?: string; v?: string };
 }) {
   if (!searchParams.order) notFound();
-  const concepto = leerConcepto(searchParams);
+  const concepto = leerConcepto(searchParams, params.brand);
   const admin = createAdminClient();
 
   type OrderView = {
