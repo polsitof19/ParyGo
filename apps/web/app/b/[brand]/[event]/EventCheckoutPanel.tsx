@@ -296,7 +296,7 @@ function fraseConfianza(pago: string): string {
 }
 
   return (
-    <section id="entradas" className={`b-buy b-c${concepto}${shownStep === 2 ? ' b-buy--datos' : ''}`}>
+    <section id="entradas" className={`b-buy b-c${concepto}${shownStep === 2 ? ' b-buy--datos' : ''}${totalItems === 0 ? ' b-buy--vacio' : ''}`}>
       {/* El chip es el atajo de vuelta a la compra. Con algo en el carrito
           manda la barra de pagar y el chip se va: dos cosas pegadas abajo se
           estorban. */}

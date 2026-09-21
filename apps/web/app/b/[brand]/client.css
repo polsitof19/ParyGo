@@ -1055,3 +1055,8 @@ body:has(.b-c3) { background: #0E0C0A; }
 @media (min-width: 768px) {
   .client-shell .b-c1 .b-hero__over { align-self: end; }
 }
+
+/* CARTEL, carrito vacío: la barra de abajo diría "Elige tu entrada" justo
+   debajo del título de sección que dice lo mismo. Con el carrito vacío el
+   atajo es el chip; la barra aparece cuando ya hay algo que pagar. */
+.client-shell .b-c1.b-buy--vacio .b-cta { display: none; }
