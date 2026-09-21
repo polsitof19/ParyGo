@@ -14,6 +14,9 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv, publicEnv } from '@/lib/env';
 import { formatPEN, formatEventDate, whatsappLink } from '@/lib/utils';
 import { brandColor, brandInk, contrastOn } from '@/lib/brandColors';
+// La línea de responsabilidad del organizador es la MISMA que la del sitio:
+// el texto vive en un solo lugar para que no se desincronicen.
+import { textoPago, contactoHref } from '@/lib/organizador';
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
@@ -119,6 +122,7 @@ export async function sendTicketEmail(orderId: string): Promise<SendTicketEmailR
     ticketUrl,
     tickets: order.tickets,
     brandWhatsapp: brand?.whatsapp_e164 ?? null,
+    brandEmail: brand?.contact_email ?? null,
     supportWhatsapp,
     primary,
     onBrand,
@@ -227,6 +231,7 @@ function renderHtml(p: {
   ticketUrl: string;
   tickets: { ticket_number: string; ticket_type_name: string; qr_code: string }[];
   brandWhatsapp: string | null;
+  brandEmail: string | null;
   supportWhatsapp: string;
   primary: string;
   onBrand: string;
@@ -270,6 +275,12 @@ function renderHtml(p: {
         ''
       )}" style="color:${p.ink};font-weight:600;text-decoration:none">WhatsApp</a></p>`
     : '';
+
+  // Quién responde por el evento, al pie. Se calcula UNA vez: antes se llamaba
+  // a contactoHref tres veces dentro del template y era fácil que una de las
+  // tres se olvidara de escapar.
+  const marcaDelPie = { name: p.brandName, whatsapp_e164: p.brandWhatsapp, contact_email: p.brandEmail };
+  const hrefDelPie = contactoHref(marcaDelPie);
 
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(p.eventName)}</title></head>
@@ -327,8 +338,18 @@ function renderHtml(p: {
         </td>
       </tr>
     </table>
+    <!-- responsabilidad del organizador (misma línea que el sitio).
+         El href va escapado igual que el texto: es un dato de la BD dentro de
+         un atributo HTML, y este email sale firmado por ParyGo. -->
+    <p style="margin:22px 0 0;font-family:${FONT};font-size:11px;line-height:1.5;color:${INK3};text-align:center">${escapeHtml(
+      textoPago(marcaDelPie)
+    )}${
+      hrefDelPie
+        ? ` <a href="${escapeHtml(hrefDelPie)}" style="color:${INK2};text-decoration:underline">&rarr;</a>`
+        : '.'
+    }</p>
     <!-- pie parygo -->
-    <p style="margin:22px 0 0;font-family:${FONT};font-size:11px;line-height:1.4;color:${INK3};text-align:center">Enviado por ${escapeHtml(
+    <p style="margin:10px 0 0;font-family:${FONT};font-size:11px;line-height:1.4;color:${INK3};text-align:center">Enviado por ${escapeHtml(
       p.brandName
     )} &middot; <span style="color:${INK2};font-weight:700">parygo<span style="color:#FF6A3D">.</span></span></p>
   </td></tr>
@@ -366,6 +387,7 @@ function renderText(p: {
   if (p.brandWhatsapp) {
     lines.push('', `WhatsApp ${p.brandName}: ${p.brandWhatsapp}`);
   }
+  lines.push('', `${textoPago({ name: p.brandName })}.`);
   lines.push('', `Enviado por ${p.brandName} via ParyGo.`);
   return lines.join('\n');
 }

@@ -3,7 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
 import { YapeUploadForm } from './YapeUploadForm';
 import { CopyButton } from './CopyButton';
-import { CheckoutSteps } from '../CheckoutSteps';
+import { LineaPago } from '../../Responsable';
+import { leerConcepto, conConcepto } from '@/lib/concepto';
 import { publicEnv } from '@/lib/env';
 
 export const runtime = 'edge';
@@ -19,9 +20,10 @@ export default async function YapeUploadPage({
   searchParams,
 }: {
   params: { brand: string; event: string };
-  searchParams: { order?: string };
+  searchParams: { order?: string; c?: string; v?: string };
 }) {
   if (!searchParams.order) notFound();
+  const concepto = leerConcepto(searchParams, params.brand);
   const admin = createAdminClient();
 
   type OrderView = {
@@ -36,6 +38,7 @@ export default async function YapeUploadPage({
       yape_number: string | null;
       yape_holder: string | null;
       whatsapp_e164: string | null;
+      contact_email: string | null;
       theme_json: { yape_qr_url?: string | null } | null;
     } | null;
     event: { name: string; slug: string } | null;
@@ -45,80 +48,77 @@ export default async function YapeUploadPage({
     .from('orders')
     .select(`
       id, status, total_cents, buyer_name, payment_method,
-      brand:brands ( slug, name, yape_number, yape_holder, whatsapp_e164, theme_json ),
+      brand:brands ( slug, name, yape_number, yape_holder, whatsapp_e164, contact_email, theme_json ),
       event:events ( name, slug )
     `)
     .eq('id', searchParams.order)
     .maybeSingle();
   const order = res.data as unknown as OrderView | null;
   if (!order) notFound();
+  // Defensa en profundidad: el subdominio tiene que ser el de la marca de la
+  // orden, igual que en /confirmacion y /t/. El gate real sigue siendo el UUID
+  // de la orden (no enumerable), pero esta página muestra datos de la marca
+  // —nombre, Yape, contacto— y no hay razón para servirlos bajo otro
+  // subdominio. Faltaba desde siempre; las otras tres páginas sí lo tenían.
+  if (order.brand?.slug !== params.brand) notFound();
 
   // If already submitted, redirect to confirmation flow.
   if (order.status !== 'pending_yape_review' || order.payment_method !== 'yape_manual') {
-    redirect(`/${params.event}/confirmacion?order=${order.id}`);
+    redirect(conConcepto(`/${params.event}/confirmacion?order=${order.id}`, concepto));
   }
   if (!order.brand?.yape_number) {
     return (
-      <main className="c-state c-checkout-canvas"><p style={{ color: 'var(--alert)' }}>Este promotor no tiene Yape configurado.</p></main>
+      <main className={`c-state c-checkout-canvas b-c${concepto}`}><p style={{ color: 'var(--alert)' }}>Este promotor no tiene Yape configurado.</p></main>
     );
   }
 
   return (
-    <main className="c-narrow c-checkout-canvas" style={{ paddingTop: 32, paddingBottom: 48 }}>
-      {/* El comprador sigue dentro del flujo: paso 3 "Pagar con Yape" activo. */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 22 }}>
-        <CheckoutSteps method="yape_manual" active={3} />
-      </div>
-      <div style={{ textAlign: 'center' }}>
-        <span className="c-eyebrow">Pago con Yape</span>
-        <h1 className="c-h1" style={{ fontSize: 28, marginTop: 8 }}>
-          Yapea {formatPEN(order.total_cents)} a {order.brand.yape_holder ?? order.brand.name}
-        </h1>
-        <p className="c-muted" style={{ marginTop: 8 }}>
-          Yapea al número de abajo y después sube los datos del comprobante. Te mandamos tu QR cuando el promotor confirme.
-        </p>
+    <main className={`b-buy c-checkout-canvas b-c${concepto}`} style={{ paddingTop: 26 }}>
+      <div className="b-head">
+        <h1 className="b-head__t">Yapea {formatPEN(order.total_cents)} exactos y sube tu captura</h1>
       </div>
 
-      <div className="c-card" style={{ marginTop: 22 }}>
-        <p className="c-card__title">1 · Yapea a este número</p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <p style={{ fontFamily: 'var(--display)', fontWeight: 800, fontSize: 'clamp(34px,9vw,46px)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', color: 'var(--brand-ink)', margin: 0 }}>{order.brand.yape_number}</p>
-          <CopyButton value={order.brand.yape_number} label="Número" />
+      {/* 1 · A quién le yapeas */}
+      <div className="b-panel">
+        <p className="b-panel__t">1 · Yapea a este número</p>
+        <div className="b-yapenum">
+          <span>{order.brand.yape_number}</span>
+          <CopyButton value={order.brand.yape_number} label="número" />
         </div>
-        <p className="c-muted" style={{ marginTop: 6 }}>Titular: <strong style={{ color: 'var(--ink)' }}>{order.brand.yape_holder ?? order.brand.name}</strong></p>
-        <p className="c-muted" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <span>Monto exacto: <strong style={{ color: 'var(--ink)' }}>{formatPEN(order.total_cents)}</strong></span>
-          <CopyButton value={(order.total_cents / 100).toFixed(2)} label="Monto" />
-        </p>
+        <p className="b-yapeheld">{order.brand.yape_holder ?? order.brand.name}</p>
+      </div>
 
-        {order.brand.theme_json?.yape_qr_url && (
-          <div style={{ marginTop: 16, borderRadius: 16, border: '1px solid #E7D9F2', background: '#F6F0FB', padding: 14, textAlign: 'center' }}>
+      {/* 2 · El QR del organizador. El campo para subirlo llega con la próxima
+             migración; hasta entonces el componente muestra su estado vacío. */}
+      <div className="b-panel">
+        <p className="b-panel__t">2 · O escanea su QR</p>
+        {order.brand.theme_json?.yape_qr_url ? (
+          <div className="b-yapeqr">
             {/* Morado Yape + nombre en TEXTO (no falsificamos el logo del BCP) */}
-            <p style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontWeight: 800, letterSpacing: '-0.01em', color: '#742384', fontSize: 15 }}>
-              <span aria-hidden style={{ display: 'inline-block', width: 9, height: 9, borderRadius: '50%', background: '#742384' }} />
-              Escanea con Yape
-            </p>
-            {/* Ampliable: tocar abre el QR a tamaño completo en mobile */}
-            <a href={order.brand.theme_json.yape_qr_url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 10 }}>
+            <p className="b-yapeqr__t"><span aria-hidden /> Escanea con Yape</p>
+            <a href={order.brand.theme_json.yape_qr_url} target="_blank" rel="noopener noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={order.brand.theme_json.yape_qr_url}
-                alt={`QR de Yape de ${order.brand.yape_holder ?? order.brand.name}`}
-                style={{ width: 'min(260px, 70vw)', aspectRatio: '1 / 1', objectFit: 'contain', borderRadius: 12, background: '#fff', border: '1px solid #E7D9F2', margin: '0 auto' }}
-              />
+              <img src={order.brand.theme_json.yape_qr_url} alt={`QR de Yape de ${order.brand.yape_holder ?? order.brand.name}`} />
             </a>
-            <p className="c-muted" style={{ marginTop: 8, fontSize: 12 }}>Toca el QR para ampliarlo</p>
+            <p className="c-help" style={{ textAlign: 'center' }}>Toca el QR para ampliarlo</p>
+          </div>
+        ) : (
+          <div className="b-yapeqr b-yapeqr--vacio">
+            <span className="b-yapeqr__ph" aria-hidden="true" />
+            <p>QR no disponible, yapea al número</p>
           </div>
         )}
-
-        <p style={{ marginTop: 12, borderRadius: 'var(--r-ctl)', background: 'var(--warn-bg)', color: 'var(--warn)', padding: '11px 14px', fontSize: 13, fontWeight: 500 }}>
-          ⚠️ Yapea el monto exacto. Si yapeas de menos o de más, el promotor puede rechazar el comprobante.
-        </p>
       </div>
 
-      <div className="c-card" style={{ marginTop: 14 }}>
-        <p className="c-card__title">2 · Sube los datos del comprobante</p>
-        <p className="c-muted" style={{ marginBottom: 14 }}>Después de yapear, abre &quot;Movimientos&quot; en tu app Yape, abre esta transferencia y copia los datos. También adjunta la captura.</p>
+      {/* 3 · Monto exacto + captura */}
+      <div className="b-panel">
+        <p className="b-panel__t">3 · El monto exacto</p>
+        <div className="b-monto">
+          <span>{formatPEN(order.total_cents)}</span>
+          <CopyButton value={(order.total_cents / 100).toFixed(2)} label="monto" />
+        </div>
+        <p className="b-aviso">Si yapeas de menos o de más, el organizador puede rechazar el comprobante.</p>
+        <div className="c-divider" />
         <YapeUploadForm
           orderId={order.id}
           brandId={order.brand.slug}
@@ -128,11 +128,9 @@ export default async function YapeUploadPage({
         />
       </div>
 
-      {order.brand.whatsapp_e164 && (
-        <p className="c-foot">
-          ¿Algún problema? <a href={`https://wa.me/${order.brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>WhatsApp soporte</a>
-        </p>
-      )}
+      {/* A dónde va la plata y a quién escribirle: ParyGo no cobra la entrada,
+          el Yape entra directo a la cuenta del organizador. */}
+      <LineaPago marca={order.brand} evento={order.event?.name} />
     </main>
   );
 }

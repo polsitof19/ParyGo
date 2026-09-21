@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { generateQrSvg } from '@/lib/qr';
 import { TicketPass, type PassState } from '../../TicketPass';
 import { TransferTicket } from './TransferTicket';
+import { leerConcepto } from '@/lib/concepto';
 
 // SVG QR generation has no Node-only dependencies (no pngjs/Buffer), so this
 // route runs fine on Cloudflare Pages edge runtime.
@@ -13,6 +14,7 @@ export const revalidate = 0;
 
 type Props = {
   params: { brand: string; uuid: string };
+  searchParams?: { c?: string; v?: string };
 };
 
 type BrandTheme = {
@@ -32,6 +34,7 @@ type TicketView = {
     slug: string;
     name: string;
     whatsapp_e164: string | null;
+    contact_email: string | null;
     theme_json: BrandTheme;
   } | null;
 };
@@ -47,7 +50,7 @@ async function loadTicket(brandSlug: string, qrCode: string): Promise<TicketView
     .select(`
       id, qr_code, ticket_type_name, ticket_number, attendee_name, validated_at, invalidated_at,
       event:events ( name, starts_at, venue_name, cancelled_at, allow_transfer ),
-      brand:brands ( slug, name, whatsapp_e164, theme_json )
+      brand:brands ( slug, name, whatsapp_e164, contact_email, theme_json )
     `)
     .eq('qr_code', qrCode)
     .maybeSingle();
@@ -68,7 +71,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function TicketPage({ params }: Props) {
+export default async function TicketPage({ params, searchParams }: Props) {
+  const concepto = leerConcepto(searchParams, params.brand);
   const t = await loadTicket(params.brand, params.uuid);
   if (!t) notFound();
 
@@ -77,7 +81,7 @@ export default async function TicketPage({ params }: Props) {
 
   if (t.invalidated_at) {
     return (
-      <main className="c-state c-checkout-canvas">
+      <main className={`c-state c-checkout-canvas b-c${concepto}`}>
         <span className="c-eyebrow" style={{ color: 'var(--alert)' }}>Entrada invalidada</span>
         <h1 className="c-h1" style={{ fontSize: 28, marginTop: 8 }}>Esta entrada ya no es válida</h1>
         <p className="c-muted" style={{ marginTop: 10 }}>Fue devuelta o cancelada. Contacta al promotor si crees que es un error.</p>
@@ -97,7 +101,7 @@ export default async function TicketPage({ params }: Props) {
       : { kind: 'ok' };
 
   return (
-    <main className="c-checkout-canvas" style={{ maxWidth: 452, margin: '0 auto', padding: '24px 16px 48px' }}>
+    <main className={`c-checkout-canvas b-c${concepto}`} style={{ maxWidth: 452, margin: '0 auto', padding: '24px 16px 48px' }}>
       <TicketPass
         qrSvg={qrSvg}
         qrCode={t.qr_code}
@@ -110,18 +114,12 @@ export default async function TicketPage({ params }: Props) {
         brandName={brand?.name ?? 'parygo'}
         brandLogoUrl={brand?.theme_json?.logo_url ?? null}
         brandWhatsapp={brand?.whatsapp_e164 ?? null}
+        brandEmail={brand?.contact_email ?? null}
         shareUrl={ticketUrl}
         state={state}
       />
-
-      {brand?.whatsapp_e164 && (
-        <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginTop: 14 }}>
-          ¿Algún problema?{' '}
-          <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink)', fontWeight: 600, textDecoration: 'underline' }}>
-            Escribe al organizador
-          </a>
-        </p>
-      )}
+      {/* El contacto del organizador ya va en el pie de la entrada
+          (LineaEntrada), así que acá no se repite. */}
 
       {/* Transferir/regalar: solo si el evento lo permite, no empezó, y la entrada
           sigue usable (no escaneada, no anulada, evento no cancelado). El corte al

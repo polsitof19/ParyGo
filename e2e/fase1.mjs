@@ -109,7 +109,14 @@ async function newCtx(tag, { session, brandHeader = false, viewport = { width: 1
 }
 // 'load' + quietud best-effort: hay prefetches RSC de <Link> que en `next start` local no cierran nunca.
 const settle = (page) => page.waitForLoadState('networkidle', { timeout: 6000 }).catch(() => {});
-const go = async (page, path) => { await page.goto(`${BASE}${path}`, { waitUntil: 'load', timeout: 90000 }); await settle(page); };
+// E2E_C=1|2|3 corre el mismo recorrido sobre cada concepto de diseño: se le
+// agrega ?c= a las páginas públicas de la marca (las del panel no lo usan).
+// Se acepta E2E_V por compatibilidad con la nomenclatura anterior (a→1, b→3).
+const ARTE = process.env.E2E_C ?? ({ a: '1', b: '3' }[process.env.E2E_V] ?? '');
+const conArte = (path) => (ARTE && !path.startsWith('/admin') && !path.startsWith('/cabina') && !path.startsWith('/scan')
+  ? path + (path.includes('?') ? '&' : '?') + 'c=' + ARTE
+  : path);
+const go = async (page, path) => { await page.goto(`${BASE}${conArte(path)}`, { waitUntil: 'load', timeout: 90000 }); await settle(page); };
 
 // Comprobante dummy (PNG) para Yape.
 const PROOF = resolve(OUT, 'proof.png');
@@ -130,6 +137,10 @@ const val = await newCtx('validator', { session: valSess, viewport: { width: 460
 Object.assign(PAGES, { super: sup, buyer, validator: val });
 // Los botones de compra existen duplicados (rail desktop + barra mobile): solo el visible.
 const vis = (loc) => loc.filter({ visible: true }).first();
+// El CTA de la pantalla 1 vive en la barra sticky (teléfono y tablet) o en el
+// resumen de compra (escritorio ≥1024). Se toma el visible.
+const ctaBtn = (page) => vis(page.locator('.b-cta .b-btn--go, .b-sum .b-btn--go'));
+const ctaCaja = (page) => vis(page.locator('.b-cta, .b-sum'));
 // Re-envía una server action capturada con otros argumentos (mismo action id,
 // mismos headers de Next). Devuelve el texto crudo de la respuesta RSC.
 async function replayAction(page, captured, args) {
@@ -415,19 +426,15 @@ if (!S.eventId) {
     const tWait = Date.now();
     while (Date.now() - tWait < 12000 && (!lastReserve || Date.now() - lastReserve < 800)) await sleep(200);
     p.off('response', onResp);
-    const contBtn = vis(p.getByRole('button', { name: /^Continuar/ }));
+    const contBtn = ctaBtn(p);
     if (await contBtn.isDisabled()) {
       // El server no reservó (sin cupo / no disponible) y el carrito quedó en 0.
       if (shots) await shot(p, tag, 'carrito-vacio');
       return { res: 'carrito-vacio', orderId: null, url: p.url(), toasts: await toastLog(p), continuarDisabled: true };
     }
-    const railStep1 = (await p.locator('.c-rail').first().innerText().catch(() => '')).replace(/\s+/g, ' ');
+    const railStep1 = (await ctaCaja(p).innerText().catch(() => '')).replace(/\s+/g, ' ');
     if (shots) await shot(p, tag, 'seleccion');
-    if (promo) {
-      await p.getByText('¿Tienes un código de promotor?').click().catch(() => {});
-      await p.locator('input[placeholder="Código de promotor"]').fill(promo).catch(() => {});
-    }
-    await vis(p.getByRole('button', { name: /^Continuar/ })).click();
+    await ctaBtn(p).click();
     await p.locator('#buyer_name').waitFor({ timeout: 15000 });
     if (shots) await shot(p, tag, 'paso2-morph');
     await p.fill('#buyer_name', name);
@@ -436,12 +443,14 @@ if (!S.eventId) {
     if (await p.locator('#buyer_dni').count()) await p.fill('#buyer_dni', '12345678');
     if (await p.locator('input[name="age_ok"]').count()) await p.check('input[name="age_ok"]');
     if (promo) {
-      await p.locator('#buyer_phone').click(); // blur del email → aplica el código
-      await p.locator('.c-promo-on').waitFor({ timeout: 15000 }).catch(() => {});
+      await p.getByRole('button', { name: /Tengo un código/ }).click().catch(() => {});
+      await p.locator('input[placeholder="Código de RR.PP."]').fill(promo);
+      await p.getByRole('button', { name: 'Aplicar' }).click();
+      await p.getByText(`Código ${promo}`).waitFor({ timeout: 15000 }).catch(() => {});
     }
     if (method === 'mp') await p.getByRole('radio', { name: 'Tarjeta' }).click();
-    const rail = (await p.locator('.c-rail').first().innerText().catch(() => '')).replace(/\s+/g, ' ');
-    const promoOn = (await p.locator('.c-promo-on').innerText().catch(() => '')).replace(/\s+/g, ' ');
+    const rail = (await p.locator('.b-panel').last().innerText().catch(() => '')).replace(/\s+/g, ' ');
+    const promoOn = promo ? rail : '';
     if (shots) await shot(p, tag, 'paso2-lleno');
     const tBefore = await toasts(p);
     // Capturamos el request real de la server action startCheckout para poder
@@ -467,7 +476,7 @@ if (!S.eventId) {
     await p.locator('#receipt').setInputFiles(PROOF);
     await sleep(400);
     if (shots) await shot(p, tag, 'yape-form');
-    await p.getByRole('button', { name: /Enviar comprobante/i }).click();
+    await p.getByRole('button', { name: /Listo, ya yape/i }).click();
     await p.waitForURL(/\/confirmacion\?order=/, { timeout: 45000 });
     await settle(p);
     if (shots) await shot(p, tag, 'confirmacion');
@@ -635,7 +644,7 @@ if (!S.eventId) {
     check('F', 'la 11ª cortesía se rechaza (stock 10 respetado)', /No hay cupo/i.test(m2) && ctk2.length === 10, `${m2} · tickets=${ctk2.length}`);
     // F3: el comprador público intenta llevar la Cortesía S/0 por el checkout (ya agotada por las 10 de cortesía).
     await go(buyer.page, `/${EVENT_SLUG}`);
-    const cortAgotada = await buyer.page.locator('.c-soldout').count();
+    const cortAgotada = await buyer.page.locator('.b-ph__ago').count();
     note('F', `Cortesía en la página pública tras emitir 10: ${cortAgotada ? 'Agotado' : 'sigue ofreciéndose'} · botón Sumar Cortesía=${await buyer.page.getByRole('button', { name: 'Sumar Cortesía' }).count()}`);
     const r = (await buyer.page.getByRole('button', { name: 'Sumar Cortesía' }).count()) ? await buy({ items: { Cortesía: 1 }, email: `e2e-f-${STAMP}@test.local`, name: `Cortesia Publica ${STAMP}`, tag: 'F' }) : { res: 'sin-boton', url: '', toasts: [], orderId: null };
     await shot(buyer.page, 'F', 'checkout-cortesia-publica');
@@ -711,27 +720,27 @@ if (!S.eventId) {
     check('H', '6ª VIP NO se vende (anti-sobreventa: sin orden, sin ticket)', !r2.orderId && (h6 ?? []).every((o) => o.status === 'failed'), `${r2.res} · órdenes=${JSON.stringify(h6)}`);
     const crudo = /Array must|element\(s\)|violates|Expected|Required|invalid/i.test(r2.toasts.join(' '));
     check('H', 'bug2: 6ª VIP → "No quedan suficientes entradas de VIP." (sin error técnico)', r2.toasts.some((t) => /No quedan suficientes entradas de VIP/.test(t)) && !crudo, r2.toasts.join(' | '));
-    check('H', 'bug2: con el carrito vacío no se puede avanzar a pagar (Continuar deshabilitado)', r2.continuarDisabled === true, `res=${r2.res}`);
+    check('H', 'bug2: con el carrito vacío no se puede avanzar a pagar (CTA deshabilitado)', r2.continuarDisabled === true, `res=${r2.res}`);
     await shot(buyer.page, 'H', 'sexta-carrito-vacio');
     // Paso 2 → volver → vaciar: el botón de pagar también se deshabilita.
     await go(buyer.page, `/${EVENT_SLUG}`);
     await vis(buyer.page.getByRole('button', { name: 'Sumar General' })).click();
     await sleep(1200);
-    await vis(buyer.page.getByRole('button', { name: /^Continuar/ })).click();
+    await ctaBtn(buyer.page).click();
     await buyer.page.locator('#buyer_name').waitFor();
-    await buyer.page.getByRole('button', { name: /Volver a entradas/ }).click();
+    await buyer.page.getByRole('button', { name: /Volver a las entradas/ }).click();
     await vis(buyer.page.getByRole('button', { name: 'Restar General' })).click();
     await sleep(800);
     const payDisabled = await buyer.page.locator('button[type=submit][form="checkout-form"]').evaluateAll((els) => els.every((e) => e.disabled));
-    const contDisabled = await vis(buyer.page.getByRole('button', { name: /^Continuar/ })).isDisabled();
-    check('H', 'bug2: carrito en 0 → Continuar y pagar deshabilitados', contDisabled && payDisabled, `continuar=${contDisabled} pagar=${payDisabled}`);
+    const contDisabled = await ctaBtn(buyer.page).isDisabled();
+    check('H', 'bug2: carrito en 0 → el CTA y el pago quedan deshabilitados', contDisabled && payDisabled, `continuar=${contDisabled} pagar=${payDisabled}`);
     if (S.checkoutReq) {
       const base = JSON.parse(S.checkoutReq.body)[0];
       const rr = await replayAction(buyer.page, S.checkoutReq, [{ ...base, buyerEmail: `e2e-h-vacio-${STAMP}@test.local`, promoCode: '', items: [] }]);
       check('H', 'bug2: checkout armado con 0 entradas → "Elige al menos una entrada." (español)', /Elige al menos una entrada/.test(rr.text) && !/Array must/.test(rr.text), rr.text.slice(-140));
     }
     await go(buyer.page, `/${EVENT_SLUG}`);
-    const soldOutWithHolds = await buyer.page.locator('.c-soldout').count();
+    const soldOutWithHolds = await buyer.page.locator('.b-ph__ago').count();
     note('H', `Con 1 VIP pagada + 4 en revisión (holds), la página pública muestra "Agotado" en VIP: ${soldOutWithHolds > 0 ? 'sí' : 'NO (sigue ofreciendo Sumar VIP)'}`);
     S.H6pendingMsg = r2.toasts.join('|');
     const { data: failedOrd } = await svc.from('orders').select('id,status').eq('event_id', S.eventId).eq('buyer_email', `e2e-h6-${STAMP}@test.local`);
@@ -774,7 +783,7 @@ if (!S.eventId) {
       check(k, 'VIP 5/5 vendidas tras aprobar', v.sold === 5, `sold=${v.sold}`);
       await go(buyer.page, `/${EVENT_SLUG}`);
       const vipRow = buyer.page.locator('text=VIP').first().locator('xpath=ancestor::*[contains(@class,"c-")][1]');
-      const soldOutCount = await buyer.page.locator('.c-soldout').count();
+      const soldOutCount = await buyer.page.locator('.b-ph__ago').count();
       const sumarVip = await buyer.page.getByRole('button', { name: 'Sumar VIP' }).count();
       await shot(buyer.page, k, 'publico-vip-agotado');
       check(k, 'sold out visible en la página pública (VIP "Agotado", sin botón Sumar)', soldOutCount >= 1 && sumarVip === 0, `c-soldout=${soldOutCount} sumarVIP=${sumarVip}`);
@@ -846,11 +855,12 @@ if (!S.eventId) {
     note('K', `estado MP inicial demotest: ${JSON.stringify(status0)}`);
     await go(p, `/${EVENT_SLUG}`);
     await vis(p.getByRole('button', { name: 'Sumar General' })).click();
-    await vis(p.getByRole('button', { name: /^Continuar/ })).click();
+    await sleep(900);
+    await ctaBtn(p).click();
     await p.locator('#buyer_name').waitFor();
     const tarjeta0 = await p.getByRole('radio', { name: 'Tarjeta' }).count();
     await shot(p, 'K', 'sin-mp-solo-yape');
-    check('K', 'sin credenciales MP: no aparece "Tarjeta" (solo Yape)', tarjeta0 === 0 && (await p.getByRole('radio', { name: 'Yape' }).count()) === 1, `tarjeta=${tarjeta0}`);
+    check('K', 'sin credenciales MP: no aparece "Tarjeta" (con un solo método no se pregunta)', tarjeta0 === 0 && (await p.getByRole('radio', { name: 'Yape' }).count()) === 0, `tarjeta=${tarjeta0}`);
 
     // Validación de UI: token inválido se rechaza limpio sin guardar.
     await go(adm.page, '/admin/settings');
@@ -901,7 +911,8 @@ if (!S.eventId) {
     }
     await go(p, `/${EVENT_SLUG}`);
     await vis(p.getByRole('button', { name: 'Sumar General' })).click();
-    await vis(p.getByRole('button', { name: /^Continuar/ })).click();
+    await sleep(900);
+    await ctaBtn(p).click();
     await p.locator('#buyer_name').waitFor();
     check('K', 'tras quitar MP: "Tarjeta" desaparece de nuevo', (await p.getByRole('radio', { name: 'Tarjeta' }).count()) === 0);
     await shot(p, 'K', 'sin-mp-de-nuevo');
