@@ -580,6 +580,15 @@ function Hero({ event, concepto }: { event: Event; concepto: Concepto }) {
       {event.cover_url ? (
         <button type="button" className="b-hero__shot" onClick={() => setZoom(true)} aria-label={`Ver el flyer de ${event.name} completo`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
+          {/* CARTEL: el póster entero sobre una copia difuminada de sí mismo.
+              Así la banda ancha no recorta un flyer vertical —que es lo que
+              se leía como imagen deformada— y sigue siendo una banda. */}
+          {concepto === 1 && (
+            <span
+              className="b-hero__blur" aria-hidden="true"
+              style={{ backgroundImage: `url(${JSON.stringify(optimizedImage(event.cover_url, { width: 640, quality: 45 }))})` }}
+            />
+          )}
           <img src={optimizedImage(event.cover_url, { width: ancho, quality: 80 })} alt={`Flyer de ${event.name}`} decoding="async" />
           {concepto !== 2 && <span className="b-hero__fade" aria-hidden="true" />}
         </button>
