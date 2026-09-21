@@ -12,36 +12,44 @@
 .super-shell .s-brandhead__url:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 .super-shell .s-brandhead__cta { margin-left: auto; }
 @media (max-width: 560px) { .super-shell .s-brandhead__cta { margin-left: 0; width: 100%; } }
-.super-shell .s-actionbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; background: var(--paper-2); border-radius: var(--r-card); margin-bottom: 18px; flex-wrap: wrap; }
-.super-shell .s-actionbar__lead { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
-.super-shell .s-actionbar__btns { display: flex; gap: 10px; flex-wrap: wrap; }
+/* Barra de acciones: una línea entre hairlines, sin relleno beige. */
+.super-shell .s-actionbar { display: flex; align-items: center; justify-content: space-between; gap: 12px 22px; padding: 13px 0; background: none; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0; margin-bottom: 28px; flex-wrap: wrap; }
+.super-shell .s-actionbar__lead { font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
+.super-shell .s-actionbar__btns { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
 .super-shell .s-deflist { display: flex; flex-direction: column; }
 .super-shell .s-defrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
 .super-shell .s-defrow:first-child { border-top: 0; }
 .super-shell .s-defrow__k { font-size: 13px; color: var(--ink-3); }
 .super-shell .s-defrow__v { font-size: 14px; font-weight: 500; text-align: right; word-break: break-word; }
-.super-shell .s-owner-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.super-shell .s-owner-row { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-ctl); }
+.super-shell .s-owner-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; }
+.super-shell .s-owner-row { display: flex; flex-direction: column; gap: 12px; padding: 16px 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; }
+.super-shell .s-owner-list > li:first-child .s-owner-row,
+.super-shell .s-owner-row:first-child { border-top: 0; }
 .super-shell .s-owner-row__id { display: flex; align-items: center; gap: 10px; }
 .super-shell .s-owner-row__email { font-size: 14px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Zona de gestión: borde de tinta (no rojo), la señal es el contenido. */
-.super-shell .s-card--danger { border-color: var(--ink-3); }
+/* Zona de gestión: la señal es el contenido, no un borde rojo. */
+.super-shell .s-card--danger { border-top-color: var(--ink-3); }
 /* Confirmación de borrado (DangerDeleteButton) dentro de la zona de gestión:
-   mismo lenguaje, borde de tinta + punto de alerta en el título del paso. */
-.super-shell .s-card--confirm-danger { border-color: var(--ink); box-shadow: inset 3px 0 0 var(--alert); }
+   barra de alerta a la izquierda, sin caja. */
+.super-shell .s-card--confirm-danger { padding-left: 14px; box-shadow: inset 2px 0 0 var(--alert); }
 /* Ancla de "recargar saldo": que no quede tapada por el topbar sticky. */
 .super-shell .s-anchor { scroll-margin-top: 84px; }
 
 /* ---------- Solicitudes ---------- */
-.super-shell .s-req { padding: 16px 18px; }
-.super-shell .s-req__name { font-family: var(--display); font-weight: 700; font-size: 17px; letter-spacing: -0.01em; }
+.super-shell .s-req { padding: 18px 0 0; }
+.super-shell .s-req__name { font-family: var(--display); font-weight: 800; font-size: 18px; letter-spacing: -0.01em; }
 .super-shell .s-req__meta { font-size: 13px; color: var(--ink-2); word-break: break-word; }
 .super-shell .s-req__note { font-size: 14px; color: var(--ink-2); margin-top: 10px; white-space: pre-wrap; }
-.super-shell .s-req__actions { display: flex; gap: 10px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.super-shell .s-req__actions { display: flex; gap: 22px; margin-top: 14px; padding-bottom: 4px; align-items: center; flex-wrap: wrap; }
 
 /* ---------- Salud ---------- */
-.super-shell .s-bignum { font-family: var(--display); font-weight: 800; font-size: 30px; line-height: 1.1; font-variant-numeric: tabular-nums; margin-top: 6px; }
+.super-shell .s-bignum { font-family: var(--display); font-weight: 800; font-size: 32px; line-height: 1; font-variant-numeric: tabular-nums; margin-top: 6px; }
 
+
+/* El wordmark "parygo." no se achica: es corto y fijo. El que se desliza es el
+   nav (4 entradas), no la marca. En el panel del organizador es al revés — ahí
+   el logo es el nombre de la marca y sí puede recortarse. */
+.super-shell .s-logo { flex: none; }
 
 /* Lista de marcas: en móvil la tabla se reemplaza por cards (solo acá). */
 @media (max-width: 760px) {

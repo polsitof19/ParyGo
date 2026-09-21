@@ -266,7 +266,7 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
               <span className="a-task__sub">{formatPEN(pendingCents)} esperando tu aprobación · hay gente esperando su QR.</span>
             </span>
           </span>
-          <a href="#yape-inline-title" className="s-btn s-btn--primary s-btn--sm">Revisar ahora</a>
+          <a href="#yape-inline-title" className="s-btn s-btn--soft s-btn--sm">Revisar ahora</a>
         </div>
       )}
 

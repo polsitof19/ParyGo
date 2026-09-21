@@ -24,7 +24,7 @@ export function InviteValidator() {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className="s-btn s-btn--soft" disabled={pending}>
+    <button type="submit" className="s-btn s-btn--primary" disabled={pending}>
       {pending ? 'Invitando…' : 'Invitar validador'}
     </button>
   );
