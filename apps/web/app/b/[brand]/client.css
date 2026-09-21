@@ -384,7 +384,7 @@
 /* ---------- Hero: el flyer a lo ancho, el nombre encima ---------- */
 .client-shell .b-hero { position: relative; margin: 0 calc(var(--pad) * -1); }
 .client-shell .b-hero__shot { display: block; width: 100%; border: 0; padding: 0; background: none; cursor: zoom-in; position: relative; }
-.client-shell .b-hero__shot img { display: block; width: 100%; height: var(--flyer-h); object-fit: cover; }
+.client-shell .b-hero__shot img { display: block; width: 100%; height: var(--flyer-h); object-fit: contain; }
 .client-shell .b-hero__shot--ph { height: var(--flyer-h); background: linear-gradient(160deg, var(--brand-soft), transparent 70%); cursor: default; }
 /* El degradado tiene que apoyar el texto pase lo que pase con el flyer. */
 .client-shell .b-hero__fade {
@@ -967,7 +967,7 @@ body:has(.b-c3) { background: #0E0C0A; }
     width: calc(320px + (100vw - min(100vw, 1120px)) / 2 + var(--pad));
   }
   .client-shell .b-c3 .b-hero__shot img,
-  .client-shell .b-c3 .b-hero__shot--ph { aspect-ratio: auto; height: 78vh; min-height: 520px; object-fit: cover; }
+  .client-shell .b-c3 .b-hero__shot--ph { aspect-ratio: auto; height: 78vh; min-height: 520px; }
 }
 
 /* NOCHE, teléfono: con el título a 56px sobre dos líneas el texto sube hasta
@@ -1020,7 +1020,7 @@ body:has(.b-c3) { background: #0E0C0A; }
   }
   .client-shell .b-c1 .b-hero__shot img,
   .client-shell .b-c1 .b-hero__shot--ph {
-    aspect-ratio: auto; height: min(62vh, 560px); object-fit: cover;
+    aspect-ratio: auto; height: min(62vh, 560px);
   }
   /* El título vuelve a apoyarse sobre el póster (en la base, en escritorio se
      desarma y se va a su propia columna). */
@@ -1103,7 +1103,7 @@ body:has(.b-c3) { background: #0E0C0A; }
 .client-shell .b-c1 { --b-t1: 30px; }
 .client-shell .b-c1 .b-hero__shot img,
 .client-shell .b-c1 .b-hero__shot--ph {
-  height: auto; aspect-ratio: 4 / 5; max-height: 420px; object-fit: cover;
+  height: auto; aspect-ratio: 4 / 5; max-height: 420px;
 }
 .client-shell .b-c1 .b1-ty__pr { font-size: 20px; }
 
@@ -1113,7 +1113,7 @@ body:has(.b-c3) { background: #0E0C0A; }
   .client-shell .b-c1 { --b-t1: 40px; }
   .client-shell .b-c1 .b-hero__shot img,
   .client-shell .b-c1 .b-hero__shot--ph {
-    height: auto; aspect-ratio: 2 / 1; max-height: 460px; object-fit: cover;
+    height: auto; aspect-ratio: 2 / 1; max-height: 460px;
   }
   .client-shell .b-c1 .b1-ty__pr { font-size: 22px; }
   /* La columna de entradas queda en 704 (la de DICE) y el resumen se
@@ -1131,7 +1131,9 @@ body:has(.b-c3) { background: #0E0C0A; }
 .client-shell .b-c2 { --b-t1: 28px; }
 .client-shell .b-c2 .b-hero__shot img,
 .client-shell .b-c2 .b-hero__shot--ph {
-  height: auto; aspect-ratio: 16 / 9; max-height: 260px; object-fit: cover;
+  /* En teléfono la tira de 16/9 dejaba el póster en 176px de ancho: con el
+     flyer entero adentro hace falta más alto para que se lea. */
+  height: auto; aspect-ratio: 4 / 3; max-height: 320px;
 }
 .client-shell .b-c2 .b2-ty__pr { font-size: 18px; }
 @media (min-width: 768px) {
@@ -1146,7 +1148,7 @@ body:has(.b-c3) { background: #0E0C0A; }
 /* Sigue siendo el más grande de los tres —es el concepto— pero dentro
    de la banda del benchmark: el título pasa de 96 a 56 (la mediana es
    34; +65% es la licencia editorial) y el precio de 64 a 26. */
-.client-shell .b-c3 { --b-t1: 40px; --flyer-h: clamp(280px, 62vw, 360px); }
+.client-shell .b-c3 { --b-t1: 40px; --flyer-h: clamp(360px, 92vw, 460px); }
 .client-shell .b-c3 .b-ph__pr { font-size: 22px; }
 @media (min-width: 1024px) {
   .client-shell .b-c3 { --b-t1: 56px; }
@@ -1155,7 +1157,7 @@ body:has(.b-c3) { background: #0E0C0A; }
   /* El flyer a sangre deja de crecer con la ventana: 62vh CON tope. */
   .client-shell .b-c3 .b-hero__shot img,
   .client-shell .b-c3 .b-hero__shot--ph {
-    height: min(62vh, 560px); min-height: 0; object-fit: cover;
+    height: min(62vh, 560px); min-height: 0;
   }
   /* Con precios de 26 en vez de 64, la columna del centro ya no necesita
      ser angosta: se le devuelve ancho quitándoselo a las laterales. */
@@ -1203,3 +1205,55 @@ body:has(.b-c3) { background: #0E0C0A; }
   .client-shell .b-c3 .b-hero__shot img,
   .client-shell .b-c3 .b-hero__shot--ph { height: min(56vh, 500px); }
 }
+
+/* ============================================================
+   RECORTE 0% EN LOS TRES CONCEPTOS
+   ============================================================
+   Un flyer vertical (los de Lima son casi todos 4:5) metido en una
+   banda apaisada se recorta: medido, hasta un 332%. `object-fit:
+   cover` no estira un píxel, pero tira el 70% del afiche, y eso es
+   lo que se lee como imagen deformada.
+
+   La solución es la de Spotify y Apple Music: el póster va ENTERO
+   con object-fit: contain, y el hueco que queda lo rellena una
+   copia del mismo flyer difuminada y oscurecida. El encuadre lo
+   sigue poniendo el concepto (banda ancha, tira de boleto, columna
+   a sangre); lo que ya no pasa es que se coma el afiche.
+
+   Esta regla va al final a propósito: pisa los object-fit: cover
+   que cada concepto declaró antes.
+   ============================================================ */
+.client-shell .b-hero__shot {
+  position: relative;
+  overflow: hidden;
+  /* Detrás del difuminado, por si la imagen tarda o falla. */
+  background: #14110E;
+  --blur-bright: .55;
+}
+.client-shell .b-hero__blur {
+  position: absolute; inset: -6%; z-index: 0;
+  background-size: cover; background-position: center;
+  filter: blur(28px) saturate(115%) brightness(var(--blur-bright));
+}
+.client-shell .b-hero__shot img {
+  position: relative; z-index: 1;
+  width: 100%; margin: 0 auto;
+  object-fit: contain;
+}
+/* El degradado que sostiene el título va encima de los dos. */
+.client-shell .b-hero__fade { z-index: 2; }
+
+/* NOCHE: el fondo de la página es #0E0C0A; un difuminado al 55% de brillo
+   encendería la esquina. Se baja para que el flyer se apoye en la noche. */
+.client-shell .b-c3 .b-hero__shot { --blur-bright: .38; background: #0E0C0A; }
+/* ENTRADA: la tira vive dentro de un boleto de papel, así que el difuminado
+   se aclara un punto para no abrir un agujero negro en el medio del ticket. */
+.client-shell .b-c2 .b-hero__shot { --blur-bright: .62; }
+
+/* El placeholder (evento sin flyer) no tiene nada que difuminar. */
+.client-shell .b-hero__shot--ph { background: none; }
+.client-shell .b-hero__shot--ph .b-hero__blur { display: none; }
+
+/* El lightbox ya mostraba el flyer entero; ahora la página también, así que
+   el aviso pasa a ser lo que de verdad ofrece: verlo en grande. */
+.client-shell .b-lightbox img { object-fit: contain; }

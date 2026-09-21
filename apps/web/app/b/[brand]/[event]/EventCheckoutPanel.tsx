@@ -580,15 +580,15 @@ function Hero({ event, concepto }: { event: Event; concepto: Concepto }) {
       {event.cover_url ? (
         <button type="button" className="b-hero__shot" onClick={() => setZoom(true)} aria-label={`Ver el flyer de ${event.name} completo`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {/* CARTEL: el póster entero sobre una copia difuminada de sí mismo.
-              Así la banda ancha no recorta un flyer vertical —que es lo que
-              se leía como imagen deformada— y sigue siendo una banda. */}
-          {concepto === 1 && (
-            <span
-              className="b-hero__blur" aria-hidden="true"
-              style={{ backgroundImage: `url(${JSON.stringify(optimizedImage(event.cover_url, { width: 640, quality: 45 }))})` }}
-            />
-          )}
+          {/* El póster ENTERO sobre una copia difuminada y oscurecida de sí
+              mismo. Es la única forma de meter un flyer vertical en una banda
+              apaisada sin tirar la mitad del afiche: lo que rellena el hueco
+              es el propio flyer, fuera de foco. Va en los tres conceptos, así
+              que el recorte es 0% en todos. Decorativo: sin texto encima. */}
+          <span
+            className="b-hero__blur" aria-hidden="true"
+            style={{ backgroundImage: `url(${JSON.stringify(optimizedImage(event.cover_url, { width: 640, quality: 45 }))})` }}
+          />
           <img src={optimizedImage(event.cover_url, { width: ancho, quality: 80 })} alt={`Flyer de ${event.name}`} decoding="async" />
           {concepto !== 2 && <span className="b-hero__fade" aria-hidden="true" />}
         </button>
