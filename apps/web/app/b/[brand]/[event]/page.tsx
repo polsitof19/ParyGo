@@ -6,8 +6,11 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv, publicEnv } from '@/lib/env';
 import { formatPEN } from '@/lib/utils';
 import { isPubliclyOffered } from '@/lib/publicTicketGuard';
+import { leerConcepto } from '@/lib/concepto';
+import { optimizedImage } from '@/lib/imageUrl';
 import { EventCheckoutPanel } from './EventCheckoutPanel';
 import { EventStructuredData } from './EventStructuredData';
+import { FondoFlyer } from './conceptos';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -20,7 +23,7 @@ async function sha256Hex(s: string): Promise<string> {
 
 type Props = {
   params: { brand: string; event: string };
-  searchParams?: { ref?: string | string[]; v?: string | string[] };
+  searchParams?: { ref?: string | string[]; v?: string | string[]; c?: string | string[] };
 };
 
 async function loadEvent(brandSlug: string, eventSlug: string) {
@@ -189,9 +192,9 @@ export default async function EventPage({ params, searchParams }: Props) {
   const refRaw = Array.isArray(searchParams?.ref) ? searchParams?.ref[0] : searchParams?.ref;
   const refCode = (refRaw ?? '').trim().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
 
-  // Dirección de arte a evaluar: ?v=b es la nocturna. Solo presentación.
-  const vRaw = Array.isArray(searchParams?.v) ? searchParams?.v[0] : searchParams?.v;
-  const variant: 'a' | 'b' = vRaw === 'b' ? 'b' : 'a';
+  // Concepto de diseño a evaluar (?c=1|2|3, con ?v= como alias viejo).
+  // Solo presentación: no toca precio, stock, pago ni emisión.
+  const concepto = leerConcepto(searchParams);
 
   // Tracking de clics del link de promotor (?ref). Best-effort: registra un clic
   // por visitante/día atribuido al código (solo si existe). Hasheamos la IP (no
@@ -218,7 +221,11 @@ export default async function EventPage({ params, searchParams }: Props) {
     <>
       <EventStructuredData brand={brand} event={event} ticketTypes={ticketTypes} />
 
-      <article className={`c-checkout-canvas b-v-${variant}`} style={{ paddingBottom: 64 }}>
+      <article className={`c-checkout-canvas b-c${concepto}`} style={{ paddingBottom: 64 }}>
+        {/* ENTRADA apoya el boleto sobre su propio flyer, difuminado. Va
+            FUERA de la sección de compra: dentro, el z-index de la sección
+            lo dejaba por encima del fondo blanco del boleto. */}
+        {concepto === 2 && <FondoFlyer url={optimizedImage(event.cover_url, { width: 900, quality: 60 })} />}
         {/* CHECKOUT (hero, entradas, datos/pago, resumen y "dónde" viven en el panel) */}
         <EventCheckoutPanel
           brand={brand}
@@ -228,7 +235,7 @@ export default async function EventPage({ params, searchParams }: Props) {
           mpPublicKey={mpPublicKey}
           refCode={refCode}
           shareUrl={shareUrl}
-          variant={variant}
+          concepto={concepto}
         />
 
         {/* SOPORTE */}

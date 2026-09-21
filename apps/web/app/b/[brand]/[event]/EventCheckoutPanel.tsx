@@ -2,14 +2,22 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Minus, Plus, Loader2, Lock, ArrowRight } from 'lucide-react';
+import { Loader2, Lock, ArrowRight } from 'lucide-react';
 import { formatPEN } from '@/lib/utils';
 import { optimizedImage } from '@/lib/imageUrl';
+import {
+  type Concepto, type Brand, type Event, type TicketType,
+  armarEscalera, resumirIncluye, distrito, hrefMapa,
+  fmtCortoMayus, fmtCuando, fmtDiaLargo, fmtHora,
+  FasesEscalera, FasesLinea, FasesSellos,
+  ChipComprar, AsiDeSimple,
+} from './conceptos';
 import { startCheckout, previewPromo, type CheckoutInput } from './actions';
 import { reserveStock } from '@/lib/reservations';
 import { MercadoPagoWallet } from './MercadoPagoWallet';
 import { ShareEvent } from './ShareEvent';
 import { LineaLegal } from '../Responsable';
+import { conConcepto } from '@/lib/concepto';
 
 const SESSION_STORAGE_KEY = 'parygo-checkout-session';
 
@@ -23,36 +31,6 @@ function readOrCreateSessionId(): string {
   return id;
 }
 
-type Brand = {
-  id: string; slug: string; name: string;
-  yape_number: string | null; yape_holder: string | null;
-  // Contacto del organizador: es quien responde por el evento, así que la
-  // página de compra tiene que poder linkearlo (ver lib/organizador.ts).
-  whatsapp_e164?: string | null; contact_email?: string | null;
-  // Supabase tipa theme_json como Json; se narrowing-castea al leer el logo.
-  theme_json?: unknown;
-};
-type Event = {
-  id: string; slug: string; name: string; description?: string | null;
-  min_age: number; starts_at: string; ends_at?: string | null;
-  venue_name?: string | null; venue_address?: string | null;
-  venue_lat?: number | null; venue_lng?: number | null; venue_maps_url?: string | null;
-  cover_url?: string | null; refund_policy?: string | null;
-  require_age_confirmation: boolean; require_dni: boolean; collect_attendee_names: boolean;
-};
-type TicketType = {
-  id: string; name: string; description: string | null; price_cents: number;
-  active_price_cents: number; active_name: string | null; active_ends_at: string | null;
-  next_price_cents: number | null; next_starts_at: string | null; next_name: string | null;
-  // soldOut viene calculado server-side; NUNCA se mandan capacity/sold al cliente
-  // (el comprador no ve cuántas hay ni cuántas quedan — solo el estado "Agotado").
-  is_unlimited: boolean; soldOut: boolean; sort_order: number; color_hex: string | null;
-  // Todas las fases de precio del tipo (públicas): la escalera que ve el
-  // comprador. La compra siempre es sobre la fase VIGENTE.
-  phases: { name: string | null; price_cents: number; starts_at: string | null; ends_at: string | null; sort_order: number }[];
-  bulk_min_qty: number; bulk_discount_pct: number;
-};
-
 // Precio unitario con descuento por cantidad (bulk) aplicado, si corresponde.
 // Solo para MOSTRAR — el server recalcula y congela el precio real en el checkout
 // (y el bulk NO se apila con un código promo: si hay código, gana el código).
@@ -63,84 +41,14 @@ function bulkUnitPrice(t: TicketType, q: number): number {
   return t.active_price_cents;
 }
 
-// Fecha corta + hora (Lima) para hero y rail.
-function fmtDateShort(iso: string): string {
-  return new Intl.DateTimeFormat('es-PE', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'America/Lima' }).format(new Date(iso));
-}
-// "Jueves 29 de octubre · 10:00 pm" — como lo diría una persona.
-function fmtCuando(iso: string): string {
-  const d = new Date(iso);
-  const dia = new Intl.DateTimeFormat('es-PE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Lima' }).format(d);
-  const hora = new Intl.DateTimeFormat('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })
-    .format(d).replace(/\s?a\.?\s?m\.?/i, ' am').replace(/\s?p\.?\s?m\.?/i, ' pm').replace(/\s+/g, ' ').trim();
-  const limpio = dia.replace(/,/g, '');
-  return `${limpio.charAt(0).toUpperCase()}${limpio.slice(1)} · ${hora}`;
-}
-
-// "JUE 29 OCT · 10:00 PM" para la línea de arriba del nombre.
-function fmtCortoMayus(iso: string): string {
-  const d = new Date(iso);
-  const dia = new Intl.DateTimeFormat('es-PE', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'America/Lima' })
-    .format(d).replace(/[.,]/g, '').trim();
-  const hora = new Intl.DateTimeFormat('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })
-    .format(d).replace(/\s?a\.?\s?m\.?/i, ' am').replace(/\s?p\.?\s?m\.?/i, ' pm').replace(/\s+/g, ' ').trim();
-  return `${dia} · ${hora}`.toUpperCase();
-}
-
-// "JUEVES 29 DE OCTUBRE" y "10:00 PM" para la ficha del póster.
-function fmtDiaLargo(iso: string): string {
-  return new Intl.DateTimeFormat('es-PE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Lima' })
-    .format(new Date(iso)).replace(/,/g, '').toUpperCase();
-}
-function fmtHora(iso: string): string {
-  return new Intl.DateTimeFormat('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })
-    .format(new Date(iso)).replace(/\s?a\.?\s?m\.?/i, ' AM').replace(/\s?p\.?\s?m\.?/i, ' PM').replace(/\s+/g, ' ').trim();
-}
-
-// El link a Maps se arma igual en la ficha y en "Dónde es".
-function hrefMapa(event: Event): string | null {
-  if (event.venue_maps_url?.startsWith('https://')) return event.venue_maps_url;
-  if (event.venue_lat && event.venue_lng) return `https://www.google.com/maps/search/?api=1&query=${event.venue_lat},${event.venue_lng}`;
-  if (event.venue_address) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue_address)}`;
-  return null;
-}
-
-// "27 set" para el fin de la preventa.
-function fmtDia(iso: string): string {
-  return new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', timeZone: 'America/Lima' })
-    .format(new Date(iso)).replace(/[-.]/g, ' ').trim();
-}
-
-// Distrito de la dirección, si se puede deducir: "Av. X 123, Jesús María,
-// Lima" → "Jesús María". Si la dirección es solo calle + ciudad, no inventa.
-function distrito(dir?: string | null): string | null {
-  const partes = (dir ?? '').split(',').map((x) => x.trim()).filter(Boolean);
-  if (partes.length < 2) return null;
-  const sinCiudad = partes.filter((x) => !/^(lima|per[uú])$/i.test(x));
-  if (sinCiudad.length < 2) return null;
-  return sinCiudad[sinCiudad.length - 1] ?? null;
-}
-
-// Qué incluye, en pocas palabras: las líneas de la descripción unidas y
-// recortadas a 6 palabras, para que la tarjeta no crezca.
-function resumirIncluye(desc?: string | null): string | null {
-  const todo = (desc ?? '').split('\n').map((x) => x.trim()).filter(Boolean).join(' · ');
-  if (!todo) return null;
-  const palabras = todo.split(/\s+/);
-  return palabras.length <= 6 ? todo : `${palabras.slice(0, 6).join(' ')}…`;
-}
-
-function fmtTime(iso: string): string {
-  return new Intl.DateTimeFormat('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' }).format(new Date(iso));
-}
-
 export function EventCheckoutPanel({
-  brand, event, ticketTypes, mpConfigured, mpPublicKey, refCode = '', shareUrl, variant = 'a',
+  brand, event, ticketTypes, mpConfigured, mpPublicKey, refCode = '', shareUrl, concepto = 1,
 }: {
   brand: Brand; event: Event; ticketTypes: TicketType[]; mpConfigured: boolean; mpPublicKey: string | null;
   refCode?: string; shareUrl: string;
-  // Dirección de arte a evaluar: 'a' clara, 'b' noche. Solo presentación.
-  variant?: 'a' | 'b';
+  // Concepto de diseño a evaluar (1 cartel, 2 entrada, 3 noche). Solo
+  // presentación: no cambia precio, stock, pago ni emisión.
+  concepto?: Concepto;
 }) {
   const sorted = useMemo(
     () => [...ticketTypes].sort((a, b) => a.active_price_cents - b.active_price_cents || a.sort_order - b.sort_order),
@@ -354,7 +262,9 @@ export function EventCheckoutPanel({
       const res = await startCheckout({ ...input, sessionId: sessionIdRef.current });
       if (!res.ok) { toast.error(res.message ?? 'Error en el checkout'); return; }
       if ('mp' in res) { if (mpPublicKey) setMpCheckout(res.mp); else window.location.href = res.mp.initPoint; return; }
-      if ('redirectUrl' in res) window.location.href = res.redirectUrl;
+      // El concepto viaja con el comprador: la pantalla de Yape y la
+      // confirmación se ven con la misma piel que la página del evento.
+      if ('redirectUrl' in res) window.location.href = conConcepto(res.redirectUrl, concepto);
     });
   }
 
@@ -386,7 +296,11 @@ function fraseConfianza(pago: string): string {
 }
 
   return (
-    <section id="entradas" className={`b-buy b-v-${variant}${shownStep === 2 ? ' b-buy--datos' : ''}`}>
+    <section id="entradas" className={`b-buy b-c${concepto}${shownStep === 2 ? ' b-buy--datos' : ''}`}>
+      {/* El chip es el atajo de vuelta a la compra. Con algo en el carrito
+          manda la barra de pagar y el chip se va: dos cosas pegadas abajo se
+          estorban. */}
+      {concepto === 1 && shownStep === 1 && <ChipComprar anclaId="elegi" activo={totalItems === 0} />}
       {mpCheckout && mpPublicKey ? (
         <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}`}>
           <div className="b-head">
@@ -401,49 +315,31 @@ function fraseConfianza(pago: string): string {
         /* ---------- PANTALLA 1: el flyer y las entradas ---------- */
         <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}`} key="step1">
         <div className="b-stage">
-          <Hero event={event} />
+          <Hero event={event} concepto={concepto} />
 
           <div className="b-list">
+            {/* "Elige tu entrada" solo en CARTEL: ahí la lista es una
+                sección con nombre propio, no la continuación del flyer. */}
+            {concepto === 1 && <h2 className="b1-h2" id="elegi">Elige tu entrada</h2>}
             <section className="b-tks">
               {sorted.map((t) => {
-                const cur = qty[t.id] ?? 0;
-                const incluye = resumirIncluye(t.description);
-                const escalera = armarEscalera(t);
-                return (
-                  <div key={t.id} className={`b-ty${t.soldOut ? ' b-ty--out' : ''}`}>
-                    {escalera.map((f, i) => (
-                      <div key={i} className={`b-ph${f.estado === 'vigente' ? ' b-ph--on' : ''}`}>
-                        <span className="b-ph__nm">
-                          {f.titulo}
-                          {f.sub && <span className="b-ph__fase">{f.sub}</span>}
-                          {f.estado === 'vigente' && incluye && <span className="b-ph__inc">{incluye}</span>}
-                        </span>
-                        <span className="b-ph__pr">{formatPEN(f.precio)}</span>
-                        <span className="b-ph__act">
-                          {f.estado !== 'vigente' ? (
-                            <Lock className="b-ph__lock" aria-label={f.estado === 'futura' ? 'Todavía no disponible' : 'Fase terminada'} />
-                          ) : t.soldOut ? (
-                            <span className="b-ph__ago">Agotada</span>
-                          ) : cur === 0 ? (
-                            <button type="button" onClick={() => inc(t)} className="b-add" aria-label={`Sumar ${t.name}`}>
-                              <Plus aria-hidden="true" />
-                            </button>
-                          ) : (
-                            <span className="b-qty" aria-live="polite">
-                              <button type="button" onClick={() => dec(t)} aria-label={`Restar ${t.name}`} className="b-qbtn"><Minus aria-hidden="true" /></button>
-                              <span key={cur} className="b-qval">{cur}</span>
-                              <button type="button" onClick={() => inc(t)} aria-label={`Sumar ${t.name}`} className="b-qbtn b-qbtn--add"><Plus aria-hidden="true" /></button>
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                );
+                const props = {
+                  t,
+                  escalera: armarEscalera(t),
+                  cur: qty[t.id] ?? 0,
+                  incluye: resumirIncluye(t.description),
+                  onInc: () => inc(t),
+                  onDec: () => dec(t),
+                };
+                if (concepto === 1) return <FasesLinea key={t.id} {...props} />;
+                if (concepto === 2) return <FasesSellos key={t.id} {...props} />;
+                return <FasesEscalera key={t.id} {...props} />;
               })}
             </section>
-
             <p className="b-trust">{fraseConfianza(payLabel)}</p>
+
+            {/* CARTEL explica el trámite en tres pasos antes del mapa. */}
+            {concepto === 1 && <AsiDeSimple conYape={!!brand.yape_number} />}
 
             <MasInfo event={event} brand={brand} />
           </div>
@@ -652,11 +548,16 @@ function fraseConfianza(pago: string): string {
   );
 }
 
-// ============================ Hero: el flyer manda ============================
-// Como en DICE o Resident Advisor: el flyer a lo ancho, oscurecido hacia abajo,
-// y encima el nombre. Arriba del nombre, la línea de cuándo y dónde en
-// mayúsculas chicas. Tocar el flyer lo abre entero (el hero lo recorta).
-function Hero({ event }: { event: Event }) {
+// ============================ El hero, por concepto ============================
+// Los tres muestran el mismo flyer y el mismo título; lo que cambia es cuánto
+// pesa cada uno y dónde cae el texto:
+//   1 CARTEL   el flyer ocupa casi toda la primera pantalla y el título va
+//              encima, grande. Es un afiche.
+//   2 ENTRADA  el flyer es chico y entra DENTRO del boleto, como la foto de
+//              un ticket; el título va en el cuerpo del boleto.
+//   3 NOCHE    el flyer sangra por un costado y el título ocupa el resto.
+// Tocar el flyer lo abre entero en los tres (el hero siempre lo recorta).
+function Hero({ event, concepto }: { event: Event; concepto: Concepto }) {
   const mapsHref = hrefMapa(event);
   const [zoom, setZoom] = useState(false);
   const donde = [event.venue_name, distrito(event.venue_address)].filter(Boolean).join(' · ');
@@ -669,14 +570,18 @@ function Hero({ event }: { event: Event }) {
     return () => window.removeEventListener('keydown', cerrar);
   }, [zoom]);
 
+  // En ENTRADA el flyer va dentro del boleto: se pide más chico y no lleva
+  // el degradado, porque el título no se apoya encima.
+  const ancho = concepto === 2 ? 640 : 900;
+
   return (
     <>
       <header className="b-hero">
       {event.cover_url ? (
         <button type="button" className="b-hero__shot" onClick={() => setZoom(true)} aria-label={`Ver el flyer de ${event.name} completo`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={optimizedImage(event.cover_url, { width: 900, quality: 80 })} alt={`Flyer de ${event.name}`} decoding="async" />
-          <span className="b-hero__fade" aria-hidden="true" />
+          <img src={optimizedImage(event.cover_url, { width: ancho, quality: 80 })} alt={`Flyer de ${event.name}`} decoding="async" />
+          {concepto !== 2 && <span className="b-hero__fade" aria-hidden="true" />}
         </button>
       ) : (
         <div className="b-hero__shot b-hero__shot--ph" aria-hidden="true"><span className="b-hero__fade" /></div>
@@ -700,60 +605,16 @@ function Hero({ event }: { event: Event }) {
       )}
       </header>
 
-      {/* En teléfono este bloque se apoya sobre el flyer; en escritorio se
-          deshace y el título se coloca en la columna del centro. */}
+      {/* El bloque de título. En CARTEL y NOCHE se apoya sobre el flyer en
+          teléfono; en ENTRADA siempre va debajo, dentro del boleto. */}
       <div className="b-hero__over">
         <p className="b-kicker">{kicker}</p>
         <h1 className="b-hero__name">{event.name}</h1>
+        {concepto === 2 && <p className="b2-cuando">{fmtCuando(event.starts_at)}</p>}
       </div>
     </>
   );
 }
-
-
-// ============================ Escalera de fases ============================
-// Una fila por fase, como en Joinnus/Teleticket: el comprador ve de un vistazo
-// qué precio rige hoy, hasta cuándo, y cuánto va a costar después. Solo la
-// fase vigente se puede comprar; las otras van con candado.
-type Peldano = { titulo: string; sub: string | null; precio: number; estado: 'pasada' | 'vigente' | 'futura' };
-
-function armarEscalera(t: TicketType): Peldano[] {
-  const ahora = Date.now();
-  if (t.phases.length === 0) {
-    // Tipo sin fases: una sola fila con el nombre del tipo.
-    return [{ titulo: t.name, sub: null, precio: t.active_price_cents, estado: 'vigente' }];
-  }
-  const ordenadas = [...t.phases].sort((a, b) => a.sort_order - b.sort_order);
-  // La vigente es la PRIMERA cuya ventana contiene a ahora (misma regla que
-  // get_event_active_prices en SQL).
-  const iVigente = ordenadas.findIndex((f) => {
-    const empezo = !f.starts_at || Date.parse(f.starts_at) <= ahora;
-    const sigue = !f.ends_at || Date.parse(f.ends_at) > ahora;
-    return empezo && sigue;
-  });
-  return ordenadas.map((f, i) => {
-    const estado: Peldano['estado'] = i === iVigente ? 'vigente' : i < iVigente || iVigente === -1 ? 'pasada' : 'futura';
-    // Si el organizador no nombró la fase: las del medio son preventas
-    // numeradas y la última es la Regular, como en Joinnus o Teleticket.
-    const ultima = i === ordenadas.length - 1;
-    const nombre = f.name?.trim() || (ultima && ordenadas.length > 1 ? 'Regular' : `Preventa ${i + 1}`);
-    if (estado === 'vigente') {
-      // La fila que se compra lleva el TIPO arriba y la fase debajo.
-      const sub = f.ends_at ? `${nombre} · hasta el ${fmtDia(f.ends_at)}` : nombre;
-      return { titulo: t.name, sub, precio: f.price_cents, estado };
-    }
-    // La fase que viene solo muestra fecha si empieza OTRO día que el corte
-    // de la anterior: si arrancan el mismo día, repetir la fecha confunde.
-    let sub: string | null = null;
-    if (estado === 'futura' && f.starts_at) {
-      const previa = ordenadas[i - 1]?.ends_at;
-      const mismoDia = previa ? fmtDia(previa) === fmtDia(f.starts_at) : false;
-      if (!mismoDia) sub = `desde el ${fmtDia(f.starts_at)}`;
-    }
-    return { titulo: nombre, sub, precio: f.price_cents, estado };
-  });
-}
-
 // ============================ Más información ============================
 // Sección visible (no acordeón): dónde es con su mapa, sobre el evento si el
 // organizador escribió algo, y la línea de responsabilidad al final: quién

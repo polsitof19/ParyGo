@@ -8,6 +8,7 @@ import { ConfirmationPoller } from './ConfirmationPoller';
 import { AddToCalendar } from './AddToCalendar';
 import { TicketPass } from '../../TicketPass';
 import { LineaPago } from '../../Responsable';
+import { leerConcepto, conConcepto } from '@/lib/concepto';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -19,9 +20,10 @@ export default async function ConfirmationPage({
   searchParams,
 }: {
   params: { brand: string; event: string };
-  searchParams: { order?: string; pendiente?: string };
+  searchParams: { order?: string; pendiente?: string; c?: string; v?: string };
 }) {
   if (!searchParams.order || !UUID_RE.test(searchParams.order)) notFound();
+  const concepto = leerConcepto(searchParams);
 
   const admin = createAdminClient();
   type OrderWithJoins = {
@@ -74,7 +76,7 @@ export default async function ConfirmationPage({
 
   if (isFailed) {
     return (
-      <main className="c-state c-checkout-canvas">
+      <main className={`c-state c-checkout-canvas b-c${concepto}`}>
         <div className="c-confirm__badge" style={{ background: 'var(--alert-bg, rgba(220,38,38,.1))', color: 'var(--alert, #dc2626)' }}><Mail className="h-8 w-8" /></div>
         <span className="c-eyebrow" style={{ color: 'var(--ink-2)', marginTop: 16, display: 'block' }}>Pago no aprobado</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>No pudimos confirmar tu pago</h1>
@@ -91,7 +93,7 @@ export default async function ConfirmationPage({
 
   if (isPending) {
     return (
-      <main className="c-state c-checkout-canvas">
+      <main className={`c-state c-checkout-canvas b-c${concepto}`}>
         <div className="c-state__spinner" />
         <span className="c-eyebrow">Procesando pago</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>Estamos confirmando tu pago</h1>
@@ -108,7 +110,7 @@ export default async function ConfirmationPage({
 
   if (isYapeReview) {
     return (
-      <main className="c-state c-checkout-canvas">
+      <main className={`c-state c-checkout-canvas b-c${concepto}`}>
         <div className="c-confirm__badge" style={{ background: 'var(--warn-bg)', color: 'var(--warn)' }}><Mail className="h-8 w-8" /></div>
         <span className="c-eyebrow" style={{ color: 'var(--ink-2)', marginTop: 16, display: 'block' }}>Comprobante en revisión</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>Tu Yape está en revisión</h1>
@@ -124,7 +126,7 @@ export default async function ConfirmationPage({
 
   if (isYapeRejected) {
     return (
-      <main className="c-state c-checkout-canvas">
+      <main className={`c-state c-checkout-canvas b-c${concepto}`}>
         <div className="c-confirm__badge" style={{ background: 'var(--alert-bg, rgba(220,38,38,.1))', color: 'var(--alert, #dc2626)' }}><Mail className="h-8 w-8" /></div>
         <span className="c-eyebrow" style={{ color: 'var(--ink-2)', marginTop: 16, display: 'block' }}>Comprobante rechazado</span>
         <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>No pudimos validar tu Yape</h1>
@@ -141,7 +143,9 @@ export default async function ConfirmationPage({
   // Pagado + tickets emitidos → cierre celebratorio
   const tickets = order.tickets ?? [];
   const firstTicket = tickets[0];
-  const ticketUrl = firstTicket ? `/t/${firstTicket.qr_code}` : null;
+  // El concepto sigue hasta la entrada: si el comprador vino en NOCHE, su QR
+  // no aparece de golpe en blanco.
+  const ticketUrl = firstTicket ? conConcepto(`/t/${firstTicket.qr_code}`, concepto) : null;
   // QR inline: reusa el mismo generador que /t. El payload es el qr_code, que ya
   // está en el payload de esta página (link permanente, ticketUrl, WhatsApp) →
   // no expone datos nuevos. Mismo control de acceso que arriba (brand.slug === params.brand).
@@ -160,7 +164,7 @@ export default async function ConfirmationPage({
   const calDetails = `Tu entrada para ${event?.name ?? 'el evento'}. Lleva ${event?.require_dni ? 'tu documento de identidad y ' : ''}tu QR (te llegó por email). Entrada por ParyGo.`;
 
   return (
-    <main className="c-narrow c-checkout-canvas" style={{ paddingTop: 40, paddingBottom: 56 }}>
+    <main className={`c-narrow c-checkout-canvas b-c${concepto}`} style={{ paddingTop: 40, paddingBottom: 56 }}>
       <div className="c-confirm">
         <div className="c-confirm__badge"><Check className="h-9 w-9" /></div>
         <span className="c-eyebrow" style={{ color: 'var(--ink-2)' }}>Compra confirmada</span>

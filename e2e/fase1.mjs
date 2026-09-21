@@ -109,11 +109,12 @@ async function newCtx(tag, { session, brandHeader = false, viewport = { width: 1
 }
 // 'load' + quietud best-effort: hay prefetches RSC de <Link> que en `next start` local no cierran nunca.
 const settle = (page) => page.waitForLoadState('networkidle', { timeout: 6000 }).catch(() => {});
-// E2E_V=b corre el mismo recorrido sobre la dirección de arte nocturna: se le
-// agrega ?v= a las páginas públicas de la marca (las del panel no la usan).
-const ARTE = process.env.E2E_V ?? '';
+// E2E_C=1|2|3 corre el mismo recorrido sobre cada concepto de diseño: se le
+// agrega ?c= a las páginas públicas de la marca (las del panel no lo usan).
+// Se acepta E2E_V por compatibilidad con la nomenclatura anterior (a→1, b→3).
+const ARTE = process.env.E2E_C ?? ({ a: '1', b: '3' }[process.env.E2E_V] ?? '');
 const conArte = (path) => (ARTE && !path.startsWith('/admin') && !path.startsWith('/cabina') && !path.startsWith('/scan')
-  ? path + (path.includes('?') ? '&' : '?') + 'v=' + ARTE
+  ? path + (path.includes('?') ? '&' : '?') + 'c=' + ARTE
   : path);
 const go = async (page, path) => { await page.goto(`${BASE}${conArte(path)}`, { waitUntil: 'load', timeout: 90000 }); await settle(page); };
 

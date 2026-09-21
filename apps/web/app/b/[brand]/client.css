@@ -292,7 +292,10 @@
 
 /* Acciones: guardar y compartir, una al lado de la otra. */
 .client-shell .c-pass__actions { display: flex; gap: 10px; margin-top: 14px; }
-.client-shell .c-pass__actions > * { flex: 1; }
+/* `flex: 1` sin min-width no achica un botón cuyo texto no entra: "Compartir
+   por WhatsApp" se salía de la entrada en 390. Con `min-width: 0` las dos
+   mitades son de verdad mitades. */
+.client-shell .c-pass__actions > * { flex: 1 1 0; min-width: 0; }
 @media (max-width: 380px) { .client-shell .c-pass__actions { flex-direction: column; } }
 .client-shell .c-pass__foot { text-align: center; font-size: 12px; color: var(--ink-3); margin-top: 16px; }
 /* Quién organiza, encima del "powered by": pegados, una sola unidad de pie. */
@@ -315,13 +318,21 @@
    hairlines, tipografía y una sola pieza de color: el botón de pagar.
    Todo alineado a la izquierda.
 
-   Dos direcciones conviven vía ?v= :
-     .b-v-a  CLARA  — papel, tinta, la marca como acento.
-     .b-v-b  NOCHE  — fondo #14110E, texto papel, la marca como acento.
+   Tres CONCEPTOS conviven vía ?c=1|2|3. Comparten esta base —escala,
+   ritmo de 8, copy y la línea de responsabilidad del organizador— y cada
+   uno agrega su bloque más abajo:
+     .b-c1  CARTEL   papel. El flyer manda; las fases son una línea de
+                     tiempo; hay un chip sticky y un "así de simple".
+     .b-c2  ENTRADA  papel. El bloque de compra ES un boleto con talón;
+                     las fases son sellos; en escritorio el flyer va
+                     detrás, difuminado y oscuro.
+     .b-c3  NOCHE    #0E0C0A. Editorial: tipografía enorme, precios
+                     gigantes, el color de la marca solo en el botón.
    Los colores del funnel salen de estas cuatro variables semánticas, no
    de los tokens directos, para que invertir sea cambiar un bloque.
    ============================================================ */
-.client-shell .b-v-a {
+.client-shell .b-c1,
+.client-shell .b-c2 {
   --pg-bg: var(--paper);
   --pg-fg: var(--ink);
   --pg-fg-2: var(--ink-2);
@@ -331,8 +342,8 @@
      debajo de AA). .62 es el mínimo que pasa en las dos (4.63 y 7.19). */
   --pg-dim: .62;
 }
-.client-shell .b-v-b {
-  --pg-bg: #14110E;
+.client-shell .b-c3 {
+  --pg-bg: #0E0C0A;
   --pg-fg: #FBF7F0;
   --pg-fg-2: rgba(251, 247, 240, .72);
   --pg-line: rgba(251, 247, 240, .16);
@@ -341,9 +352,9 @@
   color: var(--pg-fg);
 }
 /* La noche tiñe la página entera, no solo el bloque. */
-.client-shell:has(.b-v-b) { background: #14110E; }
-.client-shell:has(.b-v-b) .c-foot { color: rgba(251, 247, 240, .6); }
-.client-shell:has(.b-v-b) .c-foot a { color: rgba(251, 247, 240, .92); }
+.client-shell:has(.b-c3) { background: #0E0C0A; }
+.client-shell:has(.b-c3) .c-foot { color: rgba(251, 247, 240, .6); }
+.client-shell:has(.b-c3) .c-foot a { color: rgba(251, 247, 240, .92); }
 
 /* ------------------------------------------------------------
    ESCALA. Contenida y FIJA, no elástica: los clamp que crecían con
@@ -380,7 +391,7 @@
   position: absolute; inset: 28% 0 0; display: block;
   background: linear-gradient(180deg, transparent, rgba(0,0,0,.35) 45%, rgba(0,0,0,.92));
 }
-.client-shell .b-v-b .b-hero__fade { background: linear-gradient(180deg, transparent, rgba(20,17,14,.5) 42%, #14110E); }
+.client-shell .b-c3 .b-hero__fade { background: linear-gradient(180deg, transparent, rgba(14,12,10,.5) 42%, #0E0C0A); }
 .client-shell .b-stage { position: relative; }
 .client-shell .b-hero__over {
   position: absolute; left: 0; right: 0; top: 0; height: var(--flyer-h);
@@ -462,8 +473,8 @@
 .client-shell .b-info { margin-top: var(--b-s4); }
 .client-shell .b-info__b + .b-info__b { margin-top: var(--b-s3); }
 .client-shell .b-map { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; margin: var(--b-s2) calc(var(--pad) * -1) 0; width: calc(100% + var(--pad) * 2); filter: var(--pg-map); }
-.client-shell .b-v-b { --pg-map: invert(1) hue-rotate(180deg) saturate(.6) brightness(.9); }
-.client-shell .b-v-a { --pg-map: none; }
+.client-shell .b-c3 { --pg-map: invert(1) hue-rotate(180deg) saturate(.6) brightness(.9); }
+.client-shell .b-c1, .client-shell .b-c2 { --pg-map: none; }
 .client-shell .b-info__dir { margin: var(--b-s2) 0 0; font-size: var(--b-body); line-height: 1.45; color: var(--pg-fg); }
 .client-shell .b-info__txt { margin: var(--b-s1) 0 0; font-size: var(--b-body); line-height: 1.45; color: var(--pg-fg-2); white-space: pre-line; }
 .client-shell .b-info__link { display: inline-flex; align-items: center; min-height: 44px; margin-top: var(--b-s1); font-size: var(--b-body); font-weight: 700; color: var(--pg-fg); text-decoration: underline; text-underline-offset: 4px; }
@@ -471,7 +482,7 @@
 /* Línea legal y de responsabilidad: lo más chico de la página, en --ink-3.
    Quién se hace cargo del evento tiene que estar escrito, no sobreentendido. */
 .client-shell .b-legal { margin: var(--b-s3) 0 0; font-size: 12px; line-height: 1.5; color: var(--ink-3); }
-.client-shell .b-v-b .b-legal { color: rgba(251, 247, 240, .62); }
+.client-shell .b-c3 .b-legal { color: rgba(251, 247, 240, .62); }
 .client-shell .b-legal a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .client-shell .b-legal a:hover { color: var(--pg-fg); }
 .client-shell .b-legal + .b-legal { margin-top: var(--b-s1); }
@@ -671,26 +682,376 @@
 /* La noche tiene que llegar hasta los bordes: el body pinta lo que queda
    fuera del shell (barra de scroll, zona bajo el contenido) y el header es
    compartido con el resto del sitio. */
-body:has(.b-v-b) { background: #14110E; }
-.client-shell:has(.b-v-b) .c-header { background: rgba(20,17,14,.9); border-bottom-color: rgba(251,247,240,.14); }
-.client-shell:has(.b-v-b) .c-lockup__name { color: #FBF7F0; }
-.client-shell:has(.b-v-b) .c-lockup__ofi { color: rgba(251,247,240,.7); }
-.client-shell:has(.b-v-b) .c-powered { color: rgba(251,247,240,.62); }
-.client-shell:has(.b-v-b) .c-powered b { color: rgba(251,247,240,.9); }
+body:has(.b-c3) { background: #0E0C0A; }
+.client-shell:has(.b-c3) .c-header { background: rgba(14,12,10,.92); border-bottom-color: rgba(251,247,240,.14); }
+.client-shell:has(.b-c3) .c-lockup__name { color: #FBF7F0; }
+.client-shell:has(.b-c3) .c-lockup__ofi { color: rgba(251,247,240,.7); }
+.client-shell:has(.b-c3) .c-powered { color: rgba(251,247,240,.62); }
+.client-shell:has(.b-c3) .c-powered b { color: rgba(251,247,240,.9); }
 
 /* Tokens invertidos para la noche: todo lo que en el resto del sitio se
    escribe con --ink/--ink-2/--ink-3 o --brand-ink (incluidos estilos en
    línea) queda legible sin tocar cada llamada. El par --brand-fill /
    --on-fill NO se toca: es el medido. */
-.client-shell:has(.b-v-b) {
+.client-shell:has(.b-c3) {
   --ink: #FBF7F0;
   --ink-2: rgba(251, 247, 240, .72);
   --ink-3: rgba(251, 247, 240, .62);
   --brand-ink: #FBF7F0;
   --line: rgba(251, 247, 240, .16);
   --sel: rgba(251, 247, 240, .06);
-  --paper: #14110E;
-  --paper-2: #1B1713;
-  --paper-3: #241F1A;
-  --surface: #1B1713;
+  --paper: #0E0C0A;
+  --paper-2: #17140F;
+  --paper-3: #201C16;
+  --surface: #17140F;
+}
+
+
+/* ============================================================
+   CONCEPTO 1 — CARTEL
+   Idea: la página es un afiche. El flyer se queda con la primera
+   pantalla entera y el título vive encima; recién al bajar aparece
+   la tienda. Las fases dejan de ser una lista y pasan a ser una
+   LÍNEA DE TIEMPO: se ve de un vistazo en qué etapa estamos y hacia
+   dónde va el precio. Un chip sticky devuelve a la compra desde
+   cualquier punto, y "Así de simple" saca la duda de qué pasa
+   después de pagar.
+   ============================================================ */
+.client-shell .b-c1 {
+  /* El póster ocupa casi toda la primera pantalla: es el concepto. */
+  --flyer-h: min(72vh, 560px);
+  /* Única desviación de escala del concepto, igual que la de NOCHE: un
+     afiche con el título chico no es un afiche. El resto de la escala
+     —cuerpo, meta, etiquetas, precios— no se toca. */
+  --b-t1: 36px;
+}
+@media (min-width: 768px) { .client-shell .b-c1 { --b-t1: 44px; } }
+@media (min-width: 1024px) { .client-shell .b-c1 { --b-t1: 56px; } }
+
+/* Títulos de sección propios: la lista de entradas deja de ser la
+   continuación del flyer y pasa a llamarse. */
+.client-shell .b1-h2 {
+  margin: var(--b-s4) 0 var(--b-s2);
+  font-family: var(--display); font-weight: 800; font-size: var(--b-t3);
+  line-height: 1.05; letter-spacing: -0.02em; color: var(--pg-fg);
+  scroll-margin-top: 84px;
+}
+.client-shell .b-c1 .b-tks { margin-top: 0; }
+.client-shell .b-c1 .b-ty + .b-ty { margin-top: var(--b-s4); }
+
+/* La cabecera del tipo: nombre, precio grande y la acción. */
+.client-shell .b1-ty__head {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center; gap: var(--b-s2);
+  padding-bottom: var(--b-s2); border-bottom: 1px solid var(--pg-line);
+}
+.client-shell .b1-ty__nm { margin: 0; font-family: var(--display); font-weight: 800; font-size: var(--b-t3); line-height: 1.05; letter-spacing: -0.02em; }
+.client-shell .b1-ty__inc { margin: 4px 0 0; font-size: var(--b-meta); color: var(--pg-fg-2); }
+/* Numeral grande: es el dato que la gente compara. */
+.client-shell .b1-ty__pr { font-size: 28px; line-height: 1; }
+@media (min-width: 1024px) { .client-shell .b1-ty__pr { font-size: 34px; } }
+
+/* La línea de tiempo. El riel es un hairline; cada etapa, un punto. La
+   vigente lleva el color de la marca en el PUNTO y en el tramo del riel
+   —nunca en el texto, que sigue en tinta. */
+.client-shell .b1-line {
+  list-style: none; display: flex; gap: 0; margin: var(--b-s3) 0 0; padding: 0;
+  overflow-x: auto; scrollbar-width: none;
+}
+.client-shell .b1-line::-webkit-scrollbar { display: none; }
+.client-shell .b1-line__n {
+  position: relative; flex: 1 0 auto; min-width: 118px; padding: var(--b-s2) var(--b-s2) 0 0;
+  opacity: var(--pg-dim);
+}
+.client-shell .b1-line__n--on { opacity: 1; }
+/* El riel: una línea que cruza todos los peldaños. */
+.client-shell .b1-line__n::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 5px; height: 1px; background: var(--pg-line);
+}
+.client-shell .b1-line__n:last-child::before { right: var(--b-s2); }
+.client-shell .b1-line__n--on::before,
+.client-shell .b1-line__n--past::before { background: var(--brand); }
+.client-shell .b1-line__dot {
+  position: absolute; left: 0; top: 0; width: 11px; height: 11px; border-radius: 50%;
+  background: var(--pg-bg); box-shadow: inset 0 0 0 2px var(--pg-line);
+}
+.client-shell .b1-line__n--past .b1-line__dot { box-shadow: inset 0 0 0 2px var(--brand); }
+.client-shell .b1-line__n--on .b1-line__dot { background: var(--brand); box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 24%, transparent); }
+.client-shell .b1-line__lb { display: block; font-size: var(--b-lb); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--pg-fg-2); }
+.client-shell .b1-line__pr { display: block; margin-top: 3px; font-family: var(--display); font-weight: 800; font-size: var(--b-body); color: var(--pg-fg); font-variant-numeric: tabular-nums; }
+.client-shell .b1-line__sub { display: block; margin-top: 2px; font-size: var(--b-meta); color: var(--pg-fg-2); }
+
+/* Chip sticky: atajo de vuelta a la compra, no un segundo botón de pagar. */
+.client-shell .b1-chip {
+  position: fixed; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 40; display: flex; justify-content: center; pointer-events: none;
+  opacity: 0; transform: translateY(12px); transition: opacity .22s var(--ease), transform .22s var(--ease);
+}
+.client-shell .b1-chip[aria-hidden="true"] { visibility: hidden; }
+.client-shell .b1-chip--on { opacity: 1; transform: none; visibility: visible; }
+.client-shell .b1-chip__a {
+  pointer-events: auto; display: inline-flex; align-items: center; gap: 9px;
+  min-height: 44px; padding: 0 22px; border-radius: 999px;
+  background: var(--brand-fill); color: var(--on-fill);
+  font-weight: 700; font-size: var(--b-body);
+  box-shadow: 0 10px 30px -12px rgba(0,0,0,.55);
+}
+.client-shell .b1-chip__a svg { width: 17px; height: 17px; }
+
+/* Así de simple: tres pasos, sin prometer de más. */
+.client-shell .b1-simple { margin-top: var(--b-s5); }
+.client-shell .b1-pasos { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--b-s3); }
+@media (min-width: 768px) { .client-shell .b1-pasos { grid-template-columns: repeat(3, 1fr); gap: var(--b-s4); } }
+.client-shell .b1-paso { padding-top: var(--b-s2); border-top: 1px solid var(--pg-line); }
+.client-shell .b1-paso__n {
+  display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+  background: color-mix(in srgb, var(--brand) 16%, transparent); color: var(--pg-fg); margin-bottom: var(--b-s2);
+}
+.client-shell .b1-paso__n svg { width: 19px; height: 19px; }
+.client-shell .b1-paso__t { margin: 0; font-family: var(--display); font-weight: 800; font-size: var(--b-body); letter-spacing: -0.01em; }
+.client-shell .b1-paso__d { margin: 4px 0 0; font-size: var(--b-meta); line-height: 1.45; color: var(--pg-fg-2); }
+
+/* "Dónde es" con mapa grande: en CARTEL el lugar es parte del afiche. */
+.client-shell .b-c1 .b-map { aspect-ratio: 4 / 3; }
+@media (min-width: 768px) { .client-shell .b-c1 .b-map { height: 380px; aspect-ratio: auto; } }
+
+
+/* ============================================================
+   CONCEPTO 2 — ENTRADA
+   Idea: continuidad con parygo.com, que muestra un boleto. Acá el
+   bloque de compra ES el boleto: troquel, talón con el total y el
+   botón, tipografía de ticket (mayúsculas espaciadas, números
+   tabulares) y el color de la marca en el talón. Las fases son
+   sellos. En escritorio el boleto se apoya sobre su propio flyer,
+   difuminado y oscuro.
+   ============================================================ */
+.client-shell .b-c2 { --b-t1: 28px; }
+.client-shell .b-buy.b-c2 { position: relative; z-index: 1; }
+@media (min-width: 1024px) { .client-shell .b-c2 { --b-t1: 36px; } }
+
+/* El flyer detrás, solo en escritorio: decorativo, sin texto encima. */
+.client-shell .b2-bg { display: none; }
+@media (min-width: 1024px) {
+  .client-shell .b2-bg {
+    display: block; position: fixed; inset: -40px; z-index: 0;
+    background-size: cover; background-position: center;
+    filter: blur(32px) saturate(120%) brightness(.32);
+  }
+  .client-shell:has(.b-c2) .c-header { position: relative; z-index: 2; }
+}
+
+/* El boleto. En teléfono ocupa el ancho; en escritorio se centra y flota
+   sobre el flyer difuminado.
+   OJO con el selector: el concepto se pone en DOS elementos —el <article> de
+   la página y la <section> de compra—, así que todo lo que sea CAJA va con
+   `.b-buy.b-c2` (la sección). Con `.b-c2` a secas se le pone el ancho al
+   article y el boleto queda pegado a la izquierda. */
+@media (min-width: 768px) {
+  .client-shell .b-buy.b-c2 {
+    max-width: 720px;
+    background: var(--paper); border-radius: 18px;
+    padding: 0 0 0; overflow: hidden;
+    box-shadow: 0 30px 80px -30px rgba(0,0,0,.5);
+  }
+  .client-shell .b-c2 .b-stage { display: block; }
+  .client-shell .b-c2 .b-list { padding-bottom: var(--b-s4); }
+}
+@media (min-width: 1024px) { .client-shell .b-buy.b-c2 { max-width: 760px; } }
+
+/* El flyer va DENTRO del boleto, como la foto de un ticket. */
+.client-shell .b-c2 .b-hero { margin: 0 calc(var(--pad) * -1); }
+.client-shell .b-c2 .b-hero__shot img,
+.client-shell .b-c2 .b-hero__shot--ph { height: clamp(200px, 48vw, 260px); }
+.client-shell .b-c2 .b-hero__over { position: static; height: auto; padding: var(--b-s3) 0 0; }
+.client-shell .b-c2 .b-kicker { color: var(--pg-fg-2); text-shadow: none; }
+.client-shell .b-c2 .b-hero__name { color: var(--pg-fg); text-shadow: none; }
+.client-shell .b2-cuando { margin: var(--b-s1) 0 0; font-size: var(--b-meta); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--pg-fg-2); }
+@media (min-width: 768px) {
+  /* Dentro del boleto el flyer no se pega arriba: no hay columna que seguir. */
+  .client-shell .b-c2 .b-hero { margin: 0; position: static; top: auto; }
+  .client-shell .b-c2 .b-hero__shot img, .client-shell .b-c2 .b-hero__shot--ph { height: 220px; }
+  .client-shell .b-c2 .b-hero__over { padding: var(--b-s3) var(--b-s4) 0; }
+  .client-shell .b-c2 .b-list { padding: 0 var(--b-s4); }
+  .client-shell .b-c2 .b-aside { display: none; }
+}
+
+/* Troquel: la línea de puntos con su muesca, igual que la entrada real. */
+.client-shell .b-c2 .b-tks { position: relative; margin-top: var(--b-s4); padding-top: var(--b-s4); }
+.client-shell .b-c2 .b-tks::before {
+  content: ""; position: absolute; left: calc(var(--pad) * -1); right: calc(var(--pad) * -1); top: 0;
+  border-top: 2px dashed var(--pg-line);
+}
+@media (min-width: 768px) {
+  .client-shell .b-c2 .b-tks::before { left: calc(var(--b-s4) * -1); right: calc(var(--b-s4) * -1); }
+}
+
+/* Tipografía de boleto en la cabecera de cada tipo. */
+.client-shell .b2-ty + .b2-ty { margin-top: var(--b-s3); padding-top: var(--b-s3); border-top: 1px solid var(--pg-line); }
+.client-shell .b2-ty__head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--b-s2); }
+.client-shell .b2-ty__nm { font-size: var(--b-lb); font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--pg-fg); }
+.client-shell .b2-ty__pr { font-size: 24px; font-variant-numeric: tabular-nums; }
+.client-shell .b2-ty__inc { margin: var(--b-s1) 0 0; font-size: var(--b-meta); color: var(--pg-fg-2); }
+
+/* Los sellos: uno por fase, el vigente entero y los demás apagados. */
+.client-shell .b2-sellos { list-style: none; display: flex; flex-wrap: wrap; gap: var(--b-s1); margin: var(--b-s2) 0 0; padding: 0; }
+.client-shell .b2-sello {
+  flex: 1 1 128px; padding: var(--b-s1) 10px; border: 1px dashed var(--pg-line); border-radius: 6px;
+  opacity: var(--pg-dim);
+}
+.client-shell .b2-sello--on { opacity: 1; border-style: solid; border-color: var(--brand); }
+.client-shell .b2-sello__lb { display: block; font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--pg-fg-2); }
+.client-shell .b2-sello__pr { display: block; margin-top: 2px; font-family: var(--display); font-weight: 800; font-size: var(--b-body); font-variant-numeric: tabular-nums; color: var(--pg-fg); }
+.client-shell .b2-sello__sub { display: block; font-size: 11px; color: var(--pg-fg-2); }
+
+/* El talón: el total y el botón, con el color de la marca. En teléfono es la
+   barra de abajo; en escritorio, el pie del boleto. */
+.client-shell .b-c2 .b-cta {
+  background: var(--brand-fill); color: var(--on-fill);
+  border-top: 2px dashed color-mix(in srgb, var(--on-fill) 32%, transparent);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.client-shell .b-c2 .b-cta__t .n,
+.client-shell .b-c2 .b-cta__t .v { color: var(--on-fill); }
+.client-shell .b-c2 .b-cta__t .n { font-size: var(--b-lb); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+.client-shell .b-c2 .b-btn--go { background: var(--on-fill); color: var(--brand-fill); }
+@media (min-width: 768px) {
+  .client-shell .b-c2 .b-cta { position: static; margin: 0; padding: var(--b-s3) var(--b-s4) var(--b-s4); }
+}
+/* El resumen de escritorio no existe en ENTRADA: su trabajo lo hace el talón. */
+@media (min-width: 1024px) {
+  .client-shell .b-c2 .b-sum { display: none; }
+  .client-shell .b-c2 .b-cta { display: block; }
+}
+
+/* Mapa y datos, dentro del boleto y con su misma piel. */
+.client-shell .b-c2 .b-map { border-radius: 8px; }
+@media (min-width: 768px) {
+  .client-shell .b-c2 .b-map { margin-left: 0; margin-right: 0; width: 100%; height: 240px; aspect-ratio: auto; }
+}
+.client-shell .b-c2 .b-lb { letter-spacing: .18em; }
+
+
+/* ============================================================
+   CONCEPTO 3 — NOCHE EDITORIAL
+   Idea: Resident Advisor / DICE oscuro. Casi todo es tipografía: el
+   título ocupa la pantalla, los precios son numerales blancos
+   enormes y el flyer entra recortado a sangre por un costado. El
+   color de la marca aparece dos veces: el botón y una línea.
+   La escala general se mantiene; lo que crece es el título y el
+   precio, que SON el concepto (pedido explícito: 56 / 96).
+   ============================================================ */
+.client-shell .b-c3 { --b-t1: 56px; --flyer-h: clamp(300px, 64vw, 380px); }
+@media (min-width: 1024px) { .client-shell .b-c3 { --b-t1: 96px; } }
+
+.client-shell .b-c3 .b-hero__name { letter-spacing: -0.04em; line-height: .98; }
+.client-shell .b-c3 .b-kicker { letter-spacing: .22em; }
+/* La línea de marca: la única pieza de color fuera del botón. */
+.client-shell .b-c3 .b-tks { position: relative; padding-top: var(--b-s3); }
+.client-shell .b-c3 .b-tks::before {
+  content: ""; position: absolute; left: 0; top: 0; width: 64px; height: 3px; background: var(--brand);
+}
+/* Precios gigantes en blanco. */
+.client-shell .b-c3 .b-ph__pr { font-size: 40px; line-height: .95; letter-spacing: -0.03em; }
+.client-shell .b-c3 .b-ph--on .b-ph__pr { color: #FFF; }
+.client-shell .b-c3 .b-ph { padding: var(--b-s3) 0; align-items: end; }
+.client-shell .b-c3 .b-ph__nm { font-size: var(--b-t3); font-weight: 700; }
+@media (min-width: 1024px) {
+  .client-shell .b-c3 .b-ph__pr { font-size: 64px; }
+  .client-shell .b-c3 .b-ph__nm { font-size: 22px; }
+}
+/* El flyer sangra por el costado: en escritorio se pega al borde izquierdo
+   de la ventana y crece a lo alto. */
+@media (min-width: 1024px) {
+  .client-shell .b-c3 .b-hero {
+    margin-left: calc((100vw - min(100vw, 1120px)) / -2 - var(--pad));
+    width: calc(320px + (100vw - min(100vw, 1120px)) / 2 + var(--pad));
+  }
+  .client-shell .b-c3 .b-hero__shot img,
+  .client-shell .b-c3 .b-hero__shot--ph { aspect-ratio: auto; height: 78vh; min-height: 520px; object-fit: cover; }
+}
+
+/* NOCHE, teléfono: con el título a 56px sobre dos líneas el texto sube hasta
+   la mitad del flyer, donde el degradado todavía es débil y el arte del
+   promotor puede ser claro. Se oscurece antes y más fuerte: el título tiene
+   que leerse sobre CUALQUIER flyer. */
+.client-shell .b-c3 .b-hero__fade {
+  inset: 8% 0 0;
+  background: linear-gradient(180deg, transparent, rgba(14,12,10,.72) 38%, #0E0C0A 88%);
+}
+
+/* NOCHE: la línea de cuándo/dónde va DEBAJO del título, no encima. Arriba cae
+   sobre el medio del flyer —donde el arte del promotor suele tener su propio
+   texto— y se pisan dos tipografías. Abajo, las dos nuestras quedan juntas en
+   la zona oscura. */
+.client-shell .b-c3 .b-hero__name { order: 1; }
+.client-shell .b-c3 .b-kicker { order: 2; margin: var(--b-s1) 0 0; }
+
+/* AA en lo atenuado. La fila bloqueada se apaga con opacity var(--pg-dim)
+   (.62). Sobre eso, un texto que ya venía en --ink-2 (6.01:1) cae a 2.68:1 y
+   deja de cumplir; en tinta plena (15.73:1) cae a 4.63:1 y pasa. Así que
+   DENTRO de lo atenuado la etiqueta va en tinta, no en tinta tenue: el que
+   baja el contraste es el opacity, no el color. */
+.client-shell .b1-line__n:not(.b1-line__n--on) .b1-line__lb,
+.client-shell .b1-line__n:not(.b1-line__n--on) .b1-line__sub,
+.client-shell .b2-sello:not(.b2-sello--on) .b2-sello__lb,
+.client-shell .b2-sello:not(.b2-sello--on) .b2-sello__sub { color: var(--pg-fg); }
+
+/* ---------- CARTEL en escritorio ----------
+   En teléfono el afiche ya ocupa la primera pantalla. En escritorio la grilla
+   de tres columnas lo convertía en una columnita lateral y el concepto se
+   perdía: acá el póster va A LO ANCHO arriba, con el título encima, y la
+   tienda queda debajo en dos columnas (entradas + resumen). */
+@media (min-width: 768px) {
+  .client-shell .b-buy.b-c1 { max-width: 1120px; }
+  .client-shell .b-c1 .b-stage {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-areas:
+      "flyer  flyer"
+      "eleg   resumen"
+      "lista  resumen"
+      "trust  resumen"
+      "simple simple"
+      "info   info";
+    gap: 0 var(--b-s4);
+  }
+  /* El póster: ancho completo, sin sticky y sin recorte 4/5. */
+  .client-shell .b-c1 .b-hero {
+    grid-area: flyer; position: static; margin: 0 calc(var(--pad) * -1) var(--b-s4);
+  }
+  .client-shell .b-c1 .b-hero__shot img,
+  .client-shell .b-c1 .b-hero__shot--ph {
+    aspect-ratio: auto; height: min(62vh, 560px); object-fit: cover;
+  }
+  /* El título vuelve a apoyarse sobre el póster (en la base, en escritorio se
+     desarma y se va a su propia columna). */
+  .client-shell .b-c1 .b-hero__fade { display: block; }
+  .client-shell .b-c1 .b-kicker { display: block; }
+  .client-shell .b-c1 .b-hero__over {
+    grid-area: flyer; display: flex; flex-direction: column; justify-content: flex-end;
+    position: relative; z-index: 2; margin: 0 calc(var(--pad) * -1) var(--b-s4);
+    padding: 0 var(--b-s4) var(--b-s4); height: auto; pointer-events: none;
+  }
+  .client-shell .b-c1 .b-hero__name { color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,.7); max-width: 18ch; }
+  /* La ficha del póster no hace falta: los datos están en el afiche y en el mapa. */
+  .client-shell .b-c1 .b-aside { display: none; }
+  .client-shell .b-c1 .b1-h2 { grid-area: eleg; margin-top: 0; }
+  .client-shell .b-c1 .b-tks { grid-area: lista; }
+  .client-shell .b-c1 .b1-simple { grid-area: simple; }
+  .client-shell .b-c1 .b-info { grid-area: info; }
+  /* La línea de tiempo respira más: hay ancho de sobra. */
+  .client-shell .b-c1 .b1-line__n { min-width: 150px; }
+}
+@media (min-width: 1024px) {
+  .client-shell .b-c1 .b-hero__shot img,
+  .client-shell .b-c1 .b-hero__shot--ph { height: min(68vh, 640px); }
+  /* El resumen sigue siendo el sólido de la derecha y la barra de abajo se va,
+     igual que en la base. */
+  .client-shell .b-c1 .b-sum { top: 92px; }
+}
+
+/* El bloque de título comparte celda con el póster: se ancla ABAJO. Sin
+   align-self la celda lo estira desde arriba y el título cae sobre la parte
+   clara del flyer, donde el degradado todavía no protege. */
+@media (min-width: 768px) {
+  .client-shell .b-c1 .b-hero__over { align-self: end; }
 }

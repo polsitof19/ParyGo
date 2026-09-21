@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { generateQrSvg } from '@/lib/qr';
 import { TicketPass, type PassState } from '../../TicketPass';
 import { TransferTicket } from './TransferTicket';
+import { leerConcepto } from '@/lib/concepto';
 
 // SVG QR generation has no Node-only dependencies (no pngjs/Buffer), so this
 // route runs fine on Cloudflare Pages edge runtime.
@@ -13,6 +14,7 @@ export const revalidate = 0;
 
 type Props = {
   params: { brand: string; uuid: string };
+  searchParams?: { c?: string; v?: string };
 };
 
 type BrandTheme = {
@@ -69,7 +71,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function TicketPage({ params }: Props) {
+export default async function TicketPage({ params, searchParams }: Props) {
+  const concepto = leerConcepto(searchParams);
   const t = await loadTicket(params.brand, params.uuid);
   if (!t) notFound();
 
@@ -78,7 +81,7 @@ export default async function TicketPage({ params }: Props) {
 
   if (t.invalidated_at) {
     return (
-      <main className="c-state c-checkout-canvas">
+      <main className={`c-state c-checkout-canvas b-c${concepto}`}>
         <span className="c-eyebrow" style={{ color: 'var(--alert)' }}>Entrada invalidada</span>
         <h1 className="c-h1" style={{ fontSize: 28, marginTop: 8 }}>Esta entrada ya no es válida</h1>
         <p className="c-muted" style={{ marginTop: 10 }}>Fue devuelta o cancelada. Contacta al promotor si crees que es un error.</p>
@@ -98,7 +101,7 @@ export default async function TicketPage({ params }: Props) {
       : { kind: 'ok' };
 
   return (
-    <main className="c-checkout-canvas" style={{ maxWidth: 452, margin: '0 auto', padding: '24px 16px 48px' }}>
+    <main className={`c-checkout-canvas b-c${concepto}`} style={{ maxWidth: 452, margin: '0 auto', padding: '24px 16px 48px' }}>
       <TicketPass
         qrSvg={qrSvg}
         qrCode={t.qr_code}
