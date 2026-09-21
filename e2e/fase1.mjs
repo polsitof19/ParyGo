@@ -136,6 +136,10 @@ const val = await newCtx('validator', { session: valSess, viewport: { width: 460
 Object.assign(PAGES, { super: sup, buyer, validator: val });
 // Los botones de compra existen duplicados (rail desktop + barra mobile): solo el visible.
 const vis = (loc) => loc.filter({ visible: true }).first();
+// El CTA de la pantalla 1 vive en la barra sticky (teléfono y tablet) o en el
+// resumen de compra (escritorio ≥1024). Se toma el visible.
+const ctaBtn = (page) => vis(page.locator('.b-cta .b-btn--go, .b-sum .b-btn--go'));
+const ctaCaja = (page) => vis(page.locator('.b-cta, .b-sum'));
 // Re-envía una server action capturada con otros argumentos (mismo action id,
 // mismos headers de Next). Devuelve el texto crudo de la respuesta RSC.
 async function replayAction(page, captured, args) {
@@ -421,15 +425,15 @@ if (!S.eventId) {
     const tWait = Date.now();
     while (Date.now() - tWait < 12000 && (!lastReserve || Date.now() - lastReserve < 800)) await sleep(200);
     p.off('response', onResp);
-    const contBtn = p.locator('.b-cta .b-btn');
+    const contBtn = ctaBtn(p);
     if (await contBtn.isDisabled()) {
       // El server no reservó (sin cupo / no disponible) y el carrito quedó en 0.
       if (shots) await shot(p, tag, 'carrito-vacio');
       return { res: 'carrito-vacio', orderId: null, url: p.url(), toasts: await toastLog(p), continuarDisabled: true };
     }
-    const railStep1 = (await p.locator('.b-cta').first().innerText().catch(() => '')).replace(/\s+/g, ' ');
+    const railStep1 = (await ctaCaja(p).innerText().catch(() => '')).replace(/\s+/g, ' ');
     if (shots) await shot(p, tag, 'seleccion');
-    await p.locator('.b-cta .b-btn').click();
+    await ctaBtn(p).click();
     await p.locator('#buyer_name').waitFor({ timeout: 15000 });
     if (shots) await shot(p, tag, 'paso2-morph');
     await p.fill('#buyer_name', name);
@@ -721,13 +725,13 @@ if (!S.eventId) {
     await go(buyer.page, `/${EVENT_SLUG}`);
     await vis(buyer.page.getByRole('button', { name: 'Sumar General' })).click();
     await sleep(1200);
-    await buyer.page.locator('.b-cta .b-btn').click();
+    await ctaBtn(buyer.page).click();
     await buyer.page.locator('#buyer_name').waitFor();
     await buyer.page.getByRole('button', { name: /Volver a las entradas/ }).click();
     await vis(buyer.page.getByRole('button', { name: 'Restar General' })).click();
     await sleep(800);
     const payDisabled = await buyer.page.locator('button[type=submit][form="checkout-form"]').evaluateAll((els) => els.every((e) => e.disabled));
-    const contDisabled = await buyer.page.locator('.b-cta .b-btn').isDisabled();
+    const contDisabled = await ctaBtn(buyer.page).isDisabled();
     check('H', 'bug2: carrito en 0 → el CTA y el pago quedan deshabilitados', contDisabled && payDisabled, `continuar=${contDisabled} pagar=${payDisabled}`);
     if (S.checkoutReq) {
       const base = JSON.parse(S.checkoutReq.body)[0];
@@ -851,7 +855,7 @@ if (!S.eventId) {
     await go(p, `/${EVENT_SLUG}`);
     await vis(p.getByRole('button', { name: 'Sumar General' })).click();
     await sleep(900);
-    await p.locator('.b-cta .b-btn').click();
+    await ctaBtn(p).click();
     await p.locator('#buyer_name').waitFor();
     const tarjeta0 = await p.getByRole('radio', { name: 'Tarjeta' }).count();
     await shot(p, 'K', 'sin-mp-solo-yape');
@@ -907,7 +911,7 @@ if (!S.eventId) {
     await go(p, `/${EVENT_SLUG}`);
     await vis(p.getByRole('button', { name: 'Sumar General' })).click();
     await sleep(900);
-    await p.locator('.b-cta .b-btn').click();
+    await ctaBtn(p).click();
     await p.locator('#buyer_name').waitFor();
     check('K', 'tras quitar MP: "Tarjeta" desaparece de nuevo', (await p.getByRole('radio', { name: 'Tarjeta' }).count()) === 0);
     await shot(p, 'K', 'sin-mp-de-nuevo');

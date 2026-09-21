@@ -83,6 +83,24 @@ function fmtCortoMayus(iso: string): string {
   return `${dia} · ${hora}`.toUpperCase();
 }
 
+// "JUEVES 29 DE OCTUBRE" y "10:00 PM" para la ficha del póster.
+function fmtDiaLargo(iso: string): string {
+  return new Intl.DateTimeFormat('es-PE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Lima' })
+    .format(new Date(iso)).replace(/,/g, '').toUpperCase();
+}
+function fmtHora(iso: string): string {
+  return new Intl.DateTimeFormat('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })
+    .format(new Date(iso)).replace(/\s?a\.?\s?m\.?/i, ' AM').replace(/\s?p\.?\s?m\.?/i, ' PM').replace(/\s+/g, ' ').trim();
+}
+
+// El link a Maps se arma igual en la ficha y en "Dónde es".
+function hrefMapa(event: Event): string | null {
+  if (event.venue_maps_url?.startsWith('https://')) return event.venue_maps_url;
+  if (event.venue_lat && event.venue_lng) return `https://www.google.com/maps/search/?api=1&query=${event.venue_lat},${event.venue_lng}`;
+  if (event.venue_address) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue_address)}`;
+  return null;
+}
+
 // "27 set" para el fin de la preventa.
 function fmtDia(iso: string): string {
   return new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', timeZone: 'America/Lima' })
@@ -364,7 +382,7 @@ function fraseConfianza(pago: string): string {
 }
 
   return (
-    <section id="entradas" className={`b-buy b-v-${variant}`}>
+    <section id="entradas" className={`b-buy b-v-${variant}${shownStep === 2 ? ' b-buy--datos' : ''}`}>
       {mpCheckout && mpPublicKey ? (
         <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}`}>
           <div className="b-head">
@@ -425,6 +443,27 @@ function fraseConfianza(pago: string): string {
 
             <MasInfo event={event} />
           </div>
+
+          {/* Resumen de compra: el único bloque sólido de la página, y el
+              que reemplaza a la barra sticky en escritorio. */}
+          <aside className="b-sum">
+            <p className="b-sum__lb">Tu compra</p>
+            {lineItems.length === 0 ? (
+              <p className="b-sum__vacio">Elige tus entradas</p>
+            ) : (
+              <>
+                <ul className="b-sum__list">
+                  {lineItems.map((li) => (
+                    <li key={li.id}><span>{li.name} × {li.q}</span><span>{formatPEN(li.amount)}</span></li>
+                  ))}
+                </ul>
+                <p className="b-sum__total"><span>Total</span><b>{formatPEN(totalCents)}</b></p>
+              </>
+            )}
+            <button type="button" className="b-btn b-btn--go" disabled={totalItems === 0} onClick={() => setStep(2)}>
+              {applied?.isFree ? 'Continuar' : ctaMetodo} <ArrowRight aria-hidden="true" />
+            </button>
+          </aside>
         </div>
         </div>
       ) : (
@@ -614,6 +653,7 @@ function fraseConfianza(pago: string): string {
 // y encima el nombre. Arriba del nombre, la línea de cuándo y dónde en
 // mayúsculas chicas. Tocar el flyer lo abre entero (el hero lo recorta).
 function Hero({ event }: { event: Event }) {
+  const mapsHref = hrefMapa(event);
   const [zoom, setZoom] = useState(false);
   const donde = [event.venue_name, distrito(event.venue_address)].filter(Boolean).join(' · ');
   const kicker = [fmtCortoMayus(event.starts_at), donde].filter(Boolean).join(' · ');
@@ -626,7 +666,8 @@ function Hero({ event }: { event: Event }) {
   }, [zoom]);
 
   return (
-    <header className="b-hero">
+    <>
+      <header className="b-hero">
       {event.cover_url ? (
         <button type="button" className="b-hero__shot" onClick={() => setZoom(true)} aria-label={`Ver el flyer de ${event.name} completo`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -637,9 +678,13 @@ function Hero({ event }: { event: Event }) {
         <div className="b-hero__shot b-hero__shot--ph" aria-hidden="true"><span className="b-hero__fade" /></div>
       )}
 
-      <div className="b-hero__over">
-        <p className="b-kicker">{kicker}</p>
-        <h1 className="b-hero__name">{event.name}</h1>
+      {/* Ficha bajo el póster: solo en escritorio (en teléfono los datos
+          van sobre el flyer, en una línea). */}
+      <div className="b-aside">
+        <p>{fmtDiaLargo(event.starts_at)}</p>
+        <p>{fmtHora(event.starts_at)}</p>
+        {donde && <p>{donde}</p>}
+        {mapsHref && <a href={mapsHref} target="_blank" rel="noopener noreferrer">Cómo llegar →</a>}
       </div>
 
       {zoom && event.cover_url && (
@@ -649,7 +694,15 @@ function Hero({ event }: { event: Event }) {
           <span className="b-lightbox__hint">Toca para cerrar</span>
         </button>
       )}
-    </header>
+      </header>
+
+      {/* En teléfono este bloque se apoya sobre el flyer; en escritorio se
+          deshace y el título se coloca en la columna del centro. */}
+      <div className="b-hero__over">
+        <p className="b-kicker">{kicker}</p>
+        <h1 className="b-hero__name">{event.name}</h1>
+      </div>
+    </>
   );
 }
 
@@ -701,13 +754,7 @@ function armarEscalera(t: TicketType): Peldano[] {
 // Sección visible (no acordeón): dónde es con su mapa, sobre el evento si el
 // organizador escribió algo, y la línea legal chica al final.
 function MasInfo({ event }: { event: Event }) {
-  const mapsHref = event.venue_maps_url?.startsWith('https://')
-    ? event.venue_maps_url
-    : event.venue_lat && event.venue_lng
-      ? `https://www.google.com/maps/search/?api=1&query=${event.venue_lat},${event.venue_lng}`
-      : event.venue_address
-        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue_address)}`
-        : null;
+  const mapsHref = hrefMapa(event);
   const direccion = [event.venue_address, distrito(event.venue_address) ? null : event.venue_name]
     .filter(Boolean).join(', ');
   const legal = [

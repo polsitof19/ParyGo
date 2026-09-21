@@ -337,20 +337,26 @@
 .client-shell .b-buy {
   position: relative; max-width: 560px; margin: 0 auto;
   padding: 0 var(--pad) 40px; color: var(--pg-fg); text-align: left;
+  --flyer-h: clamp(300px, 82vw, 380px);
 }
 
 /* ---------- Hero: el flyer a lo ancho, el nombre encima ---------- */
 .client-shell .b-hero { position: relative; margin: 0 calc(var(--pad) * -1); }
 .client-shell .b-hero__shot { display: block; width: 100%; border: 0; padding: 0; background: none; cursor: zoom-in; position: relative; }
-.client-shell .b-hero__shot img { display: block; width: 100%; height: clamp(300px, 82vw, 380px); object-fit: cover; }
-.client-shell .b-hero__shot--ph { height: clamp(300px, 82vw, 380px); background: linear-gradient(160deg, var(--brand-soft), transparent 70%); cursor: default; }
+.client-shell .b-hero__shot img { display: block; width: 100%; height: var(--flyer-h); object-fit: cover; }
+.client-shell .b-hero__shot--ph { height: var(--flyer-h); background: linear-gradient(160deg, var(--brand-soft), transparent 70%); cursor: default; }
 /* El degradado tiene que apoyar el texto pase lo que pase con el flyer. */
 .client-shell .b-hero__fade {
   position: absolute; inset: 28% 0 0; display: block;
   background: linear-gradient(180deg, transparent, rgba(0,0,0,.35) 45%, rgba(0,0,0,.92));
 }
 .client-shell .b-v-b .b-hero__fade { background: linear-gradient(180deg, transparent, rgba(20,17,14,.5) 42%, #14110E); }
-.client-shell .b-hero__over { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 var(--pad) 22px; }
+.client-shell .b-stage { position: relative; }
+.client-shell .b-hero__over {
+  position: absolute; left: 0; right: 0; top: 0; height: var(--flyer-h);
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 0 var(--pad) 22px; pointer-events: none;
+}
 .client-shell .b-kicker {
   margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
   color: rgba(255,255,255,.88); text-shadow: 0 1px 8px rgba(0,0,0,.8);
@@ -494,19 +500,106 @@
 .client-shell .b-buy .c-check { color: var(--pg-fg); }
 .client-shell .b-buy .c-field + .c-field { margin-top: 20px; }
 .client-shell .b-buy select.c-input { padding-right: 18px; }
+/* ---------- Escritorio ----------
+   768-1023: dos columnas (póster + centro) y la barra sticky de abajo, como
+   en teléfono. Desde 1024: tres columnas en 1200 máx — póster con su ficha a
+   la izquierda, el título y las entradas al centro, y el resumen de compra a
+   la derecha, que es el ÚNICO bloque sólido de la página y reemplaza a la
+   barra sticky. */
 
-/* Escritorio: dos columnas, el flyer a la izquierda sin recorte extra. */
-@media (min-width: 940px) {
-  .client-shell .b-buy { max-width: 1040px; }
-  .client-shell .b-stage { display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 1fr); grid-template-areas: "hero list"; gap: 44px; align-items: start; }
-  .client-shell .b-hero { grid-area: hero; margin: 0; position: sticky; top: 92px; }
+/* La ficha del póster y el resumen no existen en teléfono. */
+.client-shell .b-aside,
+.client-shell .b-sum { display: none; }
+
+@media (min-width: 768px) {
+  .client-shell .b-buy { max-width: 900px; }
+  .client-shell .b-stage {
+    display: grid; grid-template-columns: 340px minmax(0, 1fr);
+    grid-template-areas: "flyer titulo" "flyer lista";
+    gap: 0 36px; align-items: start;
+  }
+  .client-shell .b-hero { grid-area: flyer; position: sticky; top: 92px; margin: 0; }
+  .client-shell .b-hero__over { display: contents; }
+  .client-shell .b-hero__shot { position: static; }
   .client-shell .b-hero__shot img, .client-shell .b-hero__shot--ph { height: auto; aspect-ratio: 4 / 5; }
-  .client-shell .b-hero__over { padding: 0 20px 20px; }
-  .client-shell .b-list { grid-area: list; }
-  .client-shell .b-tks { margin-top: 0; }
-  .client-shell .b-map { margin-left: 0; margin-right: 0; width: 100%; }
-  .client-shell .b-cta { margin-left: calc(var(--pad) * -1); margin-right: calc(var(--pad) * -1); }
+  /* Fuera del flyer el degradado no hace falta: el título ya no va encima. */
+  .client-shell .b-hero__fade { display: none; }
+  .client-shell .b-kicker { display: none; }
+  .client-shell .b-hero__name {
+    grid-area: titulo; position: static; margin: 0 0 26px; color: var(--pg-fg);
+    text-shadow: none; font-size: clamp(44px, 5vw, 64px); line-height: .92;
+    max-width: 14ch;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+  }
+  .client-shell .b-list { grid-area: lista; display: contents; }
+  .client-shell .b-tks { grid-area: lista; margin-top: 0; }
+  .client-shell .b-trust { grid-area: trust; }
+  .client-shell .b-info { grid-area: info; }
+  .client-shell .b-map { margin-left: 0; margin-right: 0; width: 100%; height: 320px; aspect-ratio: auto; }
 }
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .client-shell .b-stage { grid-template-areas: "flyer titulo" "flyer lista" "flyer trust" "flyer info"; }
+}
+
+@media (min-width: 1024px) {
+  /* 1200 de CONTENIDO: con 380 + 320 fijas y 32 de calle, al centro le quedan
+     436px. Los 560 del centro son un techo (las filas no se estiran), no una
+     medida alcanzable junto a las otras dos columnas dentro de 1200. */
+  .client-shell .b-buy { max-width: 1240px; padding-left: 20px; padding-right: 20px; padding-bottom: 64px; }
+  .client-shell .b-stage {
+    grid-template-columns: 380px minmax(0, 560px) 320px;
+    gap: 0 32px;
+    grid-template-areas:
+      "flyer titulo resumen"
+      "flyer lista  resumen"
+      "flyer trust  resumen"
+      "flyer info   info";
+    gap: 0 40px;
+  }
+  /* Escala de escritorio. */
+  .client-shell .b-ph { padding: 18px 0; }
+  .client-shell .b-ph__nm { font-size: 18px; }
+  .client-shell .b-ph__pr { font-size: 24px; }
+  .client-shell .b-ph__fase, .client-shell .b-kicker, .client-shell .b-lb, .client-shell .b-ty__lb { font-size: 12px; }
+  .client-shell .b-hero__name { font-size: clamp(64px, 5.2vw, 80px); margin-bottom: 30px; }
+
+  /* Ficha del póster: 11px mayúsculas, nada más. */
+  .client-shell .b-aside { display: block; padding: 16px 0 0; }
+  .client-shell .b-aside p {
+    margin: 0 0 4px; font-size: 11px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--pg-fg-2);
+  }
+  .client-shell .b-aside a {
+    display: inline-block; margin-top: 8px; font-size: 11px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--pg-fg); text-decoration: underline; text-underline-offset: 4px;
+  }
+
+  /* El resumen: el único sólido. Tinta en la clara, papel en la noche. */
+  .client-shell .b-sum {
+    grid-area: resumen; display: block; position: sticky; top: 92px;
+    padding: 22px; border-radius: 14px;
+    background: var(--pg-fg); color: var(--pg-bg);
+  }
+  .client-shell .b-sum__lb { margin: 0 0 16px; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; opacity: .7; }
+  .client-shell .b-sum__vacio { margin: 0 0 20px; font-size: 14.5px; opacity: .6; }
+  .client-shell .b-sum__list { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .client-shell .b-sum__list li { display: flex; justify-content: space-between; gap: 12px; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+  .client-shell .b-sum__total {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    margin: 0 0 18px; padding-top: 14px; border-top: 1px solid currentColor;
+  }
+  .client-shell .b-sum__total span { font-size: 13px; opacity: .7; }
+  .client-shell .b-sum__total b { font-family: var(--display); font-weight: 800; font-size: 28px; font-variant-numeric: tabular-nums; }
+  .client-shell .b-sum .b-btn { height: 50px; }
+
+  /* En la pantalla de entradas manda el resumen de la derecha, así que la
+     barra de abajo se va. En la de datos no hay resumen: la barra vuelve,
+     porque si no el escritorio se queda sin botón de pagar. */
+  .client-shell .b-cta { display: none; }
+  .client-shell .b-buy--datos .b-cta { display: block; }
+}
+
 
 @media (prefers-reduced-motion: reduce) {
   .client-shell .b-btn, .client-shell .b-qbtn, .client-shell .b-add, .client-shell .b-qty { transition: none; animation: none; }
