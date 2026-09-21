@@ -16,7 +16,7 @@ export default async function AdminTeamPage() {
   if (!ctx) return null;
 
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto' }}>
+    <div style={{ maxWidth: 680 }}>
       <Link href="/admin" className="s-back">
         <ChevronLeft className="h-3.5 w-3.5" /> Tu panel
       </Link>
