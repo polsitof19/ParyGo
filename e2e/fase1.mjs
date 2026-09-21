@@ -633,7 +633,7 @@ if (!S.eventId) {
     check('F', 'la 11ª cortesía se rechaza (stock 10 respetado)', /No hay cupo/i.test(m2) && ctk2.length === 10, `${m2} · tickets=${ctk2.length}`);
     // F3: el comprador público intenta llevar la Cortesía S/0 por el checkout (ya agotada por las 10 de cortesía).
     await go(buyer.page, `/${EVENT_SLUG}`);
-    const cortAgotada = await buyer.page.locator('.b-tk__out').count();
+    const cortAgotada = await buyer.page.locator('.b-ph__ago').count();
     note('F', `Cortesía en la página pública tras emitir 10: ${cortAgotada ? 'Agotado' : 'sigue ofreciéndose'} · botón Sumar Cortesía=${await buyer.page.getByRole('button', { name: 'Sumar Cortesía' }).count()}`);
     const r = (await buyer.page.getByRole('button', { name: 'Sumar Cortesía' }).count()) ? await buy({ items: { Cortesía: 1 }, email: `e2e-f-${STAMP}@test.local`, name: `Cortesia Publica ${STAMP}`, tag: 'F' }) : { res: 'sin-boton', url: '', toasts: [], orderId: null };
     await shot(buyer.page, 'F', 'checkout-cortesia-publica');
@@ -729,7 +729,7 @@ if (!S.eventId) {
       check('H', 'bug2: checkout armado con 0 entradas → "Elige al menos una entrada." (español)', /Elige al menos una entrada/.test(rr.text) && !/Array must/.test(rr.text), rr.text.slice(-140));
     }
     await go(buyer.page, `/${EVENT_SLUG}`);
-    const soldOutWithHolds = await buyer.page.locator('.b-tk__out').count();
+    const soldOutWithHolds = await buyer.page.locator('.b-ph__ago').count();
     note('H', `Con 1 VIP pagada + 4 en revisión (holds), la página pública muestra "Agotado" en VIP: ${soldOutWithHolds > 0 ? 'sí' : 'NO (sigue ofreciendo Sumar VIP)'}`);
     S.H6pendingMsg = r2.toasts.join('|');
     const { data: failedOrd } = await svc.from('orders').select('id,status').eq('event_id', S.eventId).eq('buyer_email', `e2e-h6-${STAMP}@test.local`);
@@ -772,7 +772,7 @@ if (!S.eventId) {
       check(k, 'VIP 5/5 vendidas tras aprobar', v.sold === 5, `sold=${v.sold}`);
       await go(buyer.page, `/${EVENT_SLUG}`);
       const vipRow = buyer.page.locator('text=VIP').first().locator('xpath=ancestor::*[contains(@class,"c-")][1]');
-      const soldOutCount = await buyer.page.locator('.b-tk__out').count();
+      const soldOutCount = await buyer.page.locator('.b-ph__ago').count();
       const sumarVip = await buyer.page.getByRole('button', { name: 'Sumar VIP' }).count();
       await shot(buyer.page, k, 'publico-vip-agotado');
       check(k, 'sold out visible en la página pública (VIP "Agotado", sin botón Sumar)', soldOutCount >= 1 && sumarVip === 0, `c-soldout=${soldOutCount} sumarVIP=${sumarVip}`);

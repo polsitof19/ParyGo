@@ -62,6 +62,20 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
   const { data: activePrices } = await supabase.rpc('get_event_active_prices', {
     p_event_id: event.id,
   });
+  // Escalera de fases por tipo (todas, no solo la vigente): el comprador ve
+  // hasta cuándo dura el precio de hoy y cuánto viene después.
+  const { data: phaseRows } = await supabase
+    .from('ticket_type_price_phases')
+    .select('ticket_type_id, name, price_cents, starts_at, ends_at, sort_order')
+    .in('ticket_type_id', (ticketTypes ?? []).map((t) => t.id))
+    .order('sort_order');
+  const phasesByType = new Map<string, { name: string | null; price_cents: number; starts_at: string | null; ends_at: string | null; sort_order: number }[]>();
+  for (const ph of phaseRows ?? []) {
+    const arr = phasesByType.get(ph.ticket_type_id) ?? [];
+    arr.push({ name: ph.name, price_cents: ph.price_cents, starts_at: ph.starts_at, ends_at: ph.ends_at, sort_order: ph.sort_order });
+    phasesByType.set(ph.ticket_type_id, arr);
+  }
+
   const priceByType = new Map(
     (activePrices ?? []).map((r) => [r.ticket_type_id, r])
   );
@@ -75,6 +89,7 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
       next_price_cents: ap?.next_price_cents ?? null,
       next_starts_at: ap?.next_starts_at ?? null,
       next_name: ap?.next_name ?? null,
+      phases: phasesByType.get(t.id) ?? [],
       // Estado de agotado calculado SERVER-side; capacity/sold no salen al cliente.
       soldOut: !t.is_unlimited && (t.capacity - t.sold) <= 0,
     };

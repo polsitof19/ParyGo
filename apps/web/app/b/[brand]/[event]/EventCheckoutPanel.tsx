@@ -43,6 +43,9 @@ type TicketType = {
   // soldOut viene calculado server-side; NUNCA se mandan capacity/sold al cliente
   // (el comprador no ve cuántas hay ni cuántas quedan — solo el estado "Agotado").
   is_unlimited: boolean; soldOut: boolean; sort_order: number; color_hex: string | null;
+  // Todas las fases de precio del tipo (públicas): la escalera que ve el
+  // comprador. La compra siempre es sobre la fase VIGENTE.
+  phases: { name: string | null; price_cents: number; starts_at: string | null; ends_at: string | null; sort_order: number }[];
   bulk_min_qty: number; bulk_discount_pct: number;
 };
 
@@ -341,10 +344,15 @@ export function EventCheckoutPanel({
         : 'Pago seguro';
   const ctaMetodo = method === 'mercadopago' ? 'Pagar con tarjeta' : brand.yape_number ? 'Pagar con Yape' : 'Pagar';
 
+// Una sola línea, como se lo diría alguien: nada de enumeraciones de tres.
+function fraseConfianza(pago: string): string {
+  if (/tarjeta/i.test(pago) && /Yape/i.test(pago)) return 'Pagas por Yape o tarjeta y tu entrada te llega al correo al toque.';
+  if (/tarjeta/i.test(pago)) return 'Pagas con tarjeta y tu entrada te llega al correo al toque.';
+  return 'Pagas por Yape y tu entrada te llega al correo al toque.';
+}
+
   return (
     <section id="entradas" className="b-buy">
-      <div className="b-blobs" aria-hidden="true"><span /><span /></div>
-
       {mpCheckout && mpPublicKey ? (
         <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}`}>
           <div className="b-head">
@@ -362,46 +370,46 @@ export function EventCheckoutPanel({
           <Hero event={event} />
 
           <div className="b-list">
-            <ul className="b-tks">
+            <section className="b-tks">
               {sorted.map((t) => {
-                const soldOut = t.soldOut;
                 const cur = qty[t.id] ?? 0;
                 const incluye = resumirIncluye(t.description);
-                const sube = t.next_price_cents != null && t.next_price_cents > t.active_price_cents;
+                const escalera = armarEscalera(t);
                 return (
-                  <li key={t.id} className={`b-tk${cur > 0 ? ' b-tk--on' : ''}${soldOut ? ' b-tk--out' : ''}`}>
-                    <div className="b-tk__l">
-                      <h2 className="b-tk__nm">{t.name}</h2>
-                      {incluye && <p className="b-tk__desc">{incluye}</p>}
-                      {!soldOut && <FaseLinea tt={t} />}
-                    </div>
-                    <div className="b-tk__r">
-                      <span className="b-tk__pr">{formatPEN(t.active_price_cents)}</span>
-                      {sube && !soldOut && <s className="b-tk__antes">{formatPEN(t.next_price_cents!)}</s>}
-                      {soldOut ? (
-                        <span className="b-tk__out">Agotado</span>
-                      ) : cur === 0 ? (
-                        <button type="button" onClick={() => inc(t)} className="b-add" aria-label={`Sumar ${t.name}`}>
-                          Agregar
-                        </button>
-                      ) : (
-                        <div className="b-qty" aria-live="polite">
-                          <button type="button" onClick={() => dec(t)} aria-label={`Restar ${t.name}`} className="b-qbtn"><Minus aria-hidden="true" /></button>
-                          <span key={cur} className="b-qval">{cur}</span>
-                          <button type="button" onClick={() => inc(t)} aria-label={`Sumar ${t.name}`} className="b-qbtn b-qbtn--add"><Plus aria-hidden="true" /></button>
-                        </div>
-                      )}
-                    </div>
-                  </li>
+                  <div key={t.id} className={`b-ty${t.soldOut ? ' b-ty--out' : ''}`}>
+                    <p className="b-ty__lb">{t.name}</p>
+                    {incluye && <p className="b-ty__desc">{incluye}</p>}
+                    {escalera.map((f, i) => (
+                      <div key={i} className={`b-ph${f.estado === 'vigente' ? ' b-ph--on' : ''}`}>
+                        <span className="b-ph__nm">{f.etiqueta}</span>
+                        <span className="b-ph__pr">{formatPEN(f.precio)}</span>
+                        <span className="b-ph__act">
+                          {f.estado !== 'vigente' ? (
+                            <Lock className="b-ph__lock" aria-label={f.estado === 'futura' ? 'Todavía no disponible' : 'Fase terminada'} />
+                          ) : t.soldOut ? (
+                            <span className="b-ph__ago">Agotada</span>
+                          ) : cur === 0 ? (
+                            <button type="button" onClick={() => inc(t)} className="b-add" aria-label={`Sumar ${t.name}`}>
+                              Agregar
+                            </button>
+                          ) : (
+                            <span className="b-qty" aria-live="polite">
+                              <button type="button" onClick={() => dec(t)} aria-label={`Restar ${t.name}`} className="b-qbtn"><Minus aria-hidden="true" /></button>
+                              <span key={cur} className="b-qval">{cur}</span>
+                              <button type="button" onClick={() => inc(t)} aria-label={`Sumar ${t.name}`} className="b-qbtn b-qbtn--add"><Plus aria-hidden="true" /></button>
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 );
               })}
-            </ul>
+            </section>
 
-            <Detalles event={event} />
+            <p className="b-trust">{fraseConfianza(payLabel)}</p>
 
-            <p className="b-trust">
-              {payLabel} · Tu QR llega al instante a tu email · Venta oficial
-            </p>
+            <MasInfo event={event} />
           </div>
         </div>
         </div>
@@ -589,7 +597,7 @@ export function EventCheckoutPanel({
 
 // ============================ Flyer + nombre + cuándo/dónde ============================
 // El flyer ya lo vio la persona en Instagram: acá confirma dónde está y qué
-// compra. Banda compacta en teléfono y columna izquierda en escritorio.
+// compra. Papel plano, sin degradados: la única marca es la barra de arriba.
 function Hero({ event }: { event: Event }) {
   const [zoom, setZoom] = useState(false);
   const donde = [event.venue_name, distrito(event.venue_address)].filter(Boolean).join(' · ');
@@ -603,13 +611,6 @@ function Hero({ event }: { event: Event }) {
 
   return (
     <header className="b-hero">
-      {event.cover_url && (
-        <div className="b-hero__bg" aria-hidden="true">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={optimizedImage(event.cover_url, { width: 420, quality: 60 })} alt="" decoding="async" />
-        </div>
-      )}
-
       {event.cover_url ? (
         <button type="button" className="b-flyer" onClick={() => setZoom(true)} aria-label={`Ver el flyer de ${event.name} completo`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -636,23 +637,50 @@ function Hero({ event }: { event: Event }) {
   );
 }
 
-// ============================ Anclaje de preventa ============================
-// Una línea honesta: hasta cuándo dura el precio de hoy. El precio de la fase
-// siguiente va tachado al lado del precio, en la columna de la derecha.
-function FaseLinea({ tt }: { tt: TicketType }) {
-  const sube = tt.next_price_cents != null && tt.next_price_cents > tt.active_price_cents;
-  const bulk = tt.bulk_min_qty > 0 && tt.bulk_discount_pct > 0;
-  const partes: string[] = [];
-  if (sube && tt.active_ends_at) partes.push(`Preventa hasta el ${fmtDia(tt.active_ends_at)}`);
-  if (bulk) partes.push(`${tt.bulk_min_qty}+ pagas ${tt.bulk_discount_pct}% menos`);
-  if (partes.length === 0) return null;
-  return <p className="b-tk__fase">{partes.join(' · ')}</p>;
+// ============================ Escalera de fases ============================
+// Una fila por fase, como en Joinnus/Teleticket: el comprador ve de un vistazo
+// qué precio rige hoy, hasta cuándo, y cuánto va a costar después. Solo la
+// fase vigente se puede comprar; las otras van con candado.
+type Peldano = { etiqueta: string; precio: number; estado: 'pasada' | 'vigente' | 'futura' };
+
+function armarEscalera(t: TicketType): Peldano[] {
+  const ahora = Date.now();
+  if (t.phases.length === 0) {
+    // Tipo sin fases: un solo precio, sin escalera que mostrar.
+    return [{ etiqueta: 'Precio', precio: t.active_price_cents, estado: 'vigente' }];
+  }
+  const ordenadas = [...t.phases].sort((a, b) => a.sort_order - b.sort_order);
+  // La vigente es la PRIMERA cuya ventana contiene a ahora (misma regla que
+  // get_event_active_prices en SQL).
+  const iVigente = ordenadas.findIndex((f) => {
+    const empezo = !f.starts_at || Date.parse(f.starts_at) <= ahora;
+    const sigue = !f.ends_at || Date.parse(f.ends_at) > ahora;
+    return empezo && sigue;
+  });
+  return ordenadas.map((f, i) => {
+    const estado: Peldano['estado'] = i === iVigente ? 'vigente' : i < iVigente || iVigente === -1 ? 'pasada' : 'futura';
+    // Si el organizador no le puso nombre a la fase: las del medio son
+    // preventas numeradas y la última es la tarifa Regular, como se nombran
+    // en Joinnus o Teleticket.
+    const ultima = i === ordenadas.length - 1;
+    const nombre = f.name?.trim() || (ultima && ordenadas.length > 1 ? 'Regular' : `Preventa ${i + 1}`);
+    let etiqueta = nombre;
+    if (estado === 'vigente' && f.ends_at) etiqueta = `${nombre} · hasta el ${fmtDia(f.ends_at)}`;
+    // La fase que viene solo muestra fecha si empieza OTRO día que el corte de
+    // la anterior: si arrancan el mismo día, repetir la fecha confunde.
+    if (estado === 'futura' && f.starts_at) {
+      const previa = ordenadas[i - 1]?.ends_at;
+      const mismoDia = previa ? fmtDia(previa) === fmtDia(f.starts_at) : false;
+      if (!mismoDia) etiqueta = `${nombre} · desde el ${fmtDia(f.starts_at)}`;
+    }
+    return { etiqueta, precio: f.price_cents, estado };
+  });
 }
 
-// ============================ Detalles (links chicos) ============================
-// Lo secundario no vive en un acordeón: son tres links bajo las entradas.
-function Detalles({ event }: { event: Event }) {
-  const [abierto, setAbierto] = useState<null | 'dev' | 'desc'>(null);
+// ============================ Más información ============================
+// Sección visible (no acordeón): dónde es con su mapa, sobre el evento si el
+// organizador escribió algo, y la línea legal chica al final.
+function MasInfo({ event }: { event: Event }) {
   const mapsHref = event.venue_maps_url?.startsWith('https://')
     ? event.venue_maps_url
     : event.venue_lat && event.venue_lng
@@ -660,26 +688,45 @@ function Detalles({ event }: { event: Event }) {
       : event.venue_address
         ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue_address)}`
         : null;
-  const devoluciones = event.refund_policy || 'Sin devolución post-pago salvo cancelación del evento.';
+  const direccion = [event.venue_address, distrito(event.venue_address) ? null : event.venue_name]
+    .filter(Boolean).join(', ');
+  const legal = [
+    event.min_age > 0 ? `+${event.min_age}` : null,
+    event.refund_policy?.trim() || 'Sin devolución salvo cancelación del evento',
+  ].filter(Boolean).join(' · ');
 
   return (
-    <div className="b-links">
-      <div className="b-links__row">
-        {mapsHref && (
-          <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="b-link">¿Dónde es?</a>
-        )}
-        {event.min_age > 0 && <span className="b-link b-link--flat">+{event.min_age}</span>}
-        <button type="button" className="b-link" aria-expanded={abierto === 'dev'} onClick={() => setAbierto(abierto === 'dev' ? null : 'dev')}>
-          Devoluciones
-        </button>
-        {event.description && (
-          <button type="button" className="b-link" aria-expanded={abierto === 'desc'} onClick={() => setAbierto(abierto === 'desc' ? null : 'desc')}>
-            Sobre el evento
-          </button>
-        )}
-      </div>
-      {abierto === 'dev' && <p className="b-links__txt">{devoluciones}</p>}
-      {abierto === 'desc' && event.description && <p className="b-links__txt" style={{ whiteSpace: 'pre-line' }}>{event.description}</p>}
-    </div>
+    <section className="b-info">
+      {(event.venue_name || event.venue_address) && (
+        <div className="b-info__b">
+          <p className="b-lb">Dónde es</p>
+          {event.venue_address && (
+            <iframe
+              className="b-map"
+              src={`https://www.google.com/maps?q=${encodeURIComponent(event.venue_address)}&z=16&output=embed`}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              title={`Mapa de ${event.venue_name ?? 'el lugar'}`}
+            />
+          )}
+          <p className="b-info__dir">
+            {event.venue_name}
+            {direccion && <><br />{direccion}</>}
+          </p>
+          {mapsHref && (
+            <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="b-info__link">Cómo llegar →</a>
+          )}
+        </div>
+      )}
+
+      {event.description && (
+        <div className="b-info__b">
+          <p className="b-lb">Sobre el evento</p>
+          <p className="b-info__txt">{event.description}</p>
+        </div>
+      )}
+
+      <p className="b-legal">{legal}</p>
+    </section>
   );
 }

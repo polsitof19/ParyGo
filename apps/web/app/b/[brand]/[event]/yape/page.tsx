@@ -64,10 +64,8 @@ export default async function YapeUploadPage({
 
   return (
     <main className="b-buy c-checkout-canvas" style={{ paddingTop: 26 }}>
-      <div className="b-blobs" aria-hidden="true"><span /><span /></div>
-
       <div className="b-head">
-        <h1 className="b-head__t">Yapea y sube tu captura</h1>
+        <h1 className="b-head__t">Yapea {formatPEN(order.total_cents)} exactos y sube tu captura</h1>
       </div>
 
       {/* 1 · A quién le yapeas */}
@@ -104,7 +102,7 @@ export default async function YapeUploadPage({
 
       {/* 3 · Monto exacto + captura */}
       <div className="b-panel">
-        <p className="b-panel__t">3 · Yapea exactamente</p>
+        <p className="b-panel__t">3 · El monto exacto</p>
         <div className="b-monto">
           <span>{formatPEN(order.total_cents)}</span>
           <CopyButton value={(order.total_cents / 100).toFixed(2)} label="monto" />
