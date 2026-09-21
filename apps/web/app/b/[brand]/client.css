@@ -313,29 +313,103 @@
 .client-shell .b-blobs span:last-child { width: 240px; aspect-ratio: 1; top: 120px; left: -80px; opacity: .16; }
 .client-shell .b-buy > *:not(.b-blobs) { position: relative; z-index: 1; }
 
-/* Flyer: lo primero y lo mas grande. Nombre y meta encima del velo. */
-.client-shell .b-hero { position: relative; border-radius: 24px; overflow: hidden; box-shadow: var(--shadow-md); background: var(--paper-2); }
-.client-shell .b-hero__img { display: block; width: 100%; aspect-ratio: 4 / 5; max-height: 58vh; object-fit: cover; }
-.client-shell .b-hero__ph {
-  display: grid; place-items: center; width: 100%; aspect-ratio: 4 / 5; padding: 28px; text-align: center;
-  font-family: var(--display); font-weight: 800; font-size: clamp(26px, 7vw, 40px); line-height: 1.02; color: var(--ink-3);
-  background: radial-gradient(120% 90% at 70% 8%, var(--brand-soft), transparent 62%), var(--paper-2);
+/* ---------- Hero compacto ----------
+   El flyer ya lo vieron en Instagram: la página confirma y vende, no vuelve a
+   vender. En teléfono el hero es una banda de ~200px — fondo con el mismo
+   flyer difuminado y teñido de marca, el flyer ENTERO (sin recorte) a la
+   izquierda, y a la derecha el pill, el nombre y "fecha · lugar".
+   En escritorio la banda se deshace (display: contents) y el flyer pasa a ser
+   la columna izquierda, grande y entero, con las entradas a la derecha. */
+.client-shell .b-stage { display: grid; gap: 18px; }
+
+.client-shell .b-hero {
+  position: relative; display: flex; align-items: center; gap: 16px;
+  min-height: 200px; padding: 18px; overflow: hidden;
+  border-radius: 24px; box-shadow: var(--shadow-sm); background: var(--paper-2);
 }
-.client-shell .b-hero__veil {
-  position: absolute; inset: auto 0 0; padding: 92px 18px 18px;
-  /* El flyer lo sube el promotor y puede ser clarísimo: el velo llega a
-     .92 donde se apoya el texto y la sombra hace de segunda señal. */
-  background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.42) 42%, rgba(0,0,0,.92) 100%);
+/* Fondo: el propio flyer, borroso y bajo, mezclado con el tinte de la marca. */
+.client-shell .b-hero__bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+.client-shell .b-hero__bg img {
+  width: 100%; height: 100%; object-fit: cover;
+  filter: blur(26px) saturate(1.15); transform: scale(1.25); opacity: .38;
 }
-.client-shell .b-hero__name { font-family: var(--display); font-weight: 800; font-size: clamp(28px, 8vw, 38px); line-height: .96; letter-spacing: -0.03em; color: #fff; margin: 0; text-shadow: 0 2px 14px rgba(0,0,0,.72); }
-.client-shell .b-hero__meta { margin: 8px 0 0; font-size: 13.5px; font-weight: 600; color: #fff; text-shadow: 0 1px 10px rgba(0,0,0,.8); }
+.client-shell .b-hero__bg::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(120deg, var(--brand-soft), transparent 55%), rgba(251,247,240,.55);
+}
+.client-shell .b-hero > *:not(.b-hero__bg) { position: relative; z-index: 1; }
+
+/* El flyer entero, sin recorte. Tocarlo lo abre a pantalla completa. */
+.client-shell .b-flyer { flex: none; border: 0; padding: 0; background: none; cursor: zoom-in; }
+.client-shell .b-flyer img {
+  /* Alto fijo y ancho libre: el flyer conserva SU proporción y no le quedan
+     bandas blancas a los costados. El tope cubre flyers muy anchos. */
+  display: block; height: 128px; width: auto; max-width: 122px; object-fit: contain;
+  border-radius: 12px; background: var(--surface);
+  box-shadow: 0 8px 22px -10px rgba(35,28,23,.55);
+  transition: transform .26s var(--spring);
+}
+.client-shell .b-flyer:hover img { transform: translateY(-2px) scale(1.02); }
+.client-shell .b-flyer:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; border-radius: 14px; }
+.client-shell .b-flyer--ph {
+  width: 96px; height: 128px; border-radius: 12px; display: grid; place-items: center; padding: 8px;
+  text-align: center; font-family: var(--display); font-weight: 800; font-size: 13px; line-height: 1.05;
+  color: var(--ink-3); background: var(--surface); box-shadow: 0 8px 22px -10px rgba(35,28,23,.55);
+}
+
+.client-shell .b-titles { min-width: 0; }
+.client-shell .b-hero__name {
+  font-family: var(--display); font-weight: 800; font-size: clamp(22px, 6vw, 28px);
+  line-height: 1.04; letter-spacing: -0.03em; color: var(--ink); margin: 8px 0 0;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+}
+.client-shell .b-hero__meta { margin: 7px 0 0; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+/* El pill ya no va sobre una foto: papel, tinta y punto de marca. */
 .client-shell .b-live {
-  position: absolute; top: 14px; left: 14px; display: inline-flex; align-items: center; gap: 7px;
-  height: 28px; padding: 0 12px; border-radius: var(--r-pill); background: rgba(251,247,240,.95);
-  font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--ink); box-shadow: var(--shadow-sm);
+  display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px;
+  border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line);
+  font-size: 11.5px; font-weight: 700; letter-spacing: .02em; color: var(--ink);
 }
 .client-shell .b-live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); animation: b-pulse 2s var(--ease) infinite; }
 @keyframes b-pulse { 0%, 100% { opacity: 1 } 50% { opacity: .4 } }
+
+/* Lightbox: el flyer entero a pantalla completa, se cierra tocando. */
+.client-shell .b-lightbox {
+  position: fixed; inset: 0; z-index: 90; border: 0; padding: 20px; width: 100%; height: 100%;
+  display: grid; place-items: center; cursor: zoom-out;
+  background: rgba(20,14,10,.92); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  animation: b-fade .18s var(--ease) both;
+}
+.client-shell .b-lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 14px; }
+.client-shell .b-lightbox__hint { position: absolute; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; text-align: center; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.8); }
+@keyframes b-fade { from { opacity: 0 } to { opacity: 1 } }
+
+/* Escritorio: dos columnas. El flyer grande y entero a la izquierda; arriba a
+   la derecha el nombre, y debajo las entradas. */
+@media (min-width: 940px) {
+  .client-shell .b-buy { max-width: 1040px; }
+  .client-shell .b-stage {
+    grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+    grid-template-areas: "flyer titles" "flyer list";
+    gap: 10px 36px; align-items: start;
+  }
+  .client-shell .b-hero { display: contents; }
+  .client-shell .b-hero__bg { display: none; }
+  .client-shell .b-flyer, .client-shell .b-flyer--ph { grid-area: flyer; }
+  .client-shell .b-flyer { cursor: default; }
+  .client-shell .b-flyer img { width: 100%; max-width: none; height: auto; max-height: 560px; border-radius: 20px; box-shadow: var(--shadow-md); }
+  .client-shell .b-flyer:hover img { transform: none; }
+  .client-shell .b-flyer--ph { width: 100%; height: 420px; font-size: 26px; border-radius: 20px; }
+  .client-shell .b-titles { grid-area: titles; padding-top: 2px; }
+  .client-shell .b-hero__name { font-size: clamp(30px, 3vw, 40px); }
+  .client-shell .b-list { grid-area: list; }
+  .client-shell .b-tks { margin-top: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .client-shell .b-flyer img { transition: none; }
+  .client-shell .b-lightbox { animation: none; }
+}
 
 /* Lista de entradas */
 .client-shell .b-tks { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }

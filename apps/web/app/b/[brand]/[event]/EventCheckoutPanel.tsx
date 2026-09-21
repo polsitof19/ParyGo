@@ -322,8 +322,10 @@ export function EventCheckoutPanel({
       ) : shownStep === 1 ? (
         /* ---------- PANTALLA 1: el flyer y las entradas ---------- */
         <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}`} key="step1">
+          <div className="b-stage">
           <Hero event={event} />
 
+          <div className="b-list">
           <ul className="b-tks">
             {sorted.map((t) => {
               const soldOut = t.soldOut;
@@ -358,6 +360,8 @@ export function EventCheckoutPanel({
           </ul>
 
           <MasInfo event={event} brand={brand} shareUrl={shareUrl} />
+          </div>
+          </div>
         </div>
       ) : (
         /* ---------- PANTALLA 2: tus datos ---------- */
@@ -535,22 +539,52 @@ export function EventCheckoutPanel({
 }
 
 // ============================ Flyer + nombre + fecha·lugar ============================
+// El flyer ya lo vio la persona en Instagram: acá confirma dónde está y qué
+// compra. Banda compacta en teléfono (flyer entero chico + datos al lado) y
+// columna izquierda grande en escritorio. Tocar el flyer lo abre completo.
 function Hero({ event }: { event: Event }) {
+  const [zoom, setZoom] = useState(false);
   const cuando = fmtDateShort(event.starts_at);
   const meta = [cuando, event.venue_name].filter(Boolean).join(' · ');
+
+  useEffect(() => {
+    if (!zoom) return;
+    const cerrar = (e: KeyboardEvent) => { if (e.key === 'Escape') setZoom(false); };
+    window.addEventListener('keydown', cerrar);
+    return () => window.removeEventListener('keydown', cerrar);
+  }, [zoom]);
+
   return (
     <header className="b-hero">
-      {event.cover_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img className="b-hero__img" src={optimizedImage(event.cover_url, { width: 900, quality: 78 })} alt={`Flyer de ${event.name}`} decoding="async" />
-      ) : (
-        <div className="b-hero__ph">{event.name}</div>
+      {event.cover_url && (
+        <div className="b-hero__bg" aria-hidden="true">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={optimizedImage(event.cover_url, { width: 420, quality: 60 })} alt="" decoding="async" />
+        </div>
       )}
-      <span className="b-live">Vendiendo</span>
-      <div className="b-hero__veil">
+
+      {event.cover_url ? (
+        <button type="button" className="b-flyer" onClick={() => setZoom(true)} aria-label={`Ver el flyer de ${event.name} completo`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={optimizedImage(event.cover_url, { width: 600, quality: 80 })} alt={`Flyer de ${event.name}`} decoding="async" />
+        </button>
+      ) : (
+        <div className="b-flyer--ph">{event.name}</div>
+      )}
+
+      <div className="b-titles">
+        <span className="b-live">Vendiendo</span>
         <h1 className="b-hero__name">{event.name}</h1>
         {meta && <p className="b-hero__meta">{meta}</p>}
       </div>
+
+      {zoom && event.cover_url && (
+        <button type="button" className="b-lightbox" onClick={() => setZoom(false)} aria-label="Cerrar el flyer">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={optimizedImage(event.cover_url, { width: 1200, quality: 86 })} alt={`Flyer de ${event.name}`} />
+          <span className="b-lightbox__hint">Toca para cerrar</span>
+        </button>
+      )}
     </header>
   );
 }
