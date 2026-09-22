@@ -67,13 +67,9 @@ export default async function EventLayout({
           </a>
         )}
         <div>
-          <span className="eyebrow">
-            Evento
-            <span className={`s-badge s-badge--inline ${event.is_published ? 's-badge--ok' : 's-badge--draft'}`}>
-              {event.is_published ? 'Publicado' : 'Borrador'}
-            </span>
-          </span>
-          <h1 className="s-h1" style={{ marginTop: 6 }}>{event.name}</h1>
+          {/* Sin eyebrow: el nombre del evento abre la página, y el estado
+              (Publicado/Borrador) lo dice la línea de publicación de abajo. */}
+          <h1 className="s-h1">{event.name}</h1>
           <p className="s-card__desc">
             {new Date(event.starts_at).toLocaleString('es-PE', { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
             {event.venue_name && <> · {event.venue_name}</>}

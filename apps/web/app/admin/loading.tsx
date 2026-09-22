@@ -12,19 +12,20 @@ export default function AdminLoading() {
           <Sk w={220} h={26} r={8} />
         </div>
       </div>
-      <div style={{ marginBottom: 22 }}><SkStats n={4} /></div>
-      <div className="a-evgrid">
+      <div style={{ marginBottom: 22 }}><SkStats n={3} /></div>
+      {/* Mismas filas que la lista real (.a-evrow): miniatura 56 + dos renglones. */}
+      <ul className="a-evlist">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="a-evcard" style={{ pointerEvents: 'none' }}>
-            <Sk w="100%" h={150} r={0} />
-            <div style={{ padding: 14 }}>
-              <Sk w="70%" h={16} />
-              <div style={{ height: 10 }} />
-              <Sk w="50%" h={12} />
-            </div>
-          </div>
+          <li key={i} className="a-evrow" style={{ pointerEvents: 'none' }}>
+            <Sk w={56} h={56} r={9} />
+            <span className="a-evrow__main">
+              <Sk w="60%" h={16} />
+              <div style={{ height: 8 }} />
+              <Sk w="40%" h={12} />
+            </span>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }

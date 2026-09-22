@@ -27,7 +27,7 @@
 .super-shell .s-owner-list > li:first-child .s-owner-row,
 .super-shell .s-owner-row:first-child { border-top: 0; }
 .super-shell .s-owner-row__id { display: flex; align-items: center; gap: 10px; }
-.super-shell .s-owner-row__email { font-size: 14px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.super-shell .s-owner-row__email { font-size: var(--s-ui); font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Zona de gestión: la señal es el contenido, no un borde rojo. */
 .super-shell .s-card--danger { border-top-color: var(--ink-3); }
 /* Confirmación de borrado (DangerDeleteButton) dentro de la zona de gestión:
@@ -40,7 +40,7 @@
 .super-shell .s-req { padding: var(--s-s2) 0 0; }
 .super-shell .s-req__name { font-family: var(--display); font-weight: 700; font-size: var(--s-t3); letter-spacing: -0.01em; }
 .super-shell .s-req__meta { font-size: var(--s-meta); color: var(--ink-2); word-break: break-word; }
-.super-shell .s-req__note { font-size: 14px; color: var(--ink-2); margin-top: 10px; white-space: pre-wrap; }
+.super-shell .s-req__note { font-size: var(--s-ui); color: var(--ink-2); margin-top: 10px; white-space: pre-wrap; }
 .super-shell .s-req__actions { display: flex; gap: var(--s-s3); margin-top: var(--s-s2); padding-bottom: 4px; align-items: center; flex-wrap: wrap; }
 
 /* ---------- Salud ---------- */

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ChevronDown } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
@@ -229,71 +230,26 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
 
   return (
     <>
-      {/* 1) ¿Cómo va? — cuatro números, en 5 segundos. */}
-      <div className="a-pulse">
-        <div className="s-stat">
-          <span className="s-stat__label">Vendidas</span>
-          <span className="s-stat__value">{soldTickets}</span>
-          <span className="s-stat__sub">
-            {soldPct !== null ? `${soldPct}% del aforo ocupado` : 'aforo ilimitado'}
-            {courtesyTickets > 0 && ` · +${courtesyTickets} cortesía${courtesyTickets === 1 ? '' : 's'}`}
-          </span>
-          {soldPct !== null && <div className="a-meter" aria-hidden="true"><div className="a-meter__fill" style={{ width: `${soldPct}%` }} /></div>}
-        </div>
-        <div className="s-stat">
-          <span className="s-stat__label">Recaudado</span>
-          <span className="s-stat__value">{formatPEN(confirmedCents)}</span>
-          <span className="s-stat__sub">{pendingCount > 0 ? `+ ${formatPEN(pendingCents)} por aprobar` : 'confirmado en tus cuentas'}</span>
-        </div>
-        <div className="s-stat">
-          <span className="s-stat__label">Cuándo</span>
-          <span className="s-stat__value s-stat__value--text">{when}</span>
-          <span className="s-stat__sub">{whenSub}</span>
-        </div>
-        <div className="s-stat">
-          <span className="s-stat__label">Entraron</span>
-          <span className="s-stat__value">{totalScanned}</span>
-          <span className="s-stat__sub">escaneados en puerta</span>
-        </div>
-      </div>
+      {/* ORDEN (2026-09-22): lo pendiente arriba, la información abajo, lo raro
+          plegado. Antes la cola de Yapes quedaba debajo de los cuatro números,
+          las acciones y las alertas: en 390 caía a ~900px del borde. */}
 
-      {/* 2) Tarea: solo si hay Yapes pendientes (punto de acento). */}
+      {/* 1) PENDIENTE — la cola de Yapes con la cifra héroe. Aprobar/Rechazar
+          son los reales (YapeReviewRow); el primario es el de la fila abierta. */}
       {pendingCount > 0 && (
-        <div className="a-task" role="status">
-          <span className="a-task__txt">
-            <span>
-              <strong>{pendingCount} Yape{pendingCount === 1 ? '' : 's'} por revisar</strong>
-              <span className="a-task__sub">{formatPEN(pendingCents)} esperando tu aprobación · hay gente esperando su QR.</span>
-            </span>
-          </span>
-          <a href="#yape-inline-title" className="s-btn s-btn--soft s-btn--sm">Revisar ahora</a>
-        </div>
-      )}
-
-      {/* 3) Acciones rápidas */}
-      <QuickActions eventId={event.id} publicUrl={publicUrl} isPublished={!!event.is_published} readOnly={impersonating} />
-
-      {noSalesYet && pendingCount === 0 && (
-        <p className="s-notice" style={{ marginBottom: 16 }}>Aún no vendiste. Comparte tu link en historias y grupos: es lo que más mueve la venta.</p>
-      )}
-
-      {/* Alertas del evento: punto + texto en tinta. */}
-      {alerts.length > 0 && (
-        <ul className="a-chips">
-          {alerts.map((al, i) => <li key={i} className={`a-chip a-chip--${al.tone}`}>{al.text}</li>)}
-        </ul>
-      )}
-
-      {/* Aprobar Yape inline — la aprobación REAL, con Aprobar/Rechazar por comprobante. */}
-      {pendingCount > 0 && (
-        <section className="a-yape-inline s-section" aria-labelledby="yape-inline-title">
-          <div className="a-yape-inline__head">
-            <h2 id="yape-inline-title" className="s-h2">Yapes para aprobar</h2>
-            {/* La instrucción va UNA vez arriba de la lista, no repetida en cada fila. */}
-            <p className="s-card__desc">
-              Abre tu Yape → Movimientos y busca cada transferencia. Si el monto, el N° de operación y el nombre coinciden, aprueba.
-              Toca una fila para ver la captura y el detalle.
-            </p>
+        <section className="s-due-queue" aria-labelledby="yape-inline-title">
+          <div className="s-due s-due--queue">
+            <div className="s-due__txt">
+              <span className="s-due__k">Por revisar</span>
+              <h2 id="yape-inline-title" className="s-due__n">
+                {pendingCount} Yape{pendingCount === 1 ? '' : 's'}
+              </h2>
+              {/* La instrucción va UNA vez arriba de la lista, no repetida en cada fila. */}
+              <p className="s-due__sub">
+                {formatPEN(pendingCents)} esperando tu aprobación. Abre tu Yape → Movimientos: si el monto, el N° de
+                operación y el nombre coinciden, aprueba. Toca una fila para ver la captura.
+              </p>
+            </div>
           </div>
           <div>
             {pendingReview.map((p) => (
@@ -320,7 +276,49 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
         </section>
       )}
 
-      {/* Tu dinero */}
+      {/* 2) ¿Cómo va? — cuatro números. La plata primero: es lo que se pregunta. */}
+      <div className="a-pulse">
+        <div className="s-stat">
+          <span className="s-stat__label">Recaudado</span>
+          <span className="s-stat__value">{formatPEN(confirmedCents)}</span>
+          <span className="s-stat__sub">{pendingCount > 0 ? `+ ${formatPEN(pendingCents)} por aprobar` : 'confirmado en tus cuentas'}</span>
+        </div>
+        <div className="s-stat">
+          <span className="s-stat__label">Vendidas</span>
+          <span className="s-stat__value">{soldTickets}</span>
+          <span className="s-stat__sub">
+            {soldPct !== null ? `${soldPct}% del aforo ocupado` : 'aforo ilimitado'}
+            {courtesyTickets > 0 && ` · +${courtesyTickets} cortesía${courtesyTickets === 1 ? '' : 's'}`}
+          </span>
+          {soldPct !== null && <div className="a-meter" aria-hidden="true"><div className="a-meter__fill" style={{ width: `${soldPct}%` }} /></div>}
+        </div>
+        <div className="s-stat">
+          <span className="s-stat__label">Cuándo</span>
+          <span className="s-stat__value s-stat__value--text">{when}</span>
+          <span className="s-stat__sub">{whenSub}</span>
+        </div>
+        <div className="s-stat">
+          <span className="s-stat__label">Entraron</span>
+          <span className="s-stat__value">{totalScanned}</span>
+          <span className="s-stat__sub">escaneados en puerta</span>
+        </div>
+      </div>
+
+      {/* Alertas del evento: punto + texto en tinta. */}
+      {alerts.length > 0 && (
+        <ul className="a-chips">
+          {alerts.map((al, i) => <li key={i} className={`a-chip a-chip--${al.tone}`}>{al.text}</li>)}
+        </ul>
+      )}
+
+      {noSalesYet && pendingCount === 0 && (
+        <p className="s-notice" style={{ marginBottom: 16 }}>Aún no vendiste. Comparte tu link en historias y grupos: es lo que más mueve la venta.</p>
+      )}
+
+      {/* 3) Acciones rápidas, a la vista: buscar, reenviar, exportar, promotores… */}
+      <QuickActions eventId={event.id} publicUrl={publicUrl} isPublished={!!event.is_published} readOnly={impersonating} />
+
+      {/* 4) INFORMACIÓN — Tu dinero */}
       <section className="s-section">
         <h2 className="s-h2" style={{ marginBottom: 12 }}>Tu dinero</h2>
         <div className="s-card">
@@ -411,11 +409,17 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
         </section>
       )}
 
-      {/* Yapes rechazados */}
+      {/* 5) LO RARO, PLEGADO — los rechazados son historial, no trabajo. */}
       {rejectedRows.length > 0 && (
-        <section className="s-section">
-          <h2 className="s-h2" style={{ marginBottom: 12 }}>Yapes rechazados <span className="s-badge s-badge--draft s-badge--inline">{rejectedRows.length}</span></h2>
-          <div className="s-card">
+        <details className="s-fold s-folds">
+          <summary>
+            <span className="s-fold__t">
+              Yapes rechazados ({rejectedRows.length})
+              <span className="s-fold__hint">Los comprobantes que no aprobaste, con el motivo.</span>
+            </span>
+            <ChevronDown aria-hidden="true" />
+          </summary>
+          <div className="s-fold__body">
             <ul className="s-hlist">
               {rejectedRows.map((r) => (
                 <li key={r.id} className="s-hlist__row">
@@ -431,7 +435,7 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
               ))}
             </ul>
           </div>
-        </section>
+        </details>
       )}
     </>
   );

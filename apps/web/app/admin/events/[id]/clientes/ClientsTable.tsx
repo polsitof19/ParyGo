@@ -31,7 +31,7 @@ function csvCell(v: string | number | null): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function ClientsTable({ rows, eventId, eventName, impersonating = false }: { rows: ClientRow[]; eventId: string; eventName: string; impersonating?: boolean }) {
+export function ClientsTable({ rows, eventId, eventName, impersonating = false, focusSearch = false, hint = null }: { rows: ClientRow[]; eventId: string; eventName: string; impersonating?: boolean; focusSearch?: boolean; hint?: string | null }) {
   const [q, setQ] = useState('');
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -67,6 +67,7 @@ export function ClientsTable({ rows, eventId, eventName, impersonating = false }
 
   return (
     <div className="s-stack" style={{ gap: 14 }}>
+      {hint && <p className="s-calm" style={{ margin: 0 }}>{hint}</p>}
       <div className="s-card" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
           <Search className="h-4 w-4" style={{ position: 'absolute', left: 12, top: 13, color: 'var(--ink-3)' }} />
@@ -77,6 +78,10 @@ export function ClientsTable({ rows, eventId, eventName, impersonating = false }
             className="s-input"
             style={{ paddingLeft: 36 }}
             aria-label="Buscar comprador"
+            // Llegando desde "Buscar comprador" o "Reenviar entrada" (acciones
+            // rápidas del evento) el teclado ya está en el campo: un toque menos.
+            autoFocus={focusSearch}
+            enterKeyHint="search"
           />
         </div>
         <button type="button" onClick={exportCsv} className="s-btn s-btn--soft" disabled={rows.length === 0} title="Exporta los compradores de esta página">
