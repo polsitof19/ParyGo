@@ -219,6 +219,17 @@ export async function middleware(req: NextRequest) {
 }
 
 async function refreshAuth(req: NextRequest, res: NextResponse): Promise<NextResponse> {
+  // Sin cookie de sesión no hay nada que refrescar, y este atajo importa: la
+  // llamada de abajo es un VIAJE DE RED a Supabase que se pagaba en CADA
+  // pedido, incluido el POST del reclamo de una entrada gratis, donde nadie
+  // está logueado. Medido contra producción: un reclamo hacía once viajes a la
+  // base y tardaba 4,3s; este era uno de ellos.
+  //
+  // El comprador nunca tiene sesión (no se registra), así que en la noche del
+  // evento esto se saltea para todo el mundo. El organizador y el super admin
+  // sí traen cookie y siguen pasando por el refresco de siempre.
+  if (!req.cookies.getAll().some((c) => c.name.startsWith('sb-'))) return res;
+
   // Without these calls Supabase auth cookies won't refresh, breaking Server Actions.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

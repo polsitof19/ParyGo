@@ -98,7 +98,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // 1. Verify event + ticket types in one query (server-trusted).
   const { data: event } = await admin
     .from('events')
-    .select('id, slug, name, brand_id, is_published, min_age, archived_at, starts_at, ends_at, require_age_confirmation, require_dni, collect_attendee_names, is_free')
+    .select('id, slug, name, brand_id, is_published, min_age, archived_at, cancelled_at, starts_at, ends_at, require_age_confirmation, require_dni, collect_attendee_names, is_free')
     .eq('id', parsed.data.eventId)
     .maybeSingle();
   if (!event || !event.is_published || event.archived_at) {
@@ -126,12 +126,22 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
       };
     }
   }
-  // La marca tampoco puede estar archivada (no confiar solo en la página).
-  const { data: brandRow } = await admin
-    .from('brands')
-    .select('archived_at')
-    .eq('id', event.brand_id)
-    .maybeSingle();
+  // A partir de acá, TODO lo que se lee es independiente entre sí, así que va
+  // junto. Estaba en fila —marca, después el guard por ítem (que volvía a pedir
+  // tipo, evento, marca y precios), después los tipos, después los precios— y
+  // eran once viajes a la base para un reclamo. Medido contra producción: 4,3s
+  // un reclamo SOLO, sin nadie más compitiendo. Mismas consultas, mismas
+  // validaciones; lo único que cambia es que no se esperan una a la otra.
+  const ticketTypeIds = parsed.data.items.map((i) => i.ticketTypeId);
+  const [brandRes, ttRes, apRes] = await Promise.all([
+    admin.from('brands').select('archived_at').eq('id', event.brand_id).maybeSingle(),
+    admin
+      .from('ticket_types')
+      .select('id, name, price_cents, capacity, sold, is_active, is_unlimited, event_id, bulk_min_qty, bulk_discount_pct, is_courtesy')
+      .in('id', ticketTypeIds),
+    admin.rpc('get_event_active_prices', { p_event_id: event.id }),
+  ]);
+  const brandRow = brandRes.data;
   if (!brandRow || brandRow.archived_at) {
     return { ok: false, message: 'Evento no disponible.' };
   }
@@ -154,27 +164,34 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // Mismo guard que la reserva del carrito: un tipo que no se vende al público
   // (S/0 en evento pago, inactivo, de otro evento) se rechaza ANTES de crear la
   // orden y de reservar stock.
+  const tts = ttRes.data;
+  if (!tts || tts.length !== ticketTypeIds.length) {
+    return { ok: false, message: 'Tipo de entrada inválido.' };
+  }
+  // El precio ACTIVO (fase vigente) lo resuelve el server, siempre. El precio
+  // que manda el cliente no se mira nunca.
+  const activePrices = apRes.data;
+
+  // El guard sigue decidiendo si un tipo se ofrece al público — con las filas
+  // que ya están en memoria, no volviéndolas a pedir. Mismas reglas.
   for (const item of parsed.data.items) {
-    const check = await checkPublicTicketType(admin, item.ticketTypeId);
+    const ttRow = (tts ?? []).find((t) => t.id === item.ticketTypeId);
+    const check = await checkPublicTicketType(admin, item.ticketTypeId, {
+      ticketType: ttRow
+        ? { id: ttRow.id, event_id: ttRow.event_id, is_active: ttRow.is_active, price_cents: ttRow.price_cents, is_courtesy: ttRow.is_courtesy ?? null }
+        : null,
+      event: {
+        id: event.id, brand_id: event.brand_id, is_published: event.is_published,
+        archived_at: event.archived_at, cancelled_at: event.cancelled_at,
+        starts_at: event.starts_at, ends_at: event.ends_at, is_free: event.is_free,
+      },
+      brandArchivedAt: brandRow.archived_at ?? null,
+      activePrices: activePrices ?? null,
+    });
     if (!check.ok) return { ok: false, message: check.message };
     if (check.eventId !== event.id) return { ok: false, message: 'Tipo de entrada no disponible.' };
   }
 
-  const ticketTypeIds = parsed.data.items.map((i) => i.ticketTypeId);
-  const { data: tts } = await admin
-    .from('ticket_types')
-    .select('id, name, price_cents, capacity, sold, is_active, is_unlimited, event_id, bulk_min_qty, bulk_discount_pct')
-    .in('id', ticketTypeIds);
-  if (!tts || tts.length !== ticketTypeIds.length) {
-    return { ok: false, message: 'Tipo de entrada inválido.' };
-  }
-
-  // Resolve the ACTIVE price phase server-side (single source of truth). The
-  // client-sent price is never trusted; we charge the phase active right now.
-  // Falls back to ticket_types.price_cents for types without phases.
-  const { data: activePrices } = await admin.rpc('get_event_active_prices', {
-    p_event_id: event.id,
-  });
   const activePriceByType = new Map(
     (activePrices ?? []).map((r) => [r.ticket_type_id, r.active_price_cents])
   );
