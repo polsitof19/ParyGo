@@ -65,7 +65,7 @@ if (!brandRow || brandRow.slug !== BRAND) throw new Error('demotest no encontrad
 const BRAND_ID = brandRow.id;
 const dbBrand = async () => (await svc.from('brands').select('event_balance, archived_at').eq('id', BRAND_ID).single()).data;
 const dbTypes = async () =>
-  (await svc.from('ticket_types').select('id, name, capacity, sold, reserved, max_scans').eq('event_id', S.eventId).order('sort_order')).data ?? [];
+  (await svc.from('ticket_types').select('id, name, capacity, sold, reserved, max_scans, is_courtesy').eq('event_id', S.eventId).order('sort_order')).data ?? [];
 const typeBy = async (name) => (await dbTypes()).find((t) => t.name === name);
 const dbOrder = async (id) =>
   (await svc.from('orders').select('id, status, total_cents, subtotal_cents, discount_cents, promo_code_id, email_sent_at, brand_id, event_id').eq('id', id).single()).data;
@@ -216,7 +216,17 @@ await step('A', 'Super admin: login, desarchivar demotest, cargar saldo, stats',
   const num = (s, label) => { const m = s.match(new RegExp(label + '\\s*(\\d+)', 'i')); return m ? +m[1] : null; };
   const mb = num(statsBefore, 'Marcas activas'), ma = num(statsAfter, 'Marcas activas');
   note('A', `stats antes: "${statsBefore.slice(0, 160)}" | después: "${statsAfter.slice(0, 160)}"`);
-  check('A', 'stats reflejan (Marcas activas +1 al desarchivar)', before.archived_at ? ma === mb + 1 : ma === mb, `${mb} → ${ma}`);
+  // demotest está marcada is_test (0057), así que NO cuenta en los KPIs del
+  // super admin: desarchivarla no mueve "Marcas activas". Eso es justamente lo
+  // que se verifica acá — antes este check esperaba +1 y se puso rojo con la
+  // migración, que es la señal correcta: el filtro de marcas de prueba funciona.
+  check('A', 'desarchivar una marca de PRUEBA no mueve "Marcas activas" (filtro is_test)', ma === mb, `${mb} → ${ma}`);
+  const { data: brandTest } = await svc.from('brands').select('is_test').eq('id', BRAND_ID).single();
+  check('A', 'demotest está marcada como marca de prueba', brandTest?.is_test === true, JSON.stringify(brandTest));
+  // Y la fila sigue estando en la lista, con su badge: se excluye de los
+  // números, no se esconde.
+  const listada = await p.locator('tr', { hasText: 'Demo Test' }).count();
+  check('A', 'la marca de prueba SIGUE en la lista (se excluye de los números, no se oculta)', listada > 0, `filas=${listada}`);
   const rowTxt = (await p.locator('tr', { hasText: 'Demo Test' }).first().innerText().catch(() => '')).replace(/\s+/g, ' ');
   note('A', `fila demotest en cabina: "${rowTxt}"`);
 });
@@ -656,6 +666,16 @@ if (!S.eventId) {
     const r = (await buyer.page.getByRole('button', { name: 'Sumar Cortesía' }).count()) ? await buy({ items: { Cortesía: 1 }, email: `e2e-f-${STAMP}@test.local`, name: `Cortesia Publica ${STAMP}`, tag: 'F' }) : { res: 'sin-boton', url: '', toasts: [], orderId: null };
     await shot(buyer.page, 'F', 'checkout-cortesia-publica');
     note('F', `checkout público de Cortesía S/0 → ${r.res} ${r.url.replace(BASE, '')} toasts=${r.toasts.join('|')}`);
+    // LA garantía del punto 3 (eventos gratis), afirmada y no solo anotada:
+    // este evento COBRA, así que su tipo S/0 no puede ofrecerse al público por
+    // ningún camino. Ni botón en la página, ni orden si alguien fuerza el
+    // checkout. La regla nueva es
+    // `precio > 0 OR (evento.is_free AND NOT tipo.is_courtesy)`, y acá
+    // is_free = false, así que el segundo término no se puede cumplir.
+    const { data: ordCort } = await svc.from('orders').select('id').eq('buyer_email', `e2e-f-${STAMP}@test.local`);
+    check('F', 'evento PAGO: el tipo S/0 NO se ofrece al público ni se puede comprar', r.res === 'sin-boton' && (ordCort ?? []).length === 0, `res=${r.res} órdenes=${(ordCort ?? []).length}`);
+    const cortDb = await typeBy('Cortesía');
+    check('F', 'el tipo S/0 quedó marcado como cortesía en la base', cortDb?.is_courtesy === true, JSON.stringify({ is_courtesy: cortDb?.is_courtesy }));
     if (r.orderId) note('F', `ALERTA: el checkout público creó orden ${r.orderId} para una Cortesía`);
   });
 

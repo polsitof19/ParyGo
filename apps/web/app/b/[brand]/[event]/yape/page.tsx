@@ -40,6 +40,7 @@ export default async function YapeUploadPage({
       whatsapp_e164: string | null;
       contact_email: string | null;
       theme_json: { yape_qr_url?: string | null } | null;
+      yape_qr_url: string | null;
     } | null;
     event: { name: string; slug: string } | null;
   };
@@ -48,7 +49,7 @@ export default async function YapeUploadPage({
     .from('orders')
     .select(`
       id, status, total_cents, buyer_name, payment_method,
-      brand:brands ( slug, name, yape_number, yape_holder, whatsapp_e164, contact_email, theme_json ),
+      brand:brands ( slug, name, yape_number, yape_holder, whatsapp_e164, contact_email, theme_json, yape_qr_url ),
       event:events ( name, slug )
     `)
     .eq('id', searchParams.order)
@@ -72,6 +73,10 @@ export default async function YapeUploadPage({
     );
   }
 
+  // El QR vive en la columna desde la 0054. theme_json se lee como respaldo por
+  // si alguna marca lo tuviera de antes; sin QR, el comprador yapea al número.
+  const qrUrl = order.brand.yape_qr_url ?? order.brand.theme_json?.yape_qr_url ?? null;
+
   return (
     <main className={`b-buy c-checkout-canvas b-c${concepto}`} style={{ paddingTop: 26 }}>
       <div className="b-head">
@@ -88,17 +93,19 @@ export default async function YapeUploadPage({
         <p className="b-yapeheld">{order.brand.yape_holder ?? order.brand.name}</p>
       </div>
 
-      {/* 2 · El QR del organizador. El campo para subirlo llega con la próxima
-             migración; hasta entonces el componente muestra su estado vacío. */}
+      {/* 2 · El QR del organizador. Vive en brands.yape_qr_url (0054); se lee
+          theme_json como respaldo por si quedara alguno de antes. Sin QR se
+          muestra el estado vacío y el comprador yapea al número, que funciona
+          igual: el QR es una comodidad, no un requisito. */}
       <div className="b-panel">
         <p className="b-panel__t">2 · O escanea su QR</p>
-        {order.brand.theme_json?.yape_qr_url ? (
+        {qrUrl ? (
           <div className="b-yapeqr">
             {/* Morado Yape + nombre en TEXTO (no falsificamos el logo del BCP) */}
             <p className="b-yapeqr__t"><span aria-hidden /> Escanea con Yape</p>
-            <a href={order.brand.theme_json.yape_qr_url} target="_blank" rel="noopener noreferrer">
+            <a href={qrUrl} target="_blank" rel="noopener noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={order.brand.theme_json.yape_qr_url} alt={`QR de Yape de ${order.brand.yape_holder ?? order.brand.name}`} />
+              <img src={qrUrl} alt={`QR de Yape de ${order.brand.yape_holder ?? order.brand.name}`} />
             </a>
             <p className="c-help" style={{ textAlign: 'center' }}>Toca el QR para ampliarlo</p>
           </div>

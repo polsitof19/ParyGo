@@ -8,7 +8,7 @@
 // =============================================================
 
 import { serverEnv, publicEnv } from '@/lib/env';
-import { brandColor, brandInk, contrastOn } from '@/lib/brandColors';
+import { brandColor, brandInk, brandFillPair } from '@/lib/brandColors';
 import { formatEventDate, whatsappLink } from '@/lib/utils';
 import type { BrandForEmail } from './sendEventPostponedEmail';
 
@@ -32,13 +32,19 @@ export async function sendTransferredTicketEmail(args: {
 
   const theme = args.brand.theme_json ?? {};
   const primary = brandColor(theme.primary_color);
-  const onBrand = contrastOn(primary);
+  // El BOTÓN usa el par medido a 4.5:1 (brandFillPair), no el color crudo de la
+  // marca: el promotor elige cualquier color y no hay forma de garantizar que
+  // el texto se lea encima. El color crudo se sigue usando en la banda de 6px,
+  // que no lleva texto. Misma regla que la web y que la previa del super admin.
+  const par = brandFillPair(primary);
+  const onBrand = par.on;
+  const brandBtn = par.fill;
   const ink = brandInk(theme.primary_color);
   const logoUrl = theme.logo_url ?? null;
   const supportWhatsapp = publicEnv.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? '';
   const dateLabel = args.startsAtIso ? formatEventDate(args.startsAtIso) : '';
 
-  const html = renderHtml({ ...args, dateLabel, primary, onBrand, ink, logoUrl, supportWhatsapp });
+  const html = renderHtml({ ...args, dateLabel, primary, onBrand, brandBtn, ink, logoUrl, supportWhatsapp });
   const text = renderText({ ...args, dateLabel });
 
   const payload: Record<string, unknown> = {
@@ -75,7 +81,7 @@ export async function sendTransferredTicketEmail(args: {
 
 function renderHtml(p: {
   newName: string; eventName: string; dateLabel: string; venue: string | null; ticketUrl: string;
-  brand: BrandForEmail; primary: string; onBrand: string; ink: string; logoUrl: string | null; supportWhatsapp: string;
+  brand: BrandForEmail; primary: string; onBrand: string; brandBtn: string; ink: string; logoUrl: string | null; supportWhatsapp: string;
 }): string {
   const FONT = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
   const CREAM = '#FBF7F0', CREAM3 = '#EFE6D6', INK = '#231C17', INK2 = '#6B5F54', INK3 = '#A89B8C';
@@ -83,7 +89,7 @@ function renderHtml(p: {
   const brandHeader = p.logoUrl
     ? `<img src="${escapeHtml(p.logoUrl)}" alt="${escapeHtml(brandName)}" height="44" style="display:block;height:44px;width:auto;max-height:44px;border:0;outline:none;text-decoration:none">`
     : `<span style="font-family:${FONT};font-size:20px;font-weight:800;letter-spacing:-0.02em;color:${INK}">${escapeHtml(brandName)}</span>`;
-  const ctaButton = `<a href="${escapeHtml(p.ticketUrl)}" style="display:inline-block;padding:13px 26px;background:${p.primary};border-radius:999px;color:${p.onBrand};text-decoration:none;font-family:${FONT};font-weight:700;font-size:14px">Ver mi entrada</a>`;
+  const ctaButton = `<a href="${escapeHtml(p.ticketUrl)}" style="display:inline-block;padding:13px 26px;background:${p.brandBtn};border-radius:999px;color:${p.onBrand};text-decoration:none;font-family:${FONT};font-weight:700;font-size:14px">Ver mi entrada</a>`;
   const supportLine = p.supportWhatsapp
     ? `<p style="margin:14px 0 0;font-family:${FONT};font-size:12px;line-height:1.5;color:${INK3}">&iquest;Dudas? Soporte ParyGo: <a href="https://wa.me/${p.supportWhatsapp.replace(/[^\d]/g, '')}" style="color:${p.ink};font-weight:600;text-decoration:none">WhatsApp</a></p>`
     : '';

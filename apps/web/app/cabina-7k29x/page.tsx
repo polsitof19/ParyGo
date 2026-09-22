@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Plus, Wallet, CalendarDays } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { idsMarcasDePrueba, sinMarcasDePrueba, soloConComprobante } from '@/lib/marcasDePrueba';
 import { BrandLogo } from '@/components/BrandLogo';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { setBrandArchivedAction } from './brands/[slug]/actions';
@@ -56,6 +57,11 @@ export default async function SuperHome() {
 
   const admin = createAdminClient();
   const HEAD = { count: 'exact' as const, head: true };
+  // Marcas de prueba (0057): no suman a los KPIs, pero SÍ siguen en la lista —
+  // Paul las administra desde acá. Se marcan con un badge para que el número
+  // y la lista no parezcan contradecirse.
+  const prueba = await idsMarcasDePrueba(admin);
+  const esPrueba = new Set(prueba);
   const [{ data: brands }, { data: members }, { data: events }, { data: paidOrders }, { count: yapePending }, { count: pendingRequests }] = await Promise.all([
     supabase.from('brands').select('id, slug, name, event_balance, archived_at, theme_json').order('created_at', { ascending: false }),
     supabase.from('brand_members').select('brand_id, display_name, role').eq('role', 'brand_admin'),
@@ -73,7 +79,7 @@ export default async function SuperHome() {
     admin.from('orders').select('brand_id, paid_at').eq('status', 'paid').not('paid_at', 'is', null)
       .order('paid_at', { ascending: false }).limit(1000),
     // Yape por revisar + solicitudes pendientes — agregados cross-tenant (admin client), igual que /salud y /solicitudes.
-    admin.from('orders').select('id', HEAD).eq('status', 'pending_yape_review'),
+    soloConComprobante(sinMarcasDePrueba(admin.from('orders').select('id', HEAD).eq('status', 'pending_yape_review'), prueba)),
     admin.from('access_requests').select('id', HEAD).eq('status', 'pending'),
   ]);
 
@@ -139,8 +145,11 @@ export default async function SuperHome() {
   const noSaldo = rows.filter((r) => r.event_balance === 0).length;
 
   // KPIs de plataforma (dashboard) — marcas activas, eventos vendiendo, Yape por revisar, solicitudes.
-  const brandsActive = rows.length;
-  const eventsSelling = rows.reduce((acc, r) => acc + r.eventsPublished, 0);
+  const brandsActive = rows.filter((r) => !esPrueba.has(r.id)).length;
+  // Las de prueba QUE ESTÁN EN LA LISTA. No sirve esPrueba.size: incluye las
+  // archivadas (demotest), que se listan aparte y no entran en `rows`.
+  const pruebaEnLista = rows.filter((r) => esPrueba.has(r.id)).length;
+  const eventsSelling = rows.reduce((acc, r) => (esPrueba.has(r.id) ? acc : acc + r.eventsPublished), 0);
   const yapeReview = yapePending ?? 0;
   const pendingReqs = pendingRequests ?? 0;
 
@@ -163,7 +172,11 @@ export default async function SuperHome() {
           <span className="eyebrow">Plataforma</span>
           <h1 className="s-h1">Marcas</h1>
           <p className="s-card__desc">
+            {/* El subtítulo describe la LISTA de abajo (todas), y el KPI de
+                arriba cuenta solo las reales. Se dice cuántas son de prueba
+                para que los dos números se expliquen solos. */}
             {rows.length} marca{rows.length === 1 ? '' : 's'}
+            {pruebaEnLista > 0 && <> · {pruebaEnLista} de prueba</>}
             {noOwner > 0 && <> · {noOwner} sin dueño</>}
             {noSaldo > 0 && <> · {noSaldo} sin saldo</>}
           </p>
@@ -223,7 +236,14 @@ export default async function SuperHome() {
                         <Link href={`/cabina-7k29x/brands/${r.slug}`} className="s-cell-brand s-rowlink" aria-label={`Abrir ${r.name}`}>
                           <BrandAvatar name={r.name} slug={r.slug} logoUrl={r.logoUrl} color={r.color} />
                           <span>
-                            <span className="nm" style={{ display: 'block' }}>{r.name}</span>
+                            <span className="nm" style={{ display: 'block' }}>
+                              {r.name}
+                              {/* Badge de prueba: explica por qué la marca está
+                                  en la lista pero no en los números de arriba. */}
+                              {esPrueba.has(r.id) && (
+                                <span className="s-badge s-badge--draft s-badge--inline">Prueba</span>
+                              )}
+                            </span>
                             <span className="sl">
                               {r.slug}.parygo.com · {r.eventsTotal} evento{r.eventsTotal === 1 ? '' : 's'}
                             </span>
@@ -270,7 +290,10 @@ export default async function SuperHome() {
                 <Link href={`/cabina-7k29x/brands/${r.slug}`} className="s-brandcard__main" aria-label={`Abrir ${r.name}`}>
                   <BrandAvatar name={r.name} slug={r.slug} logoUrl={r.logoUrl} color={r.color} />
                   <span style={{ minWidth: 0 }}>
-                    <span className="nm" style={{ display: 'block' }}>{r.name}</span>
+                    <span className="nm" style={{ display: 'block' }}>
+                      {r.name}
+                      {esPrueba.has(r.id) && <span className="s-badge s-badge--draft s-badge--inline">Prueba</span>}
+                    </span>
                     <span className="meta">
                       {r.slug}.parygo.com · Saldo {r.event_balance} · {r.eventsTotal} evento{r.eventsTotal === 1 ? '' : 's'}
                     </span>

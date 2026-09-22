@@ -1,5 +1,6 @@
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { idsMarcasDePrueba, sinMarcasDePrueba, soloConComprobante } from '@/lib/marcasDePrueba';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -30,19 +31,26 @@ export default async function SaludPage() {
   const since14d = new Date(nowMs - 14 * 86_400_000).toISOString();
   const HEAD = { count: 'exact' as const, head: true };
 
+  // Marcas de prueba fuera de los números (0057). Se piden primero porque el
+  // resto de los contadores las necesitan para filtrar.
+  const prueba = await idsMarcasDePrueba(admin);
+
   const [
     njRes, yapeRes, ordersTodayRes, ticketsTodayRes, oversellRes, brandsRes, eventsRes,
   ] = await Promise.all([
     // Cola de emails de los últimos 14 días (volumen chico → se agrega en JS).
     admin.from('notification_jobs').select('status, kind, attempts, last_error, created_at, sent_at').gte('created_at', since14d).order('created_at', { ascending: false }).limit(500),
-    admin.from('orders').select('id', HEAD).eq('status', 'pending_yape_review'),
-    admin.from('orders').select('id', HEAD).eq('status', 'paid').gte('created_at', todayStart),
-    admin.from('tickets').select('id', HEAD).is('invalidated_at', null).gte('created_at', todayStart),
+    // Pendientes de VERDAD: de marca real y con comprobante subido.
+    soloConComprobante(sinMarcasDePrueba(admin.from('orders').select('id', HEAD).eq('status', 'pending_yape_review'), prueba)),
+    sinMarcasDePrueba(admin.from('orders').select('id', HEAD).eq('status', 'paid').gte('created_at', todayStart), prueba),
+    sinMarcasDePrueba(admin.from('tickets').select('id', HEAD).is('invalidated_at', null).gte('created_at', todayStart), prueba),
     // PostgREST no compara columna-con-columna → traemos los tipos con cupo y
     // contamos oversell (sold > capacity) en JS. Volumen chico (no ilimitados).
     admin.from('ticket_types').select('sold, capacity').eq('is_unlimited', false),
-    admin.from('brands').select('id', HEAD).is('archived_at', null),
-    admin.from('events').select('id', HEAD).eq('is_published', true).is('archived_at', null),
+    admin.from('brands').select('id', HEAD).is('archived_at', null).eq('is_test', false),
+    // Igual que el resto: sin marcas de prueba. demotest sola tiene 50+
+    // eventos publicados de corridas del E2E.
+    sinMarcasDePrueba(admin.from('events').select('id', HEAD).eq('is_published', true).is('archived_at', null), prueba),
   ]);
 
   const nj = (njRes.data ?? []) as NjRow[];

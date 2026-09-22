@@ -9,7 +9,7 @@
 // =============================================================
 
 import { serverEnv, publicEnv } from '@/lib/env';
-import { brandColor, brandInk, contrastOn } from '@/lib/brandColors';
+import { brandColor, brandInk, brandFillPair } from '@/lib/brandColors';
 import { formatEventDate, whatsappLink } from '@/lib/utils';
 import type { BrandForEmail } from './sendEventPostponedEmail';
 
@@ -34,7 +34,13 @@ export async function sendEventReminderEmail(args: {
 
   const theme = args.brand.theme_json ?? {};
   const primary = brandColor(theme.primary_color);
-  const onBrand = contrastOn(primary);
+  // El BOTÓN usa el par medido a 4.5:1 (brandFillPair), no el color crudo de la
+  // marca: el promotor elige cualquier color y no hay forma de garantizar que
+  // el texto se lea encima. El color crudo se sigue usando en la banda de 6px,
+  // que no lleva texto. Misma regla que la web y que la previa del super admin.
+  const par = brandFillPair(primary);
+  const onBrand = par.on;
+  const brandBtn = par.fill;
   const ink = brandInk(theme.primary_color);
   const logoUrl = theme.logo_url ?? null;
   const supportWhatsapp = publicEnv.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? '';
@@ -43,7 +49,7 @@ export async function sendEventReminderEmail(args: {
   // en el cuerpo del recordatorio: privacidad + el QR ya está en el email original.
   const resendUrl = `https://${args.brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/reenviar`;
 
-  const html = renderHtml({ ...args, dateLabel, resendUrl, primary, onBrand, ink, logoUrl, supportWhatsapp });
+  const html = renderHtml({ ...args, dateLabel, resendUrl, primary, onBrand, brandBtn, ink, logoUrl, supportWhatsapp });
   const text = renderText({ ...args, dateLabel, resendUrl });
 
   const payload: Record<string, unknown> = {
@@ -84,7 +90,7 @@ export async function sendEventReminderEmail(args: {
 
 function renderHtml(p: {
   buyerName: string; eventName: string; dateLabel: string; venue: string | null; resendUrl: string;
-  brand: BrandForEmail; primary: string; onBrand: string; ink: string; logoUrl: string | null; supportWhatsapp: string;
+  brand: BrandForEmail; primary: string; onBrand: string; brandBtn: string; ink: string; logoUrl: string | null; supportWhatsapp: string;
 }): string {
   const FONT = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
   const CREAM = '#FBF7F0', CREAM3 = '#EFE6D6', INK = '#231C17', INK2 = '#6B5F54', INK3 = '#A89B8C';
@@ -92,7 +98,7 @@ function renderHtml(p: {
   const brandHeader = p.logoUrl
     ? `<img src="${escapeHtml(p.logoUrl)}" alt="${escapeHtml(brandName)}" height="44" style="display:block;height:44px;width:auto;max-height:44px;border:0;outline:none;text-decoration:none">`
     : `<span style="font-family:${FONT};font-size:20px;font-weight:800;letter-spacing:-0.02em;color:${INK}">${escapeHtml(brandName)}</span>`;
-  const ctaButton = `<a href="${escapeHtml(p.resendUrl)}" style="display:inline-block;padding:13px 26px;background:${p.primary};border-radius:999px;color:${p.onBrand};text-decoration:none;font-family:${FONT};font-weight:700;font-size:14px">Ver mi entrada</a>`;
+  const ctaButton = `<a href="${escapeHtml(p.resendUrl)}" style="display:inline-block;padding:13px 26px;background:${p.brandBtn};border-radius:999px;color:${p.onBrand};text-decoration:none;font-family:${FONT};font-weight:700;font-size:14px">Ver mi entrada</a>`;
   const brandWaButton = p.brand.whatsapp_e164
     ? `<a href="${whatsappLink(p.brand.whatsapp_e164.replace(/[^\d]/g, ''), `Hola, una consulta sobre ${p.eventName}`)}" style="display:inline-block;margin-left:8px;padding:11px 20px;background:#ffffff;border:1.5px solid ${CREAM3};border-radius:999px;color:${INK};text-decoration:none;font-family:${FONT};font-weight:600;font-size:13px">WhatsApp ${escapeHtml(brandName)}</a>`
     : '';

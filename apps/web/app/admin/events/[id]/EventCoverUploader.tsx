@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { pareceCaptura, medirImagen } from '@/lib/flyer';
 import { useFormStatus } from 'react-dom';
 import { useFormFeedback } from '@/components/useFormFeedback';
 import { ImagePlus } from 'lucide-react';
@@ -12,12 +13,20 @@ export function EventCoverUploader({ eventId, currentUrl, readOnly = false }: { 
   const [state, action] = useFormFeedback(setEventCoverAction, initial);
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [avisoFlyer, setAvisoFlyer] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0] ?? null;
     setPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return f ? URL.createObjectURL(f) : null; });
     setFileName(f?.name ?? null);
+    // Aviso de captura de pantalla. NO bloquea la subida.
+    setAvisoFlyer(null);
+    if (f) {
+      const { width, height } = await medirImagen(f);
+      const v = pareceCaptura(width, height);
+      if (v.esCaptura) setAvisoFlyer(v.motivo);
+    }
   }
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
 
@@ -59,6 +68,16 @@ export function EventCoverUploader({ eventId, currentUrl, readOnly = false }: { 
                 </label>
                 <span className="s-file__name">{fileName ?? (currentUrl ? 'El actual' : 'Ninguno elegido')}</span>
               </div>
+              <p className="s-hint">
+                Sube el <strong>archivo original</strong> del flyer, no una captura de
+                pantalla: la captura trae la barra del teléfono y sale borrosa en grande.
+              </p>
+              {avisoFlyer && (
+                <p className="s-err" style={{ marginTop: 8 }}>
+                  Esto parece una captura de pantalla. {avisoFlyer} Puedes subirlo igual,
+                  pero si tienes el archivo original va a verse mucho mejor.
+                </p>
+              )}
               <div style={{ marginTop: 12 }}>
                 <SubmitBtn hasFile={Boolean(fileName)} hasCurrent={Boolean(currentUrl)} />
               </div>

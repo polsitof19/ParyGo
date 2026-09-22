@@ -57,6 +57,7 @@ export type Database = {
           event_balance: number
           id: string
           instagram: string | null
+          is_test: boolean
           mp_access_token_enc: string | null
           mp_public_key_enc: string | null
           name: string
@@ -68,6 +69,7 @@ export type Database = {
           whatsapp_e164: string | null
           yape_holder: string | null
           yape_number: string | null
+          yape_qr_url: string | null
         }
         Insert: {
           archived_at?: string | null
@@ -76,6 +78,7 @@ export type Database = {
           event_balance?: number
           id?: string
           instagram?: string | null
+          is_test?: boolean
           mp_access_token_enc?: string | null
           mp_public_key_enc?: string | null
           name: string
@@ -87,6 +90,7 @@ export type Database = {
           whatsapp_e164?: string | null
           yape_holder?: string | null
           yape_number?: string | null
+          yape_qr_url?: string | null
         }
         Update: {
           archived_at?: string | null
@@ -95,6 +99,7 @@ export type Database = {
           event_balance?: number
           id?: string
           instagram?: string | null
+          is_test?: boolean
           mp_access_token_enc?: string | null
           mp_public_key_enc?: string | null
           name?: string
@@ -106,6 +111,7 @@ export type Database = {
           whatsapp_e164?: string | null
           yape_holder?: string | null
           yape_number?: string | null
+          yape_qr_url?: string | null
         }
         Relationships: []
       }
@@ -118,6 +124,7 @@ export type Database = {
           description: string | null
           ends_at: string | null
           id: string
+          is_free: boolean
           is_published: boolean
           min_age: number
           require_age_confirmation: boolean
@@ -146,6 +153,7 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           id?: string
+          is_free?: boolean
           is_published?: boolean
           min_age?: number
           require_age_confirmation?: boolean
@@ -174,6 +182,7 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           id?: string
+          is_free?: boolean
           is_published?: boolean
           min_age?: number
           require_age_confirmation?: boolean
@@ -804,6 +813,7 @@ export type Database = {
           event_id: string
           id: string
           is_active: boolean
+          is_courtesy: boolean
           is_unlimited: boolean
           max_scans: number | null
           name: string
@@ -824,6 +834,7 @@ export type Database = {
           event_id: string
           id?: string
           is_active?: boolean
+          is_courtesy?: boolean
           is_unlimited?: boolean
           max_scans?: number | null
           name: string
@@ -844,6 +855,7 @@ export type Database = {
           event_id?: string
           id?: string
           is_active?: boolean
+          is_courtesy?: boolean
           is_unlimited?: boolean
           max_scans?: number | null
           name?: string

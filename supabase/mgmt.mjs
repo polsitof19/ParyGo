@@ -11,7 +11,7 @@
 //
 // Ojo: `file` aplica DDL en PRODUCCIÓN. Está pensado para usarse después de
 // mostrar el SQL y recibir el OK, no antes.
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -70,6 +70,20 @@ if (cmd === 'info') {
   } catch (e) {
     console.log('branching NO disponible:', e.message.slice(0, 300));
   }
+} else if (cmd === 'types') {
+  // ⚠ PISA apps/web/lib/supabase/database.types.ts ENTERO.
+  //
+  // El archivo commiteado tiene ajustes a mano: regenerarlo completo el
+  // 2026-09-22 rompió ~8 archivos (nullabilidad distinta en promo-actions,
+  // reenviar, t/[uuid], cron/notifications). Por eso las columnas de las
+  // migraciones 0053–0058 se agregaron a mano y NO con este comando.
+  //
+  // Antes de usarlo: correr `npx tsc --noEmit` después y estar dispuesto a
+  // arreglar lo que se rompa, o volver con `git checkout` de ese archivo.
+  const t = await api(`/v1/projects/${REF}/types/typescript?included_schemas=public`);
+  const dest = resolve(ROOT, 'apps/web/lib/supabase/database.types.ts');
+  writeFileSync(dest, t.types);
+  console.log(`tipos regenerados: ${dest} (${t.types.length} chars)`);
 } else if (cmd === 'sql') {
   console.log(JSON.stringify(await query(arg), null, 1));
 } else if (cmd === 'file') {

@@ -72,7 +72,7 @@ export async function updateBrandSettingsAction(
   // Load the current brand (own its slug for the storage path + merge theme).
   const { data: brand, error: brandErr } = await admin
     .from('brands')
-    .select('id, slug, theme_json')
+    .select('id, slug, theme_json, yape_qr_url')
     .eq('id', brandId)
     .single();
   if (brandErr || !brand) {
@@ -81,7 +81,10 @@ export async function updateBrandSettingsAction(
 
   const theme = (brand.theme_json ?? {}) as Record<string, unknown>;
   let logoUrl = (theme.logo_url as string | undefined) ?? null;
-  let yapeQrUrl = (theme.yape_qr_url as string | undefined) ?? null;
+  // El QR vive en brands.yape_qr_url (0054). theme_json queda como respaldo de
+  // lectura por si alguna marca todavía lo tuviera ahí de antes del cambio;
+  // escribir, se escribe solo en la columna.
+  let yapeQrUrl = brand.yape_qr_url ?? (theme.yape_qr_url as string | undefined) ?? null;
 
   // Optional logo upload to the public brand-assets bucket.
   const file = formData.get('logo');
@@ -131,12 +134,14 @@ export async function updateBrandSettingsAction(
     yapeQrUrl = pub.publicUrl;
   }
 
+  // yape_qr_url YA NO va en theme_json: tiene columna propia desde la 0054.
+  // Se borra de acá para que no queden dos fuentes de verdad discrepando.
+  const { yape_qr_url: _viejo, ...themeSinQr } = theme;
   const nextTheme = {
-    ...theme,
+    ...themeSinQr,
     primary_color: parsed.data.primary_color,
     secondary_color: parsed.data.secondary_color,
     logo_url: logoUrl,
-    yape_qr_url: yapeQrUrl,
   };
 
   // Avisos de Yape por email (Grupo C). Checkboxes → 'on'/ausente. Opt-in.
@@ -154,6 +159,7 @@ export async function updateBrandSettingsAction(
       notify_yape_recovery: notifyYapeRecovery,
       notify_yape_digest: notifyYapeDigest,
       theme_json: nextTheme,
+      yape_qr_url: yapeQrUrl,
     })
     .eq('id', brandId); // scoped to the admin's own brand
   if (updErr) {

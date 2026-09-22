@@ -98,7 +98,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // 1. Verify event + ticket types in one query (server-trusted).
   const { data: event } = await admin
     .from('events')
-    .select('id, slug, name, brand_id, is_published, min_age, archived_at, starts_at, ends_at, require_age_confirmation, require_dni, collect_attendee_names')
+    .select('id, slug, name, brand_id, is_published, min_age, archived_at, starts_at, ends_at, require_age_confirmation, require_dni, collect_attendee_names, is_free')
     .eq('id', parsed.data.eventId)
     .maybeSingle();
   if (!event || !event.is_published || event.archived_at) {
@@ -353,7 +353,11 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // (tipo/cantidad/base) de order_items congelados. p_items quedó vestigial
   // (se sigue mandando por compat two-phase; el RPC lo ignora).
   const promoCode = (parsed.data.promoCode ?? '').trim();
-  let isFree = false;
+  // EVENTO GRATIS (0056): el total es 0 sin que intervenga ningún código.
+  // Se exige las DOS cosas —evento marcado gratis Y total 0— a propósito: un
+  // total 0 inesperado en un evento pago no puede terminar emitiendo entradas
+  // gratis. Con solo una de las dos condiciones, no se emite nada.
+  let isFree = event.is_free === true && totalCents === 0;
   if (promoCode) {
     const { data: applyRes, error: applyErr } = await admin.rpc('apply_promo_to_order', {
       p_order_id: order.id,
@@ -372,7 +376,9 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
       total_final_cents?: number;
       breakdown?: { ticket_type_id: string; final_cents: number }[];
     };
-    isFree = promo.is_free === true;
+    // El promo puede volver gratis un evento pago; y si el evento ya era
+    // gratis, sigue siéndolo aunque el código no aporte nada.
+    isFree = promo.is_free === true || isFree;
     totalCents = promo.total_final_cents ?? totalCents;
     const finalByType = new Map((promo.breakdown ?? []).map((b) => [b.ticket_type_id, b.final_cents]));
     for (const r of resolved) r.price_cents = finalByType.get(r.id) ?? r.price_cents;
@@ -394,11 +400,18 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   const baseUrl = `${proto}://${host}`;
   const eventBase = `/${event.slug}`;
 
-  // Free order (100% off promo): issue_tickets_atomic hace gate de cupo + flip a
+  // Orden GRATIS — por código del 100% o por evento marcado gratis (0056).
+  // issue_tickets_atomic hace gate de cupo + flip a
   // paid + consumo de promo + emisión + release, TODO atómico (migr 0034). Si el
   // cupo se agotó NO deja la orden paid-sin-QR. Solo resta el email.
   if (isFree) {
-    const issue = await issueTicketsForOrder({ orderId: order.id, reason: 'yape_approved' });
+    // Un evento gratis no pasó por Yape: se etiqueta como tal. Un promo del
+    // 100% sobre un evento pago sí nació de un camino de pago, así que
+    // conserva su motivo.
+    const issue = await issueTicketsForOrder({
+      orderId: order.id,
+      reason: event.is_free === true ? 'free_event' : 'yape_approved',
+    });
     if (issue.ok) {
       await sendTicketEmail(order.id);
       return { ok: true, redirectUrl: `${eventBase}/confirmacion?order=${order.id}` };
@@ -456,7 +469,18 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
       // (2.3) confirms the approved payment — never here.
       return { ok: true, mp: { preferenceId: pref.id, initPoint: pref.initPoint } };
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'MercadoPago no disponible';
+      // NO se le muestra al comprador el mensaje interno. Con un token
+      // inválido el SDK de MercadoPago tira un TypeError y lo que llegaba a la
+      // pantalla era "Cannot read properties of undefined (reading
+      // 'substring')" — detectado por el paso K del E2E. El detalle va al log
+      // del server, que es donde sirve; el comprador recibe algo accionable.
+      const detalle = err instanceof Error ? err.message : String(err);
+      console.error('[startCheckout] createMercadoPagoPreference falló', {
+        orderId: order.id,
+        brandId: event.brand_id,
+        detalle,
+      });
+      const message = 'No pudimos abrir el pago con tarjeta. Intenta de nuevo o paga con Yape.';
       // Cancel the order and free the held stock so other buyers can take it.
       await admin.from('orders').update({ status: 'failed' }).eq('id', order.id);
       await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });

@@ -15,10 +15,9 @@ import { brandColor, brandFillPair, brandInk } from '@/lib/brandColors';
 // tal cual, mientras la página real aclara u oscurece el relleno hasta llegar a
 // 4.5:1. O sea que la previa mostraba un botón que no era el que iba a ver el
 // comprador.
-// OJO, no es "todo lo que le llega al comprador": los emails transaccionales
-// (lib/email/*) siguen calculando el color del botón con contrastOn(). Migrarlos
-// es un cambio aparte — el HTML de email tiene sus propias reglas y no se tocó
-// en este pasada.
+// Los emails transaccionales (lib/email/*) usan el MISMO par desde el turno de
+// migraciones: lo que se ve acá es lo que ve el comprador en la web y en el
+// email. El color crudo de marca quedó solo donde no hay texto encima.
 const ACCEPT = 'image/png,image/jpeg,image/webp';
 
 export function BrandingFields({

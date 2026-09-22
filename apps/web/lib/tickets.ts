@@ -12,7 +12,10 @@ export function generateTicketNumber(): string {
 
 type IssueTicketsInput = {
   orderId: string;
-  reason: 'mp_paid' | 'yape_approved';
+  // 'free_event' es su propio motivo: la emisión de un evento gratis no pasó
+  // por Yape ni por MercadoPago, y etiquetarla como 'yape_approved' deja un
+  // log que miente justo cuando hay que reconstruir qué pasó.
+  reason: 'mp_paid' | 'yape_approved' | 'free_event';
 };
 
 type IssueTicketsResult =
@@ -91,7 +94,10 @@ export async function issueTicketsForOrder(
         brand_id: ord.brand_id,
         event_id: ord.event_id,
         order_id: input.orderId,
-        type: input.reason === 'mp_paid' ? 'tickets_issued_mp' : 'tickets_issued_yape',
+        type:
+          input.reason === 'mp_paid' ? 'tickets_issued_mp'
+          : input.reason === 'free_event' ? 'tickets_issued_free'
+          : 'tickets_issued_yape',
         payload: { count: ticketIds.length },
       });
     }
@@ -100,31 +106,10 @@ export async function issueTicketsForOrder(
   return { ok: true, ticketIds, alreadyIssued };
 }
 
-// Mark an order paid (idempotent: only updates if not already paid).
-export async function markOrderPaid(
-  orderId: string,
-  details: {
-    mpPaymentId?: string;
-    mpPaymentStatus?: string;
-  } = {}
-): Promise<{ alreadyPaid: boolean }> {
-  const admin = createAdminClient();
-  const { data: current } = await admin
-    .from('orders')
-    .select('status, paid_at')
-    .eq('id', orderId)
-    .single();
-  if (current?.status === 'paid' && current?.paid_at) {
-    return { alreadyPaid: true };
-  }
-  await admin
-    .from('orders')
-    .update({
-      status: 'paid',
-      paid_at: new Date().toISOString(),
-      mp_payment_id: details.mpPaymentId ?? null,
-      mp_payment_status: details.mpPaymentStatus ?? null,
-    })
-    .eq('id', orderId);
-  return { alreadyPaid: false };
-}
+// NOTA: acá vivía markOrderPaid(), que marcaba una orden como pagada por fuera
+// de settle_mp_payment. Se borró (2026-09-22) por dos motivos: no tenía ningún
+// caller en toda la app, y era un segundo camino para tocar el estado de una
+// orden cobrada. La ÚNICA puerta de liquidación de MercadoPago es
+// settle_mp_payment (0025, SECURITY DEFINER con revoke explícito), que es
+// atómica e idempotente por mp_payment_id. Si alguna vez hace falta marcar una
+// orden a mano, que sea por ahí y no por una función suelta.

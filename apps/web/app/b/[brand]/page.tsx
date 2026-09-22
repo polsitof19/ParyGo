@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic';
 
 type EvRow = {
   id: string; slug: string; name: string; starts_at: string;
-  venue_name?: string | null; cover_url: string | null;
+  venue_name?: string | null; cover_url: string | null; is_free: boolean;
 };
 
 const fmtFecha = (iso: string) =>
@@ -35,7 +35,13 @@ function EventCard({ e, from }: { e: EvRow; from: number | null }) {
         ) : (
           <span className="bl-card__ph">{e.name}</span>
         )}
-        {from != null && <span className="bl-card__from">desde {formatPEN(from)}</span>}
+        {/* Un evento gratis dice "Gratis", no "desde S/ 0.00": es la
+            diferencia entre una promesa y un error de formato. */}
+        {from === 0 ? (
+          <span className="bl-card__from">Gratis</span>
+        ) : from != null ? (
+          <span className="bl-card__from">desde {formatPEN(from)}</span>
+        ) : null}
       </div>
       <div className="bl-card__body">
         <h2 className="bl-card__name">{e.name}</h2>
@@ -62,7 +68,7 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
   const now = new Date().toISOString();
   const { data: upcoming } = await supabase
     .from('events')
-    .select('id, slug, name, starts_at, venue_name, cover_url')
+    .select('id, slug, name, starts_at, venue_name, cover_url, is_free')
     .eq('brand_id', brand.id)
     .eq('is_published', true)
     .is('archived_at', null)
@@ -71,22 +77,24 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
 
   const up = (upcoming ?? []) as EvRow[];
 
-  // "desde S/X" = el mínimo de los tipos activos que SE VENDEN al público
-  // (isPubliclyOffered). Un tipo S/0 es cortesía, no está a la venta.
+  // "desde S/X" = el mínimo de los tipos activos que SE OFRECEN al público
+  // (isPubliclyOffered). Una cortesía no está a la venta; un evento GRATIS sí
+  // ofrece sus tipos en 0 y entonces se muestra "Gratis" en vez de un precio.
   const fromByEvent = new Map<string, number>();
   if (up.length) {
     const { data: tts } = await supabase
       .from('ticket_types')
-      .select('event_id, price_cents, is_active')
+      .select('event_id, price_cents, is_active, is_courtesy')
       .in('event_id', up.map((e) => e.id))
       .eq('is_active', true);
+    const esGratis = new Map(up.map((e) => [e.id, e.is_free === true]));
     const porEvento = new Map<string, number[]>();
-    for (const t of (tts ?? []) as { event_id: string; price_cents: number }[]) {
+    for (const t of (tts ?? []) as { event_id: string; price_cents: number; is_courtesy: boolean }[]) {
+      if (!isPubliclyOffered(t.price_cents, { eventoEsGratis: esGratis.get(t.event_id), esCortesia: t.is_courtesy })) continue;
       porEvento.set(t.event_id, [...(porEvento.get(t.event_id) ?? []), t.price_cents]);
     }
     for (const [eventId, precios] of porEvento) {
-      const ofrecidos = precios.filter((p) => isPubliclyOffered(p));
-      if (ofrecidos.length) fromByEvent.set(eventId, Math.min(...ofrecidos));
+      if (precios.length) fromByEvent.set(eventId, Math.min(...precios));
     }
   }
 
