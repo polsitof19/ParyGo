@@ -44,7 +44,7 @@ export function EnterBrandButton({
   return (
     <button
       type="button"
-      className="s-btn s-btn--soft s-brandhead__cta"
+      className="s-btn s-btn--soft"
       disabled={pending}
       onClick={() => start(() => startImpersonationAction(brandId))}
     >

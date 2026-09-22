@@ -50,8 +50,15 @@ export function EventCoverUploader({ eventId, currentUrl, readOnly = false }: { 
               <p className="s-card__desc" style={{ marginBottom: 10 }}>
                 Sube el flyer del evento (PNG, JPG o WEBP · vertical o cuadrado · máx 10 MB). Se ve grande en la portada del evento y en tu página de marca.
               </p>
-              <input ref={inputRef} type="file" name="cover" accept="image/png,image/jpeg,image/webp" onChange={onPick} className="s-input" style={{ paddingTop: 9 }} />
-              {fileName && <p className="s-hint">{fileName}</p>}
+              {/* Input nativo escondido + boton de texto del sistema: el
+                  "Choose File" gris de WebKit no es parte de ningun sistema. */}
+              <div className="s-file">
+                <input id="cover-file" ref={inputRef} type="file" name="cover" accept="image/png,image/jpeg,image/webp" onChange={onPick} className="s-file__input" />
+                <label htmlFor="cover-file" className="s-btn s-btn--soft s-btn--sm s-file__btn">
+                  {currentUrl ? 'Cambiar flyer' : 'Elegir flyer'}
+                </label>
+                <span className="s-file__name">{fileName ?? (currentUrl ? 'El actual' : 'Ninguno elegido')}</span>
+              </div>
               <div style={{ marginTop: 12 }}>
                 <SubmitBtn hasFile={Boolean(fileName)} hasCurrent={Boolean(currentUrl)} />
               </div>

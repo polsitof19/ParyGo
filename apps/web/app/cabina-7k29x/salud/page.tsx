@@ -63,9 +63,11 @@ export default async function SaludPage() {
   const eventsPublished = eventsRes.count ?? 0;
 
   const alerts: { tone: 'alert' | 'warn'; text: string }[] = [];
-  if (oversell > 0) alerts.push({ tone: 'alert', text: `${oversell} tipo(s) de entrada con sold > capacidad (oversell). Revisar de inmediato.` });
-  if (njFailed.length > 0) alerts.push({ tone: 'warn', text: `${njFailed.length} email(s) fallaron en la cola (últimos 14 días).` });
-  if (yapePending > 0) alerts.push({ tone: 'warn', text: `${yapePending} pago(s) Yape esperando revisión de algún organizador.` });
+  // Plurales de verdad, no "pago(s)": es texto que Paul lee en el teléfono.
+  const pl = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+  if (oversell > 0) alerts.push({ tone: 'alert', text: `${pl(oversell, 'tipo de entrada', 'tipos de entrada')} con sold > capacidad (oversell). Revisar de inmediato.` });
+  if (njFailed.length > 0) alerts.push({ tone: 'warn', text: `${pl(njFailed.length, 'email falló', 'emails fallaron')} en la cola (últimos 14 días).` });
+  if (yapePending > 0) alerts.push({ tone: 'warn', text: `${pl(yapePending, 'pago Yape espera', 'pagos Yape esperan')} revisión de algún organizador.` });
 
   return (
     <>
@@ -109,7 +111,7 @@ export default async function SaludPage() {
                 <li key={i}>
                   <div className="s-hlist__row">
                     <strong>{j.kind}</strong>
-                    <span className="s-muted s-small">{new Date(j.created_at).toLocaleString('es-PE', { timeZone: 'America/Lima' })} · {j.attempts ?? 0} intento(s)</span>
+                    <span className="s-muted s-small">{new Date(j.created_at).toLocaleString('es-PE', { timeZone: 'America/Lima' })} · {pl(j.attempts ?? 0, 'intento', 'intentos')}</span>
                   </div>
                   {j.last_error && <p className="s-muted s-small" style={{ marginTop: 2, wordBreak: 'break-word' }}>{j.last_error.slice(0, 200)}</p>}
                 </li>

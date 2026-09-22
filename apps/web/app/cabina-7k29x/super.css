@@ -8,13 +8,14 @@
 .super-shell .s-brandhead { display: flex; align-items: center; gap: var(--s-s2); margin-bottom: var(--s-s3); flex-wrap: wrap; }
 .super-shell .s-brandhead__id { min-width: 0; }
 /* URL pública: tinta tenue (antes --peri, 4.17:1, no AA). */
-.super-shell .s-brandhead__url { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink-2); margin-top: 4px; }
+/* Link suelto: area de toque de 44 (media 144x19 en iPhone). */
+.super-shell .s-brandhead__url { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; font-size: 13px; color: var(--ink-2); margin-top: 0; }
 .super-shell .s-brandhead__url:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
-.super-shell .s-brandhead__cta { margin-left: auto; }
-@media (max-width: 560px) { .super-shell .s-brandhead__cta { margin-left: 0; width: 100%; } }
-/* Barra de acciones: una línea entre hairlines, sin relleno beige. */
-.super-shell .s-actionbar { display: flex; align-items: center; justify-content: space-between; gap: 12px var(--s-s3); padding: 12px 0; background: none; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0; margin-bottom: var(--s-s4); flex-wrap: wrap; }
-.super-shell .s-actionbar__lead { font-size: var(--s-lb); font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
+/* Barra de acciones de la ficha: los botones de TEXTO de la marca, alineados
+   a la izquierda, entre dos hairlines. Ya no lleva etiqueta "ACCIONES": con un
+   solo botón adentro, la etiqueta más el hueco hacían que la banda se leyera
+   como una caja vacía en el teléfono. */
+.super-shell .s-actionbar { display: flex; align-items: center; gap: 0 var(--s-s3); padding: 4px 0; background: none; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0; margin-bottom: var(--s-s2); flex-wrap: wrap; }
 .super-shell .s-actionbar__btns { display: flex; align-items: center; gap: var(--s-s3); flex-wrap: wrap; }
 .super-shell .s-deflist { display: flex; flex-direction: column; }
 .super-shell .s-defrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
@@ -46,10 +47,31 @@
 .super-shell .s-bignum { font-family: var(--display); font-weight: 800; font-size: var(--s-num); line-height: 1.05; font-variant-numeric: tabular-nums; margin-top: 6px; }
 
 
-/* El wordmark "parygo." no se achica: es corto y fijo. El que se desliza es el
-   nav (4 entradas), no la marca. En el panel del organizador es al revés — ahí
-   el logo es el nombre de la marca y sí puede recortarse. */
+/* El wordmark "parygo." no se achica: es corto y fijo. En el panel del
+   organizador es al revés — ahí el logo es el nombre de la marca y sí puede
+   recortarse. */
 .super-shell .s-logo { flex: none; }
+
+/* ---------- El nav del super admin en el teléfono ----------
+   MEDIDO en iPhone (WebKit, 390x844): las 4 entradas piden 250px y en una
+   sola fila junto al wordmark y al botón de salir quedan 225 → se deslizaba,
+   "Salud" quedaba tapada por la máscara y su área de toque se montaba 17px
+   sobre el botón de salir (un toque en el borde cerraba la sesión).
+   La respuesta no es achicar ni desvanecer: el nav se lleva su PROPIA fila,
+   completa, alineada con el wordmark. Entra entero, no se desliza y el
+   subrayado del activo cae justo sobre la línea del topbar.
+   Solo el super admin: el panel del organizador tiene 3 entradas y entra en
+   una fila (verificado en la misma corrida). */
+@media (max-width: 640px) {
+  .super-shell .s-topbar__inner { flex-wrap: wrap; row-gap: 0; min-height: 0; padding-bottom: 0; }
+  .super-shell .s-nav {
+    order: 3; flex-basis: 100%; width: 100%;
+    /* gap 4 + los 8px de relleno de cada entrada = los 20 de hueco visual. */
+    margin-left: -8px; gap: 4px;
+    overflow: visible;
+  }
+  .super-shell .s-nav a { min-height: 44px; }
+}
 
 /* Lista de marcas: en móvil la tabla se reemplaza por cards (solo acá). */
 @media (max-width: 760px) {

@@ -1,13 +1,24 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { brandColor, contrastOn, brandInk } from '@/lib/brandColors';
+import { brandColor, brandFillPair, brandInk } from '@/lib/brandColors';
 
 // Campos de branding (logo + color primario) reutilizados al CREAR una marca y
 // al EDITAR el branding de una marca existente. Solo UI: la subida/validación
 // real ocurre server-side. Muestra preview en vivo del logo y de cómo se verá el
 // color con el contraste automático (botón con texto sobre el color + acento de
 // texto sobre crema).
+//
+// La vista previa usa brandFillPair(), el MISMO par que la PÁGINA PÚBLICA del
+// comprador. Antes usaba contrastOn(), que ya no es lo que se sirve ahí: con un
+// color de tono medio contrastOn devolvía blanco o tinta crudos sobre el color
+// tal cual, mientras la página real aclara u oscurece el relleno hasta llegar a
+// 4.5:1. O sea que la previa mostraba un botón que no era el que iba a ver el
+// comprador.
+// OJO, no es "todo lo que le llega al comprador": los emails transaccionales
+// (lib/email/*) siguen calculando el color del botón con contrastOn(). Migrarlos
+// es un cambio aparte — el HTML de email tiene sus propias reglas y no se tocó
+// en este pasada.
 const ACCEPT = 'image/png,image/jpeg,image/webp';
 
 export function BrandingFields({
@@ -20,6 +31,7 @@ export function BrandingFields({
   const [color, setColor] = useState(defaultColor);
   const [hex, setHex] = useState(defaultColor);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
 
   // Sincroniza el campo hex de texto con el selector visual (ambos sentidos).
   function onPicker(v: string) {
@@ -35,11 +47,12 @@ export function BrandingFields({
     const f = e.target.files?.[0];
     if (logoPreview) URL.revokeObjectURL(logoPreview);
     setLogoPreview(f ? URL.createObjectURL(f) : null);
+    setFileName(f?.name ?? null);
   }
   useEffect(() => () => { if (logoPreview) URL.revokeObjectURL(logoPreview); }, [logoPreview]);
 
   const safe = brandColor(color);
-  const onColor = contrastOn(safe); // texto legible SOBRE el color (botón)
+  const par = brandFillPair(safe); // el par relleno/texto que sirve la página real
   const ink = brandInk(safe); // color como texto/acento sobre crema
   const previewLogo = logoPreview ?? currentLogoUrl;
 
@@ -47,14 +60,18 @@ export function BrandingFields({
     <>
       <div className="s-field">
         <label htmlFor="logo" className="s-label">Logo (PNG, JPG o WEBP · máx 10 MB · opcional)</label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="s-file">
           {previewLogo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={previewLogo} alt="preview del logo" style={{ height: 52, width: 52, borderRadius: '50%', border: '1px solid var(--line)', objectFit: 'cover', background: 'var(--surface)' }} />
           ) : (
             <span className="s-avatar" style={{ background: 'var(--paper-2)', color: 'var(--ink-3)', fontSize: 10 }}>—</span>
           )}
-          <input id="logo" name="logo" type="file" accept={ACCEPT} onChange={onFile} className="s-input" style={{ paddingTop: 9 }} />
+          <input id="logo" name="logo" type="file" accept={ACCEPT} onChange={onFile} className="s-file__input" />
+          <label htmlFor="logo" className="s-btn s-btn--soft s-btn--sm s-file__btn">
+            {previewLogo ? 'Cambiar imagen' : 'Elegir imagen'}
+          </label>
+          <span className="s-file__name">{fileName ?? (currentLogoUrl ? 'La actual' : 'Ninguna elegida')}</span>
         </div>
       </div>
 
@@ -67,7 +84,7 @@ export function BrandingFields({
             value={color}
             onChange={(e) => onPicker(e.target.value)}
             aria-label="Selector de color"
-            style={{ height: 42, width: 52, cursor: 'pointer', borderRadius: 8, border: '1px solid var(--line)', background: 'transparent', flexShrink: 0 }}
+            className="s-colorpick"
           />
           <input
             type="text"
@@ -87,7 +104,7 @@ export function BrandingFields({
       <div className="s-field">
         <p className="s-label">Vista previa (contraste automático)</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 12, padding: '14px 16px' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 40, padding: '0 18px', borderRadius: 999, background: safe, color: onColor, fontWeight: 700, fontSize: 14 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 44, padding: '0 18px', borderRadius: 999, background: par.fill, color: par.on, fontWeight: 700, fontSize: 14 }}>
             Comprar entradas
           </span>
           <span style={{ color: ink, fontWeight: 700, fontSize: 13, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
@@ -95,7 +112,11 @@ export function BrandingFields({
           </span>
           <span style={{ width: 28, height: 28, borderRadius: 8, background: safe, border: '1px solid rgba(0,0,0,.1)' }} aria-hidden="true" />
         </div>
-        <p className="s-hint">Así se ve el color en la página pública: botón (texto auto) + acento de texto legible.</p>
+        <p className="s-hint">
+          Así se ve el color en la página pública. Si el tono elegido no llega a
+          4.5:1 con la tinta ni con el papel, el botón se aclara u oscurece solo
+          hasta que se lea: es el mismo cálculo que corre en producción.
+        </p>
       </div>
     </>
   );

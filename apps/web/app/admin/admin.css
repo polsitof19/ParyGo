@@ -11,13 +11,16 @@
 /* ---------- Navegación del evento: 4 grupos en vez de 8 pestañas ----------
    Mi evento · Ventas y pagos · Puerta y equipo · Reporte. El grupo lleva una
    etiqueta chica; el activo se marca con tinta + barra de acento debajo
-   (decorativa, sin texto encima). En móvil se desliza en horizontal. */
-.admin-shell .a-nav {
-  display: flex; align-items: stretch; gap: 0; margin-top: 4px;
-  border-bottom: 1px solid var(--line);
+   (decorativa, sin texto encima). En el teléfono se PLIEGA — ver el bloque
+   "El nav del evento en el teléfono" más abajo. */
+.admin-shell .a-nav { margin-top: 4px; border-bottom: 1px solid var(--line); }
+.admin-shell .a-nav__groups {
+  display: flex; align-items: stretch; gap: 0;
   overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
 }
-.admin-shell .a-nav::-webkit-scrollbar { display: none; }
+.admin-shell .a-nav__groups::-webkit-scrollbar { display: none; }
+/* El botón de plegado solo existe en el teléfono (ver el bloque ≤640). */
+.admin-shell .a-nav__toggle { display: none; }
 .admin-shell .a-nav__group { display: flex; flex-direction: column; gap: 2px; padding: 0 14px; flex: none; }
 .admin-shell .a-nav__group:first-child { padding-left: 0; }
 .admin-shell .a-nav__group + .a-nav__group { border-left: 1px solid var(--line); }
@@ -39,6 +42,47 @@
 /* Contador de pendientes en la pestaña: punto de acento + número en tinta. */
 .admin-shell .a-nav__count { display: inline-flex; align-items: center; gap: 5px; padding: 0; background: none; color: var(--ink); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .admin-shell .a-nav__count::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
+
+/* ---------- El nav del evento en el teléfono: PLEGADO ----------
+   Medido en iPhone (390x844): los 4 grupos con sus 10 entradas piden 937px en
+   una pantalla de 358 → 2,6 pantallas de deslizamiento horizontal, con las
+   últimas secciones invisibles y sin señal de que existían.
+   En ≤640 el nav pasa a ser una línea que dice DÓNDE estás y se abre en una
+   lista completa, apilada, sin deslizar nada. Los grupos siguen siendo los
+   mismos y ninguna entrada se esconde: se pliegan, que es distinto. */
+@media (max-width: 640px) {
+  .admin-shell .a-nav { border-bottom: 0; margin-top: 0; }
+  .admin-shell .a-nav__toggle {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    min-height: 48px; padding: 6px 0;
+    background: none; border: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    text-align: left; color: var(--ink); cursor: pointer; font: inherit;
+  }
+  .admin-shell .a-nav__toggle-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+  .admin-shell .a-nav__toggle-k { font-size: var(--s-lb); font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
+  .admin-shell .a-nav__toggle-v { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .admin-shell .a-nav__toggle-chev { width: 16px; height: 16px; flex: none; color: var(--ink-3); transition: transform .18s var(--ease); }
+  .admin-shell .a-nav--open .a-nav__toggle-chev { transform: rotate(180deg); }
+  .admin-shell .a-nav--open .a-nav__toggle { border-bottom-color: transparent; }
+
+  /* Cerrado: los grupos no están. Abierto: apilados y a lo ancho. */
+  .admin-shell .a-nav__groups { display: none; }
+  .admin-shell .a-nav--open .a-nav__groups {
+    display: block; overflow: visible;
+    border-bottom: 1px solid var(--line); padding-bottom: 8px;
+  }
+  .admin-shell .a-nav__group { display: block; padding: 0; }
+  .admin-shell .a-nav__group + .a-nav__group { border-left: 0; margin-top: 10px; }
+  .admin-shell .a-nav__group:first-child { padding-left: 0; }
+  .admin-shell .a-nav__label { padding: 0; display: block; margin-bottom: 2px; }
+  .admin-shell .a-nav__items { display: flex; flex-wrap: wrap; gap: 0 18px; }
+  .admin-shell .a-nav__item { padding: 6px 0; min-height: 44px; }
+  /* Sin barra flotante: el activo se subraya donde está. */
+  .admin-shell .a-nav__item[aria-current="page"]::after { left: 0; right: 0; bottom: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell .a-nav__toggle-chev { transition: none; }
+}
 
 /* ---------- "¿Cómo va?" — franja de 4 números arriba de todo ----------
    Cuatro números grandes separados por hairlines verticales (la regla vive en
@@ -68,6 +112,12 @@
 }
 .admin-shell .a-task__txt { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .admin-shell .a-task__txt::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex: none; }
+/* Sin saldo no es "hay algo que hacer", es "no podés trabajar": punto de alerta. */
+.admin-shell .a-task--alert .a-task__txt::before { background: var(--alert); }
+/* Con dos renglones el punto no va al medio de los dos: se alinea con el
+   primero, que es el que dice qué pasa. */
+.admin-shell .a-task__txt:has(.a-task__sub) { align-items: flex-start; }
+.admin-shell .a-task__txt:has(.a-task__sub)::before { margin-top: 7px; }
 .admin-shell .a-task__txt strong { font-weight: 700; }
 .admin-shell .a-task__sub { display: block; font-size: var(--s-meta); color: var(--ink-2); }
 
@@ -179,6 +229,14 @@
 .admin-shell .a-typetable tbody tr:hover { background: var(--sel); }
 .admin-shell .a-phase { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ink-2); margin-top: 2px; }
 .admin-shell .a-phase::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); flex: none; }
+/* En el teléfono la tabla por tipo se vuelve lista (.s-table--stack, en
+   parygo-panel.css). Acá solo hay que soltarle el min-width y el relleno de
+   celda, que son más específicos y ganaban. */
+@media (max-width: 640px) {
+  .admin-shell .a-typetable { min-width: 0; }
+  .admin-shell .a-typetable td { padding: 0; border-bottom: 0; }
+  .admin-shell .a-typetable tfoot td { border-top: 0; }
+}
 
 /* ---------- Barras (ventas por día, stock) ---------- */
 .admin-shell .a-bar { height: 7px; border-radius: var(--r-pill); background: var(--paper-2); overflow: hidden; margin-top: 8px; }
@@ -238,12 +296,27 @@
 .admin-shell .a-yrow__op,
 .admin-shell .a-yrow__time { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .admin-shell .a-yrow__acts { display: flex; align-items: center; gap: 18px; flex: none; }
+/* "Aprobar" es el PRIMARIO de la fila que estás mirando, no de las ocho.
+   Con la cola llena eran ocho slabs naranjas apilados: cuando todo grita, nada
+   señala, y además rompe el "un solo primario por pantalla". En la fila
+   cerrada es un botón de texto (misma acción, mismo toque, mismo lugar); se
+   vuelve primario al abrir la fila, que es cuando ves el comprobante y podés
+   decidir de verdad. */
+.admin-shell .a-yrow:not(.a-yrow--open) .s-btn--primary {
+  background: none; color: var(--ink); padding: 0 2px;
+}
+.admin-shell .a-yrow:not(.a-yrow--open) .s-btn--primary:hover:not(:disabled) {
+  background: none; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px;
+}
 .admin-shell .a-yrow__body { border-top: 1px solid var(--line); padding: 18px 0 16px; transition: padding-left .18s; }
 @media (prefers-reduced-motion: reduce) { .admin-shell .a-yrow__chev { transition: none; } }
 @media (max-width: 560px) {
   .admin-shell .a-yrow__payer { max-width: 100%; }
   .admin-shell .a-yrow__acts { width: 100%; }
-  .admin-shell .a-yrow__acts .s-btn { flex: 1; }
+  /* Se reparten el ancho, pero el texto arranca a la IZQUIERDA de su mitad:
+     con `justify-content: center` heredado del .s-btn las dos palabras
+     quedaban flotando en el medio de la nada (y nada va centrado). */
+  .admin-shell .a-yrow__acts .s-btn { flex: 1; justify-content: flex-start; }
 }
 
 /* ---------- Varios ---------- */
@@ -257,7 +330,7 @@
 .admin-shell .a-flag--on::before { background: var(--ok); }
 .admin-shell .a-flag--off::before { background: none; box-shadow: inset 0 0 0 1.5px var(--ink-3); }
 .admin-shell .a-flag--off { color: var(--ink-3); }
-.admin-shell .a-live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ink-2); background: none; border: 0; cursor: pointer; }
+.admin-shell .a-live { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 12px; font-weight: 600; color: var(--ink-2); background: none; border: 0; cursor: pointer; }
 .admin-shell .a-live__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px rgba(46,158,107,.18); }
 @media (prefers-reduced-motion: no-preference) {
   .admin-shell .a-live__dot { animation: a-pulse 2s ease-in-out infinite; }
@@ -310,14 +383,11 @@
 }
 
 /* ---------- Piezas de formulario del organizador ---------- */
-/* Opciones plegables ("avanzado") del editor de evento. */
-.admin-shell .s-details > summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--ink-2); padding: 4px 0; list-style: none; user-select: none; transition: color .18s; }
-.admin-shell .s-details > summary::-webkit-details-marker { display: none; }
-.admin-shell .s-details > summary::before { content: '▸'; display: inline-block; margin-right: 8px; color: var(--ink-3); transition: transform .2s var(--ease); }
-.admin-shell .s-details[open] > summary::before { transform: rotate(90deg); }
-.admin-shell .s-details > summary:hover { color: var(--ink); }
-.admin-shell .s-check { font-size: 14px; color: var(--ink); cursor: pointer; }
-.admin-shell .s-check input { accent-color: var(--ink); width: 16px; height: 16px; flex: none; }
+/* .s-details y .s-check se MUDARON a app/styles/parygo-panel.css: el super
+   admin las usa (la página de evento de la cabina tiene su "Opciones del
+   checkout" y sus casillas) y acá estaban scopeadas a .admin-shell, así que en
+   /cabina-* quedaban SIN ESTILO — el triángulo del plegable no aparecía y la
+   casilla era un cuadradito de 12px como única zona activa. */
 /* Lista clave-valor ("Tu marca"). */
 .admin-shell .s-deflist { display: flex; flex-direction: column; margin: 0; }
 .admin-shell .s-defrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
@@ -325,7 +395,8 @@
 .admin-shell .s-defrow__k { font-size: var(--s-meta); color: var(--ink-3); }
 .admin-shell .s-defrow__v { font-size: var(--s-body); font-weight: 500; text-align: right; word-break: break-word; margin: 0; }
 /* Link a la página pública del evento: tinta, subrayado al hover. */
-.admin-shell .a-publink { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink-2); margin-top: 6px; }
+/* Link suelto (no una palabra dentro de una frase): area de toque de 44. */
+.admin-shell .a-publink { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; font-size: 13px; color: var(--ink-2); margin-top: 0; }
 .admin-shell .a-publink:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
 /* ---------- Ranking de promotores ---------- */
@@ -344,8 +415,13 @@
 /* Título de fila (tipo de entrada en Editar, evento en la revisión de Yape). */
 .admin-shell .a-evrow__name { font-family: var(--display); font-weight: 700; font-size: 18px; letter-spacing: -0.01em; line-height: 1.15; }
 
-/* Logo de la marca en el topbar: una sola línea (en 390 el nombre se partía). */
-.admin-shell .s-logo { white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Logo de la marca en el topbar: una sola línea (en 390 el nombre se partía).
+   El recorte con "…" lo lleva el NOMBRE, no el link entero: con el ellipsis en
+   el <a> el punto de acento se cortaba por la mitad y quedaba una astilla
+   naranja suelta. El punto y el avatar no se encogen nunca. */
+.admin-shell .s-logo { white-space: nowrap; min-width: 0; }
+.admin-shell .s-logo__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.admin-shell .s-logo .dot { flex: none; }
 @media (max-width: 640px) { .admin-shell .s-logo { max-width: 46vw; font-size: 19px; } }
 /* Inicio · Config · Equipo ENTRAN en 390: sin máscara de deslizamiento, que
    ahí solo serviría para apagar la última etiqueta. En el super admin (4

@@ -114,8 +114,13 @@ export function EventBuilder() {
                 <img src={coverPreview} alt="" style={{ width: 90, height: 120, objectFit: 'cover', borderRadius: 'var(--r-ctl)', border: '1px solid var(--line)', flexShrink: 0 }} />
               )}
               <div style={{ flex: 1, minWidth: 180 }}>
-                <input id="cover" name="cover" type="file" accept="image/png,image/jpeg,image/webp" onChange={onCover} className="s-input" style={{ paddingTop: 9 }} />
-                {coverName && <p className="s-hint">{coverName}</p>}
+                <div className="s-file">
+                  <input id="cover" name="cover" type="file" accept="image/png,image/jpeg,image/webp" onChange={onCover} className="s-file__input" />
+                  <label htmlFor="cover" className="s-btn s-btn--soft s-btn--sm s-file__btn">
+                    {coverName ? 'Cambiar flyer' : 'Elegir flyer'}
+                  </label>
+                  <span className="s-file__name">{coverName ?? 'Ninguno elegido'}</span>
+                </div>
               </div>
             </div>
           </FieldRow>
@@ -179,7 +184,7 @@ export function EventBuilder() {
               </div>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginTop: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+                <label className="s-check">
                   <input type="checkbox" checked={tt.unlimited} onChange={(e) => patchTT(i, { unlimited: e.target.checked })} />
                   Stock ilimitado
                 </label>

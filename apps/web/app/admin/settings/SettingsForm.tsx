@@ -67,17 +67,17 @@ export function SettingsForm(props: Props) {
         <div className="s-field">
           <Field label="QR de Yape (PNG, JPG o WEBP · máx 2MB · opcional)" htmlFor="yape_qr" error={err.yape_qr}>
             <p className="s-card__desc" style={{ marginBottom: 8 }}>Si lo subes, tus compradores lo ven en el paso de pago y escanean directo desde su Yape.</p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className="s-file">
               {props.yapeQrUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={props.yapeQrUrl} alt="QR de Yape actual" style={{ height: 64, width: 64, borderRadius: 10, border: '1px solid var(--line)', objectFit: 'cover' }} />
               ) : (
                 <span className="s-avatar" style={{ background: 'var(--paper-2)', color: 'var(--ink-3)', fontSize: 10, borderRadius: 10 }}>QR</span>
               )}
-              <input id="yape_qr" name="yape_qr" type="file" accept="image/png,image/jpeg,image/webp" className="s-input" style={{ paddingTop: 9 }} disabled={ro} />
+              <ArchivoInput id="yape_qr" nombre="yape_qr" tieneActual={Boolean(props.yapeQrUrl)} deshabilitado={ro} />
             </div>
             {props.yapeQrUrl && !ro && (
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 13, color: 'var(--ink-2)' }}>
+              <label className="s-check" style={{ fontSize: 13, color: 'var(--ink-2)' }}>
                 <input type="checkbox" name="remove_yape_qr" value="1" /> Quitar el QR actual
               </label>
             )}
@@ -88,26 +88,26 @@ export function SettingsForm(props: Props) {
       <section className="s-card">
         <p className="s-section-lead" style={{ marginBottom: 14 }}>Marca visual</p>
         <Field label="Logo (PNG, JPG o WEBP · máx 2MB)" htmlFor="logo" error={err.logo}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="s-file">
             {props.logoUrl ? (
               <BrandLogo src={props.logoUrl} alt="logo actual" size={48} ring={false} />
             ) : (
               <span className="s-avatar" style={{ background: 'var(--paper-2)', color: 'var(--ink-3)', fontSize: 10 }}>—</span>
             )}
-            <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp" className="s-input" style={{ paddingTop: 9 }} disabled={ro} />
+            <ArchivoInput id="logo" nombre="logo" tieneActual={Boolean(props.logoUrl)} deshabilitado={ro} />
           </div>
         </Field>
 
         <div className="s-form-grid s-field">
           <Field label="Color primario" htmlFor="primary_color" error={err.primary_color}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input type="color" name="primary_color" id="primary_color" value={primary} onChange={(e) => setPrimary(e.target.value)} disabled={ro} style={{ height: 40, width: 56, cursor: ro ? 'default' : 'pointer', borderRadius: 8, border: '1px solid var(--line)', background: 'transparent' }} />
+              <input type="color" name="primary_color" id="primary_color" value={primary} onChange={(e) => setPrimary(e.target.value)} disabled={ro} className="s-colorpick" />
               <span className="s-muted" style={{ fontSize: 13 }}>{primary}</span>
             </div>
           </Field>
           <Field label="Color secundario" htmlFor="secondary_color" error={err.secondary_color}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input type="color" name="secondary_color" id="secondary_color" value={secondary} onChange={(e) => setSecondary(e.target.value)} disabled={ro} style={{ height: 40, width: 56, cursor: ro ? 'default' : 'pointer', borderRadius: 8, border: '1px solid var(--line)', background: 'transparent' }} />
+              <input type="color" name="secondary_color" id="secondary_color" value={secondary} onChange={(e) => setSecondary(e.target.value)} disabled={ro} className="s-colorpick" />
               <span className="s-muted" style={{ fontSize: 13 }}>{secondary}</span>
             </div>
           </Field>
@@ -145,6 +145,31 @@ export function SettingsForm(props: Props) {
         </div>
       )}
     </form>
+  );
+}
+
+// Campo de archivo del sistema: el input nativo queda escondido (sigue en el
+// DOM, sigue enfocable y su <label> de caption sigue nombrándolo) y lo visible
+// es un botón de texto más el nombre del archivo. El input[type=file] nativo
+// dibujaba su propio botón gris "Choose File", sin traducir.
+function ArchivoInput({ id, nombre, tieneActual, deshabilitado }: { id: string; nombre: string; tieneActual: boolean; deshabilitado: boolean }) {
+  const [elegido, setElegido] = useState<string | null>(null);
+  return (
+    <>
+      <input
+        id={id}
+        name={nombre}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="s-file__input"
+        disabled={deshabilitado}
+        onChange={(e) => setElegido(e.target.files?.[0]?.name ?? null)}
+      />
+      <label htmlFor={id} className="s-btn s-btn--soft s-btn--sm s-file__btn">
+        {tieneActual ? 'Cambiar imagen' : 'Elegir imagen'}
+      </label>
+      <span className="s-file__name">{elegido ?? (tieneActual ? 'La actual' : 'Ninguna elegida')}</span>
+    </>
   );
 }
 

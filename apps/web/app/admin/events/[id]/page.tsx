@@ -351,7 +351,10 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
           <div className="s-card"><p className="s-empty">Este evento no tiene tipos de entrada todavía.</p></div>
         ) : (
           <div className="s-card s-card--flush" style={{ overflowX: 'auto' }}>
-            <table className="a-typetable">
+            {/* s-table--stack: en ≤640 la tabla se vuelve lista y cada número
+                se lleva su etiqueta (data-l), en vez de deslizar 540px de
+                ancho dentro de una pantalla de 358. */}
+            <table className="a-typetable s-table--stack">
               <thead><tr><th>Tipo</th><th className="num">Capacidad</th><th className="num">Emitidas</th><th className="num">Libres</th><th className="num">Escaneados</th><th className="num">Recaudado</th></tr></thead>
               <tbody>
                 {types.map((t) => {
@@ -366,11 +369,11 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
                         <strong>{t.name}</strong>{!t.is_active && <span className="s-badge s-badge--draft s-badge--inline">inactivo</span>}
                         {phase && <span className="a-phase">Precio actual: {phase}</span>}
                       </td>
-                      <td className="num">{t.is_unlimited ? '∞' : t.capacity}</td>
-                      <td className="num">{sold}</td>
-                      <td className="num">{t.is_unlimited ? '—' : libres}</td>
-                      <td className="num">{scanned}</td>
-                      <td className="num">{formatPEN(rec)}</td>
+                      <td className="num" data-l="Capacidad">{t.is_unlimited ? '∞' : t.capacity}</td>
+                      <td className="num" data-l="Emitidas">{sold}</td>
+                      <td className="num" data-l="Libres">{t.is_unlimited ? '—' : libres}</td>
+                      <td className="num" data-l="Escaneados">{scanned}</td>
+                      <td className="num" data-l="Recaudado">{formatPEN(rec)}</td>
                     </tr>
                   );
                 })}
@@ -378,11 +381,11 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
               <tfoot>
                 <tr>
                   <td>Total</td>
-                  <td className="num">{capTotal > 0 ? capTotal : (hasUnlimited ? '∞' : '—')}</td>
-                  <td className="num">{totalSold}</td>
-                  <td className="num">{capTotal > 0 ? Math.max(0, capTotal - soldCapped) : '—'}</td>
-                  <td className="num">{totalScanned}</td>
-                  <td className="num">{formatPEN(recTotal)}</td>
+                  <td className="num" data-l="Capacidad">{capTotal > 0 ? capTotal : (hasUnlimited ? '∞' : '—')}</td>
+                  <td className="num" data-l="Emitidas">{totalSold}</td>
+                  <td className="num" data-l="Libres">{capTotal > 0 ? Math.max(0, capTotal - soldCapped) : '—'}</td>
+                  <td className="num" data-l="Escaneados">{totalScanned}</td>
+                  <td className="num" data-l="Recaudado">{formatPEN(recTotal)}</td>
                 </tr>
               </tfoot>
             </table>

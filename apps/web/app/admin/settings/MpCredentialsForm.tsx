@@ -34,9 +34,12 @@ export function MpCredentialsForm({ hasAccessToken, hasPublicKey, readOnly = fal
         💳 <strong>Con tarjeta el cobro es instantáneo</strong>: la entrada y el QR salen solos al pagar, sin que tengas que revisar el comprobante a mano como en Yape.
       </p>
 
+      {/* .s-details en vez de una caja beige con borde y radio: era el último
+          rectángulo cerrado del panel, y su summary medía 20px de alto (por
+          debajo del mínimo para tocarlo). */}
       {!configured && !readOnly && (
-        <details style={{ background: 'var(--paper-2)', borderRadius: 12, border: '1px solid var(--line)', marginBottom: 14, padding: '10px 14px' }}>
-          <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>¿Cómo consigo mis credenciales?</summary>
+        <details className="s-details" style={{ marginBottom: 14 }}>
+          <summary>¿Cómo consigo mis credenciales?</summary>
           <ol style={{ margin: '10px 0 0', paddingLeft: 18, fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink-2)' }}>
             <li>Entra a tu <a href="https://www.mercadopago.com.pe/developers/panel/app" target="_blank" rel="noopener noreferrer" className="s-textlink" style={{ fontWeight: 600 }}>panel de desarrolladores de MercadoPago</a> con la cuenta donde quieres recibir la plata.</li>
             <li>Crea una aplicación (o usa una existente) y abre <strong>Credenciales de producción</strong>.</li>
