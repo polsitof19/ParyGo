@@ -94,8 +94,24 @@ export default async function BrandDetailPage({
             <ExternalLink className="h-3 w-3" />
           </a>
         </div>
-        <EnterBrandButton brandId={brand.id} />
       </header>
+
+      {/* Acciones de la ficha: una línea de botones de TEXTO, a la izquierda.
+          Antes "Entrar a la marca" vivía dentro de la cabecera con
+          margin-left:auto y en el teléfono pasaba a width:100%, con lo que su
+          texto quedaba CENTRADO en la pantalla (regla dura: nada centrado); y
+          "Crear evento" tenía su propia barra .s-actionbar entre dos hairlines
+          que, con un solo botón adentro, se leía como una caja vacía.
+          El único primario de esta pantalla es "Cargar pack": es el que mueve
+          plata. Todo lo demás es texto. */}
+      <div className="s-actionbar">
+        <div className="s-actionbar__btns">
+          <EnterBrandButton brandId={brand.id} />
+          <Link href={`/cabina-7k29x/events/new?brand=${brand.slug}`} className="s-btn s-btn--soft">
+            <Plus className="h-4 w-4" /> Crear evento
+          </Link>
+        </div>
+      </div>
 
       {/* Métricas: saldo · eventos · dueño */}
       <div className="s-stats">
@@ -121,16 +137,6 @@ export default async function BrandDetailPage({
           ) : (
             <span className="s-flag" style={{ marginTop: 6 }}>Sin dueño</span>
           )}
-        </div>
-      </div>
-
-      {/* Acciones principales */}
-      <div className="s-actionbar">
-        <span className="s-actionbar__lead">Acciones</span>
-        <div className="s-actionbar__btns">
-          <Link href={`/cabina-7k29x/events/new?brand=${brand.slug}`} className="s-btn s-btn--soft">
-            <Plus className="h-4 w-4" /> Crear evento
-          </Link>
         </div>
       </div>
 

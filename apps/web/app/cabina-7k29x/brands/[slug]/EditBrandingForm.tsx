@@ -39,7 +39,8 @@ export function EditBrandingForm({
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className="s-btn s-btn--primary" disabled={pending}>
+    // Botón de TEXTO: ver EditBrandBasicsForm.
+    <button type="submit" className="s-btn s-btn--soft" disabled={pending}>
       {pending ? 'Guardando…' : 'Guardar branding'}
     </button>
   );

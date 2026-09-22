@@ -157,7 +157,7 @@ function TicketTypeRow({
         <input id={`color-${type?.id ?? 'new'}`} name="color_hex" className="s-input" defaultValue={type?.color_hex ?? '#FF1F8F'} pattern="^#[0-9A-Fa-f]{6}$" />
       </div>
       <div className="md:col-span-2 flex items-end">
-        <label className="inline-flex items-center gap-2 text-sm" style={{ paddingBottom: 10 }}>
+        <label className="s-check">
           <input type="checkbox" name="is_active" defaultChecked={type?.is_active ?? true} value="1" />
           Activo
         </label>

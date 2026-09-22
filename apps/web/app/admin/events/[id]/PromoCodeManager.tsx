@@ -177,11 +177,13 @@ export function PromoCodeManager({
 
         <div className="s-field">
           <label className="s-label">Aplica a</label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, marginBottom: 4 }}>
+          {/* .s-check: la etiqueta entera es el area de toque (44). Suelto,
+              el radio media 20px de alto. */}
+          <label className="s-check" style={{ display: 'flex' }}>
             <input type="radio" name="applies_to" checked={appliesToAll} onChange={() => setAppliesToAll(true)} />
             <span>Todas las entradas del evento</span>
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+          <label className="s-check" style={{ display: 'flex' }}>
             <input type="radio" name="applies_to" checked={!appliesToAll} onChange={() => setAppliesToAll(false)} />
             <span>Solo algunas entradas</span>
           </label>
@@ -215,7 +217,9 @@ export function PromoCodeManager({
       ) : (
         <div className="s-table-wrap">
           <div className="s-card s-card--flush">
-            <table className="s-table">
+            {/* s-table--stack: en ≤640 la fila se vuelve bloque (pedía 771px
+                de ancho en una pantalla de 358). */}
+            <table className="s-table s-table--stack">
               <thead>
                 <tr>
                   <th>Código</th>
@@ -234,13 +238,13 @@ export function PromoCodeManager({
                   return (
                     <tr key={c.id}>
                       <td><span className="s-saldo-num" style={{ fontSize: 15, letterSpacing: '0.04em' }}>{c.code}</span></td>
-                      <td><span className="s-muted">{c.label ?? '—'}</span></td>
-                      <td>{describeDiscount(c)}</td>
-                      <td className="num">{c.use_count}{c.max_uses !== null ? ` / ${c.max_uses}` : ''}</td>
-                      <td className="num">{s.entries}</td>
-                      <td className="num">{formatPEN(s.soldCents)}</td>
+                      <td data-l="RRPP"><span className="s-muted">{c.label ?? '—'}</span></td>
+                      <td data-l="Descuento">{describeDiscount(c)}</td>
+                      <td className="num" data-l="Usos">{c.use_count}{c.max_uses !== null ? ` / ${c.max_uses}` : ''}</td>
+                      <td className="num" data-l="Entradas">{s.entries}</td>
+                      <td className="num" data-l="S/ movidos">{formatPEN(s.soldCents)}</td>
                       <td>{c.is_active ? <span className="s-badge s-badge--ok">Activo</span> : <span className="s-badge s-badge--draft">Inactivo</span>}</td>
-                      <td className="num">
+                      <td className="num" data-acts="">
                         {impersonating ? (
                           <span className="s-muted-3" style={{ fontSize: 12.5 }}>—</span>
                         ) : (

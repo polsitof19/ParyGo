@@ -24,8 +24,13 @@ export default function PuertaPage() {
           <h1 className="k-h1" style={{ marginTop: 4 }}>Acceso de staff</h1>
           <p className="k-muted" style={{ marginTop: 6, marginBottom: 20 }}>Ingresa tu código personal de 8 caracteres.</p>
           <RedeemForm />
+          {/* El link va en TINTA con subrayado, no en el naranja de marca:
+              #FF6A3D sobre la crema da 2,66:1 y el acento no porta texto.
+              Además es el único link de la pantalla, así que su área de toque
+              llega a 44 (medía 87x17). */}
           <p className="k-muted" style={{ marginTop: 18, fontSize: 12.5 }}>
-            ¿Eres organizador? <a href="/login" style={{ color: 'var(--tangerine)', fontWeight: 600 }}>Entra por email</a>
+            ¿Eres organizador?{' '}
+            <a href="/login" className="k-link">Entra por email</a>
           </p>
         </div>
       </main>

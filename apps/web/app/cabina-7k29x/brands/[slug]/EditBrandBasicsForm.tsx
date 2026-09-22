@@ -72,7 +72,9 @@ export function EditBrandBasicsForm({
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className="s-btn s-btn--primary s-btn--sm" disabled={pending}>
+    // Botón de TEXTO: el único primario de la ficha de marca es "Cargar
+    // pack", que es el que mueve plata.
+    <button type="submit" className="s-btn s-btn--soft s-btn--sm" disabled={pending}>
       {pending ? 'Guardando…' : 'Guardar datos'}
     </button>
   );

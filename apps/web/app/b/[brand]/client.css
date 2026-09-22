@@ -29,6 +29,7 @@
   --pad: clamp(16px, 4vw, 32px);
 
   min-height: 100vh;
+  min-height: 100dvh;
   /* Lienzo tintado con un toque de la marca arriba → cada evento se siente propio */
   background:
     radial-gradient(135% 75% at 50% -8%, var(--brand-soft), transparent 56%),

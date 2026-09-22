@@ -4,13 +4,23 @@
    ============================================================ */
 .scan-shell {
   --cream: #FBF7F0; --cream-2: #F4EDE1; --cream-3: #EFE6D6; --white: #FFFFFF;
-  --ink: #231C17; --ink-2: #6B5F54; --ink-3: #A89B8C;
+  /* MEDIDO 2026-09-21 (scripts/check-scan-contrast.mjs).
+     --ink-3 era #A89B8C: 2,54:1 sobre la crema — el mismo gris hex que el
+     archivo de tokens documenta como fallido. Pasa a ser ALFA de la tinta,
+     como en el resto del sistema, y así se compone contra cualquier crema
+     (4,94:1 en el peor caso).
+     --ok y --warn se oscurecieron un tono: el panel de resultado lleva texto
+     BLANCO encima y con los anteriores daba 3,30:1 y 3,19:1 — alcanzaba para
+     el rótulo gigante (texto grande) pero no para el tipo de entrada (17px)
+     ni el subtexto (14px). Ahora 5,02:1 los dos. Mismo verde, mismo ámbar,
+     más oscuros: de noche y a un brazo de distancia se lee mejor. */
+  --ink: #231C17; --ink-2: #6B5F54; --ink-3: rgba(35, 28, 23, 0.66);
   --tangerine: #FF6A3D; --tangerine-deep: #E8552A; --peri: #5B6CFF;
-  --ok: #15a34a; --deny: #dc2626; --warn: #d97706;
+  --ok: #15803d; --deny: #dc2626; --warn: #b45309;
   --display: var(--font-bricolage), "Bricolage Grotesque", system-ui, sans-serif;
   --body: var(--font-hanken), "Hanken Grotesk", system-ui, sans-serif;
   --r-card: 16px; --r-ctl: 12px; --r-pill: 999px;
-  min-height: 100vh; background: var(--cream); color: var(--ink);
+  min-height: 100vh; min-height: 100dvh; background: var(--cream); color: var(--ink);
   font-family: var(--body); font-size: 15px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
 }
 .scan-shell *, .scan-shell *::before, .scan-shell *::after { box-sizing: border-box; }
@@ -18,7 +28,10 @@
 .scan-shell button { font: inherit; }
 
 /* header del validador */
-.scan-shell .k-header { position: sticky; top: 0; z-index: 30; background: rgba(251,247,240,.9); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--cream-3); }
+/* Papel sólido, igual que el topbar de los paneles: con .9 y blur el contenido
+   se leía por debajo al scrollear, y en la puerta —de noche, a un brazo— eso
+   es lo último que querés. */
+.scan-shell .k-header { position: sticky; top: 0; z-index: 30; background: var(--cream); border-bottom: 1px solid var(--cream-3); }
 .scan-shell .k-header__in { max-width: 720px; margin: 0 auto; height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; }
 .scan-shell .k-brand { display: inline-flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 800; font-size: 17px; letter-spacing: -0.01em; }
 .scan-shell .k-brand svg { color: var(--tangerine); }
@@ -27,7 +40,9 @@
 
 .scan-shell .k-wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
 .scan-shell .k-h1 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spacing: -0.02em; }
-.scan-shell .k-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tangerine); }
+/* El acento NO porta texto (2,66:1 sobre crema). La etiqueta va en tinta
+   tenue y el color lo lleva el ícono de al lado. */
+.scan-shell .k-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
 .scan-shell .k-stack { display: flex; flex-direction: column; gap: 14px; }
 .scan-shell .k-muted { color: var(--ink-2); font-size: 13px; }
 .scan-shell .k-empty { text-align: center; color: var(--ink-2); padding: 32px 12px; background: var(--white); border: 1px solid var(--cream-3); border-radius: var(--r-card); }
@@ -37,7 +52,10 @@
 .scan-shell .k-select { height: 44px; max-width: 60%; padding: 0 12px; border-radius: var(--r-ctl); border: 1.5px solid var(--cream-3); background: var(--white); font: inherit; font-weight: 600; color: var(--ink); }
 .scan-shell .k-status { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 700; }
 .scan-shell .k-dot--on { color: var(--ok); } .scan-shell .k-dot--off { color: var(--warn); }
-.scan-shell .k-pend { color: var(--warn); }
+/* Pendientes por sincronizar: punto ámbar + texto en tinta (el ámbar como
+   texto daba 2,98:1). */
+.scan-shell .k-pend { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
+.scan-shell .k-pend::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); flex: none; }
 .scan-shell .k-count { color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .scan-shell .k-icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; border: 1.5px solid var(--cream-3); background: var(--white); color: var(--ink-2); cursor: pointer; }
 .scan-shell .k-logout:focus-visible, .scan-shell .k-icon:focus-visible, .scan-shell .k-btn:focus-visible, .scan-shell .k-select:focus-visible, .scan-shell .k-input:focus-visible { outline: 3px solid var(--tangerine); outline-offset: 2px; }
@@ -65,7 +83,9 @@
 /* controles */
 .scan-shell .k-row { display: flex; align-items: center; gap: 10px; }
 .scan-shell .k-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 46px; padding: 0 18px; border-radius: var(--r-pill); border: 1.5px solid transparent; font-weight: 700; font-size: 15px; cursor: pointer; }
-.scan-shell .k-btn--brand { background: var(--tangerine); color: #fff; }
+/* TINTA sobre naranja (5,91:1). Blanco sobre naranja da 2,85:1 y falla AA:
+   es la regla dura del sistema y acá estaba al revés. */
+.scan-shell .k-btn--brand { background: var(--tangerine); color: var(--ink); }
 .scan-shell .k-btn--brand:active { transform: scale(.98); }
 .scan-shell .k-btn--soft { background: var(--white); color: var(--ink); border-color: var(--cream-3); }
 .scan-shell .k-label { display: block; font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
@@ -97,10 +117,12 @@
 .scan-shell .k-pass:focus-visible, .scan-shell .k-nopass:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 
 /* /puerta — login por código */
-.scan-shell .k-gate { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.scan-shell .k-gate { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px; }
 .scan-shell .k-gate__card { width: 100%; max-width: 380px; text-align: center; }
 .scan-shell .k-gate__badge { width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 50%; background: rgba(255,106,61,.12); color: var(--tangerine); display: grid; place-items: center; }
 .scan-shell .k-codeinput { width: 100%; height: 56px; text-align: center; font-family: var(--display); font-weight: 800; font-size: 24px; letter-spacing: 0.3em; text-transform: uppercase; background: var(--white); border: 1.5px solid var(--cream-3); border-radius: var(--r-ctl); color: var(--ink); }
 .scan-shell .k-codeinput:focus { outline: none; border-color: var(--tangerine); box-shadow: 0 0 0 3px rgba(255,106,61,.16); }
+/* Link suelto de la pantalla de puerta: tinta + subrayado, 44 de alto. */
+.scan-shell .k-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 
 @media (prefers-reduced-motion: reduce) { .scan-shell * { animation: none !important; } }

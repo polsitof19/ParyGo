@@ -34,6 +34,38 @@ aplicado el parche, pero `next build && next start` es lo más parecido a prod.
 | J | Panel: tabla por tipo = DB, recaudado, clientes, Accesos se refresca solo |
 | K | MercadoPago: oculto sin credenciales, visible con credenciales, se quita |
 
+## Auditoría de iPhone de los paneles
+
+```bash
+node e2e/audit-iphone.mjs                      # las 26 vistas, 390 y 430
+node e2e/audit-iphone.mjs --panel super        # solo /cabina-*
+node e2e/audit-iphone.mjs --only salud --shot x  # una vista + captura
+```
+
+Abre cada vista de los dos paneles y de la puerta en **WebKit** (el motor de
+Safari) a 390x844 y 430x932, y MIDE: overflow horizontal del documento,
+elementos que se salen, texto recortado sin "…", áreas de toque por debajo de
+44px, controles montados uno sobre otro, números de stat que no caben.
+El informe queda en `tmp/iphone/audit.json` con el selector de cada hallazgo.
+
+**El objetivo es cero en todo**, con una excepción conocida: un link en medio de
+una frase (`a.s-textlink` en /editar) mide 36px de alto porque es el renglón
+del párrafo. WCAG 2.5.8 exime justamente a los targets "en una oración o bloque
+de texto"; estirarlo rompería el interlineado del párrafo.
+
+Notas de medición:
+- WebKit le da caja a lo que vive dentro de un `<details>` cerrado, y a lo
+  escondido con `clip-path`. El auditor los descarta, si no reporta fantasmas.
+- Una casilla dibuja 18px pero lo que se toca es su `<label>`: se mide la
+  etiqueta.
+- Un control puesto ADENTRO de su campo (el ojo de la contraseña) se monta
+  sobre el campo a propósito; eso no cuenta como "montado".
+- La `safe-area` se inyecta como variable porque `env()` da 0 en headless.
+  Ojo: el layout raíz NO declara `viewport-fit: cover`, así que en un iPhone
+  real iOS ya deja el contenido dentro del área segura y los paneles nunca
+  quedan bajo la isla. Agregar `cover` metería el topbar sticky debajo de la
+  barra de estado — no se hace sin revisar todas las superficies.
+
 ## Sesiones
 
 - Super admin: JWT real vía magic link generado con service-role (no envía mail ni

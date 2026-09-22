@@ -63,8 +63,11 @@ export function SetupChecklist({ steps, brandName }: { steps: SetupStep[]; brand
                 <p className="a-setup__name">{s.title}</p>
                 <p className="s-muted" style={{ fontSize: 13 }}>{s.desc}</p>
               </div>
+              {/* Botón de TEXTO, también el del paso siguiente: el único
+                  primario de la home es "Crear evento". Que este paso es el
+                  que toca ya lo dice la fila (tinta + punto de acento). */}
               {!s.done && (
-                <Link href={s.href} className={`s-btn s-btn--sm ${isNext ? 's-btn--primary' : 's-btn--soft'}`} style={{ flexShrink: 0 }}>
+                <Link href={s.href} className="s-btn s-btn--soft s-btn--sm" style={{ flexShrink: 0 }}>
                   {s.cta} <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               )}

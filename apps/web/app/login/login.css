@@ -12,7 +12,11 @@
   --body: var(--font-hanken), "Hanken Grotesk", system-ui, sans-serif;
   --r-card: 20px; --r-ctl: 12px; --r-pill: 999px;
 
+  /* 100dvh: en Safari de iPhone 100vh es el viewport GRANDE (sin la barra de
+     direcciones), asi que el shell queda mas alto que lo visible. 100vh antes,
+     como respaldo. */
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 40px 20px;

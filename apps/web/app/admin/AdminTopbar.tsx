@@ -24,9 +24,12 @@ export function AdminTopbar({ brandName, email, logoUrl }: { brandName: string; 
   return (
     <header className="s-topbar">
       <div className="s-topbar__inner">
-        <Link href="/admin" className="s-logo" style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+        {/* El que se recorta con "…" es el NOMBRE, no el lockup entero: con el
+            ellipsis en el <a> el punto de acento quedaba cortado por la mitad
+            y se veía una astilla naranja suelta al lado del nombre. */}
+        <Link href="/admin" className="s-logo" style={{ gap: 10 }}>
           {logoUrl && <BrandLogo src={logoUrl} alt="" size={28} ring={false} />}
-          {brandName}
+          <span className="s-logo__name">{brandName}</span>
           <span className="dot">.</span>
           <span className="tag">Tu panel</span>
         </Link>
