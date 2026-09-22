@@ -6,7 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv, publicEnv } from '@/lib/env';
 import { createMercadoPagoPreference } from '@/lib/mercadopago';
 import { issueTicketsForOrder } from '@/lib/tickets';
-import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
+import { enqueueTicketEmail } from '@/lib/email/enqueueTicketEmail';
 import { checkPublicTicketType, eventOverAt } from '@/lib/publicTicketGuard';
 
 export type CheckoutInput = {
@@ -439,7 +439,18 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
       reason: event.is_free === true ? 'free_event' : 'yape_approved',
     });
     if (issue.ok) {
-      await sendTicketEmail(order.id);
+      // El email NO bloquea el reclamo (0062). La entrada ya existe y el QR se
+      // muestra en la confirmación y en /t/<uuid>; el correo es la copia y sale
+      // por la cola, con reintentos. Antes acá había un `await sendTicketEmail`:
+      // con miles de reclamos a la vez, el comprador esperaba a Resend —que
+      // limita envíos por segundo— para ver su QR, y un fallo del correo podía
+      // tirar el reclamo DESPUÉS de emitida la entrada.
+      const encolado = await enqueueTicketEmail(admin, order.id);
+      if (!encolado.ok) {
+        console.error('[startCheckout] no se pudo encolar el email de la entrada', {
+          orderId: order.id, reason: encolado.reason,
+        });
+      }
       return { ok: true, redirectUrl: `${eventBase}/confirmacion?order=${order.id}` };
     }
     // No se pudo emitir (incl. oversold_no_capacity): NO marcamos pagada. Fallar

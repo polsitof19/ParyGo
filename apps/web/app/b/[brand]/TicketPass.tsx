@@ -3,6 +3,7 @@ import { optimizedImage } from '@/lib/imageUrl';
 import { formatEventDate, whatsappLink } from '@/lib/utils';
 import { SaveTicketImage } from './SaveTicketImage';
 import { LineaEntrada } from './Responsable';
+import { ReenviarMiEntrada } from './ReenviarMiEntrada';
 
 export type PassState =
   | { kind: 'ok' }
@@ -112,6 +113,10 @@ export function TicketPass({
             Compartir por WhatsApp
           </a>
         )}
+        {/* El correo puede tardar (sale por la cola) o no llegar nunca: esta es
+            la salida sin depender de nadie. Va al email de la orden, no a uno
+            que se escriba. Solo con la entrada ya emitida. */}
+        {state.kind !== 'wait' && state.kind !== 'dead' && <ReenviarMiEntrada qrCode={qrCode} />}
       </div>
 
       {showFooter && (

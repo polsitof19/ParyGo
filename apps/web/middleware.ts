@@ -52,6 +52,48 @@ const RESERVED_SUBDOMAINS = new Set([
   'static',
 ]);
 
+// ---------------------------------------------------------------------------
+// CACHÉ DE BORDE DE LAS PÁGINAS PÚBLICAS DE UNA MARCA (2026-09-22)
+// ---------------------------------------------------------------------------
+// Medido contra producción: con 50 pedidos en paralelo, la página pública
+// devolvía 503 "Worker exceeded resource limits" en el 30-60% de los casos (y
+// también /login, o sea que no es esta página: es el Worker). Con un evento
+// gratis de miles de personas eso es una caída en el peor momento.
+//
+// La página de una marca y la de un evento son IGUALES para todos: no hay
+// sesión de comprador, no hay carrito en el server, y el precio, el cupo y el
+// reclamo se validan siempre server-side en el checkout. O sea que se puede
+// servir desde el borde y que mil visitas cuesten una sola ejecución.
+//
+// Lo único que puede quedar viejo hasta 60s es el cartel de "Agotado".
+// NO abre riesgo de sobreventa: quien toque "Reclama tu entrada" pasa igual por
+// reserve_order_stock, que decide bajo lock.
+//
+// NO se cachea:
+//   · nada que lleve sesión (cookies sb-*: el panel, la cabina),
+//   · la entrada de una persona (/t/…), su pedido (/pedido/…), la
+//     confirmación, el paso de Yape ni /reenviar — son de UNO,
+//   · los links de promotor (?ref=…), porque su clic se registra en el server
+//     y con caché se perdería el tracking,
+//   · nada que no sea GET.
+const RUTAS_PUBLICAS_CACHEABLES = /^\/(?:[a-z0-9][a-z0-9-]{0,80})?$/i;
+const RUTAS_PERSONALES = /^\/(?:t|pedido|reenviar|confirmacion|yape)(?:\/|$)/i;
+
+function sePuedeCachear(req: NextRequest, path: string): boolean {
+  if (req.method !== 'GET') return false;
+  if (RUTAS_PERSONALES.test(path)) return false;
+  if (!RUTAS_PUBLICAS_CACHEABLES.test(path)) return false;
+  // Sesión abierta → respuesta personal, nunca compartida.
+  if (req.cookies.getAll().some((c) => c.name.startsWith('sb-'))) return false;
+  // Link de promotor: su clic se cuenta en el server.
+  const qs = new URL(req.url).searchParams;
+  if (qs.has('ref')) return false;
+  // Los parámetros de exploración de diseño (?c=, ?flyer=) no se cachean: son
+  // para mirar variantes, no tráfico real.
+  if (qs.has('c') || qs.has('flyer')) return false;
+  return true;
+}
+
 function extractSubdomain(host: string): string | null {
   // Strip port
   const cleanHost = host.split(':')[0]?.toLowerCase() ?? '';
@@ -144,6 +186,28 @@ export async function middleware(req: NextRequest) {
         request: { headers: new Headers(req.headers) },
       });
       rewriteRes.headers.set('x-parygo-brand-slug', brandSlug);
+      if (sePuedeCachear(req, path)) {
+        // 60s en el borde y 5 min de "serví lo viejo mientras revalidás": si el
+        // Worker se satura, la gente igual ve la página en vez de un 503.
+        rewriteRes.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+        // El navegador NO la guarda (max-age=0): el que vuelve a entrar quiere
+        // ver el cupo de ahora, y el que paga el costo es el borde, no él.
+        rewriteRes.headers.set('CDN-Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+        // OJO con la llave de caché: el Worker de *.parygo.com reescribe el
+        // Host al del proyecto de Pages, así que si algo cachea la subpetición
+        // por URL sola, dos marcas con el MISMO slug de evento podrían pisarse.
+        // Cloudflare solo respeta `Vary: Accept-Encoding`, así que un
+        // `Vary: x-parygo-brand-slug` sería un amuleto, no una garantía: por
+        // eso NO se pone. La caché de verdad va como Cache Rule de zona, donde
+        // el host SÍ entra en la llave. Estas cabeceras son la condición
+        // necesaria (sin ellas no cachea nada) y quedan verificadas midiendo
+        // cf-cache-status en producción.
+
+        // Sin cookies de sesión no hay nada que refrescar: saltearse
+        // supabase.auth.getUser() ahorra un viaje de red POR PEDIDO, que es
+        // justo lo que sobra cuando llegan miles a la vez.
+        return rewriteRes;
+      }
       return await refreshAuth(req, rewriteRes);
     }
     if (isAppHost) {

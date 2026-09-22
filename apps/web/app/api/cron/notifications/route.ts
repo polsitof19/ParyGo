@@ -20,8 +20,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-const BATCH = 50;
-const CONCURRENCY = 4; // respeta el rate limit de Resend
+// Tanda y paralelismo. Con la cola de entradas de un evento gratis grande
+// (0062) 50 por corrida eran 600 emails por hora: 3000 entradas tardaban cinco
+// horas en salir. 200 por corrida, con el cron cada minuto, las drenan en
+// ~15 min. CONCURRENCY queda en 4 a propósito: es lo que tolera el límite de
+// envíos por segundo de Resend sin que empiece a rechazar.
+const BATCH = 200;
+const CONCURRENCY = 4;
 
 type Job = {
   id: string; kind: string; brand_id: string | null; event_id: string | null;
@@ -40,6 +45,7 @@ export async function POST(req: NextRequest) {
   const { sendYapeRecoveryEmail, sendYapePendingDigestEmail } = await import('@/lib/email/sendYapeNotificationEmails');
   const { sendEventReminderEmail } = await import('@/lib/email/sendEventReminderEmail');
   const { sendEventCancelledEmail } = await import('@/lib/email/sendEventCancelledEmail');
+  const { sendTicketEmail } = await import('@/lib/email/sendTicketEmail');
   const admin = createAdminClient();
 
   // 1. Encolar lo nuevo (idempotente). Si falla, igual seguimos a procesar lo ya
@@ -114,6 +120,15 @@ export async function POST(req: NextRequest) {
           reason: (p.reason as string | null) ?? null,
           brand: brandForEmail, idempotencyKey: r.dedupe_key,
         });
+      } else if (r.kind === 'ticket_email') {
+        // La entrada con QR (0062). El reclamo ya la emitió y ya la mostró en
+        // pantalla: acá solo sale la COPIA por correo. sendTicketEmail arma el
+        // mail desde la orden y marca email_sent_at.
+        if (!r.order_id) { await markFailed(r.id, 'no_order_id'); failed++; return; }
+        const envio = await sendTicketEmail(r.order_id);
+        res = envio.ok
+          ? { ok: true, resendId: envio.status === 'sent' ? envio.resendId : null }
+          : { ok: false, reason: envio.reason };
       } else {
         await markFailed(r.id, `unknown_kind:${r.kind}`); failed++; return;
       }

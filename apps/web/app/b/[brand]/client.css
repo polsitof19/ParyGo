@@ -346,12 +346,17 @@
 .client-shell .c-pass__state b { font-weight: 600; }
 
 /* Acciones: guardar y compartir, una al lado de la otra. */
-.client-shell .c-pass__actions { display: flex; gap: 10px; margin-top: 14px; }
-/* `flex: 1` sin min-width no achica un botón cuyo texto no entra: "Compartir
-   por WhatsApp" se salía de la entrada en 390. Con `min-width: 0` las dos
-   mitades son de verdad mitades. */
-.client-shell .c-pass__actions > * { flex: 1 1 0; min-width: 0; }
-@media (max-width: 380px) { .client-shell .c-pass__actions { flex-direction: column; } }
+/* Dos por fila, y el TERCERO a lo ancho. Era flex con `flex: 1 1 0`, que
+   alcanzaba para dos botones; al sumarse "Reenviar a mi email" los tres se
+   repartían 390px y el texto se salía de la entrada (medido en el iPhone).
+   Con grilla, dos entran cómodos y el tercero baja entero en vez de apretar a
+   los otros dos. */
+.client-shell .c-pass__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.client-shell .c-pass__actions > * { min-width: 0; }
+.client-shell .c-pass__actions > :nth-child(3) { grid-column: 1 / -1; }
+/* Un solo botón (sin WhatsApp ni reenvío) no se queda a media pantalla. */
+.client-shell .c-pass__actions > :only-child { grid-column: 1 / -1; }
+@media (max-width: 380px) { .client-shell .c-pass__actions { grid-template-columns: 1fr; } }
 .client-shell .c-pass__foot { text-align: center; font-size: var(--b-micro); color: var(--ink-3); margin-top: 16px; }
 /* Quién organiza, encima del "powered by": pegados, una sola unidad de pie. */
 .client-shell .c-pass__foot--org { margin-top: 16px; }

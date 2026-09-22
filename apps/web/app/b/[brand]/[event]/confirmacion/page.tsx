@@ -262,8 +262,11 @@ export default async function ConfirmationPage({
       )}
 
       <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5, marginTop: 18 }}>
-        También te enviamos el QR por email. Si no llega en 5 min, revisa spam o usa el link permanente.{' '}
-        <Link href="/reenviar" style={{ color: 'var(--ink)', fontWeight: 600, textDecoration: 'underline' }}>¿No lo encuentras? Reenviar a mi email</Link>
+        {/* La entrada de arriba YA es la entrada: el email es la copia y sale
+            por la cola, así que puede tardar unos minutos. No prometerle 5. */}
+        El QR de arriba ya es tu entrada: guárdala como imagen o abre tu link permanente. También te la mandamos por
+        email, aunque puede demorar unos minutos.{' '}
+        <Link href="/reenviar" style={{ color: 'var(--ink)', fontWeight: 600, textDecoration: 'underline' }}>Buscar mis entradas por email</Link>
       </p>
 
       {/* Quién cobró y quién responde por el evento. */}
