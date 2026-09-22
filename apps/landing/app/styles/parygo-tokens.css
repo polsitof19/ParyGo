@@ -77,6 +77,9 @@
   /* — Radios. — */
   --r-pill: 999px;
   --r-card: 14px;
+  /* El botón tiene su propio radio (DESIGN.md: controles 9, botones 10).
+     Faltaba como token y cada hoja lo escribía a mano. */
+  --r-btn: 10px;
   --r-ctl: 9px;
 
   /* — Curvas. Ya eran idénticas en la landing y en el checkout; acá

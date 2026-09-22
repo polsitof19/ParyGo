@@ -12,7 +12,7 @@ export const metadata = {
 };
 
 const bricolage = Bricolage_Grotesque({ weight: ['700', '800'], subsets: ['latin'], variable: '--font-bricolage', display: 'swap' });
-const hanken = Hanken_Grotesk({ weight: ['400', '500', '600', '700'], subsets: ['latin'], variable: '--font-hanken', display: 'swap' });
+const hanken = Hanken_Grotesk({ weight: ['300', '400', '500', '600', '700'], subsets: ['latin'], variable: '--font-hanken', display: 'swap' });
 
 export default function PuertaPage() {
   return (

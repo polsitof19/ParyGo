@@ -2,8 +2,10 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { createClient } from '@/lib/supabase/server';
-import { brandColor, brandFillPair, brandInk, withAlpha } from './brandTheme';
+import { brandColor, brandFillPair, brandFillHover, brandInk, withAlpha } from './brandTheme';
 import { BrandLogo } from '@/components/BrandLogo';
+import { marcaConConceptos } from '@/lib/concepto';
+import ConceptosPrueba from './ConceptosPrueba';
 // Orden: tokens del sistema primero; client.css los alias y los pisa donde el
 // sitio del comprador manda (el acento ES el color de la marca).
 import '../../styles/parygo-tokens.css';
@@ -14,7 +16,7 @@ export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 const bricolage = Bricolage_Grotesque({ weight: ['700', '800'], subsets: ['latin'], variable: '--font-bricolage', display: 'swap' });
-const hanken = Hanken_Grotesk({ weight: ['400', '500', '600', '700'], subsets: ['latin'], variable: '--font-hanken', display: 'swap' });
+const hanken = Hanken_Grotesk({ weight: ['300', '400', '500', '600', '700'], subsets: ['latin'], variable: '--font-hanken', display: 'swap' });
 // Layout de las páginas públicas por marca. El middleware reescribe
 // <slug>.parygo.com/* → /b/<slug>/*, así que este segmento recibe el slug.
 export default async function BrandLayout({
@@ -40,6 +42,9 @@ export default async function BrandLayout({
   // El color crudo (--brand) queda solo para puntos, barras y anillos: nunca
   // lleva texto "a ojo" porque el promotor elige cualquier color.
   const { fill: brandFill, on: onFill } = brandFillPair(theme.primary_color);
+  // El hover del relleno es otro color MEDIDO, no un filtro de brillo: un
+  // filtro mueve el par después de que el test lo midió y lo saca de AA.
+  const brandFillHov = brandFillHover(theme.primary_color);
   const brandSoft = withAlpha(primary, 0.12);
   // Variante legible del color de marca para texto/acento sobre crema (oscurece
   // los colores muy claros como el amarillo; deja intactos los medios/oscuros).
@@ -54,11 +59,15 @@ export default async function BrandLayout({
           '--brand': primary,
           '--brand-fill': brandFill,
           '--on-fill': onFill,
+          '--brand-fill-hover': brandFillHov,
           '--brand-soft': brandSoft,
           '--brand-deep': brandTextInk,
         } as React.CSSProperties
       }
     >
+      {/* CARTEL y NOCHE solo existen para comparar conceptos sobre datos
+          reales: su CSS baja únicamente en las marcas de prueba. */}
+      {marcaConConceptos(brand.slug) && <ConceptosPrueba />}
       <header className="c-header">
         <div className="c-header__inner">
           <Link href="/" className="c-lockup" aria-label={brand.name}>

@@ -18,13 +18,46 @@
   --hairline: var(--line);
   --ok-bg: #E6F4EC; --warn-bg: #FBEEDD; --alert-bg: #FBE9E5;
   /* Defaults por si el layout no inyectó marca (fallback tangerina parygo). */
-  --brand: #FF6A3D; --brand-fill: #FF6A3D; --on-fill: #231C17;
+  --brand: #FF6A3D; --brand-fill: #FF6A3D; --on-fill: #231C17; --brand-fill-hover: #E55F35;
   --brand-soft: rgba(255,106,61,.12); --brand-deep: #E8552A;
   /* Compat: el color de marca NO porta texto (regla dura del sistema). Lo que
      antes se tintaba con la marca ahora va en tinta; el color aparece como
      punto, barra, anillo de foco o relleno con su texto medido. */
   --brand-ink: var(--ink);
   --on-brand: var(--on-fill);
+
+  /* ESCALA del comprador. FIJA, no elástica: los clamp que crecían con el
+     viewport daban titulares de 75px en escritorio y 48 en teléfono.
+       t0   display de escritorio   34   (monto de Yape, precio gigante)
+       t1   título del evento       32 → 50
+       t2   título de pantalla      24 → 32
+       t3   título de sección       20 → 24   (700)
+       price número de precio       18 → 21   (800)
+       lead cuerpo destacado        17        (nombre en la entrada, cantidad)
+       body cuerpo                  16 → 17   (1.45)
+       ctl  texto de control        15        (botón, campo)
+       ui   interfaz secundaria     14
+       meta                         13
+       micro microcopy              12        (legal, pie, sellos)
+       lb   etiqueta mayúsculas     11
+     t0/lead/ctl/ui/micro son los escalones que antes no existían y se
+     escribían sueltos: había VEINTE tamaños literales distintos, del 11.5 al
+     36. Los cinco nuevos están documentados en DESIGN.md.
+     Ritmo de espacio en múltiplos de 8: s1..s6 = 8/16/24/32/48/64. */
+  --b-t0: 34px; --b-t1: 32px; --b-t2: 24px; --b-t3: 20px;
+  --b-price: 18px; --b-lead: 17px; --b-body: 16px; --b-ctl: 15px;
+  --b-ui: 14px; --b-meta: 13px; --b-micro: 12px; --b-lb: 11px;
+  --b-s1: 8px; --b-s2: 16px; --b-s3: 24px; --b-s4: 32px; --b-s5: 48px; --b-s6: 64px;
+
+  /* TIER DISPLAY, y solo para la PÁGINA DE MARCA (/b/[slug]) y el cierre de
+     la confirmación. Es la única tipografía fluida del producto y la excepción
+     está anotada en DESIGN.md: esas dos pantallas son de presentación, no de
+     tarea, y ahí el titular sí crece con la ventana. El CHECKOUT sigue con la
+     escala fija de arriba —un clamp en el precio o en el nombre del evento
+     hacía que el mismo texto midiera distinto en cada teléfono—. */
+  --b-d1: clamp(28px, 6vw, 42px);
+  --b-d2: clamp(30px, 5.5vw, 54px);
+  --b-d3: clamp(20px, 3vw, 26px);
   --shadow: var(--shadow-md); /* alias retro-compat */
   --pad: clamp(16px, 4vw, 32px);
 
@@ -37,7 +70,7 @@
   background-attachment: fixed;
   color: var(--ink);
   font-family: var(--body);
-  font-size: 15px;
+  font-size: var(--b-ctl);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -51,8 +84,8 @@
 
 /* type */
 .client-shell .c-h1 { font-family: var(--display); font-weight: 800; letter-spacing: -0.02em; line-height: 1.02; }
-.client-shell .c-h2 { font-family: var(--display); font-weight: 700; font-size: 21px; letter-spacing: -0.02em; }
-.client-shell .c-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--brand-ink); }
+.client-shell .c-h2 { font-family: var(--display); font-weight: 700; font-size: var(--b-t3); letter-spacing: -0.02em; }
+.client-shell .c-eyebrow { font-size: var(--b-micro); font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--brand-ink); }
 .client-shell .c-muted { color: var(--ink-2); }
 .client-shell .c-muted-3 { color: var(--ink-3); }
 
@@ -65,28 +98,26 @@
 .client-shell .c-header { position: sticky; top: 0; z-index: 50; background: rgba(251,247,240,.88); -webkit-backdrop-filter: saturate(150%) blur(12px); backdrop-filter: saturate(150%) blur(12px); border-bottom: 1px solid var(--line); box-shadow: inset 0 4px 0 var(--brand); }
 .client-shell .c-header__inner { max-width: 1120px; margin: 0 auto; height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 28px; }
 .client-shell .c-lockup { display: inline-flex; align-items: center; gap: 11px; min-width: 0; }
-.client-shell .c-lockup__mark { width: 36px; height: 36px; border-radius: 50%; background: var(--brand-fill); color: var(--on-fill); display: grid; place-items: center; flex: none; font-family: var(--display); font-weight: 800; font-size: 17px; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,.16); }
+.client-shell .c-lockup__mark { width: 36px; height: 36px; border-radius: 50%; background: var(--brand-fill); color: var(--on-fill); display: grid; place-items: center; flex: none; font-family: var(--display); font-weight: 800; font-size: var(--b-lead); line-height: 1; box-shadow: var(--shadow-sm); }
 .client-shell .c-lockup__txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.12; }
-.client-shell .c-lockup__ofi { font-size: 12px; font-weight: 600; color: var(--ink-3); }
-.client-shell .c-lockup__name { font-family: var(--display); font-weight: 800; font-size: 19px; letter-spacing: -0.01em; line-height: 1.1; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.client-shell .c-powered { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--ink-3); flex-shrink: 0; }
+.client-shell .c-lockup__ofi { font-size: var(--b-micro); font-weight: 600; color: var(--ink-3); }
+.client-shell .c-lockup__name { font-family: var(--display); font-weight: 800; font-size: var(--b-t3); letter-spacing: -0.01em; line-height: 1.1; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.client-shell .c-powered { display: flex; align-items: center; gap: 5px; font-size: var(--b-micro); color: var(--ink-3); flex-shrink: 0; }
 .client-shell .c-powered a { text-decoration: none; }
 .client-shell .c-powered b { font-family: var(--display); font-weight: 800; color: var(--ink-2); }
 .client-shell .c-powered a:hover b { opacity: .82; }
-.client-shell .c-powered__dot { width: 4px; height: 4px; border-radius: 50%; background: #FF6B35; margin-left: -2px; }
+.client-shell .c-powered__dot { width: 4px; height: 4px; border-radius: 50%; background: #FF6A3D; margin-left: -2px; }
 @media (max-width: 860px) { .client-shell .c-powered { display: none; } }
-@keyframes c-pulse { 0%,100% { opacity: 1 } 50% { opacity: .45 } }
 
 /* card */
 .client-shell .c-card { background: var(--white); border: 1px solid var(--hairline); border-radius: var(--r-card); box-shadow: var(--shadow-sm); padding: 24px; }
-.client-shell .c-card__title { font-family: var(--display); font-size: 13px; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; color: var(--brand-ink); margin-bottom: 14px; }
-@keyframes c-tt-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.client-shell .c-card__title { font-family: var(--display); font-size: var(--b-meta); font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; color: var(--brand-ink); margin-bottom: 14px; }
 
 /* buttons */
-.client-shell .c-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: 15px; height: 48px; padding: 0 22px; border-radius: var(--r-pill); border: 1.5px solid transparent; cursor: pointer; white-space: nowrap; transition: filter .2s, transform .2s var(--ease), box-shadow .2s, border-color .2s, background-color .2s; }
+.client-shell .c-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: var(--b-ctl); height: 48px; padding: 0 22px; border-radius: var(--r-pill); border: 1.5px solid transparent; cursor: pointer; white-space: nowrap; transition: filter .2s, transform .2s var(--ease), box-shadow .2s, border-color .2s, background-color .2s; }
 .client-shell .c-btn:disabled { opacity: .65; cursor: not-allowed; }
 .client-shell .c-btn--brand { background: var(--brand-fill); color: var(--on-fill); box-shadow: 0 10px 24px -10px var(--brand); }
-.client-shell .c-btn--brand:hover:not(:disabled) { filter: brightness(1.05); transform: translateY(-1px); }
+.client-shell .c-btn--brand:hover:not(:disabled) { background: var(--brand-fill-hover); transform: translateY(-1px); }
 .client-shell .c-btn--brand:active:not(:disabled) { transform: translateY(0) scale(.99); }
 .client-shell .c-btn--soft { background: var(--white); color: var(--ink); border-color: var(--cream-3); }
 .client-shell .c-btn--soft:hover:not(:disabled) { border-color: var(--ink); }
@@ -94,12 +125,12 @@
 .client-shell .c-btn--ghost:hover { color: var(--ink); }
 .client-shell .c-btn:focus-visible, .client-shell .c-pay:focus-visible, .client-shell .c-tt:focus-visible, .client-shell .c-qbtn:focus-visible, .client-shell .c-input:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
 .client-shell .c-btn--block { width: 100%; }
-.client-shell .c-btn--lg { height: 54px; font-size: 16px; }
+.client-shell .c-btn--lg { height: 54px; font-size: var(--b-body); }
 
 /* form */
 .client-shell .c-field + .c-field { margin-top: 16px; }
-.client-shell .c-label { display: block; font-size: 13.5px; font-weight: 600; margin-bottom: 7px; }
-.client-shell .c-help { font-size: 12.5px; color: var(--ink-3); margin-top: 6px; }
+.client-shell .c-label { display: block; font-size: var(--b-meta); font-weight: 600; margin-bottom: 7px; }
+.client-shell .c-help { font-size: var(--b-micro); color: var(--ink-3); margin-top: 6px; }
 /* Campo de archivo del comprador: el input nativo escondido + un botón del
    sistema. Mismo patrón que los paneles (.s-file), con las clases c-* de esta
    superficie. El input sigue enfocable y sigue siendo el que viaja en el
@@ -110,24 +141,24 @@
   display: inline-flex; align-items: center; justify-content: center;
   min-height: 44px; padding: 0 16px; border-radius: var(--r-ctl);
   border: 1.5px solid var(--hairline); background: var(--white);
-  font-weight: 700; font-size: 14px; color: var(--ink); cursor: pointer;
+  font-weight: 700; font-size: var(--b-ui); color: var(--ink); cursor: pointer;
 }
 .client-shell .c-file__btn:hover { border-color: var(--ink-2); }
 .client-shell .c-file__input:focus-visible + .c-file__btn { outline: 3px solid var(--accent); outline-offset: 2px; }
-.client-shell .c-file__name { font-size: 13px; color: var(--pg-fg-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.client-shell .c-file__name { font-size: var(--b-meta); color: var(--pg-fg-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.client-shell .c-err { font-size: 12.5px; color: var(--alert); margin-top: 6px; font-weight: 600; }
-.client-shell .c-input { width: 100%; height: 48px; padding: 0 14px; background: var(--cream); border: 1.5px solid var(--cream-3); border-radius: var(--r-ctl); font-family: var(--body); font-size: 16px; color: var(--ink); transition: border-color .18s, box-shadow .18s, background-color .18s; }
+.client-shell .c-err { font-size: var(--b-micro); color: var(--alert); margin-top: 6px; font-weight: 600; }
+.client-shell .c-input { width: 100%; height: 48px; padding: 0 14px; background: var(--cream); border: 1.5px solid var(--cream-3); border-radius: var(--r-ctl); font-family: var(--body); font-size: var(--b-body); color: var(--ink); transition: border-color .18s, box-shadow .18s, background-color .18s; }
 .client-shell .c-input::placeholder { color: var(--ink-3); }
 .client-shell .c-input:focus { outline: none; background: var(--white); border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
-.client-shell .c-check { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.4; cursor: pointer; }
+.client-shell .c-check { display: flex; align-items: flex-start; gap: 10px; font-size: var(--b-ui); line-height: 1.4; cursor: pointer; }
 .client-shell .c-check input { margin-top: 2px; width: 18px; height: 18px; accent-color: var(--brand); flex-shrink: 0; }
 
 /* confirmation (peak-end) */
 .client-shell .c-confirm { text-align: center; }
-.client-shell .c-confirm__badge { width: 76px; height: 76px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; background: var(--ok-bg); color: var(--ok); animation: c-pop .5s var(--ease) both; }
-@keyframes c-pop { 0% { transform: scale(.4); opacity: 0 } 60% { transform: scale(1.08) } 100% { transform: scale(1); opacity: 1 } }
-.client-shell .c-confirm h1 { font-family: var(--display); font-weight: 800; font-size: clamp(28px,6vw,42px); letter-spacing: -0.02em; margin: 16px 0 6px; }
+.client-shell .c-confirm__badge { width: 76px; height: 76px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; background: var(--ok-bg); color: var(--ok); animation: c-pop .3s var(--ease) both; }
+@keyframes c-pop { 0% { transform: scale(.92); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
+.client-shell .c-confirm h1 { font-family: var(--display); font-weight: 800; font-size: var(--b-d1); letter-spacing: -0.02em; margin: 16px 0 6px; }
 .client-shell .c-linkpill { display: flex; align-items: center; justify-content: space-between; gap: 10px; max-width: 460px; margin: 0 auto; background: var(--white); border: 1px solid var(--cream-3); border-radius: var(--r-pill); padding: 8px 8px 8px 18px; }
 
 /* states (yape review / pending / invalid) */
@@ -137,18 +168,18 @@
 
 /* ticket page (entrada digital) */
 .client-shell .c-ticket { max-width: 420px; margin: 0 auto; }
-.client-shell .c-ticket__card { position: relative; overflow: hidden; border-radius: 26px; background: var(--white); border: 1px solid var(--cream-3); box-shadow: 0 30px 70px -30px var(--brand); }
+.client-shell .c-ticket__card { position: relative; overflow: hidden; border-radius: var(--r-card); background: var(--white); border: 1px solid var(--cream-3); box-shadow: var(--shadow-lg); }
 .client-shell .c-ticket__band { height: 8px; background: var(--brand); }
 .client-shell .c-ticket__perf { position: relative; height: 1px; border-top: 1.5px dashed var(--cream-3); margin: 6px 0; }
 .client-shell .c-ticket__perf::before, .client-shell .c-ticket__perf::after { content: ""; position: absolute; top: 50%; width: 22px; height: 22px; border-radius: 50%; background: var(--cream); transform: translateY(-50%); }
 .client-shell .c-ticket__perf::before { left: -11px; } .client-shell .c-ticket__perf::after { right: -11px; }
-.client-shell .c-qr { width: 200px; height: 200px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 12px; box-shadow: 0 0 0 1px var(--cream-3); }
+.client-shell .c-qr { width: 200px; height: 200px; margin: 0 auto; background: #fff; border-radius: var(--r-card); padding: 12px; box-shadow: 0 0 0 1px var(--cream-3); }
 .client-shell .c-qr svg { width: 100%; height: 100%; }
-.client-shell .c-validated { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 12px; border-radius: var(--r-pill); background: var(--ok-bg); color: var(--ok); font-size: 12px; font-weight: 700; }
+.client-shell .c-validated { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 12px; border-radius: var(--r-pill); background: var(--ok-bg); color: var(--ok); font-size: var(--b-micro); font-weight: 700; }
 
 /* misc */
 .client-shell .c-divider { height: 1px; background: var(--cream-3); margin: 18px 0; }
-.client-shell .c-foot { text-align: center; font-size: 12px; line-height: 1.5; color: var(--ink-3); padding: 24px var(--pad) 32px; }
+.client-shell .c-foot { text-align: center; font-size: var(--b-micro); line-height: 1.5; color: var(--ink-3); padding: 24px var(--pad) 32px; }
 .client-shell .c-foot a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .client-shell .c-foot a:hover { color: var(--ink); }
 /* Pie de responsabilidad de la página de marca: una medida de lectura, no la
@@ -157,24 +188,24 @@
 
 /* ===================== PÁGINA DE MARCA ===================== */
 .client-shell .c-brandhead { padding: clamp(28px,6vw,52px) 0 8px; }
-.client-shell .c-brandname { font-family: var(--display); font-weight: 800; font-size: clamp(28px,5vw,42px); letter-spacing: -0.02em; }
+.client-shell .c-brandname { font-family: var(--display); font-weight: 800; font-size: var(--b-d1); letter-spacing: -0.02em; }
 .client-shell .c-section { margin-top: clamp(32px,6vw,56px); }
-.client-shell .c-section__h { font-family: var(--display); font-weight: 800; font-size: clamp(20px,3vw,26px); letter-spacing: -0.02em; margin-bottom: 18px; display: flex; align-items: baseline; gap: 10px; }
-.client-shell .c-section__h .cnt { font-family: var(--body); font-size: 13px; font-weight: 600; color: var(--ink-3); }
+.client-shell .c-section__h { font-family: var(--display); font-weight: 800; font-size: var(--b-d3); letter-spacing: -0.02em; margin-bottom: 18px; display: flex; align-items: baseline; gap: 10px; }
+.client-shell .c-section__h .cnt { font-family: var(--body); font-size: var(--b-meta); font-weight: 600; color: var(--ink-3); }
 
 /* flyer (vertical/cuadrado). Fallback = gradiente tintado con la marca */
 .client-shell .c-flyer { position: relative; aspect-ratio: 3 / 4; border-radius: var(--r-card); overflow: hidden; background:
   radial-gradient(120% 90% at 80% 0%, var(--brand-soft), transparent 60%), linear-gradient(160deg, var(--cream-2), var(--cream-3)); }
 .client-shell .c-flyer img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .client-shell .c-flyer__fallback { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center; }
-.client-shell .c-flyer__fallback span { font-family: var(--display); font-weight: 800; font-size: 28px; color: var(--brand-ink); opacity: .8; }
+.client-shell .c-flyer__fallback span { font-family: var(--display); font-weight: 800; font-size: var(--b-t2); color: var(--brand-ink); opacity: .8; }
 
 /* destacado */
 .client-shell .c-feat { display: grid; grid-template-columns: minmax(0, 340px) 1fr; gap: clamp(20px,4vw,40px); align-items: center; }
 .client-shell .c-feat__eyebrow { color: var(--brand-ink); }
-.client-shell .c-feat h2 { font-family: var(--display); font-weight: 800; font-size: clamp(30px,5.5vw,54px); line-height: 1.02; letter-spacing: -0.03em; margin: 10px 0 14px; }
-.client-shell .c-feat__from { font-size: 14px; color: var(--ink-2); }
-.client-shell .c-feat__from b { font-family: var(--display); font-weight: 800; font-size: 22px; color: var(--ink); }
+.client-shell .c-feat h2 { font-family: var(--display); font-weight: 800; font-size: var(--b-d2); line-height: 1.02; letter-spacing: -0.03em; margin: 10px 0 14px; }
+.client-shell .c-feat__from { font-size: var(--b-ui); color: var(--ink-2); }
+.client-shell .c-feat__from b { font-family: var(--display); font-weight: 800; font-size: var(--b-t3); color: var(--ink); }
 
 /* grilla de eventos */
 .client-shell .c-evgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
@@ -182,13 +213,13 @@
 .client-shell .c-evcard:hover { transform: translateY(-3px); box-shadow: 0 18px 40px -20px rgba(35,28,23,.35); }
 .client-shell .c-evcard .c-flyer { border-radius: 0; }
 .client-shell .c-evcard__body { padding: 14px 16px 16px; }
-.client-shell .c-evcard__name { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: -0.01em; line-height: 1.15; }
-.client-shell .c-evcard__meta { font-size: 12.5px; color: var(--ink-3); margin-top: 4px; display: inline-flex; align-items: center; gap: 5px; }
-.client-shell .c-evcard__price { margin-top: 8px; font-size: 13.5px; font-weight: 700; color: var(--brand-ink); }
+.client-shell .c-evcard__name { font-family: var(--display); font-weight: 700; font-size: var(--b-body); letter-spacing: -0.01em; line-height: 1.15; }
+.client-shell .c-evcard__meta { font-size: var(--b-micro); color: var(--ink-3); margin-top: 4px; display: inline-flex; align-items: center; gap: 5px; }
+.client-shell .c-evcard__price { margin-top: 8px; font-size: var(--b-meta); font-weight: 700; color: var(--brand-ink); }
 .client-shell .c-evcard--past { box-shadow: none; }
 .client-shell .c-evcard--past:hover { transform: none; box-shadow: var(--shadow); }
 .client-shell .c-evcard--past .c-flyer { filter: saturate(.85) brightness(.99); }
-.client-shell .c-finalizado { position: absolute; top: 10px; left: 10px; z-index: 2; display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: var(--r-pill); background: rgba(35,28,23,.72); color: #fff; font-size: 11px; font-weight: 700; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.client-shell .c-finalizado { position: absolute; top: 10px; left: 10px; z-index: 2; display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: var(--r-pill); background: rgba(35,28,23,.72); color: #fff; font-size: var(--b-lb); font-weight: 700; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
 
 @media (max-width: 720px) {
   .client-shell .c-feat { grid-template-columns: 1fr; }
@@ -204,27 +235,37 @@
 }
 
 /* transición animada entre paso 1 y paso 2 */
-.client-shell .c-stepwrap { animation: c-stepin .12s var(--ease) both; }
-@keyframes c-stepin { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+/* Cambio de paso de la compra. Antes era 4px en 120ms —invisible— y tenía
+   una sola dirección: volver con "Atrás" se veía igual que avanzar, así que
+   el movimiento no decía nada. Ahora el paso que entra viene DESDE donde
+   está el que se fue: avanzando sube, volviendo baja. El que sale se va más
+   rápido (140ms) que lo que tarda en entrar el nuevo (220ms), para que el
+   hueco no se note. Los 4 keyframes van juntos y en este orden: --out pisa a
+   --back, y la combinación de los dos pisa a --out. */
+.client-shell .c-stepwrap { animation: c-stepin .22s var(--ease) both; }
+.client-shell .c-stepwrap--back { animation-name: c-stepin-back; }
+.client-shell .c-stepwrap--out { animation: c-stepout .14s var(--ease) both; }
+.client-shell .c-stepwrap--out.c-stepwrap--back { animation-name: c-stepout-back; }
+@keyframes c-stepin { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes c-stepin-back { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+@keyframes c-stepout { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-10px); } }
+@keyframes c-stepout-back { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(10px); } }
 
 /* cierre celebratorio: glow de marca detrás del check + energía */
 .client-shell .c-confirm { position: relative; }
 .client-shell .c-confirm::before { content: ""; position: absolute; left: 50%; top: -10px; width: 280px; height: 280px; transform: translateX(-50%); background: radial-gradient(circle, var(--brand-soft), transparent 65%); z-index: 0; pointer-events: none; }
 .client-shell .c-confirm > * { position: relative; z-index: 1; }
 .client-shell .c-confirm__badge { box-shadow: 0 0 0 10px color-mix(in srgb, var(--ok) 10%, transparent); }
-.client-shell .c-confirm h1 { background: linear-gradient(100deg, var(--ink), var(--brand-ink)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-@keyframes c-poster-in { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
 
 /* — Arte del evento + logo en el ticket digital — */
 .client-shell .c-ticket__art { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: var(--brand); }
 .client-shell .c-ticket__art img:not(.c-ticket__logo) { width: 100%; height: 100%; object-fit: cover; display: block; }
-.client-shell .c-ticket__art-veil { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.04) 40%, rgba(0,0,0,.34)); }
-.client-shell .c-ticket__logo { position: absolute; left: 16px; bottom: 12px; height: 32px; width: auto; max-width: 130px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,.55)); }
-@keyframes c-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.client-shell .c-ticket__art-veil { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(35,28,23,.05) 40%, rgba(35,28,23,.40)); }
+.client-shell .c-ticket__logo { position: absolute; left: 16px; bottom: 12px; height: 32px; width: auto; max-width: 130px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(35,28,23,.60)); }
 
 /* — Micro-pulse del total cuando cambia (cantidad / código) — */
-.client-shell .c-amount { display: inline-block; animation: c-bump .34s var(--ease); }
-@keyframes c-bump { 0% { transform: scale(1); } 38% { transform: scale(1.13); color: var(--brand-ink); } 100% { transform: scale(1); } }
+.client-shell .c-amount { display: inline-block; animation: c-bump .2s var(--ease); }
+@keyframes c-bump { 0% { transform: scale(1); } 38% { transform: scale(1.04); } 100% { transform: scale(1); } }
 @media (max-width: 820px) {
 }
 
@@ -235,7 +276,7 @@
    página entera vía :has() para que el fondo NO tenga costura, sin
    tocar la landing de marca (.bl, que NO tiene .c-checkout-canvas)
    ni el resto del shell. El acento sigue siendo el COLOR DE LA MARCA
-   (--brand); #FF6B35 es solo el default de ParyGo.
+   (--brand); #FF6A3D (el token --accent) es solo el default de ParyGo.
    Solo presentación: no toca selección/precio/pago/emisión/aforo.
    ============================================================ */
 .client-shell:has(.c-checkout-canvas) {
@@ -250,9 +291,8 @@
 /* — Marcadores de sección "— ELEGÍ TUS ENTRADAS" / "— DÓNDE" — */
 .client-shell .c-checkout-canvas .c-card__title,
 .client-shell .c-checkout-canvas .c-co__sechead .c-card__title {
-  font-size: 12px; font-weight: 800; letter-spacing: 0.14em; color: var(--ink-2);
+  font-size: var(--b-micro); font-weight: 800; letter-spacing: 0.14em; color: var(--ink-2);
 }
-@keyframes c-tick { 0% { transform: scale(.62); opacity: .35; } 55% { transform: scale(1.18); } 100% { transform: scale(1); opacity: 1; } }
 
 /* — CTA "Continuar" sobre la tarjeta OSCURA: contraste blindado —
    Texto sobre el botón: --on-brand (YIQ, ya legible para cualquier marca).
@@ -272,20 +312,20 @@
 .client-shell .c-pass__card {
   position: relative; overflow: hidden; background: var(--surface);
   border: 1px solid var(--line); border-radius: var(--r-card);
-  box-shadow: var(--shadow-md); border-top: 4px solid var(--brand);
+  box-shadow: inset 0 4px 0 var(--brand), var(--shadow-md);
 }
 /* Cabecera: quién organiza. El color de marca es la barra de arriba y el
    anillo del logo; el nombre va en tinta. */
 .client-shell .c-pass__brand { display: flex; align-items: center; gap: 10px; padding: 14px 18px 0; }
-.client-shell .c-pass__brand img { width: 30px; height: 30px; border-radius: 8px; object-fit: contain; background: var(--paper); box-shadow: 0 0 0 1.5px var(--brand); flex: none; }
-.client-shell .c-pass__brandname { font-weight: 700; font-size: 14px; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.client-shell .c-pass__type { margin-left: auto; flex: none; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.client-shell .c-pass__brand img { width: 30px; height: 30px; border-radius: var(--r-ctl); object-fit: contain; background: var(--paper); box-shadow: 0 0 0 1.5px var(--brand); flex: none; }
+.client-shell .c-pass__brandname { font-weight: 600; font-size: var(--b-ui); color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.client-shell .c-pass__type { margin-left: auto; flex: none; font-size: var(--b-lb); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
 
 /* QR: lo primero y lo más grande. */
 .client-shell .c-pass__qrwrap { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px 18px 20px; }
-.client-shell .c-pass__qr { width: clamp(240px, 62vw, 288px); height: clamp(240px, 62vw, 288px); background: #fff; border-radius: 14px; padding: 12px; box-shadow: 0 0 0 1px var(--line); }
+.client-shell .c-pass__qr { width: clamp(240px, 62vw, 288px); height: clamp(240px, 62vw, 288px); background: #fff; border-radius: var(--r-card); padding: 12px; box-shadow: 0 0 0 1px var(--line); }
 .client-shell .c-pass__qr svg { width: 100%; height: 100%; display: block; }
-.client-shell .c-pass__say { font-family: var(--display); font-weight: 800; font-size: 17px; letter-spacing: -0.01em; text-align: center; }
+.client-shell .c-pass__say { font-family: var(--display); font-weight: 800; font-size: var(--b-lead); letter-spacing: -0.01em; text-align: center; }
 
 /* Troquel + datos */
 .client-shell .c-pass__perf { position: relative; height: 1px; border-top: 1.5px dashed var(--paper-3); }
@@ -293,19 +333,19 @@
 .client-shell .c-pass__perf::before { left: -11px; }
 .client-shell .c-pass__perf::after { right: -11px; }
 .client-shell .c-pass__data { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
-.client-shell .c-pass__who { font-family: var(--display); font-weight: 800; font-size: 22px; line-height: 1.1; letter-spacing: -0.02em; }
-.client-shell .c-pass__row { display: flex; gap: 10px; font-size: 14px; color: var(--ink-2); }
+.client-shell .c-pass__who { font-family: var(--display); font-weight: 800; font-size: var(--b-t3); line-height: 1.1; letter-spacing: -0.02em; }
+.client-shell .c-pass__row { display: flex; gap: 10px; font-size: var(--b-ui); color: var(--ink-2); }
 .client-shell .c-pass__row svg { width: 16px; height: 16px; flex: none; margin-top: 2px; color: var(--ink-3); }
 .client-shell .c-pass__row b { font-weight: 600; color: var(--ink); }
-.client-shell .c-pass__code { font-size: 12.5px; color: var(--ink-3); letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+.client-shell .c-pass__code { font-size: var(--b-micro); color: var(--ink-3); letter-spacing: .04em; font-variant-numeric: tabular-nums; }
 
 /* Estado (usada / en revisión / cancelada): punto + texto en tinta. */
-.client-shell .c-pass__state { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-ctl); background: var(--surface); font-size: 14px; line-height: 1.45; }
+.client-shell .c-pass__state { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-ctl); background: var(--surface); font-size: var(--b-ui); line-height: 1.45; }
 .client-shell .c-pass__state::before { content: ""; width: 9px; height: 9px; border-radius: 50%; flex: none; margin-top: 6px; background: var(--ink-3); }
 .client-shell .c-pass__state--used::before { background: var(--ok); }
 .client-shell .c-pass__state--wait::before { background: var(--warn); }
 .client-shell .c-pass__state--dead::before { background: var(--alert); }
-.client-shell .c-pass__state b { font-weight: 700; }
+.client-shell .c-pass__state b { font-weight: 600; }
 
 /* Acciones: guardar y compartir, una al lado de la otra. */
 .client-shell .c-pass__actions { display: flex; gap: 10px; margin-top: 14px; }
@@ -314,19 +354,17 @@
    mitades son de verdad mitades. */
 .client-shell .c-pass__actions > * { flex: 1 1 0; min-width: 0; }
 @media (max-width: 380px) { .client-shell .c-pass__actions { flex-direction: column; } }
-.client-shell .c-pass__foot { text-align: center; font-size: 12px; color: var(--ink-3); margin-top: 16px; }
+.client-shell .c-pass__foot { text-align: center; font-size: var(--b-micro); color: var(--ink-3); margin-top: 16px; }
 /* Quién organiza, encima del "powered by": pegados, una sola unidad de pie. */
 .client-shell .c-pass__foot--org { margin-top: 16px; }
 .client-shell .c-pass__foot--org + .c-pass__foot { margin-top: 4px; }
 .client-shell .c-pass__foot--org a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .client-shell .c-pass__foot--org a:hover { color: var(--ink); }
-.client-shell .c-pass__foot b { font-weight: 700; color: var(--ink-2); }
+.client-shell .c-pass__foot b { font-weight: 600; color: var(--ink-2); }
 .client-shell .c-pass__foot .c-powered__dot { display: inline-block; vertical-align: 1px; margin-left: 1px; }
 
 /* Salida del morph entre pasos: el contenido que se va se desvanece 4px hacia
    arriba en 120ms antes de que entre el siguiente (ver EventCheckoutPanel). */
-.client-shell .c-stepwrap--out { animation: c-stepout .12s var(--ease) both; }
-@keyframes c-stepout { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-4px); } }
 
 /* ============================================================
    COMPRA — dirección de arte (.b-*)
@@ -335,20 +373,17 @@
    hairlines, tipografía y una sola pieza de color: el botón de pagar.
    Todo alineado a la izquierda.
 
-   Tres CONCEPTOS conviven vía ?c=1|2|3. Comparten esta base —escala,
-   ritmo de 8, copy y la línea de responsabilidad del organizador— y cada
-   uno agrega su bloque más abajo:
-     .b-c1  CARTEL   papel. El flyer manda; las fases son una línea de
-                     tiempo; hay un chip sticky y un "así de simple".
+   Tres CONCEPTOS conviven vía ?c=1|2|3, pero en producción manda UNO:
      .b-c2  ENTRADA  papel. El bloque de compra ES un boleto con talón;
                      las fases son sellos; en escritorio el flyer va
-                     detrás, difuminado y oscuro.
-     .b-c3  NOCHE    #0E0C0A. Editorial: tipografía enorme, precios
-                     gigantes, el color de la marca solo en el botón.
+                     detrás, difuminado y oscuro.        ← acá, producción
+   CARTEL (.b-c1) y NOCHE (.b-c3) viven en conceptos-prueba.css, que solo
+   baja en las marcas de prueba (ver marcaConConceptos en lib/concepto.ts).
+   Este archivo es la BASE que comparten los tres —escala, ritmo de 8, copy
+   y la línea de responsabilidad del organizador—.
    Los colores del funnel salen de estas cuatro variables semánticas, no
    de los tokens directos, para que invertir sea cambiar un bloque.
    ============================================================ */
-.client-shell .b-c1,
 .client-shell .b-c2 {
   --pg-bg: var(--paper);
   --pg-fg: var(--ink);
@@ -359,42 +394,14 @@
      debajo de AA). .62 es el mínimo que pasa en las dos (4.63 y 7.19). */
   --pg-dim: .62;
 }
-.client-shell .b-c3 {
-  --pg-bg: #0E0C0A;
-  --pg-fg: #FBF7F0;
-  --pg-fg-2: rgba(251, 247, 240, .72);
-  --pg-line: rgba(251, 247, 240, .16);
-  --pg-dim: .62;
-  background: var(--pg-bg);
-  color: var(--pg-fg);
-}
-/* La noche tiñe la página entera, no solo el bloque. */
-.client-shell:has(.b-c3) { background: #0E0C0A; }
-.client-shell:has(.b-c3) .c-foot { color: rgba(251, 247, 240, .6); }
-.client-shell:has(.b-c3) .c-foot a { color: rgba(251, 247, 240, .92); }
 
-/* ------------------------------------------------------------
-   ESCALA. Contenida y FIJA, no elástica: los clamp que crecían con
-   el viewport daban titulares de 75px en escritorio y de 48 en
-   teléfono. Cinco escalones y nada más; el mismo texto mide lo
-   mismo en toda la compra.
-     t1  título del evento     32 → 50
-     t2  título de pantalla    24 → 32
-     t3  título de sección     20 → 24   (700)
-     body                      16 → 17   (1.45)
-     meta                      13
-     lb   etiqueta mayúsculas  11
-     price                     18 → 21   (800)
-   Ritmo de espacio en múltiplos de 8: s1..s6 = 8/16/24/32/48/64.
-   Los títulos van a 1.05 de interlínea.
-   ------------------------------------------------------------ */
+/* La escala vive en .client-shell (arriba): la comparten la compra, la
+   entrada con QR y la confirmación. Acá solo los anchos del bloque.
+   Los títulos van a 1.05 de interlínea. */
 .client-shell .b-buy {
   position: relative; max-width: 560px; margin: 0 auto;
   padding: 0 var(--pad) var(--b-s5); color: var(--pg-fg); text-align: left;
   --flyer-h: clamp(240px, 66vw, 300px);
-  --b-t1: 32px; --b-t2: 24px; --b-t3: 20px;
-  --b-body: 16px; --b-meta: 13px; --b-lb: 11px; --b-price: 18px;
-  --b-s1: 8px; --b-s2: 16px; --b-s3: 24px; --b-s4: 32px; --b-s5: 48px; --b-s6: 64px;
   font-size: var(--b-body); line-height: 1.45;
 }
 
@@ -403,12 +410,18 @@
 .client-shell .b-hero__shot { display: block; width: 100%; border: 0; padding: 0; background: none; cursor: zoom-in; position: relative; }
 .client-shell .b-hero__shot img { display: block; width: 100%; height: var(--flyer-h); object-fit: contain; }
 .client-shell .b-hero__shot--ph { height: var(--flyer-h); background: linear-gradient(160deg, var(--brand-soft), transparent 70%); cursor: default; }
-/* El degradado tiene que apoyar el texto pase lo que pase con el flyer. */
+/* El degradado tiene que apoyar el texto pase lo que pase con el flyer.
+
+   EXCEPCIÓN DOCUMENTADA al "las sombras son de tinta, nunca de negro puro":
+   esto no es una sombra sobre papel, es un VELO SOBRE UNA FOTO que no
+   controlamos —el flyer lo sube el promotor—. Un velo de tinta cálida no
+   oscurece lo suficiente un flyer claro y el nombre del evento deja de
+   leerse. Lo mismo vale para los text-shadow de .b-kicker y .b-hero__name,
+   que son contorno de legibilidad, no profundidad. Sobre papel, tokens. */
 .client-shell .b-hero__fade {
   position: absolute; inset: 28% 0 0; display: block;
   background: linear-gradient(180deg, transparent, rgba(0,0,0,.35) 45%, rgba(0,0,0,.92));
 }
-.client-shell .b-c3 .b-hero__fade { background: linear-gradient(180deg, transparent, rgba(14,12,10,.5) 42%, #0E0C0A); }
 .client-shell .b-stage { position: relative; }
 .client-shell .b-hero__over {
   position: absolute; left: 0; right: 0; top: 0; height: var(--flyer-h);
@@ -429,11 +442,13 @@
 .client-shell .b-lightbox {
   position: fixed; inset: 0; z-index: 90; border: 0; padding: 20px; width: 100%; height: 100%;
   display: grid; place-items: center; cursor: zoom-out;
+  /* Misma excepción que el velo del hero: es el fondo del visor del FLYER a
+     pantalla completa. Un fondo de tinta cálida al 94% tiñe la foto. */
   background: rgba(10,8,6,.94); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   animation: b-fade .18s var(--ease) both;
 }
 .client-shell .b-lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.client-shell .b-lightbox__hint { position: absolute; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; text-align: center; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.75); }
+.client-shell .b-lightbox__hint { position: absolute; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; text-align: center; font-size: var(--b-meta); font-weight: 600; color: rgba(255,255,255,.75); }
 @keyframes b-fade { from { opacity: 0 } to { opacity: 1 } }
 
 /* ---------- Entradas: lista tipo carta ---------- */
@@ -466,40 +481,40 @@
 .client-shell .b-add {
   position: relative;
   width: 36px; height: 36px; display: grid; place-items: center;
-  border: 1px solid var(--pg-fg); border-radius: 4px; background: none; color: var(--pg-fg);
+  border: 1px solid var(--pg-fg); border-radius: var(--r-ctl); background: none; color: var(--pg-fg);
   font: inherit; line-height: 1; cursor: pointer;
   transition: transform .18s var(--spring), background-color .18s, color .18s;
 }
 .client-shell .b-add::after,
 .client-shell .b-qbtn::after { content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
 .client-shell .b-add:hover { background: var(--pg-fg); color: var(--pg-bg); }
-.client-shell .b-add:active { transform: scale(.94); }
-.client-shell .b-qty { display: inline-flex; align-items: center; gap: 10px; animation: b-spring .3s var(--spring) both; }
-@keyframes b-spring { from { transform: scale(.85); opacity: .4; } to { transform: scale(1); opacity: 1; } }
+.client-shell .b-add:active { transform: scale(.96); }
+/* El stepper aparece sin rebote y sin sobrepaso: se toca decenas de veces
+   por compra y la señal del cambio la lleva el total, no el control. */
+.client-shell .b-qty { display: inline-flex; align-items: center; gap: 10px; animation: b-qty-in .16s var(--ease) both; }
+@keyframes b-qty-in { from { transform: scale(.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .client-shell .b-qbtn {
-  width: 36px; height: 36px; display: grid; place-items: center; border-radius: 4px;
+  width: 36px; height: 36px; display: grid; place-items: center; border-radius: var(--r-ctl);
   border: 1px solid var(--pg-line); background: none; color: var(--pg-fg); cursor: pointer;
   transition: transform .18s var(--spring), border-color .18s;
 }
 .client-shell .b-qbtn:hover:not(:disabled) { border-color: var(--pg-fg); }
-.client-shell .b-qbtn:active:not(:disabled) { transform: scale(.92); }
-.client-shell .b-qval { min-width: 20px; text-align: center; font-family: var(--display); font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums; }
+.client-shell .b-qbtn:active:not(:disabled) { transform: scale(.96); }
+.client-shell .b-qval { min-width: 20px; text-align: center; font-family: var(--display); font-weight: 800; font-size: var(--b-lead); font-variant-numeric: tabular-nums; }
 
 /* ---------- Confianza + información ---------- */
 .client-shell .b-trust { margin: var(--b-s1) 0 0; font-size: var(--b-meta); line-height: 1.45; color: var(--pg-fg-2); }
 .client-shell .b-info { margin-top: var(--b-s4); }
 .client-shell .b-info__b + .b-info__b { margin-top: var(--b-s3); }
 .client-shell .b-map { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; margin: var(--b-s2) calc(var(--pad) * -1) 0; width: calc(100% + var(--pad) * 2); filter: var(--pg-map); }
-.client-shell .b-c3 { --pg-map: invert(1) hue-rotate(180deg) saturate(.6) brightness(.9); }
-.client-shell .b-c1, .client-shell .b-c2 { --pg-map: none; }
+.client-shell .b-c2 { --pg-map: none; }
 .client-shell .b-info__dir { margin: var(--b-s2) 0 0; font-size: var(--b-body); line-height: 1.45; color: var(--pg-fg); }
-.client-shell .b-info__txt { margin: var(--b-s1) 0 0; font-size: var(--b-body); line-height: 1.45; color: var(--pg-fg-2); white-space: pre-line; }
-.client-shell .b-info__link { display: inline-flex; align-items: center; min-height: 44px; margin-top: var(--b-s1); font-size: var(--b-body); font-weight: 700; color: var(--pg-fg); text-decoration: underline; text-underline-offset: 4px; }
+.client-shell .b-info__txt { margin: var(--b-s1) 0 0; font-size: var(--b-body); font-weight: 300; line-height: 1.45; color: var(--pg-fg-2); white-space: pre-line; }
+.client-shell .b-info__link { display: inline-flex; align-items: center; min-height: 44px; margin-top: var(--b-s1); font-size: var(--b-body); font-weight: 600; color: var(--pg-fg); text-decoration: underline; text-underline-offset: 4px; }
 
 /* Línea legal y de responsabilidad: lo más chico de la página, en --ink-3.
    Quién se hace cargo del evento tiene que estar escrito, no sobreentendido. */
-.client-shell .b-legal { margin: var(--b-s3) 0 0; font-size: 12px; line-height: 1.5; color: var(--ink-3); }
-.client-shell .b-c3 .b-legal { color: rgba(251, 247, 240, .62); }
+.client-shell .b-legal { margin: var(--b-s3) 0 0; font-size: var(--b-micro); line-height: 1.5; color: var(--ink-3); }
 .client-shell .b-legal a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .client-shell .b-legal a:hover { color: var(--pg-fg); }
 .client-shell .b-legal + .b-legal { margin-top: var(--b-s1); }
@@ -516,23 +531,26 @@
 .client-shell .b-cta__t { display: flex; align-items: baseline; gap: var(--b-s1); margin-bottom: var(--b-s1); }
 .client-shell .b-cta__t .n { font-size: var(--b-meta); font-weight: 600; color: var(--pg-fg-2); }
 .client-shell .b-cta__t .n--solo { font-size: var(--b-meta); }
-.client-shell .b-cta__t .v { font-family: var(--display); font-weight: 800; font-size: 20px; color: var(--pg-fg); font-variant-numeric: tabular-nums; }
+.client-shell .b-cta__t .v { font-family: var(--display); font-weight: 800; font-size: var(--b-t3); color: var(--pg-fg); font-variant-numeric: tabular-nums; }
 .client-shell .b-btn {
   display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%;
-  height: 48px; padding: 0 22px; border: 0; border-radius: 12px;
+  height: 48px; padding: 0 22px; border: 0; border-radius: var(--r-btn);
   font-family: var(--body); font-weight: 700; font-size: var(--b-body); cursor: pointer;
   transition: transform .2s var(--spring), filter .2s, opacity .2s;
 }
 .client-shell .b-btn--go { background: var(--brand-fill); color: var(--on-fill); }
-.client-shell .b-btn--go:hover:not(:disabled) { filter: brightness(1.05); }
-.client-shell .b-btn--go:active:not(:disabled) { transform: scale(.99); }
+/* El hover es OTRO COLOR medido (brandFillHover), no un filter: un filtro
+   mueve el relleno DESPUÉS de que el test midió el par y lo puede sacar de AA.
+   Con #E91E63 brightness(1.05) bajaba de 4.58:1 a 4.20:1. */
+.client-shell .b-btn--go:hover:not(:disabled) { background: var(--brand-fill-hover); }
+.client-shell .b-btn--go:active:not(:disabled) { transform: scale(.97); }
 .client-shell .b-btn:disabled { opacity: .4; cursor: not-allowed; }
 .client-shell .b-btn svg { width: 17px; height: 17px; }
 /* El resto son textos, no botones. */
 .client-shell .b-back {
   display: inline-flex; align-items: center; min-height: 44px; margin-top: var(--b-s2);
   background: none; border: 0; padding: 0;
-  font: inherit; font-size: 14px; font-weight: 600; color: var(--pg-fg-2);
+  font: inherit; font-size: var(--b-ui); font-weight: 600; color: var(--pg-fg-2);
   text-decoration: underline; text-underline-offset: 4px; cursor: pointer;
 }
 .client-shell .b-back:hover { color: var(--pg-fg); }
@@ -546,14 +564,14 @@
 .client-shell .b-panel__t { margin: 0 0 var(--b-s2); font-size: var(--b-lb); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--pg-fg-2); }
 .client-shell .b-resumen { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: var(--b-body); padding: var(--b-s1) 0; border-bottom: 1px solid var(--pg-line); }
 .client-shell .b-resumen b { font-family: var(--display); font-weight: 800; font-size: var(--b-price); font-variant-numeric: tabular-nums; }
-.client-shell .b-desc { display: inline-flex; align-items: center; gap: 7px; font-weight: 700; color: var(--pg-fg); font-variant-numeric: tabular-nums; }
+.client-shell .b-desc { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; color: var(--pg-fg); font-variant-numeric: tabular-nums; }
 .client-shell .b-desc::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
 .client-shell .b-seguro { display: flex; align-items: center; gap: 7px; margin: var(--b-s2) 0 0; font-size: var(--b-meta); color: var(--pg-fg-2); }
 .client-shell .b-seguro svg { width: 14px; height: 14px; }
 .client-shell .b-pays { display: flex; gap: 10px; }
 .client-shell .b-pay {
-  flex: 1; min-height: 46px; border-radius: 8px; border: 1px solid var(--pg-line); background: none;
-  font: inherit; font-weight: 700; font-size: 15px; color: var(--pg-fg-2); cursor: pointer;
+  flex: 1; min-height: 46px; border-radius: var(--r-ctl); border: 1px solid var(--pg-line); background: none;
+  font: inherit; font-weight: 600; font-size: var(--b-ctl); color: var(--pg-fg-2); cursor: pointer;
   transition: border-color .18s, color .18s;
 }
 .client-shell .b-pay--on { border-color: var(--pg-fg); color: var(--pg-fg); }
@@ -652,7 +670,7 @@
   /* El resumen: el único sólido. Tinta en la clara, papel en la noche. */
   .client-shell .b-sum {
     grid-area: resumen; display: block; position: sticky; top: 92px;
-    padding: var(--b-s3); border-radius: 14px;
+    padding: var(--b-s3); border-radius: var(--r-card);
     background: var(--pg-fg); color: var(--pg-bg);
   }
   .client-shell .b-sum__lb { margin: 0 0 var(--b-s2); font-size: var(--b-lb); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; opacity: .7; }
@@ -664,7 +682,7 @@
     margin: 0 0 var(--b-s2); padding-top: var(--b-s2); border-top: 1px solid currentColor;
   }
   .client-shell .b-sum__total span { font-size: var(--b-meta); opacity: .7; }
-  .client-shell .b-sum__total b { font-family: var(--display); font-weight: 800; font-size: 24px; font-variant-numeric: tabular-nums; }
+  .client-shell .b-sum__total b { font-family: var(--display); font-weight: 800; font-size: var(--b-t2); font-variant-numeric: tabular-nums; }
   .client-shell .b-sum .b-btn { height: 48px; }
 
   /* En la pantalla de entradas manda el resumen de la derecha, así que la
@@ -676,21 +694,28 @@
 
 
 @media (prefers-reduced-motion: reduce) {
+  /* Misma idea que en los paneles: sin movimiento, pero el control sigue
+     contestando al dedo. Velo inset, no background-color: el botón de pagar
+     lleva el relleno de marca de fondo. */
+  .client-shell .b-btn:active, .client-shell .b-qbtn:active, .client-shell .b-add:active {
+    transform: none !important;
+    box-shadow: inset 0 0 0 999px var(--sel);
+  }
   .client-shell .b-btn, .client-shell .b-qbtn, .client-shell .b-add, .client-shell .b-qty { transition: none; animation: none; }
   .client-shell .b-lightbox { animation: none; }
 }
 
 
 /* Pantalla de Yape: titular, QR (con su estado vacío) y monto exacto. */
-.client-shell .b-yapeheld { margin: 8px 0 0; font-size: 16px; font-weight: 700; color: var(--ink); }
-.client-shell .b-monto { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 16px; border-radius: 16px; background: var(--paper); border: 1px solid var(--line); }
+.client-shell .b-yapeheld { margin: 8px 0 0; font-size: var(--b-body); font-weight: 600; color: var(--ink); }
+.client-shell .b-monto { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 16px; border-radius: var(--r-card); background: var(--paper); border: 1px solid var(--line); }
 /* El monto es el dato que se copia a Yape: el más grande de la pantalla, pero
    dentro de la escala (32 en teléfono, 36 en escritorio). */
-.client-shell .b-monto > span { font-family: var(--display); font-weight: 800; font-size: 32px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.05; }
-@media (min-width: 768px) { .client-shell .b-monto > span { font-size: 36px; } }
+.client-shell .b-monto > span { font-family: var(--display); font-weight: 800; font-size: var(--b-t1); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.05; }
+@media (min-width: 768px) { .client-shell .b-monto > span { font-size: var(--b-t0); } }
 .client-shell .b-yapeqr--vacio { display: grid; place-items: center; gap: 10px; padding: 26px 16px; border: 1.5px dashed var(--line); background: var(--paper); color: var(--ink-3); }
-.client-shell .b-yapeqr--vacio p { margin: 0; font-size: 13.5px; }
-.client-shell .b-yapeqr__ph { width: 54px; height: 54px; border-radius: 12px; background: repeating-linear-gradient(45deg, var(--paper-3) 0 6px, var(--paper-2) 6px 12px); }
+.client-shell .b-yapeqr--vacio p { margin: 0; font-size: var(--b-meta); }
+.client-shell .b-yapeqr__ph { width: 54px; height: 54px; border-radius: var(--r-btn); background: repeating-linear-gradient(45deg, var(--paper-3) 0 6px, var(--paper-2) 6px 12px); }
 .client-shell .c-divider { height: 1px; background: var(--line); margin: 18px 0; }
 
 .client-shell .b-add svg { width: 17px; height: 17px; }
@@ -699,62 +724,13 @@
    acento es el color de la marca, que puede ser cualquiera. */
 .client-shell .b-ph__pocas {
   display: inline-flex; align-items: center; gap: 6px;
-  margin-left: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
+  margin-left: 8px; font-size: var(--b-micro); font-weight: 700; letter-spacing: 0.02em;
   text-transform: none; color: var(--pg-fg-2); white-space: nowrap;
 }
 .client-shell .b-ph__pocas::before {
   content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--alert); flex: none;
 }
-.client-shell .b-ph__inc { display: block; margin-top: 5px; font-size: 13px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--pg-fg-2); }
-
-/* La noche tiene que llegar hasta los bordes: el body pinta lo que queda
-   fuera del shell (barra de scroll, zona bajo el contenido) y el header es
-   compartido con el resto del sitio. */
-body:has(.b-c3) { background: #0E0C0A; }
-.client-shell:has(.b-c3) .c-header { background: rgba(14,12,10,.92); border-bottom-color: rgba(251,247,240,.14); }
-.client-shell:has(.b-c3) .c-lockup__name { color: #FBF7F0; }
-.client-shell:has(.b-c3) .c-lockup__ofi { color: rgba(251,247,240,.7); }
-.client-shell:has(.b-c3) .c-powered { color: rgba(251,247,240,.62); }
-.client-shell:has(.b-c3) .c-powered b { color: rgba(251,247,240,.9); }
-
-/* Tokens invertidos para la noche: todo lo que en el resto del sitio se
-   escribe con --ink/--ink-2/--ink-3 o --brand-ink (incluidos estilos en
-   línea) queda legible sin tocar cada llamada. El par --brand-fill /
-   --on-fill NO se toca: es el medido. */
-.client-shell:has(.b-c3) {
-  --ink: #FBF7F0;
-  --ink-2: rgba(251, 247, 240, .72);
-  --ink-3: rgba(251, 247, 240, .62);
-  --brand-ink: #FBF7F0;
-  --line: rgba(251, 247, 240, .16);
-  --sel: rgba(251, 247, 240, .06);
-  --paper: #0E0C0A;
-  --paper-2: #17140F;
-  --paper-3: #201C16;
-  --surface: #17140F;
-}
-
-
-/* ============================================================
-   CONCEPTO 1 — CARTEL
-   Idea: la página es un afiche. El flyer se queda con la primera
-   pantalla entera y el título vive encima; recién al bajar aparece
-   la tienda. Las fases dejan de ser una lista y pasan a ser una
-   LÍNEA DE TIEMPO: se ve de un vistazo en qué etapa estamos y hacia
-   dónde va el precio. Un chip sticky devuelve a la compra desde
-   cualquier punto, y "Así de simple" saca la duda de qué pasa
-   después de pagar.
-   ============================================================ */
-.client-shell .b-c1 {
-  /* El póster ocupa casi toda la primera pantalla: es el concepto. */
-  --flyer-h: min(72vh, 560px);
-  /* Única desviación de escala del concepto, igual que la de NOCHE: un
-     afiche con el título chico no es un afiche. El resto de la escala
-     —cuerpo, meta, etiquetas, precios— no se toca. */
-  --b-t1: 36px;
-}
-@media (min-width: 768px) { .client-shell .b-c1 { --b-t1: 44px; } }
-@media (min-width: 1024px) { .client-shell .b-c1 { --b-t1: 56px; } }
+.client-shell .b-ph__inc { display: block; margin-top: 5px; font-size: var(--b-meta); font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--pg-fg-2); }
 
 /* Títulos de sección propios: la lista de entradas deja de ser la
    continuación del flyer y pasa a llamarse. */
@@ -764,8 +740,6 @@ body:has(.b-c3) { background: #0E0C0A; }
   line-height: 1.05; letter-spacing: -0.02em; color: var(--pg-fg);
   scroll-margin-top: 84px;
 }
-.client-shell .b-c1 .b-tks { margin-top: 0; }
-.client-shell .b-c1 .b-ty + .b-ty { margin-top: var(--b-s4); }
 
 /* La cabecera del tipo: nombre, precio grande y la acción. */
 .client-shell .b1-ty__head {
@@ -776,8 +750,8 @@ body:has(.b-c3) { background: #0E0C0A; }
 .client-shell .b1-ty__nm { margin: 0; font-family: var(--display); font-weight: 800; font-size: var(--b-t3); line-height: 1.05; letter-spacing: -0.02em; }
 .client-shell .b1-ty__inc { margin: 4px 0 0; font-size: var(--b-meta); color: var(--pg-fg-2); }
 /* Numeral grande: es el dato que la gente compara. */
-.client-shell .b1-ty__pr { font-size: 28px; line-height: 1; }
-@media (min-width: 1024px) { .client-shell .b1-ty__pr { font-size: 34px; } }
+.client-shell .b1-ty__pr { font-size: var(--b-t2); line-height: 1; }
+@media (min-width: 1024px) { .client-shell .b1-ty__pr { font-size: var(--b-t0); } }
 
 /* La línea de tiempo. El riel es un hairline; cada etapa, un punto. La
    vigente lleva el color de la marca en el PUNTO y en el tramo del riel
@@ -819,10 +793,10 @@ body:has(.b-c3) { background: #0E0C0A; }
 .client-shell .b1-chip--on { opacity: 1; transform: none; visibility: visible; }
 .client-shell .b1-chip__a {
   pointer-events: auto; display: inline-flex; align-items: center; gap: 9px;
-  min-height: 44px; padding: 0 22px; border-radius: 999px;
+  min-height: 44px; padding: 0 22px; border-radius: var(--r-pill);
   background: var(--brand-fill); color: var(--on-fill);
   font-weight: 700; font-size: var(--b-body);
-  box-shadow: 0 10px 30px -12px rgba(0,0,0,.55);
+  box-shadow: var(--shadow-md);
 }
 .client-shell .b1-chip__a svg { width: 17px; height: 17px; }
 
@@ -838,10 +812,6 @@ body:has(.b-c3) { background: #0E0C0A; }
 .client-shell .b1-paso__n svg { width: 19px; height: 19px; }
 .client-shell .b1-paso__t { margin: 0; font-family: var(--display); font-weight: 800; font-size: var(--b-body); letter-spacing: -0.01em; }
 .client-shell .b1-paso__d { margin: 4px 0 0; font-size: var(--b-meta); line-height: 1.45; color: var(--pg-fg-2); }
-
-/* "Dónde es" con mapa grande: en CARTEL el lugar es parte del afiche. */
-.client-shell .b-c1 .b-map { aspect-ratio: 4 / 3; }
-@media (min-width: 768px) { .client-shell .b-c1 .b-map { height: 380px; aspect-ratio: auto; } }
 
 
 /* ============================================================
@@ -877,9 +847,9 @@ body:has(.b-c3) { background: #0E0C0A; }
 @media (min-width: 768px) {
   .client-shell .b-buy.b-c2 {
     max-width: 720px;
-    background: var(--paper); border-radius: 18px;
+    background: var(--paper); border-radius: var(--r-card);
     padding: 0 0 0; overflow: hidden;
-    box-shadow: 0 30px 80px -30px rgba(0,0,0,.5);
+    box-shadow: var(--shadow-lg);
   }
   .client-shell .b-c2 .b-stage { display: block; }
   .client-shell .b-c2 .b-list { padding-bottom: var(--b-s4); }
@@ -917,7 +887,7 @@ body:has(.b-c3) { background: #0E0C0A; }
 .client-shell .b2-ty + .b2-ty { margin-top: var(--b-s3); padding-top: var(--b-s3); border-top: 1px solid var(--pg-line); }
 .client-shell .b2-ty__head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--b-s2); }
 .client-shell .b2-ty__nm { font-size: var(--b-lb); font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--pg-fg); }
-.client-shell .b2-ty__pr { font-size: 24px; font-variant-numeric: tabular-nums; }
+.client-shell .b2-ty__pr { font-size: var(--b-t2); font-variant-numeric: tabular-nums; }
 .client-shell .b2-ty__inc { margin: var(--b-s1) 0 0; font-size: var(--b-meta); color: var(--pg-fg-2); }
 
 
@@ -932,6 +902,7 @@ body:has(.b-c3) { background: #0E0C0A; }
 .client-shell .b-c2 .b-cta__t .v { color: var(--on-fill); }
 .client-shell .b-c2 .b-cta__t .n { font-size: var(--b-lb); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
 .client-shell .b-c2 .b-btn--go { background: var(--on-fill); color: var(--brand-fill); }
+.client-shell .b-c2 .b-btn--go:hover:not(:disabled) { background: var(--brand-fill); color: var(--on-fill); }
 @media (min-width: 768px) {
   .client-shell .b-c2 .b-cta { position: static; margin: 0; padding: var(--b-s3) var(--b-s4) var(--b-s4); }
 }
@@ -942,67 +913,11 @@ body:has(.b-c3) { background: #0E0C0A; }
 }
 
 /* Mapa y datos, dentro del boleto y con su misma piel. */
-.client-shell .b-c2 .b-map { border-radius: 8px; }
+.client-shell .b-c2 .b-map { border-radius: var(--r-ctl); }
 @media (min-width: 768px) {
   .client-shell .b-c2 .b-map { margin-left: 0; margin-right: 0; width: 100%; height: 240px; aspect-ratio: auto; }
 }
 .client-shell .b-c2 .b-lb { letter-spacing: .18em; }
-
-
-/* ============================================================
-   CONCEPTO 3 — NOCHE EDITORIAL
-   Idea: Resident Advisor / DICE oscuro. Casi todo es tipografía: el
-   título ocupa la pantalla, los precios son numerales blancos
-   enormes y el flyer entra recortado a sangre por un costado. El
-   color de la marca aparece dos veces: el botón y una línea.
-   La escala general se mantiene; lo que crece es el título y el
-   precio, que SON el concepto (pedido explícito: 56 / 96).
-   ============================================================ */
-.client-shell .b-c3 { --b-t1: 56px; --flyer-h: clamp(300px, 64vw, 380px); }
-@media (min-width: 1024px) { .client-shell .b-c3 { --b-t1: 96px; } }
-
-.client-shell .b-c3 .b-hero__name { letter-spacing: -0.04em; line-height: .98; }
-.client-shell .b-c3 .b-kicker { letter-spacing: .22em; }
-/* La línea de marca: la única pieza de color fuera del botón. */
-.client-shell .b-c3 .b-tks { position: relative; padding-top: var(--b-s3); }
-.client-shell .b-c3 .b-tks::before {
-  content: ""; position: absolute; left: 0; top: 0; width: 64px; height: 3px; background: var(--brand);
-}
-/* Precios gigantes en blanco. */
-.client-shell .b-c3 .b-ph__pr { font-size: 40px; line-height: .95; letter-spacing: -0.03em; }
-.client-shell .b-c3 .b-ph--on .b-ph__pr { color: #FFF; }
-.client-shell .b-c3 .b-ph { padding: var(--b-s3) 0; align-items: end; }
-.client-shell .b-c3 .b-ph__nm { font-size: var(--b-t3); font-weight: 700; }
-@media (min-width: 1024px) {
-  .client-shell .b-c3 .b-ph__pr { font-size: 64px; }
-  .client-shell .b-c3 .b-ph__nm { font-size: 22px; }
-}
-/* El flyer sangra por el costado: en escritorio se pega al borde izquierdo
-   de la ventana y crece a lo alto. */
-@media (min-width: 1024px) {
-  .client-shell .b-c3 .b-hero {
-    margin-left: calc((100vw - min(100vw, 1120px)) / -2 - var(--pad));
-    width: calc(320px + (100vw - min(100vw, 1120px)) / 2 + var(--pad));
-  }
-  .client-shell .b-c3 .b-hero__shot img,
-  .client-shell .b-c3 .b-hero__shot--ph { aspect-ratio: auto; height: 78vh; min-height: 520px; }
-}
-
-/* NOCHE, teléfono: con el título a 56px sobre dos líneas el texto sube hasta
-   la mitad del flyer, donde el degradado todavía es débil y el arte del
-   promotor puede ser claro. Se oscurece antes y más fuerte: el título tiene
-   que leerse sobre CUALQUIER flyer. */
-.client-shell .b-c3 .b-hero__fade {
-  inset: 8% 0 0;
-  background: linear-gradient(180deg, transparent, rgba(14,12,10,.72) 38%, #0E0C0A 88%);
-}
-
-/* NOCHE: la línea de cuándo/dónde va DEBAJO del título, no encima. Arriba cae
-   sobre el medio del flyer —donde el arte del promotor suele tener su propio
-   texto— y se pisan dos tipografías. Abajo, las dos nuestras quedan juntas en
-   la zona oscura. */
-.client-shell .b-c3 .b-hero__name { order: 1; }
-.client-shell .b-c3 .b-kicker { order: 2; margin: var(--b-s1) 0 0; }
 
 /* AA en lo atenuado. La fila bloqueada se apaga con opacity var(--pg-dim)
    (.62). Sobre eso, un texto que ya venía en --ink-2 (6.01:1) cae a 2.68:1 y
@@ -1011,136 +926,6 @@ body:has(.b-c3) { background: #0E0C0A; }
    baja el contraste es el opacity, no el color. */
 .client-shell .b1-line__n:not(.b1-line__n--on) .b1-line__lb,
 .client-shell .b1-line__n:not(.b1-line__n--on) .b1-line__sub { color: var(--pg-fg); }
-
-/* ---------- CARTEL en escritorio ----------
-   En teléfono el afiche ya ocupa la primera pantalla. En escritorio la grilla
-   de tres columnas lo convertía en una columnita lateral y el concepto se
-   perdía: acá el póster va A LO ANCHO arriba, con el título encima, y la
-   tienda queda debajo en dos columnas (entradas + resumen). */
-@media (min-width: 768px) {
-  .client-shell .b-buy.b-c1 { max-width: 1120px; }
-  .client-shell .b-c1 .b-stage {
-    grid-template-columns: minmax(0, 1fr) 320px;
-    grid-template-areas:
-      "flyer  flyer"
-      "eleg   resumen"
-      "lista  resumen"
-      "trust  resumen"
-      "simple simple"
-      "info   info";
-    gap: 0 var(--b-s4);
-  }
-  /* El póster: ancho completo, sin sticky y sin recorte 4/5. */
-  .client-shell .b-c1 .b-hero {
-    grid-area: flyer; position: static; margin: 0 calc(var(--pad) * -1) var(--b-s4);
-  }
-  .client-shell .b-c1 .b-hero__shot img,
-  .client-shell .b-c1 .b-hero__shot--ph {
-    aspect-ratio: auto; height: min(62vh, 560px);
-  }
-  /* El título vuelve a apoyarse sobre el póster (en la base, en escritorio se
-     desarma y se va a su propia columna). */
-  .client-shell .b-c1 .b-hero__fade { display: block; }
-  .client-shell .b-c1 .b-kicker { display: block; }
-  .client-shell .b-c1 .b-hero__over {
-    grid-area: flyer; display: flex; flex-direction: column; justify-content: flex-end;
-    position: relative; z-index: 2; margin: 0 calc(var(--pad) * -1) var(--b-s4);
-    padding: 0 var(--b-s4) var(--b-s4); height: auto; pointer-events: none;
-  }
-  .client-shell .b-c1 .b-hero__name { color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,.7); max-width: 18ch; }
-  /* La ficha del póster no hace falta: los datos están en el afiche y en el mapa. */
-  .client-shell .b-c1 .b-aside { display: none; }
-  .client-shell .b-c1 .b1-h2 { grid-area: eleg; margin-top: 0; }
-  .client-shell .b-c1 .b-tks { grid-area: lista; }
-  .client-shell .b-c1 .b1-simple { grid-area: simple; }
-  .client-shell .b-c1 .b-info { grid-area: info; }
-  /* La línea de tiempo respira más: hay ancho de sobra. */
-  .client-shell .b-c1 .b1-line__n { min-width: 150px; }
-}
-@media (min-width: 1024px) {
-  .client-shell .b-c1 .b-hero__shot img,
-  .client-shell .b-c1 .b-hero__shot--ph { height: min(68vh, 640px); }
-  /* El resumen sigue siendo el sólido de la derecha y la barra de abajo se va,
-     igual que en la base. */
-  .client-shell .b-c1 .b-sum { top: 92px; }
-}
-
-/* El bloque de título comparte celda con el póster: se ancla ABAJO. Sin
-   align-self la celda lo estira desde arriba y el título cae sobre la parte
-   clara del flyer, donde el degradado todavía no protege. */
-@media (min-width: 768px) {
-  .client-shell .b-c1 .b-hero__over { align-self: end; }
-}
-
-/* CARTEL, carrito vacío: la barra de abajo diría "Elige tu entrada" justo
-   debajo del título de sección que dice lo mismo. Con el carrito vacío el
-   atajo es el chip; la barra aparece cuando ya hay algo que pagar. */
-.client-shell .b-c1.b-buy--vacio .b-cta { display: none; }
-
-/* ============================================================
-   PROPORCIONES SEGÚN BENCHMARK (2026-09-21)
-   ============================================================
-   Medido con Playwright sobre páginas de evento REALES de DICE,
-   Fever, Joinnus y Teleticket (RA quedó fuera: Cloudflare bloquea
-   el navegador automatizado). Mediana en 1440×900:
-
-     contenedor de contenido   821 px
-     alto del hero (borde inf) 563 px
-     título del evento          34 px
-     cuerpo                     14 px
-     precio                     15 px
-     botón principal        ~400 × 48 px
-     columna de entradas       367 px
-     imagen del evento      ~470 × 390 px  (relación ≈ 1.8:1)
-     espacio entre secciones ~20-32 px
-
-   Y en 390×844: contenedor 358, hero 440, título 28, cuerpo 14,
-   precio 14, botón 44 de alto, imagen ≈ 373 × 373.
-
-   Lo que estaba fuera de escala y por qué se veía "grande y
-   distorsionado" en PC:
-     · el título de NOCHE medía 96 px — 2,8× la mediana;
-     · los precios medían 24-64 px — hasta 4× la mediana de 15;
-     · el flyer de NOCHE crecía con 78vh SIN tope: 842 px de alto
-       en 1920×1080, contra 563 de la mediana;
-     · el flyer se recortaba hasta un 332% respecto de su relación
-       real (un póster vertical metido en una banda de 760×220),
-       que es lo que se lee como "deformado" aunque el object-fit
-       sea cover y no estire un píxel.
-
-   Reglas que quedan: el alto del flyer SIEMPRE con tope en px
-   (nunca vh solo), relación fija por aspect-ratio, y el contenedor
-   con máximo y centrado para que 1920 no estire nada.
-   ============================================================ */
-
-/* ---------- 1 · CARTEL ---------- */
-/* Teléfono: el póster conserva su relación vertical (es lo que menos
-   recorta) pero con tope, para no comerse dos pantallas. */
-/* --flyer-h manda: el bloque del título se apoya sobre el flyer con ESA
-   altura. Cuando la imagen se declaraba aparte (aspect-ratio + max-height)
-   las dos medidas se separaban y el título caía 140px por debajo del flyer,
-   en blanco sobre papel. Una sola fuente de verdad. */
-.client-shell .b-c1 { --b-t1: 30px; --flyer-h: min(125vw, 420px); }
-.client-shell .b-c1 .b1-ty__pr { font-size: 20px; }
-
-@media (min-width: 768px) {
-  /* Banda a lo ancho, en la relación que usan Joinnus (1,81:1) y
-     Teleticket (2,2:1), con tope duro en px: no crece con la ventana. */
-  .client-shell .b-c1 { --b-t1: 40px; }
-  .client-shell .b-c1 .b-hero__shot img,
-  .client-shell .b-c1 .b-hero__shot--ph {
-    height: auto; aspect-ratio: 2 / 1; max-height: 460px;
-  }
-  .client-shell .b-c1 .b1-ty__pr { font-size: 22px; }
-  /* La columna de entradas queda en 704 (la de DICE) y el resumen se
-     ensancha para que el botón se acerque a los ~400 de la referencia. */
-  .client-shell .b-c1 .b-stage { grid-template-columns: minmax(0, 1fr) 340px; }
-}
-@media (min-width: 1024px) {
-  .client-shell .b-c1 { --b-t1: 40px; }
-  .client-shell .b-c1 .b-hero__shot img,
-  .client-shell .b-c1 .b-hero__shot--ph { max-height: 460px; }
-}
 
 /* ---------- 2 · ENTRADA ---------- */
 /* Es el concepto más convencional: va JUSTO sobre la mediana. */
@@ -1151,38 +936,14 @@ body:has(.b-c3) { background: #0E0C0A; }
      flyer entero adentro hace falta más alto para que se lea. */
   height: auto; aspect-ratio: 4 / 3; max-height: 320px;
 }
-.client-shell .b-c2 .b2-ty__pr { font-size: 18px; }
+.client-shell .b-c2 .b2-ty__pr { font-size: var(--b-price); }
 @media (min-width: 768px) {
   .client-shell .b-c2 { --b-t1: 34px; }
   .client-shell .b-c2 .b-hero__shot img,
   .client-shell .b-c2 .b-hero__shot--ph { aspect-ratio: 16 / 9; max-height: 340px; }
-  .client-shell .b-c2 .b2-ty__pr { font-size: 20px; }
+  .client-shell .b-c2 .b2-ty__pr { font-size: var(--b-t3); }
 }
 @media (min-width: 1024px) { .client-shell .b-c2 { --b-t1: 34px; } }
-
-/* ---------- 3 · NOCHE ---------- */
-/* Sigue siendo el más grande de los tres —es el concepto— pero dentro
-   de la banda del benchmark: el título pasa de 96 a 56 (la mediana es
-   34; +65% es la licencia editorial) y el precio de 64 a 26. */
-.client-shell .b-c3 { --b-t1: 40px; --flyer-h: clamp(360px, 92vw, 460px); }
-.client-shell .b-c3 .b-ph__pr { font-size: 22px; }
-@media (min-width: 1024px) {
-  .client-shell .b-c3 { --b-t1: 56px; }
-  .client-shell .b-c3 .b-ph__pr { font-size: 26px; }
-  .client-shell .b-c3 .b-ph__nm { font-size: 18px; }
-  /* El flyer a sangre deja de crecer con la ventana: 62vh CON tope. */
-  .client-shell .b-c3 .b-hero__shot img,
-  .client-shell .b-c3 .b-hero__shot--ph {
-    height: min(62vh, 560px); min-height: 0;
-  }
-  /* Con precios de 26 en vez de 64, la columna del centro ya no necesita
-     ser angosta: se le devuelve ancho quitándoselo a las laterales. */
-  .client-shell .b-c3 .b-stage { grid-template-columns: 300px minmax(0, 1fr) 300px; }
-  .client-shell .b-c3 .b-hero {
-    margin-left: calc((100vw - min(100vw, 1120px)) / -2 - var(--pad));
-    width: calc(300px + (100vw - min(100vw, 1120px)) / 2 + var(--pad));
-  }
-}
 
 /* ---------- CARTEL: el póster entero, sin recorte ----------
    Una banda ancha con un flyer vertical recortaba el 204% de su relación —lo
@@ -1192,18 +953,10 @@ body:has(.b-c3) { background: #0E0C0A; }
    object-fit: contain. Recorte 0%. */
 .client-shell .b-hero__blur { display: none; }
 @media (min-width: 768px) {
-  /* position:relative OBLIGATORIO: la regla base pone el shot en static a
-     partir de 768 y, sin ancestro posicionado, el difuminado se escapaba del
-     hero y cubría media página. */
-  .client-shell .b-c1 .b-hero__shot { position: relative; overflow: hidden; background: #14110E; }
   .client-shell .b-hero__blur {
     display: block; position: absolute; inset: -6%;
     background-size: cover; background-position: center;
     filter: blur(28px) saturate(115%) brightness(.55);
-  }
-  .client-shell .b-c1 .b-hero__shot img {
-    position: relative; z-index: 1; object-fit: contain;
-    width: auto; max-width: 100%; margin: 0 auto;
   }
 }
 
@@ -1213,13 +966,6 @@ body:has(.b-c3) { background: #0E0C0A; }
 @media (min-width: 768px) {
   .client-shell .b-c2 .b-hero__shot img,
   .client-shell .b-c2 .b-hero__shot--ph { max-height: none; }
-}
-
-/* NOCHE: el flyer a sangre se aprieta un punto más para caer dentro de la
-   mediana del hero (563) en 1440. */
-@media (min-width: 1024px) {
-  .client-shell .b-c3 .b-hero__shot img,
-  .client-shell .b-c3 .b-hero__shot--ph { height: min(56vh, 500px); }
 }
 
 /* ============================================================
@@ -1242,7 +988,8 @@ body:has(.b-c3) { background: #0E0C0A; }
 .client-shell .b-hero__shot {
   position: relative;
   overflow: hidden;
-  /* Detrás del difuminado, por si la imagen tarda o falla. */
+  /* Detrás del difuminado, por si la imagen tarda o falla. Casi negro a
+     propósito: lo que va encima es el flyer difuminado, no papel. */
   background: #14110E;
   --blur-bright: .55;
 }
@@ -1258,10 +1005,6 @@ body:has(.b-c3) { background: #0E0C0A; }
 }
 /* El degradado que sostiene el título va encima de los dos. */
 .client-shell .b-hero__fade { z-index: 2; }
-
-/* NOCHE: el fondo de la página es #0E0C0A; un difuminado al 55% de brillo
-   encendería la esquina. Se baja para que el flyer se apoye en la noche. */
-.client-shell .b-c3 .b-hero__shot { --blur-bright: .38; background: #0E0C0A; }
 /* ENTRADA: la tira vive dentro de un boleto de papel, así que el difuminado
    se aclara un punto para no abrir un agujero negro en el medio del ticket. */
 .client-shell .b-c2 .b-hero__shot { --blur-bright: .62; }
@@ -1279,9 +1022,9 @@ body:has(.b-c3) { background: #0E0C0A; }
    que cambia es la tipografía, que acá va en mayúsculas espaciadas y números
    tabulares, como el resto del ticket. */
 .client-shell .b-c2 .b1-line { margin-top: var(--b-s2); }
-.client-shell .b-c2 .b1-line__lb { letter-spacing: .18em; font-size: 10px; }
+.client-shell .b-c2 .b1-line__lb { letter-spacing: .16em; }
 .client-shell .b-c2 .b1-line__pr { font-variant-numeric: tabular-nums; }
-.client-shell .b-c2 .b1-line__sub { font-size: 11px; }
+.client-shell .b-c2 .b1-line__sub { font-size: var(--b-lb); }
 /* Los tres pasos, dentro del boleto: separados por el troquel de puntos. */
 .client-shell .b-c2 .b1-simple { margin-top: var(--b-s4); padding-top: var(--b-s4); border-top: 2px dashed var(--pg-line); }
 .client-shell .b-c2 .b1-h2 { font-size: var(--b-t3); }

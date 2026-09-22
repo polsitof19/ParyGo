@@ -62,8 +62,7 @@
 .scan-shell .k-camerr { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--deny); background: rgba(220,38,38,.08); border: 1px solid rgba(220,38,38,.25); border-radius: var(--r-ctl); padding: 10px 12px; }
 
 /* RESULTADO gigante — legibilidad sobre estética. Color por tono. */
-.scan-shell .k-result { border-radius: 22px; padding: 28px 20px; text-align: center; color: #fff; box-shadow: 0 18px 44px -20px rgba(0,0,0,.35); animation: k-pop .22s cubic-bezier(.22,1,.36,1); }
-@keyframes k-pop { from { transform: scale(.96); opacity: .4 } to { transform: scale(1); opacity: 1 } }
+.scan-shell .k-result { border-radius: 22px; padding: 28px 20px; text-align: center; color: #fff; box-shadow: 0 18px 44px -20px rgba(0,0,0,.35); }
 .scan-shell .k-result--ok { background: var(--ok); }
 .scan-shell .k-result--deny { background: var(--deny); }
 .scan-shell .k-result--warn { background: var(--warn); }

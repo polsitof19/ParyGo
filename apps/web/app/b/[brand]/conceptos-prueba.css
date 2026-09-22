@@ -1,0 +1,333 @@
+/* ============================================================
+   CARTEL (concepto 1) y NOCHE (concepto 3) — SOLO MARCAS DE PRUEBA.
+   ============================================================
+   En producción manda ENTRADA (concepto 2). lib/concepto.ts solo deja elegir
+   ?c=1 y ?c=3 en koko, demotest y ensayo-paul: para cualquier marca real el
+   selector queda inerte. O sea que estas reglas NO pueden aplicar nunca en la
+   página de un promotor, pero vivían en client.css y viajaban igual en cada
+   visita del comprador (87 de sus 1295 líneas, con toda la paleta oscura y
+   sus degradados).
+
+   Ahora el layout de la marca importa este archivo SOLO si el slug está en esa
+   lista. Si agregás una marca de prueba, va en lib/concepto.ts y acá no hay
+   nada que tocar: el layout lee la misma lista.
+
+   OJO con el orden: este archivo se carga DESPUÉS de client.css, así que ante
+   igual especificidad estas reglas ganan. Es lo que se quiere (son el tema
+   completo de un concepto), pero no muevas reglas de concepto 2 acá.
+   ============================================================ */
+.client-shell .b-c1 {
+  --pg-bg: var(--paper);
+  --pg-fg: var(--ink);
+  --pg-fg-2: var(--ink-2);
+  --pg-line: var(--line);
+  /* Fases bloqueadas: atenuadas, pero el precio que viene TIENE que leerse.
+     Medido: .45 da 2.80:1 sobre papel y 4.32:1 sobre noche (los dos por
+     debajo de AA). .62 es el mínimo que pasa en las dos (4.63 y 7.19). */
+  --pg-dim: .62;
+}
+.client-shell .b-c3 {
+  /* Los dos saltos propios de NOCHE: es un concepto editorial y su display
+     no cabe en la rampa del resto del comprador. Van como variables para que
+     no queden números sueltos. */
+  --bc3-display: 64px;
+  --bc3-precio: 40px;
+  --pg-bg: #0E0C0A;
+  --pg-fg: #FBF7F0;
+  --pg-fg-2: rgba(251, 247, 240, .72);
+  --pg-line: rgba(251, 247, 240, .16);
+  --pg-dim: .62;
+  background: var(--pg-bg);
+  color: var(--pg-fg);
+}
+/* La noche tiñe la página entera, no solo el bloque. */
+.client-shell:has(.b-c3) { background: #0E0C0A; }
+.client-shell:has(.b-c3) .c-foot { color: rgba(251, 247, 240, .6); }
+.client-shell:has(.b-c3) .c-foot a { color: rgba(251, 247, 240, .92); }
+.client-shell .b-c3 .b-hero__fade { background: linear-gradient(180deg, transparent, rgba(14,12,10,.5) 42%, #0E0C0A); }
+.client-shell .b-c3 { --pg-map: invert(1) hue-rotate(180deg) saturate(.6) brightness(.9); }
+.client-shell .b-c1 { --pg-map: none; }
+.client-shell .b-c3 .b-legal { color: rgba(251, 247, 240, .62); }
+
+/* La noche tiene que llegar hasta los bordes: el body pinta lo que queda
+   fuera del shell (barra de scroll, zona bajo el contenido) y el header es
+   compartido con el resto del sitio. */
+body:has(.b-c3) { background: #0E0C0A; }
+.client-shell:has(.b-c3) .c-header { background: rgba(14,12,10,.92); border-bottom-color: rgba(251,247,240,.14); }
+.client-shell:has(.b-c3) .c-lockup__name { color: #FBF7F0; }
+.client-shell:has(.b-c3) .c-lockup__ofi { color: rgba(251,247,240,.7); }
+.client-shell:has(.b-c3) .c-powered { color: rgba(251,247,240,.62); }
+.client-shell:has(.b-c3) .c-powered b { color: rgba(251,247,240,.9); }
+
+/* Tokens invertidos para la noche: todo lo que en el resto del sitio se
+   escribe con --ink/--ink-2/--ink-3 o --brand-ink (incluidos estilos en
+   línea) queda legible sin tocar cada llamada. El par --brand-fill /
+   --on-fill NO se toca: es el medido. */
+.client-shell:has(.b-c3) {
+  --ink: #FBF7F0;
+  --ink-2: rgba(251, 247, 240, .72);
+  --ink-3: rgba(251, 247, 240, .62);
+  --brand-ink: #FBF7F0;
+  --line: rgba(251, 247, 240, .16);
+  --sel: rgba(251, 247, 240, .06);
+  --paper: #0E0C0A;
+  --paper-2: #17140F;
+  --paper-3: #201C16;
+  --surface: #17140F;
+}
+
+/* ============================================================
+   CONCEPTO 1 — CARTEL
+   Idea: la página es un afiche. El flyer se queda con la primera
+   pantalla entera y el título vive encima; recién al bajar aparece
+   la tienda. Las fases dejan de ser una lista y pasan a ser una
+   LÍNEA DE TIEMPO: se ve de un vistazo en qué etapa estamos y hacia
+   dónde va el precio. Un chip sticky devuelve a la compra desde
+   cualquier punto, y "Así de simple" saca la duda de qué pasa
+   después de pagar.
+   ============================================================ */
+.client-shell .b-c1 {
+  /* El póster ocupa casi toda la primera pantalla: es el concepto. */
+  --flyer-h: min(72vh, 560px);
+  /* Única desviación de escala del concepto, igual que la de NOCHE: un
+     afiche con el título chico no es un afiche. El resto de la escala
+     —cuerpo, meta, etiquetas, precios— no se toca. */
+  --b-t1: 36px;
+}
+@media (min-width: 768px) { .client-shell .b-c1 { --b-t1: 44px; } }
+@media (min-width: 1024px) { .client-shell .b-c1 { --b-t1: 56px; } }
+.client-shell .b-c1 .b-tks { margin-top: 0; }
+.client-shell .b-c1 .b-ty + .b-ty { margin-top: var(--b-s4); }
+
+/* "Dónde es" con mapa grande: en CARTEL el lugar es parte del afiche. */
+.client-shell .b-c1 .b-map { aspect-ratio: 4 / 3; }
+@media (min-width: 768px) { .client-shell .b-c1 .b-map { height: 380px; aspect-ratio: auto; } }
+
+/* ============================================================
+   CONCEPTO 3 — NOCHE EDITORIAL
+   Idea: Resident Advisor / DICE oscuro. Casi todo es tipografía: el
+   título ocupa la pantalla, los precios son numerales blancos
+   enormes y el flyer entra recortado a sangre por un costado. El
+   color de la marca aparece dos veces: el botón y una línea.
+   La escala general se mantiene; lo que crece es el título y el
+   precio, que SON el concepto (pedido explícito: 56 / 96).
+   ============================================================ */
+.client-shell .b-c3 { --b-t1: 56px; --flyer-h: clamp(300px, 64vw, 380px); }
+@media (min-width: 1024px) { .client-shell .b-c3 { --b-t1: 96px; } }
+
+.client-shell .b-c3 .b-hero__name { letter-spacing: -0.04em; line-height: .98; }
+.client-shell .b-c3 .b-kicker { letter-spacing: .22em; }
+/* La línea de marca: la única pieza de color fuera del botón. */
+.client-shell .b-c3 .b-tks { position: relative; padding-top: var(--b-s3); }
+.client-shell .b-c3 .b-tks::before {
+  content: ""; position: absolute; left: 0; top: 0; width: 64px; height: 3px; background: var(--brand);
+}
+/* Precios gigantes en blanco. */
+.client-shell .b-c3 .b-ph__pr { font-size: var(--bc3-precio); line-height: .95; letter-spacing: -0.03em; }
+.client-shell .b-c3 .b-ph--on .b-ph__pr { color: #FFF; }
+.client-shell .b-c3 .b-ph { padding: var(--b-s3) 0; align-items: end; }
+.client-shell .b-c3 .b-ph__nm { font-size: var(--b-t3); font-weight: 700; }
+@media (min-width: 1024px) {
+  .client-shell .b-c3 .b-ph__pr { font-size: var(--bc3-display); }
+  .client-shell .b-c3 .b-ph__nm { font-size: var(--b-t3); }
+}
+/* El flyer sangra por el costado: en escritorio se pega al borde izquierdo
+   de la ventana y crece a lo alto. */
+@media (min-width: 1024px) {
+  .client-shell .b-c3 .b-hero {
+    margin-left: calc((100vw - min(100vw, 1120px)) / -2 - var(--pad));
+    width: calc(320px + (100vw - min(100vw, 1120px)) / 2 + var(--pad));
+  }
+  .client-shell .b-c3 .b-hero__shot img,
+  .client-shell .b-c3 .b-hero__shot--ph { aspect-ratio: auto; height: 78vh; min-height: 520px; }
+}
+
+/* NOCHE, teléfono: con el título a 56px sobre dos líneas el texto sube hasta
+   la mitad del flyer, donde el degradado todavía es débil y el arte del
+   promotor puede ser claro. Se oscurece antes y más fuerte: el título tiene
+   que leerse sobre CUALQUIER flyer. */
+.client-shell .b-c3 .b-hero__fade {
+  inset: 8% 0 0;
+  background: linear-gradient(180deg, transparent, rgba(14,12,10,.72) 38%, #0E0C0A 88%);
+}
+
+/* NOCHE: la línea de cuándo/dónde va DEBAJO del título, no encima. Arriba cae
+   sobre el medio del flyer —donde el arte del promotor suele tener su propio
+   texto— y se pisan dos tipografías. Abajo, las dos nuestras quedan juntas en
+   la zona oscura. */
+.client-shell .b-c3 .b-hero__name { order: 1; }
+.client-shell .b-c3 .b-kicker { order: 2; margin: var(--b-s1) 0 0; }
+
+/* ---------- CARTEL en escritorio ----------
+   En teléfono el afiche ya ocupa la primera pantalla. En escritorio la grilla
+   de tres columnas lo convertía en una columnita lateral y el concepto se
+   perdía: acá el póster va A LO ANCHO arriba, con el título encima, y la
+   tienda queda debajo en dos columnas (entradas + resumen). */
+@media (min-width: 768px) {
+  .client-shell .b-buy.b-c1 { max-width: 1120px; }
+  .client-shell .b-c1 .b-stage {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-areas:
+      "flyer  flyer"
+      "eleg   resumen"
+      "lista  resumen"
+      "trust  resumen"
+      "simple simple"
+      "info   info";
+    gap: 0 var(--b-s4);
+  }
+  /* El póster: ancho completo, sin sticky y sin recorte 4/5. */
+  .client-shell .b-c1 .b-hero {
+    grid-area: flyer; position: static; margin: 0 calc(var(--pad) * -1) var(--b-s4);
+  }
+  .client-shell .b-c1 .b-hero__shot img,
+  .client-shell .b-c1 .b-hero__shot--ph {
+    aspect-ratio: auto; height: min(62vh, 560px);
+  }
+  /* El título vuelve a apoyarse sobre el póster (en la base, en escritorio se
+     desarma y se va a su propia columna). */
+  .client-shell .b-c1 .b-hero__fade { display: block; }
+  .client-shell .b-c1 .b-kicker { display: block; }
+  .client-shell .b-c1 .b-hero__over {
+    grid-area: flyer; display: flex; flex-direction: column; justify-content: flex-end;
+    position: relative; z-index: 2; margin: 0 calc(var(--pad) * -1) var(--b-s4);
+    padding: 0 var(--b-s4) var(--b-s4); height: auto; pointer-events: none;
+  }
+  .client-shell .b-c1 .b-hero__name { color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,.7); max-width: 18ch; }
+  /* La ficha del póster no hace falta: los datos están en el afiche y en el mapa. */
+  .client-shell .b-c1 .b-aside { display: none; }
+  .client-shell .b-c1 .b1-h2 { grid-area: eleg; margin-top: 0; }
+  .client-shell .b-c1 .b-tks { grid-area: lista; }
+  .client-shell .b-c1 .b1-simple { grid-area: simple; }
+  .client-shell .b-c1 .b-info { grid-area: info; }
+  /* La línea de tiempo respira más: hay ancho de sobra. */
+  .client-shell .b-c1 .b1-line__n { min-width: 150px; }
+}
+@media (min-width: 1024px) {
+  .client-shell .b-c1 .b-hero__shot img,
+  .client-shell .b-c1 .b-hero__shot--ph { height: min(68vh, 640px); }
+  /* El resumen sigue siendo el sólido de la derecha y la barra de abajo se va,
+     igual que en la base. */
+  .client-shell .b-c1 .b-sum { top: 92px; }
+}
+
+/* El bloque de título comparte celda con el póster: se ancla ABAJO. Sin
+   align-self la celda lo estira desde arriba y el título cae sobre la parte
+   clara del flyer, donde el degradado todavía no protege. */
+@media (min-width: 768px) {
+  .client-shell .b-c1 .b-hero__over { align-self: end; }
+}
+
+/* CARTEL, carrito vacío: la barra de abajo diría "Elige tu entrada" justo
+   debajo del título de sección que dice lo mismo. Con el carrito vacío el
+   atajo es el chip; la barra aparece cuando ya hay algo que pagar. */
+.client-shell .b-c1.b-buy--vacio .b-cta { display: none; }
+
+/* ============================================================
+   PROPORCIONES SEGÚN BENCHMARK (2026-09-21)
+   ============================================================
+   Medido con Playwright sobre páginas de evento REALES de DICE,
+   Fever, Joinnus y Teleticket (RA quedó fuera: Cloudflare bloquea
+   el navegador automatizado). Mediana en 1440×900:
+
+     contenedor de contenido   821 px
+     alto del hero (borde inf) 563 px
+     título del evento          34 px
+     cuerpo                     14 px
+     precio                     15 px
+     botón principal        ~400 × 48 px
+     columna de entradas       367 px
+     imagen del evento      ~470 × 390 px  (relación ≈ 1.8:1)
+     espacio entre secciones ~20-32 px
+
+   Y en 390×844: contenedor 358, hero 440, título 28, cuerpo 14,
+   precio 14, botón 44 de alto, imagen ≈ 373 × 373.
+
+   Lo que estaba fuera de escala y por qué se veía "grande y
+   distorsionado" en PC:
+     · el título de NOCHE medía 96 px — 2,8× la mediana;
+     · los precios medían 24-64 px — hasta 4× la mediana de 15;
+     · el flyer de NOCHE crecía con 78vh SIN tope: 842 px de alto
+       en 1920×1080, contra 563 de la mediana;
+     · el flyer se recortaba hasta un 332% respecto de su relación
+       real (un póster vertical metido en una banda de 760×220),
+       que es lo que se lee como "deformado" aunque el object-fit
+       sea cover y no estire un píxel.
+
+   Reglas que quedan: el alto del flyer SIEMPRE con tope en px
+   (nunca vh solo), relación fija por aspect-ratio, y el contenedor
+   con máximo y centrado para que 1920 no estire nada.
+   ============================================================ */
+
+/* ---------- 1 · CARTEL ---------- */
+/* Teléfono: el póster conserva su relación vertical (es lo que menos
+   recorta) pero con tope, para no comerse dos pantallas. */
+/* --flyer-h manda: el bloque del título se apoya sobre el flyer con ESA
+   altura. Cuando la imagen se declaraba aparte (aspect-ratio + max-height)
+   las dos medidas se separaban y el título caía 140px por debajo del flyer,
+   en blanco sobre papel. Una sola fuente de verdad. */
+.client-shell .b-c1 { --b-t1: 30px; --flyer-h: min(125vw, 420px); }
+.client-shell .b-c1 .b1-ty__pr { font-size: var(--b-t3); }
+
+@media (min-width: 768px) {
+  /* Banda a lo ancho, en la relación que usan Joinnus (1,81:1) y
+     Teleticket (2,2:1), con tope duro en px: no crece con la ventana. */
+  .client-shell .b-c1 { --b-t1: 40px; }
+  .client-shell .b-c1 .b-hero__shot img,
+  .client-shell .b-c1 .b-hero__shot--ph {
+    height: auto; aspect-ratio: 2 / 1; max-height: 460px;
+  }
+  .client-shell .b-c1 .b1-ty__pr { font-size: var(--b-t3); }
+  /* La columna de entradas queda en 704 (la de DICE) y el resumen se
+     ensancha para que el botón se acerque a los ~400 de la referencia. */
+  .client-shell .b-c1 .b-stage { grid-template-columns: minmax(0, 1fr) 340px; }
+}
+@media (min-width: 1024px) {
+  .client-shell .b-c1 { --b-t1: 40px; }
+  .client-shell .b-c1 .b-hero__shot img,
+  .client-shell .b-c1 .b-hero__shot--ph { max-height: 460px; }
+}
+
+/* ---------- 3 · NOCHE ---------- */
+/* Sigue siendo el más grande de los tres —es el concepto— pero dentro
+   de la banda del benchmark: el título pasa de 96 a 56 (la mediana es
+   34; +65% es la licencia editorial) y el precio de 64 a 26. */
+.client-shell .b-c3 { --b-t1: 40px; --flyer-h: clamp(360px, 92vw, 460px); }
+.client-shell .b-c3 .b-ph__pr { font-size: var(--b-t3); }
+@media (min-width: 1024px) {
+  .client-shell .b-c3 { --b-t1: 56px; }
+  .client-shell .b-c3 .b-ph__pr { font-size: var(--b-t2); }
+  .client-shell .b-c3 .b-ph__nm { font-size: var(--b-price); }
+  /* El flyer a sangre deja de crecer con la ventana: 62vh CON tope. */
+  .client-shell .b-c3 .b-hero__shot img,
+  .client-shell .b-c3 .b-hero__shot--ph {
+    height: min(62vh, 560px); min-height: 0;
+  }
+  /* Con precios de 26 en vez de 64, la columna del centro ya no necesita
+     ser angosta: se le devuelve ancho quitándoselo a las laterales. */
+  .client-shell .b-c3 .b-stage { grid-template-columns: 300px minmax(0, 1fr) 300px; }
+  .client-shell .b-c3 .b-hero {
+    margin-left: calc((100vw - min(100vw, 1120px)) / -2 - var(--pad));
+    width: calc(300px + (100vw - min(100vw, 1120px)) / 2 + var(--pad));
+  }
+}
+@media (min-width: 768px) {
+  /* position:relative OBLIGATORIO: la regla base pone el shot en static a
+     partir de 768 y, sin ancestro posicionado, el difuminado se escapaba del
+     hero y cubría media página. */
+  .client-shell .b-c1 .b-hero__shot { position: relative; overflow: hidden; background: #14110E; }
+  .client-shell .b-c1 .b-hero__shot img {
+    position: relative; z-index: 1; object-fit: contain;
+    width: auto; max-width: 100%; margin: 0 auto;
+  }}
+
+/* NOCHE: el flyer a sangre se aprieta un punto más para caer dentro de la
+   mediana del hero (563) en 1440. */
+@media (min-width: 1024px) {
+  .client-shell .b-c3 .b-hero__shot img,
+  .client-shell .b-c3 .b-hero__shot--ph { height: min(56vh, 500px); }
+}
+
+/* NOCHE: el fondo de la página es #0E0C0A; un difuminado al 55% de brillo
+   encendería la esquina. Se baja para que el flyer se apoye en la noche. */
+.client-shell .b-c3 .b-hero__shot { --blur-bright: .38; background: #0E0C0A; }

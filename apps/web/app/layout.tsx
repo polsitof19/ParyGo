@@ -1,33 +1,29 @@
 import type { Metadata, Viewport } from 'next';
-import { Fredoka, Nunito, JetBrains_Mono } from 'next/font/google';
+import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { Toaster } from 'sonner';
 import './globals.css';
 
-// Body font. Nunito is a variable font (weights 200-1000); next/font picks
-// up the full range. Self-hosted, latin subset, ~24 KB gzipped over the
-// wire after subsetting.
-const nunito = Nunito({
+// Las DOS familias del sistema, las mismas que declara cada superficie en su
+// propio layout (parygo-tokens.css las lee por --font-bricolage/--font-hanken).
+//
+// Antes acá vivían Fredoka + Nunito + JetBrains Mono, de la identidad anterior.
+// Como el layout raíz envuelve TODO, cada página —la del comprador incluida—
+// se bajaba esas tres ADEMÁS de las dos del sistema que su propio layout ya
+// carga. Medido sobre koko: 4 archivos y 141 KB por visita. Nunito no lo usaba
+// ningún componente; Fredoka y JetBrains solo estas cuatro pantallas sueltas
+// (/, error, not-found y el bloque de códigos de puerta), que ahora usan las
+// del sistema como el resto de la app.
+const bricolage = Bricolage_Grotesque({
+  weight: ['700', '800'],
   subsets: ['latin'],
-  variable: '--font-sans',
+  variable: '--font-bricolage',
   display: 'swap',
 });
-
-// Display font. Fredoka is a variable font (weights 300-700) with a
-// rounded, friendly silhouette. ~22 KB gzipped.
-const fredoka = Fredoka({
+const hanken = Hanken_Grotesk({
+  weight: ['300', '400', '500', '600', '700'],
   subsets: ['latin'],
-  variable: '--font-display',
+  variable: '--font-hanken',
   display: 'swap',
-});
-
-// Mono is only used for `[ ## ]` markers and ticket codes — never the LCP
-// element. Skip the preload so it doesn't fight the two display/body fonts
-// for critical-path bandwidth on mobile.
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-mono',
-  display: 'swap',
-  preload: false,
 });
 
 export const viewport: Viewport = {
@@ -60,7 +56,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`dark ${nunito.variable} ${fredoka.variable} ${jetbrainsMono.variable}`}
+      className={`dark ${hanken.variable} ${bricolage.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-screen font-sans">

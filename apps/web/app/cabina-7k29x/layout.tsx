@@ -21,7 +21,7 @@ const bricolage = Bricolage_Grotesque({
   display: 'swap',
 });
 const hanken = Hanken_Grotesk({
-  weight: ['400', '500', '600', '700'],
+  weight: ['300', '400', '500', '600', '700'],
   subsets: ['latin'],
   variable: '--font-hanken',
   display: 'swap',

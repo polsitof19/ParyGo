@@ -4,23 +4,15 @@
 // ni del server → importable desde client y server components.
 //
 // La base de las páginas es SIEMPRE crema; el primary_color caracteriza (acentos).
-// El color de texto SOBRE el color de marca se calcula por luminancia para que
-// SIEMPRE se lea (amarillo→texto oscuro, azul/negro→texto claro).
+// Nada de color de marca sobre texto "a ojo": las dos funciones que lo permiten
+// —brandInk() para texto DEL color de marca, brandFillPair() para texto SOBRE
+// él— garantizan AA 4.5:1 y las verifica scripts/check-brand-contrast.mjs.
 
 function parseHex(hex: string): [number, number, number] | null {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
   if (!m) return null;
   const n = parseInt(m[1]!, 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-
-// Color de texto legible sobre `hex` (YIQ perceptual). Ink cálido o blanco.
-export function contrastOn(hex: string): string {
-  const rgb = parseHex(hex);
-  if (!rgb) return '#231C17';
-  const [r, g, b] = rgb;
-  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-  return yiq >= 150 ? '#231C17' : '#FFFFFF';
 }
 
 // Luminancia relativa (WCAG) de un rgb 0..255.
@@ -32,34 +24,69 @@ function relLuminance([r, g, b]: [number, number, number]): number {
   return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
 }
 
-// Contraste WCAG contra blanco (el fondo más exigente: crema ≈ blanco). Cuanto
-// más bajo, menos legible es el color como TEXTO sobre crema/blanco.
-function contrastOnWhite(rgb: [number, number, number]): number {
-  return (1 + 0.05) / (relLuminance(rgb) + 0.05);
-}
-
 function toHex([r, g, b]: [number, number, number]): string {
   const h = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
   return `#${h(r)}${h(g)}${h(b)}`;
 }
 
-// Variante del color de marca para usarlo como TEXTO/acento sobre el fondo crema.
-// Si el primary ya contrasta bien (colores medios/oscuros: rojo, azul, tangerina)
-// se devuelve TAL CUAL (la marca conserva su color vivo en los textitos). Si es
-// muy claro (amarillo, pasteles), se oscurece preservando el tono —escalando el
-// rgb— hasta que se lea cómodo. El primary original sigue intacto para botones,
-// hero y acentos grandes (eso usa --brand, no --brand-ink).
+// ⚠ Si tocás esta función, tocá también su copia en
+// scripts/check-brand-contrast.mjs (mismo motivo que brandFillPair: el CI no
+// puede importar un .ts). Ese test falla si las dos se separan.
+//
+// Variante del color de marca para usarlo como TEXTO sobre el papel crema
+// (links al WhatsApp del organizador, "Reenviála a tu email", confirmaciones).
+//
+// PISO AA 4.5:1 CONTRA --paper-3 (#EFE6D6), no contra blanco. Dos razones:
+//   - paper-3 es la más OSCURA de las cuatro superficies de papel, o sea el
+//     peor caso; medir contra blanco da un número que la página no cumple.
+//   - 4.5:1 es el mínimo de AA para texto normal, y esto es texto normal de
+//     13-14px, no display.
+// Antes el umbral era 2.8:1 contra blanco y devolvía el color crudo: el propio
+// tangerina de ParyGo salía a 2.66:1 sobre paper y 2.30:1 sobre paper-3, o sea
+// texto que no llegaba ni al 3:1 de texto grande. 9 de 13 colores de marca
+// fallaban. Ese era el bug.
+//
+// Si el color ya llega, se devuelve TAL CUAL (la marca conserva su color vivo).
+// Si no, se oscurece escalando el rgb —que preserva el tono— lo MÍNIMO
+// necesario. El primary original sigue intacto para rellenos, hero y acentos
+// grandes (eso usa --brand, no --brand-ink).
 export function brandInk(hex?: string | null): string {
   const rgb = hex ? parseHex(hex) : null;
-  if (!rgb) return '#231C17';
-  // Ya legible como texto sobre crema/blanco → conservar el color vivo.
-  if (contrastOnWhite(rgb) >= 2.8) return toHex(rgb);
-  // Demasiado claro: oscurecer (preservando tono) hasta un contraste cómodo.
-  for (let f = 0.96; f >= 0.12; f -= 0.04) {
-    const d: [number, number, number] = [rgb[0] * f, rgb[1] * f, rgb[2] * f];
-    if (contrastOnWhite(d) >= 3.5) return toHex(d);
+  if (!rgb) return INK_HEX;
+  if (contrastBetween(rgb, PAPER_3) >= 4.5) return toHex(rgb);
+  // Se baja el factor de a poco y se mide sobre el hex YA REDONDEADO: es el
+  // color que termina en la página, y redondear puede comerse el último 0.01.
+  for (let f = 0.995; f >= 0; f -= 0.005) {
+    const candidato = toHex([rgb[0] * f, rgb[1] * f, rgb[2] * f]);
+    if (contrastBetween(parseHex(candidato)!, PAPER_3) >= 4.5) return candidato;
   }
-  return toHex([rgb[0] * 0.12, rgb[1] * 0.12, rgb[2] * 0.12]);
+  return INK_HEX;
+}
+
+// ⚠ Copia en scripts/check-brand-contrast.mjs — si la tocás, tocá la otra.
+//
+// HOVER del relleno de marca. Existe porque el hover era `filter: brightness(1.05)`
+// y eso rompía la garantía del par medido: el test mide el par estático y el
+// filtro lo mueve DESPUÉS. Con #E91E63 el botón pasaba de 4.58:1 a 4.20:1 y con
+// #607D8B de 4.56 a 4.19 — o sea que el estado en el que el comprador tiene el
+// dedo encima era justo el que no cumplía AA.
+//
+// Acá el hover es otro COLOR, no un filtro, y sale medido: se profundiza hacia
+// el texto (el gesto clásico de "se hunde") hasta un 12%, y se retrocede de a
+// 2% mientras no llegue a 4.5:1. Si ni el 2% entra —el relleno ya estaba al
+// límite— se va para el lado contrario, que siempre SUBE el contraste.
+export function brandFillHover(hex?: string | null): string {
+  const { fill, on } = brandFillPair(hex);
+  const rgb = parseHex(fill)!;
+  const texto = on === INK_HEX ? INK : PAPER;
+  for (let m = 0.12; m >= 0.02; m -= 0.02) {
+    const candidato = toHex(mix(rgb, texto, m));
+    if (contrastBetween(parseHex(candidato)!, texto) >= 4.5) return candidato;
+  }
+  // Sin margen para profundizar: se aleja del texto. Alejarse de blanco o de
+  // negro puro (no de PAPER/INK) garantiza que el contraste no baje nunca.
+  const lejos: [number, number, number] = on === INK_HEX ? [255, 255, 255] : [0, 0, 0];
+  return toHex(mix(rgb, lejos, 0.12));
 }
 
 // `hex` con alpha (para tintes suaves sobre crema). alpha 0..1.
@@ -86,6 +113,9 @@ function contrastBetween(a: [number, number, number], b: [number, number, number
 
 const INK: [number, number, number] = [0x23, 0x1c, 0x17];
 const PAPER: [number, number, number] = [0xfb, 0xf7, 0xf0];
+// La más oscura de las cuatro superficies de papel: el peor caso para medir
+// texto encima. Es el mismo piso que usa el resto del sistema para --ink-2/3.
+const PAPER_3: [number, number, number] = [0xef, 0xe6, 0xd6];
 const INK_HEX = '#231C17';
 const PAPER_HEX = '#FBF7F0';
 
