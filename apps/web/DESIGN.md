@@ -54,6 +54,12 @@ typography:
     fontWeight: 800
     lineHeight: 1.05
     letterSpacing: "-0.03em"
+  hero:
+    fontFamily: "Bricolage Grotesque, system-ui, sans-serif"
+    fontSize: "56px"
+    fontWeight: 800
+    lineHeight: 0.92
+    letterSpacing: "-0.04em"
 rounded:
   ctl: "9px"   # --r-ctl
   btn: "10px"  # --r-btn
@@ -197,7 +203,15 @@ mide, pero el detector de impeccable sí, y en septiembre de 2026 pasó de 61
 tamaños fuera de rampa a 0.
 
 **Paneles** (`--s-*`, en `.pg-panel`): t1 28→34 · t2 20→24 · t3 16 ·
-lead 18 · body 16→17 · ctl 15 · ui 14 · meta 13 · micro 12 · lb 11 · num 26→28.
+lead 18 · body 16→17 · ctl 15 · ui 14 · meta 13 · micro 12 · lb 11 · num 26→28 ·
+**d1 40→56** (cifra héroe).
+
+`d1` (2026-09-22) es la jerarquía por TAMAÑO que tienen las referencias
+modernas (DICE separa display y cuerpo 5.9×, Shotgun 5.1×) y que al panel le
+faltaba: todo se distinguía por peso 700/800 a tamaños parecidos. Hay **una
+sola** cifra héroe por pantalla y es siempre **lo que espera al usuario**
+(“5 Yapes”, “2 solicitudes”), nunca una métrica de vanidad: el número de lo
+que ya pasó sigue en `num`. Interlineado .92, tracking -0.04em (el piso).
 
 **Comprador** (`--b-*`, en `.client-shell`): t0 34 · t1 32→50 · t2 24→32 ·
 t3 20→24 · price 18→21 · lead 17 · body 16→17 · ctl 15 · ui 14 · meta 13 ·
@@ -245,6 +259,24 @@ Son tres, y son las únicas:
 - `100dvh`, no `100vh`: en Safari móvil 100vh es el viewport grande y deja la
   página más alta que lo visible.
 
+### Orden de pantalla (2026-09-22)
+
+Cada pantalla de panel se lee en tres franjas, siempre en este orden:
+
+1. **Pendiente arriba.** Lo que espera al usuario va primero, con la cifra
+   héroe (`.s-due`) y el ÚNICO primario de la pantalla. Si hay pendiente,
+   “Crear evento” / “Crear marca” bajan a botón de texto; sin pendiente,
+   vuelven a ser el primario. Las tareas secundarias van en líneas con punto
+   (`.s-todo`). Nada pendiente se dice en voz baja (`.s-calm`, punto hueco).
+2. **Información abajo.** Stats, tablas, listas. La plata primero.
+3. **Lo raro, plegado** (`.s-fold`): archivados, rechazados, los datos de la
+   marca. Están, pero no compiten.
+
+Las **acciones frecuentes se ven sin abrir nada** (`.s-acts`): rejilla de filas
+de 48px, dos columnas en el teléfono y cuatro en escritorio. Medido con
+Playwright (`e2e/clics-paneles.mjs`): buscar comprador, reenviar entrada,
+exportar asistentes y ventas por promotor quedan a 2 clics desde `/admin`.
+
 ## Elevation & Depth
 
 **No hay elevación en los paneles.** La profundidad la dan los hairlines
@@ -265,6 +297,12 @@ propósito.
 
 Las barras superiores son de **papel sólido**, no vidrio esmerilado: con
 translucidez el contenido se leía por debajo al scrollear en iPhone.
+
+**Excepción de color: el banner de impersonación** (`.imp-banner`, índigo
+#4338CA con texto blanco, 7.9:1). Está fuera de la paleta a propósito: avisa
+que el super admin está mirando una marca en SOLO LECTURA, y tiene que verse
+ajeno al panel para que nadie lo confunda con la marca. Son los cuatro valores
+que el detector marca en los paneles, y se dejan marcados.
 
 ## Shapes
 

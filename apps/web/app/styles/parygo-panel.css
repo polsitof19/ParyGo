@@ -47,6 +47,11 @@
        micro 12   microcopy (pie, nota al pie de tabla)
      Documentados en DESIGN.md junto con el resto de la rampa. */
   --s-lead: 18px; --s-ctl: 15px; --s-ui: 14px; --s-micro: 12px;
+  /* d1 — CIFRA HÉROE (2026-09-22). Un solo número por pantalla: lo que está
+     esperando al usuario ("5 Yapes"). Es la jerarquía por TAMAÑO del ADN de
+     las referencias (DICE separa display y cuerpo 5.9×): acá d1/body es 2.5×
+     en el teléfono y 3.3× en escritorio, sin subir ningún peso. */
+  --s-d1: 40px;
   --s-s1: 8px; --s-s2: 16px; --s-s3: 24px; --s-s4: 32px; --s-s5: 48px; --s-s6: 64px;
   /* 100dvh, no 100vh: en Safari de iPhone 100vh mide el viewport GRANDE (sin
      la barra de direcciones), así que el shell siempre quedaba más alto que lo
@@ -63,7 +68,7 @@
   -moz-osx-font-smoothing: grayscale;
 }
 @media (min-width: 1024px) {
-  .pg-panel { --s-t1: 34px; --s-t2: 24px; --s-body: 17px; --s-num: 28px; }
+  .pg-panel { --s-t1: 34px; --s-t2: 24px; --s-body: 17px; --s-num: 28px; --s-d1: 56px; }
 }
 .pg-panel *, .pg-panel *::before, .pg-panel *::after { box-sizing: border-box; }
 .pg-panel a { color: inherit; text-decoration: none; }
@@ -632,7 +637,8 @@
 .pg-panel .s-textlink:active,
 .pg-panel .s-nav a:active,
 .pg-panel .s-back:active,
-.pg-panel .s-details > summary:active { transform: scale(.97); }
+.pg-panel .s-details > summary:active,
+.pg-panel .s-fold > summary:active { transform: scale(.97); }
 
 /* Las filas son enteras un link: aplastarlas se vería mal a lo ancho de la
    pantalla. Su señal de presión es el mismo tinte del hover, que en el
@@ -640,6 +646,66 @@
 .pg-panel .s-table tbody tr:active,
 .pg-panel .s-event-row:active,
 .pg-panel .s-brandcard:active { background-color: var(--sel); }
+
+/* ============================================================
+   ORDEN DE PANTALLA (2026-09-22): pendiente arriba → información → lo raro
+   plegado. Cuatro piezas compartidas por los dos paneles.
+   ============================================================ */
+
+/* 1. Lo que espera al usuario: la cifra héroe (--s-d1) + qué es + la acción.
+   Es el ÚNICO primario de la pantalla cuando existe: la plata esperando manda
+   sobre "crear". Sin fondo ni caja; la separa un hairline abajo. */
+.pg-panel .s-due { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-s2) var(--s-s3); flex-wrap: wrap; padding: 0 0 var(--s-s3); margin: 0 0 var(--s-s3); border-bottom: 1px solid var(--line); }
+.pg-panel .s-due__txt { display: flex; flex-direction: column; gap: var(--s-s1); min-width: 0; }
+.pg-panel .s-due__k { display: inline-flex; align-items: center; gap: var(--s-s1); font-size: var(--s-lb); font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-2); }
+.pg-panel .s-due__k::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+.pg-panel .s-due__n { font-family: var(--display); font-weight: 800; font-size: var(--s-d1); line-height: .92; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; color: var(--ink); }
+.pg-panel .s-due__sub { font-size: var(--s-meta); color: var(--ink-2); max-width: 52ch; }
+/* Lo que sigue ya no dibuja su propio hairline: lo puso este bloque. */
+.pg-panel .s-due + .s-card, .pg-panel .s-due + .s-todos { border-top: 0; }
+/* Con la cola debajo (Yapes del evento) el hairline lo pone la primera fila. */
+.pg-panel .s-due--queue { border-bottom: 0; padding-bottom: var(--s-s2); margin-bottom: 0; }
+.pg-panel .s-due-queue { margin-bottom: var(--s-s4); border-bottom: 1px solid var(--line); }
+
+/* 2. Tarea secundaria: una LÍNEA con punto y un botón de texto. */
+.pg-panel .s-todos { margin: 0 0 var(--s-s4); }
+/* La lista de abajo ya arranca con su hairline: la última tarea no dibuja otro. */
+.pg-panel .s-todos > .s-todo:last-child { border-bottom: 0; }
+.pg-panel .s-todo { display: flex; align-items: center; justify-content: space-between; gap: var(--s-s1) var(--s-s2); flex-wrap: wrap; min-height: 56px; padding: var(--s-s1) 0; border-bottom: 1px solid var(--line); }
+.pg-panel .s-todo__txt { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.pg-panel .s-todo__txt::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; margin-top: var(--s-s1); }
+.pg-panel .s-todo--alert .s-todo__txt::before { background: var(--alert); }
+.pg-panel .s-todo__txt strong { font-weight: 700; }
+.pg-panel .s-todo__sub { display: block; font-size: var(--s-meta); color: var(--ink-2); }
+/* Nada pendiente: se dice, en voz baja. Punto hueco = no pasa nada. */
+.pg-panel .s-calm { display: flex; align-items: center; flex-wrap: wrap; gap: 0 10px; font-size: var(--s-meta); color: var(--ink-2); margin: 0 0 var(--s-s3); }
+.pg-panel .s-calm::before { content: ""; width: 8px; height: 8px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ink-3); flex: none; }
+
+/* 3. Acciones rápidas visibles: rejilla de filas de 48 con hairline, como un
+   menú (no botones sueltos que se parten en renglones). Dos columnas en el
+   teléfono, cuatro en escritorio. El ícono va en --ink-3: la palabra manda. */
+.pg-panel .s-acts__k { display: block; font-size: var(--s-lb); font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-3); }
+.pg-panel .s-acts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 var(--s-s3); margin: var(--s-s1) 0 var(--s-s4); padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.pg-panel .s-acts > li { display: flex; min-width: 0; border-bottom: 1px solid var(--line); }
+.pg-panel .s-act { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 0; background: none; border: 0; font: inherit; font-size: var(--s-ui); font-weight: 600; color: var(--ink); text-align: left; cursor: pointer; white-space: nowrap; transition: transform .14s ease-out; }
+.pg-panel .s-act > svg { width: 16px; height: 16px; flex: none; color: var(--ink-3); transition: color .18s; }
+.pg-panel .s-act > span { overflow: hidden; text-overflow: ellipsis; }
+.pg-panel .s-act:hover > span { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px; }
+.pg-panel .s-act:hover > svg { color: var(--ink); }
+.pg-panel .s-act:active { transform: scale(.97); }
+@media (max-width: 860px) { .pg-panel .s-acts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--s-s2); } }
+
+/* 4. Lo raro, plegado. Un <details> con hairline arriba y el título en t3. */
+.pg-panel .s-folds { margin-top: var(--s-s4); border-bottom: 1px solid var(--line); }
+.pg-panel .s-fold { border-top: 1px solid var(--line); }
+.pg-panel .s-fold > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: var(--s-s2); min-height: 56px; padding: var(--s-s1) 0; transition: transform .14s ease-out; }
+.pg-panel .s-fold > summary::-webkit-details-marker { display: none; }
+.pg-panel .s-fold__t { font-family: var(--display); font-weight: 700; font-size: var(--s-t3); letter-spacing: -0.01em; }
+.pg-panel .s-fold__hint { display: block; font-family: var(--body); font-weight: 400; font-size: var(--s-meta); color: var(--ink-2); letter-spacing: 0; }
+.pg-panel .s-fold > summary > svg { width: 16px; height: 16px; flex: none; color: var(--ink-3); transition: transform .18s var(--ease); }
+.pg-panel .s-fold[open] > summary > svg { transform: rotate(180deg); }
+.pg-panel .s-fold > summary:hover .s-fold__t { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px; }
+.pg-panel .s-fold__body { padding: 0 0 var(--s-s3); }
 
 @keyframes s-fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 /* Fade de los skeletons de carga (loading.tsx lo usa inline: animation: 'a-fade .2s both'). */
@@ -672,7 +738,9 @@
   .pg-panel .s-textlink:active,
   .pg-panel .s-nav a:active,
   .pg-panel .s-back:active,
-  .pg-panel .s-details > summary:active {
+  .pg-panel .s-details > summary:active,
+  .pg-panel .s-fold > summary:active,
+  .pg-panel .s-act:active {
     transform: none !important;
     box-shadow: inset 0 0 0 999px var(--sel);
   }

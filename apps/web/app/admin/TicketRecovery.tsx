@@ -44,7 +44,7 @@ export function TicketRecovery({ orders }: { orders: StuckOrder[] }) {
 function RecoveryRow({ order }: { order: StuckOrder }) {
   const [state, action] = useFormFeedback(reissueTicketsAction, initial);
   return (
-    <li className="s-defrow" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', border: '1px solid var(--line)', borderRadius: 'var(--r-ctl, 12px)', padding: '12px 14px' }}>
+    <li className="s-defrow" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '12px 0' }}>
       <div style={{ minWidth: 0 }}>
         <p style={{ fontWeight: 700 }}>{order.buyerName ?? 'Comprador'}</p>
         <p className="s-muted" style={{ fontSize: 13 }}>

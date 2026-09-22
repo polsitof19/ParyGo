@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Plus, Wallet, CalendarDays } from 'lucide-react';
+import { Plus, Wallet, CalendarDays, ChevronDown } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { idsMarcasDePrueba, sinMarcasDePrueba, soloConComprobante } from '@/lib/marcasDePrueba';
@@ -141,8 +141,6 @@ export default async function SuperHome() {
     .sort((a, b) => Number(isAlert(b.r)) - Number(isAlert(a.r)) || a.i - b.i)
     .map(({ r }) => r);
 
-  const noOwner = rows.filter((r) => !r.owner).length;
-  const noSaldo = rows.filter((r) => r.event_balance === 0).length;
 
   // KPIs de plataforma (dashboard) — marcas activas, eventos vendiendo, Yape por revisar, solicitudes.
   const brandsActive = rows.filter((r) => !esPrueba.has(r.id)).length;
@@ -165,48 +163,72 @@ export default async function SuperHome() {
     </span>
   );
 
+  // ORDEN (2026-09-22): lo que espera a Paul arriba, el inventario en una
+  // línea, la lista, y las archivadas plegadas. Las solicitudes de acceso son
+  // la tarea más vieja (alguien espera respuesta) y se llevan la cifra héroe;
+  // el resto de lo pendiente va en líneas debajo, cada una con su acción.
+  const sinSaldo = rows.filter((r) => r.event_balance === 0);
+  const sinDueno = rows.filter((r) => !r.owner);
+  const due = pendingReqs > 0
+    ? { n: pendingReqs, what: `solicitud${pendingReqs === 1 ? '' : 'es'}`, sub: 'de acceso esperando respuesta.', href: '/cabina-7k29x/solicitudes', cta: 'Ver solicitudes' }
+    : yapeReview > 0
+      ? { n: yapeReview, what: `Yape${yapeReview === 1 ? '' : 's'}`, sub: 'con comprobante subido, sin revisar por su marca.', href: '/cabina-7k29x/salud', cta: 'Ver en Salud' }
+      : null;
+  const nombres = (list: BrandRow[]) => list.slice(0, 3).map((r) => r.name).join(', ') + (list.length > 3 ? ` y ${list.length - 3} más` : '');
+
   return (
     <>
       <div className="s-pagehead">
         <div>
-          <span className="eyebrow">Plataforma</span>
           <h1 className="s-h1">Marcas</h1>
           <p className="s-card__desc">
-            {/* El subtítulo describe la LISTA de abajo (todas), y el KPI de
-                arriba cuenta solo las reales. Se dice cuántas son de prueba
-                para que los dos números se expliquen solos. */}
-            {rows.length} marca{rows.length === 1 ? '' : 's'}
-            {pruebaEnLista > 0 && <> · {pruebaEnLista} de prueba</>}
-            {noOwner > 0 && <> · {noOwner} sin dueño</>}
-            {noSaldo > 0 && <> · {noSaldo} sin saldo</>}
+            {/* El inventario, en una línea: cuenta solo marcas reales (las de
+                prueba no suman) y dice cuántas de prueba hay en la lista para
+                que el número y la lista no parezcan contradecirse. */}
+            {brandsActive} activa{brandsActive === 1 ? '' : 's'} · {eventsSelling} evento{eventsSelling === 1 ? '' : 's'} vendiendo
+            {pruebaEnLista > 0 && <> · {pruebaEnLista} de prueba en la lista</>}
           </p>
         </div>
-        <Link href="/cabina-7k29x/brands/new" className="s-btn s-btn--primary">
+        <Link href="/cabina-7k29x/brands/new" className={`s-btn ${due ? 's-btn--soft' : 's-btn--primary'}`}>
           <Plus className="h-4 w-4" /> Crear marca
         </Link>
       </div>
 
-      {/* KPIs de plataforma. Las dos primeras son inventario (informativas);
-          las dos últimas son trabajo pendiente del super admin. El color solo
-          aparece cuando hay algo que hacer: en cero se ven todas iguales. */}
-      <div className="s-stats-4" style={{ marginBottom: 18 }}>
-        <div className="s-stat">
-          <span className="s-stat__label">Marcas activas</span>
-          <span className="s-stat__value">{brandsActive}</span>
+      {/* 1) PENDIENTE */}
+      {due && (
+        <div className="s-due" role="status">
+          <div className="s-due__txt">
+            <span className="s-due__k">Por resolver</span>
+            <span className="s-due__n">{due.n} {due.what}</span>
+            <span className="s-due__sub">{due.sub}</span>
+          </div>
+          <Link href={due.href} className="s-btn s-btn--primary">{due.cta}</Link>
         </div>
-        <div className="s-stat">
-          <span className="s-stat__label">Eventos vendiendo</span>
-          <span className="s-stat__value">{eventsSelling}</span>
+      )}
+      {(pendingReqs > 0 && yapeReview > 0) || sinSaldo.length > 0 || sinDueno.length > 0 ? (
+        <div className="s-todos">
+          {pendingReqs > 0 && yapeReview > 0 && (
+            <div className="s-todo">
+              <span className="s-todo__txt"><span><strong>{yapeReview} Yape{yapeReview === 1 ? '' : 's'} por revisar</strong><span className="s-todo__sub">Con comprobante subido, en marcas reales.</span></span></span>
+              <Link href="/cabina-7k29x/salud" className="s-btn s-btn--soft s-btn--sm">Ver en Salud</Link>
+            </div>
+          )}
+          {sinSaldo.length > 0 && (
+            <div className="s-todo">
+              <span className="s-todo__txt"><span><strong>{sinSaldo.length} marca{sinSaldo.length === 1 ? '' : 's'} sin saldo</strong><span className="s-todo__sub">{nombres(sinSaldo)}</span></span></span>
+              <Link href={`/cabina-7k29x/brands/${sinSaldo[0]!.slug}#saldo`} className="s-btn s-btn--soft s-btn--sm">Recargar{sinSaldo.length > 1 ? ` ${sinSaldo[0]!.name}` : ''}</Link>
+            </div>
+          )}
+          {sinDueno.length > 0 && (
+            <div className="s-todo s-todo--alert">
+              <span className="s-todo__txt"><span><strong>{sinDueno.length} marca{sinDueno.length === 1 ? '' : 's'} sin dueño</strong><span className="s-todo__sub">{nombres(sinDueno)} · nadie puede entrar a su panel.</span></span></span>
+              <Link href={`/cabina-7k29x/brands/${sinDueno[0]!.slug}`} className="s-btn s-btn--soft s-btn--sm">Asignar</Link>
+            </div>
+          )}
         </div>
-        <Link href="/cabina-7k29x/salud" className={`s-stat${yapeReview > 0 ? ' s-stat--alert' : ''}`}>
-          <span className="s-stat__label">Yape por revisar</span>
-          <span className="s-stat__value">{yapeReview}</span>
-        </Link>
-        <Link href="/cabina-7k29x/solicitudes" className={`s-stat${pendingReqs > 0 ? ' s-stat--alert' : ''}`}>
-          <span className="s-stat__label">Solicitudes pendientes</span>
-          <span className="s-stat__value">{pendingReqs}</span>
-        </Link>
-      </div>
+      ) : !due ? (
+        <p className="s-calm">Nada por resolver: sin solicitudes, sin Yapes trabados, todas las marcas con saldo y dueño.</p>
+      ) : null}
 
       {allRows.length === 0 ? (
         <div className="s-card"><p className="s-empty">Todavía no hay marcas. Crea la primera.</p></div>
@@ -322,31 +344,31 @@ export default async function SuperHome() {
         </>
       )}
 
-      {/* Archivadas — sección aparte, solo lectura + desarchivar */}
+      {/* LO RARO, PLEGADO — archivadas: solo lectura + desarchivar. */}
       {archivedRows.length > 0 && (
-        <div className="s-card s-section">
-          <div className="s-card__head">
-            <div>
-              <h2 className="s-h2">Archivadas</h2>
-              <p className="s-card__desc">
-                {archivedRows.length} marca{archivedRows.length === 1 ? '' : 's'} archivada{archivedRows.length === 1 ? '' : 's'}.
-                No aparecen en público y sus eventos no se venden. Puedes desarchivarlas cuando quieras.
-              </p>
-            </div>
+        <details className="s-fold s-folds">
+          <summary>
+            <span className="s-fold__t">
+              Archivadas ({archivedRows.length})
+              <span className="s-fold__hint">No aparecen en público y sus eventos no se venden. Puedes desarchivarlas.</span>
+            </span>
+            <ChevronDown aria-hidden="true" />
+          </summary>
+          <div className="s-fold__body">
+            <ul className="s-event-list">
+              {archivedRows.map((r) => (
+                <li key={r.id} className="s-event-row">
+                  <Link href={`/cabina-7k29x/brands/${r.slug}`} className="s-event-row__main">
+                    <span className="s-event-row__name">{r.name}</span>
+                    <span className="s-event-row__date">{r.slug}.parygo.com · {r.eventsTotal} evento{r.eventsTotal === 1 ? '' : 's'}</span>
+                  </Link>
+                  <span className="s-badge s-badge--draft">Archivada</span>
+                  <ArchiveToggle id={r.id} archived={true} action={setBrandArchivedAction} noun="la marca" />
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul className="s-event-list">
-            {archivedRows.map((r) => (
-              <li key={r.id} className="s-event-row">
-                <Link href={`/cabina-7k29x/brands/${r.slug}`} className="s-event-row__main">
-                  <span className="s-event-row__name">{r.name}</span>
-                  <span className="s-event-row__date">{r.slug}.parygo.com · {r.eventsTotal} evento{r.eventsTotal === 1 ? '' : 's'}</span>
-                </Link>
-                <span className="s-badge s-badge--draft">Archivada</span>
-                <ArchiveToggle id={r.id} archived={true} action={setBrandArchivedAction} noun="la marca" />
-              </li>
-            ))}
-          </ul>
-        </div>
+        </details>
       )}
     </>
   );

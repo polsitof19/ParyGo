@@ -109,7 +109,7 @@ export function BrandingFields({
           <span style={{ color: ink, fontWeight: 700, fontSize: 13, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
             PRÓXIMO EVENTO
           </span>
-          <span style={{ width: 28, height: 28, borderRadius: 8, background: safe, border: '1px solid rgba(0,0,0,.1)' }} aria-hidden="true" />
+          <span style={{ width: 28, height: 28, borderRadius: 'var(--r-ctl)', background: safe, border: '1px solid var(--line)' }} aria-hidden="true" />
         </div>
         <p className="s-hint">
           Así se ve el color en la página pública. Si el tono elegido no llega a

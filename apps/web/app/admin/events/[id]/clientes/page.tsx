@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 const PAGE_SIZE = 100;
 
-export default async function EventClientsPage({ params, searchParams }: { params: { id: string }; searchParams: { page?: string } }) {
+export default async function EventClientsPage({ params, searchParams }: { params: { id: string }; searchParams: { page?: string; buscar?: string; reenviar?: string } }) {
   const user = await requireSession();
   const ctx = ownerBrandContext(user);
   if (!ctx) notFound();
@@ -76,7 +76,14 @@ export default async function EventClientsPage({ params, searchParams }: { param
           {totalPages > 1 && <> · página {page} de {totalPages}</>}
         </p>
       </div>
-      <ClientsTable rows={rows} eventId={event.id} eventName={event.name} impersonating={ctx.impersonating} />
+      <ClientsTable
+        rows={rows}
+        eventId={event.id}
+        eventName={event.name}
+        impersonating={ctx.impersonating}
+        focusSearch={Boolean(searchParams.buscar || searchParams.reenviar)}
+        hint={searchParams.reenviar && !ctx.impersonating ? 'Busca al comprador y toca «Reenviar QR»: le llega otra vez el email con su entrada.' : null}
+      />
       {totalPages > 1 && (
         <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 16 }} aria-label="Paginación de compradores">
           {page > 1 ? (

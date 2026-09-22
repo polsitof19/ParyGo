@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Calendar, Plus, ScanLine, Settings, ArrowRight } from 'lucide-react';
+import { ChevronDown, Plus, ScanLine, Settings, ArrowRight } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createClient } from '@/lib/supabase/server';
@@ -141,53 +141,70 @@ export default async function AdminHomePage() {
     { key: 'publicar', title: 'Publica tu evento', desc: 'Cuando esté listo, ponlo en vivo para empezar a vender.', done: publishedCount > 0, href: firstEventId ? `/admin/events/${firstEventId}` : '/admin/events/new', cta: 'Publicar' },
   ];
 
+  // ORDEN (2026-09-22): lo pendiente arriba, la información abajo, lo raro
+  // plegado. La plata esperando es la tarea que manda: cuando hay Yapes por
+  // revisar, SU botón es el único primario y "Crear evento" pasa a texto.
+  const hasDue = totalPending > 0 && !!firstPendingEvent;
+  const createPrimary = !hasDue;
+
   return (
     <>
       <div className="s-pagehead">
         <div>
-          <span className="eyebrow">{brand.name} · tu panel</span>
           <h1 className="s-h1">Tus eventos</h1>
           <p className="s-card__desc">
             {activeEvents.length} activo{activeEvents.length === 1 ? '' : 's'} · {publishedCount} publicado{publishedCount === 1 ? '' : 's'}
-            {archivedEvents.length > 0 && ` · ${archivedEvents.length} archivado${archivedEvents.length === 1 ? '' : 's'}`}
           </p>
         </div>
         {impersonating ? null : canCreate ? (
-          <Link href="/admin/events/new" className="s-btn s-btn--primary">
+          <Link href="/admin/events/new" className={`s-btn ${createPrimary ? 's-btn--primary' : 's-btn--soft'}`}>
             <Plus className="h-4 w-4" /> Crear evento
           </Link>
         ) : (
-          <button type="button" className="s-btn s-btn--primary" disabled title="Sin saldo de eventos">
+          <button type="button" className={`s-btn ${createPrimary ? 's-btn--primary' : 's-btn--soft'}`} disabled title="Sin saldo de eventos">
             <Plus className="h-4 w-4" /> Crear evento
           </button>
         )}
       </div>
 
-      {/* ¿Cómo va? — lo que importa, en 5 segundos. */}
-      <div className="a-pulse">
-        <div className="s-stat">
-          <span className="s-stat__label">Vendidas</span>
-          <span className="s-stat__value">{soldTickets}</span>
-          <span className="s-stat__sub">entradas, todos tus eventos</span>
+      {/* 1) PENDIENTE — la cifra héroe es lo que está esperando. */}
+      {hasDue && (
+        <div className="s-due" role="status">
+          <div className="s-due__txt">
+            <span className="s-due__k">Por revisar</span>
+            <span className="s-due__n">{totalPending} Yape{totalPending === 1 ? '' : 's'}</span>
+            <span className="s-due__sub">
+              Plata esperando tu aprobación{pendingEventCount > 1 && ` en ${pendingEventCount} eventos`} · hay gente esperando su QR.
+            </span>
+          </div>
+          <Link href={`/admin/events/${firstPendingEvent!.id}/yape`} className="s-btn s-btn--primary">Revisar Yapes</Link>
         </div>
+      )}
+
+      {/* Aviso de saldo bajo (solo dueño): es una tarea, va arriba. */}
+      {!impersonating && (
+        <LowBalanceNotice balance={balance} brandName={brand.name} supportWhatsapp={publicEnv.NEXT_PUBLIC_SUPPORT_WHATSAPP} />
+      )}
+
+      {/* Recuperación de tickets — solo aparece si hay órdenes pagadas sin tickets.
+          Re-emitir es escritura → oculto en solo lectura. */}
+      {stuckOrders.length > 0 && !impersonating && <TicketRecovery orders={stuckOrders} />}
+
+      {/* Setup guiado: solo el dueño y solo si falta algún paso (se auto-oculta). */}
+      {!impersonating && <SetupChecklist steps={setupSteps} brandName={brand.name} />}
+
+      {/* 2) ¿Cómo va? — la plata primero. */}
+      <div className="a-pulse a-pulse--3">
         <div className="s-stat">
           <span className="s-stat__label">Recaudado</span>
           <span className="s-stat__value">{formatPEN(totalSalesCents)}</span>
           <span className="s-stat__sub">confirmado en tus cuentas</span>
         </div>
-        {nextEvent ? (
-          <Link href={`/admin/events/${nextEvent.id}`} className="s-stat">
-            <span className="s-stat__label">Próximo evento</span>
-            <span className="s-stat__value s-stat__value--text">{nextEvent.name}</span>
-            <span className="s-stat__sub">{nextWhen} · {formatPEN(salesByEvent.get(nextEvent.id) ?? 0)} vendido</span>
-          </Link>
-        ) : (
-          <div className="s-stat">
-            <span className="s-stat__label">Próximo evento</span>
-            <span className="s-stat__value s-stat__value--text">Ninguno publicado</span>
-            <span className="s-stat__sub">{canCreate ? 'crea o publica uno' : 'pide un pack para crear'}</span>
-          </div>
-        )}
+        <div className="s-stat">
+          <span className="s-stat__label">Vendidas</span>
+          <span className="s-stat__value">{soldTickets}</span>
+          <span className="s-stat__sub">entradas, todos tus eventos</span>
+        </div>
         <div className={`s-stat${balance === 0 ? ' s-stat--alert' : ''}`}>
           <span className="s-stat__label">Eventos disponibles</span>
           <span className="s-stat__value">{balance}</span>
@@ -195,164 +212,143 @@ export default async function AdminHomePage() {
         </div>
       </div>
 
-      {/* Tarea: solo si hay Yapes pendientes (punto de acento). */}
-      {totalPending > 0 && (
-        <div className="a-task" role="status">
-          <span className="a-task__txt">
-            <span>
-              <strong>
-                Tienes {totalPending} Yape{totalPending === 1 ? '' : 's'} por revisar
-                {pendingEventCount > 1 && ` en ${pendingEventCount} eventos`}
-              </strong>
-              <span className="a-task__sub">Plata esperando tu aprobación · hay gente esperando su QR.</span>
-            </span>
-          </span>
-          {firstPendingEvent && (
-            <Link href={`/admin/events/${firstPendingEvent.id}/yape`} className="s-btn s-btn--soft s-btn--sm">Revisar ahora</Link>
-          )}
-        </div>
-      )}
-
-      {/* Acciones rápidas del próximo evento. Sin próximo evento queda igual el
-          acceso al escáner: es lo único que se hace desde la home sin abrir nada. */}
+      {/* 3) El próximo evento con sus acciones a la vista: buscar comprador,
+          reenviar entrada, exportar, promotores, escáner… a UN toque de la home.
+          Sin próximo evento queda el escáner, lo único que no depende de uno. */}
       {nextEvent ? (
-        <QuickActions eventId={nextEvent.id} publicUrl={nextPublicUrl} isPublished={!!nextEvent.is_published} readOnly={impersonating} />
+        <section className="s-section a-next" aria-labelledby="a-next-title">
+          <span className="s-acts__k">Próximo · {nextWhen}</span>
+          <h2 id="a-next-title" className="s-h2 a-next__title">
+            <Link href={`/admin/events/${nextEvent.id}`}>{nextEvent.name}</Link>
+          </h2>
+          <p className="s-card__desc">{formatPEN(salesByEvent.get(nextEvent.id) ?? 0)} vendido</p>
+          <QuickActions eventId={nextEvent.id} publicUrl={nextPublicUrl} isPublished={!!nextEvent.is_published} readOnly={impersonating} label="Acciones del próximo evento" />
+        </section>
       ) : (
-        <div className="a-quick" role="group" aria-label="Acciones rápidas">
+        <p className="s-calm">
+          <span style={{ flex: '1 1 220px' }}>Ningún evento publicado por venir. {canCreate ? 'Crea o publica uno para empezar a vender.' : 'Pide un pack para crear el próximo.'}</span>
           <Link href="/scan" className="s-btn s-btn--soft s-btn--sm">
             <ScanLine aria-hidden="true" /> Abrir escáner
           </Link>
-        </div>
+        </p>
       )}
 
-      {/* Aviso de saldo bajo (solo dueño): empuja a pedir packs cuando queda ≤1. */}
-      {!impersonating && (
-        <LowBalanceNotice balance={balance} brandName={brand.name} supportWhatsapp={publicEnv.NEXT_PUBLIC_SUPPORT_WHATSAPP} />
-      )}
-
-      {/* Setup guiado: solo el dueño (no en solo lectura) y solo si falta algún
-          paso (el componente se auto-oculta cuando está todo listo). */}
-      {!impersonating && <SetupChecklist steps={setupSteps} brandName={brand.name} />}
-
-      {/* Recuperación de tickets — solo aparece si hay órdenes pagadas sin tickets.
-          Re-emitir es escritura → oculto en solo lectura. */}
-      {stuckOrders.length > 0 && !impersonating && <TicketRecovery orders={stuckOrders} />}
-
-      {/* Eventos activos */}
-      {!events || events.length === 0 ? (
-        <div className="s-card">
+      {/* 4) Eventos activos, en filas */}
+      <section className="s-section">
+        <h2 className="s-h2">Todos tus eventos</h2>
+        {!events || events.length === 0 ? (
           <p className="s-empty">
             {canCreate
               ? 'Todavía no creaste ningún evento. Usa “Crear evento” para arrancar.'
               : 'No tienes eventos. Cuando ParyGo te cargue saldo vas a poder crear el primero.'}
           </p>
-        </div>
-      ) : activeEvents.length === 0 ? (
-        <div className="s-card">
-          <p className="s-empty">Todos tus eventos están archivados. Mira la sección “Archivados” más abajo.</p>
-        </div>
-      ) : (
-        <div className="a-evgrid">
-          {activeEvents.map((e) => {
-            const pend = pendingByEvent.get(e.id) ?? 0;
-            const sales = salesByEvent.get(e.id) ?? 0;
-            const start = new Date(e.starts_at);
-            const past = start.getTime() < Date.now();
-            const status = !e.is_published ? { cls: 's-badge--draft', label: 'Borrador' }
-              : past ? { cls: 's-badge--draft', label: 'Pasado' }
-              : sales > 0 ? { cls: 's-badge--ok', label: 'Vendiendo' }
-              : { cls: 's-badge--ok', label: 'Publicado' };
-            const day = start.toLocaleDateString('es-PE', { day: '2-digit', timeZone: 'America/Lima' });
-            const mon = start.toLocaleDateString('es-PE', { month: 'short', timeZone: 'America/Lima' }).replace('.', '').toUpperCase();
-            return (
-              <Link key={e.id} href={`/admin/events/${e.id}`} className={`a-evcard${past ? ' a-evcard--past' : ''}`}>
-                <div className="a-evcard__media">
-                  {e.cover_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={optimizedImage(e.cover_url, { width: 480, quality: 72 })} alt="" loading="lazy" decoding="async" />
-                  ) : (
-                    <div className="a-evcard__noflyer" aria-hidden="true">{(e.name.trim()[0] ?? '?').toUpperCase()}</div>
-                  )}
-                  <span className="a-evcard__date"><b>{day}</b>{mon}</span>
-                  <span className={`s-badge ${status.cls} a-evcard__status`}>{status.label}</span>
-                </div>
-                <div className="a-evcard__body">
-                  <span className="a-evcard__name">{e.name}</span>
-                  <span className="a-evcard__meta">
-                    <Calendar className="h-3 w-3" />
-                    {start.toLocaleString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
-                  </span>
-                  <div className="a-evcard__foot">
-                    {sales > 0 && <span className="a-evcard__sales">{formatPEN(sales)} <span className="s-muted" style={{ fontWeight: 500 }}>vendido</span></span>}
-                    {pend > 0 && <span className="s-badge s-badge--todo">{pend} Yape por revisar</span>}
-                    {pend === 0 && sales === 0 && e.is_published && !past && <span className="s-muted s-small">Aún no vendiste · comparte tu link</span>}
-                    <ArrowRight className="h-4 w-4 a-evcard__go" />
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Archivados — fuera del flujo normal; solo lectura + desarchivar */}
-      {/* Plegados: no compiten con los eventos activos (antes eran N filas con N botones). */}
-      {archivedEvents.length > 0 && (
-        <details className="a-accordion s-section">
-          <summary>
-            <span className="a-accordion__title">Archivados ({archivedEvents.length})</span>
-            <span className="a-accordion__hint">No se venden ni aparecen en público. Puedes desarchivarlos cuando quieras.</span>
-          </summary>
-          <div className="a-accordion__body">
-          <ul className="s-event-list">
-            {archivedEvents.map((e) => (
-              <li key={e.id} className="s-event-row">
-                <Link href={`/admin/events/${e.id}`} className="s-event-row__main">
-                  <span className="s-event-row__name">{e.name}</span>
-                  <span className="s-event-row__date">
-                    {new Date(e.starts_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Lima' })}
-                  </span>
-                </Link>
-                <span className="s-badge s-badge--draft">Archivado</span>
-                {!impersonating && <ArchiveToggle id={e.id} archived={true} action={setEventArchivedAction} noun="el evento" />}
-              </li>
-            ))}
+        ) : activeEvents.length === 0 ? (
+          <p className="s-empty">Todos tus eventos están archivados. Míralos en “Archivados”, más abajo.</p>
+        ) : (
+          <ul className="a-evlist">
+            {activeEvents.map((e) => {
+              const pend = pendingByEvent.get(e.id) ?? 0;
+              const sales = salesByEvent.get(e.id) ?? 0;
+              const start = new Date(e.starts_at);
+              const past = start.getTime() < Date.now();
+              const status = !e.is_published ? { cls: 's-badge--draft', label: 'Borrador' }
+                : past ? { cls: 's-badge--draft', label: 'Pasado' }
+                : sales > 0 ? { cls: 's-badge--ok', label: 'Vendiendo' }
+                : { cls: 's-badge--ok', label: 'Publicado' };
+              return (
+                <li key={e.id}>
+                  <Link href={`/admin/events/${e.id}`} className={`a-evrow${past ? ' a-evrow--past' : ''}`}>
+                    <span className="a-evrow__thumb" aria-hidden="true">
+                      {e.cover_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={optimizedImage(e.cover_url, { width: 160, quality: 72 })} alt="" loading="lazy" decoding="async" />
+                      ) : (
+                        (e.name.trim()[0] ?? '?').toUpperCase()
+                      )}
+                    </span>
+                    <span className="a-evrow__main">
+                      <span className="a-evrow__title">{e.name}</span>
+                      <span className="a-evrow__when">
+                        {start.toLocaleString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
+                        <span className={`s-badge ${status.cls}`}>{status.label}</span>
+                      </span>
+                    </span>
+                    <span className="a-evrow__side">
+                      {sales > 0 && <span className="a-evrow__money">{formatPEN(sales)}</span>}
+                      {pend > 0 && <span className="s-badge s-badge--todo">{pend} Yape</span>}
+                    </span>
+                    <ArrowRight className="a-evrow__go" aria-hidden="true" />
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
+        )}
+      </section>
+
+      {/* 5) LO RARO, PLEGADO: archivados y los datos de la marca. */}
+      <div className="s-folds">
+        {archivedEvents.length > 0 && (
+          <details className="s-fold">
+            <summary>
+              <span className="s-fold__t">
+                Archivados ({archivedEvents.length})
+                <span className="s-fold__hint">No se venden ni aparecen en público. Puedes desarchivarlos.</span>
+              </span>
+              <ChevronDown aria-hidden="true" />
+            </summary>
+            <div className="s-fold__body">
+              <ul className="s-event-list">
+                {archivedEvents.map((e) => (
+                  <li key={e.id} className="s-event-row">
+                    <Link href={`/admin/events/${e.id}`} className="s-event-row__main">
+                      <span className="s-event-row__name">{e.name}</span>
+                      <span className="s-event-row__date">
+                        {new Date(e.starts_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Lima' })}
+                      </span>
+                    </Link>
+                    <span className="s-badge s-badge--draft">Archivado</span>
+                    {!impersonating && <ArchiveToggle id={e.id} archived={true} action={setEventArchivedAction} noun="el evento" />}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </details>
+        )}
+
+        <details className="s-fold">
+          <summary>
+            <span className="s-fold__t">
+              Tu marca
+              <span className="s-fold__hint">Datos públicos y de cobro de {brand.name}.</span>
+            </span>
+            <ChevronDown aria-hidden="true" />
+          </summary>
+          <div className="s-fold__body">
+            <div className="s-grid-2">
+              <dl className="s-deflist">
+                <Row label="Email">{brand.contact_email ?? '—'}</Row>
+                <Row label="WhatsApp">{brand.whatsapp_e164 ?? '—'}</Row>
+              </dl>
+              <dl className="s-deflist">
+                <Row label="Yape número">{brand.yape_number ?? '—'}</Row>
+                <Row label="Yape titular">{brand.yape_holder ?? '—'}</Row>
+                <Row label="Colores">
+                  <span style={{ display: 'inline-flex', gap: 6 }}>
+                    <Swatch hex={theme.primary_color} />
+                    <Swatch hex={theme.secondary_color} />
+                  </span>
+                </Row>
+              </dl>
+            </div>
+            {!impersonating && (
+              <Link href="/admin/settings" className="s-btn s-btn--soft s-btn--sm">
+                <Settings className="h-4 w-4" /> Editar tu marca
+              </Link>
+            )}
           </div>
         </details>
-      )}
-
-      {/* Configuración de la marca (resumen) */}
-      <div className="s-card" style={{ marginTop: 22 }}>
-        <div className="s-card__head">
-          <div>
-            <h2 className="s-h2">Tu marca</h2>
-            <p className="s-card__desc">Datos públicos y de cobro de {brand.name}.</p>
-          </div>
-          {!impersonating && (
-            <Link href="/admin/settings" className="s-btn s-btn--soft s-btn--sm">
-              <Settings className="h-4 w-4" /> Editar
-            </Link>
-          )}
-        </div>
-        <div className="s-grid-2" style={{ marginTop: 6 }}>
-          <dl className="s-deflist">
-            <Row label="Email">{brand.contact_email ?? '—'}</Row>
-            <Row label="WhatsApp">{brand.whatsapp_e164 ?? '—'}</Row>
-          </dl>
-          <dl className="s-deflist">
-            <Row label="Yape número">{brand.yape_number ?? '—'}</Row>
-            <Row label="Yape titular">{brand.yape_holder ?? '—'}</Row>
-            <Row label="Colores">
-              <span style={{ display: 'inline-flex', gap: 6 }}>
-                <Swatch hex={theme.primary_color} />
-                <Swatch hex={theme.secondary_color} />
-              </span>
-            </Row>
-          </dl>
-        </div>
       </div>
-
     </>
   );
 }
