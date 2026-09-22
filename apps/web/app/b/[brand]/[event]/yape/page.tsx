@@ -4,7 +4,6 @@ import { formatPEN } from '@/lib/utils';
 import { YapeUploadForm } from './YapeUploadForm';
 import { CopyButton } from './CopyButton';
 import { LineaPago } from '../../Responsable';
-import { leerConcepto, conConcepto } from '@/lib/concepto';
 import { publicEnv } from '@/lib/env';
 
 export const runtime = 'edge';
@@ -23,7 +22,7 @@ export default async function YapeUploadPage({
   searchParams: { order?: string; c?: string; v?: string };
 }) {
   if (!searchParams.order) notFound();
-  const concepto = leerConcepto(searchParams, params.brand);
+
   const admin = createAdminClient();
 
   type OrderView = {
@@ -65,11 +64,11 @@ export default async function YapeUploadPage({
 
   // If already submitted, redirect to confirmation flow.
   if (order.status !== 'pending_yape_review' || order.payment_method !== 'yape_manual') {
-    redirect(conConcepto(`/${params.event}/confirmacion?order=${order.id}`, concepto));
+    redirect(`/${params.event}/confirmacion?order=${order.id}`);
   }
   if (!order.brand?.yape_number) {
     return (
-      <main className={`c-state c-checkout-canvas b-c${concepto}`}><p style={{ color: 'var(--alert)' }}>Este promotor no tiene Yape configurado.</p></main>
+      <main className={`c-state c-checkout-canvas`}><p style={{ color: 'var(--alert)' }}>Este promotor no tiene Yape configurado.</p></main>
     );
   }
 
@@ -78,7 +77,7 @@ export default async function YapeUploadPage({
   const qrUrl = order.brand.yape_qr_url ?? order.brand.theme_json?.yape_qr_url ?? null;
 
   return (
-    <main className={`b-buy c-checkout-canvas b-c${concepto}`} style={{ paddingTop: 26 }}>
+    <main className={`b-buy c-checkout-canvas`} style={{ paddingTop: 26 }}>
       <div className="b-head">
         <h1 className="b-head__t">Yapea {formatPEN(order.total_cents)} exactos y sube tu captura</h1>
       </div>

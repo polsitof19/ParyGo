@@ -1,0 +1,221 @@
+/* ============================================================
+   LAS DOS DIRECCIONES DE LA PÁGINA DE COMPRA
+   ============================================================
+   No las elige nadie a mano: las elige el flyer (lib/concepto.ts).
+
+     .b-canvas     manda la IMAGEN. El flyer sangra y la compra flota
+                   encima, en papel. Color de marca SOLO en el CTA.
+                   Es el diseño del producto.
+
+     .b-editorial  manda la TIPOGRAFÍA. El nombre del evento arriba y
+                   grande, el flyer reducido a una banda, el color de
+                   marca como relleno con intención en la fase vigente.
+                   Es el respaldo cuando el flyer no sirve —una captura
+                   de pantalla, o directamente no hay—, y ahí es MEJOR
+                   que canvas: un evento sin buen arte lo sostiene su
+                   nombre, no una imagen a sangre que delata el recorte.
+
+   Lo que NO cambia entre las dos, porque no es estilo sino producto:
+   la escala fija, el ritmo de 8, un solo botón primario, la escalera
+   de fases con candados, el copy en tú, la línea de responsabilidad
+   del organizador y la regla dura del acento (el color de marca solo
+   porta texto en el par medido de brandFillPair).
+
+   OJO CON LA ESTRUCTURA: dentro de .b-stage son HERMANOS, en este
+   orden — .b-hero, .b-aside, .b-hero__over, .b-list. El título NO
+   está dentro del hero. Y el alto del flyer lo gobierna --flyer-h,
+   que dimensiona a la vez la imagen y la caja del título: tocar el
+   `height` de la imagen y no la variable los desalinea.
+
+   Referencias medidas: design_handoff_moderno/ADN-referencias-*.md.
+   De ahí salen la jerarquía por TAMAÑO (no por peso), los dos mundos
+   de radio, el color escaso y las transiciones de una sola propiedad.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   UNA COLUMNA, EN LOS DOS ANCHOS Y EN LAS DOS DIRECCIONES
+   ------------------------------------------------------------
+   La base trae, de ≥1024, una grilla de dos columnas heredada del
+   concepto CARTEL: el flyer pegajoso a la izquierda y, a la derecha,
+   `.b-list { display: contents }` para que sus hijos caigan en celdas.
+   El concepto que estaba en producción nunca la usaba —se la pisaba
+   con `display: block`— así que quedó sin mantener: con el markup de
+   hoy aprieta las filas hasta partir el texto en una palabra por
+   renglón y deja el título sin celda.
+   Las dos direcciones van en una sola columna, que es lo que ya se
+   servía. El escritorio gana ancho, no una segunda columna. */
+.client-shell .b-canvas .b-stage,
+.client-shell .b-editorial .b-stage { display: block; }
+.client-shell .b-canvas .b-list,
+.client-shell .b-editorial .b-list { display: block; }
+.client-shell .b-canvas .b-tks,
+.client-shell .b-editorial .b-tks { grid-area: auto; }
+.client-shell .b-canvas .b-hero,
+.client-shell .b-editorial .b-hero { position: static; }
+@media (min-width: 1024px) {
+  /* El título vuelve a su lugar: sin grilla, no hay celda "titulo". */
+  .client-shell .b-canvas .b-hero__over,
+  .client-shell .b-editorial .b-hero__over { display: block; }
+  .client-shell .b-canvas .b-hero__name,
+  .client-shell .b-editorial .b-hero__name { grid-area: auto; }
+  .client-shell .b-canvas .b-kicker,
+  .client-shell .b-editorial .b-kicker { display: block; }
+  /* El flyer no se estira a lo ancho de una columna de 720. */
+  .client-shell .b-canvas .b-hero__shot img,
+  .client-shell .b-editorial .b-hero__shot img { aspect-ratio: auto; }
+}
+
+/* De ≥768 —no 1024: ese es el breakpoint real de client.css— la base
+   reubica el hero para una grilla de dos columnas que ya no existe: manda el título a una celda inexistente, lo pinta en TINTA (da
+   por hecho que está fuera del flyer), esconde el kicker y apaga el velo.
+   Sobre el flyer a sangre de canvas eso deja el nombre en tinta oscura sobre
+   una imagen oscura. Se neutraliza para las dos direcciones y cada una vuelve
+   a aplicar su receta, que es la misma en los dos anchos. */
+@media (min-width: 768px) {
+  .client-shell .b-canvas .b-hero__over,
+  .client-shell .b-editorial .b-hero__over { display: block; }
+  .client-shell .b-canvas .b-hero__name,
+  .client-shell .b-editorial .b-hero__name {
+    grid-area: auto; max-width: none;
+    -webkit-line-clamp: none; line-clamp: none; display: block; overflow: visible;
+  }
+  .client-shell .b-canvas .b-kicker,
+  .client-shell .b-editorial .b-kicker { display: block; }
+  .client-shell .b-canvas .b-hero__shot img,
+  .client-shell .b-editorial .b-hero__shot img { aspect-ratio: auto; }
+  .client-shell .b-canvas .b-hero__fade { display: block; }
+  /* El alto lo vuelve a poner la variable: la base, de ≥768, le deja
+     `height: auto` a la imagen y el flyer se estiraba a su tamaño natural,
+     empujando las entradas fuera de la pantalla. */
+  .client-shell .b-canvas .b-hero__shot img,
+  .client-shell .b-canvas .b-hero__shot--ph,
+  .client-shell .b-editorial .b-hero__shot img,
+  .client-shell .b-editorial .b-hero__shot--ph { height: var(--flyer-h); }
+  /* El nombre vuelve a ir SOBRE el flyer en canvas, como en el teléfono, y
+     apoyado abajo: `display: block` le quitaba el flex y lo mandaba arriba. */
+  .client-shell .b-canvas .b-hero__over {
+    position: absolute; height: var(--flyer-h);
+    display: flex; flex-direction: column; justify-content: flex-end;
+  }
+  .client-shell .b-canvas .b-hero__name { color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,.72); }
+  .client-shell .b-canvas .b-kicker { color: rgba(255,255,255,.9); text-shadow: 0 1px 8px rgba(0,0,0,.8); }
+}
+
+/* ------------------------------------------------------------
+   CANVAS — manda la imagen
+   ------------------------------------------------------------ */
+.client-shell .b-buy.b-canvas { position: relative; z-index: 1; max-width: 560px; }
+@media (min-width: 1024px) { .client-shell .b-buy.b-canvas { max-width: 720px; } }
+.client-shell:has(.b-canvas) .c-header { position: relative; z-index: 2; }
+
+/* El flyer manda: ocupa dos tercios de la pantalla. Se mueve la VARIABLE,
+   que dimensiona la imagen y la caja del título a la vez. */
+.client-shell .b-canvas { --flyer-h: clamp(340px, 62vh, 520px); }
+.client-shell .b-canvas .b-stage { display: block; }
+
+/* En canvas el flyer SANGRA: llena la caja y se recorta. La base usa
+   `contain` sobre una copia difuminada de sí mismo para no perder nada de un
+   flyer vertical — es lo correcto para una banda, pero acá dejaba dos franjas
+   oscuras arriba y abajo y la imagen no llegaba a mandar. Canvas solo se
+   sirve cuando el flyer es bueno (lo decide lib/concepto.ts), así que acá
+   recortar es seguro; cuando no lo es, la página ya se fue a editorial. */
+.client-shell .b-canvas .b-hero__shot img { object-fit: cover; }
+.client-shell .b-canvas .b-hero__blur { display: none; }
+
+/* El velo tiene que aguantar un flyer claro: el nombre va encima. Negro puro
+   a propósito —es máscara de legibilidad sobre una foto ajena, no una sombra
+   sobre papel; la excepción está escrita en DESIGN.md—. */
+.client-shell .b-canvas .b-hero__fade {
+  inset: 22% 0 0;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.30) 42%, rgba(0,0,0,.76));
+}
+/* El título despeja el panel que lo monta. */
+.client-shell .b-canvas .b-hero__over { padding-bottom: var(--b-s5); }
+
+/* La compra es un panel de papel apoyado SOBRE la imagen. Solo en teléfono:
+   en escritorio la base ya separa flyer y lista en dos columnas y no hay nada
+   que montar. */
+.client-shell .b-canvas .b-list {
+  position: relative; z-index: 4; margin-top: -32px;
+  background: var(--paper); border-radius: var(--r-card) var(--r-card) 0 0;
+  padding: var(--b-s3) 0 var(--b-s4);
+}
+
+/* Micro-espaciado apretado: la escalera va pegada a su fila, como en DICE. */
+.client-shell .b-canvas .b1-line { margin-top: var(--b-s1); }
+.client-shell .b-canvas .b1-line__lb { letter-spacing: .14em; }
+
+/* Pastilla quieta, sin mayúsculas: en canvas el color de marca aparece en el
+   botón y en ningún otro lado. */
+.client-shell .b-canvas .b-btn--go { border-radius: var(--r-pill); padding: 0 26px; }
+.client-shell .b-canvas .b-add,
+.client-shell .b-canvas .b-qbtn { border-radius: var(--r-pill); }
+.client-shell .b-canvas .b-map { border-radius: var(--r-ctl); }
+
+
+/* ------------------------------------------------------------
+   EDITORIAL — manda la tipografía
+   ------------------------------------------------------------ */
+.client-shell .b-buy.b-editorial { max-width: 560px; }
+@media (min-width: 1024px) { .client-shell .b-buy.b-editorial { max-width: 760px; } }
+
+/* El nombre ANTES que la imagen. Como el título es hermano del hero, el
+   orden se cambia en el contenedor, no dentro del hero. */
+.client-shell .b-editorial .b-stage { display: flex; flex-direction: column; }
+.client-shell .b-editorial .b-hero__over { order: 1; }
+.client-shell .b-editorial .b-hero { order: 2; }
+.client-shell .b-editorial .b-aside { order: 3; }
+.client-shell .b-editorial .b-list { order: 4; }
+
+/* El flyer pasa a ser una BANDA —en una revista la foto acompaña al texto—,
+   y es lo que deja el primer precio por encima del pliegue en un 390. */
+.client-shell .b-editorial { --flyer-h: clamp(150px, 24vh, 260px); }
+.client-shell .b-editorial .b-hero__over {
+  position: static; height: auto;
+  padding: var(--b-s5) 0 var(--b-s3); pointer-events: auto;
+}
+.client-shell .b-editorial .b-hero { margin-top: 0; }
+.client-shell .b-editorial .b-hero__fade { display: none; }
+.client-shell .b-editorial .b-kicker { color: var(--ink-3); text-shadow: none; }
+.client-shell .b-editorial .b-hero__name {
+  color: var(--ink); text-shadow: none;
+  line-height: .92; letter-spacing: -.035em;
+}
+.client-shell .b-editorial .b2-cuando { color: var(--ink-2); }
+.client-shell .b-editorial .b-list { padding-top: var(--b-s4); }
+
+/* El título de la sección es una ETIQUETA con regla, no un titular: en
+   editorial el titular ya lo gastó el nombre del evento. */
+.client-shell .b-editorial .b1-h2 {
+  margin: 0 0 var(--b-s2); padding-bottom: var(--b-s1);
+  font-family: var(--body); font-size: var(--b-lb); font-weight: 700;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3);
+  border-bottom: 2px solid var(--ink);
+}
+/* Jerarquía por TAMAÑO, no por peso: el nombre del tipo y su precio suben un
+   escalón en vez de engordar. */
+.client-shell .b-editorial .b1-ty__nm { font-size: var(--b-t3); font-weight: 700; letter-spacing: -.01em; }
+.client-shell .b-editorial .b1-ty__pr { font-size: var(--b-t2); }
+.client-shell .b-editorial .b-ty { padding: var(--b-s3) 0; border-top: 1px solid var(--line); }
+.client-shell .b-editorial .b-ty:last-of-type { border-bottom: 1px solid var(--line); }
+
+/* La fase vigente es un BLOQUE de color con su texto medido: el color con
+   intención, no un punto decorativo. Es el único lugar de editorial donde el
+   relleno de marca lleva texto, y es el par de brandFillPair. */
+.client-shell .b-editorial .b1-line__n--on {
+  background: var(--brand-fill); color: var(--on-fill);
+  border-radius: var(--r-ctl);
+  /* El relleno respeta el ritmo del peldaño (la base ya le da 16px arriba):
+     cambiarlo por un padding propio con margen negativo hacía que el bloque
+     se saliera de su celda y se comiera la fase siguiente. Solo se recorta un
+     poco a la derecha para que no toque al vecino. */
+  padding: var(--b-s2) var(--b-s1) var(--b-s1) var(--b-s1);
+  margin-right: var(--b-s1);
+}
+/* El riel no cruza el bloque: una línea de marca sobre relleno de marca no se
+   ve, y donde sí se vería sería una raya atravesando el precio. */
+.client-shell .b-editorial .b1-line__n--on::before { display: none; }
+.client-shell .b-editorial .b1-line__n--on .b1-line__lb,
+.client-shell .b-editorial .b1-line__n--on .b1-line__sub { color: inherit; opacity: .78; }
+.client-shell .b-editorial .b1-line__n--on .b1-line__pr { color: inherit; }
+.client-shell .b-editorial .b1-line__n--on .b1-line__dot { display: none; }

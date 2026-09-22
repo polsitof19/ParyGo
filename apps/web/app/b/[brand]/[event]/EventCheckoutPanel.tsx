@@ -6,18 +6,17 @@ import { Loader2, Lock, ArrowRight } from 'lucide-react';
 import { formatPEN } from '@/lib/utils';
 import { optimizedImage } from '@/lib/imageUrl';
 import {
-  type Concepto, type Brand, type Event, type TicketType,
+  type Brand, type Event, type TicketType,
   armarEscalera, resumirIncluye, distrito, hrefMapa,
   fmtCortoMayus, fmtCuando, fmtDiaLargo, fmtHora,
-  FasesEscalera, FasesLinea, FasesSellos,
-  ChipComprar, AsiDeSimple,
+  FilaEntrada, AsiDeSimple,
 } from './conceptos';
 import { startCheckout, previewPromo, type CheckoutInput } from './actions';
 import { reserveStock } from '@/lib/reservations';
 import { MercadoPagoWallet } from './MercadoPagoWallet';
 import { ShareEvent } from './ShareEvent';
 import { LineaLegal } from '../Responsable';
-import { conConcepto } from '@/lib/concepto';
+import { claseDireccion, type Direccion } from '@/lib/concepto';
 
 const SESSION_STORAGE_KEY = 'parygo-checkout-session';
 
@@ -42,13 +41,13 @@ function bulkUnitPrice(t: TicketType, q: number): number {
 }
 
 export function EventCheckoutPanel({
-  brand, event, ticketTypes, mpConfigured, mpPublicKey, refCode = '', shareUrl, concepto = 1,
+  brand, event, ticketTypes, mpConfigured, mpPublicKey, refCode = '', shareUrl, direccion = 'editorial',
 }: {
   brand: Brand; event: Event; ticketTypes: TicketType[]; mpConfigured: boolean; mpPublicKey: string | null;
   refCode?: string; shareUrl: string;
-  // Concepto de diseño a evaluar (1 cartel, 2 entrada, 3 noche). Solo
+  // Dirección de diseño, decidida por el flyer en el server. Solo
   // presentación: no cambia precio, stock, pago ni emisión.
-  concepto?: Concepto;
+  direccion?: Direccion;
 }) {
   const sorted = useMemo(
     () => [...ticketTypes].sort((a, b) => a.active_price_cents - b.active_price_cents || a.sort_order - b.sort_order),
@@ -272,9 +271,7 @@ export function EventCheckoutPanel({
       const res = await startCheckout({ ...input, sessionId: sessionIdRef.current });
       if (!res.ok) { toast.error(res.message ?? 'Error en el checkout'); return; }
       if ('mp' in res) { if (mpPublicKey) setMpCheckout(res.mp); else window.location.href = res.mp.initPoint; return; }
-      // El concepto viaja con el comprador: la pantalla de Yape y la
-      // confirmación se ven con la misma piel que la página del evento.
-      if ('redirectUrl' in res) window.location.href = conConcepto(res.redirectUrl, concepto);
+      if ('redirectUrl' in res) window.location.href = res.redirectUrl;
     });
   }
 
@@ -306,11 +303,7 @@ function fraseConfianza(pago: string): string {
 }
 
   return (
-    <section id="entradas" className={`b-buy b-c${concepto}${shownStep === 2 ? ' b-buy--datos' : ''}${totalItems === 0 ? ' b-buy--vacio' : ''}`}>
-      {/* El chip es el atajo de vuelta a la compra. Con algo en el carrito
-          manda la barra de pagar y el chip se va: dos cosas pegadas abajo se
-          estorban. */}
-      {concepto === 1 && shownStep === 1 && <ChipComprar anclaId="elegi" activo={totalItems === 0} />}
+    <section id="entradas" className={`b-buy ${claseDireccion(direccion)}${shownStep === 2 ? ' b-buy--datos' : ''}${totalItems === 0 ? ' b-buy--vacio' : ''}`}>
       {mpCheckout && mpPublicKey ? (
         <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}${atras ? ' c-stepwrap--back' : ''}`}>
           <div className="b-head">
@@ -325,12 +318,12 @@ function fraseConfianza(pago: string): string {
         /* ---------- PANTALLA 1: el flyer y las entradas ---------- */
         <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}${atras ? ' c-stepwrap--back' : ''}`} key="step1">
         <div className="b-stage">
-          <Hero event={event} concepto={concepto} />
+          <Hero event={event} direccion={direccion} />
 
           <div className="b-list">
-            {/* "Elige tu entrada" solo en CARTEL: ahí la lista es una
-                sección con nombre propio, no la continuación del flyer. */}
-            {concepto === 1 && <h2 className="b1-h2" id="elegi">Elige tu entrada</h2>}
+            {/* En EDITORIAL la lista es una sección con nombre propio; en
+                CANVAS es la continuación natural del flyer y no lo necesita. */}
+            {direccion === 'editorial' && <h2 className="b1-h2" id="elegi">Elige tu entrada</h2>}
             <section className="b-tks">
               {sorted.map((t) => {
                 const props = {
@@ -341,16 +334,12 @@ function fraseConfianza(pago: string): string {
                   onInc: () => inc(t),
                   onDec: () => dec(t),
                 };
-                if (concepto === 1) return <FasesLinea key={t.id} {...props} />;
-                if (concepto === 2) return <FasesSellos key={t.id} {...props} />;
-                return <FasesEscalera key={t.id} {...props} />;
+                return <FilaEntrada key={t.id} {...props} />;
               })}
             </section>
             <p className="b-trust">{fraseConfianza(payLabel)}</p>
 
-            {/* CARTEL y ENTRADA explican el trámite en tres pasos antes del
-                mapa. NOCHE no: ahí el silencio es parte del concepto. */}
-            {concepto !== 3 && <AsiDeSimple conYape={!!brand.yape_number} />}
+            <AsiDeSimple conYape={!!brand.yape_number} />
 
             <MasInfo event={event} brand={brand} />
           </div>
@@ -559,7 +548,7 @@ function fraseConfianza(pago: string): string {
   );
 }
 
-// ============================ El hero, por concepto ============================
+// ========================= El hero, por dirección =========================
 // Los tres muestran el mismo flyer y el mismo título; lo que cambia es cuánto
 // pesa cada uno y dónde cae el texto:
 //   1 CARTEL   el flyer ocupa casi toda la primera pantalla y el título va
@@ -568,22 +557,40 @@ function fraseConfianza(pago: string): string {
 //              un ticket; el título va en el cuerpo del boleto.
 //   3 NOCHE    el flyer sangra por un costado y el título ocupa el resto.
 // Tocar el flyer lo abre entero en los tres (el hero siempre lo recorta).
-function Hero({ event, concepto }: { event: Event; concepto: Concepto }) {
+function Hero({ event, direccion }: { event: Event; direccion: Direccion }) {
   const mapsHref = hrefMapa(event);
   const [zoom, setZoom] = useState(false);
+  // `cerrando` existe para que el visor tenga SALIDA: antes se desmontaba de
+  // golpe mientras la entrada sí estaba animada, que es la asimetría que
+  // hace que algo se sienta roto. Sale por el mismo camino que entró.
+  const [cerrando, setCerrando] = useState(false);
+  const cerrarZoom = useCallback(() => {
+    const reduce = typeof window !== 'undefined'
+      && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) { setZoom(false); return; }
+    setCerrando(true);
+  }, []);
+  // El desmontaje espera a que termine la salida, y el temporizador se limpia:
+  // si el árbol se va antes (una navegación justo después de cerrar), el
+  // callback no queda vivo. Mismo patrón que la transición entre pasos.
+  useEffect(() => {
+    if (!cerrando) return;
+    const t = setTimeout(() => { setCerrando(false); setZoom(false); }, 160);
+    return () => clearTimeout(t);
+  }, [cerrando]);
   const donde = [event.venue_name, distrito(event.venue_address)].filter(Boolean).join(' · ');
   const kicker = [fmtCortoMayus(event.starts_at), donde].filter(Boolean).join(' · ');
 
   useEffect(() => {
     if (!zoom) return;
-    const cerrar = (e: KeyboardEvent) => { if (e.key === 'Escape') setZoom(false); };
+    const cerrar = (e: KeyboardEvent) => { if (e.key === 'Escape') cerrarZoom(); };
     window.addEventListener('keydown', cerrar);
     return () => window.removeEventListener('keydown', cerrar);
-  }, [zoom]);
+  }, [zoom, cerrarZoom]);
 
-  // En ENTRADA el flyer va dentro del boleto: se pide más chico y no lleva
-  // el degradado, porque el título no se apoya encima.
-  const ancho = concepto === 2 ? 640 : 900;
+  // En EDITORIAL el flyer es una banda y el título NO se apoya encima: se
+  // pide más chico y no lleva degradado. En CANVAS sangra y sí lo lleva.
+  const ancho = direccion === 'editorial' ? 640 : 900;
 
   return (
     <>
@@ -601,7 +608,7 @@ function Hero({ event, concepto }: { event: Event; concepto: Concepto }) {
             style={{ backgroundImage: `url(${JSON.stringify(optimizedImage(event.cover_url, { width: 640, quality: 45 }))})` }}
           />
           <img src={optimizedImage(event.cover_url, { width: ancho, quality: 80 })} alt={`Flyer de ${event.name}`} decoding="async" />
-          {concepto !== 2 && <span className="b-hero__fade" aria-hidden="true" />}
+          {direccion === 'canvas' && <span className="b-hero__fade" aria-hidden="true" />}
         </button>
       ) : (
         <div className="b-hero__shot b-hero__shot--ph" aria-hidden="true"><span className="b-hero__fade" /></div>
@@ -617,7 +624,7 @@ function Hero({ event, concepto }: { event: Event; concepto: Concepto }) {
       </div>
 
       {zoom && event.cover_url && (
-        <button type="button" className="b-lightbox" onClick={() => setZoom(false)} aria-label="Cerrar el flyer">
+        <button type="button" className={`b-lightbox${cerrando ? ' b-lightbox--out' : ''}`} onClick={cerrarZoom} aria-label="Cerrar el flyer">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={optimizedImage(event.cover_url, { width: 1200, quality: 86 })} alt={`Flyer de ${event.name}`} />
           <span className="b-lightbox__hint">Toca para cerrar</span>
@@ -625,12 +632,13 @@ function Hero({ event, concepto }: { event: Event; concepto: Concepto }) {
       )}
       </header>
 
-      {/* El bloque de título. En CARTEL y NOCHE se apoya sobre el flyer en
-          teléfono; en ENTRADA siempre va debajo, dentro del boleto. */}
+      {/* El bloque de título. En CANVAS se apoya SOBRE el flyer; en
+          EDITORIAL va arriba de todo y el flyer viene después. Lo ordena el
+          CSS con `order`, no dos árboles distintos. */}
       <div className="b-hero__over">
         <p className="b-kicker">{kicker}</p>
         <h1 className="b-hero__name">{event.name}</h1>
-        {concepto === 2 && <p className="b2-cuando">{fmtCuando(event.starts_at)}</p>}
+        {direccion === 'editorial' && <p className="b2-cuando">{fmtCuando(event.starts_at)}</p>}
       </div>
     </>
   );

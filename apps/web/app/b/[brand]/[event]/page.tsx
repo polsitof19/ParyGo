@@ -6,11 +6,10 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv, publicEnv } from '@/lib/env';
 import { formatPEN } from '@/lib/utils';
 import { isPubliclyOffered } from '@/lib/publicTicketGuard';
-import { leerConcepto } from '@/lib/concepto';
+import { decidirDireccion, claseDireccion } from '@/lib/concepto';
 import { optimizedImage } from '@/lib/imageUrl';
 import { EventCheckoutPanel } from './EventCheckoutPanel';
 import { EventStructuredData } from './EventStructuredData';
-import { FondoFlyer } from './conceptos';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -176,6 +175,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function EventPage({ params, searchParams }: Props) {
   const data = await loadEvent(params.brand, params.event);
   if (!data) notFound();
+  // La medición del flyer SALE YA, sin await: mientras corre, la página sigue
+  // resolviendo el resto. Esperarla acá, en serie después de loadEvent, le
+  // sumaba hasta 1.2s a la página que cobra. Se recoge al final, donde se usa.
+  const midiendoFlyer = decidirDireccion(data.event.cover_url);
   const { brand, event, ticketTypes, mpConfigured, mpPublicKey } = data;
 
   // Guarda de evento pasado: un link viejo de un evento ya terminado NO debe
@@ -205,9 +208,9 @@ export default async function EventPage({ params, searchParams }: Props) {
   const refRaw = Array.isArray(searchParams?.ref) ? searchParams?.ref[0] : searchParams?.ref;
   const refCode = (refRaw ?? '').trim().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
 
-  // Concepto de diseño a evaluar (?c=1|2|3, con ?v= como alias viejo).
-  // Solo presentación: no toca precio, stock, pago ni emisión.
-  const concepto = leerConcepto(searchParams, params.brand);
+  // La DIRECCIÓN de diseño la decide el flyer, no la URL: canvas si el arte
+  // sirve, editorial si es una captura o no hay. Solo presentación: no toca
+  // precio, stock, pago ni emisión. Ver lib/concepto.ts.
 
   // ?flyer=<slug> — AYUDA DE PREVIEW: pinta el evento con el flyer de otra
   // marca para comparar cómo responde cada concepto a paletas distintas (un
@@ -243,6 +246,12 @@ export default async function EventPage({ params, searchParams }: Props) {
     }
   }
   const eventoParaPintar = { ...event, cover_url: coverUrl };
+  // Se recoge la medición que salió arriba. Si el preview cambió el flyer con
+  // ?flyer=, se mide ESE, porque es el que se va a pintar; ese camino solo
+  // existe en preview y en local, así que la serie ahí no cuesta nada.
+  const direccion = coverUrl === event.cover_url
+    ? await midiendoFlyer
+    : await decidirDireccion(coverUrl);
 
   // Tracking de clics del link de promotor (?ref). Best-effort: registra un clic
   // por visitante/día atribuido al código (solo si existe). Hasheamos la IP (no
@@ -269,11 +278,7 @@ export default async function EventPage({ params, searchParams }: Props) {
     <>
       <EventStructuredData brand={brand} event={event} ticketTypes={ticketTypes} />
 
-      <article className={`c-checkout-canvas b-c${concepto}`} style={{ paddingBottom: 64 }}>
-        {/* ENTRADA apoya el boleto sobre su propio flyer, difuminado. Va
-            FUERA de la sección de compra: dentro, el z-index de la sección
-            lo dejaba por encima del fondo blanco del boleto. */}
-        {concepto === 2 && <FondoFlyer url={optimizedImage(eventoParaPintar.cover_url, { width: 900, quality: 60 })} />}
+      <article className={`c-checkout-canvas ${claseDireccion(direccion)}`} style={{ paddingBottom: 64 }}>
         {/* CHECKOUT (hero, entradas, datos/pago, resumen y "dónde" viven en el panel) */}
         <EventCheckoutPanel
           brand={brand}
@@ -283,7 +288,7 @@ export default async function EventPage({ params, searchParams }: Props) {
           mpPublicKey={mpPublicKey}
           refCode={refCode}
           shareUrl={shareUrl}
-          concepto={concepto}
+          direccion={direccion}
         />
 
         {/* SOPORTE */}

@@ -1,7 +1,7 @@
 'use client';
 
 // =============================================================
-// Los tres conceptos de la página de compra
+// Las piezas de la página de compra
 // =============================================================
 // Acá viven los tipos compartidos, las funciones de fecha y las piezas que
 // CAMBIAN entre conceptos. Todo lo que no está acá (carrito, reservas, promo,
@@ -20,7 +20,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Minus, Plus, Lock, Ticket, Smartphone, Mail } from 'lucide-react';
 import { formatPEN } from '@/lib/utils';
 
-export type Concepto = 1 | 2 | 3;
+export type { Direccion } from '@/lib/concepto';
 
 export type Brand = {
   id: string; slug: string; name: string;
@@ -195,39 +195,13 @@ type FilaProps = {
 // ------------------------------------------- 3 · NOCHE y base: la escalera ---
 // Una fila por fase. Es la lectura más literal: qué precio rige hoy, hasta
 // cuándo y cuánto va a costar después.
-export function FasesEscalera({ t, escalera, cur, incluye, onInc, onDec }: FilaProps) {
-  return (
-    <div className={`b-ty${t.soldOut ? ' b-ty--out' : ''}`}>
-      {escalera.map((f, i) => (
-        <div key={i} className={`b-ph${f.estado === 'vigente' ? ' b-ph--on' : ''}`}>
-          <span className="b-ph__nm">
-            {f.titulo}
-            {f.sub && <span className="b-ph__fase">{f.sub}</span>}
-            {/* "Quedan pocas": urgencia honesta, calculada en el server, sin el
-                número. Va al lado del nombre y NO toca el botón — el tipo se
-                sigue comprando normal, que es todo el punto de avisarlo. */}
-            {f.estado === 'vigente' && t.pocas && !t.soldOut && (
-              <span className="b-ph__pocas">Quedan pocas</span>
-            )}
-            {f.estado === 'vigente' && incluye && <span className="b-ph__inc">{incluye}</span>}
-          </span>
-          {/* Un tipo gratis dice "Gratis", no "S/ 0.00" — misma palabra que
-              usa la tarjeta del listado de marca. */}
-          <span className="b-ph__pr">{f.precio === 0 ? 'Gratis' : formatPEN(f.precio)}</span>
-          <span className="b-ph__act">
-            <Accion t={t} cur={cur} estado={f.estado} onInc={onInc} onDec={onDec} />
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// -------------------------------------------- 1 · CARTEL: línea de tiempo ---
-// El tipo y su precio de hoy arriba, grandes. Debajo, la escalera de precios
-// como una línea horizontal: dónde estamos y hacia dónde va. La fase vigente
-// se marca con el color de la marca (punto y barra — nunca el texto).
-export function FasesLinea({ t, escalera, cur, incluye, onInc, onDec }: FilaProps) {
+// ------------------------------------------------ La fila de una entrada ---
+// UNA sola para las dos direcciones: el tipo y su precio de hoy arriba,
+// grandes, y debajo la escalera de precios como una línea horizontal —dónde
+// estamos y hacia dónde va—. Lo que cambia entre canvas y editorial es el
+// CSS, no el markup: dos árboles distintos para la misma información serían
+// dos cosas que mantener y dos formas de que se desincronicen.
+export function FilaEntrada({ t, escalera, cur, incluye, onInc, onDec }: FilaProps) {
   const vigente = escalera.find((f) => f.estado === 'vigente') ?? escalera[0]!;
   const iVig = escalera.indexOf(vigente);
   return (
@@ -267,59 +241,6 @@ function Linea({ t, escalera, iVig }: { t: TicketType; escalera: Peldano[]; iVig
   );
 }
 
-// --------------------------------------------- 2 · ENTRADA: línea de tiempo ---
-// Cabecera de boleto (tipo · precio · acción) y debajo la misma línea de
-// tiempo que CARTEL, con la tipografía del boleto.
-export function FasesSellos({ t, escalera, cur, incluye, onInc, onDec }: FilaProps) {
-  const vigente = escalera.find((f) => f.estado === 'vigente') ?? escalera[0]!;
-  const iVig = escalera.indexOf(vigente);
-  return (
-    <div className={`b-ty b2-ty${t.soldOut ? ' b-ty--out' : ''}`}>
-      <div className="b2-ty__head">
-        <span className="b2-ty__nm">{t.name}</span>
-        <span className="b-ph__pr b2-ty__pr">{formatPEN(vigente.precio)}</span>
-        <span className="b-ph__act">
-          <Accion t={t} cur={cur} estado="vigente" onInc={onInc} onDec={onDec} />
-        </span>
-      </div>
-      {incluye && <p className="b2-ty__inc">{incluye}</p>}
-      {escalera.length > 1 && (
-        // Misma línea de tiempo que CARTEL: se entiende de un vistazo en qué
-        // etapa estamos y hacia dónde va el precio. Lo que cambia en ENTRADA
-        // es la tipografía, que la pone el CSS del boleto.
-        <Linea t={t} escalera={escalera} iVig={iVig} />
-      )}
-    </div>
-  );
-}
-
-// ------------------------------------------- 1 · CARTEL: chip de comprar ---
-// Aparece cuando la lista de entradas sale de la pantalla y lleva de vuelta.
-// No reemplaza al botón de pagar: es un atajo de navegación.
-export function ChipComprar({ anclaId, activo }: { anclaId: string; activo: boolean }) {
-  const [verse, setVerse] = useState(false);
-  const ref = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!activo) { setVerse(false); return; }
-    const ancla = document.getElementById(anclaId);
-    if (!ancla || typeof IntersectionObserver === 'undefined') return;
-    const io = new IntersectionObserver(
-      ([e]) => setVerse(!!e && !e.isIntersecting && e.boundingClientRect.top < 0),
-      { rootMargin: '-72px 0px 0px 0px' }
-    );
-    io.observe(ancla);
-    return () => io.disconnect();
-  }, [anclaId, activo]);
-  return (
-    <div ref={ref} className={`b1-chip${verse ? ' b1-chip--on' : ''}`} aria-hidden={!verse}>
-      <a href={`#${anclaId}`} className="b1-chip__a" tabIndex={verse ? 0 : -1}>
-        <Ticket aria-hidden="true" /> Comprar entradas
-      </a>
-    </div>
-  );
-}
-
-// -------------------------------------------- 1 · CARTEL: así de simple ---
 export function AsiDeSimple({ conYape }: { conYape: boolean }) {
   const pasos = [
     { Icono: Ticket, t: 'Eliges', d: 'Sumas las entradas que quieres.' },
@@ -344,8 +265,4 @@ export function AsiDeSimple({ conYape }: { conYape: boolean }) {
 
 // ------------------------------------------ 2 · ENTRADA: el flyer detrás ---
 // En escritorio el boleto se apoya sobre el propio flyer, difuminado y
-// oscurecido. Es decorativo: no lleva texto encima y va aria-hidden.
-export function FondoFlyer({ url }: { url?: string | null }) {
-  if (!url) return null;
-  return <div className="b2-bg" aria-hidden="true" style={{ backgroundImage: `url(${JSON.stringify(url)})` }} />;
-}
+
