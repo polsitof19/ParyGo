@@ -15,6 +15,13 @@ const PAST_SLUG = `e2e-pasado-${STAMP}`;
 const PROMO = `E2E20${STAMP.slice(-3)}`;
 const ADMIN_EMAIL = 'brandadmin.demotest@parygo.test';
 const ADMIN_PASS = process.env.E2E_ADMIN_PASS || 'E2eSep!demotest2026'; // la setea el paso A
+// Credenciales de PRUEBA de MercadoPago (las TEST-… del panel de desarrolladores).
+// Si están, el paso K prueba el camino BUENO: se crea la preferencia de verdad
+// y el checkout llega al Wallet Brick. Si no están, K prueba que el camino
+// falle LIMPIO con un token inválido. Las dos cosas son válidas; con
+// credenciales se prueba más.
+const MP_TEST_TOKEN = process.env.E2E_MP_ACCESS_TOKEN || env.E2E_MP_ACCESS_TOKEN || '';
+const MP_TEST_PUBKEY = process.env.E2E_MP_PUBLIC_KEY || env.E2E_MP_PUBLIC_KEY || '';
 const VALIDATOR_EMAIL = 'validator.demotest@parygo.test';
 const SUPER_EMAIL = env.SUPER_ADMIN_EMAIL;
 const TZ = 'America/Lima';
@@ -58,7 +65,7 @@ if (!brandRow || brandRow.slug !== BRAND) throw new Error('demotest no encontrad
 const BRAND_ID = brandRow.id;
 const dbBrand = async () => (await svc.from('brands').select('event_balance, archived_at').eq('id', BRAND_ID).single()).data;
 const dbTypes = async () =>
-  (await svc.from('ticket_types').select('id, name, capacity, sold, reserved, max_scans').eq('event_id', S.eventId).order('sort_order')).data ?? [];
+  (await svc.from('ticket_types').select('id, name, capacity, sold, reserved, max_scans, is_courtesy').eq('event_id', S.eventId).order('sort_order')).data ?? [];
 const typeBy = async (name) => (await dbTypes()).find((t) => t.name === name);
 const dbOrder = async (id) =>
   (await svc.from('orders').select('id, status, total_cents, subtotal_cents, discount_cents, promo_code_id, email_sent_at, brand_id, event_id').eq('id', id).single()).data;
@@ -209,7 +216,17 @@ await step('A', 'Super admin: login, desarchivar demotest, cargar saldo, stats',
   const num = (s, label) => { const m = s.match(new RegExp(label + '\\s*(\\d+)', 'i')); return m ? +m[1] : null; };
   const mb = num(statsBefore, 'Marcas activas'), ma = num(statsAfter, 'Marcas activas');
   note('A', `stats antes: "${statsBefore.slice(0, 160)}" | después: "${statsAfter.slice(0, 160)}"`);
-  check('A', 'stats reflejan (Marcas activas +1 al desarchivar)', before.archived_at ? ma === mb + 1 : ma === mb, `${mb} → ${ma}`);
+  // demotest está marcada is_test (0057), así que NO cuenta en los KPIs del
+  // super admin: desarchivarla no mueve "Marcas activas". Eso es justamente lo
+  // que se verifica acá — antes este check esperaba +1 y se puso rojo con la
+  // migración, que es la señal correcta: el filtro de marcas de prueba funciona.
+  check('A', 'desarchivar una marca de PRUEBA no mueve "Marcas activas" (filtro is_test)', ma === mb, `${mb} → ${ma}`);
+  const { data: brandTest } = await svc.from('brands').select('is_test').eq('id', BRAND_ID).single();
+  check('A', 'demotest está marcada como marca de prueba', brandTest?.is_test === true, JSON.stringify(brandTest));
+  // Y la fila sigue estando en la lista, con su badge: se excluye de los
+  // números, no se esconde.
+  const listada = await p.locator('tr', { hasText: 'Demo Test' }).count();
+  check('A', 'la marca de prueba SIGUE en la lista (se excluye de los números, no se oculta)', listada > 0, `filas=${listada}`);
   const rowTxt = (await p.locator('tr', { hasText: 'Demo Test' }).first().innerText().catch(() => '')).replace(/\s+/g, ' ');
   note('A', `fila demotest en cabina: "${rowTxt}"`);
 });
@@ -649,6 +666,16 @@ if (!S.eventId) {
     const r = (await buyer.page.getByRole('button', { name: 'Sumar Cortesía' }).count()) ? await buy({ items: { Cortesía: 1 }, email: `e2e-f-${STAMP}@test.local`, name: `Cortesia Publica ${STAMP}`, tag: 'F' }) : { res: 'sin-boton', url: '', toasts: [], orderId: null };
     await shot(buyer.page, 'F', 'checkout-cortesia-publica');
     note('F', `checkout público de Cortesía S/0 → ${r.res} ${r.url.replace(BASE, '')} toasts=${r.toasts.join('|')}`);
+    // LA garantía del punto 3 (eventos gratis), afirmada y no solo anotada:
+    // este evento COBRA, así que su tipo S/0 no puede ofrecerse al público por
+    // ningún camino. Ni botón en la página, ni orden si alguien fuerza el
+    // checkout. La regla nueva es
+    // `precio > 0 OR (evento.is_free AND NOT tipo.is_courtesy)`, y acá
+    // is_free = false, así que el segundo término no se puede cumplir.
+    const { data: ordCort } = await svc.from('orders').select('id').eq('buyer_email', `e2e-f-${STAMP}@test.local`);
+    check('F', 'evento PAGO: el tipo S/0 NO se ofrece al público ni se puede comprar', r.res === 'sin-boton' && (ordCort ?? []).length === 0, `res=${r.res} órdenes=${(ordCort ?? []).length}`);
+    const cortDb = await typeBy('Cortesía');
+    check('F', 'el tipo S/0 quedó marcado como cortesía en la base', cortDb?.is_courtesy === true, JSON.stringify({ is_courtesy: cortDb?.is_courtesy }));
     if (r.orderId) note('F', `ALERTA: el checkout público creó orden ${r.orderId} para una Cortesía`);
   });
 
@@ -876,13 +903,14 @@ if (!S.eventId) {
     }
 
     // Con credenciales (dummy, cargadas vía el mismo RPC que usa settings) → aparece Tarjeta.
+    const conCredsReales = Boolean(MP_TEST_TOKEN && MP_TEST_PUBKEY);
     const { error: setErr } = await svc.rpc('set_brand_mp_credentials', {
       p_brand_id: BRAND_ID,
-      p_access_token: 'TEST-e2e-dummy-token-no-valido',
-      p_public_key: 'TEST-00000000-0000-0000-0000-000000000000',
+      p_access_token: conCredsReales ? MP_TEST_TOKEN : 'TEST-e2e-dummy-token-no-valido',
+      p_public_key: conCredsReales ? MP_TEST_PUBKEY : 'TEST-00000000-0000-0000-0000-000000000000',
       p_encryption_key: env.BRAND_CREDS_ENCRYPTION_KEY,
     });
-    note('K', `set_brand_mp_credentials dummy (solo demotest): ${setErr ? setErr.message : 'ok'}`);
+    note('K', `set_brand_mp_credentials (solo demotest): ${setErr ? setErr.message : 'ok'} · ${conCredsReales ? 'credenciales de PRUEBA reales' : 'token dummy'}`);
     try {
       const vHold0 = await typeBy('General');
       const email = `e2e-k-${STAMP}@test.local`;
@@ -890,9 +918,26 @@ if (!S.eventId) {
       await shot(p, 'K', 'con-mp-intento-pago');
       const tarjetaShown = await p.getByRole('radio', { name: 'Tarjeta' }).count();
       check('K', 'con credenciales MP: aparece "Tarjeta"', tarjetaShown === 1 || r.res !== 'timeout', `tarjeta=${tarjetaShown}`);
-      const { data: ko } = await svc.from('orders').select('id,status,payment_method').eq('buyer_email', email).eq('event_id', S.eventId);
+      const { data: ko } = await svc.from('orders').select('id,status,payment_method,mp_preference_id').eq('buyer_email', email).eq('event_id', S.eventId);
       const rawDb = /violates|constraint|relation "|duplicate key|syntax error/i.test(r.toasts.join(' '));
-      check('K', 'pago con Tarjeta falla limpio (mensaje entendible, sin error crudo de BD, orden failed, sin ticket)', r.res === 'toast' && !rawDb && (ko ?? []).every((o) => o.status === 'failed'), `${r.res} · ${r.toasts.join('|')} · ${JSON.stringify(ko)}`);
+      // La orden SIEMPRE se tiene que poder crear: hasta la 0055, orders_check
+      // exigía mp_preference_id en el INSERT y el pago con tarjeta moría con un
+      // error crudo de Postgres en la cara del comprador.
+      check('K', 'la orden de MP se crea (0055: ya no explota orders_check en el INSERT)', !rawDb, `res=${r.res} · ${r.toasts.join('|')}`);
+      if (conCredsReales) {
+        // Camino BUENO: la preferencia se crea contra MP y el checkout llega al
+        // Wallet Brick. La orden queda pendiente CON preferencia, esperando el
+        // webhook: no se emite ninguna entrada acá.
+        const o = (ko ?? [])[0];
+        check('K', 'con credenciales de prueba: se crea la preferencia y aparece el Wallet Brick', r.res === 'mp', `res=${r.res}`);
+        check('K', 'la orden queda pending_payment CON mp_preference_id', o?.status === 'pending_payment' && Boolean(o?.mp_preference_id), JSON.stringify(ko));
+        const tk = o ? await dbTickets(o.id) : [];
+        check('K', 'sin webhook no se emite ninguna entrada', tk.length === 0, `tickets=${tk.length}`);
+      } else {
+        // Sin credenciales: MP rechaza el token y el camino de error tiene que
+        // cerrar limpio — orden failed y cupo liberado, sin error crudo de BD.
+        check('K', 'sin credenciales válidas: falla limpio (orden failed, mensaje entendible)', r.res === 'toast' && (ko ?? []).every((o) => o.status === 'failed'), `${r.res} · ${r.toasts.join('|')} · ${JSON.stringify(ko)}`);
+      }
       const g1 = await typeBy('General');
       note('K', `General sold antes/después intento MP: ${vHold0.sold}/${g1.sold}`);
     } finally {

@@ -2,17 +2,27 @@ import type { createAdminClient } from '@/lib/supabase/admin';
 
 type Admin = ReturnType<typeof createAdminClient>;
 
-// ¿Se ofrece este tipo en la página pública? Solo si su precio ACTIVO es > 0.
-// Los tipos S/0 (p. ej. "Cortesía") se emiten desde el panel ("Cortesías").
+// ¿Este tipo se ofrece al público?
 //
-// Por qué tampoco en un evento 100% gratis: startCheckout rechaza total 0 (no
-// existe flujo de emisión gratis sin código promo), así que ofrecerlos sería un
-// callejón sin salida que además deja retener cupo 15 min a cualquiera. Y
-// "gratis" inferido por precio es manipulable (desactivar los tipos pagos
-// expondría la Cortesía). Habilitar eventos gratis requiere un flag explícito
-// de cortesía (migración) + ese flujo de emisión. Ver e2e/REPORT de la Fase 2.
-export function isPubliclyOffered(activePriceCents: number): boolean {
-  return activePriceCents > 0;
+// Hasta la 0056, "precio 0" significaba dos cosas que el sistema no podía
+// distinguir: una CORTESÍA de un evento pago (lista de invitados, jamás
+// pública) y una entrada de un evento GRATIS de verdad (que sí tiene que
+// poder tomarse). Ante la duda se ocultaba todo lo que valiera 0, y los
+// eventos gratis quedaban sin camino.
+//
+// Ahora la intención es explícita y la regla es una sola:
+//
+//   público = precio > 0  OR  (evento.is_free  AND  NOT tipo.is_courtesy)
+//
+// O sea: un tipo S/0 de un evento PAGO sigue oculto, exactamente como antes.
+// Lo único que cambia es que un evento marcado gratis puede ofrecer sus tipos
+// gratis, siempre que no sean cortesías.
+export function isPubliclyOffered(
+  activePriceCents: number,
+  opciones?: { eventoEsGratis?: boolean; esCortesia?: boolean }
+): boolean {
+  if (activePriceCents > 0) return true;
+  return Boolean(opciones?.eventoEsGratis) && !opciones?.esCortesia;
 }
 
 // Momento en que el evento deja de vender: ends_at si existe; si no, 18h tras el
@@ -32,14 +42,14 @@ export async function checkPublicTicketType(admin: Admin, ticketTypeId: string):
   const unavailable = { ok: false as const, message: 'Tipo de entrada no disponible.' };
   const { data: tt } = await admin
     .from('ticket_types')
-    .select('id, event_id, is_active, price_cents')
+    .select('id, event_id, is_active, price_cents, is_courtesy')
     .eq('id', ticketTypeId)
     .maybeSingle();
   if (!tt || !tt.is_active) return unavailable;
 
   const { data: event } = await admin
     .from('events')
-    .select('id, brand_id, is_published, archived_at, cancelled_at, starts_at, ends_at')
+    .select('id, brand_id, is_published, archived_at, cancelled_at, starts_at, ends_at, is_free')
     .eq('id', tt.event_id)
     .maybeSingle();
   if (!event || !event.brand_id || !event.is_published || event.archived_at || event.cancelled_at) {
@@ -61,7 +71,12 @@ export async function checkPublicTicketType(admin: Admin, ticketTypeId: string):
     return unavailable;
   }
   const activePriceCents = (activePrices ?? []).find((r) => r.ticket_type_id === tt.id)?.active_price_cents ?? tt.price_cents;
-  if (!isPubliclyOffered(activePriceCents)) return unavailable;
+  // Fail-closed: si el evento no trajo is_free (deploy viejo, fila rara), se
+  // comporta como evento pago y el tipo S/0 queda oculto — que es el estado
+  // seguro. Nunca al revés.
+  if (!isPubliclyOffered(activePriceCents, { eventoEsGratis: event.is_free === true, esCortesia: tt.is_courtesy === true })) {
+    return unavailable;
+  }
 
   return { ok: true, eventId: event.id, brandId: event.brand_id, activePriceCents };
 }

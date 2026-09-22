@@ -47,7 +47,7 @@ export type TicketType = {
   next_price_cents: number | null; next_starts_at: string | null; next_name: string | null;
   // soldOut viene calculado server-side; NUNCA se mandan capacity/sold al cliente
   // (el comprador no ve cuántas hay ni cuántas quedan — solo el estado "Agotado").
-  is_unlimited: boolean; soldOut: boolean; sort_order: number; color_hex: string | null;
+  is_unlimited: boolean; soldOut: boolean; pocas: boolean; sort_order: number; color_hex: string | null;
   // Todas las fases de precio del tipo (públicas). La compra siempre es sobre
   // la fase VIGENTE.
   phases: { name: string | null; price_cents: number; starts_at: string | null; ends_at: string | null; sort_order: number }[];
@@ -203,9 +203,17 @@ export function FasesEscalera({ t, escalera, cur, incluye, onInc, onDec }: FilaP
           <span className="b-ph__nm">
             {f.titulo}
             {f.sub && <span className="b-ph__fase">{f.sub}</span>}
+            {/* "Quedan pocas": urgencia honesta, calculada en el server, sin el
+                número. Va al lado del nombre y NO toca el botón — el tipo se
+                sigue comprando normal, que es todo el punto de avisarlo. */}
+            {f.estado === 'vigente' && t.pocas && !t.soldOut && (
+              <span className="b-ph__pocas">Quedan pocas</span>
+            )}
             {f.estado === 'vigente' && incluye && <span className="b-ph__inc">{incluye}</span>}
           </span>
-          <span className="b-ph__pr">{formatPEN(f.precio)}</span>
+          {/* Un tipo gratis dice "Gratis", no "S/ 0.00" — misma palabra que
+              usa la tarjeta del listado de marca. */}
+          <span className="b-ph__pr">{f.precio === 0 ? 'Gratis' : formatPEN(f.precio)}</span>
           <span className="b-ph__act">
             <Accion t={t} cur={cur} estado={f.estado} onInc={onInc} onDec={onDec} />
           </span>
@@ -250,7 +258,7 @@ function Linea({ t, escalera, iVig }: { t: TicketType; escalera: Peldano[]; iVig
             <li key={i} className={`b1-line__n${i === iVig ? ' b1-line__n--on' : ''}${i < iVig ? ' b1-line__n--past' : ''}`}>
               <span className="b1-line__dot" aria-hidden="true" />
               <span className="b1-line__lb">{nombreFase(t, f, i, escalera.length)}</span>
-              <span className="b1-line__pr">{formatPEN(f.precio)}</span>
+              <span className="b1-line__pr">{f.precio === 0 ? 'Gratis' : formatPEN(f.precio)}</span>
               {f.sub && i !== iVig && <span className="b1-line__sub">{f.sub}</span>}
               {i === iVig && f.sub && <span className="b1-line__sub">{f.sub.replace(/^.*·\s*/, '')}</span>}
             </li>

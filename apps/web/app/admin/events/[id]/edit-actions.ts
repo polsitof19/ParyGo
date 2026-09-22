@@ -54,6 +54,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   if (!parsed.success) return { ok: false, message: 'Revisa los campos (el enlace de Maps debe empezar con https://).' };
   const requireAge = formData.get('require_age_confirmation') === 'on';
   const requireDni = formData.get('require_dni') === 'on';
+  const isFree = formData.get('is_free') === 'on';
   const sendReminder = formData.get('send_reminder') === 'on';
   const collectAttendeeNames = formData.get('collect_attendee_names') === 'on';
   const allowTransfer = formData.get('allow_transfer') === 'on';
@@ -68,7 +69,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   // — la gente compró con esta fecha. Aplica al dueño Y al super admin.
   const { data: current } = await admin
     .from('events')
-    .select('starts_at, ends_at, is_published')
+    .select('starts_at, ends_at, is_published, is_free')
     .eq('id', eventId)
     .maybeSingle();
   const dateChanging = current?.starts_at
@@ -94,6 +95,22 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
     }
   }
 
+  // Marcar gratis un evento que YA cobró dejaría la página pública diciendo
+  // "Gratis" sobre un evento con ventas pagas. El checkbox del formulario ya
+  // viene deshabilitado en ese caso, pero eso es del cliente: la decisión la
+  // toma el server. Solo se bloquea el CAMBIO — si ya estaba marcado, guardar
+  // el resto del formulario no falla.
+  if (isFree !== (current?.is_free ?? false)) {
+    const { count: pagas } = await admin
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .eq('status', 'paid');
+    if ((pagas ?? 0) > 0) {
+      return { ok: false, message: 'No puedes cambiar si el evento es gratis: ya tiene ventas pagas.' };
+    }
+  }
+
   const { error } = await admin
     .from('events')
     .update({
@@ -106,6 +123,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
       venue_maps_url: parsed.data.venue_maps_url || null,
       require_age_confirmation: requireAge,
       require_dni: requireDni,
+      is_free: isFree,
       send_reminder: sendReminder,
       collect_attendee_names: collectAttendeeNames,
       allow_transfer: allowTransfer,
@@ -523,7 +541,7 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   const admin = createAdminClient();
   const { data: tt } = await admin
     .from('ticket_types')
-    .select('id, event_id, name, price_cents, capacity, sold, is_unlimited, is_active')
+    .select('id, event_id, name, price_cents, capacity, sold, is_unlimited, is_active, is_courtesy')
     .eq('id', ttId)
     .maybeSingle();
   if (!tt || tt.event_id !== eventId) return { ok: false, message: 'Ese tipo no es de este evento.' };
@@ -531,6 +549,7 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   const name = String(formData.get('name') ?? '').trim().slice(0, 80) || tt.name;
   const isActive = formData.get('is_active') === 'on';
   const isUnlimited = formData.get('is_unlimited') === 'on';
+  const isCourtesy = formData.get('is_courtesy') === 'on';
   const newPriceCents = Math.round(parseFloat(String(formData.get('price_soles') ?? '')) * 100);
   const newCapacity = parseInt(String(formData.get('capacity') ?? ''), 10);
   const sold = tt.sold ?? 0;
@@ -539,6 +558,11 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   const description = String(formData.get('description') ?? '').trim().slice(0, 280);
 
   const update: Record<string, unknown> = { name, is_active: isActive, description: description || null };
+  // Cortesía = lista de invitados: nunca se ofrece al público, ni siquiera en
+  // un evento gratis. La BD además exige precio 0 (constraint de la 0056), así
+  // que marcar cortesía un tipo con precio falla con un mensaje claro en vez
+  // de dejar un estado incoherente.
+  update.is_courtesy = isCourtesy;
 
   // --- Descuento por cantidad (bulk): min 0 (off) o 2-50; pct 0-90 ---
   // Tope 10 = máximo por compra (Zod en checkout); umbrales mayores serían inalcanzables.

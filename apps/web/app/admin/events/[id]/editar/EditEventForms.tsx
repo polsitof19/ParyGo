@@ -5,7 +5,7 @@ import { useFormStatus } from 'react-dom';
 import { useFormFeedback } from '@/components/useFormFeedback';
 import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, type EditState } from '../edit-actions';
 
-export type TtRow = { id: string; name: string; description: string; priceCents: number; capacity: number; sold: number; isUnlimited: boolean; isActive: boolean; bulkMinQty: number; bulkDiscountPct: number };
+export type TtRow = { id: string; name: string; description: string; priceCents: number; capacity: number; sold: number; isUnlimited: boolean; isActive: boolean; isCourtesy: boolean; bulkMinQty: number; bulkDiscountPct: number };
 
 // Campos de descuento por cantidad (compartidos entre crear y editar).
 function BulkFields({ minQty, pct, disabled }: { minQty?: number; pct?: number; disabled?: boolean }) {
@@ -34,7 +34,7 @@ function Submit({ label }: { label: string }) {
   return <button type="submit" className="s-btn s-btn--primary s-btn--sm" disabled={pending}>{pending ? 'Guardando…' : label}</button>;
 }
 
-export function EditEventForm(p: { eventId: string; name: string; description: string; startsLocal: string; venueName: string; venueAddress: string; venueMapsUrl: string; requireAgeConfirmation: boolean; requireDni: boolean; sendReminder: boolean; collectAttendeeNames: boolean; allowTransfer: boolean; minAge: number; isPublished?: boolean; hasSales?: boolean; readOnly?: boolean }) {
+export function EditEventForm(p: { eventId: string; name: string; description: string; startsLocal: string; venueName: string; venueAddress: string; venueMapsUrl: string; requireAgeConfirmation: boolean; requireDni: boolean; isFree: boolean; sendReminder: boolean; collectAttendeeNames: boolean; allowTransfer: boolean; minAge: number; isPublished?: boolean; hasSales?: boolean; readOnly?: boolean }) {
   const [state, action] = useFormFeedback(updateEventAction, initial);
   const dateRef = useRef<HTMLInputElement>(null);
   const ro = Boolean(p.readOnly);
@@ -88,6 +88,19 @@ export function EditEventForm(p: { eventId: string; name: string; description: s
             <span>Pedir documento de identidad (DNI/CE) en el checkout</span>
           </label>
           <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Por defecto activado. Sirve para validar identidad en la puerta. Desactívalo si no lo necesitas.</p>
+        </div>
+        <div className="s-field">
+          <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+            <input type="checkbox" name="is_free" defaultChecked={p.isFree} disabled={ro || p.hasSales} />
+            <span>Evento gratis (entrada libre con registro)</span>
+          </label>
+          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>
+            Por defecto desactivado. Actívalo solo si la entrada no se cobra: tus
+            tipos en S/0 pasan a ofrecerse al público y la entrada se emite al
+            instante, sin pago. Los tipos marcados como cortesía siguen sin
+            aparecer — esos se siguen emitiendo desde tu panel.
+            {p.hasSales && ' No se puede cambiar: este evento ya tiene ventas pagas, y marcarlo gratis diría "Gratis" en un evento que cobró.'}
+          </p>
         </div>
         <div className="s-field">
           <label className="s-check" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
@@ -175,6 +188,7 @@ export function TicketTypeEditor({ eventId, tt, readOnly = false }: { eventId: s
         <div className="s-field" style={{ display: 'flex', gap: 16, alignItems: 'flex-end', paddingBottom: 6 }}>
           <label className="s-check" style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}><input type="checkbox" name="is_unlimited" defaultChecked={tt.isUnlimited} disabled={ro} /> Ilimitado</label>
           <label className="s-check" style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}><input type="checkbox" name="is_active" defaultChecked={tt.isActive} disabled={ro} /> Activo</label>
+          <label className="s-check" style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}><input type="checkbox" name="is_courtesy" defaultChecked={tt.isCourtesy} disabled={ro} /> Cortesía</label>
         </div>
       </div>
       <BulkFields minQty={tt.bulkMinQty} pct={tt.bulkDiscountPct} disabled={ro} />

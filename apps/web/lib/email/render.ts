@@ -1,7 +1,7 @@
 // Shell de email con la identidad cálida (mismo sistema que el email del ticket):
 // fondo crema, tarjeta blanca, logo de la marca, color de marca con contraste
 // automático. Email-safe: tablas + estilos inline, fuentes web-safe.
-import { brandColor, brandInk, contrastOn } from '@/lib/brandColors';
+import { brandColor, brandInk, brandFillPair } from '@/lib/brandColors';
 
 export function escapeHtml(s: string): string {
   return String(s)
@@ -30,7 +30,11 @@ export type WarmEmailOpts = {
 // Devuelve { html, primary, onBrand, ink } por si el caller quiere reusar colores.
 export function renderWarmEmail(o: WarmEmailOpts): { html: string } {
   const primary = brandColor(o.primaryColor ?? undefined);
-  const onBrand = contrastOn(primary);
+  // El BOTÓN usa el par medido a 4.5:1 (brandFillPair), no el color crudo: el
+  // promotor elige cualquier color y no hay forma de garantizar que el texto se
+  // lea encima. El crudo se queda en la banda de 6px, que no lleva texto.
+  const par = brandFillPair(primary);
+  const onBrand = par.on;
   const ink = brandInk(o.primaryColor ?? undefined);
   const band = o.tone === 'alert' ? ALERT : primary;
   const eyebrowColor = o.tone === 'alert' ? ALERT : ink;
@@ -51,7 +55,7 @@ export function renderWarmEmail(o: WarmEmailOpts): { html: string } {
     : '';
 
   const button = o.button
-    ? `<a href="${escapeHtml(o.button.url)}" style="display:inline-block;padding:15px 28px;background:${primary};color:${onBrand};text-decoration:none;font-family:${FONT};font-weight:700;font-size:15px;border-radius:999px">${escapeHtml(o.button.label)}</a>`
+    ? `<a href="${escapeHtml(o.button.url)}" style="display:inline-block;padding:15px 28px;background:${par.fill};color:${onBrand};text-decoration:none;font-family:${FONT};font-weight:700;font-size:15px;border-radius:999px">${escapeHtml(o.button.label)}</a>`
     : '';
 
   return {

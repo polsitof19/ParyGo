@@ -65,7 +65,13 @@ export function SettingsForm(props: Props) {
           </Field>
         </div>
         <div className="s-field">
-          <Field label="QR de Yape (PNG, JPG o WEBP · máx 2MB · opcional)" htmlFor="yape_qr" error={err.yape_qr}>
+          <Field label="QR de Yape (opcional)" htmlFor="yape_qr" error={err.yape_qr}>
+            <p className="s-hint" style={{ marginTop: 0, marginBottom: 10 }}>
+              Sube el QR que descargas de tu app Yape. Tus compradores lo escanean
+              en vez de tipear el número. Si no subes ninguno, siguen viendo
+              &laquo;yapea al número&raquo;, que funciona igual.
+              <br />PNG, JPG o WEBP · máx 2 MB.
+            </p>
             <p className="s-card__desc" style={{ marginBottom: 8 }}>Si lo subes, tus compradores lo ven en el paso de pago y escanean directo desde su Yape.</p>
             <div className="s-file">
               {props.yapeQrUrl ? (

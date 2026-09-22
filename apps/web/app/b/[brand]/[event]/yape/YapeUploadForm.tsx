@@ -75,7 +75,18 @@ export function YapeUploadForm({ orderId, expectedAmountCents, buyerName }: Prop
 
       <div className="c-field">
         <label htmlFor="receipt" className="c-label">Captura del comprobante</label>
-        <input id="receipt" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif" required onChange={handleFile} className="c-input" style={{ paddingTop: 11 }} />
+        {/* El input nativo dibuja su propio botón gris ("Choose File" en
+            Safari, sin traducir). Se esconde —sigue en el DOM, enfocable y con
+            su <label> de caption— y lo visible es un botón del sistema más el
+            nombre del archivo. Es la pantalla donde el comprador paga: no
+            puede tener un control que se vea prestado. */}
+        <div className="c-file">
+          <input id="receipt" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif" required onChange={handleFile} className="c-file__input" />
+          <label htmlFor="receipt" className="c-file__btn">
+            {file ? 'Cambiar captura' : 'Elegir captura'}
+          </label>
+          <span className="c-file__name">{file?.name ?? 'Ninguna elegida'}</span>
+        </div>
         {previewUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={previewUrl} alt="" style={{ marginTop: 10, maxHeight: 240, borderRadius: 'var(--r-ctl)', border: '1px solid var(--cream-3)' }} />

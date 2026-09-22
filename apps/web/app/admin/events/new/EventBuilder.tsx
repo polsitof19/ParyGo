@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { pareceCaptura, medirImagen } from '@/lib/flyer';
 import { useFormState, useFormStatus } from 'react-dom';
 import { Plus, Trash2 } from 'lucide-react';
 import { createBrandEventAction, type FormState } from './actions';
@@ -23,6 +24,23 @@ const toISO = (local: string): string | null => {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 };
 const toCents = (s: string): number => Math.round(parseFloat(s || '0') * 100) || 0;
+
+// Una fase de preventa termina AL FINAL del día que el promotor elige, no a la
+// medianoche del día anterior ni a la hora que quedó en el input. Si pone
+// "sube el 24 de setiembre" quiere decir que el 24 todavía se vende al precio
+// viejo. El input es datetime-local, así que sin esto la hora arranca en 00:00
+// y la preventa se corta un día antes de lo que el promotor cree.
+// Todo en hora de Lima, que es la única que existe en este producto.
+const FIN_DEL_DIA = '23:59';
+const alFinDelDia = (local: string): string => {
+  if (!local) return local;
+  const [fecha, hora] = local.split('T');
+  if (!fecha) return local;
+  // Solo se completa lo que está en 00:00 (o vacío): si el promotor puso una
+  // hora a propósito, se respeta.
+  if (!hora || hora === '00:00' || hora === '00:00:00') return `${fecha}T${FIN_DEL_DIA}`;
+  return local;
+};
 const newTT = (): TT => ({ name: '', description: '', unlimited: false, capacity: '100', phases: [{ priceSoles: '', until: '' }] });
 
 export function EventBuilder() {
@@ -30,6 +48,7 @@ export function EventBuilder() {
   const [tts, setTts] = useState<TT[]>([newTT()]);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [coverName, setCoverName] = useState<string | null>(null);
+  const [avisoFlyer, setAvisoFlyer] = useState<string | null>(null);
   const min = nowLocalInput();
   const confirmFreeRef = useRef<HTMLInputElement>(null);
 
@@ -52,20 +71,30 @@ export function EventBuilder() {
     }
   }
 
-  function onCover(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onCover(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0] ?? null;
     setCoverPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return f ? URL.createObjectURL(f) : null; });
     setCoverName(f?.name ?? null);
+    // Aviso de captura de pantalla. NO bloquea: solo lo dice.
+    setAvisoFlyer(null);
+    if (f) {
+      const { width, height } = await medirImagen(f);
+      const v = pareceCaptura(width, height);
+      if (v.esCaptura) setAvisoFlyer(v.motivo);
+    }
   }
   useEffect(() => () => { if (coverPreview) URL.revokeObjectURL(coverPreview); }, [coverPreview]);
 
   const serialized = useMemo(
     () =>
       tts.map((tt, i) => {
+        // El 23:59 también se aplica acá y no solo en el onBlur: si el
+        // promotor escribe la fecha y manda el formulario sin salir del campo,
+        // el onBlur no llega a correr y la preventa se cortaría a las 00:00.
         const phases = tt.phases.map((ph, j) => ({
           price_cents: toCents(ph.priceSoles),
-          starts_at: j === 0 ? null : toISO(tt.phases[j - 1]?.until ?? ''),
-          ends_at: toISO(ph.until),
+          starts_at: j === 0 ? null : toISO(alFinDelDia(tt.phases[j - 1]?.until ?? '')),
+          ends_at: toISO(alFinDelDia(ph.until)),
           sort_order: j + 1,
         }));
         return {
@@ -107,6 +136,17 @@ export function EventBuilder() {
           </FieldRow>
         </div>
         <div className="s-field">
+          <label className="s-check">
+            <input type="checkbox" name="is_free" />
+            Evento gratis (entrada libre con registro)
+          </label>
+          <p className="s-hint">
+            Actívalo solo si la entrada no se cobra: tus tipos en S/0 se ofrecen
+            al público y la entrada se emite al instante, sin pago. Lo puedes
+            cambiar después, mientras no haya ventas.
+          </p>
+        </div>
+        <div className="s-field">
           <FieldRow id="cover" label="Flyer del evento (opcional)" hint="PNG, JPG o WEBP · vertical o cuadrado · máx 10 MB. Se ve grande en la portada y en tu página de marca." error={state.fieldErrors?.cover}>
             <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
               {coverPreview && (
@@ -121,6 +161,17 @@ export function EventBuilder() {
                   </label>
                   <span className="s-file__name">{coverName ?? 'Ninguno elegido'}</span>
                 </div>
+                <p className="s-hint">
+                  Sube el <strong>archivo original</strong> del flyer, no una captura de
+                  pantalla: la captura trae la barra del teléfono y sale borrosa en
+                  grande.
+                </p>
+                {avisoFlyer && (
+                  <p className="s-err" style={{ marginTop: 8 }}>
+                    Esto parece una captura de pantalla. {avisoFlyer} Puedes publicarlo igual,
+                    pero si tienes el archivo original va a verse mucho mejor.
+                  </p>
+                )}
               </div>
             </div>
           </FieldRow>
@@ -213,7 +264,18 @@ export function EventBuilder() {
                       </div>
                       <div>
                         <label className="s-label" style={{ fontSize: 11 }}>{j === tt.phases.length - 1 ? 'Hasta (vacío = hasta el evento)' : 'Sube el'}</label>
-                        <input type="datetime-local" min={min} value={ph.until} onChange={(e) => patchPhase(i, j, { until: e.target.value })} className="s-input" />
+                        <input
+                          type="datetime-local"
+                          min={min}
+                          value={ph.until}
+                          onChange={(e) => patchPhase(i, j, { until: e.target.value })}
+                          // Al salir del campo se completa la hora a 23:59 si
+                          // quedó en 00:00. Se sugiere, no se impone: queda
+                          // escrito en el input y el promotor puede cambiarlo.
+                          onBlur={(e) => patchPhase(i, j, { until: alFinDelDia(e.target.value) })}
+                          className="s-input"
+                        />
+                        <p className="s-hint" style={{ fontSize: 11 }}>Termina a las 23:59 de ese día.</p>
                       </div>
                       {tt.phases.length > 1 && (
                         <button type="button" className="s-btn s-btn--ghost s-btn--sm" onClick={() => patchTT(i, { phases: tt.phases.filter((_, m) => m !== j) })} aria-label="Quitar fase">

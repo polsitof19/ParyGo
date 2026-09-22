@@ -15,7 +15,7 @@
 // =============================================================
 
 import { serverEnv, publicEnv } from '@/lib/env';
-import { brandColor, brandInk, contrastOn } from '@/lib/brandColors';
+import { brandColor, brandInk, brandFillPair } from '@/lib/brandColors';
 import { whatsappLink } from '@/lib/utils';
 
 export type BrandForEmail = {
@@ -114,8 +114,10 @@ function shell(p: { brand: BrandForEmail; primary: string; ink: string; eyebrow:
 </body></html>`;
 }
 
-function ctaButton(href: string, label: string, primary: string, onBrand: string): string {
-  return `<a href="${escapeHtml(href)}" style="display:inline-block;padding:13px 26px;background:${primary};border-radius:999px;color:${onBrand};text-decoration:none;font-family:${FONT};font-weight:700;font-size:15px">${escapeHtml(label)}</a>`;
+// `fill` es el relleno YA ajustado por brandFillPair (no el color crudo de la
+// marca): el texto de encima tiene que leerse.
+function ctaButton(href: string, label: string, fill: string, onBrand: string): string {
+  return `<a href="${escapeHtml(href)}" style="display:inline-block;padding:13px 26px;background:${fill};border-radius:999px;color:${onBrand};text-decoration:none;font-family:${FONT};font-weight:700;font-size:15px">${escapeHtml(label)}</a>`;
 }
 
 // -------------------------------------------------------------
@@ -133,7 +135,13 @@ export async function sendYapeRecoveryEmail(args: {
   const fromEmail = serverEnv.RESEND_FROM_EMAIL ?? 'tickets@parygo.com';
   const theme = args.brand.theme_json ?? {};
   const primary = brandColor(theme.primary_color);
-  const onBrand = contrastOn(primary);
+  // El BOTÓN usa el par medido a 4.5:1 (brandFillPair), no el color crudo de la
+  // marca: el promotor elige cualquier color y no hay forma de garantizar que
+  // el texto se lea encima. El color crudo se sigue usando en la banda de 6px,
+  // que no lleva texto. Misma regla que la web y que la previa del super admin.
+  const par = brandFillPair(primary);
+  const onBrand = par.on;
+  const brandBtn = par.fill;
   const ink = brandInk(theme.primary_color);
   const resumeUrl = `https://${args.brand.slug}.${appDomain()}/${args.eventSlug}/yape?order=${args.orderId}`;
   const waButton = args.brand.whatsapp_e164
@@ -143,7 +151,7 @@ export async function sendYapeRecoveryEmail(args: {
   const inner = `
     <p style="margin:0 0 16px;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}">Hola ${escapeHtml(args.buyerName || '')}, empezaste tu compra para <strong>${escapeHtml(args.eventName)}</strong> pero todavía no la completaste.</p>
     <p style="margin:0 0 18px;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}">Para recibir tu entrada, sube tu comprobante de Yape. Te toma menos de un minuto:</p>
-    <div>${ctaButton(resumeUrl, 'Completar mi compra', primary, onBrand)}</div>
+    <div>${ctaButton(resumeUrl, 'Completar mi compra', brandBtn, onBrand)}</div>
     <p style="margin:16px 0 0;font-family:${FONT};font-size:12.5px;line-height:1.5;color:${INK3}">Si ya pagaste y subiste tu comprobante, ignora este mensaje.</p>`;
 
   const html = shell({ brand: args.brand, primary, ink, eyebrow: 'Te falta un paso', title: `Completa tu entrada`, inner, footer: waButton });
@@ -179,7 +187,13 @@ export async function sendYapePendingDigestEmail(args: {
   const fromEmail = serverEnv.RESEND_FROM_EMAIL ?? 'tickets@parygo.com';
   const theme = args.brand.theme_json ?? {};
   const primary = brandColor(theme.primary_color);
-  const onBrand = contrastOn(primary);
+  // El BOTÓN usa el par medido a 4.5:1 (brandFillPair), no el color crudo de la
+  // marca: el promotor elige cualquier color y no hay forma de garantizar que
+  // el texto se lea encima. El color crudo se sigue usando en la banda de 6px,
+  // que no lleva texto. Misma regla que la web y que la previa del super admin.
+  const par = brandFillPair(primary);
+  const onBrand = par.on;
+  const brandBtn = par.fill;
   const ink = brandInk(theme.primary_color);
   const reviewUrl = `https://${args.brand.slug}.${appDomain()}/admin/events/${args.eventId}/yape`;
   const n = args.pendingCount;

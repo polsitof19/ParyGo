@@ -10,7 +10,7 @@
 // =============================================================
 
 import { serverEnv, publicEnv } from '@/lib/env';
-import { brandColor, brandInk, contrastOn } from '@/lib/brandColors';
+import { brandColor, brandInk, brandFillPair } from '@/lib/brandColors';
 import { formatEventDate, whatsappLink } from '@/lib/utils';
 import type { BrandForEmail } from './sendEventPostponedEmail';
 
@@ -34,13 +34,19 @@ export async function sendEventCancelledEmail(args: {
 
   const theme = args.brand.theme_json ?? {};
   const primary = brandColor(theme.primary_color);
-  const onBrand = contrastOn(primary);
+  // El BOTÓN usa el par medido a 4.5:1 (brandFillPair), no el color crudo de la
+  // marca: el promotor elige cualquier color y no hay forma de garantizar que
+  // el texto se lea encima. El color crudo se sigue usando en la banda de 6px,
+  // que no lleva texto. Misma regla que la web y que la previa del super admin.
+  const par = brandFillPair(primary);
+  const onBrand = par.on;
+  const brandBtn = par.fill;
   const ink = brandInk(theme.primary_color);
   const logoUrl = theme.logo_url ?? null;
   const supportWhatsapp = publicEnv.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? '';
   const dateLabel = args.startsAtIso ? formatEventDate(args.startsAtIso) : '';
 
-  const html = renderHtml({ ...args, dateLabel, primary, onBrand, ink, logoUrl, supportWhatsapp });
+  const html = renderHtml({ ...args, dateLabel, primary, onBrand, brandBtn, ink, logoUrl, supportWhatsapp });
   const text = renderText({ ...args, dateLabel });
 
   const payload: Record<string, unknown> = {
@@ -81,7 +87,7 @@ export async function sendEventCancelledEmail(args: {
 
 function renderHtml(p: {
   buyerName: string; eventName: string; dateLabel: string; reason: string | null;
-  brand: BrandForEmail; primary: string; onBrand: string; ink: string; logoUrl: string | null; supportWhatsapp: string;
+  brand: BrandForEmail; primary: string; onBrand: string; brandBtn: string; ink: string; logoUrl: string | null; supportWhatsapp: string;
 }): string {
   const FONT = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
   const CREAM = '#FBF7F0', CREAM3 = '#EFE6D6', INK = '#231C17', INK2 = '#6B5F54', INK3 = '#A89B8C';

@@ -133,6 +133,17 @@ export async function createBrandEventAction(
     p_ticket_types: parsedTT.data,
   });
 
+  // "Evento gratis" se setea DESPUÉS de crear, con un update común.
+  // create_brand_event enumera sus columnas y es SECURITY DEFINER (consume el
+  // saldo de packs): reescribirla para pasar un flag de presentación sería
+  // mucho más riesgo que beneficio. El evento nace pago —el default seguro— y
+  // si el promotor lo marcó gratis, se corrige acá, antes de que pueda
+  // publicarse (nace is_published = false).
+  if (!error && newEventId && formData.get('is_free') === 'on') {
+    const { error: freeErr } = await admin.from('events').update({ is_free: true }).eq('id', newEventId);
+    if (freeErr) console.error('[createEvent] no se pudo marcar gratis', { newEventId, detalle: freeErr.message });
+  }
+
   if (error || !newEventId) {
     const msg = error?.message ?? '';
     if (msg.includes('INSUFFICIENT_BALANCE')) {

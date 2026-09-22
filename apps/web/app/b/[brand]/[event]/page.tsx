@@ -41,7 +41,7 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
     .select(`
       id, slug, name, description, starts_at, ends_at,
       venue_name, venue_address, venue_lat, venue_lng, venue_maps_url,
-      cover_url, min_age, require_age_confirmation, require_dni, collect_attendee_names, refund_policy, is_published
+      cover_url, min_age, require_age_confirmation, require_dni, collect_attendee_names, refund_policy, is_published, is_free
     `)
     .eq('brand_id', brand.id)
     .eq('slug', eventSlug)
@@ -52,7 +52,7 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
 
   const { data: ticketTypes } = await supabase
     .from('ticket_types')
-    .select('id, name, description, price_cents, capacity, sold, sort_order, color_hex, is_active, is_unlimited, bulk_min_qty, bulk_discount_pct')
+    .select('id, name, description, price_cents, capacity, sold, sort_order, color_hex, is_active, is_unlimited, bulk_min_qty, bulk_discount_pct, is_courtesy')
     .eq('event_id', event.id)
     .eq('is_active', true)
     .order('sort_order')
@@ -95,12 +95,25 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
       phases: phasesByType.get(t.id) ?? [],
       // Estado de agotado calculado SERVER-side; capacity/sold no salen al cliente.
       soldOut: !t.is_unlimited && (t.capacity - t.sold) <= 0,
+      // "Quedan pocas": mismo criterio, misma regla — el NÚMERO no sale al
+      // cliente, solo el booleano. Umbral 10% del aforo del tipo, con piso de
+      // 1 (si el aforo es chico, 10% redondea a 0 y nunca avisaría).
+      // Un tipo ilimitado nunca queda "pocas"; uno agotado tampoco (ya dice
+      // "Agotada", que es más fuerte).
+      pocas: (() => {
+        if (t.is_unlimited) return false;
+        const quedan = t.capacity - t.sold;
+        if (quedan <= 0) return false;
+        return quedan <= Math.max(1, Math.ceil(t.capacity * 0.1));
+      })(),
     };
   });
   // Tipos S/0 (p. ej. "Cortesía") no se ofrecen al público: se emiten desde el
   // panel. El server (reserva y checkout) aplica la misma regla en
   // lib/publicTicketGuard — esto es solo la presentación.
-  const publicTicketTypes = ticketTypesWithPhase.filter((t) => isPubliclyOffered(t.active_price_cents));
+  const publicTicketTypes = ticketTypesWithPhase.filter((t) =>
+    isPubliclyOffered(t.active_price_cents, { eventoEsGratis: event.is_free === true, esCortesia: t.is_courtesy === true })
+  );
 
   // MercadoPago: the card option only shows if THIS brand configured MP creds.
   // The public_key (inherently public) is read server-side and handed to the

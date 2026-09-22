@@ -13,7 +13,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv, publicEnv } from '@/lib/env';
 import { formatPEN, formatEventDate, whatsappLink } from '@/lib/utils';
-import { brandColor, brandInk, contrastOn } from '@/lib/brandColors';
+import { brandColor, brandInk, brandFillPair } from '@/lib/brandColors';
 // La línea de responsabilidad del organizador es la MISMA que la del sitio:
 // el texto vive en un solo lugar para que no se desincronicen.
 import { textoPago, contactoHref } from '@/lib/organizador';
@@ -107,7 +107,13 @@ export async function sendTicketEmail(orderId: string): Promise<SendTicketEmailR
   //    TEXTO/acento sobre el fondo claro (un #FFEE8C claro se oscurece para leerse).
   const theme = brand?.theme_json ?? {};
   const primary = brandColor(theme.primary_color);
-  const onBrand = contrastOn(primary);
+  // El BOTÓN usa el par medido a 4.5:1 (brandFillPair), no el color crudo de la
+  // marca: el promotor elige cualquier color y no hay forma de garantizar que
+  // el texto se lea encima. El color crudo se sigue usando en la banda de 6px,
+  // que no lleva texto. Misma regla que la web y que la previa del super admin.
+  const par = brandFillPair(primary);
+  const onBrand = par.on;
+  const brandBtn = par.fill;
   const ink = brandInk(theme.primary_color);
   const logoUrl = theme.logo_url ?? null;
 
@@ -126,6 +132,7 @@ export async function sendTicketEmail(orderId: string): Promise<SendTicketEmailR
     supportWhatsapp,
     primary,
     onBrand,
+    brandBtn,
     ink,
     logoUrl,
   });
@@ -235,6 +242,7 @@ function renderHtml(p: {
   supportWhatsapp: string;
   primary: string;
   onBrand: string;
+  brandBtn: string;
   ink: string;
   logoUrl: string | null;
 }): string {
@@ -312,7 +320,7 @@ function renderHtml(p: {
           )}, tu pago fue aprobado. Esta es tu entrada &mdash; guard&aacute; este email o abr&iacute; tu entrada con el bot&oacute;n.</p>
           <a href="${
             p.ticketUrl
-          }" style="display:inline-block;padding:15px 28px;background:${p.primary};color:${p.onBrand};text-decoration:none;font-family:${FONT};font-weight:700;font-size:15px;border-radius:999px">${p.tickets.length > 1 ? 'Ver mis entradas con QR' : 'Ver mi entrada con QR'} &rarr;</a>
+          }" style="display:inline-block;padding:15px 28px;background:${p.brandBtn};color:${p.onBrand};text-decoration:none;font-family:${FONT};font-weight:700;font-size:15px;border-radius:999px">${p.tickets.length > 1 ? 'Ver mis entradas con QR' : 'Ver mi entrada con QR'} &rarr;</a>
           <p style="margin:12px 0 0;font-family:${FONT};font-size:12px;line-height:1.4;color:${INK3}">Tu link permanente: <a href="${
             p.ticketUrl
           }" style="color:${p.ink};text-decoration:none">${escapeHtml(p.ticketUrl)}</a></p>
