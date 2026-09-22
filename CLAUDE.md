@@ -124,6 +124,9 @@ para OK de Paul.
   MercadoPago está LEVANTADO — no volver a reportarlo como pendiente.
 
 ## Sistema de diseño — reglas duras
+- Las skills de diseño (emil, impeccable, taste) son CONSEJO GENERAL; ante
+  cualquier contradicción manda CLAUDE.md (tokens, brandFillPair, benchmarks y
+  tests de contraste). impeccable se invoca A MANO, nunca por hook.
 - Fuente única: apps/*/app/styles/parygo-tokens.css, extraído de la landing y
   corregido para pasar AA. Está DUPLICADO en apps/landing y apps/web a propósito
   (dos apps Next separadas); `npm run test:tokens` falla si divergen y corre en
