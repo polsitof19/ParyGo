@@ -36,6 +36,8 @@ const eventSchema = z.object({
   // Enlace de Google Maps: debe ser https (va a un href). Vacío permitido.
   venue_maps_url: z.string().url().startsWith('https://').max(500).optional().or(z.literal('')),
   min_age: z.string().optional().or(z.literal('')),
+  // Límite de entradas por persona (0060). Vacío = sin límite.
+  max_per_person: z.string().optional().or(z.literal('')),
 });
 
 // ===== 1) Editar campos del evento (libre) =====
@@ -50,6 +52,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
     starts_at: formData.get('starts_at'), venue_name: formData.get('venue_name') ?? '',
     venue_address: formData.get('venue_address') ?? '', venue_maps_url: formData.get('venue_maps_url') ?? '',
     min_age: formData.get('min_age') ?? '',
+    max_per_person: formData.get('max_per_person') ?? '',
   });
   if (!parsed.success) return { ok: false, message: 'Revisa los campos (el enlace de Maps debe empezar con https://).' };
   const requireAge = formData.get('require_age_confirmation') === 'on';
@@ -128,6 +131,12 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
       collect_attendee_names: collectAttendeeNames,
       allow_transfer: allowTransfer,
       min_age: parsed.data.min_age ? Math.min(99, Math.max(0, parseInt(parsed.data.min_age, 10) || 18)) : 18,
+      // Vacío o 0 = sin límite (NULL). El tope duro (1..100) lo impone también
+      // el CHECK de la 0060: esto es la cara amable, no la garantía.
+      max_per_person: (() => {
+        const n = parseInt(String(parsed.data.max_per_person ?? ''), 10);
+        return Number.isFinite(n) && n > 0 ? Math.min(100, n) : null;
+      })(),
     })
     .eq('id', eventId)
     .eq('brand_id', brandId); // scoped

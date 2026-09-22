@@ -125,6 +125,9 @@ export type Database = {
           ends_at: string | null
           id: string
           is_free: boolean
+          // 0060: NULL = sin límite. Agregada A MANO (regenerar el archivo entero
+          // rompe tipos afinados; ver CLAUDE.md).
+          max_per_person: number | null
           is_published: boolean
           min_age: number
           require_age_confirmation: boolean
@@ -154,6 +157,7 @@ export type Database = {
           ends_at?: string | null
           id?: string
           is_free?: boolean
+          max_per_person?: number | null
           is_published?: boolean
           min_age?: number
           require_age_confirmation?: boolean
@@ -183,6 +187,7 @@ export type Database = {
           ends_at?: string | null
           id?: string
           is_free?: boolean
+          max_per_person?: number | null
           is_published?: boolean
           min_age?: number
           require_age_confirmation?: boolean

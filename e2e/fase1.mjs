@@ -31,7 +31,7 @@ if (FORBIDDEN_SLUGS.has(BRAND)) throw new Error('marca prohibida');
 // ---------------- resultados ----------------
 const R = {};
 const S = { stamp: STAMP, eventSlug: EVENT_SLUG, promo: PROMO, orders: {} };
-const LETTERS = 'ABCDEFGHIJK'.split('');
+const LETTERS = 'ABCDEFGHIJKL'.split('');
 for (const k of LETTERS) R[k] = { ok: null, checks: [], notes: [] };
 const check = (k, name, cond, detail = '') => {
   R[k].checks.push({ name, ok: !!cond, detail: String(detail).slice(0, 400) });
@@ -961,6 +961,81 @@ if (!S.eventId) {
     await p.locator('#buyer_name').waitFor();
     check('K', 'tras quitar MP: "Tarjeta" desaparece de nuevo', (await p.getByRole('radio', { name: 'Tarjeta' }).count()) === 0);
     await shot(p, 'K', 'sin-mp-de-nuevo');
+  });
+
+  // =====================================================================
+  // PASO PERMANENTE (2026-09-22). Un evento GRATIS se reclama DESDE LA
+  // PANTALLA, como lo hace una persona. Existe porque el camino gratis estuvo
+  // roto en producción sin que ninguna suite lo notara: startCheckout cortaba
+  // con "Total inválido." antes de llegar a la rama que emite sin pago, y la
+  // suite que cubre eventos gratis (e2e/nuevo-0053-0058.mjs) arma las órdenes
+  // DIRECTO contra la base. Probar el RPC no prueba el checkout.
+  await step('L', 'Evento GRATIS: reclamo desde la pantalla → QR sin pagar', async () => {
+    const p = buyer.page;
+    const inicio = new Date(Date.now() + 9 * 86400000);
+    const slugGratis = `e2e-gratis-pantalla-${STAMP}`;
+    const { data: evG, error: evErr } = await svc.from('events').insert({
+      brand_id: BRAND_ID, slug: slugGratis, name: `E2E Gratis Pantalla ${STAMP}`,
+      starts_at: inicio.toISOString(),
+      ends_at: new Date(inicio.getTime() + 7 * 3600000).toISOString(),
+      venue_name: 'Local E2E', is_published: true, is_free: true, min_age: 0,
+    }).select('id, slug, is_free').single();
+    if (evErr) throw new Error('no se pudo crear el evento gratis: ' + evErr.message);
+    S.eventoGratisId = evG.id;
+    const { error: ttErr } = await svc.from('ticket_types').insert({
+      event_id: evG.id, name: 'Entrada', price_cents: 0, capacity: 5,
+      is_active: true, is_unlimited: false, is_courtesy: false, max_scans: 1, sort_order: 1,
+    });
+    if (ttErr) throw new Error('no se pudo crear el tipo gratis: ' + ttErr.message);
+
+    await go(p, `/${slugGratis}`);
+    const txt = (await bodyText(p, 600)).replace(/\s+/g, ' ');
+    await shot(p, 'L', 'evento-gratis');
+    // Un tipo S/0 de un evento marcado GRATIS y no cortesía SÍ se ofrece.
+    check('L', 'el tipo gratis se ofrece en público (S/ 0 visible)', /Entrada/.test(txt) && /S\/\s*0/.test(txt), txt.slice(0, 200));
+    check('L', 'el copy no promete un pago que no existe', !/Yapeas el monto/.test(txt), txt.slice(0, 240));
+
+    await vis(p.getByRole('button', { name: 'Sumar Entrada' })).click();
+    await sleep(1200);
+    await ctaBtn(p).click();
+    await p.locator('#buyer_name').waitFor({ timeout: 15000 });
+    const emailG = `e2e-l-${STAMP}@test.local`;
+    await p.fill('#buyer_name', `Gratis ${STAMP}`);
+    await p.fill('#buyer_email', emailG);
+    await p.fill('#buyer_phone', '+51 999 111 222');
+    if (await p.locator('#buyer_dni').count()) await p.fill('#buyer_dni', '12345678');
+    if (await p.locator('input[name="age_ok"]').count()) await p.check('input[name="age_ok"]');
+    const cta = (await vis(p.locator('button[type=submit][form="checkout-form"]')).innerText()).replace(/\s+/g, ' ');
+    await shot(p, 'L', 'datos-gratis');
+    check('L', 'el CTA dice "Reclama tu entrada gratis" (no "Pagar")', /Reclama tu entrada gratis/i.test(cta), cta);
+    check('L', 'no se pregunta forma de pago en un evento gratis', (await p.getByRole('radio', { name: 'Yape' }).count()) === 0 && (await p.getByRole('radio', { name: 'Tarjeta' }).count()) === 0);
+
+    await vis(p.locator('button[type=submit][form="checkout-form"]')).click();
+    const res = await Promise.race([
+      p.waitForURL(/\/confirmacion\?order=/, { timeout: 30000 }).then(() => 'nav'),
+      p.waitForFunction(() => (window.__toastLog ?? []).length > 0, null, { timeout: 30000 }).then(() => 'toast'),
+    ]).catch(() => 'timeout');
+    await sleep(800);
+    const toastsG = await toastLog(p);
+    const orderId = new URL(p.url()).searchParams.get('order');
+    await shot(p, 'L', 'confirmacion-gratis');
+    // Esta es LA regresión: hasta el 2026-09-22 acá salía "Total inválido.".
+    check('L', 'el reclamo llega a la confirmación sin pasar por Yape', res === 'nav' && !!orderId, `${res} · ${p.url()} · ${toastsG.join('|')}`);
+    if (orderId) {
+      const o = await dbOrder(orderId);
+      const tk = await dbTickets(orderId);
+      S.orders.L = orderId;
+      check('L', 'orden PAGADA con total 0 y una entrada emitida', o?.status === 'paid' && o?.total_cents === 0 && tk.length === 1, `${o?.status} total=${o?.total_cents} tickets=${tk.length}`);
+      if (tk[0]) {
+        await go(p, `/t/${tk[0].qr_code}`);
+        const qrEls = await p.evaluate(() => [...document.querySelectorAll('svg, img, canvas')].filter((e) => { const r = e.getBoundingClientRect(); return r.width >= 120 && r.height >= 120 && Math.abs(r.width - r.height) < 8; }).length);
+        const tTxt = await bodyText(p, 200);
+        await shot(p, 'L', 'ticket-gratis');
+        check('L', '/t/[uuid] de la entrada gratis carga con QR', qrEls > 0 && !/no encontr|404/i.test(tTxt), `qrEls=${qrEls} · ${tTxt.slice(0, 120)}`);
+      }
+    }
+    // El evento queda archivado acá mismo (además cleanup archiva los e2e-*).
+    await svc.from('events').update({ archived_at: new Date().toISOString(), is_published: false }).eq('id', evG.id);
   });
 }
 

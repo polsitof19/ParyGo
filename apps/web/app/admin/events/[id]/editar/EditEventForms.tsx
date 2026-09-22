@@ -34,7 +34,7 @@ function Submit({ label }: { label: string }) {
   return <button type="submit" className="s-btn s-btn--primary s-btn--sm" disabled={pending}>{pending ? 'Guardando…' : label}</button>;
 }
 
-export function EditEventForm(p: { eventId: string; name: string; description: string; startsLocal: string; venueName: string; venueAddress: string; venueMapsUrl: string; requireAgeConfirmation: boolean; requireDni: boolean; isFree: boolean; sendReminder: boolean; collectAttendeeNames: boolean; allowTransfer: boolean; minAge: number; isPublished?: boolean; hasSales?: boolean; readOnly?: boolean }) {
+export function EditEventForm(p: { eventId: string; name: string; description: string; startsLocal: string; venueName: string; venueAddress: string; venueMapsUrl: string; requireAgeConfirmation: boolean; requireDni: boolean; isFree: boolean; sendReminder: boolean; collectAttendeeNames: boolean; allowTransfer: boolean; minAge: number; maxPerPerson: number | null; isPublished?: boolean; hasSales?: boolean; readOnly?: boolean }) {
   const [state, action] = useFormFeedback(updateEventAction, initial);
   const dateRef = useRef<HTMLInputElement>(null);
   const ro = Boolean(p.readOnly);
@@ -100,6 +100,17 @@ export function EditEventForm(p: { eventId: string; name: string; description: s
             instante, sin pago. Los tipos marcados como cortesía siguen sin
             aparecer — esos se siguen emitiendo desde tu panel.
             {p.hasSales && ' No se puede cambiar: este evento ya tiene ventas pagas, y marcarlo gratis diría "Gratis" en un evento que cobró.'}
+          </p>
+        </div>
+        <div className="s-field">
+          <label className="s-label" htmlFor="ev-maxpp">Máximo de entradas por persona</label>
+          <input id="ev-maxpp" name="max_per_person" type="number" min={0} max={100} placeholder="Sin límite" defaultValue={p.maxPerPerson ?? ''} className="s-input" disabled={ro} />
+          <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>
+            Vacío = sin límite. Si pones un número, cada persona puede llevarse
+            como máximo esa cantidad en todo el evento: se cuenta por correo Y
+            por documento, así que cambiar de correo con el mismo documento no
+            da más entradas. Sirve sobre todo en eventos gratis, donde sin tope
+            unos pocos se llevan el aforo.
           </p>
         </div>
         <div className="s-field">

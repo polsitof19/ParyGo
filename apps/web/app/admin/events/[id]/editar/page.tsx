@@ -30,7 +30,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
   const admin = createAdminClient();
   const { data: event } = await admin
     .from('events')
-    .select('id, brand_id, name, description, starts_at, venue_name, venue_address, venue_maps_url, require_age_confirmation, require_dni, send_reminder, collect_attendee_names, allow_transfer, min_age, cover_url, is_published, archived_at, cancelled_at, is_free')
+    .select('id, brand_id, name, description, starts_at, venue_name, venue_address, venue_maps_url, require_age_confirmation, require_dni, send_reminder, collect_attendee_names, allow_transfer, min_age, max_per_person, cover_url, is_published, archived_at, cancelled_at, is_free')
     .eq('id', params.id)
     .maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
@@ -75,6 +75,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
           requireAgeConfirmation={event.require_age_confirmation ?? false}
           requireDni={event.require_dni ?? true}
           isFree={event.is_free ?? false}
+          maxPerPerson={event.max_per_person ?? null}
           sendReminder={event.send_reminder ?? false}
           collectAttendeeNames={event.collect_attendee_names ?? false}
           allowTransfer={event.allow_transfer ?? false}

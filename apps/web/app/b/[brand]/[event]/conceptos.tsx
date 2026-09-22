@@ -39,6 +39,9 @@ export type Event = {
   venue_lat?: number | null; venue_lng?: number | null; venue_maps_url?: string | null;
   cover_url?: string | null; refund_policy?: string | null;
   require_age_confirmation: boolean; require_dni: boolean; collect_attendee_names: boolean;
+  // Evento GRATIS (0056). Manda en el copy de toda la compra: sin gratis, el
+  // mismo tipo a S/0 sería una cortesía y no se ofrece en público.
+  is_free?: boolean | null;
 };
 
 export type TicketType = {
@@ -241,8 +244,16 @@ function Linea({ t, escalera, iVig }: { t: TicketType; escalera: Peldano[]; iVig
   );
 }
 
-export function AsiDeSimple({ conYape }: { conYape: boolean }) {
-  const pasos = [
+export function AsiDeSimple({ conYape, gratis = false }: { conYape: boolean; gratis?: boolean }) {
+  // En un evento gratis no hay paso de pago: el trámite del medio son TUS
+  // DATOS, y el QR sale al instante (no "cuando aprueben el Yape").
+  const pasos = gratis
+    ? [
+        { Icono: Ticket, t: 'Eliges', d: 'Sumas las entradas que quieres.' },
+        { Icono: Smartphone, t: 'Dejas tus datos', d: 'Nombre, correo y teléfono. Nada de pagos.' },
+        { Icono: Mail, t: 'Tu QR al toque', d: 'Te aparece en pantalla y te llega al correo.' },
+      ]
+    : [
     { Icono: Ticket, t: 'Eliges', d: 'Sumas las entradas que quieres.' },
     { Icono: Smartphone, t: conYape ? 'Yapeas' : 'Pagas', d: conYape ? 'Yapeas el monto exacto y subes la captura.' : 'Pagas con tu tarjeta.' },
     { Icono: Mail, t: 'Tu QR al correo', d: 'Te llega tu entrada. La muestras en la puerta.' },

@@ -4,7 +4,12 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { query } from './mgmt.mjs';
 
-const files = readdirSync('supabase/migrations').filter((f) => /^00(5[3-9])_/.test(f)).sort();
+// Por defecto ensaya de la 0053 en adelante; con argumento, solo las que
+// empiezan con ese prefijo:  node supabase/dryrun.mjs 0060
+const filtro = process.argv[2];
+const files = readdirSync('supabase/migrations')
+  .filter((f) => (filtro ? f.startsWith(filtro) : /^00(5[3-9]|[6-9]\d)_/.test(f)))
+  .sort();
 for (const f of files) {
   const sql = readFileSync('supabase/migrations/' + f, 'utf8');
   try {

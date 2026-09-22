@@ -232,7 +232,22 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     });
   }
 
-  if (totalCents <= 0) {
+  // EVENTO GRATIS (0056): un total de 0 es LEGÍTIMO si el evento está marcado
+  // gratis; en cualquier otro caso sigue siendo un error.
+  //
+  // Este `return` mataba el camino gratis entero: la rama que emite sin pago
+  // vive más abajo (isFree) y nunca se alcanzaba, así que el comprador de un
+  // evento gratis recibía "Total inválido." y no se creaba ni la orden.
+  // Medido contra demotest el 2026-09-22 con un evento gratis real: 0 órdenes,
+  // 0 tickets. No lo vio nadie porque la suite que cubre eventos gratis
+  // (e2e/nuevo-0053-0058.mjs) arma las órdenes DIRECTO contra la base y no pasa
+  // por startCheckout. Por eso el E2E de fase 1 ahora reclama una entrada
+  // gratis DESDE LA PANTALLA (paso L).
+  //
+  // La condición es la misma que manda en el resto del sistema —evento gratis
+  // Y total 0— y se vuelve a exigir más abajo antes de emitir: un total 0
+  // inesperado en un evento que cobra no emite nada.
+  if (totalCents < 0 || (totalCents === 0 && event.is_free !== true)) {
     return { ok: false, message: 'Total inválido.' };
   }
 
@@ -337,7 +352,18 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   if (reserveErr) {
     await admin.from('orders').update({ status: 'failed' }).eq('id', order.id);
     await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
-    const agotado = /insufficient_stock/.test(reserveErr.message ?? '');
+    const msg = reserveErr.message ?? '';
+    const agotado = /insufficient_stock/.test(msg);
+    // Límite por persona (0060). El RPC es el que decide —bajo advisory lock—,
+    // así que acá solo se traduce su error a algo que el comprador entienda.
+    // El número sale del propio error para no volver a consultarlo.
+    const limite = /per_person_limit/.test(msg) ? Number(msg.match(/limit=(\d+)/)?.[1] ?? 0) : 0;
+    if (limite > 0) {
+      return {
+        ok: false,
+        message: `Este evento permite ${limite} entrada${limite === 1 ? '' : 's'} por persona, y ya llegaste a ese máximo con tu correo o tu documento.`,
+      };
+    }
     return {
       ok: false,
       message: agotado

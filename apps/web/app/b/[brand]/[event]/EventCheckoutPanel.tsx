@@ -237,15 +237,25 @@ export function EventCheckoutPanel({
   const bulkSavings = applied ? 0 : sorted.reduce((s, t) => { const q = qty[t.id] ?? 0; return s + q * (t.active_price_cents - bulkUnitPrice(t, q)); }, 0);
   const docLabel = docType === 'dni' ? 'DNI' : docType === 'ce' ? 'Carné ext.' : 'Pasaporte';
 
+  // GRATIS de verdad: o el evento está marcado gratis y el total quedó en 0, o
+  // un código del 100% lo dejó en 0. Es la MISMA condición que exige el server
+  // antes de emitir sin pago (evento gratis Y total 0): si un evento gratis
+  // tuviera además un tipo pago, el total deja de ser 0 y esto vuelve a ser una
+  // compra normal, como corresponde.
+  const eventoGratis = event.is_free === true && finalTotal === 0;
+  const esGratis = applied?.isFree === true || eventoGratis;
+
   // Label ÚNICO del CTA (mismo texto en el botón del rail y en la barra mobile).
   const ctaLabel = isPending
     ? 'Procesando…'
-    : applied?.isFree
-      ? 'Obtener entrada gratis'
-      : method === 'mercadopago'
-        ? `Pagar ${formatPEN(finalTotal)}`
-        : 'Pagar con Yape';
-  const isYape = method === 'yape_manual' && !applied?.isFree;
+    : eventoGratis
+      ? 'Reclama tu entrada gratis'
+      : applied?.isFree
+        ? 'Obtener entrada gratis'
+        : method === 'mercadopago'
+          ? `Pagar ${formatPEN(finalTotal)}`
+          : 'Pagar con Yape';
+  const isYape = method === 'yape_manual' && !esGratis;
 
   function submitCheckout(form: HTMLFormElement) {
     if (itemsForPromo.length === 0) { toast.error('Elige al menos una entrada.'); setStep(1); return; }
@@ -286,7 +296,9 @@ export function EventCheckoutPanel({
   const lineItems = selectedTypes.map((t) => ({ id: t.id, name: t.name, q: qty[t.id]!, amount: qty[t.id]! * t.active_price_cents }));
   // Confianza y CTA reflejan los métodos REALES de la marca: no prometemos un
   // medio de pago que el organizador no configuró.
-  const payLabel = brand.yape_number && mpConfigured
+  const payLabel = eventoGratis
+    ? 'gratis'
+    : brand.yape_number && mpConfigured
     ? 'Pagas con Yape o tarjeta'
     : brand.yape_number
       ? 'Pagas con Yape'
@@ -297,6 +309,9 @@ export function EventCheckoutPanel({
 
 // Una sola línea, como se lo diría alguien: nada de enumeraciones de tres.
 function fraseConfianza(pago: string): string {
+  // Evento gratis: no hay pago que explicar. Lo que hay que prometer es que el
+  // QR sale al instante y que no se cobra nada.
+  if (pago === 'gratis') return 'No pagas nada: dejas tus datos y tu entrada te llega al correo al toque.';
   if (/tarjeta/i.test(pago) && /Yape/i.test(pago)) return 'Pagas por Yape o tarjeta y tu entrada te llega al correo al toque.';
   if (/tarjeta/i.test(pago)) return 'Pagas con tarjeta y tu entrada te llega al correo al toque.';
   return 'Pagas por Yape y tu entrada te llega al correo al toque.';
@@ -339,7 +354,7 @@ function fraseConfianza(pago: string): string {
             </section>
             <p className="b-trust">{fraseConfianza(payLabel)}</p>
 
-            <AsiDeSimple conYape={!!brand.yape_number} />
+            <AsiDeSimple conYape={!!brand.yape_number} gratis={eventoGratis} />
 
             <MasInfo event={event} brand={brand} />
           </div>
@@ -361,7 +376,7 @@ function fraseConfianza(pago: string): string {
               </>
             )}
             <button type="button" className="b-btn b-btn--go" disabled={totalItems === 0} onClick={() => setStep(2)}>
-              {applied?.isFree ? 'Continuar' : ctaMetodo} <ArrowRight aria-hidden="true" />
+              {esGratis ? 'Continuar' : ctaMetodo} <ArrowRight aria-hidden="true" />
             </button>
           </aside>
         </div>
@@ -460,7 +475,7 @@ function fraseConfianza(pago: string): string {
             )}
 
             {/* Pago: solo se pregunta si de verdad hay dos formas. */}
-            {!applied?.isFree && brand.yape_number && mpConfigured && (
+            {!esGratis && brand.yape_number && mpConfigured && (
               <div className="b-panel">
                 <p className="b-panel__t">¿Cómo pagas?</p>
                 <div className="b-pays" role="radiogroup" aria-label="Forma de pago">
@@ -494,7 +509,11 @@ function fraseConfianza(pago: string): string {
                 </div>
               )}
               <div className="b-resumen"><span>Total</span><b>{formatPEN(finalTotal)}</b></div>
-              <p className="b-seguro"><Lock aria-hidden="true" /> {payLabel}</p>
+              {/* El candado es la promesa del pago. En un evento gratis no hay
+                  pago, así que no hay nada que asegurar: va la promesa real. */}
+              {eventoGratis
+                ? <p className="b-seguro">Entrada gratis · no se te cobra nada</p>
+                : <p className="b-seguro"><Lock aria-hidden="true" /> {payLabel}</p>}
 
               {!applied && (
                 showPromo ? (
@@ -533,12 +552,12 @@ function fraseConfianza(pago: string): string {
           </div>
           {shownStep === 1 ? (
             <button type="button" className="b-btn b-btn--go" disabled={totalItems === 0} onClick={() => setStep(2)}>
-              {applied?.isFree ? 'Continuar' : ctaMetodo} <ArrowRight aria-hidden="true" />
+              {esGratis ? 'Continuar' : ctaMetodo} <ArrowRight aria-hidden="true" />
             </button>
           ) : (
             <button type="submit" form="checkout-form" className="b-btn b-btn--go" disabled={isPending || totalItems === 0}>
               {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              {!isPending && method === 'mercadopago' && !applied?.isFree && <Lock className="h-4 w-4" />}
+              {!isPending && method === 'mercadopago' && !esGratis && <Lock className="h-4 w-4" />}
               {ctaLabel}
             </button>
           )}

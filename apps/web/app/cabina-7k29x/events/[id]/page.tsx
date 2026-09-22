@@ -29,7 +29,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
     .from('events')
     .select(`
       id, slug, name, description, starts_at, ends_at,
-      venue_name, venue_address, venue_maps_url, require_age_confirmation, require_dni, send_reminder, collect_attendee_names, allow_transfer, min_age, is_published, refund_policy, cover_url, is_free,
+      venue_name, venue_address, venue_maps_url, require_age_confirmation, require_dni, send_reminder, collect_attendee_names, allow_transfer, min_age, max_per_person, is_published, refund_policy, cover_url, is_free,
       archived_at, brand_id,
       brand:brands ( slug, name, theme_json )
     `)
@@ -147,6 +147,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
           name={event.name}
           description={event.description ?? ''}
           isFree={event.is_free ?? false}
+          maxPerPerson={event.max_per_person ?? null}
           startsLocal={toLimaLocal(event.starts_at)}
           venueName={event.venue_name ?? ''}
           venueAddress={event.venue_address ?? ''}
