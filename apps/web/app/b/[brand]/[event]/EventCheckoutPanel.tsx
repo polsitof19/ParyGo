@@ -630,7 +630,13 @@ function Hero({ event, direccion }: { event: Event; direccion: Direccion }) {
           {direccion === 'canvas' && <span className="b-hero__fade" aria-hidden="true" />}
         </button>
       ) : (
-        <div className="b-hero__shot b-hero__shot--ph" aria-hidden="true"><span className="b-hero__fade" /></div>
+        // Sin flyer NO se dibuja la caja. En la dirección Canvas el marcador
+        // quedaba sin fondo (client.css:842), o sea un rectángulo vacío de
+        // 203px arriba de todo — medido en la página de Standly ya publicada.
+        // Un evento sin flyer arranca por su nombre, que es lo que tiene.
+        direccion !== 'canvas' && (
+          <div className="b-hero__shot b-hero__shot--ph" aria-hidden="true"><span className="b-hero__fade" /></div>
+        )
       )}
 
       {/* Ficha bajo el póster: solo en escritorio (en teléfono los datos
