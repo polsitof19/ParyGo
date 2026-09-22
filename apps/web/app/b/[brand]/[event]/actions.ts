@@ -427,7 +427,11 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     for (const r of resolved) r.price_cents = finalByType.get(r.id) ?? r.price_cents;
   }
 
-  await admin.from('events_log').insert({
+  // La bitácora NO se espera acá: es un registro forense, no un paso del
+  // reclamo, y esperarla cuesta un viaje entero a la base (la base está en
+  // us-west-1 y el Worker corre en Lima: ~300ms cada viaje). Se dispara ahora y
+  // se espera junto con el resto, más abajo, para que igual quede escrita.
+  const logCreada = admin.from('events_log').insert({
     brand_id: event.brand_id,
     event_id: event.id,
     order_id: order.id,
@@ -451,10 +455,14 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     // Un evento gratis no pasó por Yape: se etiqueta como tal. Un promo del
     // 100% sobre un evento pago sí nació de un camino de pago, así que
     // conserva su motivo.
-    const issue = await issueTicketsForOrder({
-      orderId: order.id,
-      reason: event.is_free === true ? 'free_event' : 'yape_approved',
-    });
+    // La emisión y la bitácora, juntas: la bitácora no bloquea la entrada.
+    const [issue] = await Promise.all([
+      issueTicketsForOrder({
+        orderId: order.id,
+        reason: event.is_free === true ? 'free_event' : 'yape_approved',
+      }),
+      logCreada,
+    ]);
     if (issue.ok) {
       // El email NO bloquea el reclamo (0062). La entrada ya existe y el QR se
       // muestra en la confirmación y en /t/<uuid>; el correo es la copia y sale
@@ -472,6 +480,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     }
     // No se pudo emitir (incl. oversold_no_capacity): NO marcamos pagada. Fallar
     // la orden y liberar el hold. issueTicketsForOrder ya logueó el detalle.
+    await logCreada;
     await admin.from('orders').update({ status: 'failed' }).eq('id', order.id);
     await admin.rpc('release_promo_redemption_for_order', { p_order_id: order.id });
     await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
@@ -483,6 +492,11 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
         : 'No se pudieron emitir las entradas. Intenta de nuevo.',
     };
   }
+
+  // Los caminos que siguen (Yape y tarjeta) no emiten acá: esperan a la
+  // bitácora antes de devolver, para que no quede una escritura colgando
+  // cuando el Worker termine el pedido.
+  await logCreada;
 
   if (parsed.data.method === 'mercadopago') {
     try {
