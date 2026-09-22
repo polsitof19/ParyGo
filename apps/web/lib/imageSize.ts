@@ -9,7 +9,7 @@
 // DEUDA ANOTADA: lo correcto a futuro es guardar ancho y alto al subir el
 // flyer (una migración chica: events.cover_w / cover_h). Eso saca esta
 // petición del camino de la página que cobra. Mientras tanto, acá va con
-// Range de 1 KB, cache forzado y un presupuesto de tiempo duro.
+// Range de 8 KB y un presupuesto de tiempo duro.
 //
 // Runtime edge: solo fetch y ArrayBuffer, nada de Node.
 
@@ -91,10 +91,16 @@ export async function medidasDeImagen(url: string | null | undefined): Promise<M
   const corte = new AbortController();
   const reloj = setTimeout(() => corte.abort(), TOPE_MS);
   try {
+    // SIN `cache`. En el runtime de Workers esa opción no está implementada y
+    // el fetch TIRA ("The 'cache' field on 'RequestInitializerDict' is not
+    // implemented"): el catch se lo comía y la página caía SIEMPRE en
+    // editorial. En local no pasaba —el fetch de Node la acepta— así que el
+    // bug solo se veía en producción: koko, con un flyer bueno de 1080×1350,
+    // se servía en editorial. Cloudflare ya cachea las subpeticiones GET por
+    // su cuenta, así que no hace falta pedírselo.
     const r = await fetch(url, {
       headers: { Range: `bytes=0-${VENTANA - 1}` },
       signal: corte.signal,
-      cache: 'force-cache',
     });
     // SOLO 206. Un 200 significa que el servidor ignoró el Range y está
     // mandando el archivo ENTERO: leerlo sería bajarse varios MB en un edge
