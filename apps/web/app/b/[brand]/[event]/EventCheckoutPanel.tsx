@@ -630,13 +630,12 @@ function Hero({ event, direccion }: { event: Event; direccion: Direccion }) {
           {direccion === 'canvas' && <span className="b-hero__fade" aria-hidden="true" />}
         </button>
       ) : (
-        // Sin flyer NO se dibuja la caja. En la dirección Canvas el marcador
-        // quedaba sin fondo (client.css:842), o sea un rectángulo vacío de
-        // 203px arriba de todo — medido en la página de Standly ya publicada.
-        // Un evento sin flyer arranca por su nombre, que es lo que tiene.
-        direccion !== 'canvas' && (
-          <div className="b-hero__shot b-hero__shot--ph" aria-hidden="true"><span className="b-hero__fade" /></div>
-        )
+        // Sin flyer NO se dibuja nada. El marcador era un bloque de 203px con
+        // un degradado casi invisible: medido en la página ya publicada de
+        // Standly (b-hero__shot--ph, top 221, alto 203) se veía como un hueco
+        // vacío arriba de todo. Un evento sin flyer arranca por su nombre, que
+        // es lo que tiene. Cuando el promotor suba el flyer, vuelve la imagen.
+        null
       )}
 
       {/* Ficha bajo el póster: solo en escritorio (en teléfono los datos
