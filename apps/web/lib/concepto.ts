@@ -1,64 +1,58 @@
 // =============================================================
-// Conceptos de diseño de la página de compra
+// Dirección de diseño de la página de compra
 // =============================================================
-// En producción manda UNO: el 2, ENTRADA. Los otros dos siguen en el código
-// para poder compararlos en vivo, pero solo en las marcas de prueba; para
-// cualquier marca real ?c= queda inerte y sale ENTRADA. Así un link con ?c=3
-// que alguien copie y pegue no le cambia la cara al evento de un promotor.
+// Hay DOS, y no las elige nadie a mano: las elige el flyer.
 //
-//   1  CARTEL   el flyer a pantalla completa manda; fases en línea de tiempo.
-//   2  ENTRADA  el bloque de compra ES un boleto, con talón.  ← producción
-//   3  NOCHE    editorial oscuro, tipografía grande.
+//   CANVAS     el flyer sangra y la compra flota encima, en papel.
+//              Es la que mejor entra en un teléfono y la que se eligió
+//              como diseño del producto. Necesita que el arte sirva.
 //
-// Es SOLO presentación: ninguno cambia precios, stock, pago ni emisión. El
-// concepto viaja por la query para que el recorrido entero —entradas, datos,
-// Yape y la entrada con QR— se vea con la misma piel.
+//   EDITORIAL  manda la tipografía: el nombre del evento arriba y grande,
+//              el flyer reducido a una banda. Es el respaldo, y es mejor
+//              que CANVAS justamente cuando el arte NO sirve.
 //
-// ?v=a|b era el selector anterior (dos direcciones de arte). Se mantiene como
-// alias para no romper links viejos: a → 1, b → 3.
+// La regla: CANVAS solo si el flyer existe y NO parece una captura de
+// pantalla. Si no hay flyer, si no se pudo medir, o si la proporción lo
+// delata, va EDITORIAL.
+//
+// Por qué importa: el promotor recibe el flyer por WhatsApp, le saca captura
+// y sube eso. Medido sobre los flyers reales de la base el 2026-09-22:
+//   koko    1080×1350  ratio .800  → CANVAS
+//   hoesky  1320×2868  ratio .460  → EDITORIAL (es una captura de Instagram,
+//                                    con la barra de "Seguir" y el reproductor)
+// Con CANVAS esa captura se ve a sangre, con el chrome de Instagram y todo.
+// Con EDITORIAL queda reducida a una banda y el evento lo sostiene el nombre.
+//
+// FAIL-SAFE a propósito: ante la duda, EDITORIAL. EDITORIAL se banca
+// cualquier flyer; CANVAS no.
+//
+// ?c= quedó INERTE. Antes dejaba elegir concepto a mano en las marcas de
+// prueba; ahora no hay nada que elegir y un link viejo con ?c=3 no cambia
+// nada. La decisión es del flyer, no de la URL.
 
-export type Concepto = 1 | 2 | 3;
+import { pareceCaptura } from './flyer';
+import { medidasDeImagen } from './imageSize';
 
-/** El que ve todo el mundo. */
-export const CONCEPTO_POR_DEFECTO: Concepto = 2;
+export type Direccion = 'canvas' | 'editorial';
 
-/** Marcas donde ?c= sigue vivo, para comparar los tres sobre datos reales. */
-const MARCAS_DE_PRUEBA = new Set(['koko', 'demotest', 'ensayo-paul']);
+/** La que se sirve cuando no se puede decidir. */
+export const DIRECCION_SEGURA: Direccion = 'editorial';
 
 /**
- * ¿Esta marca puede mostrar CARTEL o NOCHE? El layout lo usa para bajar (o no)
- * conceptos-prueba.css. Misma lista que decide si ?c= se obedece: si el
- * concepto no se puede elegir, su CSS no tiene por qué viajar.
+ * Decide la dirección a partir del flyer del evento.
+ *
+ * Hace UNA petición de 1 KB a la imagen (Range), cacheada y con tope de
+ * tiempo. Conviene llamarla en paralelo con las consultas de la página, no
+ * en serie: es la página que cobra.
  */
-export function marcaConConceptos(slug?: string): boolean {
-  return !!slug && MARCAS_DE_PRUEBA.has(slug);
+export async function decidirDireccion(coverUrl: string | null | undefined): Promise<Direccion> {
+  if (!coverUrl) return 'editorial';
+  const m = await medidasDeImagen(coverUrl);
+  if (!m) return DIRECCION_SEGURA;
+  return pareceCaptura(m.width, m.height).esCaptura ? 'editorial' : 'canvas';
 }
 
-type Query = Record<string, string | string[] | undefined> | undefined;
-
-function uno(v: string | string[] | undefined): string {
-  return (Array.isArray(v) ? v[0] : v) ?? '';
-}
-
-/**
- * @param sp        searchParams de la página.
- * @param marcaSlug slug de la marca. Sin él, o si no es de prueba, devuelve
- *                  siempre el concepto de producción.
- */
-export function leerConcepto(sp: Query, marcaSlug?: string): Concepto {
-  if (!marcaSlug || !MARCAS_DE_PRUEBA.has(marcaSlug)) return CONCEPTO_POR_DEFECTO;
-  const c = uno(sp?.c).trim();
-  if (c === '1') return 1;
-  if (c === '2') return 2;
-  if (c === '3') return 3;
-  const v = uno(sp?.v).trim().toLowerCase();
-  if (v === 'a') return 1;
-  if (v === 'b') return 3;
-  return CONCEPTO_POR_DEFECTO;
-}
-
-/** Agrega ?c= a una URL interna, salvo que sea el concepto de producción. */
-export function conConcepto(url: string, c: Concepto): string {
-  if (c === CONCEPTO_POR_DEFECTO) return url;
-  return url + (url.includes('?') ? '&' : '?') + `c=${c}`;
+/** La clase que la dirección pone en el árbol. */
+export function claseDireccion(d: Direccion): string {
+  return d === 'canvas' ? 'b-canvas' : 'b-editorial';
 }

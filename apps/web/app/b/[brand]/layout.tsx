@@ -4,12 +4,11 @@ import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { createClient } from '@/lib/supabase/server';
 import { brandColor, brandFillPair, brandFillHover, brandInk, withAlpha } from './brandTheme';
 import { BrandLogo } from '@/components/BrandLogo';
-import { marcaConConceptos } from '@/lib/concepto';
-import ConceptosPrueba from './ConceptosPrueba';
 // Orden: tokens del sistema primero; client.css los alias y los pisa donde el
 // sitio del comprador manda (el acento ES el color de la marca).
 import '../../styles/parygo-tokens.css';
 import './client.css';
+import './direcciones.css';
 import './landing.css';
 
 export const runtime = 'edge';
@@ -65,9 +64,6 @@ export default async function BrandLayout({
         } as React.CSSProperties
       }
     >
-      {/* CARTEL y NOCHE solo existen para comparar conceptos sobre datos
-          reales: su CSS baja únicamente en las marcas de prueba. */}
-      {marcaConConceptos(brand.slug) && <ConceptosPrueba />}
       <header className="c-header">
         <div className="c-header__inner">
           <Link href="/" className="c-lockup" aria-label={brand.name}>
