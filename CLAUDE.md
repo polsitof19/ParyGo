@@ -62,12 +62,29 @@ supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se regist
 - Yape manual: COMPLETO punta a punta. Comprobante público → revisión en panel
   (autenticada, scoped por marca, transición de estado atómica) → emisión →
   email. Es el camino que cobra hoy.
-- MercadoPago: IMPLEMENTADO y endurecido, no bloqueado. Webhook en
-  /api/webhooks/mp/[brandId]: HMAC obligatorio sin bypass de entorno, re-fetch
-  del pago contra la API de MP, verificación del monto contra el total congelado,
-  settle_mp_payment atómico (0025), idempotencia por mp_payment_id, anti-replay
-  de 5 min, comparación en tiempo constante.
-- PENDIENTE OPERATIVO (único): mp_webhook_secret NO tiene UI de carga ni de
+- MercadoPago: IMPLEMENTADO Y FUNCIONAL (2026-09-22). El código está completo y
+  el checkout con tarjeta funciona: se crea la preferencia y el comprador llega
+  a pagar. Lo que falta es OPERATIVO, dos cargas de datos, no código:
+    1. las credenciales REALES de la marca (se cargan desde el panel), y
+    2. el mp_webhook_secret, que sigue sin UI (ver el bullet de abajo).
+  Sin la 2, el comprador paga pero el webhook responde 401 y la orden no se
+  liquida — o sea que para cobrar de verdad hacen falta las dos. Webhook
+  en /api/webhooks/mp/[brandId]: HMAC obligatorio sin bypass de entorno,
+  re-fetch del pago contra la API de MP, verificación del monto contra el total
+  congelado, settle_mp_payment atómico (0025), idempotencia por mp_payment_id,
+  anti-replay de 5 min, comparación en tiempo constante.
+- El bloqueo que tenía era orders_check (0036): exigía mp_preference_id en el
+  INSERT y startCheckout inserta ANTES de crear la preferencia, así que TODO
+  pago con tarjeta moría con un error crudo de Postgres en la cara del
+  comprador. CERRADO por la 0055: una orden de MP puede existir sin preferencia
+  mientras NO esté cobrada (status fuera de paid/refunded Y sin mp_payment_id).
+  El invariante que importa —una orden de MP cobrada es reconciliable— lo sigue
+  imponiendo el CHECK a nivel de fila, no la disciplina del código; probado con
+  casos negativos contra la base real. NO volver a "crear la preferencia antes
+  del insert": el monto autoritativo recién existe después de order_items +
+  apply_promo_to_order, y una preferencia huérfana es un link de pago vivo sin
+  orden detrás. El test K del E2E cubre los dos caminos y está en VERDE.
+- PENDIENTE OPERATIVO: mp_webhook_secret NO tiene UI de carga ni de
   rotación. Se genera aleatorio al crear la marca en el panel super, se guarda
   encriptado (0034) y nunca se muestra; la columna en texto plano se borró (0044).
   Para que MP firme con un secret que la app reconozca hace falta un UPDATE
@@ -78,8 +95,12 @@ supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se regist
   Bulk topeado a 90% por constraint (0051). Anti-sobreventa atómico (0031).
 
 ## Orden seguro OBLIGATORIO por cada cambio
-Plan/Explore (diseñar antes de codear) → migración vía Management API
-(aplicar → verificar) → test en DEMOTEST (nunca Code/Almighty) → push →
+Plan/Explore (diseñar antes de codear) → ENSAYO con rollback
+(`node supabase/dryrun.mjs`: corre la migración contra el esquema REAL dentro
+de una transacción y la revierte — es la red que reemplaza al branch que no se
+puede tener, ver abajo) → migración vía Management API
+(`node supabase/mgmt.mjs file <archivo>` → verificar) → test en DEMOTEST
+(nunca Code/Almighty) → push →
 smoke en prod. No acumular pasos sin validar. Pausar entre pasos de riesgo
 para OK de Paul.
 
@@ -146,7 +167,20 @@ para OK de Paul.
   2px en el activo, sin pastillas. Nada centrado en toda la app.
 
 ## Migraciones
-Incrementales, idempotentes, numeradas (vamos por 0052). Backwards-compatible
+NO HAY BASE DE ENSAYO. demotest es una MARCA dentro de producción, no un
+entorno, y un branch de Supabase tampoco sirve: hasta la 0053 el historial no
+podía reconstruir la base (el valor 'courtesy' del enum payment_method se había
+agregado fuera de banda y ninguna migración lo creaba), así que el branch
+arrancaba con un esquema distinto al real. Eso quedó cerrado, pero el ensayo
+real sigue siendo `supabase/dryrun.mjs` (transacción + rollback contra el
+esquema de producción). Verificar SIEMPRE que no persistió nada después.
+Herramientas versionadas: supabase/mgmt.mjs (Management API; lee el token de
+.env.local y no lo imprime nunca), supabase/dryrun.mjs (ensayo),
+supabase/verify-0053-0058.mjs (comprobaciones de estado esperado).
+OJO con `mgmt.mjs types`: PISA database.types.ts entero y regenerarlo completo
+rompe tipos afinados a mano — las columnas nuevas se agregan a mano.
+
+Incrementales, idempotentes, numeradas (vamos por 0059). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
 para no romper la app vieja desplegada.
 
@@ -174,6 +208,29 @@ para no romper la app vieja desplegada.
 - Códigos promo: por evento, tipos percent/fixed(por-orden)/free, límites
   ilimitado/N/por-email, tracking por RR.PP. (label + ventas por código), sin
   comisiones automáticas. Descuento sobre fase activa, congelado, server-side.
+- EVENTOS GRATIS (0056 + 0059, 2026-09-22). "Precio 0" significaba dos cosas que
+  el sistema no podía distinguir: una CORTESÍA de un evento pago (lista de
+  invitados, jamás pública) y una entrada de un evento GRATIS de verdad. Ahora
+  la intención es explícita: events.is_free y ticket_types.is_courtesy.
+  REGLA ÚNICA, en lib/publicTicketGuard.ts:
+      público = precio > 0  OR  (evento.is_free AND NOT tipo.is_courtesy)
+  O sea: un tipo S/0 de un evento PAGO sigue oculto, igual que siempre.
+  startCheckout emite sin pago solo si se cumplen las DOS condiciones (evento
+  marcado gratis Y total 0); un total 0 inesperado en un evento que cobra no
+  emite nada. El server BLOQUEA cambiar is_free si el evento ya tiene ventas
+  pagas (el checkbox deshabilitado es solo del cliente).
+  Un tipo S/0 de un evento pago NACE cortesía por trigger (0059), porque los
+  tipos se crean por tres caminos distintos —el builder inserta vía RPC, o sea
+  SQL— y un default que vive en tres lugares se desincroniza.
+- MARCAS DE PRUEBA (0057, 2026-09-22). brands.is_test: demotest, ensayo-paul y
+  koko. Los contadores del super admin las excluyen, y "Yape por revisar"
+  cuenta solo órdenes CON comprobante subido (una pendiente sin comprobante es
+  un checkout abandonado, no trabajo de nadie). Medido: marcas activas 4 → 2,
+  Yape por revisar 12 → 0; el 97% de lo "cobrado" que se veía eran corridas del
+  E2E. NO afecta nada del flujo de compra: una marca de prueba funciona igual,
+  solo que no suma a las métricas, y SIGUE en la lista con un badge "Prueba".
+  Ojo con koko: tiene una venta real de S/60 y un evento publicado; si alguna
+  vez pasa a ser cliente de verdad hay que desmarcarla o sus ventas no aparecen.
 
 ## Reportar
 Por paso, con evidencia (la migración, el test de concurrencia, los tests de
