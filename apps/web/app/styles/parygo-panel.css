@@ -40,6 +40,13 @@
   --pad: clamp(16px, 4vw, 32px);
   --s-t1: 28px; --s-t2: 20px; --s-t3: 16px;
   --s-body: 16px; --s-meta: 13px; --s-lb: 11px; --s-num: 26px;
+  /* Escalones que antes se escribían sueltos (había 10 tamaños literales):
+       lead  18   entradilla / cifra en línea
+       ctl   15   texto de control (botón, campo, opción)
+       ui    14   interfaz secundaria
+       micro 12   microcopy (pie, nota al pie de tabla)
+     Documentados en DESIGN.md junto con el resto de la rampa. */
+  --s-lead: 18px; --s-ctl: 15px; --s-ui: 14px; --s-micro: 12px;
   --s-s1: 8px; --s-s2: 16px; --s-s3: 24px; --s-s4: 32px; --s-s5: 48px; --s-s6: 64px;
   /* 100dvh, no 100vh: en Safari de iPhone 100vh mide el viewport GRANDE (sin
      la barra de direcciones), así que el shell siempre quedaba más alto que lo
@@ -61,7 +68,7 @@
 .pg-panel *, .pg-panel *::before, .pg-panel *::after { box-sizing: border-box; }
 .pg-panel a { color: inherit; text-decoration: none; }
 .pg-panel button { font: inherit; }
-.pg-panel code { font-size: 0.92em; background: var(--paper-2); border-radius: 5px; padding: 1px 5px; }
+.pg-panel code { font-size: 0.92em; background: var(--paper-2); border-radius: var(--r-ctl); padding: 1px 5px; }
 
 /* Foco: anillo de acento (decorativo, sin texto encima). Solo teclado. */
 .pg-panel :where(a, button, input, select, textarea, summary):focus-visible {
@@ -81,7 +88,7 @@
 /* Eyebrow: tinta + punto de acento (nunca texto en acento). */
 .pg-panel .eyebrow {
   display: inline-flex; align-items: center; gap: 8px;
-  font-size: 12px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase;
+  font-size: var(--s-micro); font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase;
   color: var(--ink-2);
 }
 .pg-panel .eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
@@ -89,7 +96,7 @@
 .pg-panel .s-muted-3 { color: var(--ink-3); }
 .pg-panel .s-small { font-size: var(--s-meta); }
 /* Link dentro de un párrafo: subrayado, no color (el acento no porta texto). */
-.pg-panel .s-textlink { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; text-decoration-color: var(--line); transition: text-decoration-color .18s; }
+.pg-panel .s-textlink { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; text-decoration-color: var(--line); transition: text-decoration-color .18s, transform .14s ease-out; }
 .pg-panel .s-textlink:hover { text-decoration-color: var(--ink); }
 
 /* ---------- Sección (antes "card") ----------
@@ -132,14 +139,14 @@
 .pg-panel .s-btn {
   position: relative;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  font-family: var(--body); font-weight: 700; font-size: 14px;
-  height: 44px; min-width: 44px; padding: 0 2px; border-radius: 10px;
+  font-family: var(--body); font-weight: 600; font-size: var(--s-ui);
+  height: 44px; min-width: 44px; padding: 0 2px; border-radius: var(--r-btn);
   border: 0; background: none; color: var(--ink); cursor: pointer; white-space: nowrap;
-  transition: background-color .18s, color .18s, opacity .18s;
+  transition: background-color .18s, color .18s, opacity .18s, transform .14s ease-out;
 }
 .pg-panel .s-btn:disabled { cursor: not-allowed; opacity: .7; }
-.pg-panel .s-btn--sm { height: 44px; font-size: 13px; }
-.pg-panel .s-btn--lg { height: 48px; font-size: 15px; }
+.pg-panel .s-btn--sm { height: 44px; font-size: var(--s-meta); }
+.pg-panel .s-btn--lg { height: 48px; font-size: var(--s-ctl); }
 .pg-panel .s-btn--block { width: 100%; }
 /* Primario: el único con relleno. */
 .pg-panel .s-btn--primary { background: var(--accent); color: var(--ink); padding: 0 18px; }
@@ -155,7 +162,7 @@
 /* Destructivo confirmado: TINTA sólida con punto de alerta (es el primario de
    su paso). Blanco sobre --alert da 4.35:1 (no AA); la tinta invertida, 15.7:1. */
 .pg-panel .s-btn--danger { background: var(--ink); color: var(--paper); padding: 0 18px; }
-.pg-panel .s-btn--danger:hover:not(:disabled) { background: #3A2F27; }
+.pg-panel .s-btn--danger:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 88%, var(--paper)); }
 .pg-panel .s-btn--danger::before,
 .pg-panel .s-btn--danger-soft::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--alert); flex: none; }
 .pg-panel .s-btn--danger-soft { color: var(--ink); }
@@ -163,7 +170,7 @@
 /* ---------- Estados: PUNTO + texto en tinta ---------- */
 .pg-panel .s-badge {
   display: inline-flex; align-items: center; gap: 7px;
-  font-size: 11.5px; font-weight: 700; letter-spacing: 0.02em; line-height: 1.3;
+  font-size: var(--s-lb); font-weight: 700; letter-spacing: 0.02em; line-height: 1.3;
   color: var(--ink-2); white-space: nowrap;
 }
 .pg-panel .s-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--ink-3); }
@@ -176,7 +183,7 @@
 .pg-panel .s-badge--draft::before { background: none; box-shadow: inset 0 0 0 1.5px var(--ink-3); }
 .pg-panel .s-badge--inline { margin-left: 10px; vertical-align: middle; }
 /* Señal de problema dentro de una celda: punto de acento + texto en tinta. */
-.pg-panel .s-flag { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.02em; color: var(--ink-2); }
+.pg-panel .s-flag { display: inline-flex; align-items: center; gap: 7px; font-size: var(--s-lb); font-weight: 700; letter-spacing: 0.02em; color: var(--ink-2); }
 .pg-panel .s-flag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
 
 /* ---------- Stats: números, no cajas ----------
@@ -213,7 +220,7 @@
    número. Sin levantarla del papel, porque ya no hay papel del que levantarla. */
 .pg-panel a.s-stat:hover .s-stat__value { text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 2px; }
 .pg-panel .s-stat__owner { order: 3; display: flex; align-items: center; gap: 9px; min-width: 0; }
-.pg-panel .s-stat__owner-email { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-panel .s-stat__owner-email { font-size: var(--s-ui); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Franja de stats: columnas separadas por hairlines verticales, sin gap
    horizontal (el hairline ES la separación). El primero de cada fila no lleva
@@ -238,20 +245,20 @@
 }
 
 /* ---------- Avatar ---------- */
-.pg-panel .s-avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: 16px; }
-.pg-panel .s-avatar--lg { width: 52px; height: 52px; font-size: 20px; }
-.pg-panel .s-avatar--sm { width: 30px; height: 30px; font-size: 13px; }
+.pg-panel .s-avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: var(--s-body); }
+.pg-panel .s-avatar--lg { width: 52px; height: 52px; font-size: var(--s-t2); }
+.pg-panel .s-avatar--sm { width: 30px; height: 30px; font-size: var(--s-meta); }
 
 /* ---------- Formularios ----------
    Etiqueta chica en mayúsculas ARRIBA, campo sin relleno beige (solo una línea
    abajo), ayuda en --ink-3 DEBAJO. El campo se lee como un renglón escrito, no
    como una caja. */
-.pg-panel .s-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 7px; }
+.pg-panel .s-label { display: block; font-size: var(--s-lb); font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 7px; }
 .pg-panel .s-label .req { color: var(--ink-3); margin-left: 3px; }
 .pg-panel .s-input {
   width: 100%; height: 44px; padding: 0 2px; background: none;
   border: 0; border-bottom: 1.5px solid var(--line); border-radius: 0;
-  font-family: var(--body); font-size: 15px; color: var(--ink);
+  font-family: var(--body); font-size: var(--s-ctl); color: var(--ink);
   transition: border-color .18s, box-shadow .18s;
 }
 .pg-panel textarea.s-input { height: auto; min-height: 78px; padding: 8px 2px; line-height: 1.5; resize: vertical; }
@@ -259,7 +266,7 @@
 /* Foco: la línea de abajo se vuelve tinta y engorda. Sin anillo ni relleno. */
 .pg-panel .s-input:focus { outline: none; border-bottom-color: var(--ink); box-shadow: inset 0 -1px 0 0 var(--ink); }
 /* Chico en ANCHO, no en alto: 34px de alto no se puede tocar. */
-.pg-panel .s-input--sm { width: auto; max-width: 200px; height: 44px; font-size: 13px; }
+.pg-panel .s-input--sm { width: auto; max-width: 200px; height: 44px; font-size: var(--s-meta); }
 .pg-panel .s-select { -webkit-appearance: none; appearance: none; cursor: pointer; padding-right: 26px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23231C17' stroke-opacity='.66' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 2px center; }
@@ -283,12 +290,12 @@
 /* Selector de color: 44 de alto como cualquier control (medía 42 y el hex que
    WebKit dibuja adentro quedaba recortado). El hex se lee en el campo de al
    lado, que es el que se puede copiar. */
-.pg-panel .s-colorpick { height: 44px; width: 52px; flex: none; cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: transparent; padding: 3px; }
+.pg-panel .s-colorpick { height: 44px; width: 52px; flex: none; cursor: pointer; border-radius: var(--r-ctl); border: 1px solid var(--line); background: transparent; padding: 3px; }
 /* Error / éxito de campo: punto de color + texto en tinta (--alert 4.35:1 y
    --ok 3.38:1 como texto no llegan a AA). flex, no inline-flex: dos errores
    hermanos no deben quedar uno al lado del otro. */
 .pg-panel .s-err,
-.pg-panel .s-hint--ok { display: flex; align-items: center; gap: 7px; font-size: 13px; margin-top: 5px; color: var(--ink); }
+.pg-panel .s-hint--ok { display: flex; align-items: center; gap: 7px; font-size: var(--s-meta); margin-top: 5px; color: var(--ink); }
 .pg-panel .s-hint--ok { color: var(--ink-2); }
 .pg-panel .s-err::before,
 .pg-panel .s-hint--ok::before { content: ""; width: 7px; height: 7px; border-radius: 50%; flex: none; }
@@ -303,9 +310,9 @@
    summary de 23px de alto, y la casilla como un cuadradito de 12px que era la
    única zona activa. Viven acá porque son de los dos paneles.
    La casilla sigue dibujando 18px; lo que se TOCA es la etiqueta entera. */
-.pg-panel .s-check { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; color: var(--ink); cursor: pointer; }
+.pg-panel .s-check { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: var(--s-ui); color: var(--ink); cursor: pointer; }
 .pg-panel .s-check input { accent-color: var(--ink); width: 18px; height: 18px; flex: none; }
-.pg-panel .s-details > summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; font-weight: 600; font-size: 14px; color: var(--ink-2); padding: 4px 0; list-style: none; user-select: none; transition: color .18s; }
+.pg-panel .s-details > summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; font-weight: 600; font-size: var(--s-ui); color: var(--ink-2); padding: 4px 0; list-style: none; user-select: none; transition: color .18s, transform .14s ease-out; }
 .pg-panel .s-details > summary::-webkit-details-marker { display: none; }
 .pg-panel .s-details > summary::before { content: '▸'; display: inline-block; margin-right: 8px; color: var(--ink-3); transition: transform .2s var(--ease); }
 .pg-panel .s-details[open] > summary::before { transform: rotate(90deg); }
@@ -333,12 +340,12 @@
 .pg-panel .s-pwrap .s-input { padding-right: 46px; }
 /* 44x44 reales: es un botón dentro del campo, y en el telefono era de 32 y
    se montaba sobre el input. El icono sigue dibujandose chico. */
-.pg-panel .s-peek { position: absolute; right: -2px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; border: none; background: transparent; color: var(--ink-3); cursor: pointer; border-radius: 8px; }
+.pg-panel .s-peek { position: absolute; right: -2px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; border: none; background: transparent; color: var(--ink-3); cursor: pointer; border-radius: var(--r-ctl); }
 .pg-panel .s-peek:hover { color: var(--ink); background: var(--sel); }
 .pg-panel .s-pwd-form { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
 .pg-panel .s-slug-wrap { position: relative; }
 .pg-panel .s-slug-wrap .s-input { padding-right: 106px; }
-.pg-panel .s-slug-suffix { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--ink-3); pointer-events: none; }
+.pg-panel .s-slug-suffix { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); font-size: var(--s-ui); color: var(--ink-3); pointer-events: none; }
 
 /* ---------- Avisos (banners y notas de estado) ----------
    Una LÍNEA con punto, no una caja: hairlines arriba y abajo, sin relleno. */
@@ -381,7 +388,7 @@
    Hairlines, hover con tinte, sin filas pintadas: la alerta es un punto en la
    celda que falla y el ORDEN (alertas arriba). */
 .pg-panel .s-table { width: 100%; border-collapse: collapse; }
-.pg-panel .s-table thead th { font-size: 11px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-3); text-align: left; padding: 0 16px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.pg-panel .s-table thead th { font-size: var(--s-lb); font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-3); text-align: left; padding: 0 16px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .pg-panel .s-table thead th.num { text-align: right; }
 /* DENSIDAD MEDIDA: la fila de la tabla de marcas medía 70px (avatar de 40
    + 12 de relleno arriba y abajo). Mediana del benchmark: 32 (GitHub 41).
@@ -402,7 +409,7 @@
 .pg-panel .s-cell-brand { display: flex; align-items: center; gap: 12px; }
 .pg-panel .s-cell-brand .nm { font-size: var(--s-body); font-weight: 600; line-height: 1.2; }
 .pg-panel .s-cell-brand .sl { font-size: var(--s-meta); color: var(--ink-3); white-space: nowrap; }
-.pg-panel .s-saldo-num { font-family: var(--display); font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
+.pg-panel .s-saldo-num { font-family: var(--display); font-weight: 800; font-size: var(--s-lead); font-variant-numeric: tabular-nums; }
 .pg-panel .s-cellmeta { font-size: var(--s-meta); color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .pg-panel .s-cellmeta--none { color: var(--ink-3); }
 .pg-panel .s-cellmeta .nm { display: block; color: var(--ink); font-weight: 500; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -416,9 +423,9 @@
    saldo", que mueve plata: el área que se toca es exactamente la que se ve. */
 .pg-panel .s-rowbtn {
   width: 44px; height: 44px; display: grid; place-items: center; flex: none;
-  border: 0; border-radius: 8px;
+  border: 0; border-radius: var(--r-ctl);
   background: none; color: var(--ink-3); cursor: pointer;
-  transition: color .18s, background-color .18s;
+  transition: color .18s, background-color .18s, transform .14s ease-out;
 }
 .pg-panel .s-rowbtn:hover { color: var(--ink); background: var(--paper-2); }
 .pg-panel .s-rowbtn svg { width: 16px; height: 16px; }
@@ -430,8 +437,8 @@
    lista de la franja de números. */
 .pg-panel .s-brandcard__main { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; min-width: 0; color: inherit; }
 .pg-panel .s-brandcard__side { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; flex: none; }
-.pg-panel .s-brandcard .nm { font-size: 15px; font-weight: 600; }
-.pg-panel .s-brandcard .meta { display: block; font-size: 13px; color: var(--ink-2); margin-top: 1px; }
+.pg-panel .s-brandcard .nm { font-size: var(--s-ctl); font-weight: 600; }
+.pg-panel .s-brandcard .meta { display: block; font-size: var(--s-meta); color: var(--ink-2); margin-top: 1px; }
 .pg-panel .s-cardflags { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; }
 /* Tablas: se deslizan en horizontal si no entran (nunca se ocultan). El
    cambio tabla → cards de la lista de marcas es propio del super admin. */
@@ -458,7 +465,7 @@
   .pg-panel .s-table--stack tbody tr:first-child { border-top: 0; }
   .pg-panel .s-table--stack td { display: inline-flex; align-items: baseline; gap: 6px; padding: 0; border: 0; text-align: left; }
   /* La primera celda es el título de la fila: renglón propio, sin etiqueta. */
-  .pg-panel .s-table--stack td:first-child { flex-basis: 100%; display: block; font-size: 15px; }
+  .pg-panel .s-table--stack td:first-child { flex-basis: 100%; display: block; font-size: var(--s-ctl); }
   /* La etiqueta viaja con el número. */
   .pg-panel .s-table--stack td[data-l]::before {
     content: attr(data-l);
@@ -503,9 +510,9 @@
    pasa de renglón y la fila vuelve a crecer. */
 .pg-panel .s-event-row__name,
 .pg-panel .s-event-row__date { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pg-panel .s-event-row__name { font-size: 15px; font-weight: 600; }
+.pg-panel .s-event-row__name { font-size: var(--s-ctl); font-weight: 600; }
 .pg-panel a.s-event-row__main:hover .s-event-row__name { text-decoration: underline; text-underline-offset: 3px; }
-.pg-panel .s-event-row__date { font-size: 13px; color: var(--ink-3); }
+.pg-panel .s-event-row__date { font-size: var(--s-meta); color: var(--ink-3); }
 /* El estado no se encoge ni se parte: lo que cede es el nombre. */
 .pg-panel .s-event-row > .s-badge { flex: none; }
 /* 44x44 reales. Dibujado sigue siendo un círculo de 32 (el hover), pero la
@@ -539,10 +546,10 @@
 .pg-panel .s-topbar__inner { max-width: 1120px; margin: 0 auto; min-height: 64px; display: flex; align-items: center; gap: 14px; padding: 8px var(--pad); flex-wrap: wrap; }
 /* El wordmark es un link: su área de toque llega a 44 sin empujar la barra
    (el alto lo sigue marcando el min-height del inner). */
-.pg-panel .s-logo { display: inline-flex; align-items: center; min-height: 44px; font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: -0.04em; }
+.pg-panel .s-logo { display: inline-flex; align-items: center; min-height: 44px; font-family: var(--display); font-weight: 800; font-size: var(--s-t2); letter-spacing: -0.04em; }
 /* Excepción documentada: el punto del wordmark en acento. Glifo decorativo. */
 .pg-panel .s-logo .dot { color: var(--accent); }
-.pg-panel .s-logo .tag { font-family: var(--body); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); margin-left: 8px; }
+.pg-panel .s-logo .tag { font-family: var(--body); font-size: var(--s-lb); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); margin-left: 8px; }
 /* Navegación: TEXTO. El activo se marca con un subrayado de 2px (el acento es
    una línea, no texto — decorativo, permitido). Sin pastillas, sin relleno. */
 /* El área de toque de cada entrada llega a 44x44 REALES sin volverse una
@@ -552,18 +559,18 @@
    —tiene que medir lo que mide la palabra—, así que dejó de ser un box-shadow
    del link y pasó a un ::after metido 8px por lado. */
 .pg-panel .s-nav { display: flex; gap: 6px; margin-left: 10px; flex-wrap: wrap; }
-.pg-panel .s-nav a { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-size: 14px; font-weight: 600; color: var(--ink-2); min-height: 44px; min-width: 44px; padding: 0 8px; border-radius: 0; transition: color .18s; }
+.pg-panel .s-nav a { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-size: var(--s-ui); font-weight: 600; color: var(--ink-2); min-height: 44px; min-width: 44px; padding: 0 8px; border-radius: 0; transition: color .18s, transform .14s ease-out; }
 .pg-panel .s-nav a::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: 0; height: 2px; background: transparent; transition: background-color .18s; }
 .pg-panel .s-nav a:hover { color: var(--ink); }
 .pg-panel .s-nav a:hover::after { background: var(--line); }
 .pg-panel .s-nav a[aria-current="page"] { color: var(--ink); }
 .pg-panel .s-nav a[aria-current="page"]::after { background: var(--accent); }
 /* Contador: punto de acento + número en tinta (sin pastilla). */
-.pg-panel .s-nav-count { display: inline-flex; align-items: center; gap: 5px; background: none; color: var(--ink); font-size: 12px; font-weight: 700; line-height: 1; padding: 0; font-variant-numeric: tabular-nums; }
+.pg-panel .s-nav-count { display: inline-flex; align-items: center; gap: 5px; background: none; color: var(--ink); font-size: var(--s-micro); font-weight: 600; line-height: 1; padding: 0; font-variant-numeric: tabular-nums; }
 .pg-panel .s-nav-count::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
 .pg-panel .s-topbar__right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
-.pg-panel .s-email { font-size: 13px; color: var(--ink-3); }
-.pg-panel .s-iconbtn { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 8px; border: 0; background: none; color: var(--ink-3); cursor: pointer; transition: color .18s, background-color .18s; }
+.pg-panel .s-email { font-size: var(--s-meta); color: var(--ink-3); }
+.pg-panel .s-iconbtn { width: 44px; height: 44px; display: grid; place-items: center; border-radius: var(--r-ctl); border: 0; background: none; color: var(--ink-3); cursor: pointer; transition: color .18s, background-color .18s, transform .14s ease-out; }
 .pg-panel .s-iconbtn:hover { color: var(--ink); background: var(--paper-2); }
 /* Móvil: una sola fila mientras el nav ENTRE. Se deja overflow-x auto como
    red de seguridad, pero SIN máscara de degradado: medido en iPhone (WebKit,
@@ -584,9 +591,9 @@
    más espacio come. */
 .pg-panel .s-nav__short { display: none; }
 @media (max-width: 460px) {
-  .pg-panel .s-logo { font-size: 18px; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pg-panel .s-logo { font-size: var(--s-lead); max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pg-panel .s-nav { gap: 0; margin-left: 2px; }
-  .pg-panel .s-nav a { font-size: 13px; }
+  .pg-panel .s-nav a { font-size: var(--s-meta); }
   .pg-panel .s-nav__long { display: none; }
   .pg-panel .s-nav__short { display: inline; }
 }
@@ -607,30 +614,45 @@
 /* "volver" es un link suelto, no una palabra dentro de una frase: su area de
    toque llega a 44 (medida 62x19 en iPhone). El alto extra es el aire que ya
    lo separaba del h1. */
-.pg-panel .s-back { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; font-size: 13px; color: var(--ink-2); margin-bottom: 2px; }
+.pg-panel .s-back { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; font-size: var(--s-meta); color: var(--ink-2); margin-bottom: 2px; transition: color .18s, transform .14s ease-out; }
 .pg-panel .s-back:hover { color: var(--ink); }
 
 /* ============================================================
    Motion. Entrada con --ease (sale rápido, llega suave); hovers y
    presiones con --spring. Todo apagado con reduced-motion.
    ============================================================ */
+
+/* Presión. El panel se usa desde el teléfono: el :hover no existe ahí, así que
+   sin :active no hay ninguna señal de que el control recibió el toque. 0.97 es
+   el mínimo que se percibe sin que el control "salte"; 140ms ease-out para que
+   la respuesta salga en el primer frame y no al soltar. */
+.pg-panel .s-btn:active:not(:disabled),
+.pg-panel .s-iconbtn:active:not(:disabled),
+.pg-panel .s-rowbtn:active:not(:disabled),
+.pg-panel .s-textlink:active,
+.pg-panel .s-nav a:active,
+.pg-panel .s-back:active,
+.pg-panel .s-details > summary:active { transform: scale(.97); }
+
+/* Las filas son enteras un link: aplastarlas se vería mal a lo ancho de la
+   pantalla. Su señal de presión es el mismo tinte del hover, que en el
+   teléfono aparece recién al tocar. */
+.pg-panel .s-table tbody tr:active,
+.pg-panel .s-event-row:active,
+.pg-panel .s-brandcard:active { background-color: var(--sel); }
+
 @keyframes s-fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 /* Fade de los skeletons de carga (loading.tsx lo usa inline: animation: 'a-fade .2s both'). */
 @keyframes a-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: no-preference) {
-  .pg-panel .s-pagehead,
-  .pg-panel .s-card,
-  .pg-panel .s-stat,
-  .pg-panel .s-notice { animation: s-fadeUp .42s var(--ease) both; }
-  .pg-panel .s-stats-4 > :nth-child(2), .pg-panel .s-stats > :nth-child(2) { animation-delay: .04s; }
-  .pg-panel .s-stats-4 > :nth-child(3), .pg-panel .s-stats > :nth-child(3) { animation-delay: .08s; }
-  .pg-panel .s-stats-4 > :nth-child(4) { animation-delay: .12s; }
-  .pg-panel .s-table tbody tr,
-  .pg-panel .s-brandcard,
-  .pg-panel .s-event-row { animation: s-fadeUp .36s var(--ease) both; }
-  .pg-panel .s-table tbody tr:nth-child(2), .pg-panel .s-brandcard:nth-child(2), .pg-panel .s-event-row:nth-child(2) { animation-delay: .04s; }
-  .pg-panel .s-table tbody tr:nth-child(3), .pg-panel .s-brandcard:nth-child(3), .pg-panel .s-event-row:nth-child(3) { animation-delay: .08s; }
-  .pg-panel .s-table tbody tr:nth-child(n+4), .pg-panel .s-brandcard:nth-child(n+4), .pg-panel .s-event-row:nth-child(n+4) { animation-delay: .12s; }
+  /* SOLO el aviso. Un aviso aparece cuando pasó algo y entrar es su mensaje.
+     El resto del panel NO se anima al cargar: las filas de tabla, las tarjetas
+     de marca y las filas de evento entraban con fade-up escalonado (.04/.08/.12)
+     en CADA navegación. El organizador abre esta pantalla decenas de veces por
+     día —y la noche del evento, muchas más—: una animación que se ve tantas
+     veces deja de informar y solo retrasa la lectura. Además el escalonado de
+     filas es la firma visual del dashboard generado. */
+  .pg-panel .s-notice { animation: s-fadeUp .24s var(--ease) both; }
 }
 @media (prefers-reduced-motion: reduce) {
   .pg-panel *, .pg-panel *::before, .pg-panel *::after {
@@ -638,4 +660,20 @@
     transition-duration: 0ms !important;
   }
   .pg-panel .s-btn:hover, .pg-panel .s-rowbtn:hover { transform: none !important; }
+
+  /* La presión NO desaparece: cambia de canal. Con la transición en 0ms un
+     scale(.97) sería un SALTO, peor que el movimiento que se quiso evitar.
+     El velo va como sombra INSET y no como background-color: el botón
+     primario lleva el acento (o el relleno de marca) de fondo y un
+     background-color se lo comería. */
+  .pg-panel .s-btn:active:not(:disabled),
+  .pg-panel .s-iconbtn:active:not(:disabled),
+  .pg-panel .s-rowbtn:active:not(:disabled),
+  .pg-panel .s-textlink:active,
+  .pg-panel .s-nav a:active,
+  .pg-panel .s-back:active,
+  .pg-panel .s-details > summary:active {
+    transform: none !important;
+    box-shadow: inset 0 0 0 999px var(--sel);
+  }
 }

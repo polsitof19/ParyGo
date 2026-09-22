@@ -154,7 +154,31 @@ para OK de Paul.
   único que lleva texto encima es el par que devuelve `brandFillPair()`
   (--brand-fill/--on-fill), medido a 4.5:1; el color crudo queda para puntos,
   barra de fila activa, anillo de foco y la barra de 4px del header.
-  `npm run test:contrast` verifica ese par contra 13 colores de marca.
+  `npm run test:contrast` verifica TRES caminos contra 14 colores de marca:
+  el par de relleno, su HOVER (`brandFillHover()`) y el color como tinta
+  (`brandInk()`).
+- El HOVER de un relleno de marca es OTRO COLOR MEDIDO, nunca `filter:
+  brightness()`. Un filtro mueve el relleno DESPUÉS de que el test midió el
+  par: con #E91E63 el botón de pagar caía de 4.58:1 a 4.20:1 justo cuando el
+  comprador tenía el dedo encima. El test falla si el filtro vuelve.
+- `brandInk()` (el color de marca usado COMO texto: el eyebrow y la cifra
+  grande de los emails transaccionales) tiene piso AA 4.5:1 contra --paper-3,
+  la superficie más oscura. Medía contra BLANCO con umbral 2.8 y devolvía el
+  color crudo: el propio tangerina salía a 2.30:1 sobre paper-3 y 9 de 13
+  colores de marca fallaban. Cerrado el 2026-09-22; el test lo cubre y además
+  rechaza que vuelva el umbral viejo.
+- CERO tamaños y radios sueltos en el CSS: cada uno sale de la rampa de su
+  superficie (--s-* en paneles, --b-* en el comprador) o de los tokens de radio
+  (--r-ctl/--r-btn/--r-card/--r-pill). Las excepciones son tres y están
+  escritas en apps/web/DESIGN.md: el tier display FLUIDO de la página de marca
+  (--b-d1/2/3, que NO vale en el checkout), los dos saltos de NOCHE, y los
+  velos sobre FOTO, que sí llevan negro puro porque son máscaras de
+  legibilidad sobre una imagen ajena, no sombras sobre papel.
+- El panel NO anima al cargar (solo .s-notice) y TODO control presionable
+  tiene `:active { transform: scale(.97) }`. El organizador trabaja desde el
+  teléfono: ahí el :hover no existe y sin :active no hay ninguna señal de que
+  el control recibió el toque. El fade-up escalonado de filas se sacó: se veía
+  decenas de veces por día y es la firma del dashboard generado.
 - Estado de las superficies: landing, super admin, panel del organizador y
   checkout/entrada YA están en el sistema. La entrada del comprador (QR) vive
   en app/b/[brand]/TicketPass.tsx, compartida por /t/[uuid] y la confirmación.

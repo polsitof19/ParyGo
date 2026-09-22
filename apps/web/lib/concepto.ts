@@ -25,6 +25,15 @@ export const CONCEPTO_POR_DEFECTO: Concepto = 2;
 /** Marcas donde ?c= sigue vivo, para comparar los tres sobre datos reales. */
 const MARCAS_DE_PRUEBA = new Set(['koko', 'demotest', 'ensayo-paul']);
 
+/**
+ * ¿Esta marca puede mostrar CARTEL o NOCHE? El layout lo usa para bajar (o no)
+ * conceptos-prueba.css. Misma lista que decide si ?c= se obedece: si el
+ * concepto no se puede elegir, su CSS no tiene por qué viajar.
+ */
+export function marcaConConceptos(slug?: string): boolean {
+  return !!slug && MARCAS_DE_PRUEBA.has(slug);
+}
+
 type Query = Record<string, string | string[] | undefined> | undefined;
 
 function uno(v: string | string[] | undefined): string {

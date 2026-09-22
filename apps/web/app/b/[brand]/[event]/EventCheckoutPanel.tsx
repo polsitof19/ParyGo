@@ -57,25 +57,35 @@ export function EventCheckoutPanel({
 
   const [qty, setQty] = useState<Record<string, number>>({});
   const [step, setStepRaw] = useState<1 | 2>(1);
-  // Morph entre pasos: el contenido que se va se desvanece 120ms (fade + 4px)
-  // antes de que entre el nuevo, en vez de cortarse de golpe. `step` sigue
-  // siendo la verdad para la lógica; `shownStep` es lo que se está pintando.
+  // Morph entre pasos: el contenido que se va sale (140ms) antes de que entre
+  // el nuevo (220ms), en vez de cortarse de golpe. `step` sigue siendo la
+  // verdad para la lógica; `shownStep` es lo que se está pintando.
+  //
+  // `atras` es la DIRECCIÓN, y existe porque sin ella volver se veía igual que
+  // avanzar: el paso que entra tiene que venir del lado por donde se fue el
+  // anterior, o el movimiento no informa nada.
   const [shownStep, setShownStep] = useState<1 | 2>(1);
   const [leaving, setLeaving] = useState(false);
+  const [atras, setAtras] = useState(false);
   const setStep = useCallback((next: 1 | 2) => {
-    setStepRaw((prev) => {
-      if (prev === next) return prev;
-      setLeaving(true);
-      return next;
-    });
-  }, []);
+    // Sin updater funcional: un updater de useState tiene que ser PURO y en
+    // Strict Mode React lo corre dos veces en desarrollo, así que no puede
+    // llevar adentro el setAtras/setLeaving. `step` alcanza como fuente única
+    // —es el paso lógico— y la dependencia lo mantiene fresco.
+    if (step === next) return;
+    setAtras(next < step);
+    setLeaving(true);
+    setStepRaw(next);
+  }, [step]);
   useEffect(() => {
     if (!leaving) return;
     // prefers-reduced-motion: sin espera, el cambio es inmediato.
     const reduce = typeof window !== 'undefined'
       && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (reduce) { setShownStep(step); setLeaving(false); return; }
-    const t = setTimeout(() => { setShownStep(step); setLeaving(false); }, 120);
+    // Igual que la duración de c-stepout: el nuevo paso entra justo cuando
+    // el anterior terminó de irse.
+    const t = setTimeout(() => { setShownStep(step); setLeaving(false); }, 140);
     return () => clearTimeout(t);
   }, [leaving, step]);
   // Código de RR.PP. (promo_codes) — opcional. Se ingresa en el paso 1 o 2 y se
@@ -302,7 +312,7 @@ function fraseConfianza(pago: string): string {
           estorban. */}
       {concepto === 1 && shownStep === 1 && <ChipComprar anclaId="elegi" activo={totalItems === 0} />}
       {mpCheckout && mpPublicKey ? (
-        <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}`}>
+        <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}${atras ? ' c-stepwrap--back' : ''}`}>
           <div className="b-head">
             <h1 className="b-head__t">Paga con tarjeta</h1>
             <p className="b-head__s">{event.name} · {formatPEN(finalTotal)}</p>
@@ -313,7 +323,7 @@ function fraseConfianza(pago: string): string {
         </div>
       ) : shownStep === 1 ? (
         /* ---------- PANTALLA 1: el flyer y las entradas ---------- */
-        <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}`} key="step1">
+        <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}${atras ? ' c-stepwrap--back' : ''}`} key="step1">
         <div className="b-stage">
           <Hero event={event} concepto={concepto} />
 
@@ -369,7 +379,7 @@ function fraseConfianza(pago: string): string {
         </div>
       ) : (
         /* ---------- PANTALLA 2: tus datos ---------- */
-        <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}`} key="step2">
+        <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}${atras ? ' c-stepwrap--back' : ''}`} key="step2">
           <div className="b-head">
             <h1 className="b-head__t">Tus datos</h1>
             <p className="b-head__s">Aquí te mandamos tu entrada.</p>

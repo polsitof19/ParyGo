@@ -55,8 +55,9 @@ typography:
     lineHeight: 1.05
     letterSpacing: "-0.03em"
 rounded:
-  ctl: "9px"
-  btn: "10px"
+  ctl: "9px"   # --r-ctl
+  btn: "10px"  # --r-btn
+
   card: "14px"
   pill: "999px"
 spacing:
@@ -157,6 +158,14 @@ Los grises hex que traía la landing fallaban (#A89B8C daba 2.19:1).
 - **El color de marca nunca porta texto.** Lo único que lleva texto encima es el
   par que devuelve `brandFillPair()` (relleno + color de texto), medido a 4.5:1
   y verificado por test contra 14 colores de marca.
+- **El hover de ese relleno también está medido**, y es OTRO COLOR
+  (`brandFillHover()`), no un filtro. `filter: brightness()` mueve el relleno
+  DESPUÉS de que el test midió el par: con #E91E63 el botón de pagar caía de
+  4.58:1 a 4.20:1 justo cuando el comprador tenía el dedo encima.
+- **`brandInk()` es el color de marca usado COMO texto** (el eyebrow y la cifra
+  grande de los emails transaccionales). Su piso es AA 4.5:1 **contra
+  `paper-3`**, la superficie más oscura. Medir contra blanco con umbral 2.8
+  —como hacía— dejaba pasar el propio tangerina a 2.30:1 sobre paper-3.
 - Excepción única y acotada: la palabra de acento del h1 de la landing
   (display ≥56px) usa `accent-deep`, medida 3.41:1 sobre el mínimo de 3:1 que
   WCAG pide para texto grande, y lleva un subrayado ondulado como segunda señal.
@@ -179,6 +188,38 @@ Escala FIJA en variables CSS, sin `clamp` elástico. Móvil → escritorio:
 | meta | 13 | 400 |
 | etiqueta | 11 mayúsculas, `0.10em` | 700 |
 | número de stat | 26 → 28, tabular | 800 |
+
+### La rampa por superficie
+
+La tabla de arriba es la jerarquía de ROLES. Cada superficie la materializa en
+variables, y **no quedan tamaños literales**: `npm run test:contrast` no lo
+mide, pero el detector de impeccable sí, y en septiembre de 2026 pasó de 61
+tamaños fuera de rampa a 0.
+
+**Paneles** (`--s-*`, en `.pg-panel`): t1 28→34 · t2 20→24 · t3 16 ·
+lead 18 · body 16→17 · ctl 15 · ui 14 · meta 13 · micro 12 · lb 11 · num 26→28.
+
+**Comprador** (`--b-*`, en `.client-shell`): t0 34 · t1 32→50 · t2 24→32 ·
+t3 20→24 · price 18→21 · lead 17 · body 16→17 · ctl 15 · ui 14 · meta 13 ·
+micro 12 · lb 11.
+
+`lead`, `ctl`, `ui` y `micro` existen porque el texto de un control, el de
+una fila secundaria y el de una nota al pie son tres cosas distintas, y antes
+las tres se escribían como números sueltos entre 11.5 y 15.
+
+### Excepciones documentadas
+
+Son tres, y son las únicas:
+
+1. **El tier display de la página de marca** (`--b-d1/2/3`, `clamp()`). Es la
+   única tipografía FLUIDA del producto. Vale en `/b/[slug]` y en el cierre de
+   la confirmación, que son pantallas de presentación. **En el checkout no**:
+   un clamp en el precio hace que el mismo texto mida distinto en cada
+   teléfono, que es justo lo que la escala fija vino a resolver.
+2. **Los dos saltos de NOCHE** (`--bc3-display` 64, `--bc3-precio` 40), en
+   `conceptos-prueba.css`. NOCHE es un concepto editorial y solo existe en las
+   marcas de prueba.
+3. **Los velos sobre foto** (ver más abajo, en Elevación).
 
 ### Named Rules
 
@@ -209,6 +250,18 @@ Escala FIJA en variables CSS, sin `clamp` elástico. Móvil → escritorio:
 **No hay elevación en los paneles.** La profundidad la dan los hairlines
 (1px `line`) y el aire. Las sombras del token existen para superficies que no
 son panel (el resultado de la puerta) y son de tinta, nunca de negro puro.
+
+**Sobre papel, siempre `--shadow-sm/md/lg`.** Un `rgba(0,0,0,…)` sobre crema
+se ve sucio; por eso los tokens son de tinta.
+
+**Excepción: los velos sobre FOTO llevan negro puro.** El degradado del hero,
+el contorno del nombre del evento encima del flyer y el fondo del visor a
+pantalla completa **no** son sombras sobre papel: son máscaras de legibilidad
+sobre una imagen que el promotor sube y que nosotros no controlamos. Un velo de
+tinta cálida no oscurece lo suficiente un flyer claro y el nombre deja de
+leerse. Cada uno de esos seis valores tiene el motivo escrito al lado en
+`client.css`; son los únicos que el detector marca y se dejan marcados a
+propósito.
 
 Las barras superiores son de **papel sólido**, no vidrio esmerilado: con
 translucidez el contenido se leía por debajo al scrollear en iPhone.

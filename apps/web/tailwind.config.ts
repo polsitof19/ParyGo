@@ -62,11 +62,14 @@ const config: Config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
-        // Rounded display. Fallback stack stays generic so a brand could
-        // later override --font-display without us forcing a condensed look.
-        display: ['var(--font-display)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-mono)', 'monospace'],
+        // Las dos del sistema (parygo-tokens.css usa las mismas variables).
+        // font-sans/font-display ya no apuntan a Nunito/Fredoka: esas dejaron
+        // de cargarse y las cuatro pantallas que las usaban pasaron al sistema.
+        sans: ['var(--font-hanken)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-bricolage)', 'system-ui', 'sans-serif'],
+        // Monoespaciada DEL SISTEMA: se usa en etiquetitas y códigos, nunca en
+        // el LCP, y no justifica bajar una familia entera.
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
       },
       keyframes: {
         'accordion-down': {
