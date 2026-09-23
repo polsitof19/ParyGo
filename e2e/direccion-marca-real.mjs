@@ -25,7 +25,7 @@
 //     bloque de compra (resumen, barra, entradas) arriba del título. Nació de
 //     la captura de Paul del 2026-09-23: "Tu compra" suelto arriba del nombre
 //     y todo en una columna de 720.
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 import { svc, BASE } from './lib.mjs';
 
 const MAS_ANGOSTA_QUE = 0.5; // lib/flyer.ts: por debajo de 1:2 es una captura
@@ -34,7 +34,7 @@ const MAS_ANGOSTA_QUE = 0.5; // lib/flyer.ts: por debajo de 1:2 es una captura
 export async function eventoDeMarcaReal() {
   const { data } = await svc
     .from('events')
-    .select('slug, name, cover_url, starts_at, brand:brands!inner(slug, is_test, archived_at)')
+    .select('slug, name, cover_url, starts_at, is_free, brand:brands!inner(slug, is_test, archived_at)')
     .eq('is_published', true).is('archived_at', null)
     .eq('brand.is_test', false).is('brand.archived_at', null)
     .gt('starts_at', new Date(Date.now() - 12 * 3600e3).toISOString())
@@ -50,13 +50,34 @@ export async function verificarDireccion({ browser, prod = false, base = BASE } 
   if (!ev) { check('hay un evento publicado de una marca real para medir', false, 'ninguno'); return checks; }
   const url = prod ? `https://${ev.brand.slug}.parygo.com/${ev.slug}` : `${base}/${ev.slug}`;
 
-  for (const ancho of [1440, 390]) {
+  for (const ancho of [1440, 390, 430]) {
+    const movil = ancho < 1024;
     const ctx = await browser.newContext({
-      viewport: { width: ancho, height: ancho === 390 ? 844 : 900 },
+      viewport: { width: ancho, height: movil ? (ancho === 430 ? 932 : 844) : 900 },
       ...(prod ? {} : { extraHTTPHeaders: { 'x-parygo-brand-slug': ev.brand.slug } }),
     });
     const p = await ctx.newPage();
     const r = await p.goto(`${url}?nc=${Date.now()}`, { waitUntil: 'networkidle', timeout: 90000 });
+    // Nada tapado por la barra de pagar: con la página al fondo, ningún texto
+    // (fuera de la propia barra) pisa la caja de la barra.
+    const tapados = movil ? await p.evaluate(async () => {
+      scrollTo(0, document.documentElement.scrollHeight);
+      await new Promise((r) => setTimeout(r, 300));
+      const bar = document.querySelector('.b-cta');
+      if (!bar) return ['sin barra'];
+      const b = bar.getBoundingClientRect();
+      const out = [];
+      const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      while (tw.nextNode()) {
+        const n = tw.currentNode; const el = n.parentElement;
+        if (!n.textContent.trim() || !el || bar.contains(el) || el.closest('.sr-only, [data-sonner-toaster]')) continue;
+        const rg = document.createRange(); rg.selectNodeContents(n);
+        const r = rg.getBoundingClientRect();
+        if (r.width && r.height && r.left < b.right && r.right > b.left && r.top < b.bottom && r.bottom > b.top) out.push(n.textContent.trim().slice(0, 30));
+      }
+      scrollTo(0, 0);
+      return out;
+    }) : [];
     const m = await p.evaluate(() => {
       const buy = document.querySelector('.b-buy');
       const img = document.querySelector('.b-hero__shot img');
@@ -86,10 +107,29 @@ export async function verificarDireccion({ browser, prod = false, base = BASE } 
       // Orden aprobado de los bloques en el teléfono.
       const orden = ['.b-hero', '.b-tks', '.b-trust', '.b1-simple', '.b-info']
         .map((s) => [s, caja(s)?.top ?? null]);
-      const meta = document.querySelector('.b-meta');
+      const meta = document.querySelector('.b-hero__cuando');
+      // Texto DENTRO del área del flyer: cualquier nodo de texto visible cuya
+      // caja pise la del flyer (el visor a pantalla completa no cuenta).
+      const shot = document.querySelector('.b-hero__shot');
+      const hr = shot ? shot.getBoundingClientRect() : null;
+      const textoEnFlyer = [];
+      if (hr) {
+        const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        while (tw.nextNode()) {
+          const n = tw.currentNode; const el = n.parentElement;
+          if (!n.textContent.trim() || !el || !visible(el) || el.closest('.b-lightbox, .sr-only')) continue;
+          const rg = document.createRange(); rg.selectNodeContents(n);
+          const r = rg.getBoundingClientRect();
+          if (r.width && r.height && r.left < hr.right && r.right > hr.left && r.top < hr.bottom && r.bottom > hr.top) textoEnFlyer.push(n.textContent.trim().slice(0, 30));
+        }
+      }
+      const fila = document.querySelector('.b1-ty');
+      const filaTop = fila ? Math.round(fila.getBoundingClientRect().top + scrollY) : null;
+      const ceroSoles = /S\/\s?0(?![\d.,])/.test(document.body.innerText);
       const cta = document.querySelector('.b-cta');
       const fondoCta = cta ? getComputedStyle(cta).backgroundColor : null;
       return {
+        heroAlto: hr ? Math.round(hr.height) : null, textoEnFlyer, filaTop, ceroSoles,
         orden, meta: visible(meta) ? meta.innerText.replace(/\s+/g, ' ') : null, fondoCta,
         pgBg: getComputedStyle(document.querySelector('.client-shell')).getPropertyValue('--pg-bg').trim(),
         titulo, flyer: caja('.b-hero'), rail: caja('.b-sum'), compraArriba,
@@ -119,10 +159,10 @@ export async function verificarDireccion({ browser, prod = false, base = BASE } 
     // Las variables de color de la compra existen (a508bde las había borrado y
     // la barra de pagar salía transparente, con la página viéndose a través).
     check(`${tag} · --pg-bg está definida`, !!m.pgBg, m.pgBg);
-    // El kicker del hero es la MARCA; la fecha va en la línea del panel (390) o
-    // en la ficha bajo el flyer (1440). Nunca en el kicker: se repetía.
-    check(`${tag} · el kicker del hero es la marca, sin la fecha`, !!m.kicker && !/\d{1,2}:\d{2}/.test(m.kicker), m.kicker);
-    if (ancho === 1440) {
+    // Sin eyebrow sobre el título: la marca ya está en el header.
+    check(`${tag} · sin eyebrow sobre el título`, !m.kicker, m.kicker);
+    if (ev.is_free) check(`${tag} · evento gratis: nunca dice "S/ 0"`, !m.ceroSoles, m.ceroSoles);
+    if (!movil) {
       check(`${tag} · y una vez en la ficha de datos`, !!m.ficha, m.ficha);
       const { titulo: t, rail, flyer } = m;
       check(`${tag} · "Tu compra" es un rail a la DERECHA del título`,
@@ -134,9 +174,13 @@ export async function verificarDireccion({ browser, prod = false, base = BASE } 
       check(`${tag} · ningún bloque de compra aparece arriba del título`,
         Array.isArray(m.compraArriba) && m.compraArriba.length === 0, JSON.stringify(m.compraArriba));
     } else {
+      check(`${tag} · hero ≤300px`, m.heroAlto !== null && m.heroAlto <= 300, m.heroAlto);
+      check(`${tag} · ningún texto dentro del área del flyer`, m.textoEnFlyer.length === 0, JSON.stringify(m.textoEnFlyer));
+      check(`${tag} · la primera entrada empieza antes de y=320`, m.filaTop !== null && m.filaTop < 320, m.filaTop);
+      check(`${tag} · la barra de pagar no tapa ningún texto (página al fondo)`, tapados.length === 0, JSON.stringify(tapados));
       // En el teléfono no hay rail: la compra va en la barra de abajo.
       check(`${tag} · sin rail en el teléfono`, !m.rail, JSON.stringify(m.rail));
-      check(`${tag} · cuándo y dónde, una vez, en la línea del panel`, !!m.meta && /\d{1,2}:\d{2}/.test(m.meta), m.meta);
+      check(`${tag} · cuándo · dónde, debajo del título`, !!m.meta && /\d{1,2}:\d{2}/.test(m.meta), m.meta);
       // La barra de pagar tiene fondo (alfa ≥ .9): no se ve la página a través.
       const alfa = (() => {
         const c = m.fondoCta ?? '';
@@ -190,7 +234,10 @@ export async function verificarDireccion({ browser, prod = false, base = BASE } 
 
 // Ejecutado directo (no importado desde fase1).
 if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}` || process.argv[1]?.endsWith('direccion-marca-real.mjs')) {
-  const browser = await chromium.launch();
+  // E2E_ENGINE=webkit corre en WebKit (el motor de Safari/iPhone, que es
+  // donde está casi todo el tráfico del comprador).
+  const motor = process.env.E2E_ENGINE === 'webkit' ? webkit : chromium;
+  const browser = await motor.launch();
   const checks = await verificarDireccion({ browser, prod: process.env.E2E_PROD === '1' });
   await browser.close();
   for (const c of checks) console.log(`${c.ok ? '✔' : '✘'} ${c.name}${c.detail ? ' — ' + c.detail : ''}`);

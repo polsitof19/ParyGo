@@ -44,6 +44,8 @@ export type Event = {
   // Evento GRATIS (0056). Manda en el copy de toda la compra: sin gratis, el
   // mismo tipo a S/0 sería una cortesía y no se ofrece en público.
   is_free?: boolean | null;
+  // Tope de entradas por persona (0060). NULL = sin tope propio (queda el de 10).
+  max_per_person?: number | null;
 };
 
 export type TicketType = {
@@ -196,7 +198,9 @@ export function FilaEntrada({ t, escalera, cur, incluye, onInc, onDec }: FilaPro
           <h3 className="b1-ty__nm">{t.name}</h3>
           {incluye && <p className="b1-ty__inc">{incluye}</p>}
         </div>
-        <span className="b-ph__pr b1-ty__pr">{formatPEN(vigente.precio)}</span>
+        {/* Un tipo a 0 que llega al público es de un evento GRATIS (las cortesías
+            no se ofrecen): dice "Gratis", nunca "S/ 0". */}
+        <span className="b-ph__pr b1-ty__pr">{vigente.precio === 0 ? 'Gratis' : formatPEN(vigente.precio)}</span>
         <span className="b-ph__act b1-ty__act">
           <Accion t={t} cur={cur} estado="vigente" onInc={onInc} onDec={onDec} />
         </span>

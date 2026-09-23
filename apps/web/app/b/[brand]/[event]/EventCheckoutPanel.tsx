@@ -54,7 +54,10 @@ export function EventCheckoutPanel({
     [ticketTypes]
   );
 
-  const [qty, setQty] = useState<Record<string, number>>({});
+  // Evento GRATIS con un solo tipo: la entrada viene elegida (1) y el botón
+  // de abajo ya es "Reclamar". No hay nada que decidir antes de dejar los datos.
+  const unicoGratis = event.is_free === true && sorted.length === 1 && !sorted[0]!.soldOut ? sorted[0]! : null;
+  const [qty, setQty] = useState<Record<string, number>>(() => (unicoGratis ? { [unicoGratis.id]: 1 } : {}));
   const [step, setStepRaw] = useState<1 | 2>(1);
   // Morph entre pasos: el contenido que se va sale (140ms) antes de que entre
   // el nuevo (220ms), en vez de cortarse de golpe. `step` sigue siendo la
@@ -117,7 +120,11 @@ export function EventCheckoutPanel({
   const claimRef = useRef<{ clave: string; id: string } | null>(null);
   const [reservationExpiresAt, setReservationExpiresAt] = useState<number | null>(null);
   const [now, setNow] = useState<number>(() => Date.now());
-  const lastReserved = useRef<Record<string, number>>({});
+  // La preselección cuenta como "ya reservada" para NO crear una reserva de
+  // stock en cada visita (bots incluidos): el cupo lo asegura igual
+  // reserve_order_stock, bajo lock, al reclamar. Si la persona cambia la
+  // cantidad, desde ahí se reserva como siempre.
+  const lastReserved = useRef<Record<string, number>>(unicoGratis ? { [unicoGratis.id]: 1 } : {});
   useEffect(() => { sessionIdRef.current = readOrCreateSessionId(); }, []);
   useEffect(() => {
     if (reservationExpiresAt === null) return;
@@ -164,7 +171,8 @@ export function EventCheckoutPanel({
   function inc(t: TicketType) {
     const current = qty[t.id] ?? 0;
     if (t.soldOut) return;
-    if (current >= 10) { toast.error('Máximo 10 por compra'); return; }
+    const tope = event.max_per_person ?? 10;
+    if (current >= tope) { toast.error(`Máximo ${tope} por persona`); return; }
     // El tope real de stock lo enforcea reserveStock (atómico) + reserve_order_stock
     // al confirmar; acá solo limitamos el máximo por compra. No exponemos el cupo.
     setQty({ ...qty, [t.id]: current + 1 });
@@ -238,8 +246,9 @@ export function EventCheckoutPanel({
   }
 
   const finalTotal = applied ? applied.finalCents : totalCents;
+  // En un evento gratis el monto 0 se lee "Gratis", nunca "S/ 0".
+  const plata = (c: number) => (event.is_free && c === 0 ? 'Gratis' : formatPEN(c));
   // "Desde" de la barra vacía: la entrada más barata que todavía se vende.
-  const dondeCorto = [event.venue_name, distrito(event.venue_address)].filter(Boolean).join(' · ');
   const aLaVenta = sorted.filter((t) => !t.soldOut);
   const desdeCents = aLaVenta.length ? Math.min(...aLaVenta.map((t) => t.active_price_cents)) : 0;
   // Ahorro por cantidad (bulk) — solo si NO hay código (son excluyentes).
@@ -329,6 +338,13 @@ export function EventCheckoutPanel({
         ? 'Pagas con tarjeta'
         : 'Pago seguro';
   const ctaMetodo = method === 'mercadopago' ? 'Pagar con tarjeta' : brand.yape_number ? 'Pagar con Yape' : 'Pagar';
+  // Un solo texto para el botón del paso 1, en la barra (teléfono) y en el
+  // rail (escritorio): antes el rail decía "Continuar" y la barra otra cosa.
+  const etiquetaPaso1 = totalItems === 0
+    ? (event.is_free ? 'Elige tu entrada' : 'Elige tus entradas')
+    : event.is_free
+      ? <>Reclamar entrada gratis <ArrowRight aria-hidden="true" /></>
+      : <>{esGratis ? 'Continuar' : ctaMetodo} <ArrowRight aria-hidden="true" /></>;
 
 // Una sola línea, como se lo diría alguien: nada de enumeraciones de tres.
 function fraseConfianza(pago: string): string {
@@ -346,7 +362,7 @@ function fraseConfianza(pago: string): string {
         <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}${atras ? ' c-stepwrap--back' : ''}`}>
           <div className="b-head">
             <h1 className="b-head__t">Paga con tarjeta</h1>
-            <p className="b-head__s">{event.name} · {formatPEN(finalTotal)}</p>
+            <p className="b-head__s">{event.name} · {plata(finalTotal)}</p>
           </div>
           <div className="b-panel">
             <MercadoPagoWallet publicKey={mpPublicKey} preferenceId={mpCheckout.preferenceId} initPoint={mpCheckout.initPoint} />
@@ -356,17 +372,11 @@ function fraseConfianza(pago: string): string {
         /* ---------- PANTALLA 1: el flyer y las entradas ---------- */
         <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}${atras ? ' c-stepwrap--back' : ''}`} key="step1">
         <div className="b-stage">
-          <Hero event={event} direccion={direccion} marca={brand.name} />
+          <Hero event={event} direccion={direccion} />
 
           <div className="b-list">
             {/* En EDITORIAL la lista es una sección con nombre propio; en
                 CANVAS es la continuación natural del flyer y no lo necesita. */}
-            {/* Cuándo y dónde, UNA vez, como primera línea del panel (la
-                maqueta aprobada de Canvas). El kicker del hero lleva la marca. */}
-            <p className="b-meta">
-              <b>{fmtCuando(event.starts_at)}</b>
-              {dondeCorto && <span>{dondeCorto}</span>}
-            </p>
             {/* En CANVAS el título de la sección no se ve —la lista es la continuación
                 del flyer—, pero existe para lectores de pantalla: sin él el
                 esquema saltaba de h1 a h3. */}
@@ -401,14 +411,14 @@ function fraseConfianza(pago: string): string {
               <>
                 <ul className="b-sum__list">
                   {lineItems.map((li) => (
-                    <li key={li.id}><span>{li.name} × {li.q}</span><span>{formatPEN(li.amount)}</span></li>
+                    <li key={li.id}><span>{li.name} × {li.q}</span><span>{plata(li.amount)}</span></li>
                   ))}
                 </ul>
-                <p className="b-sum__total"><span>Total</span><b>{formatPEN(totalCents)}</b></p>
+                <p className="b-sum__total"><span>Total</span><b>{plata(totalCents)}</b></p>
               </>
             )}
             <button type="button" className="b-btn b-btn--go" disabled={totalItems === 0} onClick={() => setStep(2)}>
-              {esGratis ? 'Continuar' : ctaMetodo} <ArrowRight aria-hidden="true" />
+              {etiquetaPaso1}
             </button>
           </aside>
         </div>
@@ -525,7 +535,7 @@ function fraseConfianza(pago: string): string {
               {lineItems.map((li) => (
                 <div key={li.id} className="b-resumen">
                   <span>{li.q}× {li.name}</span>
-                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPEN(li.amount)}</span>
+                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>{plata(li.amount)}</span>
                 </div>
               ))}
               {bulkSavings > 0 && (
@@ -540,7 +550,7 @@ function fraseConfianza(pago: string): string {
                   </span>
                 </div>
               )}
-              <div className="b-resumen"><span>Total</span><b>{formatPEN(finalTotal)}</b></div>
+              <div className="b-resumen"><span>Total</span><b>{plata(finalTotal)}</b></div>
               {/* El candado es la promesa del pago. En un evento gratis no hay
                   pago, así que no hay nada que asegurar: va la promesa real. */}
               {eventoGratis
@@ -573,25 +583,26 @@ function fraseConfianza(pago: string): string {
       {!mpCheckout && (
         <div className="b-cta">
           <div className="b-cta__t">
-            {totalItems === 0 ? (
+            {totalItems === 0 && event.is_free ? (
+              // Gratis y vacía: no hay un "desde" que decir.
+              <span className="n n--solo">Elige tu entrada</span>
+            ) : totalItems === 0 ? (
               // Vacía, la barra dice cuánto cuesta entrar (como la maqueta
-              // aprobada de Canvas): el precio más bajo a la venta, o Gratis.
+              // aprobada de Canvas): el precio más bajo a la venta.
               <>
                 <span className="n">Desde</span>
-                <span className="v">{desdeCents === 0 ? 'Gratis' : formatPEN(desdeCents)}</span>
+                <span className="v">{formatPEN(desdeCents)}</span>
               </>
             ) : (
               <>
                 <span className="n">{totalItems} entrada{totalItems === 1 ? '' : 's'}</span>
-                <span className="v"><span key={finalTotal} className="c-amount">{formatPEN(shownStep === 1 ? totalCents : finalTotal)}</span></span>
+                <span className="v"><span key={finalTotal} className="c-amount">{plata(shownStep === 1 ? totalCents : finalTotal)}</span></span>
               </>
             )}
           </div>
           {shownStep === 1 ? (
             <button type="button" className="b-btn b-btn--go" disabled={totalItems === 0} onClick={() => setStep(2)}>
-              {totalItems === 0
-                ? 'Elige tus entradas'
-                : <>{esGratis ? 'Continuar' : ctaMetodo} <ArrowRight aria-hidden="true" /></>}
+              {etiquetaPaso1}
             </button>
           ) : (
             <button type="submit" form="checkout-form" className="b-btn b-btn--go" disabled={isPending || totalItems === 0}>
@@ -615,7 +626,7 @@ function fraseConfianza(pago: string): string {
 //              un ticket; el título va en el cuerpo del boleto.
 //   3 NOCHE    el flyer sangra por un costado y el título ocupa el resto.
 // Tocar el flyer lo abre entero en los tres (el hero siempre lo recorta).
-function Hero({ event, direccion, marca }: { event: Event; direccion: Direccion; marca: string }) {
+function Hero({ event, direccion }: { event: Event; direccion: Direccion }) {
   const mapsHref = hrefMapa(event);
   const [zoom, setZoom] = useState(false);
   // `cerrando` existe para que el visor tenga SALIDA: antes se desmontaba de
@@ -694,15 +705,15 @@ function Hero({ event, direccion, marca }: { event: Event; direccion: Direccion;
       )}
       </header>
 
-      {/* El bloque de título. En CANVAS se apoya SOBRE el flyer; en
-          EDITORIAL va arriba de todo y el flyer viene después. Lo ordena el
-          CSS con `order`, no dos árboles distintos. */}
+      {/* El bloque de título, DEBAJO del flyer en las dos direcciones (en
+          el teléfono) y en la columna del centro (en escritorio). */}
       <div className="b-hero__over">
-        <p className="b-kicker">{marca}</p>
+        {/* NUNCA texto sobre el flyer: el título y cuándo/dónde van DEBAJO,
+            en tinta sobre papel. Sin eyebrow de marca: ya está en el header. */}
         <h1 className="b-hero__name">{event.name}</h1>
-        {/* La fecha NO va acá: va una vez en la línea de arriba del panel
-            (.b-meta) y, en escritorio, en la ficha bajo el flyer (y la línea
-            del panel se oculta). En Standly llegó a leerse tres veces. */}
+        <p className="b-hero__cuando">{[fmtCuando(event.starts_at), donde].filter(Boolean).join(' · ')}</p>
+        {/* En escritorio esta línea se oculta: cuándo y dónde ya están en la
+            ficha bajo el flyer. En Standly llegó a leerse tres veces. */}
       </div>
     </>
   );

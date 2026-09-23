@@ -323,34 +323,26 @@
   }
 }
 
-
 /* ============================================================
-   TELÉFONO Y TABLET (<1024) — LA MAQUETA APROBADA DE CANVAS
+   TELÉFONO Y TABLET (<1024) — CANVAS Y EDITORIAL
    ============================================================
-   Portado de design_handoff_moderno/prototipo-compra.html (dirección
-   B, rama design/moderno), medido lado a lado en WebKit a 390 y 430
-   el 2026-09-23. Lo que se corrigió contra esa maqueta:
-     · el kicker del hero es la MARCA, y cuándo/dónde es la primera
-       línea del panel (.b-meta), una sola vez;
-     · el nombre sobre el flyer va en --b-t2, no en t1;
-     · el panel monta 40px sobre el flyer y el título le deja 64 abajo;
-     · la fila: nombre en cuerpo 17/600, precio t3 y el "+" PEGADO al
-       precio (antes 88px de hueco), hairline arriba y abajo;
-     · la barra: una fila —"Desde S/ X" a la izquierda y el botón a la
-       derecha—, papel OPACO (la maqueta usaba 92% con desenfoque, pero en WebKit a 390 se leía el título de la sección de abajo a través de la barra, y se veía como un error); apagada es tinta sobre
-       papel con borde, no el color de marca al 40%.
-   Orden de bloques (el aprobado): hero → entradas → confianza →
-   pasos → dónde. Escritorio: el bloque de tres columnas de arriba.
+   Corrección del 2026-09-23 sobre la captura de Paul a 390, y encima
+   de la maqueta de Canvas (design/moderno):
+     · el hero mide como mucho 300px y lleva el flyer ENTERO
+       (contain) sobre su copia difuminada: nada se recorta;
+     · NUNCA texto sobre el flyer: el título y cuándo · dónde van
+       DEBAJO, en flujo, tinta sobre papel. Sin eyebrow de marca (ya
+       está en el header) y sin la franja flotante de fecha;
+     · la primera fila de entrada entra antes de y=320 a 390. Con el
+       header de 68 y el título debajo del flyer, eso deja al hero en
+       ~150px: el tope de 300 es un techo, y el que manda es el precio
+       a la vista;
+     · la fila: nombre en cuerpo 17/600, precio t3 y el "+" pegado al
+       precio, hairline arriba y abajo (de la maqueta);
+     · la barra: una fila, PAPEL OPACO (a 92% en WebKit se leía el
+       texto de abajo y parecía un error). Apagada es tinta sobre papel.
+   Orden: hero → título → entradas → confianza → pasos → dónde.
    ============================================================ */
-.client-shell .b-meta {
-  display: flex; flex-wrap: wrap; gap: 2px var(--b-s2);
-  margin: 0; font-size: var(--b-meta); line-height: 1.45; color: var(--ink-2);
-}
-.client-shell .b-meta b { color: var(--ink); font-weight: 600; }
-@media (min-width: 1024px) {
-  /* En escritorio cuándo y dónde están en la ficha bajo el flyer. */
-  .client-shell .b-meta { display: none; }
-}
 
 /* Apagado = tinta sobre papel con borde. El color de marca aparece recién
    cuando hay algo que comprar: al 40% era ilegible y, con una marca clara,
@@ -360,31 +352,52 @@
   box-shadow: inset 0 0 0 1px var(--line); opacity: 1;
 }
 
+/* Cuándo · dónde, bajo el título. En escritorio ya está en la ficha. */
+.client-shell .b-hero__cuando { margin: var(--b-s1) 0 0; font-size: var(--b-meta); line-height: 1.45; color: var(--ink-2); }
+@media (min-width: 1024px) { .client-shell .b-hero__cuando { display: none; } }
+
 @media (max-width: 1023px) {
-  /* ---- La barra de pagar: una fila ---- */
-  .client-shell .b-cta {
-    display: flex; align-items: center; gap: var(--b-s2);
-    padding: var(--b-s2) var(--pad) calc(var(--b-s2) + env(safe-area-inset-bottom, 0px));
-    background: var(--pg-bg);
-    -webkit-backdrop-filter: none; backdrop-filter: none;
-  }
-  .client-shell .b-cta__t { flex: 1; min-width: 0; display: block; margin: 0; }
-  .client-shell .b-cta__t .n {
-    display: block; font-size: var(--b-lb); font-weight: 700; letter-spacing: .14em;
-    text-transform: uppercase; color: var(--ink-3);
-  }
-  .client-shell .b-cta__t .v { display: block; }
-  .client-shell .b-cta .b-btn { width: auto; flex: none; }
+  .client-shell .b-canvas,
+  .client-shell .b-editorial { --flyer-h: 150px; }
 
-  /* ---- Canvas: hero ---- */
-  .client-shell .b-canvas .b-hero__name {
-    font-size: var(--b-t2); line-height: 1.02; letter-spacing: -.03em; max-width: 16ch;
-  }
-  .client-shell .b-canvas .b-hero__over { padding-bottom: var(--b-s6); }
+  /* ---- El hero: flyer entero, nada encima ---- */
+  .client-shell .b-canvas .b-stage,
+  .client-shell .b-editorial .b-stage { display: flex; flex-direction: column; }
+  .client-shell .b-canvas .b-hero,
+  .client-shell .b-editorial .b-hero { order: 1; margin-top: 0; }
+  .client-shell .b-canvas .b-hero__over,
+  .client-shell .b-editorial .b-hero__over { order: 2; }
+  .client-shell .b-canvas .b-aside,
+  .client-shell .b-editorial .b-aside { order: 3; }
+  .client-shell .b-canvas .b-list,
+  .client-shell .b-editorial .b-list { order: 4; }
 
-  /* ---- Canvas: el panel de papel ---- */
-  .client-shell .b-canvas .b-list { margin-top: -40px; padding-top: var(--b-s3); }
-  .client-shell .b-canvas .b-tks { margin-top: var(--b-s3); }
+  .client-shell .b-canvas .b-hero__shot img,
+  .client-shell .b-editorial .b-hero__shot img {
+    height: var(--flyer-h); max-height: 300px; object-fit: contain;
+  }
+  .client-shell .b-canvas .b-hero__blur,
+  .client-shell .b-editorial .b-hero__blur { display: block; }
+  .client-shell .b-canvas .b-hero__fade,
+  .client-shell .b-editorial .b-hero__fade { display: none; }
+
+  .client-shell .b-canvas .b-hero__over,
+  .client-shell .b-editorial .b-hero__over {
+    position: static; height: auto; display: block; pointer-events: auto;
+    padding: var(--b-s2) 0 var(--b-s2);
+  }
+  .client-shell .b-canvas .b-hero__name,
+  .client-shell .b-editorial .b-hero__name {
+    color: var(--ink); text-shadow: none;
+    font-size: var(--b-t2); line-height: 1.05; letter-spacing: -.03em;
+  }
+
+  /* ---- La lista: en flujo, sin panel montado sobre la imagen ---- */
+  .client-shell .b-canvas .b-list,
+  .client-shell .b-editorial .b-list {
+    margin-top: 0; padding-top: 0; background: none; border-radius: 0;
+  }
+  .client-shell .b-canvas .b-tks { margin-top: 0; }
   .client-shell .b-canvas .b-ty + .b-ty { margin-top: 0; }
   .client-shell .b-canvas .b1-ty { padding: var(--b-s2) 0; border-bottom: 1px solid var(--line); }
   .client-shell .b-canvas .b1-ty:first-child { border-top: 1px solid var(--line); }
@@ -397,4 +410,20 @@
   .client-shell .b-canvas .b1-ty__act { min-width: 0; }
   .client-shell .b-canvas .b-add { width: 40px; height: 40px; border-color: var(--line); }
   .client-shell .b-canvas .b-trust { margin-top: var(--b-s2); }
+
+  /* ---- La barra de pagar: una fila, opaca ---- */
+  .client-shell .b-cta {
+    display: flex; align-items: center; gap: var(--b-s2);
+    padding: var(--b-s2) var(--pad) calc(var(--b-s2) + env(safe-area-inset-bottom, 0px));
+    background: var(--pg-bg);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  .client-shell .b-cta__t { flex: 1; min-width: 0; display: block; margin: 0; }
+  .client-shell .b-cta__t .n {
+    display: block; font-size: var(--b-lb); font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .client-shell .b-cta__t .n--solo { font-size: var(--b-meta); letter-spacing: 0; text-transform: none; font-weight: 600; color: var(--ink-2); }
+  .client-shell .b-cta__t .v { display: block; }
+  .client-shell .b-cta .b-btn { width: auto; flex: none; padding: 0 var(--b-s3); font-size: var(--b-ctl); }
 }

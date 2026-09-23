@@ -530,7 +530,9 @@ if (!S.eventId) {
     await shot(p, 'C', 'marca-landing');
     // La landing destaca un solo "próximo evento": con varias corridas publicadas puede ser otro E2E.
     check('C', 'landing de marca muestra marca + evento publicado', /Demo Test/.test(landing) && /E2E Septiembre/.test(landing), landing.slice(0, 200));
-    check('C', 'cosmético 7: la landing no dice "desde S/ 0" (la Cortesía no cuenta) y muestra "desde S/ 20"', !/desde S\/ 0\b/.test(landing) && /desde S\/ 20\b/.test(landing), (landing.match(/desde S\/ \d+/g) ?? []).join(' | '));
+    check('C', 'cosmético 7: la landing no dice "desde S/ 0" (la Cortesía no cuenta) y muestra "desde S/ 20"', // /i y \s: la home nueva (2026-09-23) escribe "Desde" con mayúscula, y
+    // formatPEN separa "S/" del número con un espacio de no separación.
+    !/desde S\/\s?0\b/i.test(landing) && /desde S\/\s?20\b/i.test(landing), (landing.match(/desde S\/\s?\d+/gi) ?? []).join(' | '));
     const email = `e2e-c-${STAMP}@test.local`;
     S.buyerC = email;
     const r = await buy({ items: { General: 2, VIP: 1 }, email, name: `Comprador C ${STAMP}`, promo: PROMO, tag: 'C', shots: true });
@@ -991,12 +993,19 @@ if (!S.eventId) {
     await go(p, `/${slugGratis}`);
     const txt = (await bodyText(p, 600)).replace(/\s+/g, ' ');
     await shot(p, 'L', 'evento-gratis');
-    // Un tipo S/0 de un evento marcado GRATIS y no cortesía SÍ se ofrece.
-    check('L', 'el tipo gratis se ofrece en público (S/ 0 visible)', /Entrada/.test(txt) && /S\/\s*0/.test(txt), txt.slice(0, 200));
+    // Un tipo S/0 de un evento marcado GRATIS y no cortesía SÍ se ofrece, y
+    // dice "Gratis": nunca "S/ 0" (corrección de Paul, 2026-09-23).
+    check('L', 'el tipo gratis se ofrece en público y dice "Gratis"', /Entrada/.test(txt) && /Gratis/.test(txt), txt.slice(0, 200));
+    check('L', 'un evento gratis nunca muestra "S/ 0"', !/S\/\s?0(?![\d.,])/.test(txt), txt.slice(0, 240));
     check('L', 'el copy no promete un pago que no existe', !/Yapeas el monto/.test(txt), txt.slice(0, 240));
 
-    await vis(p.getByRole('button', { name: 'Sumar Entrada' })).click();
-    await sleep(1200);
+    // Un solo tipo: viene con 1 elegida y el botón ya es "Reclamar", activo.
+    // Se reclama SIN tocar el stepper, o sea sin reserva previa de stock: el
+    // cupo lo asegura reserve_order_stock dentro de claim_free_order.
+    const cant = (await vis(p.locator('.b-qval')).innerText().catch(() => '')).trim();
+    const ctaG = (await ctaBtn(p).innerText().catch(() => '')).replace(/\s+/g, ' ');
+    check('L', 'un solo tipo gratis viene con 1 preseleccionada', cant === '1', cant);
+    check('L', 'el botón es "Reclamar entrada gratis" y está activo', /Reclamar entrada gratis/.test(ctaG) && !(await ctaBtn(p).isDisabled()), ctaG);
     await ctaBtn(p).click();
     await p.locator('#buyer_name').waitFor({ timeout: 15000 });
     const emailG = `e2e-l-${STAMP}@test.local`;
