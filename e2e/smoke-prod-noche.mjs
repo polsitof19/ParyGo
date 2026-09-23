@@ -36,7 +36,9 @@ for (const ancho of [390, 1440]) {
   });
   const page = await ctx.newPage();
   // Nada de escritura: cualquier POST (server action) desde esta página es un error del smoke.
-  page.on('request', (r) => { if (r.method() !== 'GET' && r.method() !== 'HEAD') { fallas += 1; console.log('✘ request no-GET', r.method(), r.url()); } });
+  // /cdn-cgi/rum es el beacon de Cloudflare Web Analytics (lo inyecta Cloudflare,
+  // es telemetría, no toca la app ni la base): no cuenta como escritura.
+  page.on('request', (r) => { if (r.method() !== 'GET' && r.method() !== 'HEAD' && !r.url().includes('/cdn-cgi/rum')) { fallas += 1; console.log('✘ request no-GET', r.method(), r.url()); } });
   for (const pg of PAGINAS) {
     const r = await page.goto(`${pg.url}?nc=${Date.now()}`, { waitUntil: 'load', timeout: 90000 });
     await page.waitForTimeout(2500);
@@ -55,7 +57,9 @@ for (const ancho of [390, 1440]) {
         s.remove();
         pesoReal = { peso: cs.fontWeight, w400: Math.round(a), wPeso: Math.round(c) };
       }
-      const logo = document.querySelector('.c-lockup__logo, .bh-marca__logo');
+      // El logo VISIBLE: en la home la cabecera (con su logo de 26) está oculta
+      // y el que se ve es el de 56.
+      const logo = [...document.querySelectorAll('.c-lockup__logo, .bh-marca__logo')].find((x) => x.getClientRects().length) ?? null;
       return {
         tema: shell?.className ?? '',
         fondo: shell ? getComputedStyle(shell).backgroundColor : null,
