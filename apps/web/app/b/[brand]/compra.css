@@ -162,8 +162,16 @@
 /* ---------- Dónde es ---------- */
 .client-shell .b-info { margin-top: var(--b-s5); }
 .client-shell .b-info__b + .b-info__b { margin-top: var(--b-s4); }
-.client-shell .b-map { display: grid; place-items: center; height: var(--b-map); border-radius: var(--r-card); background: var(--surface-2); color: var(--ink-3); }
+.client-shell .b-map { position: relative; display: grid; place-items: center; height: var(--b-map); border-radius: var(--r-card); overflow: hidden; background: var(--surface-2); color: var(--ink-3); }
 .client-shell .b-map svg { width: 22px; height: 22px; }
+/* El mapa de Google viene claro: se invierte y se gira el tono para que los
+   colores del mapa sigan siendo los suyos (verde el parque, azul el agua)
+   sobre el negro. Es un filtro sobre una imagen ajena, no sobre texto ni
+   controles, y por eso no entra en la regla de brightness de los botones. */
+.client-shell .b-map__frame {
+  position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block;
+  filter: invert(.92) hue-rotate(180deg) saturate(.7) contrast(.9);
+}
 .client-shell .b-donde__txt { margin-top: var(--b-sm); }
 .client-shell .b-donde__nm { font-size: var(--b-ctl); font-weight: 600; }
 .client-shell .b-info__dir { margin-top: 2px; font-size: var(--b-meta); color: var(--ink-2); }

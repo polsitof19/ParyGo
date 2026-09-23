@@ -713,6 +713,8 @@ function Hero({ event, linea }: { event: Event; direccion: Direccion; linea: str
 function MasInfo({ event, brand }: { event: Event; brand: Brand }) {
   const mapsHref = hrefMapa(event);
   const direccion = event.venue_address ?? '';
+  // Qué busca el mapa: la dirección si la hay; si no, el nombre del lugar.
+  const mapaQuery = [event.venue_name, event.venue_address].filter(Boolean).join(', ');
 
   return (
     <section className="b-info">
@@ -720,11 +722,23 @@ function MasInfo({ event, brand }: { event: Event; brand: Brand }) {
         <div className="b-info__b b-info__donde">
           <h2 className="b1-h2">Dónde es</h2>
           <div className="b-donde">
-            {/* El mapa es un bloque de 118 en --surface-2 con el pin; el mapa
-                de verdad se abre en "Cómo llegar". El iframe de Google era un
-                rectángulo blanco de 280px en una página negra, y un tercero
-                cargando en la pantalla que cobra. */}
-            <span className="b-map" aria-hidden="true"><MapPin /></span>
+            {/* El mapa de Google, a 118 y en diferido. Sobre el negro va
+                oscurecido con un filtro (compra.css); el pin en --surface-2 es
+                lo que se ve mientras carga y lo que queda si no hay dirección
+                ni lugar que buscar. */}
+            <span className="b-map" aria-hidden="true">
+              <MapPin />
+              {mapaQuery && (
+                <iframe
+                  className="b-map__frame"
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(mapaQuery)}&z=16&output=embed`}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title={`Mapa de ${event.venue_name ?? 'el lugar'}`}
+                  tabIndex={-1}
+                />
+              )}
+            </span>
             <div className="b-donde__txt">
               {event.venue_name && <p className="b-donde__nm">{event.venue_name}</p>}
               {direccion && <p className="b-info__dir">{direccion}</p>}
