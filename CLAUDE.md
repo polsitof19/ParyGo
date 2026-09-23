@@ -238,26 +238,25 @@ para OK de Paul.
   ≥900 y barra de ABAJO en el teléfono, en los DOS paneles. Tamaños y radios
   siempre de la rampa (--s-*, incluidos --s-field/--s-cifra/--s-hero/--s-word)
   o de los tokens de radio. Nada centrado en toda la app.
-- PANEL DEL ORGANIZADOR, estructura (rama panel/ordenado, 2026-09-23):
-  CUATRO secciones, iguales en celular y compu: Eventos · Escáner · Equipo ·
-  Mi marca (barra lateral en la compu; barra FIJA abajo en <900). El INICIO
-  (panel/noche): fila de Yapes por aprobar → EL EVENTO QUE VIENE (flyer,
-  nombre, cuándo/dónde, estado; tres cifras vendidas · cortesías · cobrado;
-  Abrir escáner + Copiar link; aviso "Invita a tu equipo de puerta" si no hay
-  validadores; acciones agrupadas en Asistentes y Venta) → Todos tus eventos →
-  Anteriores y Archivados plegados → el pack al pie. En el EVENTO, "Cómo va"
-  es corto (Yapes pendientes, tres cifras + aforo que abren Estadísticas,
-  alertas, botones, acciones); el detalle (cuatro números, tabla por tipo,
-  ventas por día, rechazados, reporte para imprimir) vive en la sub-pestaña
-  /estadisticas. Sub-pestañas de Resumen: Cómo va · Yapes · Estadísticas.
-  Cada evento, CUATRO
-  pestañas siempre a la vista: Resumen (cómo va · Revisar Yape · Reporte) ·
-  Evento (datos, fecha, lugar, entradas y precios, flyer, gestión: UNA sola
-  pantalla, /editar; /entradas redirige ahí) · Personas (compradores ·
-  promotores · cortesías) · Puerta (en vivo · equipo). Crear evento = un
-  formulario en 3 pasos numerados (lo básico → entradas → detalles), link del
-  evento auto desde el nombre. El E2E (paso J) verifica las pestañas, las
-  secciones y el redirect.
+- PANEL DEL ORGANIZADOR, estructura POR NIVELES (pedido de Paul, 2026-09-23,
+  rama panel/lanzamiento): CUATRO secciones, iguales en celular y compu:
+  Eventos · Escáner · Equipo · Mi marca (barra lateral en la compu; barra FIJA
+  abajo en <900). NIVEL 1, EVENTOS: fila de Yapes por aprobar (si hay) y los
+  eventos como TARJETAS con su flyer (el organizador elige cuál abrir);
+  pasados y archivados plegados; el pack al pie. NIVEL 2, EL EVENTO: flyer,
+  nombre, cuándo/dónde, publicar, Yapes pendientes, Abrir escáner + Copiar
+  link y un MENÚ de secciones EN ESTE ORDEN: Estadísticas · Entradas · Yapes
+  · Cortesías y códigos · Compradores · Promotores · Puerta · Datos del
+  evento. NIVEL 3, cada sección es su pantalla con "‹ <evento>" para volver
+  (nada de pestañas ni sub-pestañas). SIN CIFRAS DE VENTA fuera de
+  Estadísticas (Paul: "S/ 0 cobrado · 3 vendidas se ve poco profesional").
+  Entradas (/entradas): cada tipo es una fila plegada con UN botón "Guardar
+  cambios de <nombre>" + "Agregar tipo de entrada" (nombre, precio o gratis,
+  cuántas, color). Datos del evento (/editar): datos, flyer y gestión, con
+  "Guardar datos del evento". Crear evento = formulario en 3 pasos. iPhone:
+  ningún campo con letra < 16px (Safari hace zoom; audit-iphone lo mide como
+  "zoom") y html con touch-action: manipulation. El E2E (paso J) verifica el
+  menú, las secciones y que el evento abra sin cifras.
 - ESCÁNER: /scan sin sesión va a /login?next=/scan y el login VUELVE al
   escáner (lib/loginNext.ts, con test de open redirect en
   e2e/login-next.test.mts); antes terminaba en el panel y "parecía que se
@@ -338,6 +337,15 @@ para no romper la app vieja desplegada.
   "YA USADO" y no pasa: es anti-fraude (un QR reenviado por WhatsApp no entra
   dos veces). El builder crea los tipos con max_scans=1. Reingreso configurable
   por tipo queda como FEATURE FUTURA con migración; no reportarlo como bug.
+- CÓDIGOS PARA RECLAMAR (2026-09-23): un código que deja la orden en S/0 en
+  un evento que COBRA vale 1 ENTRADA por uso (startCheckout lo exige dos
+  veces: tras preview_promo y tras apply_promo_to_order, contra el total
+  congelado). Antes un uso se llevaba hasta 10 entradas. El organizador los
+  crea en Cortesías ("Códigos para reclamar": gratis, N usos, 1 por email).
+  Cubierto por el paso N del E2E.
+- CORTESÍAS: se emiten al email del organizador (precargado) y la página
+  Cortesías lista CADA entrada con "Copiar link" y "WhatsApp" (la URL solo
+  en el href/portapapeles, nunca escrita). Cada QR entra una vez.
 - Códigos promo: por evento, tipos percent/fixed(por-orden)/free, límites
   ilimitado/N/por-email, tracking por RR.PP. (label + ventas por código), sin
   comisiones automáticas. Descuento sobre fase activa, congelado, server-side.

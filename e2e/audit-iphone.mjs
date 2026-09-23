@@ -187,8 +187,17 @@ const MEDIR = () => {
     vacios.push({ q: path(e), h: Math.round(r.height) });
   }
 
+  // ZOOM de iOS: Safari agranda la página al enfocar un campo con letra < 16px.
+  const zoom = [];
+  for (const e of document.querySelectorAll('input, select, textarea')) {
+    if (!vis(e)) continue;
+    if (/^(checkbox|radio|color|range|file|hidden|submit|button)$/.test(e.type)) continue;
+    const fs = parseFloat(getComputedStyle(e).fontSize);
+    if (fs < 16) zoom.push({ q: path(e), fs });
+  }
+
   const cls = typeof window.__cls === 'number' ? Math.round(window.__cls * 1000) / 1000 : null;
-  return { ...out, fuera, desliza, cortado, toque, montados, stats, shell, vacios, cls };
+  return { ...out, fuera, desliza, cortado, toque, montados, stats, shell, vacios, zoom, cls };
 };
 
 const V = (await vistas(PANEL)).filter((v) => !ONLY || v.id.includes(ONLY));
@@ -248,7 +257,7 @@ for (const w of ANCHOS) {
         String(m.scrollW).padStart(4) + '/' + m.W + ' ' + st.padEnd(12) +
         ' fuera:' + m.fuera.length + ' desliza:' + m.desliza.length + ' cortado:' + m.cortado.length +
         ' toque:' + m.toque.length + ' montados:' + m.montados.length + ' stats:' + m.stats.length +
-        ' vacios:' + m.vacios.length + (m.cls !== null ? ' cls:' + m.cls : '')
+        ' vacios:' + m.vacios.length + ' zoom:' + m.zoom.length + (m.cls !== null ? ' cls:' + m.cls : '')
       );
       informe.push({ w, status: resp?.status() ?? null, ...v, ...m });
       if (SHOT) await page.screenshot({ path: resolve(OUT, 'shots', SHOT + '-' + v.id + '-' + w + '.png'), fullPage: true });

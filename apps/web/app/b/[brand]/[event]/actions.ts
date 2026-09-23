@@ -408,8 +408,16 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
       p_email: parsed.data.buyerEmail.toLowerCase(),
       p_items: parsed.data.items.map((i) => ({ ticket_type_id: i.ticketTypeId, quantity: i.quantity })),
     });
-    const r = pv as { ok?: boolean; reason?: string } | null;
+    const r = pv as { ok?: boolean; reason?: string; is_free?: boolean } | null;
     if (pvErr || !r?.ok) return { ok: false, message: mapPromoError(`PROMO_${r?.reason ?? ''}`) };
+    // Un código que deja GRATIS la orden de un evento que cobra es un "código
+    // para reclamar": vale UNA entrada por uso. Sin esto, un solo uso se
+    // llevaba hasta 10 entradas (el tope de usos cuenta órdenes, no entradas).
+    // En un evento gratis no aplica: ahí el total 0 es lo normal.
+    const qtyTotal = parsed.data.items.reduce((a, i) => a + i.quantity, 0);
+    if (r.is_free === true && event.is_free !== true && qtyTotal > 1) {
+      return { ok: false, message: 'Este código vale para 1 entrada. Elige solo una.' };
+    }
   }
 
   // 4. Insert order + order_items in a "transaction" (best-effort, no real BEGIN
@@ -527,6 +535,16 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
       total_final_cents?: number;
       breakdown?: { ticket_type_id: string; final_cents: number }[];
     };
+    // "Código para reclamar" = 1 entrada por uso. Se vuelve a exigir acá
+    // contra el total que QUEDÓ ESCRITO (apply_promo_to_order), no solo contra
+    // el preview de arriba: el preview lee el precio activo por su cuenta y, en
+    // el borde de un cambio de fase, podría ver otro total que el congelado.
+    if (promo.is_free === true && event.is_free !== true && resolved.reduce((a, r) => a + r.quantity, 0) > 1) {
+      await admin.from('orders').update({ status: 'failed' }).eq('id', order.id);
+      await admin.rpc('release_promo_redemption_for_order', { p_order_id: order.id });
+      await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
+      return { ok: false, message: 'Este código vale para 1 entrada. Elige solo una.' };
+    }
     // El promo puede volver gratis un evento pago; y si el evento ya era
     // gratis, sigue siéndolo aunque el código no aporte nada.
     isFree = promo.is_free === true || isFree;

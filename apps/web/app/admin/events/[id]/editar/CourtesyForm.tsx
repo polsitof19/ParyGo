@@ -8,11 +8,11 @@ import { issueCourtesyTicketsAction, type CourtesyState } from '../courtesy-acti
 const initial: CourtesyState = { ok: false, message: null };
 type TT = { id: string; name: string };
 
-export function CourtesyForm({ eventId, ticketTypes }: { eventId: string; ticketTypes: TT[] }) {
+export function CourtesyForm({ eventId, ticketTypes, defaultEmail = '' }: { eventId: string; ticketTypes: TT[]; defaultEmail?: string }) {
   const [state, action] = useFormFeedback(issueCourtesyTicketsAction, initial);
   const [typeId, setTypeId] = useState(ticketTypes[0]?.id ?? '');
   const [qty, setQty] = useState(1);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(defaultEmail);
 
   if (ticketTypes.length === 0) {
     return <p className="s-card__desc">Crea un tipo de entrada activo antes de emitir cortesías.</p>;
@@ -40,7 +40,7 @@ export function CourtesyForm({ eventId, ticketTypes }: { eventId: string; ticket
           <input id="ct_qty" name="quantity" type="number" min={1} max={100} value={qty} onChange={(e) => setQty(Math.max(1, Math.min(100, Number(e.target.value) || 1)))} className="s-input" required />
         </div>
         <div>
-          <label className="s-label" htmlFor="ct_email">Email destino</label>
+          <label className="s-label" htmlFor="ct_email">Enviar a</label>
           <input id="ct_email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="promotor@correo.com" className="s-input" required />
         </div>
       </div>

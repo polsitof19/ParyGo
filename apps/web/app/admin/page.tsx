@@ -1,10 +1,9 @@
 import Link from 'next/link';
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { ChevronDown, Plus } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { formatPEN } from '@/lib/utils';
 import { optimizedImage } from '@/lib/imageUrl';
 import { TicketRecovery } from './TicketRecovery';
 import { SetupChecklist, type SetupStep } from './SetupChecklist';
@@ -12,7 +11,6 @@ import { LowBalanceNotice } from './LowBalanceNotice';
 import { publicEnv } from '@/lib/env';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { setEventArchivedAction } from './events/[id]/edit-actions';
-import { EventButtons, QuickActions } from './events/[id]/QuickActions';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -81,7 +79,7 @@ export default async function AdminHomePage() {
   // traían las pagadas dos veces (una para sumar, otra para recuperación).
   const eventNameById = new Map((events ?? []).map((e) => [e.id, e.name] as const));
   const eventIds = (events ?? []).map((e) => e.id);
-  const [{ data: paidRows }, { data: ticketOrderRows }, { count: activeTypeCount }, { data: mpStatus }, { data: validTicketRows }, { count: validatorCountRaw }] = await Promise.all([
+  const [{ data: paidRows }, { data: ticketOrderRows }, { count: activeTypeCount }, { data: mpStatus }, { data: validTicketRows }] = await Promise.all([
     adminCli.from('orders').select('id, buyer_name, total_cents, created_at, event_id, payment_method').eq('brand_id', brand.id).eq('status', 'paid'),
     adminCli.from('tickets').select('order_id').eq('brand_id', brand.id),
     eventIds.length
@@ -92,10 +90,7 @@ export default async function AdminHomePage() {
     // Resumen del evento. ticketOrderRows (sin filtrar) sigue siendo para la
     // detección de órdenes pagadas sin tickets.
     adminCli.from('tickets').select('order_id').eq('brand_id', brand.id).is('invalidated_at', null),
-    // ¿Tiene equipo de puerta? Sin validadores, el aviso "Invita a tu equipo".
-    adminCli.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', brand.id).eq('role', 'validator'),
   ]);
-  const validatorCount = validatorCountRaw ?? 0;
   const mpRow = Array.isArray(mpStatus) ? mpStatus[0] : null;
   const mpConfigured = Boolean(mpRow?.has_access_token && mpRow?.has_public_key);
   const paidOrderRows = (paidRows ?? []) as { id: string; buyer_name: string | null; total_cents: number | null; created_at: string; event_id: string; payment_method: string }[];
@@ -181,9 +176,11 @@ export default async function AdminHomePage() {
     </button>
   );
 
-  const eventRow = (e: (typeof activeEvents)[number]) => {
+  // EVENTOS como TARJETAS con su flyer (pedido de Paul, 2026-09-23): con dos o
+  // tres eventos, el organizador elige cuál abrir mirando el flyer. Tocar la
+  // tarjeta entra al panel de ESE evento.
+  const eventCard = (e: (typeof activeEvents)[number]) => {
     const pend = pendingByEvent.get(e.id) ?? 0;
-    const vendidas = soldByEvent.get(e.id) ?? 0;
     const past = isPast(e);
     const hoy = !past && new Date(e.starts_at).toLocaleDateString('es-PE', { timeZone: 'America/Lima' }) === new Date().toLocaleDateString('es-PE', { timeZone: 'America/Lima' });
     const status = !e.is_published ? { cls: 's-badge--draft', label: 'Borrador' }
@@ -192,27 +189,19 @@ export default async function AdminHomePage() {
       : { cls: 's-badge--ok', label: 'Publicado' };
     return (
       <li key={e.id}>
-        <Link href={`/admin/events/${e.id}`} className={`a-evrow${past ? ' a-evrow--past' : ''}`}>
-          <span className="a-evrow__thumb" aria-hidden="true">
+        <Link href={`/admin/events/${e.id}`} className={`a-evcard${past ? ' a-evcard--past' : ''}`}>
+          <span className="a-evcard__flyer" aria-hidden="true">
             {e.cover_url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={optimizedImage(e.cover_url, { width: 160, quality: 72 })} alt="" loading="lazy" decoding="async" />
+              <img src={optimizedImage(e.cover_url, { width: 480, quality: 75 })} alt="" loading="lazy" decoding="async" />
             ) : (
-              (e.name.trim()[0] ?? '?').toUpperCase()
+              <span>{(e.name.trim()[0] ?? '?').toUpperCase()}</span>
             )}
+            {pend > 0 && <span className="a-nav__count a-evcard__pend" aria-label={`${pend} Yape por aprobar`}>{pend}</span>}
           </span>
-          <span className="a-evrow__main">
-            <span className="a-evrow__title">{e.name}</span>
-            <span className="a-evrow__when">
-              {fmtWhen(e.starts_at)}
-              <span className={`s-badge ${status.cls}`}>{status.label}</span>
-            </span>
-          </span>
-          <span className="a-evrow__side">
-            <span className="a-evrow__n">{vendidas}</span>
-            <span className="a-evrow__sold">{vendidas === 1 ? 'entrada' : 'entradas'}</span>
-            {pend > 0 && <span className="a-nav__count" aria-label={`${pend} Yape por aprobar`}>{pend}</span>}
-          </span>
+          <span className="a-evcard__name">{e.name}</span>
+          <span className="a-evcard__when">{fmtWhen(e.starts_at)}</span>
+          <span className={`s-badge ${status.cls}`}>{status.label}</span>
         </Link>
       </li>
     );
@@ -220,7 +209,6 @@ export default async function AdminHomePage() {
 
   return (
     <>
-      <h1 className="a-srh1">Tus eventos</h1>
 
       {/* 1) PENDIENTE — una fila con fondo, lo único con fondo de la pantalla. */}
       {hasDue && (
@@ -248,56 +236,11 @@ export default async function AdminHomePage() {
       {/* Setup guiado: solo el dueño y solo si falta algún paso (se auto-oculta). */}
       {!impersonating && <SetupChecklist steps={setupSteps} brandName={brand.name} />}
 
-      {/* 2) EL EVENTO QUE VIENE: flyer, nombre, cuándo; tres cifras; los dos
-          botones; y sus acciones agrupadas. */}
-      {nextEvent ? (
-        <section className="a-next" aria-labelledby="a-next-title">
-          <div className="a-next__head">
-            <Link href={`/admin/events/${nextEvent.id}`} className="a-next__flyer" tabIndex={-1} aria-hidden="true">
-              {nextEvent.cover_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={optimizedImage(nextEvent.cover_url, { width: 320, quality: 75 })} alt="" decoding="async" />
-              ) : (
-                <span>{(nextEvent.name.trim()[0] ?? '?').toUpperCase()}</span>
-              )}
-            </Link>
-            <div className="a-next__id">
-              <h2 id="a-next-title" className="a-next__title">
-                <Link href={`/admin/events/${nextEvent.id}`}>{nextEvent.name}</Link>
-              </h2>
-              <p className="a-next__when">
-                {fmtWhen(nextEvent.starts_at)}
-                {nextEvent.venue_name && <><br />{nextEvent.venue_name}</>}
-              </p>
-              <span className="s-badge s-badge--ok a-next__state">Publicado · {nextWhen}</span>
-            </div>
-          </div>
-
-          <EventButtons publicUrl={nextPublicUrl} isPublished={!!nextEvent.is_published} scannerPrimary={!hasDue} readOnly={impersonating} />
-
-          {validatorCount === 0 && !impersonating && (
-            <Link href="/admin/equipo" className="a-hint">
-              <span className="a-hint__dot" aria-hidden="true" />
-              <span className="a-hint__txt">
-                <strong>Invita a tu equipo de puerta</strong>
-                <span>Por ahora solo tú puedes escanear {nextDays !== null && nextDays <= 0 ? 'esta noche' : 'ese día'}.</span>
-              </span>
-              <ChevronRight aria-hidden="true" />
-            </Link>
-          )}
-
-          <QuickActions eventId={nextEvent.id} publicUrl={nextPublicUrl} isPublished={!!nextEvent.is_published} readOnly={impersonating} showEdit />
-        </section>
-      ) : (
-        <p className="s-calm">
-          <span style={{ flex: '1 1 220px' }}>Ningún evento publicado por venir. {canCreate ? 'Crea o publica uno para empezar a vender.' : 'Pide un pack para crear el próximo.'}</span>
-        </p>
-      )}
-
-      {/* 3) Tus eventos: los que vienen y los borradores. */}
+      {/* 2) TUS EVENTOS: tarjetas con el flyer. Primero los que vienen (el más
+          cercano primero) y los borradores; lo pasado, plegado abajo. */}
       <section className="a-mine" aria-labelledby="a-mine-title">
         <div className="a-mine__head">
-          <h2 id="a-mine-title" className="s-h2">{nextEvent ? 'Todos tus eventos' : 'Tus eventos'}</h2>
+          <h1 id="a-mine-title" className="s-h1">Eventos</h1>
           {createBtn}
         </div>
         {!events || events.length === 0 ? (
@@ -309,7 +252,7 @@ export default async function AdminHomePage() {
         ) : upcoming.length === 0 ? (
           <p className="s-empty">No tienes eventos por venir. Los que ya pasaron están en “Anteriores”.</p>
         ) : (
-          <ul className="a-evlist">{upcoming.map(eventRow)}</ul>
+          <ul className="a-evgrid">{upcoming.map(eventCard)}</ul>
         )}
       </section>
 
@@ -322,7 +265,7 @@ export default async function AdminHomePage() {
               <ChevronDown aria-hidden="true" />
             </summary>
             <div className="s-fold__body">
-              <ul className="a-evlist">{pastEvents.map(eventRow)}</ul>
+              <ul className="a-evgrid a-evgrid--past">{pastEvents.map(eventCard)}</ul>
             </div>
           </details>
         )}

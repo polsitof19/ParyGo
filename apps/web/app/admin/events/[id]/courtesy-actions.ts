@@ -159,6 +159,6 @@ export async function issueCourtesyTicketsAction(
     ok: true,
     message: emailSent
       ? `Listo: ${qty} ${tt.name} de cortesía enviadas a ${email}.`
-      : `Emitidas ${qty} ${tt.name}, pero el email a ${email} no se envió — reenvialo desde la orden.`,
+      : `Emitidas ${qty} ${tt.name}, pero el email a ${email} no se envió — reenvíalo desde la orden.`,
   };
 }
