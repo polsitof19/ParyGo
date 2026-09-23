@@ -23,6 +23,9 @@ declare
   ev uuid; tt uuid; ev_pago uuid; tt_pago uuid; tt_cort uuid;
   r jsonb := '{}'::jsonb; x jsonb; o uuid;
 begin
+  -- demotest vive ARCHIVADA y una marca archivada no reclama: se desarchiva
+  -- dentro de esta transacción, que se revierte entera al final.
+  update brands set archived_at = null where id = b;
   insert into events (brand_id, slug, name, starts_at, ends_at, is_published, is_free, max_per_person, require_dni, require_age_confirmation, min_age)
   values (b, 'ensayo-0064-' || floor(random()*1e6)::int, 'Ensayo 0064', now() + interval '5 days', now() + interval '5 days 6 hours', true, true, 1, true, true, 18)
   returning id into ev;
@@ -70,6 +73,33 @@ begin
     'K_cantidad_11', ${claim('ev', 'b', "jsonb_build_array(jsonb_build_object('ticket_type_id', tt, 'quantity', 11))", 'e2e-x@test.local', '55555555', { sesion: 'sesion-k-123' })});
   r := r || jsonb_build_object('Z_ordenes_finales', (select count(*) from orders where event_id in (ev, ev_pago)));
 
+  -- R. IDEMPOTENCIA por claim_id (evento aparte: aforo 5, límite 1 por persona)
+  declare ev2 uuid; tt2 uuid; cid uuid := gen_random_uuid(); x1 jsonb; x2 jsonb;
+  begin
+    insert into events (brand_id, slug, name, starts_at, is_published, is_free, max_per_person)
+    values (b, 'ensayo-0064r-' || floor(random()*1e6)::int, 'Ensayo replay', now() + interval '5 days', true, true, 1) returning id into ev2;
+    insert into ticket_types (event_id, name, price_cents, capacity, is_active) values (ev2, 'Gratis', 0, 5, true) returning id into tt2;
+    x1 := claim_free_order(ev2, b, ${uno('tt2')}, 'Rita', 'e2e-ensayo-r@test.local', '+51999', 'dni', '66666666', true, false, 'sesion-r1-123', null, null, '{}', cid);
+    -- el mismo reclamo otra vez (respuesta perdida → reintento), con el email en otra caja
+    x2 := claim_free_order(ev2, b, ${uno('tt2')}, 'Rita', 'E2E-ensayo-r@test.local', '+51999', 'dni', '66666666', true, false, 'sesion-r1-123', null, null, '{}', cid);
+    r := r || jsonb_build_object(
+      'R1_ok', x1->'ok', 'R2', x2,
+      'R2_misma_orden', (x1->>'order_id') = (x2->>'order_id'),
+      'R2_ordenes', (select count(*) from orders where event_id = ev2),
+      'R2_tickets', (select count(*) from tickets t join orders o2 on o2.id = t.order_id where o2.event_id = ev2),
+      'R2_sold', (select sold from ticket_types where id = tt2),
+      'R2_jobs', (select count(*) from notification_jobs n join orders o2 on o2.id = n.order_id where o2.event_id = ev2),
+      'R3_otro_email', claim_free_order(ev2, b, ${uno('tt2')}, 'Otro', 'e2e-ensayo-otro2@test.local', '+51999', 'dni', '77777777', true, false, 'sesion-r3-123', null, null, '{}', cid),
+      'R4_otro_evento', claim_free_order(ev, b, ${uno('tt')}, 'Rita', 'e2e-ensayo-r@test.local', '+51999', 'dni', '66666666', true, false, 'sesion-r4-123', null, null, '{}', cid));
+    r := r || jsonb_build_object('R6_sin_claim_id_sigue_andando',
+      (claim_free_order(ev2, b, ${uno('tt2')}, 'Sin', 'e2e-ensayo-s@test.local', '+51999', 'dni', '88888888', true, false, 'sesion-r6-123', null, null, '{}'))->'ok');
+    begin
+      x := claim_free_order(ev2, b, ${uno('tt2')}, 'Rita', 'e2e-ensayo-r@test.local', '+51999', 'dni', '66666666', true, false, 'sesion-r5-123', null, null, '{}', gen_random_uuid());
+      r := r || jsonb_build_object('R5_otro_claim_misma_persona', x);
+    exception when others then r := r || jsonb_build_object('R5_error', sqlerrm); end;
+    r := r || jsonb_build_object('R_ordenes_finales', (select count(*) from orders where event_id = ev2));
+  end;
+
   raise exception 'RESULTADO:%', r::text;
 end $$;`;
 
@@ -84,6 +114,6 @@ try {
   console.log(JSON.stringify(JSON.parse(JSON.parse(`"${m[1]}"`)), null, 1));
 }
 const quedo = await query(`select (select count(*) from pg_proc where proname = 'claim_free_order') funcion,
-  (select count(*) from events where slug like 'ensayo-0064%') eventos,
-  (select count(*) from orders where buyer_email like 'e2e-ensayo-%' or buyer_email = 'e2e-x@test.local') ordenes`);
+  (select count(*) from events where slug like 'ensayo-0064%') eventos, (select count(*) from information_schema.columns where table_name='orders' and column_name='claim_id') columna,
+  (select count(*) from orders where buyer_email like 'e2e-ensayo-%' or buyer_email = 'e2e-x@test.local' or buyer_email like 'e2e-ensayo-%') ordenes`);
 console.log('persistió algo?', JSON.stringify(quedo));

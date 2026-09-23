@@ -46,7 +46,29 @@
 -- emisión y el encolado (antes se soltaba al terminar la reserva). Mejor un
 -- "intenta de nuevo" a los 4s que el pool de PostgREST de una instancia Free
 -- lleno de conexiones esperando; statement_timeout de 10s como techo total.
+--
+-- IDEMPOTENCIA (claim_id): el cliente genera un uuid por reclamo y lo manda
+-- en cada reintento del MISMO reclamo. Con señal mala, la función puede
+-- confirmar y la respuesta perderse: el comprador ve "intenta de nuevo", toca
+-- otra vez, y sin esto se creaba una SEGUNDA orden (entradas duplicadas que
+-- gastan aforo). Ahora el reintento devuelve la orden que ya existe.
+--   · UNIQUE parcial en orders.claim_id: dos reintentos SIMULTÁNEOS no pueden
+--     crear dos órdenes — el segundo espera al primero, choca con el índice y
+--     devuelve la orden del primero.
+--   · El replay exige mismo evento, misma marca y mismo email. Un claim_id
+--     reusado con otros datos es 'claim_conflict' y no revela la orden ajena.
+--   · claim_id es opcional (default null): sin él, el reclamo funciona igual
+--     que antes, sin idempotencia.
 -- =============================================================
+
+alter table public.orders add column if not exists claim_id uuid;
+create unique index if not exists orders_claim_id_uniq
+  on public.orders (claim_id) where claim_id is not null;
+comment on column public.orders.claim_id is
+  'Id del reclamo generado en el cliente (0064). UNIQUE: un reintento del mismo reclamo gratis devuelve la misma orden.';
+
+-- La versión sin p_claim_id nunca se aplicó; por si un ensayo la dejó, fuera.
+drop function if exists public.claim_free_order(uuid, uuid, jsonb, text, text, text, text, text, boolean, boolean, text, text, text, jsonb);
 
 create or replace function public.claim_free_order(
   p_event_id     uuid,
@@ -62,7 +84,8 @@ create or replace function public.claim_free_order(
   p_session_id   text,
   p_ip           text,
   p_user_agent   text,
-  p_utm          jsonb      -- {source, medium, campaign, content, term}
+  p_utm          jsonb,     -- {source, medium, campaign, content, term}
+  p_claim_id     uuid default null
 ) returns jsonb
 language plpgsql
 security definer
@@ -81,7 +104,26 @@ declare
   v_doc      text := btrim(coalesce(p_dni, ''));
   v_issue    jsonb;
   v_count    int;
+  v_prev     record;
 begin
+  -- Reintento de un reclamo que YA se confirmó: la misma orden, sin validar de
+  -- nuevo (el aforo o el límite por persona ya la cuentan).
+  if p_claim_id is not null then
+    select o.id, o.event_id, o.brand_id, o.buyer_email, o.status, e.slug,
+           (select count(*) from public.tickets t where t.order_id = o.id) as n
+      into v_prev
+    from public.orders o join public.events e on e.id = o.event_id
+    where o.claim_id = p_claim_id;
+    if found then
+      if v_prev.event_id = p_event_id and v_prev.brand_id = p_brand_id
+         and v_prev.buyer_email = lower(p_buyer_email) and v_prev.status = 'paid' then
+        return jsonb_build_object('ok', true, 'order_id', v_prev.id, 'event_slug', v_prev.slug,
+                                  'ticket_count', v_prev.n, 'replayed', true);
+      end if;
+      return jsonb_build_object('ok', false, 'code', 'claim_conflict');
+    end if;
+  end if;
+
   if p_items is null or jsonb_typeof(p_items) <> 'array'
      or jsonb_array_length(p_items) < 1 or jsonb_array_length(p_items) > 20 then
     return jsonb_build_object('ok', false, 'code', 'type_invalid');
@@ -165,19 +207,37 @@ begin
     v_ip := null;
   end;
 
+  begin
   insert into public.orders (
-    event_id, brand_id, buyer_name, buyer_email, buyer_phone, buyer_dni,
+    claim_id, event_id, brand_id, buyer_name, buyer_email, buyer_phone, buyer_dni,
     buyer_doc_type, buyer_age_ok, marketing_opt_in, payment_method,
     subtotal_cents, total_cents, discount_cents, status,
     ip_address, user_agent, utm_source, utm_medium, utm_campaign, utm_content, utm_term
   ) values (
-    v_event.id, v_event.brand_id, p_buyer_name, lower(p_buyer_email), p_buyer_phone,
+    p_claim_id, v_event.id, v_event.brand_id, p_buyer_name, lower(p_buyer_email), p_buyer_phone,
     case when v_event.require_dni then v_doc else null end,
     p_doc_type, coalesce(p_age_ok, false), coalesce(p_marketing, false), 'yape_manual',
     0, 0, 0, 'pending_yape_review',
     v_ip, p_user_agent,
     p_utm->>'source', p_utm->>'medium', p_utm->>'campaign', p_utm->>'content', p_utm->>'term'
   ) returning id into v_order_id;
+  exception when unique_violation then
+    -- Dos reintentos a la vez: este esperó al otro en el índice y el otro ya
+    -- confirmó. Se devuelve SU orden (o conflicto si los datos no coinciden).
+    -- Sin claim_id el choque no es de este índice: que siga su curso.
+    if p_claim_id is null then raise; end if;
+    select o.id, o.event_id, o.brand_id, o.buyer_email, o.status, e.slug,
+           (select count(*) from public.tickets t where t.order_id = o.id) as n
+      into v_prev
+    from public.orders o join public.events e on e.id = o.event_id
+    where o.claim_id = p_claim_id;
+    if found and v_prev.event_id = p_event_id and v_prev.brand_id = p_brand_id
+       and v_prev.buyer_email = lower(p_buyer_email) and v_prev.status = 'paid' then
+      return jsonb_build_object('ok', true, 'order_id', v_prev.id, 'event_slug', v_prev.slug,
+                                'ticket_count', v_prev.n, 'replayed', true);
+    end if;
+    return jsonb_build_object('ok', false, 'code', 'claim_conflict');
+  end;
 
   insert into public.order_items
     (order_id, ticket_type_id, ticket_type_name, quantity, unit_price_cents, subtotal_cents, attendee_names)
@@ -224,7 +284,7 @@ begin
 end;
 $$;
 
-revoke all on function public.claim_free_order(uuid, uuid, jsonb, text, text, text, text, text, boolean, boolean, text, text, text, jsonb) from public;
-revoke all on function public.claim_free_order(uuid, uuid, jsonb, text, text, text, text, text, boolean, boolean, text, text, text, jsonb) from anon;
-revoke all on function public.claim_free_order(uuid, uuid, jsonb, text, text, text, text, text, boolean, boolean, text, text, text, jsonb) from authenticated;
-grant execute on function public.claim_free_order(uuid, uuid, jsonb, text, text, text, text, text, boolean, boolean, text, text, text, jsonb) to service_role;
+revoke all on function public.claim_free_order(uuid, uuid, jsonb, text, text, text, text, text, boolean, boolean, text, text, text, jsonb, uuid) from public;
+revoke all on function public.claim_free_order(uuid, uuid, jsonb, text, text, text, text, text, boolean, boolean, text, text, text, jsonb, uuid) from anon;
+revoke all on function public.claim_free_order(uuid, uuid, jsonb, text, text, text, text, text, boolean, boolean, text, text, text, jsonb, uuid) from authenticated;
+grant execute on function public.claim_free_order(uuid, uuid, jsonb, text, text, text, text, text, boolean, boolean, text, text, text, jsonb, uuid) to service_role;

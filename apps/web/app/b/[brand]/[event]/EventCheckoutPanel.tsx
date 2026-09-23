@@ -110,6 +110,11 @@ export function EventCheckoutPanel({
     });
 
   const sessionIdRef = useRef<string>('');
+  // Id del reclamo gratis (0064). Atado al CONTENIDO del reclamo: si la
+  // respuesta se pierde y la persona toca de nuevo sin cambiar nada, viaja el
+  // mismo id y el server devuelve la orden que ya creó. Si cambia entradas,
+  // email o documento, es otro reclamo y lleva otro id.
+  const claimRef = useRef<{ clave: string; id: string } | null>(null);
   const [reservationExpiresAt, setReservationExpiresAt] = useState<number | null>(null);
   const [now, setNow] = useState<number>(() => Date.now());
   const lastReserved = useRef<Record<string, number>>({});
@@ -279,6 +284,15 @@ export function EventCheckoutPanel({
       // Solo una pista para el server: elige el camino de un viaje (0064).
       freeHint: eventoGratis && !applied,
     };
+    if (input.freeHint) {
+      const clave = JSON.stringify([input.items, input.buyerEmail.toLowerCase(), input.buyerDocType, input.buyerDni]);
+      if (claimRef.current?.clave !== clave) {
+        claimRef.current = { clave, id: window.crypto?.randomUUID?.() ?? '' };
+      }
+      // Sin randomUUID (navegador muy viejo) no se manda: el reclamo anda igual,
+      // solo que sin idempotencia.
+      if (claimRef.current.id) input.claimId = claimRef.current.id;
+    }
     startTransition(async () => {
       const res = await startCheckout({ ...input, sessionId: sessionIdRef.current });
       if (!res.ok) { toast.error(res.message ?? 'Error en el checkout'); return; }

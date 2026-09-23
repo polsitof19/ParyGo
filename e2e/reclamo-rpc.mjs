@@ -12,6 +12,11 @@
 //    un "insufficient_stock", sold = 1, y ninguna orden huérfana del rechazo.
 // 3. CONCURRENCIA — misma persona: límite 1 por persona, el mismo email dos
 //    veces a la vez → un éxito, un "per_person_limit".
+// 4. IDEMPOTENCIA — el MISMO reclamo (mismo claim_id) dos veces a la vez, como
+//    un reintento que sale antes de que llegue la respuesta del primero → los
+//    dos devuelven la MISMA orden, una sola orden y una sola entrada.
+// demotest vive archivada y una marca archivada no reclama: se desarchiva
+// durante el test y se vuelve a archivar al final (pase lo que pase).
 // Al final archiva el evento (cleanup.mjs además limpia los e2e-*).
 import { svc, anon, env, log, otpSession } from './lib.mjs';
 import { createClient } from '@supabase/supabase-js';
@@ -20,7 +25,9 @@ const STAMP = Date.now().toString().slice(-6);
 const R = [];
 const check = (nombre, ok, detalle = '') => { R.push({ nombre, ok }); log(`${ok ? '✅' : '❌'} ${nombre}${detalle ? ' · ' + detalle : ''}`); };
 
-const { data: brand } = await svc.from('brands').select('id').eq('slug', 'demotest').single();
+const { data: brand } = await svc.from('brands').select('id, archived_at').eq('slug', 'demotest').single();
+const estabaArchivada = !!brand.archived_at;
+if (estabaArchivada) await svc.from('brands').update({ archived_at: null }).eq('id', brand.id);
 
 async function eventoGratis(sufijo, { capacidad, porPersona = null }) {
   const inicio = new Date(Date.now() + 9 * 86400000);
@@ -38,12 +45,12 @@ async function eventoGratis(sufijo, { capacidad, porPersona = null }) {
   return { ev: ev.id, tt: tt.id };
 }
 
-const args = (ev, tt, email, dni, sesion) => ({
+const args = (ev, tt, email, dni, sesion, claimId = null) => ({
   p_event_id: ev, p_brand_id: brand.id,
   p_items: [{ ticket_type_id: tt, quantity: 1 }],
   p_buyer_name: 'E2E RPC', p_buyer_email: email, p_buyer_phone: '+51999111222',
   p_doc_type: 'dni', p_dni: dni, p_age_ok: true, p_marketing: false,
-  p_session_id: sesion, p_ip: null, p_user_agent: 'e2e', p_utm: {},
+  p_session_id: sesion, p_ip: null, p_user_agent: 'e2e', p_utm: {}, p_claim_id: claimId,
 });
 
 const eventos = [];
@@ -95,10 +102,32 @@ try {
   check('misma persona a la vez: un éxito y un "límite por persona"', ok === 1 && limite === 1, JSON.stringify([m1.data ?? m1.error?.message, m2.data ?? m2.error?.message]));
   const { count: tkM } = await svc.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', m.ev);
   check('misma persona: una sola entrada emitida', tkM === 1, `tickets=${tkM}`);
+
+  // ---------- 4. mismo claim_id, dos veces a la vez ----------
+  const i = await eventoGratis('claim', { capacidad: 10, porPersona: 2 });
+  eventos.push(i.ev);
+  const cid = crypto.randomUUID();
+  const emailI = `e2e-rpc-claim-${STAMP}@test.local`;
+  const [i1, i2] = await Promise.all([
+    svc.rpc('claim_free_order', args(i.ev, i.tt, emailI, '40000001', `sesion-i-${STAMP}`, cid)),
+    svc.rpc('claim_free_order', args(i.ev, i.tt, emailI, '40000001', `sesion-i-${STAMP}`, cid)),
+  ]);
+  const mismas = i1.data?.ok === true && i2.data?.ok === true && i1.data.order_id === i2.data.order_id;
+  const replays = [i1, i2].filter((r) => r.data?.replayed === true).length;
+  check('mismo claim_id a la vez: los dos OK con la MISMA orden (uno es replay)', mismas && replays === 1,
+    JSON.stringify([i1.data ?? i1.error?.message, i2.data ?? i2.error?.message]));
+  const { count: ordI } = await svc.from('orders').select('id', { count: 'exact', head: true }).eq('event_id', i.ev);
+  const { count: tkI } = await svc.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', i.ev);
+  const { data: ttI } = await svc.from('ticket_types').select('sold').eq('id', i.tt).single();
+  check('mismo claim_id: 1 orden, 1 entrada, sold=1 (el límite de 2 no se gastó dos veces)', ordI === 1 && tkI === 1 && ttI.sold === 1,
+    `órdenes=${ordI} tickets=${tkI} sold=${ttI.sold}`);
+  const i3 = await svc.rpc('claim_free_order', args(i.ev, i.tt, emailI, '40000001', `sesion-i-${STAMP}`, cid));
+  check('reintento posterior con el mismo claim_id: misma orden', i3.data?.order_id === i1.data?.order_id && i3.data?.replayed === true, JSON.stringify(i3.data ?? i3.error));
 } finally {
   if (eventos.length) {
     await svc.from('events').update({ archived_at: new Date().toISOString(), is_published: false }).in('id', eventos);
   }
+  if (estabaArchivada) await svc.from('brands').update({ archived_at: new Date().toISOString() }).eq('id', brand.id);
 }
 const fallas = R.filter((r) => !r.ok).length;
 log(fallas ? `❌ ${fallas} de ${R.length} fallaron` : `✅ ${R.length}/${R.length}`);

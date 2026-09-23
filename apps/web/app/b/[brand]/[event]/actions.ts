@@ -31,6 +31,10 @@ export type CheckoutInput = {
   // habilita nada. Si miente o quedó vieja, el RPC responde not_free y se cae
   // al camino de siempre, que valida todo desde cero.
   freeHint?: boolean;
+  // Id del reclamo, generado en el cliente y el MISMO en cada reintento del
+  // mismo reclamo: si la respuesta se perdió, el reintento devuelve la orden
+  // que ya existe en vez de crear otra (0064, orders.claim_id UNIQUE).
+  claimId?: string;
 };
 
 const PROMO_ERRORS: Record<string, string> = {
@@ -79,6 +83,7 @@ const schema = z.object({
   sessionId: z.string().min(8, 'Sesión inválida. Recarga la página.').max(64, 'Sesión inválida. Recarga la página.'),
   promoCode: z.string().min(2).max(32).optional().or(z.literal('')),
   freeHint: z.boolean().optional(),
+  claimId: z.string().uuid().optional(),
 });
 
 type Atribucion = {
@@ -158,6 +163,7 @@ async function reclamoGratis(
     p_ip: atrib.ip,
     p_user_agent: atrib.userAgent,
     p_utm: atrib.utm,
+    p_claim_id: d.claimId ?? null,
   });
   if (error) {
     // La función todavía no existe (deploy de la app antes que la migración):
@@ -179,6 +185,9 @@ async function reclamoGratis(
     case 'event_over': return { ok: false, message: 'Este evento ya terminó.' };
     case 'type_invalid': return { ok: false, message: 'Tipo de entrada inválido.' };
     case 'type_unavailable': return { ok: false, message: 'Tipo de entrada no disponible.' };
+    // El id del reclamo ya se usó con otros datos (otro evento u otro email).
+    // No es un reintento: no se revela nada de esa orden.
+    case 'claim_conflict': return { ok: false, message: 'Algo cambió en tu reclamo. Recarga la página e intenta de nuevo.' };
     // not_free, o una respuesta que no se entiende: el camino de siempre decide.
     default: return null;
   }

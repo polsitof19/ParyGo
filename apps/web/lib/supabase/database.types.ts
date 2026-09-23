@@ -337,6 +337,7 @@ export type Database = {
           buyer_age_ok: boolean
           buyer_dni: string | null
           buyer_doc_type: string
+          claim_id: string | null
           buyer_email: string
           buyer_name: string
           buyer_phone: string
@@ -371,6 +372,7 @@ export type Database = {
           buyer_age_ok: boolean
           buyer_dni?: string | null
           buyer_doc_type?: string
+          claim_id?: string | null
           buyer_email: string
           buyer_name: string
           buyer_phone: string
@@ -403,6 +405,7 @@ export type Database = {
           buyer_age_ok?: boolean
           buyer_dni?: string | null
           buyer_doc_type?: string
+          claim_id?: string | null
           buyer_email?: string
           buyer_name?: string
           buyer_phone?: string
@@ -1153,6 +1156,7 @@ export type Database = {
           p_ip: string | null
           p_user_agent: string | null
           p_utm: Json
+          p_claim_id?: string | null
         }
         Returns: Json
       }
