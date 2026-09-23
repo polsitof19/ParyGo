@@ -62,12 +62,15 @@ export function QuickActions({
   isPublished,
   readOnly = false,
   showEdit = false,
+  showPublic = true,
 }: {
   eventId: string;
   publicUrl: string | null;
   isPublished: boolean;
   readOnly?: boolean;
   showEdit?: boolean;
+  /** En el evento la cabecera ya tiene "Ver página pública": no repetirlo. */
+  showPublic?: boolean;
 }) {
   const base = `/admin/events/${eventId}`;
   const live = Boolean(publicUrl && isPublished);
@@ -121,7 +124,7 @@ export function QuickActions({
               </Link>
             </li>
           )}
-          {live && (
+          {live && showPublic && (
             <li>
               <a href={publicUrl!} target="_blank" rel="noopener noreferrer" className="s-act">
                 <ExternalLink aria-hidden="true" /><span>Ver página pública</span>

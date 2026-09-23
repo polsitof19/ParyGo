@@ -53,7 +53,7 @@ export function PublishControl({ eventId, isPublished, impersonating = false }: 
         <Eye className="h-5 w-5" />
         <span><strong>Publicado</strong> — visible en tu página pública.</span>
       </div>
-      <button type="button" className="s-btn s-btn--soft s-btn--sm" disabled={pending} onClick={() => flip(false)}>
+      <button type="button" className="s-btn s-btn--ghost s-btn--sm" disabled={pending} onClick={() => flip(false)}>
         {pending ? '…' : 'Volver a borrador'}
       </button>
     </div>

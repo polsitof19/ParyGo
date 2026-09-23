@@ -1017,14 +1017,21 @@ if (!S.eventId) {
     // Entradas y fecha en UNA pantalla; el link viejo /entradas redirige ahí.
     await go(p, `/admin/events/${S.eventId}/entradas`);
     check('J', '/entradas lleva a la pantalla del evento con datos y tipos de entrada', /\/editar/.test(p.url()) && (await p.locator('#entradas').count()) === 1 && (await p.locator('#datos').count()) === 1, p.url());
+    // (panel/estadisticas) El inicio del evento quedó corto: tres cifras que
+    // abren Estadísticas, donde viven los cuatro números, la tabla y el gráfico.
     await go(p, `/admin/events/${S.eventId}`);
+    const cortas = (await p.locator('a.a-evnums').innerText().catch(() => '')).replace(/\s+/g, ' ');
+    check('J', 'Cómo va: tres cifras que abren Estadísticas (cobrado / vendidas / cortesías)', /cobrado/i.test(cortas) && /vendidas/i.test(cortas) && /cortesías/i.test(cortas) && (await p.locator('a.a-evnums[href$="/estadisticas"]').count()) === 1, cortas.slice(0, 160));
+    await go(p, `/admin/events/${S.eventId}/estadisticas`);
     const pulse = (await p.locator('.a-pulse').innerText().catch(() => '')).replace(/\s+/g, ' ');
-    check('J', 'Resumen arranca con "¿cómo va?" (vendidas / recaudado / cuándo / entraron)', /VENDIDAS/i.test(pulse) && /RECAUDADO/i.test(pulse) && /CUÁNDO/i.test(pulse), pulse.slice(0, 160));
+    check('J', 'Estadísticas arranca con los cuatro números (vendidas / recaudado / cuándo / entraron)', /VENDIDAS/i.test(pulse) && /RECAUDADO/i.test(pulse) && /CUÁNDO/i.test(pulse), pulse.slice(0, 160));
     await go(p, `/admin/events/${S.eventId}/cortesias`);
     const cort = await bodyText(p, 2000);
     check('J', 'Cortesías muestra lo emitido (10 entradas)', /10 entradas de cortesía/.test(cort), (cort.match(/\d+ entradas? de cortesía[^.]*/) ?? [''])[0]);
     await go(p, `/admin/events/${S.eventId}`);
     await shot(p, 'J', 'resumen');
+    await go(p, `/admin/events/${S.eventId}/estadisticas`);
+    await shot(p, 'J', 'estadisticas');
     const rows = await p.locator('table.a-typetable tbody tr').allInnerTexts();
     const typesDb = await dbTypes();
     const ui = Object.fromEntries(rows.map((r) => { const c = r.split(/\t|\n/).map((x) => x.trim()).filter(Boolean); return [c[0], c]; }));

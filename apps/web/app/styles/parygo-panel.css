@@ -23,8 +23,14 @@
         mayúsculas espaciadas: era la firma del dashboard generado),
      3. superficie #141414 SOLO para lo que pide algo (Yapes por aprobar,
         solicitudes): el único bloque con fondo es el pendiente.
-   Un solo primario por pantalla: RELLENO BLANCO con texto #0A0A0A (19:1),
-   radio 10, alto 48. El secundario es el mismo botón con borde.
+   Un solo primario por pantalla: relleno de TINTA con el color del fondo
+   encima (blanco con #0A0A0A en noche, #0A0A0A con blanco en claro), radio
+   10, alto 48. El secundario es el mismo botón con borde.
+
+   CLARO U OSCURO SEGÚN EL TELÉFONO (2026-09-23, pedido de Paul): el panel
+   sigue prefers-color-scheme. Oscuro = los tokens de .pg.pg-noche; claro =
+   el bloque "TEMA CLARO" de abajo, blanco neutro (nunca crema), medido por
+   scripts/check-panel-contrast.mjs dentro de npm run test:contrast.
    Nada centrado: todo se alinea a la izquierda.
 
    ESCALA (2026-09-21). Contenida y FIJA, la misma que la página de compra:
@@ -84,6 +90,49 @@
 @media (min-width: 900px) {
   .pg-panel { --s-hero: 36px; }
 }
+/* Bordes y velos que dependen del fondo. Oscuro por defecto. */
+.pg.pg-panel {
+  color-scheme: dark;
+  --on-accent: #0A0A0A;                         /* número sobre el acento: 7.0:1 en los dos temas */
+  --ctl-line: rgba(255, 255, 255, 0.16);        /* borde del botón secundario */
+  --ctl-line-hover: rgba(255, 255, 255, 0.34);
+  --field-line: rgba(255, 255, 255, 0.14);      /* borde del campo */
+  --field-focus: rgba(255, 255, 255, 0.45);
+  --field-ring: rgba(255, 255, 255, 0.08);
+  --selection: rgba(255, 255, 255, 0.22);
+  --chev: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-opacity='.66' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+/* ---------- TEMA CLARO (teléfono en modo claro) ----------
+   Blanco neutro, tinta #0A0A0A. Contraste medido (check-panel-contrast):
+   --ink 19.8 · --ink-2 ≥ 6.4 · --ink-3 ≥ 4.8 sobre las cuatro superficies;
+   --on-white (#FFFFFF) sobre --ink (#0A0A0A) 19.8; hover del primario
+   #262626 con blanco 15.1. */
+@media (prefers-color-scheme: light) {
+  .pg.pg-panel {
+    color-scheme: light;
+    --bg: #FFFFFF;
+    --surface: #F4F4F5;
+    --surface-2: #EAEAEB;
+    --selected: #E4E4E6;
+    --paper: var(--bg);
+    --paper-2: var(--surface);
+    --paper-3: var(--surface-2);
+    --ink: #0A0A0A;
+    --ink-2: #525252;
+    --ink-3: #616161;
+    --line: rgba(0, 0, 0, 0.10);
+    --sel: rgba(0, 0, 0, 0.04);
+    --on-white: #FFFFFF;
+    --white-hover: #262626;
+    --ctl-line: rgba(0, 0, 0, 0.16);
+    --ctl-line-hover: rgba(0, 0, 0, 0.36);
+    --field-line: rgba(0, 0, 0, 0.16);
+    --field-focus: rgba(0, 0, 0, 0.55);
+    --field-ring: rgba(0, 0, 0, 0.06);
+    --selection: rgba(0, 0, 0, 0.12);
+    --chev: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230A0A0A' stroke-opacity='.66' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  }
+}
 .pg-panel *, .pg-panel *::before, .pg-panel *::after { box-sizing: border-box; }
 .pg-panel a { color: inherit; text-decoration: none; }
 .pg-panel button { font: inherit; }
@@ -98,7 +147,8 @@
 
 /* Que el rebote del scroll (iOS) y el fondo detrás del shell sean negros. */
 html:has(.pg-panel), body:has(.pg-panel) { background: #0A0A0A; }
-.pg-panel ::selection { background: rgba(255, 255, 255, 0.22); }
+@media (prefers-color-scheme: light) { html:has(.pg-panel), body:has(.pg-panel) { background: #FFFFFF; } }
+.pg-panel ::selection { background: var(--selection); }
 
 .pg-panel .s-wrap { max-width: 1120px; margin: 0 auto; padding: var(--s-s4) var(--pad) var(--s-s6); }
 
@@ -172,17 +222,17 @@ html:has(.pg-panel), body:has(.pg-panel) { background: #0A0A0A; }
 .pg-panel .s-btn--lg { height: 48px; font-size: var(--s-ctl); }
 .pg-panel .s-btn--block { width: 100%; }
 /* Primario: el único con relleno. */
-/* Primario: relleno BLANCO, texto #0A0A0A (19.8:1). El acento no lleva texto
-   y sobre negro el blanco es lo que más llama sin gritar. Hover = otro gris
-   medido (--white-hover #E6E6E6, 16.5:1), nunca un filtro. */
+/* Primario: relleno de TINTA con el fondo encima (19.8:1 en los dos temas).
+   El acento no lleva texto. Hover = otro gris medido (--white-hover), nunca
+   un filtro. */
 .pg-panel .s-btn--primary { background: var(--ink); color: var(--on-white); padding: 0 20px; height: 48px; }
 .pg-panel .s-btn--primary.s-btn--sm { padding: 0 16px; height: 44px; }
 .pg-panel .s-btn--primary.s-btn--lg { padding: 0 24px; }
 .pg-panel .s-btn--primary:hover:not(:disabled) { background: var(--white-hover); }
 /* Secundario: el MISMO botón con borde y sin relleno ("Copiar link", "Crear
    evento"). Al pasar, el borde se aclara. */
-.pg-panel .s-btn--soft { color: var(--ink); border: 1px solid rgba(255, 255, 255, 0.16); padding: 0 16px; }
-.pg-panel .s-btn--soft:hover:not(:disabled) { border-color: rgba(255, 255, 255, 0.34); }
+.pg-panel .s-btn--soft { color: var(--ink); border: 1px solid var(--ctl-line); padding: 0 16px; }
+.pg-panel .s-btn--soft:hover:not(:disabled) { border-color: var(--ctl-line-hover); }
 .pg-panel .s-btn--ghost { color: var(--ink-2); }
 .pg-panel .s-btn--ghost:hover:not(:disabled),
 .pg-panel .s-btn--danger-soft:hover:not(:disabled) { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px; }
@@ -284,7 +334,7 @@ html:has(.pg-panel), body:has(.pg-panel) { background: #0A0A0A; }
 .pg-panel .s-label .req { color: var(--ink-3); margin-left: 3px; }
 .pg-panel .s-input {
   width: 100%; height: 48px; padding: 0 14px; background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.14); border-radius: var(--r-btn);
+  border: 1px solid var(--field-line); border-radius: var(--r-btn);
   font-family: var(--body); font-size: var(--s-field); color: var(--ink);
   transition: border-color .18s, box-shadow .18s;
 }
@@ -292,14 +342,14 @@ html:has(.pg-panel), body:has(.pg-panel) { background: #0A0A0A; }
 .pg-panel .s-input::placeholder { color: var(--ink-3); }
 /* Foco: el borde se aclara y aparece un anillo blanco tenue (el mismo del
    campo del comprador). */
-.pg-panel .s-input:focus { outline: none; border-color: rgba(255, 255, 255, 0.45); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08); }
+.pg-panel .s-input:focus { outline: none; border-color: var(--field-focus); box-shadow: 0 0 0 3px var(--field-ring); }
 .pg-panel .s-input:disabled { color: var(--ink-2); border-style: dashed; }
 /* Chico en ANCHO, no en alto: 34px de alto no se puede tocar. */
 .pg-panel .s-input--sm { width: auto; max-width: 200px; height: 44px; font-size: var(--s-meta); }
 .pg-panel .s-select { -webkit-appearance: none; appearance: none; cursor: pointer; padding-right: 26px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-opacity='.66' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-image: var(--chev);
   background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px; }
-.pg-panel .s-select option { background: #141414; color: #FFFFFF; }
+.pg-panel .s-select option { background: var(--surface); color: var(--ink); }
 .pg-panel .s-hint { font-size: var(--s-meta); color: var(--ink-3); margin-top: var(--s-s1); }
 /* ---------- Campo de archivo ----------
    El input[type=file] nativo dibuja su propio botón gris ("Choose File" en
@@ -596,7 +646,7 @@ html:has(.pg-panel), body:has(.pg-panel) { background: #0A0A0A; }
 /* Contador (solicitudes, Yapes): pastilla naranja con el número en #0A0A0A
    (7.0:1). Es el único texto sobre acento del panel y va en NEGRO, nunca en
    blanco (2.85:1). */
-.pg-panel .s-nav-count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--r-pill); background: var(--accent); color: var(--on-white); font-size: var(--s-micro); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.pg-panel .s-nav-count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--r-pill); background: var(--accent); color: var(--on-accent); font-size: var(--s-micro); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
 .pg-panel .s-topbar__right { margin-left: auto; display: flex; align-items: center; gap: 4px; }
 .pg-panel .s-email { display: none; font-size: var(--s-meta); color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pg-panel .s-iconbtn { width: 44px; height: 44px; display: grid; place-items: center; border-radius: var(--r-btn); border: 0; background: none; color: var(--ink-2); cursor: pointer; font: inherit; transition: color .18s, background-color .18s, transform .14s ease-out; }
