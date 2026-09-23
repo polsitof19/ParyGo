@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { ScanLine } from 'lucide-react';
-import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
+
 import Link from 'next/link';
 import { LayoutGrid } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth';
@@ -12,8 +12,6 @@ import './scan.css';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-const bricolage = Bricolage_Grotesque({ weight: ['700', '800'], subsets: ['latin'], variable: '--font-bricolage', display: 'swap' });
-const hanken = Hanken_Grotesk({ weight: ['300', '400', '500', '600', '700'], subsets: ['latin'], variable: '--font-hanken', display: 'swap' });
 
 export default async function ScanLayout({ children }: { children: React.ReactNode }) {
   // Sin sesión (o vencida): al login, y DE VUELTA al escáner después. Antes
@@ -38,7 +36,7 @@ export default async function ScanLayout({ children }: { children: React.ReactNo
     .maybeSingle();
 
   return (
-    <div className={`scan-shell ${bricolage.variable} ${hanken.variable}`}>
+    <div className={`scan-shell`}>
       <ScanServiceWorker />
       <header className="k-header">
         <div className="k-header__in">

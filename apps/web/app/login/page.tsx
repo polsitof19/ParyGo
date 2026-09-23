@@ -1,4 +1,3 @@
-import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { LoginForm } from './LoginForm';
 import './login.css';
 
@@ -9,18 +8,6 @@ export const metadata = {
 };
 
 // Misma identidad cálida que los paneles, scopeada bajo .auth-shell.
-const bricolage = Bricolage_Grotesque({
-  weight: ['700', '800'],
-  subsets: ['latin'],
-  variable: '--font-bricolage',
-  display: 'swap',
-});
-const hanken = Hanken_Grotesk({
-  weight: ['300', '400', '500', '600', '700'],
-  subsets: ['latin'],
-  variable: '--font-hanken',
-  display: 'swap',
-});
 
 export default function LoginPage({
   searchParams,
@@ -30,7 +17,7 @@ export default function LoginPage({
   const support = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP;
 
   return (
-    <main className={`auth-shell ${bricolage.variable} ${hanken.variable}`}>
+    <main className={`auth-shell`}>
       <div className="auth-wrap">
         <div className="auth-brand">
           parygo<span className="dot">.</span>

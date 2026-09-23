@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
+import { GeistSans } from 'geist/font/sans';
 import { Toaster } from 'sonner';
 import './globals.css';
 
@@ -20,20 +20,6 @@ import './globals.css';
 // @font-face sigue declarado y el navegador baja el archivo solo si algo lo
 // usa. Las superficies que sí las usan (paneles, puerta, login, legal) las
 // declaran en SU layout, y ahí sí se precargan.
-const bricolage = Bricolage_Grotesque({
-  weight: ['700', '800'],
-  subsets: ['latin'],
-  variable: '--font-bricolage',
-  display: 'swap',
-  preload: false,
-});
-const hanken = Hanken_Grotesk({
-  weight: ['300', '400', '500', '600', '700'],
-  subsets: ['latin'],
-  variable: '--font-hanken',
-  display: 'swap',
-  preload: false,
-});
 
 export const viewport: Viewport = {
   // Identidad cálida: el chrome del navegador (barra de estado móvil) toma este
@@ -65,7 +51,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`dark ${hanken.variable} ${bricolage.variable}`}
+      className={`dark ${GeistSans.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-screen font-sans">
