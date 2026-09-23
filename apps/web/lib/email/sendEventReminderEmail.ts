@@ -43,7 +43,8 @@ export async function sendEventReminderEmail(args: {
   const brandBtn = par.fill;
   const ink = brandInk(theme.primary_color);
   const logoUrl = theme.logo_url ?? null;
-  const supportWhatsapp = publicEnv.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? '';
+  // Sin el WhatsApp de soporte de ParyGo (Paul, 2026-09-23); el de la marca se queda.
+  const supportWhatsapp = '';
   const dateLabel = formatEventDate(args.startsAtIso);
   // Página de reenvío (el comprador recupera su QR a su email). No metemos el QR
   // en el cuerpo del recordatorio: privacidad + el QR ya está en el email original.

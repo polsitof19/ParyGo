@@ -48,7 +48,7 @@ export async function sendTransferredTicketEmail(args: {
     logoUrl: theme.logo_url ?? null,
     brandWhatsapp: args.brand.whatsapp_e164,
     brandEmail: args.brand.contact_email,
-    supportWhatsapp: publicEnv.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? '',
+    supportWhatsapp: '', // sin el WhatsApp de soporte de ParyGo (2026-09-23)
     total: null,
     verUrl: args.ticketUrl,
     entradas: [{ ticketTypeName: args.ticketTypeName, attendeeName: args.newName }],

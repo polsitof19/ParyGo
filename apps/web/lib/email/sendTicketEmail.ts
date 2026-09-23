@@ -57,7 +57,8 @@ type OrderWithJoins = {
 // nada. Separado del envío para que el E2E revise el correo REAL de un
 // pedido de demotest —mismo query, mismo render— sin depender de Resend.
 export async function armarEmailDePedido(orderId: string, admin = createAdminClient()) {
-  const supportWhatsapp = publicEnv.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? '';
+  // Sin el WhatsApp de soporte de ParyGo (Paul, 2026-09-23); el de la marca se queda.
+  const supportWhatsapp = '';
   const res = await admin
     .from('orders')
     .select(`

@@ -55,7 +55,8 @@ export async function sendEventPostponedEmail(args: {
   const brandBtn = par.fill;
   const ink = brandInk(theme.primary_color);
   const logoUrl = theme.logo_url ?? null;
-  const supportWhatsapp = publicEnv.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? '';
+  // Sin el WhatsApp de soporte de ParyGo (Paul, 2026-09-23); el de la marca se queda.
+  const supportWhatsapp = '';
 
   const html = renderHtml({ ...args, primary, onBrand, brandBtn, ink, logoUrl, supportWhatsapp });
   const text = renderText(args);
