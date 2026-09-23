@@ -1,6 +1,6 @@
 ---
 name: ParyGo
-description: Papel cálido, tinta marrón y hairlines; el color solo aparece cuando hay algo que hacer.
+description: Papel cálido solo en la landing; compra y paneles (organizador y super admin) en tema noche, negro neutro. El color solo aparece cuando hay algo que hacer.
 colors:
   paper: "#FBF7F0"
   paper-2: "#F4EDE1"
@@ -17,6 +17,20 @@ colors:
   ok: "#2E9E6B"
   warn: "#C7791A"
   alert: "#D7472F"
+  # — Tema noche (2026-09-23): comprador (b/[brand]/*) Y los paneles
+  #   (organizador + super admin), montado con `pg pg-noche`. Fondo y tinta
+  #   NEUTROS, nunca crema. Ver la sección "Tema noche" para el resto
+  #   (--selected, --on-white, --white-hover, --material, --veil).
+  noche-bg: "#0A0A0A"
+  noche-surface: "#141414"
+  noche-surface-2: "#1C1C1C"
+  noche-selected: "#202020"
+  noche-ink: "#FFFFFF"
+  noche-ink-2: "#A3A3A3"
+  noche-ink-3: "#8A8A8A"
+  noche-line: "rgba(255, 255, 255, 0.12)"
+  noche-on-white: "#0A0A0A"
+  noche-white-hover: "#E6E6E6"
 typography:
   display:
     fontFamily: "Bricolage Grotesque, system-ui, sans-serif"
@@ -123,9 +137,17 @@ components:
 
 ## Overview
 
-Papel cálido y tinta marrón, no blanco y negro. La estructura la hacen tres
-cosas: hairlines de 1px, jerarquía tipográfica y espacio. **Cero tarjetas
-flotantes**: no hay rectángulos blancos con sombra sobre el papel.
+Dos mundos, según la superficie. La **landing** (y los emails que no son de
+entrada) sigue en papel cálido y tinta marrón, no blanco y negro. **Compra y
+paneles** (organizador `/admin` y super admin `/cabina-7k29x`) van en **tema
+noche**, negro neutro — desde el 2026-09-23 los paneles dejaron el papel y se
+sumaron al mismo tema noche del comprador. Todo lo de esta página que hable
+de "papel" sin aclaración es la landing; lo de los paneles y la compra está en
+la sección **Tema noche**, más abajo.
+
+En las dos superficies la estructura la hacen tres cosas: hairlines de 1px,
+jerarquía tipográfica y espacio. **Cero tarjetas flotantes**: no hay
+rectángulos con sombra sobre el papel ni sobre el negro.
 
 El principio que gobierna todo: **el color aparece solo cuando hay algo que
 hacer.** Cuando todo grita, nada señala.
@@ -145,6 +167,9 @@ garantizar contraste sobre un color arbitrario.
 
 ### Neutral
 
+**Vale para la landing** (y los emails que no son de entrada). Compra y
+paneles usan la paleta neutra de tema noche, ver más abajo.
+
 Papel en cuatro superficies, de más clara a más oscura: `paper` #FBF7F0,
 `paper-2` #F4EDE1, `paper-3` #EFE6D6, `surface` #FFFFFF.
 
@@ -155,10 +180,13 @@ Los grises hex que traía la landing fallaban (#A89B8C daba 2.19:1).
 
 ### Named Rules
 
-- **Botón primario = TINTA sobre acento** (5.91:1 medido). Blanco sobre naranja
-  da 2.85:1 y falla AA: no se usa nunca.
+- **Botón primario = TINTA sobre acento** (5.91:1 medido), en la **landing**.
+  Blanco sobre naranja da 2.85:1 y falla AA: no se usa nunca. En los paneles
+  y la compra (tema noche) el primario ya no lleva el acento: ver Botones,
+  más abajo.
 - **Los semánticos (`ok`, `warn`, `alert`) fallan AA como texto sobre papel.**
-  El texto de un estado va en `ink`; el color lo lleva el punto.
+  El texto de un estado va en `ink`; el color lo lleva el punto. Vale igual
+  en tema noche: el texto de un estado va en `--ink`, nunca en el color.
 - `peri` #5B6CFF es decorativo puro: falla en los tres roles (texto 3.91, con
   blanco 4.17, con tinta 4.03). Solo blobs y puntos.
 - **El color de marca nunca porta texto.** Lo único que lleva texto encima es el
@@ -178,8 +206,10 @@ Los grises hex que traía la landing fallaban (#A89B8C daba 2.19:1).
 
 ## Typography
 
-Dos familias: **Bricolage Grotesque** para display, números y títulos;
-**Hanken Grotesk** para cuerpo e interfaz.
+**En la landing**, dos familias: **Bricolage Grotesque** para display, números
+y títulos; **Hanken Grotesk** para cuerpo e interfaz. **En compra y paneles**
+(tema noche) la familia es una sola: **Geist** (paquete `geist`, `next/font/local`)
+en todo — títulos, números, cuerpo y etiquetas. Sin Bricolage ni Hanken ahí.
 
 ### Hierarchy
 
@@ -202,16 +232,18 @@ variables, y **no quedan tamaños literales**: `npm run test:contrast` no lo
 mide, pero el detector de impeccable sí, y en septiembre de 2026 pasó de 61
 tamaños fuera de rampa a 0.
 
-**Paneles** (`--s-*`, en `.pg-panel`): t1 28→34 · t2 20→24 · t3 16 ·
-lead 18 · body 16→17 · ctl 15 · ui 14 · meta 13 · micro 12 · lb 11 · num 26→28 ·
-**d1 40→56** (cifra héroe).
+**Paneles** (`--s-*`, en `.pg-panel`): desde el 2026-09-23 comparten el tema
+noche del comprador (Geist, peso 600 en vez de 800, etiquetas en minúscula
+normal en vez de mayúsculas espaciadas). Su rampa propia, distinta de la del
+comprador, está documentada en la sección **Tema noche**, más abajo, junto con
+el resto de los tokens de esa superficie.
 
-`d1` (2026-09-22) es la jerarquía por TAMAÑO que tienen las referencias
-modernas (DICE separa display y cuerpo 5.9×, Shotgun 5.1×) y que al panel le
-faltaba: todo se distinguía por peso 700/800 a tamaños parecidos. Hay **una
-sola** cifra héroe por pantalla y es siempre **lo que espera al usuario**
-(“5 Yapes”, “2 solicitudes”), nunca una métrica de vanidad: el número de lo
-que ya pasó sigue en `num`. Interlineado .92, tracking -0.04em (el piso).
+`d1` (2026-09-22, sigue vigente en tema noche como `--s-d1` 40→56) es la
+jerarquía por TAMAÑO que tienen las referencias modernas (DICE separa display
+y cuerpo 5.9×, Shotgun 5.1×) y que al panel le faltaba: todo se distinguía por
+peso a tamaños parecidos. Hay **una sola** cifra héroe por pantalla y es
+siempre **lo que espera al usuario** (“5 Yapes”, “2 solicitudes”), nunca una
+métrica de vanidad: el número de lo que ya pasó sigue en `num`.
 
 **Comprador** (`--b-*`, en `.client-shell`): t0 34 · t1 32→50 · t2 24→32 ·
 t3 20→24 · price 18→21 · lead 17 · body 16→17 · ctl 15 · ui 14 · meta 13 ·
@@ -240,7 +272,10 @@ Son tres, y son las únicas:
 - **Los números son tabulares siempre** (`font-variant-numeric: tabular-nums`):
   precios, saldos, stats, montos. Una columna de números que baila es un error.
 - **Las etiquetas van en mayúsculas espaciadas de 11px**, en `ink-3`, DEBAJO de
-  su número.
+  su número — en la **landing**. En tema noche (compra y paneles) las
+  etiquetas van en minúscula NORMAL, 11–13px según la superficie: nada de
+  mayúsculas espaciadas ni eyebrows sobre títulos, era la firma del dashboard
+  generado.
 - Todo el copy en **tuteo peruano**. Cero voseo.
 
 ## Layout
@@ -263,11 +298,14 @@ Son tres, y son las únicas:
 
 Cada pantalla de panel se lee en tres franjas, siempre en este orden:
 
-1. **Pendiente arriba.** Lo que espera al usuario va primero, con la cifra
-   héroe (`.s-due`) y el ÚNICO primario de la pantalla. Si hay pendiente,
-   “Crear evento” / “Crear marca” bajan a botón de texto; sin pendiente,
-   vuelven a ser el primario. Las tareas secundarias van en líneas con punto
-   (`.s-todo`). Nada pendiente se dice en voz baja (`.s-calm`, punto hueco).
+1. **Pendiente arriba.** Lo que espera al usuario va primero, en `.s-due` —
+   el ÚNICO bloque con fondo (`--surface`) de la pantalla, punto de acento,
+   qué es y por qué importa, con el ÚNICO primario de la pantalla a la
+   derecha (2026-09-23: ya no es una cifra héroe de 56px suelta; es la fila
+   con fondo de la referencia aprobada). Si hay pendiente, “Crear evento” /
+   “Crear marca” bajan a botón de texto; sin pendiente, vuelven a ser el
+   primario. Las tareas secundarias van en líneas con punto (`.s-todo`). Nada
+   pendiente se dice en voz baja (`.s-calm`, punto hueco).
 2. **Información abajo.** Stats, tablas, listas. La plata primero.
 3. **Lo raro, plegado** (`.s-fold`): archivados, rechazados, los datos de la
    marca. Están, pero no compiten.
@@ -279,12 +317,16 @@ exportar asistentes y ventas por promotor quedan a 2 clics desde `/admin`.
 
 ## Elevation & Depth
 
-**No hay elevación en los paneles.** La profundidad la dan los hairlines
-(1px `line`) y el aire. Las sombras del token existen para superficies que no
-son panel (el resultado de la puerta) y son de tinta, nunca de negro puro.
+**No hay elevación en los paneles**, ni en la compra. La profundidad la dan
+los hairlines (1px `line`) y el aire. Desde el 2026-09-23, con los paneles en
+tema noche, esto ya no es solo una convención: `.pg.pg-noche` pisa
+`--shadow-sm/md/lg` a `none` — sobre negro no hay sombra que leer, la
+profundidad la hace la superficie (`--surface` #141414 sobre `--bg` #0A0A0A)
+y el borde `--line`.
 
-**Sobre papel, siempre `--shadow-sm/md/lg`.** Un `rgba(0,0,0,…)` sobre crema
-se ve sucio; por eso los tokens son de tinta.
+**Sobre papel (la landing), siempre `--shadow-sm/md/lg`.** Un `rgba(0,0,0,…)`
+sobre crema se ve sucio; por eso esos tokens son de tinta, nunca de negro
+puro.
 
 **Excepción: los velos sobre FOTO llevan negro puro.** El degradado del hero,
 el contorno del nombre del evento encima del flyer y el fondo del visor a
@@ -304,13 +346,22 @@ que el super admin está mirando una marca en SOLO LECTURA, y tiene que verse
 ajeno al panel para que nadie lo confunda con la marca. Son los cuatro valores
 que el detector marca en los paneles, y se dejan marcados.
 
-## El comprador: tema noche (2026-09-23)
+## Tema noche: comprador y paneles (2026-09-23)
 
-Las superficies del comprador (b/[brand]/*: compra, datos, Yape, confirmación,
-/pedido, /t/[uuid] y la home de marca) van en **negro neutro**, con el tema
-`pg-noche` de parygo-tokens.css. Regla de fondos del comprador: blanco
-#FFFFFF o negro #0A0A0A, nunca crema ni marrón. Todo lo de "papel" de arriba
-sigue valiendo para los paneles y la landing, NO para el comprador.
+El comprador (`b/[brand]/*`: compra, datos, Yape, confirmación, /pedido,
+/t/[uuid] y la home de marca) y, desde el 2026-09-23, **los dos paneles**
+(organizador `/admin` y super admin `/cabina-7k29x`, montados con
+`pg pg-noche pg-panel`) van en **negro neutro**, con el tema `pg-noche` de
+parygo-tokens.css. Regla de fondos: blanco #FFFFFF o negro #0A0A0A, nunca
+crema ni marrón. Todo lo de "papel" de arriba sigue valiendo SOLO para la
+landing (y los emails que no son de entrada) — ya NO para el comprador ni
+para los paneles.
+
+Comprador y paneles comparten exactamente los mismos tokens de color y la
+misma familia (Geist); lo que cambia entre los dos es la rampa tipográfica
+propia de cada uno (`--b-*` en el comprador, `--s-*` en los paneles) y sus
+componentes. Esta sección cubre primero los tokens compartidos, después lo
+propio del comprador, y por último lo propio de los paneles.
 
 | Token | Valor | Uso |
 |---|---|---|
@@ -322,8 +373,17 @@ sigue valiendo para los paneles y la landing, NO para el comprador.
 | `--ink-2` | #A3A3A3 | secundario (≥ 6.46:1) |
 | `--ink-3` | #8A8A8A | etiquetas (≥ 4.72:1; #7A7A7A fallaba) |
 | `--line` | rgba(255,255,255,.12) | bordes |
-| `--brand-mark` | brandMark(hex) | punto, barra de 3px, foco (≥ 3:1 sobre #0A0A0A) |
-| `--brand-fill`/`--on-fill` | brandFillPair(hex,'neutra') | el ÚNICO texto sobre la marca |
+| `--on-white` | #0A0A0A | texto sobre un relleno blanco (botón primario, `+` del stepper) |
+| `--white-hover` | #E6E6E6 | hover del relleno blanco (16.5:1) |
+| `--accent` | #FF6A3D | el mismo naranja parygo de siempre, decorativo (punto, pastilla de contador) |
+| `--brand-mark` | brandMark(hex) | **solo comprador**: punto, barra de 3px, foco (≥ 3:1 sobre #0A0A0A) |
+| `--brand-fill`/`--on-fill` | brandFillPair(hex,'neutra') | **solo comprador**: el ÚNICO texto sobre la marca |
+
+Los paneles no tienen concepto de "marca" propia: su acento siempre es
+`--accent` (#FF6A3D), nunca `brandMark`/`brandFillPair` — esos dos son del
+comprador, donde el color lo elige el promotor.
+
+### El comprador
 
 **Tipografía:** Geist (paquete `geist`, next/font/local) en todo; ni
 Bricolage ni Hanken. Escala FIJA: h1 40/.95/800 −0.04em en teléfono y
@@ -354,42 +414,136 @@ links bajan a opacity .7, nunca al color de la marca. `prefers-reduced-motion`
 **Excepción que sigue vigente:** el flyer difuminado con brightness(.55)
 detrás de la banda es una máscara sobre una FOTO ajena, no una sombra.
 
+### Los paneles (organizador y super admin)
+
+Referencia aprobada por Paul el 2026-09-23 ("Panel organizador ParyGo.html").
+Montan `pg pg-noche pg-panel admin-shell` (organizador) o
+`pg pg-noche pg-panel super-shell` (super admin). Mismos colores que el
+comprador (tabla de arriba); tipografía Geist en todo, **peso 600 donde el
+sistema de papel usaba 800** (no queda ningún 800 en los paneles); etiquetas
+en minúscula normal, nunca mayúsculas espaciadas ni eyebrows sobre títulos.
+
+**Rampa propia** (`--s-*`, en `.pg-panel`), teléfono → escritorio (≥1024,
+salvo donde se anota otro punto de quiebre):
+
+| Token | Tamaño | Peso | Uso |
+|---|---|---|---|
+| `--s-t1` | 26 → 36 | 600, −0.03em | título de página (`.s-h1`) |
+| `--s-t2` | 20 → 22 | 600, −0.02em | título de sección (`.s-h2`, `.s-card__title`) |
+| `--s-t3` | 16 (fijo) | 600, −0.01em | subtítulo (`.s-h3`) |
+| `--s-body` | 15 (fijo) | 400 | cuerpo |
+| `--s-lead` | 18 (fijo) | 600 | entradilla / cifra en línea |
+| `--s-ctl` | 15 (fijo) | 400–600 | texto de control (botón, campo, opción) |
+| `--s-ui` | 14 (fijo) | 400–500 | interfaz secundaria |
+| `--s-meta` | 13 (fijo) | 400–500 | meta, subtítulos chicos |
+| `--s-micro` | 12 (fijo) | 400–500 | microcopy (pie, nota al pie de tabla) |
+| `--s-lb` | 13 (fijo) | 500, minúscula | etiqueta de grupo (`.s-acts__k`, `.s-section-lead`) |
+| `--s-num` | 22 → 26 | 600, tabular, −0.02em | número de stat |
+| `--s-field` | 16 (fijo) | 400 | texto dentro de un campo (16 = iOS no hace zoom al enfocar) |
+| `--s-cifra` | 20 (fijo) | 600, tabular | las tres cifras del evento que viene |
+| `--s-hero` | 24 → 36 (≥900) | 600, −0.025em/−0.03em | nombre del evento que viene, el título más grande de la home |
+| `--s-word` | 19 (fijo) | 700, −0.03em | wordmark "parygo." del super admin |
+| `--s-d1` | 40 → 56 | 600 | cifra grande suelta (p. ej. el código de puerta en `.a-code--lg`) |
+
+Espacio en múltiplos de 8 (`--s-s1`…`--s-s6` = 8/16/24/32/48/64), contenedor
+de 1120, igual que en el resto del sistema.
+
+**Componentes propios de esta superficie:**
+
+- **Botones.** Primario: relleno `--ink` (blanco) con texto `--on-white`
+  (#0A0A0A, 19.8:1 medido), radio `--r-btn` (10), alto **48** (antes 44).
+  Hover = `--white-hover` #E6E6E6 (16.5:1), nunca un filtro. Secundario
+  (`.s-btn--soft`): el mismo botón sin relleno, con borde blanco al 16%
+  (`.34` al pasar). Ghost (`.s-btn--ghost`): solo texto, subrayado al pasar.
+  Destructivo confirmado (`.s-btn--danger`): relleno `--ink` con punto de
+  alerta, es el primario de SU paso. Un solo primario por pantalla, igual
+  que en el resto del sistema.
+- **Campos** (`.s-input`). Caja de 48 de alto, borde blanco al 14%, radio
+  `--r-btn` (10, no `--r-ctl`), texto en `--s-field` (16px). Foco: el borde
+  sube a blanco 45% + anillo de 3px blanco al 8%. Ya no es una línea inferior
+  como en el sistema de papel: acá el campo SÍ es una caja.
+- **`.s-due`.** La única fila con fondo (`--surface` #141414, radio
+  `--r-ctl` = 12 en este tema) de toda la pantalla: punto de acento, qué es
+  y por qué importa, con la acción a la derecha. Reemplazó a la cifra héroe
+  de 56px que tenía antes (2026-09-23): la etiqueta "Por revisar" queda solo
+  para el lector de pantalla.
+- **Navegación.** Barra LATERAL de 248px fija a la izquierda desde 900px
+  (filas de 44, la activa con fondo `--surface`); en el teléfono, cabecera
+  de 60 arriba y barra FIJA abajo (`.s-tabbar`, ítems de ícono 22px + nombre
+  de 11px, el activo con un punto de acento debajo). Mismo markup en los dos
+  paneles. El contador (Yapes por revisar, solicitudes) es una pastilla de
+  `--accent` con el número en `--on-white` (#0A0A0A, 7.0:1 medido) — el ÚNICO
+  texto sobre el acento de todo el panel, y va en negro, nunca en blanco.
+- **Acciones** (`.s-acts` / `.s-act`). Filas de **52** con ícono (18px,
+  `--ink-2`) y chevron a la derecha, agrupadas por para qué sirven
+  ("Asistentes" · "Venta" en el organizador): 1 columna en el teléfono, 2
+  columnas desde 900px.
+- **Motion.** El panel NO anima al cargar — solo `.s-notice` entra con
+  fade de 240ms; el fade-up escalonado de filas (tabla, tarjetas de marca,
+  filas de evento) se sacó a propósito: el organizador abre estas pantallas
+  decenas de veces por día y es la firma visual del dashboard generado.
+  TODO control presionable lleva `:active { transform: scale(.97) }` en
+  140ms: el organizador trabaja desde el teléfono, donde `:hover` no existe,
+  así que sin `:active` no hay ninguna señal de que el control recibió el
+  toque. `prefers-reduced-motion` cambia la presión de `transform` a un
+  `box-shadow` inset, nunca la saca del todo.
+
 ## Shapes
 
-- Controles 9px, botones 10px, tarjetas 14px, pastillas 999px.
-- **Los campos no son cajas**: línea inferior de 1.5px y nada más. Al enfocar,
-  la línea se vuelve tinta y engorda; sin anillo ni relleno.
-- Los bloques de sección no tienen borde cerrado ni radio: arrancan con un
-  hairline superior.
+**Landing:** controles 9px, botones 10px, tarjetas 14px, pastillas 999px.
+**Los campos no son cajas**: línea inferior de 1.5px y nada más. Al enfocar,
+la línea se vuelve tinta y engorda; sin anillo ni relleno.
+
+**Tema noche (compra y paneles):** botones 10px (sin cambio), tarjetas 14px
+(sin cambio), pero **controles pasan a 12px** (`--r-ctl`, lo pisa
+`.pg.pg-noche`) y **los campos SÍ son cajas**: borde de 1px blanco al 14%,
+alto 48, foco con borde blanco 45% + anillo blanco 8%. Es la inversión
+deliberada de la regla de la landing: sobre negro una línea sola no se lee
+tan bien como una caja con borde tenue.
+
+Los bloques de sección, en las dos superficies, no tienen borde cerrado ni
+radio: arrancan con un hairline superior.
 
 ## Components
 
 ### Buttons
 
-**UN solo botón primario por pantalla.** El resto son botones de TEXTO: sin
-relleno, sin borde, subrayado al pasar.
+**UN solo botón primario por pantalla**, en TODAS las superficies. El resto
+son botones de TEXTO: sin relleno, sin borde, subrayado al pasar.
 
-Todos miden **44px de alto reales**. Un botón de texto no se ve más grande por
-medir 44: no hay caja que crezca, solo aire alrededor de la palabra.
+**En la landing:** todos miden 44px de alto reales. Un botón de texto no se ve
+más grande por medir 44: no hay caja que crezca, solo aire alrededor de la
+palabra. El destructivo confirmado es tinta sólida con punto de alerta
+(15.7:1); blanco sobre `alert` da 4.35:1 y no llega.
 
-El destructivo confirmado es tinta sólida con punto de alerta (15.7:1); blanco
-sobre `alert` da 4.35:1 y no llega.
+**En compra y paneles (tema noche):** el primario mide 48 de alto, relleno
+`--ink` (blanco) con texto `--on-white` (#0A0A0A), hover `--white-hover`
+#E6E6E6. En el comprador, si hay marca, el primario es el par de
+`brandFillPair()`; en los paneles siempre es blanco/negro (ver el detalle
+completo en **Los paneles**, dentro de Tema noche).
 
 ### Estados
 
 Un estado es **un punto de color + texto en tinta**. Nunca texto de color.
 `ok` listo · `warn` atención · `alert` problema · `accent` tarea pendiente ·
-punto hueco = no pasa nada (borrador, archivado).
+punto hueco = no pasa nada (borrador, archivado). Vale igual en las tres
+superficies: papel, comprador y paneles.
 
 ### Stats
 
-Número grande (Bricolage 800, tabular) con la etiqueta de 11px en mayúsculas
-espaciadas DEBAJO, columnas separadas por hairlines verticales.
+**En la landing:** número grande (Bricolage 800, tabular) con la etiqueta de
+11px en mayúsculas espaciadas DEBAJO, columnas separadas por hairlines
+verticales.
 
-El DOM va etiqueta → número y el orden VISUAL se invierte por CSS. Es una
-divergencia consciente de WCAG 1.3.2: un lector de pantalla dice "Vendidas,
-240" y quien ve la pantalla lee "240 / VENDIDAS". Ojo al leerlo con un script:
-partir el `innerText` por espacios da vuelta los campos.
+**En los paneles:** mismo patrón de columnas y hairlines, pero el número es
+Geist **600** (no 800) y la etiqueta va en **12px minúscula normal** en
+`--ink-2` (no mayúsculas espaciadas) — ver la rampa `--s-num`/`--s-micro` en
+Tema noche.
+
+En las dos, el DOM va etiqueta → número y el orden VISUAL se invierte por
+CSS. Es una divergencia consciente de WCAG 1.3.2: un lector de pantalla dice
+"Vendidas, 240" y quien ve la pantalla lee "240 / VENDIDAS". Ojo al leerlo
+con un script: partir el `innerText` por espacios da vuelta los campos.
 
 ## Do's and Don'ts
 
@@ -399,7 +553,10 @@ partir el `innerText` por espacios da vuelta los campos.
   reproducible.
 - Usar el punto de color para el estado y la tinta para el texto.
 - Dejar que el hairline y el aire hagan la estructura.
-- Diseñar para el teléfono de noche, con una mano.
+- Diseñar para el teléfono de noche, con una mano — vale para el comprador
+  Y para el organizador en la puerta.
+- En los paneles, animar solo cuando algo cambió (`.s-notice`); nunca al
+  cargar la pantalla.
 
 **Don't**
 
@@ -407,6 +564,9 @@ partir el `innerText` por espacios da vuelta los campos.
 - Blanco sobre naranja (2.85:1).
 - Más de un primario por pantalla.
 - Centrar cosas.
-- Tarjetas flotantes con sombra sobre el papel.
-- Bajar `ink-2`/`ink-3` sin volver a medir contra `paper-3`.
+- Tarjetas flotantes con sombra sobre el papel o sobre el negro.
+- Bajar `ink-2`/`ink-3` sin volver a medir contra `paper-3` (landing) o
+  contra `--selected` (tema noche).
+- Mayúsculas espaciadas como etiqueta, ni peso 800, en los paneles: ahí el
+  tope es minúscula normal y 600 — quedó atrás con el papel.
 - Deslizar tablas en horizontal en el teléfono.

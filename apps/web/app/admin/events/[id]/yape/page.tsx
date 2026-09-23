@@ -86,14 +86,13 @@ export default async function EventYapePage({ params }: { params: { id: string }
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
         <div>
-          <span className="eyebrow">Revisar Yape</span>
           <h2 className="s-h2" style={{ marginTop: 2 }}>Comprobantes pendientes {withUrls.length > 0 && <span className="s-badge s-badge--alert" style={{ marginLeft: 8 }}>{withUrls.length}</span>}</h2>
         </div>
         <LiveRefresh seconds={25} />
       </div>
 
       {withUrls.length === 0 ? (
-        <div className="s-card"><p className="s-empty">No hay comprobantes pendientes. 🎉 Los nuevos aparecen solos (refresco automático).</p></div>
+        <div className="s-card"><p className="s-empty">No hay comprobantes por revisar. Los nuevos aparecen solos, sin recargar.</p></div>
       ) : (
         <>
           {/* La instrucción va UNA vez arriba de la lista, no repetida en cada fila. */}

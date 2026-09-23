@@ -24,12 +24,11 @@ export default async function NewEventPage({
   }
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto' }}>
+    <div style={{ maxWidth: 720 }}>
       <Link href="/cabina-7k29x/events" className="s-back">
         <ChevronLeft className="h-3.5 w-3.5" /> Eventos
       </Link>
       <header style={{ marginBottom: 22 }}>
-        <span className="eyebrow">Nuevo evento</span>
         <h1 className="s-h1" style={{ marginTop: 8 }}>Crear evento</h1>
         <p className="s-card__desc">
           Solo super admin crea eventos. El dueño después edita contenido y tipos de entrada.

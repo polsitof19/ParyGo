@@ -145,11 +145,14 @@ para OK de Paul.
   --selected #202020, --ink #FFF, --ink-2 #A3A3A3, --ink-3 #8A8A8A; #7A7A7A de
   la maqueta daba 4.30 sobre --surface y se corrigió). Geist (paquete `geist`)
   en todo, sin Bricolage ni Hanken. El email de entrada va en BLANCO.
-  PENDIENTES para otra rama (siguen en crema, no tocarlos en design/noche):
-  la landing, los paneles (organizador y super admin) y los emails de
+  Los PANELES (organizador y super admin) también van en noche desde el
+  2026-09-23 (rama panel/noche): `pg pg-noche pg-panel`, mismos tokens.
+  PENDIENTES para otra rama (siguen en crema): la landing y los emails de
   recordatorio, cancelado, cambio de fecha y Yape.
-- Botón primario = TINTA sobre acento (5.91:1 medido). Blanco sobre naranja da
-  2.85:1 y FALLA AA — no usarlo nunca. En el COMPRADOR y los emails de entrada
+- Botón primario = TINTA sobre acento (5.91:1 medido) en la landing. Blanco
+  sobre naranja da 2.85:1 y FALLA AA — no usarlo nunca. En los PANELES (noche)
+  el primario es RELLENO BLANCO con texto #0A0A0A (hover #E6E6E6); el acento
+  ahí solo es punto, contador (número en #0A0A0A) o anillo de foco. En el COMPRADOR y los emails de entrada
   el botón es `brandFillPair(hex, 'neutra')`: blanco o #0A0A0A sobre el color
   de la marca, el que llegue a 4.5:1 (prefiere blanco; Code: blanco sobre
   #C8371F = 5.22:1). Nunca blanco "a mano": una marca clara lleva #0A0A0A.
@@ -212,24 +215,33 @@ para OK de Paul.
   teléfono: ahí el :hover no existe y sin :active no hay ninguna señal de que
   el control recibió el toque. El fade-up escalonado de filas se sacó: se veía
   decenas de veces por día y es la firma del dashboard generado.
-- Estado de las superficies: landing, super admin y panel del organizador en
-  el sistema de papel; el comprador (compra, entrada, home de marca) en el
-  tema noche (rama design/noche). La entrada (QR) vive en
+- Estado de las superficies: la landing en el sistema de papel; el comprador
+  (compra, entrada, home de marca) y los dos paneles en el tema noche. La entrada (QR) vive en
   app/b/[brand]/TicketPass.tsx, compartida por /t/[uuid], /pedido y la
   confirmación; la imagen que se guarda/comparte, en SaveTicketImage.tsx.
-- PANELES (organizador + super admin): CERO TARJETAS FLOTANTES. Nada de
-  rectángulos blancos con sombra sobre el papel; la estructura la hacen
-  hairlines (1px --line), jerarquía tipográfica y espacio. `.s-card` ya no es
-  una tarjeta: es un bloque que arranca con border-top. Stats = número 32/800
-  tabular con etiqueta 11px en mayúsculas espaciadas DEBAJO, columnas separadas
-  por hairlines verticales. Tablas y listas como un menú: filas con hairline,
-  sin fondo, tinte suave al pasar. Campos con línea inferior, sin relleno.
-  UN solo botón primario por pantalla (tinta sobre acento, radio 10); el resto
-  son botones de TEXTO (.s-btn--soft/--ghost). Nav en texto con subrayado de
-  2px en el activo, sin pastillas. Nada centrado en toda la app.
+- PANELES (organizador + super admin), TEMA NOCHE (2026-09-23, referencia
+  aprobada por Paul "Panel organizador ParyGo.html"; brief en
+  apps/web/.impeccable/surfaces/app-admin.md). Fondo #0A0A0A, Geist 600 en
+  títulos y números (sin 800), etiquetas en 12–13px y MINÚSCULA normal: NADA
+  de mayúsculas espaciadas ni eyebrow encima de un título (era la firma del
+  dashboard generado; impeccable lo prohíbe). Sin sombras. La estructura la
+  hacen hairlines y filas de 52 con ícono y chevron, como un menú de ajustes.
+  Lo ÚNICO con fondo (--surface #141414, radio --r-ctl) es lo que pide algo:
+  la fila de Yapes por aprobar / solicitudes (.s-due). Campos en CAJA de 48
+  (borde blanco .14, radio 10, texto 16 para que iOS no haga zoom). UN solo
+  primario por pantalla (relleno blanco); secundario = mismo botón con borde
+  (.s-btn--soft); --ghost = texto. Navegación: barra LATERAL fija de 248 en
+  ≥900 y barra de ABAJO en el teléfono, en los DOS paneles. Tamaños y radios
+  siempre de la rampa (--s-*, incluidos --s-field/--s-cifra/--s-hero/--s-word)
+  o de los tokens de radio. Nada centrado en toda la app.
 - PANEL DEL ORGANIZADOR, estructura (rama panel/ordenado, 2026-09-23):
   CUATRO secciones, iguales en celular y compu: Eventos · Escáner · Equipo ·
-  Mi marca (arriba en la compu; barra FIJA abajo en ≤640). Cada evento, CUATRO
+  Mi marca (barra lateral en la compu; barra FIJA abajo en <900). El INICIO
+  (panel/noche): fila de Yapes por aprobar → EL EVENTO QUE VIENE (flyer,
+  nombre, cuándo/dónde, estado; tres cifras vendidas · cortesías · cobrado;
+  Abrir escáner + Copiar link; aviso "Invita a tu equipo de puerta" si no hay
+  validadores; acciones agrupadas en Asistentes y Venta) → Todos tus eventos →
+  Anteriores y Archivados plegados → el pack al pie. Cada evento, CUATRO
   pestañas siempre a la vista: Resumen (cómo va · Revisar Yape · Reporte) ·
   Evento (datos, fecha, lugar, entradas y precios, flyer, gestión: UNA sola
   pantalla, /editar; /entradas redirige ahí) · Personas (compradores ·
@@ -284,6 +296,13 @@ Herramientas versionadas: supabase/mgmt.mjs (Management API; lee el token de
 supabase/verify-0053-0058.mjs (comprobaciones de estado esperado).
 OJO con `mgmt.mjs types`: PISA database.types.ts entero y regenerarlo completo
 rompe tipos afinados a mano — las columnas nuevas se agregan a mano.
+
+PENDIENTE (encontrado 2026-09-23): la 0054 agregó brands.yape_qr_url SIN
+`grant select (yape_qr_url) on public.brands to authenticated` (las columnas
+de brands se exponen una por una: 0023/0043/0052). Con la sesión del
+organizador daba "permission denied" y "Mi marca" salía EN BLANCO. El panel
+ya la lee con service role acotada a la marca; la migración del grant queda
+para cuando Paul la apruebe (no hace falta para que ande).
 
 Incrementales, idempotentes, numeradas (vamos por 0059). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
@@ -348,3 +367,24 @@ permisos por JWT, el security-review). Pausar antes de pasos de riesgo para OK.
 ## Modelo / costo
 Opus para diseño (Plan) y lo de riesgo. Sonnet/Haiku para subagents mecánicos
 (review, tests). No quemar Opus en tareas mecánicas.
+
+## Herramientas
+- **Context7** (MCP global): consultarlo ANTES de usar cualquier API de Next,
+  Supabase o Resend. La doc de memoria envejece; Context7 trae la de la versión.
+- **Graphify**: consultar el grafo antes de leer archivos a ciegas
+  (`graphify query "<pregunta>"`, `graphify explain "<símbolo>"`,
+  `graphify path "<A>" "<B>"`). Regenerarlo tras cambios grandes con
+  `graphify update .` (solo AST, sin LLM, sin costo). Salida en graphify-out/
+  (gitignored; cada máquina lo genera). Los hooks que lo recuerdan viven en
+  .claude/settings.local.json (ruta del exe propia de cada PC, no se commitean).
+  En Windows, si el shim `graphify` de uv falla, usar `graphify.exe` o
+  `python -m graphify` con el Python de `%APPDATA%\uv\tools\graphifyy`.
+- **Playwright CLI** (`playwright-cli`): capturas y QA a 390 y 1440.
+- **Agent-skills** (/spec /plan /review…): solo apoyo. Mandan las reglas de
+  este archivo: gates, nada a refactor/monorepo sin OK de Paul, security-reviewer
+  en pagos.
+- **Ponytail**: código mínimo, pero NUNCA recortar validación, seguridad ni
+  manejo de errores del flujo de compra.
+- **UI UX Pro Max / SkillUI / impeccable**: solo referencia. Manda el sistema
+  de ParyGo: fondos blanco/negro neutro, Geist, sin tarjetas flotantes. La salida
+  de SkillUI vive en tmp/skillui/ y no se aplica a nada.

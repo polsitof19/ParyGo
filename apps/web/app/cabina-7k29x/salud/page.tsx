@@ -97,7 +97,6 @@ export default async function SaludPage() {
     <>
       <header className="s-pagehead">
         <div>
-          <span className="eyebrow">Plataforma</span>
           <h1 className="s-h1">Salud</h1>
           <p className="s-card__desc">Estado en vivo de la plataforma. Solo lectura.</p>
         </div>

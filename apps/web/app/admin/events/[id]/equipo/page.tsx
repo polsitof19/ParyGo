@@ -26,7 +26,6 @@ export default async function EventTeamPage({ params }: { params: { id: string }
     <>
       <div className="s-pagehead" style={{ marginBottom: 14 }}>
         <div>
-          <span className="eyebrow">Puerta</span>
           <h2 className="s-h2" style={{ marginTop: 6 }}>Equipo de puerta</h2>
           <p className="s-card__desc">
             Tu staff valida entradas con su email y contraseña, o con su código personal de puerta. Solo ven el escáner, nada más de tu panel.

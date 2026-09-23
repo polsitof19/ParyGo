@@ -31,7 +31,6 @@ export default async function EventsListPage({ searchParams }: { searchParams?: 
     <>
       <div className="s-pagehead">
         <div>
-          <span className="eyebrow">Plataforma</span>
           <h1 className="s-h1" style={{ marginTop: 8 }}>Eventos</h1>
           <p className="s-card__desc">
             {events?.length ?? 0} evento{events?.length === 1 ? '' : 's'}

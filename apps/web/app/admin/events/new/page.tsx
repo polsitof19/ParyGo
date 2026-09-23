@@ -31,12 +31,11 @@ export default async function NewBrandEventPage() {
   if ((brand.event_balance ?? 0) <= 0) redirect('/admin');
 
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto' }}>
+    <div style={{ maxWidth: 680 }}>
       <Link href="/admin" className="s-back">
         <ChevronLeft className="h-3.5 w-3.5" /> Tus eventos
       </Link>
       <header style={{ marginBottom: 22 }}>
-        <span className="eyebrow">Nuevo evento · {brand.name}</span>
         <h1 className="s-h1" style={{ marginTop: 8 }}>Crear evento</h1>
         <p className="s-card__desc">
           Tres pasos: lo básico, las entradas y (si quieres) los detalles. Usa 1 de tu saldo ({brand.event_balance} disponible{brand.event_balance === 1 ? '' : 's'}). Se crea en borrador y lo publicas cuando esté listo.

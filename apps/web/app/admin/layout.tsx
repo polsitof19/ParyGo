@@ -1,4 +1,4 @@
-import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
+import { GeistSans } from 'geist/font/sans';
 import { redirect } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
@@ -13,19 +13,10 @@ import './admin.css';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-// Identidad cálida parygo, scopeada bajo .admin-shell (no afecta cabina/scan/landing).
-const bricolage = Bricolage_Grotesque({
-  weight: ['600', '700', '800'],
-  subsets: ['latin'],
-  variable: '--font-bricolage',
-  display: 'swap',
-});
-const hanken = Hanken_Grotesk({
-  weight: ['300', '400', '500', '600', '700'],
-  subsets: ['latin'],
-  variable: '--font-hanken',
-  display: 'swap',
-});
+// Tema NOCHE (2026-09-23), el mismo del comprador: fondo #0A0A0A y Geist en
+// todo. Los tokens son los de .pg.pg-noche (medidos por test:contrast); lo
+// propio del panel vive en parygo-panel.css.
+
 
 export default async function AdminLayout({
   children,
@@ -54,7 +45,7 @@ export default async function AdminLayout({
   const logoUrl = (brand?.theme_json as { logo_url?: string | null } | null)?.logo_url ?? null;
 
   return (
-    <div className={`pg pg-panel admin-shell ${bricolage.variable} ${hanken.variable}`}>
+    <div className={`pg pg-noche pg-panel admin-shell ${GeistSans.variable}`}>
       {ctx.impersonating && <ImpersonationBanner brandName={brand?.name ?? "la marca"} modoEdicion={ctx.modoEdicion} />}
       <AdminTopbar brandName={brand?.name ?? 'Tu marca'} email={user.email} logoUrl={logoUrl} soloLectura={ctx.impersonating} />
       <main className="s-wrap">{children}</main>

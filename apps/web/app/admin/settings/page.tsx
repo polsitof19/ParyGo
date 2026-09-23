@@ -20,13 +20,18 @@ export default async function AdminSettingsPage() {
   // MP status: service_role; never decrypts, returns only booleans.
   const supabase = createClient();
   const admin = createAdminClient();
-  const [{ data: brand }, { data: mpStatus }] = await Promise.all([
+  // yape_qr_url (0054) NO tiene grant de columna para authenticated: pedirla
+  // con la sesión del organizador daba "permission denied for table brands",
+  // brand quedaba null y "Mi marca" salía EN BLANCO. Se lee con service role,
+  // acotada a la marca de la sesión (ctx.brandId), igual que en actions.ts.
+  const [{ data: brand }, { data: mpStatus }, { data: qrRow }] = await Promise.all([
     supabase
       .from('brands')
-      .select('id, name, contact_email, whatsapp_e164, instagram, yape_number, yape_holder, notify_yape_recovery, notify_yape_digest, theme_json, yape_qr_url')
+      .select('id, name, contact_email, whatsapp_e164, instagram, yape_number, yape_holder, notify_yape_recovery, notify_yape_digest, theme_json')
       .eq('id', ctx.brandId)
       .single(),
     admin.rpc('get_brand_mp_status', { p_brand_id: ctx.brandId }),
+    admin.from('brands').select('yape_qr_url').eq('id', ctx.brandId).maybeSingle(),
   ]);
   if (!brand) return null;
   const mp = (Array.isArray(mpStatus) ? mpStatus[0] : null) ?? {
@@ -42,13 +47,12 @@ export default async function AdminSettingsPage() {
   };
 
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto' }}>
+    <div style={{ maxWidth: 680 }}>
       <Link href="/admin" className="s-back">
         <ChevronLeft className="h-3.5 w-3.5" /> Tus eventos
       </Link>
 
       <header style={{ marginBottom: 22 }}>
-        <span className="eyebrow">{brand.name}</span>
         <h1 className="s-h1" style={{ marginTop: 8 }}>Mi marca</h1>
         <p className="s-card__desc">
           {impersonating
@@ -72,7 +76,7 @@ export default async function AdminSettingsPage() {
         primaryColor={theme.primary_color ?? '#FF1F8F'}
         secondaryColor={theme.secondary_color ?? '#00E5FF'}
         logoUrl={theme.logo_url ?? null}
-        yapeQrUrl={brand.yape_qr_url ?? theme.yape_qr_url ?? null}
+        yapeQrUrl={qrRow?.yape_qr_url ?? theme.yape_qr_url ?? null}
         notifyYapeRecovery={Boolean(brand.notify_yape_recovery)}
         notifyYapeDigest={Boolean(brand.notify_yape_digest)}
         readOnly={impersonating}

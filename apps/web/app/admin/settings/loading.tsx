@@ -2,7 +2,7 @@ import { Sk, SkCard } from '@/components/Skeleton';
 
 export default function SettingsLoading() {
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto', animation: 'a-fade .2s both' }}>
+    <div style={{ maxWidth: 680, animation: 'a-fade .2s both' }}>
       <div style={{ marginBottom: 22 }}>
         <Sk w={140} h={12} />
         <div style={{ height: 8 }} />

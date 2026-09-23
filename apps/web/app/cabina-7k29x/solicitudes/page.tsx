@@ -37,7 +37,6 @@ export default async function SolicitudesPage() {
     <>
       <header className="s-pagehead">
         <div>
-          <span className="eyebrow">Onboarding</span>
           <h1 className="s-h1">Solicitudes de acceso</h1>
           <p className="s-card__desc">
             {pending.length} pendiente{pending.length === 1 ? '' : 's'}. Aprobar crea la marca con el alta de siempre (tú pones subdominio y contraseña). El saldo se carga aparte.

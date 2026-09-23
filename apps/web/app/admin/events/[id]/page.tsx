@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { ChevronDown } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
@@ -7,7 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
 import { YapeReviewRow } from '@/app/admin/yape/YapeReviewRow';
 import { publicEnv } from '@/lib/env';
-import { QuickActions } from './QuickActions';
+import { EventButtons, QuickActions } from './QuickActions';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -281,7 +280,13 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
         <div className="s-stat">
           <span className="s-stat__label">Recaudado</span>
           <span className="s-stat__value">{formatPEN(confirmedCents)}</span>
-          <span className="s-stat__sub">{pendingCount > 0 ? `+ ${formatPEN(pendingCents)} por aprobar` : 'confirmado en tus cuentas'}</span>
+          <span className="s-stat__sub">
+            {pendingCount > 0
+              ? `+ ${formatPEN(pendingCents)} por aprobar`
+              : showMp
+                ? `Yape ${formatPEN(byMethod.yape.cents)} · tarjeta ${formatPEN(byMethod.mp.cents)}`
+                : 'confirmado en tu Yape'}
+          </span>
         </div>
         <div className="s-stat">
           <span className="s-stat__label">Vendidas</span>
@@ -315,32 +320,11 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
         <p className="s-notice" style={{ marginBottom: 16 }}>Aún no vendiste. Comparte tu link en historias y grupos: es lo que más mueve la venta.</p>
       )}
 
-      {/* 3) Acciones rápidas, a la vista: buscar, reenviar, exportar, promotores… */}
+      {/* 3) Los dos botones (escáner · copiar link) y las acciones agrupadas.
+          Con Yapes por aprobar el primario es el de la fila abierta: el
+          escáner baja a secundario (uno solo por pantalla). */}
+      <EventButtons publicUrl={publicUrl} isPublished={!!event.is_published} scannerPrimary={pendingCount === 0} readOnly={impersonating} />
       <QuickActions eventId={event.id} publicUrl={publicUrl} isPublished={!!event.is_published} readOnly={impersonating} />
-
-      {/* 4) INFORMACIÓN — Tu dinero */}
-      <section className="s-section">
-        <h2 className="s-h2" style={{ marginBottom: 12 }}>Tu dinero</h2>
-        <div className="s-card">
-          <p className="s-card__desc" style={{ marginBottom: 14 }}>Esto debería estar en tu cuenta de <strong>{showMp ? 'Yape / MercadoPago' : 'Yape'}</strong>. ParyGo no toca tu plata: cada cobro va directo a tu cuenta.</p>
-          <div className="a-money">
-            <div className="a-money__cell"><span className="s-stat__label">Yape aprobado</span><span className="a-money__v">{formatPEN(byMethod.yape.cents)}</span><span className="s-stat__sub">{byMethod.yape.count} órdenes</span></div>
-            {showMp && (
-              <div className="a-money__cell"><span className="s-stat__label">MercadoPago</span><span className="a-money__v">{formatPEN(byMethod.mp.cents)}</span><span className="s-stat__sub">{byMethod.mp.count} órdenes</span></div>
-            )}
-            {courtesyTickets > 0 && (
-              <div className="a-money__cell"><span className="s-stat__label">Cortesías</span><span className="a-money__v">{courtesyTickets}</span><span className="s-stat__sub">entradas gratis entregadas</span></div>
-            )}
-            <div className="a-money__cell a-money__cell--total"><span className="s-stat__label">Total confirmado</span><span className="a-money__v">{formatPEN(confirmedCents)}</span><span className="s-stat__sub">ya en tus cuentas</span></div>
-          </div>
-          {pendingCount > 0 && (
-            <div className="a-money__pending">
-              <span><strong>Yape pendiente de aprobar: {formatPEN(pendingCents)}</strong>&nbsp;({pendingCount}). No cuenta como confirmado hasta que lo apruebes.</span>
-              <Link href={`/admin/events/${event.id}/yape`} className="s-btn s-btn--soft s-btn--sm">Revisar Yape</Link>
-            </div>
-          )}
-        </div>
-      </section>
 
       {/* Entradas por tipo */}
       <section className="s-section">
@@ -391,19 +375,24 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
         )}
       </section>
 
-      {/* Ventas por día */}
+      {/* Ventas por día: una columna por día (los últimos 14 con ventas); la
+          última, en blanco. El monto de cada día va en el title y en el texto
+          para lectores de pantalla. */}
       {paidRows.length > 0 && byDay.length > 0 && (
         <section className="s-section">
           <h2 className="s-h2" style={{ marginBottom: 12 }}>Ventas por día</h2>
           <div className="s-card">
-            <div className="a-days">
-              {byDay.map(([day, cents]) => (
-                <div key={day} className="a-days__row">
-                  <span className="a-days__k">{day}</span>
-                  <div className="a-bar"><div className="a-bar__fill" style={{ width: `${Math.round((cents / maxDay) * 100)}%` }} /></div>
-                  <span className="a-days__v">{formatPEN(cents)}</span>
-                </div>
+            <ol className="a-chart" aria-label="Ventas por día">
+              {byDay.map(([day, cents], i) => (
+                <li key={day} className={`a-chart__col${i === byDay.length - 1 ? ' a-chart__col--last' : ''}`} title={`${day}: ${formatPEN(cents)}`}>
+                  <span className="a-chart__bar" style={{ height: `${Math.max(4, Math.round((cents / maxDay) * 100))}%` }} />
+                  <span className="a-chart__sr">{day}: {formatPEN(cents)}</span>
+                </li>
               ))}
+            </ol>
+            <div className="a-chart__axis">
+              <span>{byDay[0]![0]}</span>
+              <span>{byDay[byDay.length - 1]![0]} · {formatPEN(byDay[byDay.length - 1]![1])}</span>
             </div>
           </div>
         </section>

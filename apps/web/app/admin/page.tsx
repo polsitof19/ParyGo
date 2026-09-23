@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronDown, Plus, ScanLine, ArrowRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createClient } from '@/lib/supabase/server';
@@ -12,7 +12,7 @@ import { LowBalanceNotice } from './LowBalanceNotice';
 import { publicEnv } from '@/lib/env';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { setEventArchivedAction } from './events/[id]/edit-actions';
-import { QuickActions } from './events/[id]/QuickActions';
+import { EventButtons, QuickActions } from './events/[id]/QuickActions';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -40,7 +40,7 @@ export default async function AdminHomePage() {
   const [{ data: events }, { data: pendingProofs }] = await Promise.all([
     supabase
       .from('events')
-      .select('id, slug, name, starts_at, is_published, cover_url, archived_at')
+      .select('id, slug, name, starts_at, is_published, cover_url, archived_at, venue_name')
       .eq('brand_id', brand.id)
       .order('starts_at', { ascending: false }),
     supabase
@@ -81,7 +81,7 @@ export default async function AdminHomePage() {
   // traían las pagadas dos veces (una para sumar, otra para recuperación).
   const eventNameById = new Map((events ?? []).map((e) => [e.id, e.name] as const));
   const eventIds = (events ?? []).map((e) => e.id);
-  const [{ data: paidRows }, { data: ticketOrderRows }, { count: activeTypeCount }, { data: mpStatus }, { data: validTicketRows }] = await Promise.all([
+  const [{ data: paidRows }, { data: ticketOrderRows }, { count: activeTypeCount }, { data: mpStatus }, { data: validTicketRows }, { count: validatorCountRaw }] = await Promise.all([
     adminCli.from('orders').select('id, buyer_name, total_cents, created_at, event_id, payment_method').eq('brand_id', brand.id).eq('status', 'paid'),
     adminCli.from('tickets').select('order_id').eq('brand_id', brand.id),
     eventIds.length
@@ -92,17 +92,18 @@ export default async function AdminHomePage() {
     // Resumen del evento. ticketOrderRows (sin filtrar) sigue siendo para la
     // detección de órdenes pagadas sin tickets.
     adminCli.from('tickets').select('order_id').eq('brand_id', brand.id).is('invalidated_at', null),
+    // ¿Tiene equipo de puerta? Sin validadores, el aviso "Invita a tu equipo".
+    adminCli.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', brand.id).eq('role', 'validator'),
   ]);
+  const validatorCount = validatorCountRaw ?? 0;
   const mpRow = Array.isArray(mpStatus) ? mpStatus[0] : null;
   const mpConfigured = Boolean(mpRow?.has_access_token && mpRow?.has_public_key);
   const paidOrderRows = (paidRows ?? []) as { id: string; buyer_name: string | null; total_cents: number | null; created_at: string; event_id: string; payment_method: string }[];
 
-  // Ventas por evento + total (exacto, mismos montos que antes).
+  // Ventas por evento (exacto, mismos montos que antes).
   const salesByEvent = new Map<string, number>();
-  let totalSalesCents = 0;
   for (const o of paidOrderRows) {
     salesByEvent.set(o.event_id, (salesByEvent.get(o.event_id) ?? 0) + (o.total_cents ?? 0));
-    totalSalesCents += o.total_cents ?? 0;
   }
 
   const ordersWithTickets = new Set((ticketOrderRows ?? []).map((t) => t.order_id as string));
@@ -110,7 +111,6 @@ export default async function AdminHomePage() {
   // "¿Cómo va?" a nivel marca. Vendidas = entradas de órdenes pagadas que NO son
   // cortesía (las cortesías no son venta).
   const saleOrderIds = new Set(paidOrderRows.filter((o) => o.payment_method !== 'courtesy').map((o) => o.id));
-  const soldTickets = (validTicketRows ?? []).filter((t) => saleOrderIds.has(t.order_id as string)).length;
   // Vendidas por evento (misma regla: válidas y no cortesía), para la lista.
   const eventoDeOrden = new Map(paidOrderRows.map((o) => [o.id, o.event_id] as const));
   const soldByEvent = new Map<string, number>();
@@ -125,6 +125,15 @@ export default async function AdminHomePage() {
     .filter((e) => e.is_published && Date.parse(e.starts_at) > nowMs - 12 * 3600 * 1000)
     .sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at))[0] ?? null;
   const nextDays = nextEvent ? Math.ceil((Date.parse(nextEvent.starts_at) - nowMs) / 86400000) : null;
+  // Aforo del próximo evento: misma regla que el Resumen del evento (tipos con
+  // cupo; sold incluye cortesías, que también ocupan lugar). Sin tipos con
+  // cupo (todo ilimitado) no hay barra.
+  const { data: nextTypes } = nextEvent
+    ? await adminCli.from('ticket_types').select('capacity, sold, is_unlimited').eq('event_id', nextEvent.id)
+    : { data: null };
+  const nextCapped = (nextTypes ?? []).filter((t) => !t.is_unlimited);
+  const nextCap = nextCapped.reduce((a, t) => a + (t.capacity ?? 0), 0);
+  const nextPct = nextCap > 0 ? Math.min(100, Math.round((nextCapped.reduce((a, t) => a + (t.sold ?? 0), 0) / nextCap) * 100)) : null;
   const nextWhen = nextDays === null ? null : nextDays <= 0 ? 'hoy' : nextDays === 1 ? 'mañana' : `en ${nextDays} días`;
   const nextPublicUrl = nextEvent ? `https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${nextEvent.slug}` : null;
   const firstPendingEvent = activeEvents.find((e) => (pendingByEvent.get(e.id) ?? 0) > 0) ?? null;
@@ -148,43 +157,91 @@ export default async function AdminHomePage() {
     { key: 'publicar', title: 'Publica tu evento', desc: 'Cuando esté listo, ponlo en vivo para empezar a vender.', done: publishedCount > 0, href: firstEventId ? `/admin/events/${firstEventId}` : '/admin/events/new', cta: 'Publicar' },
   ];
 
-  // ORDEN (2026-09-22): lo pendiente arriba, la información abajo, lo raro
-  // plegado. La plata esperando es la tarea que manda: cuando hay Yapes por
-  // revisar, SU botón es el único primario y "Crear evento" pasa a texto.
+  // ORDEN (2026-09-23, referencia aprobada): lo pendiente arriba (una fila con
+  // fondo), después EL EVENTO QUE VIENE (flyer, tres cifras, escáner y link,
+  // y sus acciones agrupadas), después tus eventos y lo pasado plegado.
+  // Un solo primario por pantalla: con Yapes esperando es "Revisar Yapes";
+  // si no, "Abrir escáner" del próximo evento.
   const hasDue = totalPending > 0 && !!firstPendingEvent;
-  const createPrimary = !hasDue;
+
+  // Cortesías del próximo evento (entradas válidas de órdenes de cortesía).
+  const courtesyOrderIds = new Set(paidOrderRows.filter((o) => o.payment_method === 'courtesy').map((o) => o.id));
+  const courtesyByEvent = new Map<string, number>();
+  for (const t of (validTicketRows ?? []) as { order_id: string }[]) {
+    if (!courtesyOrderIds.has(t.order_id)) continue;
+    const ev = eventoDeOrden.get(t.order_id);
+    if (ev) courtesyByEvent.set(ev, (courtesyByEvent.get(ev) ?? 0) + 1);
+  }
+
+  // Tus eventos: los que vienen (y los borradores) a la vista; los que ya
+  // pasaron, plegados en "Anteriores".
+  const isPast = (e: { starts_at: string }) => Date.parse(e.starts_at) + 12 * 3600 * 1000 < nowMs;
+  const upcoming = activeEvents.filter((e) => !isPast(e)).sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at));
+  const pastEvents = activeEvents.filter(isPast);
+  const fmtWhen = (iso: string) => new Date(iso).toLocaleString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' });
+
+  const createBtn = impersonating ? null : canCreate ? (
+    <Link href="/admin/events/new" className="s-btn s-btn--soft s-btn--sm">
+      <Plus aria-hidden="true" /> Crear evento
+    </Link>
+  ) : (
+    <button type="button" className="s-btn s-btn--soft s-btn--sm" disabled title="Sin saldo de eventos">
+      <Plus aria-hidden="true" /> Crear evento
+    </button>
+  );
+
+  const eventRow = (e: (typeof activeEvents)[number]) => {
+    const pend = pendingByEvent.get(e.id) ?? 0;
+    const vendidas = soldByEvent.get(e.id) ?? 0;
+    const past = isPast(e);
+    const hoy = !past && new Date(e.starts_at).toLocaleDateString('es-PE', { timeZone: 'America/Lima' }) === new Date().toLocaleDateString('es-PE', { timeZone: 'America/Lima' });
+    const status = !e.is_published ? { cls: 's-badge--draft', label: 'Borrador' }
+      : past ? { cls: 's-badge--draft', label: 'Pasado' }
+      : hoy ? { cls: 's-badge--todo', label: 'Hoy' }
+      : { cls: 's-badge--ok', label: 'Publicado' };
+    return (
+      <li key={e.id}>
+        <Link href={`/admin/events/${e.id}`} className={`a-evrow${past ? ' a-evrow--past' : ''}`}>
+          <span className="a-evrow__thumb" aria-hidden="true">
+            {e.cover_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={optimizedImage(e.cover_url, { width: 160, quality: 72 })} alt="" loading="lazy" decoding="async" />
+            ) : (
+              (e.name.trim()[0] ?? '?').toUpperCase()
+            )}
+          </span>
+          <span className="a-evrow__main">
+            <span className="a-evrow__title">{e.name}</span>
+            <span className="a-evrow__when">
+              {fmtWhen(e.starts_at)}
+              <span className={`s-badge ${status.cls}`}>{status.label}</span>
+            </span>
+          </span>
+          <span className="a-evrow__side">
+            <span className="a-evrow__n">{vendidas}</span>
+            <span className="a-evrow__sold">{vendidas === 1 ? 'entrada' : 'entradas'}</span>
+            {pend > 0 && <span className="a-nav__count" aria-label={`${pend} Yape por aprobar`}>{pend}</span>}
+          </span>
+        </Link>
+      </li>
+    );
+  };
 
   return (
     <>
-      <div className="s-pagehead">
-        <div>
-          <h1 className="s-h1">Tus eventos</h1>
-          <p className="s-card__desc">
-            {activeEvents.length} activo{activeEvents.length === 1 ? '' : 's'} · {publishedCount} publicado{publishedCount === 1 ? '' : 's'}
-          </p>
-        </div>
-        {impersonating ? null : canCreate ? (
-          <Link href="/admin/events/new" className={`s-btn ${createPrimary ? 's-btn--primary' : 's-btn--soft'}`}>
-            <Plus className="h-4 w-4" /> Crear evento
-          </Link>
-        ) : (
-          <button type="button" className={`s-btn ${createPrimary ? 's-btn--primary' : 's-btn--soft'}`} disabled title="Sin saldo de eventos">
-            <Plus className="h-4 w-4" /> Crear evento
-          </button>
-        )}
-      </div>
+      <h1 className="a-srh1">Tus eventos</h1>
 
-      {/* 1) PENDIENTE — la cifra héroe es lo que está esperando. */}
+      {/* 1) PENDIENTE — una fila con fondo, lo único con fondo de la pantalla. */}
       {hasDue && (
         <div className="s-due" role="status">
           <div className="s-due__txt">
             <span className="s-due__k">Por revisar</span>
-            <span className="s-due__n">{totalPending} Yape{totalPending === 1 ? '' : 's'}</span>
+            <span className="s-due__n">{totalPending} Yape{totalPending === 1 ? '' : 's'} por aprobar</span>
             <span className="s-due__sub">
-              Plata esperando tu aprobación{pendingEventCount > 1 && ` en ${pendingEventCount} eventos`} · hay gente esperando su QR.
+              Hay gente esperando su QR{pendingEventCount > 1 && ` · en ${pendingEventCount} eventos`}.
             </span>
           </div>
-          <Link href={`/admin/events/${firstPendingEvent!.id}/yape`} className="s-btn s-btn--primary">Revisar Yapes</Link>
+          <Link href={`/admin/events/${firstPendingEvent!.id}/yape`} className="s-btn s-btn--primary s-btn--sm">Revisar Yapes</Link>
         </div>
       )}
 
@@ -200,113 +257,102 @@ export default async function AdminHomePage() {
       {/* Setup guiado: solo el dueño y solo si falta algún paso (se auto-oculta). */}
       {!impersonating && <SetupChecklist steps={setupSteps} brandName={brand.name} />}
 
-      {/* 2) ¿Cómo va? — la plata primero. */}
-      <div className="a-pulse a-pulse--3">
-        <div className="s-stat">
-          <span className="s-stat__label">Recaudado</span>
-          <span className="s-stat__value">{formatPEN(totalSalesCents)}</span>
-          <span className="s-stat__sub">confirmado en tus cuentas</span>
-        </div>
-        <div className="s-stat">
-          <span className="s-stat__label">Vendidas</span>
-          <span className="s-stat__value">{soldTickets}</span>
-          <span className="s-stat__sub">entradas, todos tus eventos</span>
-        </div>
-        <div className={`s-stat${balance === 0 ? ' s-stat--alert' : ''}`}>
-          <span className="s-stat__label">Eventos disponibles</span>
-          <span className="s-stat__value">{balance}</span>
-          <span className="s-stat__sub">{canCreate ? `puedes crear ${balance} más` : 'sin saldo — pide un pack'}</span>
-        </div>
-      </div>
-
-      {/* 3) El próximo evento con sus acciones a la vista: buscar comprador,
-          reenviar entrada, exportar, promotores, escáner… a UN toque de la home.
-          Sin próximo evento queda el escáner, lo único que no depende de uno. */}
+      {/* 2) EL EVENTO QUE VIENE: flyer, nombre, cuándo; tres cifras; los dos
+          botones; y sus acciones agrupadas. */}
       {nextEvent ? (
-        <section className="s-section a-next" aria-labelledby="a-next-title">
-          <span className="s-acts__k">Próximo · {nextWhen}</span>
-          <h2 id="a-next-title" className="s-h2 a-next__title">
-            <Link href={`/admin/events/${nextEvent.id}`}>{nextEvent.name}</Link>
-          </h2>
-          <p className="s-card__desc">{formatPEN(salesByEvent.get(nextEvent.id) ?? 0)} vendido</p>
-          <QuickActions eventId={nextEvent.id} publicUrl={nextPublicUrl} isPublished={!!nextEvent.is_published} readOnly={impersonating} label="Acciones del próximo evento" />
+        <section className="a-next" aria-labelledby="a-next-title">
+          <div className="a-next__head">
+            <Link href={`/admin/events/${nextEvent.id}`} className="a-next__flyer" tabIndex={-1} aria-hidden="true">
+              {nextEvent.cover_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={optimizedImage(nextEvent.cover_url, { width: 320, quality: 75 })} alt="" decoding="async" />
+              ) : (
+                <span>{(nextEvent.name.trim()[0] ?? '?').toUpperCase()}</span>
+              )}
+            </Link>
+            <div className="a-next__id">
+              <h2 id="a-next-title" className="a-next__title">
+                <Link href={`/admin/events/${nextEvent.id}`}>{nextEvent.name}</Link>
+              </h2>
+              <p className="a-next__when">
+                {fmtWhen(nextEvent.starts_at)}
+                {nextEvent.venue_name && <><br />{nextEvent.venue_name}</>}
+              </p>
+              <span className="s-badge s-badge--ok a-next__state">Publicado · {nextWhen}</span>
+            </div>
+          </div>
+
+          <Link href={`/admin/events/${nextEvent.id}`} className="a-next__nums" aria-label={`Cómo va ${nextEvent.name}`}>
+            {/* La plata primero, como en el Resumen del evento. */}
+            <span><b>{formatPEN(salesByEvent.get(nextEvent.id) ?? 0)}</b>cobrado</span>
+            <span><b>{soldByEvent.get(nextEvent.id) ?? 0}</b>vendidas</span>
+            <span><b>{courtesyByEvent.get(nextEvent.id) ?? 0}</b>cortesías</span>
+            {nextPct !== null && (
+              <span className="a-next__cap">
+                <span className="a-meter" aria-hidden="true"><span className="a-meter__fill" style={{ width: `${nextPct}%` }} /></span>
+                {nextPct}% del aforo ocupado
+              </span>
+            )}
+          </Link>
+
+          <EventButtons publicUrl={nextPublicUrl} isPublished={!!nextEvent.is_published} scannerPrimary={!hasDue} readOnly={impersonating} />
+
+          {validatorCount === 0 && !impersonating && (
+            <Link href="/admin/equipo" className="a-hint">
+              <span className="a-hint__dot" aria-hidden="true" />
+              <span className="a-hint__txt">
+                <strong>Invita a tu equipo de puerta</strong>
+                <span>Por ahora solo tú puedes escanear {nextDays !== null && nextDays <= 0 ? 'esta noche' : 'ese día'}.</span>
+              </span>
+              <ChevronRight aria-hidden="true" />
+            </Link>
+          )}
+
+          <QuickActions eventId={nextEvent.id} publicUrl={nextPublicUrl} isPublished={!!nextEvent.is_published} readOnly={impersonating} showEdit />
         </section>
       ) : (
         <p className="s-calm">
           <span style={{ flex: '1 1 220px' }}>Ningún evento publicado por venir. {canCreate ? 'Crea o publica uno para empezar a vender.' : 'Pide un pack para crear el próximo.'}</span>
-          <Link href="/scan" className="s-btn s-btn--soft s-btn--sm">
-            <ScanLine aria-hidden="true" /> Abrir escáner
-          </Link>
         </p>
       )}
 
-      {/* 4) Eventos activos, en filas */}
-      <section className="s-section">
-        <h2 className="s-h2">Todos tus eventos</h2>
+      {/* 3) Tus eventos: los que vienen y los borradores. */}
+      <section className="a-mine" aria-labelledby="a-mine-title">
+        <div className="a-mine__head">
+          <h2 id="a-mine-title" className="s-h2">{nextEvent ? 'Todos tus eventos' : 'Tus eventos'}</h2>
+          {createBtn}
+        </div>
         {!events || events.length === 0 ? (
           <p className="s-empty">
             {canCreate
               ? 'Todavía no creaste ningún evento. Usa “Crear evento” para arrancar.'
               : 'No tienes eventos. Cuando ParyGo te cargue saldo vas a poder crear el primero.'}
           </p>
-        ) : activeEvents.length === 0 ? (
-          <p className="s-empty">Todos tus eventos están archivados. Míralos en “Archivados”, más abajo.</p>
+        ) : upcoming.length === 0 ? (
+          <p className="s-empty">No tienes eventos por venir. Los que ya pasaron están en “Anteriores”.</p>
         ) : (
-          <ul className="a-evlist">
-            {activeEvents.map((e) => {
-              const pend = pendingByEvent.get(e.id) ?? 0;
-              const sales = salesByEvent.get(e.id) ?? 0;
-              const vendidas = soldByEvent.get(e.id) ?? 0;
-              const start = new Date(e.starts_at);
-              // "Pasado" recién cuando terminó la noche (12h después del inicio):
-              // el mismo día el evento es "Hoy", no "Pasado".
-              const past = start.getTime() + 12 * 3600 * 1000 < Date.now();
-              const hoy = !past && start.toLocaleDateString('es-PE', { timeZone: 'America/Lima' }) === new Date().toLocaleDateString('es-PE', { timeZone: 'America/Lima' });
-              const status = !e.is_published ? { cls: 's-badge--draft', label: 'Borrador' }
-                : past ? { cls: 's-badge--draft', label: 'Pasado' }
-                : hoy ? { cls: 's-badge--todo', label: 'Hoy' }
-                : sales > 0 ? { cls: 's-badge--ok', label: 'Vendiendo' }
-                : { cls: 's-badge--ok', label: 'Publicado' };
-              return (
-                <li key={e.id}>
-                  <Link href={`/admin/events/${e.id}`} className={`a-evrow${past ? ' a-evrow--past' : ''}`}>
-                    <span className="a-evrow__thumb" aria-hidden="true">
-                      {e.cover_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={optimizedImage(e.cover_url, { width: 160, quality: 72 })} alt="" loading="lazy" decoding="async" />
-                      ) : (
-                        (e.name.trim()[0] ?? '?').toUpperCase()
-                      )}
-                    </span>
-                    <span className="a-evrow__main">
-                      <span className="a-evrow__title">{e.name}</span>
-                      <span className="a-evrow__when">
-                        {start.toLocaleString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
-                        <span className={`s-badge ${status.cls}`}>{status.label}</span>
-                      </span>
-                    </span>
-                    <span className="a-evrow__side">
-                      <span className="a-evrow__sold">{vendidas} vendida{vendidas === 1 ? '' : 's'}</span>
-                      {sales > 0 && <span className="a-evrow__money">{formatPEN(sales)}</span>}
-                      {pend > 0 && <span className="s-badge s-badge--todo">{pend} Yape</span>}
-                    </span>
-                    <ArrowRight className="a-evrow__go" aria-hidden="true" />
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <ul className="a-evlist">{upcoming.map(eventRow)}</ul>
         )}
       </section>
 
-      {/* 5) LO RARO, PLEGADO: los archivados. Los datos de la marca tienen su
-          propia sección ("Mi marca") en la navegación. */}
+      {/* 4) LO PASADO, PLEGADO: los que ya pasaron y los archivados. */}
       <div className="s-folds">
+        {pastEvents.length > 0 && (
+          <details className="s-fold">
+            <summary>
+              <span className="s-fold__t">Anteriores · {pastEvents.length}</span>
+              <ChevronDown aria-hidden="true" />
+            </summary>
+            <div className="s-fold__body">
+              <ul className="a-evlist">{pastEvents.map(eventRow)}</ul>
+            </div>
+          </details>
+        )}
         {archivedEvents.length > 0 && (
           <details className="s-fold">
             <summary>
               <span className="s-fold__t">
-                Archivados ({archivedEvents.length})
+                Archivados · {archivedEvents.length}
                 <span className="s-fold__hint">No se venden ni aparecen en público. Puedes desarchivarlos.</span>
               </span>
               <ChevronDown aria-hidden="true" />
@@ -329,9 +375,22 @@ export default async function AdminHomePage() {
             </div>
           </details>
         )}
-
       </div>
+
+      {/* Tu pack: una línea al pie, como en la referencia. */}
+      <p className="a-pack">
+        {balance > 0
+          ? <>Te quedan {balance} evento{balance === 1 ? '' : 's'} en tu pack.</>
+          : <>No te quedan eventos en tu pack.</>}
+        {!impersonating && publicEnv.NEXT_PUBLIC_SUPPORT_WHATSAPP && (
+          <>
+            {' '}
+            <a className="s-textlink" href={`https://wa.me/${publicEnv.NEXT_PUBLIC_SUPPORT_WHATSAPP.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola, quiero comprar más eventos para ${brand.name}.`)}`} target="_blank" rel="noopener noreferrer">
+              Comprar más
+            </a>
+          </>
+        )}
+      </p>
     </>
   );
 }
-

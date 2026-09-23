@@ -18,12 +18,12 @@
 .admin-shell .a-tabs__item {
   position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   min-height: 48px; padding: 0 var(--s-s1);
-  font-size: var(--s-ctl); font-weight: 700; color: var(--ink-2); white-space: nowrap;
+  font-size: var(--s-ctl); font-weight: 500; color: var(--ink-2); white-space: nowrap;
   transition: color .18s, transform .14s ease-out;
 }
 .admin-shell .a-tabs__item::after { content: ""; position: absolute; left: var(--s-s1); right: var(--s-s1); bottom: -1px; height: 2px; background: transparent; }
-.admin-shell .a-tabs__item[aria-current="page"] { color: var(--ink); }
-.admin-shell .a-tabs__item[aria-current="page"]::after { background: var(--accent); }
+.admin-shell .a-tabs__item[aria-current="page"] { color: var(--ink); font-weight: 600; }
+.admin-shell .a-tabs__item[aria-current="page"]::after { background: var(--ink); }
 .admin-shell .a-tabs__item:active { transform: scale(.97); }
 @media (min-width: 641px) {
   /* En la compu las pestañas van a la izquierda, del ancho de su texto. */
@@ -31,51 +31,23 @@
   .admin-shell .a-tabs__item { padding: 0; }
   .admin-shell .a-tabs__item::after { left: 0; right: 0; }
 }
-.admin-shell .a-tabs__subs { display: flex; flex-wrap: wrap; gap: 0 var(--s-s3); padding-top: var(--s-s1); }
+/* Sub-pestañas: pastillas de texto; la activa con fondo --surface. */
+.admin-shell .a-tabs__subs { display: flex; flex-wrap: wrap; gap: 4px; padding-top: 12px; }
 .admin-shell .a-tabs__sub {
-  position: relative; display: inline-flex; align-items: center; gap: 7px; min-height: 44px;
-  font-size: var(--s-ui); font-weight: 600; color: var(--ink-2);
+  position: relative; display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; border-radius: var(--r-pill);
+  font-size: var(--s-ui); font-weight: 500; color: var(--ink-2);
   transition: color .18s, transform .14s ease-out;
 }
-.admin-shell .a-tabs__sub[aria-current="page"] { color: var(--ink); text-decoration: underline; text-decoration-thickness: 2px; text-decoration-color: var(--accent); text-underline-offset: 6px; }
+.admin-shell .a-tabs__sub[aria-current="page"] { color: var(--ink); background: var(--surface); }
 .admin-shell .a-tabs__sub:active { transform: scale(.97); }
 @media (hover: hover) and (pointer: fine) {
   .admin-shell .a-tabs__item:hover, .admin-shell .a-tabs__sub:hover { color: var(--ink); }
 }
 /* Contador (Yapes por revisar): punto de acento + número en tinta. */
-.admin-shell .a-nav__count { display: inline-flex; align-items: center; gap: 5px; padding: 0; background: none; color: var(--ink); font-size: var(--s-micro); font-weight: 700; font-variant-numeric: tabular-nums; }
-.admin-shell .a-nav__count::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
+.admin-shell .a-nav__count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--r-pill); background: var(--accent); color: var(--on-white); font-size: var(--s-micro); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) {
   .admin-shell .a-tabs__item:active, .admin-shell .a-tabs__sub:active { transform: none; }
 }
-
-/* ---------- Navegación del panel: las cuatro secciones ----------
-   Eventos · Escáner · Equipo · Mi marca. En la compu, arriba en texto. En el
-   celular (≤640) la fila de arriba se va y aparece la BARRA DE ABAJO, fija,
-   con ícono y nombre: el pulgar llega y siempre se ve dónde se está. */
-.admin-shell .s-nav .s-nav__ico { display: none; }
-.admin-shell .s-tabbar { display: none; }
-@media (max-width: 640px) {
-  .admin-shell .s-topbar .s-nav { display: none; }
-  .admin-shell .s-tabbar {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
-    display: grid; grid-template-columns: repeat(4, 1fr);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    background: var(--paper); border-top: 1px solid var(--line);
-  }
-  .admin-shell .s-tabbar a {
-    position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-    min-height: 60px; font-size: var(--s-micro); font-weight: 600; color: var(--ink-2);
-    transition: color .18s, transform .14s ease-out;
-  }
-  .admin-shell .s-tabbar a svg { width: 22px; height: 22px; }
-  .admin-shell .s-tabbar a[aria-current="page"] { color: var(--ink); }
-  .admin-shell .s-tabbar a[aria-current="page"]::before { content: ""; position: absolute; top: -1px; left: 28%; right: 28%; height: 2px; background: var(--accent); }
-  .admin-shell .s-tabbar a:active { transform: scale(.97); }
-  /* Que la barra no tape el final de la página. */
-  .admin-shell .s-wrap { padding-bottom: calc(var(--s-s6) + 60px + env(safe-area-inset-bottom, 0px)); }
-}
-@media (prefers-reduced-motion: reduce) { .admin-shell .s-tabbar a:active { transform: none; } }
 
 /* ---------- La pantalla del evento: índice y anclas ---------- */
 .admin-shell .a-jump { display: flex; flex-wrap: wrap; gap: 0 var(--s-s3); margin-bottom: var(--s-s2); }
@@ -86,11 +58,11 @@
 .admin-shell .a-step { display: flex; align-items: center; gap: 10px; }
 .admin-shell .a-step__n {
   display: inline-grid; place-items: center; width: 26px; height: 26px; flex: none; border-radius: 50%;
-  background: var(--accent); color: var(--ink); font-size: var(--s-meta); font-weight: 800;
+  background: var(--accent); color: var(--on-white); font-size: var(--s-meta); font-weight: 600;
 }
 
 /* ---------- Lista de eventos: vendidas ---------- */
-.admin-shell .a-evrow__sold { font-size: var(--s-meta); font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.admin-shell .a-evrow__sold { font-size: var(--s-micro); font-weight: 400; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* ---------- "¿Cómo va?" — franja de 4 números arriba de todo ----------
    Cuatro números grandes separados por hairlines verticales (la regla vive en
@@ -112,17 +84,78 @@
 }
 .admin-shell .s-due + .a-task { border-top: 0; }
 .admin-shell .s-calm > .s-btn { margin-left: auto; }
-/* Próximo evento en la home: título-link + sus acciones. */
-.admin-shell .a-next { margin-top: var(--s-s4); }
-.admin-shell .a-next__title { margin-top: 4px; }
+/* ---------- Home: EL EVENTO QUE VIENE (referencia 2026-09-23) ----------
+   Flyer de 100×120 (el ancla visual), nombre en 24→36/600, cuándo y dónde en
+   --ink-2, el estado con punto. Debajo tres cifras entre dos hairlines, los
+   dos botones y las acciones agrupadas. */
+.admin-shell .a-srh1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.admin-shell .a-next { margin: 0 0 var(--s-s5); }
+.admin-shell .a-next__head { display: flex; align-items: flex-start; gap: 16px; }
+.admin-shell .a-next__flyer { flex: none; width: 100px; height: 120px; border-radius: var(--r-btn); overflow: hidden; background: var(--surface-2); display: grid; place-items: center; font-weight: 600; font-size: var(--s-t2); color: var(--ink-3); }
+.admin-shell .a-next__flyer img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.admin-shell .a-next__id { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.admin-shell .a-next__title { font-family: var(--display); font-weight: 600; font-size: var(--s-hero); line-height: 1.12; letter-spacing: -0.025em; overflow-wrap: anywhere; }
 .admin-shell .a-next__title a:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; }
-.admin-shell .a-next .s-acts__k:first-of-type { margin-top: 0; }
-.admin-shell .a-next nav { margin-top: var(--s-s2); }
+.admin-shell .a-next__when { font-size: var(--s-ui); color: var(--ink-2); line-height: 1.45; }
+.admin-shell .a-next__state { color: var(--ink); font-weight: 600; }
+.admin-shell .a-next__nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 20px; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); transition: background-color .18s; }
+.admin-shell .a-next__nums > span { display: flex; flex-direction: column; gap: 2px; font-size: var(--s-micro); color: var(--ink-2); min-width: 0; }
+.admin-shell .a-next__nums b { font-family: var(--display); font-weight: 600; font-size: var(--s-cifra); letter-spacing: -0.02em; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (hover: hover) and (pointer: fine) { .admin-shell .a-next__nums:hover { background: var(--sel); } }
+/* La barra de aforo cruza las tres columnas, debajo de las cifras. */
+.admin-shell .a-next__nums > .a-next__cap { grid-column: 1 / -1; gap: 8px; }
+.admin-shell .a-next__cap .a-meter { display: block; margin-top: 4px; }
+.admin-shell .a-next__cap .a-meter__fill { display: block; }
+@media (min-width: 900px) {
+  .admin-shell .a-next__flyer { width: 176px; height: 220px; }
+  .admin-shell .a-next__head { gap: 24px; }
+  .admin-shell .a-next__title { letter-spacing: -0.03em; }
+  .admin-shell .a-next__nums { max-width: 600px; }
+}
+
+/* Los dos botones del evento: escáner (primario) y copiar link. En el
+   teléfono se reparten el ancho, en la compu miden lo que su texto. */
+.admin-shell .a-evbtns { display: flex; gap: 10px; margin-top: 20px; }
+.admin-shell .a-evbtns .s-btn { height: 48px; }
+.admin-shell .a-evbtns .s-btn svg { width: 18px; height: 18px; }
+@media (max-width: 559px) { .admin-shell .a-evbtns .s-btn { flex: 1; padding: 0 12px; } }
+@media (min-width: 560px) { .admin-shell .a-evbtns .s-btn { min-width: 200px; } }
+
+/* Aviso suave (equipo de puerta): una fila con punto ámbar y chevron. */
+.admin-shell .a-hint { display: flex; align-items: center; gap: 14px; margin-top: 20px; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); transition: background-color .18s; }
+.admin-shell .a-hint__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex: none; }
+.admin-shell .a-hint__txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.admin-shell .a-hint__txt strong { font-weight: 600; font-size: var(--s-ctl); }
+.admin-shell .a-hint__txt span { font-size: var(--s-meta); color: var(--ink-2); }
+.admin-shell .a-hint > svg { width: 18px; height: 18px; color: var(--ink-3); flex: none; }
+@media (hover: hover) and (pointer: fine) { .admin-shell .a-hint:hover { background: var(--sel); } }
+.admin-shell .a-hint + .a-actgroups .s-acts__k:first-child { padding-top: var(--s-s3); }
+
+/* Grupos de acciones (Asistentes · Venta). */
+.admin-shell .a-actgroups { display: flex; flex-direction: column; }
+.admin-shell .a-actgroups .s-acts { margin-bottom: 0; }
+
+/* Tus eventos: título + "Crear evento" en la misma línea. */
+.admin-shell .a-mine { margin-top: var(--s-s2); }
+.admin-shell .a-mine__head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-s2); margin-bottom: 4px; }
+.admin-shell .a-mine__head .s-btn svg { width: 16px; height: 16px; }
+.admin-shell .a-evrow__n { font-family: var(--display); font-weight: 600; font-size: var(--s-lead); line-height: 1; font-variant-numeric: tabular-nums; }
+
+/* Tu pack, al pie. */
+.admin-shell .a-pack { margin-top: var(--s-s4); font-size: var(--s-meta); color: var(--ink-2); }
+
+/* ---------- Ventas por día: columnas ---------- */
+.admin-shell .a-chart { list-style: none; margin: 0; padding: 0; display: flex; align-items: flex-end; gap: 6px; height: 120px; border-bottom: 1px solid var(--line); }
+.admin-shell .a-chart__col { flex: 1 1 0; max-width: 48px; min-width: 0; height: 100%; display: flex; align-items: flex-end; }
+.admin-shell .a-chart__bar { display: block; width: 100%; background: var(--surface-2); }
+.admin-shell .a-chart__col--last .a-chart__bar { background: var(--ink); }
+.admin-shell .a-chart__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.admin-shell .a-chart__axis { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; font-size: var(--s-micro); color: var(--ink-2); font-variant-numeric: tabular-nums; }
 
 .admin-shell .a-pulse .s-stat__value--text { font-size: calc(var(--s-num) - 8px); line-height: 1.15; letter-spacing: -0.02em; }
 /* Barra de avance (aforo): relleno de acento, sin texto encima. */
-.admin-shell .a-meter { height: 4px; border-radius: var(--r-pill); background: var(--paper-3); overflow: hidden; margin-top: 4px; }
-.admin-shell .a-meter__fill { height: 100%; border-radius: var(--r-pill); background: var(--accent); }
+.admin-shell .a-meter { height: 6px; border-radius: var(--r-pill); background: var(--surface-2); overflow: hidden; margin-top: 4px; }
+.admin-shell .a-meter__fill { height: 100%; border-radius: var(--r-pill); background: var(--ink); }
 
 /* ---------- Tarea: Yape por revisar (solo si hay pendientes) ----------
    Una LÍNEA con punto naranja y un solo botón. No es un banner: no tiene
@@ -148,8 +181,8 @@
    Filas con hairline, sin cajas. El estado es un punto: --ok listo, acento el
    siguiente, hueco lo que todavía no toca. */
 .admin-shell .a-setup { margin-bottom: var(--s-s4); }
-.admin-shell .a-setup__meter { height: 3px; background: var(--paper-3); overflow: hidden; margin: 0 0 6px; }
-.admin-shell .a-setup__meter-fill { height: 100%; background: var(--accent); }
+.admin-shell .a-setup__meter { height: 4px; border-radius: var(--r-pill); background: var(--surface-2); overflow: hidden; margin: 0 0 6px; }
+.admin-shell .a-setup__meter-fill { height: 100%; border-radius: var(--r-pill); background: var(--ink); }
 .admin-shell .a-setup__list { list-style: none; margin: 0; padding: 0; }
 .admin-shell .a-setup__step { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
 .admin-shell .a-setup__step:first-child { border-top: 0; }
@@ -206,8 +239,8 @@
 .admin-shell .s-pagehead.a-evhead { justify-content: flex-start; align-items: center; flex-direction: row; flex-wrap: nowrap; margin-bottom: var(--s-s3); }
 .admin-shell .s-pagehead.a-evhead > div { min-width: 0; }
 .admin-shell .s-pagehead.a-evhead .s-h1 { margin-top: 0; overflow-wrap: anywhere; }
-@media (max-width: 560px) { .admin-shell .a-evhead__thumb { width: 56px; height: 56px; } }
-.admin-shell .a-evhead__thumb { flex-shrink: 0; display: block; width: 64px; height: 64px; border-radius: var(--r-ctl); overflow: hidden; transition: opacity .18s; }
+@media (max-width: 560px) { .admin-shell .a-evhead__thumb { width: 80px; height: 100px; } }
+.admin-shell .a-evhead__thumb { flex-shrink: 0; display: block; width: 96px; height: 120px; border-radius: var(--r-btn); overflow: hidden; transition: opacity .18s; }
 .admin-shell .a-evhead__thumb:hover { opacity: .85; }
 .admin-shell .a-evhead__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
@@ -217,18 +250,18 @@
    menú: miniatura de 56 (el flyer sigue siendo el ancla visual), nombre,
    cuándo, y a la derecha la plata y lo pendiente. Toda la fila es el link. */
 .admin-shell .a-evlist { list-style: none; margin: var(--s-s1) 0 0; padding: 0; border-top: 1px solid var(--line); }
-.admin-shell .a-evrow { display: flex; align-items: center; gap: var(--s-s2); min-height: 72px; padding: var(--s-s1) 0; border-bottom: 1px solid var(--line); color: inherit; transition: background-color .18s; }
+.admin-shell .a-evrow { display: flex; align-items: center; gap: 14px; min-height: 80px; padding: var(--s-s1) 0; border-bottom: 1px solid var(--line); color: inherit; transition: background-color .18s; }
 .admin-shell .a-evrow:hover { background: var(--sel); }
 .admin-shell .a-evrow:active { background: var(--sel); }
 .admin-shell .a-evrow:hover .a-evrow__title { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px; }
 .admin-shell .a-evrow--past .a-evrow__thumb, .admin-shell .a-evrow--past .a-evrow__title { opacity: .62; }
-.admin-shell .a-evrow__thumb { position: relative; flex: none; width: 56px; height: 56px; border-radius: var(--r-ctl); overflow: hidden; background: var(--paper-3); display: grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: var(--s-t2); color: var(--ink-3); }
+.admin-shell .a-evrow__thumb { position: relative; flex: none; width: 48px; height: 60px; border-radius: var(--r-btn); overflow: hidden; background: var(--surface-2); display: grid; place-items: center; font-family: var(--display); font-weight: 600; font-size: var(--s-t2); color: var(--ink-3); }
 .admin-shell .a-evrow__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .admin-shell .a-evrow__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.admin-shell .a-evrow__title { font-weight: 700; font-size: var(--s-body); line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-shell .a-evrow__title { font-weight: 600; font-size: var(--s-body); line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .admin-shell .a-evrow__when { display: flex; align-items: center; gap: var(--s-s1); flex-wrap: wrap; font-size: var(--s-meta); color: var(--ink-2); }
-.admin-shell .a-evrow__side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right; }
-.admin-shell .a-evrow__money { font-family: var(--display); font-weight: 700; font-size: var(--s-lead); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.admin-shell .a-evrow__side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; text-align: right; }
+.admin-shell .a-evrow__money { font-family: var(--display); font-weight: 600; font-size: var(--s-ctl); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .admin-shell .a-evrow__go { flex: none; width: 16px; height: 16px; color: var(--ink-3); }
 @media (max-width: 460px) { .admin-shell .a-evrow__go { display: none; } }
 
@@ -243,7 +276,7 @@
 .admin-shell .a-money__v { order: 1; }
 /* El total es el número que manda: punto ok delante de su etiqueta. */
 .admin-shell .a-money__cell--total .s-stat__label::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
-.admin-shell .a-money__v { font-family: var(--display); font-weight: 800; font-size: var(--s-num); line-height: 1.05; letter-spacing: -0.02em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.admin-shell .a-money__v { font-family: var(--display); font-weight: 600; font-size: var(--s-num); line-height: 1.05; letter-spacing: -0.02em; color: var(--ink); font-variant-numeric: tabular-nums; }
 .admin-shell .a-money__pending { margin-top: var(--s-s3); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: var(--s-s2) 0 0; font-size: var(--s-body); color: var(--ink); }
 .admin-shell .a-money__pending > span { display: inline-flex; align-items: center; gap: 10px; }
 .admin-shell .a-money__pending > span::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
@@ -255,7 +288,7 @@
 
 /* ---------- Tabla por tipo ---------- */
 .admin-shell .a-typetable { width: 100%; border-collapse: collapse; min-width: 520px; }
-.admin-shell .a-typetable th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .10em; text-transform: uppercase; color: var(--ink-3); padding: 0 16px 12px; border-bottom: 1px solid var(--line); }
+.admin-shell .a-typetable th { text-align: left; font-size: var(--s-micro); font-weight: 500; color: var(--ink-2); padding: 0 16px 12px; border-bottom: 1px solid var(--line); }
 .admin-shell .a-typetable td { padding: 12px 16px; border-bottom: 1px solid var(--line); font-size: var(--s-ui); }
 .admin-shell .a-typetable :is(th, td):first-child { padding-left: 0; }
 .admin-shell .a-typetable :is(th, td):last-child { padding-right: 0; }
@@ -275,9 +308,9 @@
 }
 
 /* ---------- Barras (ventas por día, stock) ---------- */
-.admin-shell .a-bar { height: 7px; border-radius: var(--r-pill); background: var(--paper-2); overflow: hidden; margin-top: 8px; }
-.admin-shell .a-bar__fill { height: 100%; border-radius: var(--r-pill); background: var(--accent); }
-.admin-shell .a-bar__fill--full { background: var(--ok); }
+.admin-shell .a-bar { height: 6px; border-radius: var(--r-pill); background: var(--surface-2); overflow: hidden; margin-top: 8px; }
+.admin-shell .a-bar__fill { height: 100%; border-radius: var(--r-pill); background: var(--ink); }
+.admin-shell .a-bar__fill--full { background: var(--ink-3); }
 .admin-shell .a-days { display: flex; flex-direction: column; gap: 6px; }
 .admin-shell .a-days__row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
 .admin-shell .a-days__k { width: 64px; flex-shrink: 0; color: var(--ink-2); }
@@ -294,7 +327,7 @@
 .admin-shell .a-verify-box { background: none; border: 0; border-radius: 0; padding: 0; }
 .admin-shell .a-verify { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); font-size: var(--s-ui); }
 .admin-shell .a-verify:first-child { border-top: 0; }
-.admin-shell .a-verify__k { font-size: 11.5px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: var(--ink-3); }
+.admin-shell .a-verify__k { font-size: var(--s-meta); font-weight: 400; color: var(--ink-2); }
 .admin-shell .a-verify__v { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; display: inline-flex; align-items: center; gap: 7px; }
 /* Coincide / no coincide: punto de color, texto en tinta. */
 .admin-shell .a-verify__v--ok::before,
@@ -304,9 +337,9 @@
 .admin-shell .a-verify__exp { font-size: var(--s-micro); color: var(--ink-2); margin-left: 6px; }
 .admin-shell .a-yape-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 14px; padding: 12px 0 0; border-radius: 0; background: none; border: 0; border-top: 1px solid var(--line); }
 .admin-shell .a-yape-summary__count { font-size: var(--s-ui); color: var(--ink); }
-.admin-shell .a-yape-summary__count strong { font-family: var(--display); font-weight: 800; }
+.admin-shell .a-yape-summary__count strong { font-family: var(--display); font-weight: 600; }
 .admin-shell .a-yape-summary__plus { color: var(--ink-3); font-weight: 700; }
-.admin-shell .a-yape-summary__total { font-family: var(--display); font-weight: 800; font-size: var(--s-ctl); color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.admin-shell .a-yape-summary__total { font-family: var(--display); font-weight: 600; font-size: var(--s-ctl); color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .admin-shell .a-reject-box { margin-top: 16px; padding-left: 14px; border-top: 0; box-shadow: inset 2px 0 0 var(--alert); }
 
 /* Fila compacta: pagador · monto · N° operación · hora · botones. El comprobante
@@ -316,18 +349,19 @@
 .admin-shell .a-yrow { border: 0; border-top: 1px solid var(--line); border-radius: 0; background: none; }
 .admin-shell .a-yrow + .a-yrow { margin-top: 0; }
 .admin-shell .a-yrow:first-child { border-top: 0; }
-.admin-shell .a-yrow--open { box-shadow: inset 2px 0 0 var(--accent); }
+.admin-shell .a-yrow--open { background: var(--surface); border-radius: var(--r-ctl); border-top-color: transparent; }
+.admin-shell .a-yrow--open + .a-yrow { border-top-color: transparent; }
 .admin-shell .a-yrow--open .a-yrow__head,
 .admin-shell .a-yrow--open .a-yrow__body { padding-left: 14px; }
-.admin-shell .a-yrow__head { display: flex; align-items: center; gap: 12px; padding: var(--s-s1) 0; flex-wrap: wrap; transition: padding-left .18s var(--ease); }
+.admin-shell .a-yrow__head { display: flex; align-items: center; gap: 12px; padding: var(--s-s1) 0; flex-wrap: wrap; }
 .admin-shell .a-yrow__toggle {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   background: none; border: 0; padding: 4px 0; text-align: left; cursor: pointer; color: var(--ink); font: inherit;
 }
 .admin-shell .a-yrow__chev { width: 16px; height: 16px; flex: none; color: var(--ink-3); transition: transform .18s var(--ease); }
 .admin-shell .a-yrow--open .a-yrow__chev { transform: rotate(90deg); }
-.admin-shell .a-yrow__payer { font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
-.admin-shell .a-yrow__amt { font-family: var(--display); font-weight: 800; font-size: var(--s-ctl); font-variant-numeric: tabular-nums; }
+.admin-shell .a-yrow__payer { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
+.admin-shell .a-yrow__amt { font-family: var(--display); font-weight: 600; font-size: var(--s-ctl); font-variant-numeric: tabular-nums; }
 .admin-shell .a-yrow__amt--bad { box-shadow: inset 0 -2px 0 var(--alert); }
 .admin-shell .a-yrow__op,
 .admin-shell .a-yrow__time { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
@@ -344,7 +378,11 @@
 .admin-shell .a-yrow:not(.a-yrow--open) .s-btn--primary:hover:not(:disabled) {
   background: none; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px;
 }
-.admin-shell .a-yrow__body { border-top: 1px solid var(--line); padding: 18px 0 16px; transition: padding-left .18s var(--ease); }
+/* Y "Rechazar", en la fila cerrada, también es texto: con su borde de
+   secundario quedaba MÁS visible que "Aprobar" y el ojo iba al rechazo. */
+.admin-shell .a-yrow:not(.a-yrow--open) .s-btn--soft { border-color: transparent; padding: 0 2px; color: var(--ink-2); }
+.admin-shell .a-yrow:not(.a-yrow--open) .s-btn--soft:hover:not(:disabled) { color: var(--ink); }
+.admin-shell .a-yrow__body { border-top: 1px solid var(--line); padding: 18px 0 16px; }
 @media (prefers-reduced-motion: reduce) { .admin-shell .a-yrow__chev { transition: none; } }
 @media (max-width: 560px) {
   .admin-shell .a-yrow__payer { max-width: 100%; }
@@ -356,12 +394,12 @@
 }
 
 /* ---------- Varios ---------- */
-.admin-shell .a-code { font-family: var(--display); font-weight: 800; font-size: var(--s-t2); letter-spacing: 0.22em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.admin-shell .a-code { font-family: var(--display); font-weight: 600; font-size: var(--s-t2); letter-spacing: 0.22em; color: var(--ink); font-variant-numeric: tabular-nums; }
 .admin-shell .a-code--lg { font-size: var(--s-d1); letter-spacing: 0.28em; }
 .admin-shell .a-color-prev { height: 42px; border-radius: var(--r-ctl); border: 1px solid var(--line); }
 .admin-shell .a-swatch { display: inline-block; width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line); vertical-align: middle; }
 /* Configurado / no configurado: punto + texto. */
-.admin-shell .a-flag { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.02em; color: var(--ink-2); }
+.admin-shell .a-flag { display: inline-flex; align-items: center; gap: 7px; font-size: var(--s-meta); font-weight: 500; color: var(--ink-2); }
 .admin-shell .a-flag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; flex: none; }
 .admin-shell .a-flag--on::before { background: var(--ok); }
 .admin-shell .a-flag--off::before { background: none; box-shadow: inset 0 0 0 1.5px var(--ink-3); }
@@ -378,7 +416,7 @@
 .admin-shell .a-accordion > summary { list-style: none; cursor: pointer; padding: 16px 0; display: flex; flex-direction: column; gap: 2px; transition: opacity .18s; }
 .admin-shell .a-accordion > summary::-webkit-details-marker { display: none; }
 .admin-shell .a-accordion > summary:hover .a-accordion__title { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px; }
-.admin-shell .a-accordion__title { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 800; font-size: 17px; letter-spacing: -0.01em; color: var(--ink); }
+.admin-shell .a-accordion__title { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 600; font-size: var(--s-ctl); letter-spacing: -0.01em; color: var(--ink); }
 .admin-shell .a-accordion__title > svg { color: var(--ink-3); }
 .admin-shell .a-accordion__title::after { content: '▾'; margin-left: auto; color: var(--ink-3); font-size: 13px; text-decoration: none; transition: transform .2s var(--ease); }
 .admin-shell .a-accordion[open] > summary .a-accordion__title::after { transform: rotate(180deg); }
@@ -452,28 +490,13 @@
 .admin-shell .a-rank__row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 0; border-top: 1px solid var(--line); transition: background-color .18s; }
 .admin-shell .a-rank__row:first-child { border-top: 0; }
 .admin-shell .a-rank__row:hover { background: var(--sel); }
-.admin-shell .a-rank__pos { width: 34px; text-align: center; font-family: var(--display); font-weight: 800; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.admin-shell .a-rank__pos { width: 34px; text-align: center; font-family: var(--display); font-weight: 600; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 /* Top 3 con ventas: tinta + punto de acento (antes el número iba en el color de marca). */
 .admin-shell .a-rank__pos--top { color: var(--ink); display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
 .admin-shell .a-rank__pos--top::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 .admin-shell .a-rank__name { font-weight: 700; }
 .admin-shell .a-rank__num { text-align: right; flex-shrink: 0; }
-.admin-shell .a-rank__money { font-family: var(--display); font-weight: 800; font-variant-numeric: tabular-nums; }
+.admin-shell .a-rank__money { font-family: var(--display); font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* Título de fila (tipo de entrada en Editar, evento en la revisión de Yape). */
-.admin-shell .a-evrow__name { font-family: var(--display); font-weight: 700; font-size: var(--s-lead); letter-spacing: -0.01em; line-height: 1.15; }
-
-/* Logo de la marca en el topbar: una sola línea (en 390 el nombre se partía).
-   El recorte con "…" lo lleva el NOMBRE, no el link entero: con el ellipsis en
-   el <a> el punto de acento se cortaba por la mitad y quedaba una astilla
-   naranja suelta. El punto y el avatar no se encogen nunca. */
-.admin-shell .s-logo { white-space: nowrap; min-width: 0; }
-.admin-shell .s-logo__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.admin-shell .s-logo .dot { flex: none; }
-@media (max-width: 640px) { .admin-shell .s-logo { max-width: 46vw; font-size: var(--s-t2); } }
-/* Inicio · Config · Equipo ENTRAN en 390: sin máscara de deslizamiento, que
-   ahí solo serviría para apagar la última etiqueta. En el super admin (4
-   entradas) la máscara se queda: ahí el nav sí se desliza. */
-@media (max-width: 460px) {
-  .admin-shell .s-nav { -webkit-mask-image: none; mask-image: none; }
-}
+.admin-shell .a-evrow__name { font-family: var(--display); font-weight: 600; font-size: var(--s-lead); letter-spacing: -0.01em; line-height: 1.15; }

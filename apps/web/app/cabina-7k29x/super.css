@@ -35,43 +35,18 @@
 .super-shell .s-card--confirm-danger { padding-left: 14px; box-shadow: inset 2px 0 0 var(--alert); }
 /* Ancla de "recargar saldo": que no quede tapada por el topbar sticky. */
 .super-shell .s-anchor { scroll-margin-top: 84px; }
+.super-shell .s-logo { flex: none; }
 
 /* ---------- Solicitudes ---------- */
 .super-shell .s-req { padding: var(--s-s2) 0 0; }
-.super-shell .s-req__name { font-family: var(--display); font-weight: 700; font-size: var(--s-t3); letter-spacing: -0.01em; }
+.super-shell .s-req__name { font-family: var(--display); font-weight: 600; font-size: var(--s-t3); letter-spacing: -0.01em; }
 .super-shell .s-req__meta { font-size: var(--s-meta); color: var(--ink-2); word-break: break-word; }
 .super-shell .s-req__note { font-size: var(--s-ui); color: var(--ink-2); margin-top: 10px; white-space: pre-wrap; }
 .super-shell .s-req__actions { display: flex; gap: var(--s-s3); margin-top: var(--s-s2); padding-bottom: 4px; align-items: center; flex-wrap: wrap; }
 
 /* ---------- Salud ---------- */
-.super-shell .s-bignum { font-family: var(--display); font-weight: 800; font-size: var(--s-num); line-height: 1.05; font-variant-numeric: tabular-nums; margin-top: 6px; }
+.super-shell .s-bignum { font-family: var(--display); font-weight: 600; font-size: var(--s-num); line-height: 1.05; font-variant-numeric: tabular-nums; margin-top: 6px; }
 
-
-/* El wordmark "parygo." no se achica: es corto y fijo. En el panel del
-   organizador es al revés — ahí el logo es el nombre de la marca y sí puede
-   recortarse. */
-.super-shell .s-logo { flex: none; }
-
-/* ---------- El nav del super admin en el teléfono ----------
-   MEDIDO en iPhone (WebKit, 390x844): las 4 entradas piden 250px y en una
-   sola fila junto al wordmark y al botón de salir quedan 225 → se deslizaba,
-   "Salud" quedaba tapada por la máscara y su área de toque se montaba 17px
-   sobre el botón de salir (un toque en el borde cerraba la sesión).
-   La respuesta no es achicar ni desvanecer: el nav se lleva su PROPIA fila,
-   completa, alineada con el wordmark. Entra entero, no se desliza y el
-   subrayado del activo cae justo sobre la línea del topbar.
-   Solo el super admin: el panel del organizador tiene 3 entradas y entra en
-   una fila (verificado en la misma corrida). */
-@media (max-width: 640px) {
-  .super-shell .s-topbar__inner { flex-wrap: wrap; row-gap: 0; min-height: 0; padding-bottom: 0; }
-  .super-shell .s-nav {
-    order: 3; flex-basis: 100%; width: 100%;
-    /* gap 4 + los 8px de relleno de cada entrada = los 20 de hueco visual. */
-    margin-left: -8px; gap: 4px;
-    overflow: visible;
-  }
-  .super-shell .s-nav a { min-height: 44px; }
-}
 
 /* Lista de marcas: en móvil la tabla se reemplaza por cards (solo acá). */
 @media (max-width: 760px) {
