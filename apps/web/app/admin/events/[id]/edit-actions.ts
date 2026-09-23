@@ -611,8 +611,17 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   const name = String(formData.get('name') ?? '').trim().slice(0, 80) || tt.name;
   const isActive = formData.get('is_active') === 'on';
   const isUnlimited = formData.get('is_unlimited') === 'on';
-  const isCourtesy = formData.get('is_courtesy') === 'on';
   const newPriceCents = Math.round(parseFloat(String(formData.get('price_soles') ?? '')) * 100);
+  const { data: evCfg } = await admin.from('events').select('is_published, is_free').eq('id', eventId).maybeSingle();
+  const eventoEsGratis = evCfg?.is_free === true;
+  const precioFinal = Number.isFinite(newPriceCents) ? newPriceCents : tt.price_cents;
+  // "Cortesía" ya NO es una casilla (Paul, 2026-09-23: "gratis y cortesía es
+  // prácticamente lo mismo"; la marcó para que la entrada SE LLAME cortesía y
+  // la página se quedó sin entradas). Lo que ve la gente es el NOMBRE. La
+  // regla la decide el precio: en un evento que COBRA, S/0 = cortesía (no se
+  // vende; el trigger 0059 hace lo mismo al insertar); en un evento GRATIS,
+  // una entrada de S/0 siempre se ofrece.
+  const isCourtesy = !eventoEsGratis && precioFinal === 0;
   const newCapacity = parseInt(String(formData.get('capacity') ?? ''), 10);
   const sold = tt.sold ?? 0;
   // Descripción opcional (texto mostrado en el checkout). No afecta precio ni
@@ -623,29 +632,21 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   const colorHex = parseColorHex(formData);
   if (colorHex === false) return { ok: false, message: 'Color inválido.' };
   if (colorHex !== undefined) update.color_hex = colorHex;
-  // Cortesía = lista de invitados: nunca se ofrece al público, ni siquiera en
-  // un evento gratis. La BD además exige precio 0 (constraint de la 0056), así
-  // que marcar cortesía un tipo con precio falla con un mensaje claro en vez
-  // de dejar un estado incoherente.
   update.is_courtesy = isCourtesy;
 
-  // NO dejar un evento PUBLICADO sin nada a la venta (2026-09-23: la única
-  // entrada del evento gratis de Code quedó marcada "Cortesía" desde el panel
-  // y la página de compra mostró "Las entradas estarán disponibles pronto").
-  // Si este tipo deja de ofrecerse al público y no queda otro que se ofrezca,
-  // se rechaza con una explicación en vez de romper la venta.
+  // NO dejar un evento PUBLICADO sin nada a la venta (2026-09-23: la página de
+  // compra de Code mostró "Las entradas estarán disponibles pronto"). Si este
+  // tipo deja de ofrecerse al público (pausado, o precio 0 en un evento que
+  // cobra) y no queda otro que se ofrezca, se rechaza con una explicación.
   {
-    const { data: ev } = await admin.from('events').select('is_published, is_free').eq('id', eventId).maybeSingle();
-    if (ev?.is_published) {
-      const eventoEsGratis = ev.is_free === true;
-      const precioNuevo = Number.isFinite(newPriceCents) ? newPriceCents : tt.price_cents;
+    if (evCfg?.is_published) {
       const eraPublica = tt.is_active && isPubliclyOffered(tt.price_cents, { eventoEsGratis, esCortesia: tt.is_courtesy });
-      const seraPublica = isActive && isPubliclyOffered(precioNuevo, { eventoEsGratis, esCortesia: isCourtesy });
+      const seraPublica = isActive && isPubliclyOffered(precioFinal, { eventoEsGratis, esCortesia: isCourtesy });
       if (eraPublica && !seraPublica) {
         const { data: otras } = await admin.from('ticket_types').select('id, price_cents, is_active, is_courtesy').eq('event_id', eventId).neq('id', tt.id);
         const quedaAlguna = (otras ?? []).some((o) => o.is_active && isPubliclyOffered(o.price_cents, { eventoEsGratis, esCortesia: o.is_courtesy }));
         if (!quedaAlguna) {
-          return { ok: false, message: 'Es la única entrada a la venta de tu evento publicado: si la pausas o la marcas como cortesía, tu página se queda sin entradas. Crea otra entrada primero, o pasa el evento a borrador.' };
+          return { ok: false, message: 'Es la única entrada a la venta de tu evento publicado: si la pausas, tu página se queda sin entradas. Crea otra entrada primero, o pasa el evento a borrador.' };
         }
       }
     }
