@@ -1026,6 +1026,16 @@ if (!S.eventId) {
       const tk = await dbTickets(orderId);
       S.orders.L = orderId;
       check('L', 'orden PAGADA con total 0 y una entrada emitida', o?.status === 'paid' && o?.total_cents === 0 && tk.length === 1, `${o?.status} total=${o?.total_cents} tickets=${tk.length}`);
+      // 0064: el reclamo gratis va en UN viaje (claim_free_order). Si la
+      // bitácora no lo dice, se cayó al camino viejo de once viajes: funciona,
+      // pero es la regresión de latencia que esta migración cerró.
+      const { data: bit } = await svc.from('events_log').select('type, payload').eq('order_id', orderId);
+      const creada = (bit ?? []).find((b) => b.type === 'order_created');
+      check('L', 'el reclamo fue por el camino de un viaje (claim_free_order)',
+        creada?.payload?.via === 'claim_free_order' && (bit ?? []).some((b) => b.type === 'tickets_issued_free'),
+        JSON.stringify(bit));
+      const { data: job } = await svc.from('notification_jobs').select('kind, status').eq('order_id', orderId);
+      check('L', 'la entrada por email quedó en la cola', (job ?? []).length === 1 && job[0].kind === 'ticket_email', JSON.stringify(job));
       if (tk[0]) {
         await go(p, `/t/${tk[0].qr_code}`);
         const qrEls = await p.evaluate(() => [...document.querySelectorAll('svg, img, canvas')].filter((e) => { const r = e.getBoundingClientRect(); return r.width >= 120 && r.height >= 120 && Math.abs(r.width - r.height) < 8; }).length);

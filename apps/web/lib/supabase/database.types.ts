@@ -1137,6 +1137,25 @@ export type Database = {
         Args: { p_order_id: string }
         Returns: Json
       }
+      claim_free_order: {
+        Args: {
+          p_event_id: string
+          p_brand_id: string
+          p_items: Json
+          p_buyer_name: string
+          p_buyer_email: string
+          p_buyer_phone: string
+          p_doc_type: string
+          p_dni: string
+          p_age_ok: boolean
+          p_marketing: boolean
+          p_session_id: string
+          p_ip: string | null
+          p_user_agent: string | null
+          p_utm: Json
+        }
+        Returns: Json
+      }
       get_brand_mp_credentials: {
         Args: { p_brand_id: string; p_encryption_key: string }
         Returns: {

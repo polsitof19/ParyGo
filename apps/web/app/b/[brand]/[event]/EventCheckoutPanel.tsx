@@ -276,6 +276,8 @@ export function EventCheckoutPanel({
         ? itemsForPromo.map((it) => ({ ...it, attendeeNames: (attendeeNames[it.ticketTypeId] ?? []).slice(0, it.quantity) }))
         : itemsForPromo,
       promoCode: applied?.code,
+      // Solo una pista para el server: elige el camino de un viaje (0064).
+      freeHint: eventoGratis && !applied,
     };
     startTransition(async () => {
       const res = await startCheckout({ ...input, sessionId: sessionIdRef.current });

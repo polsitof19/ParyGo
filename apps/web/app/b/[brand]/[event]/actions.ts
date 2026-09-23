@@ -26,6 +26,11 @@ export type CheckoutInput = {
   items: { ticketTypeId: string; quantity: number; attendeeNames?: string[] }[];
   sessionId: string;
   promoCode?: string;
+  // Pista del cliente: "este reclamo es de un evento gratis". Solo elige QUÉ
+  // camino del server valida (claim_free_order, un viaje a la base) — no
+  // habilita nada. Si miente o quedó vieja, el RPC responde not_free y se cae
+  // al camino de siempre, que valida todo desde cero.
+  freeHint?: boolean;
 };
 
 const PROMO_ERRORS: Record<string, string> = {
@@ -73,7 +78,111 @@ const schema = z.object({
     .max(20, 'Demasiados tipos de entrada en una compra.'),
   sessionId: z.string().min(8, 'Sesión inválida. Recarga la página.').max(64, 'Sesión inválida. Recarga la página.'),
   promoCode: z.string().min(2).max(32).optional().or(z.literal('')),
+  freeHint: z.boolean().optional(),
 });
+
+type Atribucion = {
+  ip: string | null;
+  userAgent: string | null;
+  utm: { source: string | null; medium: string | null; campaign: string | null; content: string | null; term: string | null };
+};
+
+// IP, user-agent y UTM del referer. Lo usan los dos caminos del reclamo.
+function atribucion(reqHeaders: ReturnType<typeof headers>): Atribucion {
+  const ip = reqHeaders.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
+  const userAgent = reqHeaders.get('user-agent') ?? null;
+  const referer = reqHeaders.get('referer') ?? '';
+  const referUrl = (() => {
+    try {
+      return new URL(referer);
+    } catch {
+      return null;
+    }
+  })();
+  const utm = referUrl
+    ? {
+        source: referUrl.searchParams.get('utm_source'),
+        medium: referUrl.searchParams.get('utm_medium'),
+        campaign: referUrl.searchParams.get('utm_campaign'),
+        content: referUrl.searchParams.get('utm_content'),
+        term: referUrl.searchParams.get('utm_term'),
+      }
+    : { source: null, medium: null, campaign: null, content: null, term: null };
+  return { ip, userAgent, utm };
+}
+
+// Rechazos del reclamo, con el MISMO texto que el camino de siempre.
+function mensajeRechazo(msg: string): string {
+  // Límite por persona (0060): el número sale del propio error.
+  const limite = /per_person_limit/.test(msg) ? Number(msg.match(/limit=(\d+)/)?.[1] ?? 0) : 0;
+  if (limite > 0) {
+    return `Este evento permite ${limite} entrada${limite === 1 ? '' : 's'} por persona, y ya llegaste a ese máximo con tu correo o tu documento.`;
+  }
+  if (/insufficient_stock|oversold_no_capacity/.test(msg)) {
+    return 'Se agotaron las entradas mientras completabas la compra.';
+  }
+  return 'No se pudo reservar el stock. Intenta de nuevo.';
+}
+
+// RECLAMO GRATIS EN UN VIAJE (0064). claim_free_order hace en una transacción
+// lo que el camino de siempre hace en once viajes en fila (~300ms cada uno
+// entre el Worker en Lima y la base en us-west-1): valida, crea la orden,
+// reserva con el gate por persona, emite, deja la bitácora y encola el email.
+// Si algo se rechaza a mitad de camino se revierte todo: no queda una orden
+// 'failed' por cada rechazo.
+//
+// Devuelve null cuando este camino no aplica (evento no gratis, algún tipo con
+// precio, o la función todavía no existe en la base) y startCheckout sigue por
+// el camino de siempre, que vuelve a validar todo.
+async function reclamoGratis(
+  admin: ReturnType<typeof createAdminClient>,
+  d: z.infer<typeof schema>,
+  atrib: Atribucion
+): Promise<CheckoutResult | null> {
+  const { data, error } = await admin.rpc('claim_free_order', {
+    p_event_id: d.eventId,
+    p_brand_id: d.brandId,
+    p_items: d.items.map((i) => ({
+      ticket_type_id: i.ticketTypeId,
+      quantity: i.quantity,
+      attendee_names: i.attendeeNames ?? null,
+    })),
+    p_buyer_name: d.buyerName,
+    p_buyer_email: d.buyerEmail,
+    p_buyer_phone: d.buyerPhone,
+    p_doc_type: d.buyerDocType,
+    p_dni: d.buyerDni,
+    p_age_ok: d.ageOk,
+    p_marketing: d.marketingOptIn,
+    p_session_id: d.sessionId,
+    p_ip: atrib.ip,
+    p_user_agent: atrib.userAgent,
+    p_utm: atrib.utm,
+  });
+  if (error) {
+    // La función todavía no existe (deploy de la app antes que la migración):
+    // camino de siempre. PGRST202 = PostgREST no la encuentra; 42883 = Postgres.
+    if (error.code === 'PGRST202' || error.code === '42883') return null;
+    // Todo lo demás es un rechazo real que ya se revirtió entero en la base.
+    console.error('[startCheckout] claim_free_order rechazó', { code: error.code, detalle: error.message });
+    return { ok: false, message: mensajeRechazo(error.message ?? '') };
+  }
+  const r = data as { ok?: boolean; code?: string; order_id?: string; event_slug?: string; min_age?: number; doc_type?: string } | null;
+  if (r?.ok && r.order_id && r.event_slug) {
+    return { ok: true, redirectUrl: `/${r.event_slug}/confirmacion?order=${r.order_id}` };
+  }
+  switch (r?.code) {
+    case 'event_unavailable': return { ok: false, message: 'Evento no disponible.' };
+    case 'brand_mismatch': return { ok: false, message: 'Marca/evento no coinciden.' };
+    case 'age_required': return { ok: false, message: `Tienes que confirmar que eres mayor de ${r.min_age} años.` };
+    case 'dni_invalid': return { ok: false, message: r.doc_type === 'dni' ? 'El DNI debe tener 8 dígitos.' : 'Documento inválido.' };
+    case 'event_over': return { ok: false, message: 'Este evento ya terminó.' };
+    case 'type_invalid': return { ok: false, message: 'Tipo de entrada inválido.' };
+    case 'type_unavailable': return { ok: false, message: 'Tipo de entrada no disponible.' };
+    // not_free, o una respuesta que no se entiende: el camino de siempre decide.
+    default: return null;
+  }
+}
 
 export async function startCheckout(input: CheckoutInput): Promise<CheckoutResult> {
   // errorMap de parse: los mensajes definidos en el schema (en español) ganan;
@@ -94,6 +203,14 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   const rawHost = reqHeaders.get('host') ?? '';
   const host = forwardedHost || rawHost;
   const proto = reqHeaders.get('x-forwarded-proto') ?? 'https';
+  const atrib = atribucion(reqHeaders);
+
+  // Evento gratis sin código: un solo viaje (0064). Con código promo va por el
+  // camino de siempre, que es el que sabe aplicarlo.
+  if (parsed.data.freeHint && !(parsed.data.promoCode ?? '').trim()) {
+    const rapido = await reclamoGratis(admin, parsed.data, atrib);
+    if (rapido) return rapido;
+  }
 
   // 1. Verify event + ticket types in one query (server-trusted).
   const { data: event } = await admin
@@ -268,26 +385,8 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     return { ok: false, message: 'Total inválido.' };
   }
 
-  // 3. Capture UTM + IP for attribution.
-  const ip = reqHeaders.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
-  const userAgent = reqHeaders.get('user-agent') ?? null;
-  const referer = reqHeaders.get('referer') ?? '';
-  const referUrl = (() => {
-    try {
-      return new URL(referer);
-    } catch {
-      return null;
-    }
-  })();
-  const utm = referUrl
-    ? {
-        source: referUrl.searchParams.get('utm_source'),
-        medium: referUrl.searchParams.get('utm_medium'),
-        campaign: referUrl.searchParams.get('utm_campaign'),
-        content: referUrl.searchParams.get('utm_content'),
-        term: referUrl.searchParams.get('utm_term'),
-      }
-    : { source: null, medium: null, campaign: null, content: null, term: null };
+  // 3. UTM + IP for attribution (calculados arriba).
+  const { ip, userAgent, utm } = atrib;
 
   // Código promo: pre-validación de solo lectura ANTES de crear la orden y de
   // reservar stock, así un código inválido/vencido/agotado no retiene cupo ni
