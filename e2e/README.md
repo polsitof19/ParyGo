@@ -10,7 +10,7 @@ que habla con Supabase de **producción**. Solo toca la marca `demotest`
 npm install                        # instala playwright (devDependency de la raíz)
 npx playwright install chromium
 node e2e/patch-next-windows.mjs    # SOLO Windows (ver abajo). Idempotente.
-cd apps/web && npx next build && npx next start -p 3001   # en otra terminal
+cd apps/web && npx next build && NODE_OPTIONS=--max-old-space-size=1024 npx next start -p 3001   # en otra terminal (tope de RAM)
 node e2e/fase1.mjs                 # capturas + results.json en tmp/e2e/
 node e2e/cleanup.mjs               # deja demotest como estaba (archivada)
 ```

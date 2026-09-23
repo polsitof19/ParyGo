@@ -82,7 +82,10 @@ async function activeHolds(ticketTypeId) {
 }
 
 // ---------------- navegador ----------------
-const browser = await chromium.launch({ headless: true });
+// Poca RAM (2026-09-23: la PC de 16 GB se quedaba sin memoria a mitad del
+// E2E): sin GPU, pocos procesos de pestaña y un tope al JS de cada una.
+const LIVIANO = ['--disable-gpu', '--disable-dev-shm-usage', '--renderer-process-limit=2', '--js-flags=--max-old-space-size=256', '--disable-extensions'];
+const browser = await chromium.launch({ headless: true, args: LIVIANO });
 const ctxOpts = { timezoneId: TZ, locale: 'es-PE' };
 const consoleErrors = [];
 function wire(page, tag) {
@@ -141,7 +144,7 @@ const PROOF = resolve(OUT, 'proof.png');
 const FLYER = resolve(OUT, 'flyer-4x5.png');
 const FLYER_ALTO = resolve(OUT, 'flyer-captura.png');
 for (const [file, w, h, bg] of [[FLYER, 1080, 1350, 'linear-gradient(160deg,#3a1c71,#d76d77 60%,#ffaf7b)'], [FLYER_ALTO, 1080, 2400, 'linear-gradient(180deg,#111,#2c3e50)']]) {
-  const b = await chromium.launch();
+  const b = await chromium.launch({ args: LIVIANO });
   const pg = await b.newPage({ viewport: { width: w, height: h } });
   await pg.setContent(`<body style="margin:0;width:${w}px;height:${h}px;background:${bg};font-family:sans-serif;color:#fff;display:grid;place-items:center"><div style="text-align:center"><div style="font-size:120px;font-weight:900">E2E</div><div style="font-size:48px">flyer de prueba ${STAMP}</div></div></body>`);
   await pg.screenshot({ path: file });
