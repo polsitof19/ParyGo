@@ -133,7 +133,11 @@ const MEDIR = () => {
     }
     const w = right - left, h = bottom - top;
     if (Math.min(w, h) < 43.5) toque.push({ q: path(e), t: txt(e) || (lb ? txt(lb) : ''), w: Math.round(w), h: Math.round(h) });
-    cajas.push({ e, q: path(e), t: txt(e), top, bottom, left, right, dentroDeCampo: getComputedStyle(e).position === 'absolute' });
+    // Dentro de una barra FIJA (la de pestañas de abajo del panel): se
+    // superpone a propósito con lo que pasa por debajo al scrollear, y la
+    // página deja el espacio al final. No es un control encimado.
+    const enFijo = (() => { for (let n = e; n; n = n.parentElement) if (getComputedStyle(n).position === 'fixed') return true; return false; })();
+    cajas.push({ e, q: path(e), t: txt(e), top, bottom, left, right, enFijo, dentroDeCampo: getComputedStyle(e).position === 'absolute' });
   }
 
   const montados = [];
@@ -141,6 +145,7 @@ const MEDIR = () => {
     for (let j = i + 1; j < cajas.length; j++) {
       const a = cajas[i], b = cajas[j];
       if (a.e.contains(b.e) || b.e.contains(a.e)) continue;
+      if (a.enFijo !== b.enFijo) continue;
       // Un control puesto ADENTRO de su campo (el ojo de la contraseña) se
       // monta sobre el campo a propósito: está encima, así que el toque va al
       // botón, y el texto del campo no llega hasta ahí (padding-right).

@@ -309,6 +309,11 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
                 onScan={(codes) => { setCameraError(null); onDetect(codes); }}
                 onError={(e) => setCameraError(e instanceof Error ? e.message : 'No se pudo abrir la cámara')}
                 formats={['qr_code']}
+                // Cámara TRASERA a 720p. Sin límite, Safari de iPhone abría el
+                // video a la resolución máxima del sensor y, con la memoria al
+                // tope, recargaba la pestaña: el escáner "se reiniciaba". Un QR
+                // se lee de sobra a 720p.
+                constraints={{ facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }}
                 scanDelay={400}
                 components={{ finder: true }}
                 styles={{ container: { width: '100%' } }}

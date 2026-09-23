@@ -9,7 +9,7 @@ import { TeamPanel } from '../../../TeamPanel';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-// Equipo de puerta — grupo "Puerta y equipo". Antes la gestión de validadores
+// Equipo de puerta — pestaña "Puerta". Antes la gestión de validadores
 // vivía SOLO en la home global, lejos del monitor de puerta del evento (ver
 // handoff de paneles). Los validadores son de la MARCA (valen para todos los
 // eventos); esta página los acerca a donde se usan.
@@ -26,7 +26,7 @@ export default async function EventTeamPage({ params }: { params: { id: string }
     <>
       <div className="s-pagehead" style={{ marginBottom: 14 }}>
         <div>
-          <span className="eyebrow">Puerta y equipo</span>
+          <span className="eyebrow">Puerta</span>
           <h2 className="s-h2" style={{ marginTop: 6 }}>Equipo de puerta</h2>
           <p className="s-card__desc">
             Tu staff valida entradas con su email y contraseña, o con su código personal de puerta. Solo ven el escáner, nada más de tu panel.

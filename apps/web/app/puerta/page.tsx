@@ -29,8 +29,8 @@ export default function PuertaPage() {
               Además es el único link de la pantalla, así que su área de toque
               llega a 44 (medía 87x17). */}
           <p className="k-muted" style={{ marginTop: 18, fontSize: 12.5 }}>
-            ¿Eres organizador?{' '}
-            <a href="/login" className="k-link">Entra por email</a>
+            ¿Eres organizador o entras con email?{' '}
+            <a href="/login?next=/scan" className="k-link">Entra con tu email y contraseña</a>
           </p>
         </div>
       </main>

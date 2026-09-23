@@ -41,6 +41,12 @@ const alFinDelDia = (local: string): string => {
   if (!hora || hora === '00:00' || hora === '00:00:00') return `${fecha}T${FIN_DEL_DIA}`;
   return local;
 };
+// El link del evento sale del nombre ("Density · Noche 04" → density-noche-04)
+// mientras el organizador no lo toque; si lo edita a mano, se respeta.
+const aSlug = (n: string): string => n
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+  .slice(0, 42).replace(/-+$/g, '');
 const newTT = (): TT => ({ name: '', description: '', unlimited: false, capacity: '100', phases: [{ priceSoles: '', until: '' }] });
 
 export function EventBuilder() {
@@ -49,6 +55,8 @@ export function EventBuilder() {
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [coverName, setCoverName] = useState<string | null>(null);
   const [avisoFlyer, setAvisoFlyer] = useState<string | null>(null);
+  const [slug, setSlug] = useState('');
+  const slugManual = useRef(false);
   const min = nowLocalInput();
   const confirmFreeRef = useRef<HTMLInputElement>(null);
 
@@ -119,20 +127,39 @@ export function EventBuilder() {
       <input type="hidden" name="ticket_types_json" value={JSON.stringify(serialized)} />
       <input type="hidden" name="confirm_free" ref={confirmFreeRef} defaultValue="" />
 
-      {/* Evento */}
+      {/* 1 · Lo básico: qué, cuándo y dónde. Es lo que el organizador tiene
+          en la cabeza; el resto es opcional y va al final. */}
       <section className="s-card">
-        <p className="s-section-lead" style={{ marginBottom: 14 }}>Evento</p>
-        <FieldRow id="name" label="Nombre" required error={state.fieldErrors?.name}>
-          <input id="name" name="name" placeholder="Density · Noche 04" required className="s-input" />
+        <p className="s-section-lead a-step"><span className="a-step__n">1</span> Lo básico</p>
+        <FieldRow id="name" label="Nombre del evento" required error={state.fieldErrors?.name}>
+          <input
+            id="name" name="name" placeholder="Density · Noche 04" required className="s-input"
+            onChange={(e) => { if (!slugManual.current) setSlug(aSlug(e.target.value)); }}
+          />
         </FieldRow>
         <div className="s-field">
-          <FieldRow id="slug" label="Slug" hint="Ej: density-04 → tumarca.parygo.com/density-04" required error={state.fieldErrors?.slug}>
-            <input id="slug" name="slug" placeholder="density-04" pattern="^[a-z0-9][a-z0-9-]{0,40}[a-z0-9]$" required className="s-input" />
+          <FieldRow id="slug" label="Link del evento" hint={slug ? `tumarca.parygo.com/${slug}` : 'Se arma solo con el nombre. Puedes cambiarlo.'} required error={state.fieldErrors?.slug}>
+            <input
+              id="slug" name="slug" placeholder="density-04" pattern="^[a-z0-9][a-z0-9-]{0,40}[a-z0-9]$" required className="s-input"
+              value={slug}
+              onChange={(e) => { slugManual.current = true; setSlug(e.target.value.toLowerCase()); }}
+            />
           </FieldRow>
         </div>
-        <div className="s-field">
-          <FieldRow id="description" label="Descripción corta">
-            <textarea id="description" name="description" rows={2} className="s-input" placeholder="DJ Headliner · Club Foso · Lima" />
+        <div className="s-form-grid s-field">
+          <FieldRow id="starts_at" label="Empieza" required error={state.fieldErrors?.starts_at}>
+            <input id="starts_at" name="starts_at" type="datetime-local" min={min} required className="s-input" />
+          </FieldRow>
+          <FieldRow id="ends_at" label="Termina (aprox.)">
+            <input id="ends_at" name="ends_at" type="datetime-local" min={min} className="s-input" />
+          </FieldRow>
+        </div>
+        <div className="s-form-grid s-field">
+          <FieldRow id="venue_name" label="Local">
+            <input id="venue_name" name="venue_name" placeholder="Club Foso" className="s-input" />
+          </FieldRow>
+          <FieldRow id="venue_address" label="Dirección">
+            <input id="venue_address" name="venue_address" placeholder="Av. Foso 123, Miraflores" className="s-input" />
           </FieldRow>
         </div>
         <div className="s-field">
@@ -146,68 +173,12 @@ export function EventBuilder() {
             cambiar después, mientras no haya ventas.
           </p>
         </div>
-        <div className="s-field">
-          <FieldRow id="cover" label="Flyer del evento (opcional)" hint="PNG, JPG o WEBP · vertical o cuadrado · máx 10 MB. Se ve grande en la portada y en tu página de marca." error={state.fieldErrors?.cover}>
-            <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-              {coverPreview && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={coverPreview} alt="" style={{ width: 90, height: 120, objectFit: 'cover', borderRadius: 'var(--r-ctl)', border: '1px solid var(--line)', flexShrink: 0 }} />
-              )}
-              <div style={{ flex: 1, minWidth: 180 }}>
-                <div className="s-file">
-                  <input id="cover" name="cover" type="file" accept="image/png,image/jpeg,image/webp" onChange={onCover} className="s-file__input" />
-                  <label htmlFor="cover" className="s-btn s-btn--soft s-btn--sm s-file__btn">
-                    {coverName ? 'Cambiar flyer' : 'Elegir flyer'}
-                  </label>
-                  <span className="s-file__name">{coverName ?? 'Ninguno elegido'}</span>
-                </div>
-                <p className="s-hint">
-                  Sube el <strong>archivo original</strong> del flyer, no una captura de
-                  pantalla: la captura trae la barra del teléfono y sale borrosa en
-                  grande.
-                </p>
-                {avisoFlyer && (
-                  <p className="s-err" style={{ marginTop: 8 }}>
-                    Esto parece una captura de pantalla. {avisoFlyer} Puedes publicarlo igual,
-                    pero si tienes el archivo original va a verse mucho mejor.
-                  </p>
-                )}
-              </div>
-            </div>
-          </FieldRow>
-        </div>
-        <div className="s-form-grid s-field">
-          <FieldRow id="starts_at" label="Inicio" required error={state.fieldErrors?.starts_at}>
-            <input id="starts_at" name="starts_at" type="datetime-local" min={min} required className="s-input" />
-          </FieldRow>
-          <FieldRow id="ends_at" label="Fin estimado">
-            <input id="ends_at" name="ends_at" type="datetime-local" min={min} className="s-input" />
-          </FieldRow>
-        </div>
-        <div className="s-form-grid s-field">
-          <FieldRow id="venue_name" label="Local">
-            <input id="venue_name" name="venue_name" placeholder="Club Foso" className="s-input" />
-          </FieldRow>
-          <FieldRow id="venue_address" label="Dirección">
-            <input id="venue_address" name="venue_address" placeholder="Av. Foso 123, Miraflores" className="s-input" />
-          </FieldRow>
-        </div>
-        <div className="s-field">
-          <FieldRow id="min_age" label="Edad mínima">
-            <input id="min_age" name="min_age" type="number" min={0} max={99} defaultValue={18} className="s-input" style={{ maxWidth: 120 }} />
-          </FieldRow>
-        </div>
-        <div className="s-field">
-          <FieldRow id="refund_policy" label="Política de devolución">
-            <textarea id="refund_policy" name="refund_policy" rows={2} className="s-input" defaultValue="Sin devolución post-pago salvo cancelación del evento." />
-          </FieldRow>
-        </div>
       </section>
 
-      {/* Tipos de entrada */}
+      {/* 2 · Entradas: cada tipo con su cupo y su precio (y sus preventas). */}
       <section className="s-card">
         <div className="s-card__head">
-          <p className="s-section-lead" style={{ margin: 0 }}>Tipos de entrada</p>
+          <p className="s-section-lead a-step" style={{ margin: 0 }}><span className="a-step__n">2</span> Entradas y precios</p>
           <button type="button" className="s-btn s-btn--soft s-btn--sm" onClick={() => setTts((s) => [...s, newTT()])}>
             <Plus className="h-4 w-4" /> Tipo
           </button>
@@ -218,7 +189,7 @@ export function EventBuilder() {
             <div key={i} className="s-card" style={{ background: 'var(--paper)', boxShadow: 'none' }}>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
                 <div style={{ flex: 1 }}>
-                  <label className="s-label">Nombre del tipo</label>
+                  <label className="s-label">Nombre de la entrada</label>
                   <input value={tt.name} onChange={(e) => patchTT(i, { name: e.target.value })} placeholder="General / VIP" required className="s-input" />
                 </div>
                 {tts.length > 1 && (
@@ -291,6 +262,54 @@ export function EventBuilder() {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* 3 · Detalles opcionales: se pueden completar después, desde el evento. */}
+      <section className="s-card">
+        <p className="s-section-lead a-step"><span className="a-step__n">3</span> Detalles <span className="s-muted" style={{ fontWeight: 400 }}>(opcional, lo puedes cambiar después)</span></p>
+        <FieldRow id="description" label="Descripción corta">
+          <textarea id="description" name="description" rows={2} className="s-input" placeholder="DJ Headliner · Club Foso · Lima" />
+        </FieldRow>
+        <div className="s-field">
+          <FieldRow id="cover" label="Flyer del evento (opcional)" hint="PNG, JPG o WEBP · vertical o cuadrado · máx 10 MB. Se ve grande en la portada y en tu página de marca." error={state.fieldErrors?.cover}>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+              {coverPreview && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={coverPreview} alt="" style={{ width: 90, height: 120, objectFit: 'cover', borderRadius: 'var(--r-ctl)', border: '1px solid var(--line)', flexShrink: 0 }} />
+              )}
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <div className="s-file">
+                  <input id="cover" name="cover" type="file" accept="image/png,image/jpeg,image/webp" onChange={onCover} className="s-file__input" />
+                  <label htmlFor="cover" className="s-btn s-btn--soft s-btn--sm s-file__btn">
+                    {coverName ? 'Cambiar flyer' : 'Elegir flyer'}
+                  </label>
+                  <span className="s-file__name">{coverName ?? 'Ninguno elegido'}</span>
+                </div>
+                <p className="s-hint">
+                  Sube el <strong>archivo original</strong> del flyer, no una captura de
+                  pantalla: la captura trae la barra del teléfono y sale borrosa en
+                  grande.
+                </p>
+                {avisoFlyer && (
+                  <p className="s-err" style={{ marginTop: 8 }}>
+                    Esto parece una captura de pantalla. {avisoFlyer} Puedes publicarlo igual,
+                    pero si tienes el archivo original va a verse mucho mejor.
+                  </p>
+                )}
+              </div>
+            </div>
+          </FieldRow>
+        </div>
+        <div className="s-field">
+          <FieldRow id="min_age" label="Edad mínima">
+            <input id="min_age" name="min_age" type="number" min={0} max={99} defaultValue={18} className="s-input" style={{ maxWidth: 120 }} />
+          </FieldRow>
+        </div>
+        <div className="s-field">
+          <FieldRow id="refund_policy" label="Política de devolución">
+            <textarea id="refund_policy" name="refund_policy" rows={2} className="s-input" defaultValue="Sin devolución post-pago salvo cancelación del evento." />
+          </FieldRow>
         </div>
       </section>
 

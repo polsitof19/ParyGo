@@ -988,11 +988,36 @@ if (!S.eventId) {
   // =====================================================================
   await step('J', 'Panel: ventas en tiempo real y asistentes', async () => {
     const p = adm.page;
-    // Estructura del panel (handoff): 4 grupos, "En la puerta", cortesías con historial.
+    // Estructura del panel (panel/ordenado, 2026-09-23): el evento tiene
+    // CUATRO pestañas a la vista (Resumen · Evento · Personas · Puerta) y la
+    // navegación del panel, cuatro secciones (Eventos · Escáner · Equipo · Mi marca).
     await go(p, `/admin/events/${S.eventId}`);
-    const groups = await p.locator('.a-nav__label').allInnerTexts();
-    const navTxt = (await p.locator('.a-nav').innerText()).replace(/\s+/g, ' ');
-    check('J', 'nav del evento en 4 grupos, con "En la puerta" (no "Accesos")', groups.length === 4 && /En la puerta/.test(navTxt) && !/Accesos/.test(navTxt), groups.join(' | '));
+    const tabs = (await p.locator('.a-tabs__item').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').replace(/\d+$/, '').trim());
+    check('J', 'evento en 4 pestañas: Resumen · Evento · Personas · Puerta', tabs.join('|') === 'Resumen|Evento|Personas|Puerta', tabs.join(' | '));
+    const secciones = (await p.locator('.s-topbar .s-nav a').allInnerTexts()).map((t) => t.trim());
+    check('J', 'panel en 4 secciones: Eventos · Escáner · Equipo · Mi marca', secciones.join('|') === 'Eventos|Escáner|Equipo|Mi marca', secciones.join(' | '));
+    // El escáner SIN sesión: pide login y VUELVE al escáner (antes el
+    // organizador terminaba en su panel y parecía que la página se reiniciaba).
+    {
+      const sc = await newCtx('escaner-login', { viewport: { width: 390, height: 844 } });
+      await sc.page.goto(`${BASE}/scan`, { waitUntil: 'load', timeout: 90000 });
+      // El redirect al login puede llegar del lado del cliente (el loading.tsx
+      // de la raíz hace streaming): se espera a que la URL sea la del login.
+      await sc.page.waitForURL(/\/login/, { timeout: 20000 }).catch(() => {});
+      const alLogin = sc.page.url();
+      await sc.page.fill('#email', ADMIN_EMAIL);
+      await sc.page.fill('#password', ADMIN_PASS);
+      await Promise.all([sc.page.waitForURL(/\/(scan|admin)/, { timeout: 30000 }).catch(() => {}), sc.page.locator('button[type=submit]').click()]);
+      await settle(sc.page);
+      const h1 = (await sc.page.locator('h1').first().innerText().catch(() => '')).trim();
+      check('J', 'escáner sin sesión → login → de vuelta al ESCÁNER (no al panel)', /\/login\?next=(%2F|\/)scan/.test(alLogin) && /\/scan$/.test(sc.page.url()) && /Escanear entradas/.test(h1), `${alLogin} → ${sc.page.url()} · "${h1}"`);
+      check('J', 'el organizador tiene "Panel" para volver desde el escáner', (await sc.page.locator('a.k-panel[href="/admin"]').count()) === 1);
+      await sc.ctx.close();
+    }
+    // Entradas y fecha en UNA pantalla; el link viejo /entradas redirige ahí.
+    await go(p, `/admin/events/${S.eventId}/entradas`);
+    check('J', '/entradas lleva a la pantalla del evento con datos y tipos de entrada', /\/editar/.test(p.url()) && (await p.locator('#entradas').count()) === 1 && (await p.locator('#datos').count()) === 1, p.url());
+    await go(p, `/admin/events/${S.eventId}`);
     const pulse = (await p.locator('.a-pulse').innerText().catch(() => '')).replace(/\s+/g, ' ');
     check('J', 'Resumen arranca con "¿cómo va?" (vendidas / recaudado / cuándo / entraron)', /VENDIDAS/i.test(pulse) && /RECAUDADO/i.test(pulse) && /CUÁNDO/i.test(pulse), pulse.slice(0, 160));
     await go(p, `/admin/events/${S.eventId}/cortesias`);

@@ -118,7 +118,7 @@ export default async function EventAccessPage({ params }: { params: { id: string
     <>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
         <div>
-          <span className="eyebrow">Puerta y equipo · En la puerta</span>
+          <span className="eyebrow">Puerta · En vivo</span>
           <h2 className="s-h2" style={{ marginTop: 6 }}>Control de puerta en vivo</h2>
           <p className="s-card__desc">Quién ya ingresó y quién falta. Solo entradas válidas (no anuladas).</p>
         </div>

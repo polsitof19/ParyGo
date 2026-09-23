@@ -125,3 +125,10 @@
 .scan-shell .k-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 
 @media (prefers-reduced-motion: reduce) { .scan-shell * { animation: none !important; } }
+
+/* Cabecera de la puerta: el organizador tiene un atajo de vuelta a su panel
+   (el validador no: solo ve el escáner). Área de toque de 44. */
+.scan-shell .k-header__right { display: inline-flex; align-items: center; gap: 8px; }
+.scan-shell .k-panel { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--cream-3); background: var(--white); color: var(--ink); font-weight: 600; font-size: 14px; text-decoration: none; }
+.scan-shell .k-panel:active { transform: scale(.97); }
+.scan-shell .k-panel:focus-visible { outline: 3px solid var(--tangerine); outline-offset: 2px; }

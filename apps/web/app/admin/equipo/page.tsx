@@ -18,12 +18,12 @@ export default async function AdminTeamPage() {
   return (
     <div style={{ maxWidth: 680 }}>
       <Link href="/admin" className="s-back">
-        <ChevronLeft className="h-3.5 w-3.5" /> Tu panel
+        <ChevronLeft className="h-3.5 w-3.5" /> Tus eventos
       </Link>
 
       <div className="s-pagehead" style={{ marginBottom: 18 }}>
         <div>
-          <span className="eyebrow">Configuración</span>
+          <span className="eyebrow">Equipo</span>
           <h1 className="s-h1" style={{ marginTop: 8 }}>Equipo de puerta</h1>
           <p className="s-card__desc">
             Tu staff valida entradas con su email y contraseña, o con su código personal de puerta.
