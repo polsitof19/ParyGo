@@ -1,21 +1,29 @@
-import { Sk, SkCard, SkStats } from '@/components/Skeleton';
+import { Sk } from '@/components/Skeleton';
 
-// Skeleton del área de contenido de un evento (la cabecera + tabs del layout se
-// mantienen; esto es el fallback de la sub-página mientras carga → cambiar de
-// pestaña se siente instantáneo).
+// Esqueleto mientras carga el evento o una de sus secciones: el mismo dibujo
+// que la página (flyer + nombre, y filas de menú), no las cajas de cifras de
+// antes. Así la carga no "salta" a otra forma.
 export default function EventLoading() {
   return (
     <div style={{ animation: 'a-fade .2s both' }}>
-      <div style={{ marginBottom: 14 }}>
-        <Sk w={120} h={12} />
-        <div style={{ height: 8 }} />
-        <Sk w={200} h={22} r={8} />
+      <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+        <Sk w={104} h={130} r={10} />
+        <div style={{ flex: 1 }}>
+          <Sk w="70%" h={24} r={8} />
+          <div style={{ height: 10 }} />
+          <Sk w="50%" h={14} />
+        </div>
       </div>
-      <div style={{ marginBottom: 14 }}><SkStats n={4} /></div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <SkCard lines={3} />
-        <SkCard lines={2} />
-      </div>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 0', borderBottom: '1px solid var(--line)' }}>
+          <Sk w={20} h={20} r={6} />
+          <div style={{ flex: 1 }}>
+            <Sk w="35%" h={14} />
+            <div style={{ height: 8 }} />
+            <Sk w="60%" h={12} />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -53,6 +53,7 @@ for (const ancho of [390, 1440]) {
     await primero.click();
     await p.waitForURL(/\/admin\/events\//, { timeout: 30000 });
     await p.waitForTimeout(1500);
+    await p.locator('.a-menu__t').first().waitFor({ timeout: 30000 }).catch(() => {});
     const menu = (await p.locator('.a-menu__t').allInnerTexts()).map((t) => t.trim());
     check(`${ancho} · evento = menú con Estadísticas primero`, menu[0] === 'Estadísticas' && menu[1] === 'Entradas' && menu.length >= 7, menu.join(' | '));
     await p.screenshot({ path: resolve(OUT, `evento-${ancho}.png`), fullPage: !movil });
