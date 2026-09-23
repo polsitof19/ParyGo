@@ -302,9 +302,18 @@
   .client-shell .b-canvas .b1-pasos,
   .client-shell .b-editorial .b1-pasos { grid-template-columns: 1fr; gap: var(--b-s3); }
 
-  /* Derecha: Tu compra. */
+  /* Derecha: Tu compra. Papel con una regla de tinta arriba, SIN caja:
+     la base lo pintaba como bloque sólido de tinta (var(--pg-fg)), que
+     no se veía mientras --pg-* estuvo sin definir; al definirlas volvió
+     la caja negra y el botón apagado quedaba tinta sobre tinta. */
   .client-shell .b-canvas .b-sum,
-  .client-shell .b-editorial .b-sum { grid-area: resumen; order: 0; }
+  .client-shell .b-editorial .b-sum {
+    grid-area: resumen; order: 0;
+    background: none; color: var(--ink); border-radius: 0;
+    padding: var(--b-s2) 0 0; border-top: 2px solid var(--ink);
+  }
+  .client-shell .b-canvas .b-sum__total,
+  .client-shell .b-editorial .b-sum__total { border-top-color: var(--line); }
 
   /* Las pantallas sin grilla (tus datos, el pago con tarjeta) no se estiran
      a 1120: un formulario a lo ancho no se lee. */
@@ -312,4 +321,80 @@
   .client-shell .b-editorial > .c-stepwrap:not(:has(> .b-stage)) {
     max-width: 640px; margin-left: auto; margin-right: auto;
   }
+}
+
+
+/* ============================================================
+   TELÉFONO Y TABLET (<1024) — LA MAQUETA APROBADA DE CANVAS
+   ============================================================
+   Portado de design_handoff_moderno/prototipo-compra.html (dirección
+   B, rama design/moderno), medido lado a lado en WebKit a 390 y 430
+   el 2026-09-23. Lo que se corrigió contra esa maqueta:
+     · el kicker del hero es la MARCA, y cuándo/dónde es la primera
+       línea del panel (.b-meta), una sola vez;
+     · el nombre sobre el flyer va en --b-t2, no en t1;
+     · el panel monta 40px sobre el flyer y el título le deja 64 abajo;
+     · la fila: nombre en cuerpo 17/600, precio t3 y el "+" PEGADO al
+       precio (antes 88px de hueco), hairline arriba y abajo;
+     · la barra: una fila —"Desde S/ X" a la izquierda y el botón a la
+       derecha—, papel OPACO (la maqueta usaba 92% con desenfoque, pero en WebKit a 390 se leía el título de la sección de abajo a través de la barra, y se veía como un error); apagada es tinta sobre
+       papel con borde, no el color de marca al 40%.
+   Orden de bloques (el aprobado): hero → entradas → confianza →
+   pasos → dónde. Escritorio: el bloque de tres columnas de arriba.
+   ============================================================ */
+.client-shell .b-meta {
+  display: flex; flex-wrap: wrap; gap: 2px var(--b-s2);
+  margin: 0; font-size: var(--b-meta); line-height: 1.45; color: var(--ink-2);
+}
+.client-shell .b-meta b { color: var(--ink); font-weight: 600; }
+@media (min-width: 1024px) {
+  /* En escritorio cuándo y dónde están en la ficha bajo el flyer. */
+  .client-shell .b-meta { display: none; }
+}
+
+/* Apagado = tinta sobre papel con borde. El color de marca aparece recién
+   cuando hay algo que comprar: al 40% era ilegible y, con una marca clara,
+   casi invisible. */
+.client-shell .b-buy .b-btn--go:disabled {
+  background: transparent; color: var(--ink-3);
+  box-shadow: inset 0 0 0 1px var(--line); opacity: 1;
+}
+
+@media (max-width: 1023px) {
+  /* ---- La barra de pagar: una fila ---- */
+  .client-shell .b-cta {
+    display: flex; align-items: center; gap: var(--b-s2);
+    padding: var(--b-s2) var(--pad) calc(var(--b-s2) + env(safe-area-inset-bottom, 0px));
+    background: var(--pg-bg);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  .client-shell .b-cta__t { flex: 1; min-width: 0; display: block; margin: 0; }
+  .client-shell .b-cta__t .n {
+    display: block; font-size: var(--b-lb); font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .client-shell .b-cta__t .v { display: block; }
+  .client-shell .b-cta .b-btn { width: auto; flex: none; }
+
+  /* ---- Canvas: hero ---- */
+  .client-shell .b-canvas .b-hero__name {
+    font-size: var(--b-t2); line-height: 1.02; letter-spacing: -.03em; max-width: 16ch;
+  }
+  .client-shell .b-canvas .b-hero__over { padding-bottom: var(--b-s6); }
+
+  /* ---- Canvas: el panel de papel ---- */
+  .client-shell .b-canvas .b-list { margin-top: -40px; padding-top: var(--b-s3); }
+  .client-shell .b-canvas .b-tks { margin-top: var(--b-s3); }
+  .client-shell .b-canvas .b-ty + .b-ty { margin-top: 0; }
+  .client-shell .b-canvas .b1-ty { padding: var(--b-s2) 0; border-bottom: 1px solid var(--line); }
+  .client-shell .b-canvas .b1-ty:first-child { border-top: 1px solid var(--line); }
+  .client-shell .b-canvas .b1-ty__head { padding-bottom: 0; border-bottom: 0; }
+  .client-shell .b-canvas .b1-ty__nm {
+    font-family: var(--body); font-size: var(--b-lead); font-weight: 600;
+    line-height: 1.25; letter-spacing: 0;
+  }
+  .client-shell .b-canvas .b1-ty__pr { font-size: var(--b-t3); }
+  .client-shell .b-canvas .b1-ty__act { min-width: 0; }
+  .client-shell .b-canvas .b-add { width: 40px; height: 40px; border-color: var(--line); }
+  .client-shell .b-canvas .b-trust { margin-top: var(--b-s2); }
 }

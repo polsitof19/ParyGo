@@ -8,7 +8,7 @@ import { optimizedImage } from '@/lib/imageUrl';
 import {
   type Brand, type Event, type TicketType,
   armarEscalera, resumirIncluye, distrito, hrefMapa,
-  fmtCortoMayus, fmtDiaLargo, fmtHora,
+  fmtCuando, fmtDiaLargo, fmtHora,
   FilaEntrada, AsiDeSimple,
 } from './conceptos';
 import { startCheckout, previewPromo, type CheckoutInput } from './actions';
@@ -238,6 +238,10 @@ export function EventCheckoutPanel({
   }
 
   const finalTotal = applied ? applied.finalCents : totalCents;
+  // "Desde" de la barra vacía: la entrada más barata que todavía se vende.
+  const dondeCorto = [event.venue_name, distrito(event.venue_address)].filter(Boolean).join(' · ');
+  const aLaVenta = sorted.filter((t) => !t.soldOut);
+  const desdeCents = aLaVenta.length ? Math.min(...aLaVenta.map((t) => t.active_price_cents)) : 0;
   // Ahorro por cantidad (bulk) — solo si NO hay código (son excluyentes).
   const bulkSavings = applied ? 0 : sorted.reduce((s, t) => { const q = qty[t.id] ?? 0; return s + q * (t.active_price_cents - bulkUnitPrice(t, q)); }, 0);
   const docLabel = docType === 'dni' ? 'DNI' : docType === 'ce' ? 'Carné ext.' : 'Pasaporte';
@@ -352,12 +356,21 @@ function fraseConfianza(pago: string): string {
         /* ---------- PANTALLA 1: el flyer y las entradas ---------- */
         <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}${atras ? ' c-stepwrap--back' : ''}`} key="step1">
         <div className="b-stage">
-          <Hero event={event} direccion={direccion} />
+          <Hero event={event} direccion={direccion} marca={brand.name} />
 
           <div className="b-list">
             {/* En EDITORIAL la lista es una sección con nombre propio; en
                 CANVAS es la continuación natural del flyer y no lo necesita. */}
-            {direccion === 'editorial' && <h2 className="b1-h2" id="elegi">Elige tu entrada</h2>}
+            {/* Cuándo y dónde, UNA vez, como primera línea del panel (la
+                maqueta aprobada de Canvas). El kicker del hero lleva la marca. */}
+            <p className="b-meta">
+              <b>{fmtCuando(event.starts_at)}</b>
+              {dondeCorto && <span>{dondeCorto}</span>}
+            </p>
+            {/* En CANVAS el título de la sección no se ve —la lista es la continuación
+                del flyer—, pero existe para lectores de pantalla: sin él el
+                esquema saltaba de h1 a h3. */}
+            <h2 className={direccion === 'editorial' ? 'b1-h2' : 'sr-only'} id="elegi">Elige tu entrada</h2>
             <section className="b-tks">
               {sorted.map((t) => {
                 const props = {
@@ -561,7 +574,12 @@ function fraseConfianza(pago: string): string {
         <div className="b-cta">
           <div className="b-cta__t">
             {totalItems === 0 ? (
-              <span className="n n--solo">Elige tu entrada</span>
+              // Vacía, la barra dice cuánto cuesta entrar (como la maqueta
+              // aprobada de Canvas): el precio más bajo a la venta, o Gratis.
+              <>
+                <span className="n">Desde</span>
+                <span className="v">{desdeCents === 0 ? 'Gratis' : formatPEN(desdeCents)}</span>
+              </>
             ) : (
               <>
                 <span className="n">{totalItems} entrada{totalItems === 1 ? '' : 's'}</span>
@@ -571,7 +589,9 @@ function fraseConfianza(pago: string): string {
           </div>
           {shownStep === 1 ? (
             <button type="button" className="b-btn b-btn--go" disabled={totalItems === 0} onClick={() => setStep(2)}>
-              {esGratis ? 'Continuar' : ctaMetodo} <ArrowRight aria-hidden="true" />
+              {totalItems === 0
+                ? 'Elige tus entradas'
+                : <>{esGratis ? 'Continuar' : ctaMetodo} <ArrowRight aria-hidden="true" /></>}
             </button>
           ) : (
             <button type="submit" form="checkout-form" className="b-btn b-btn--go" disabled={isPending || totalItems === 0}>
@@ -595,7 +615,7 @@ function fraseConfianza(pago: string): string {
 //              un ticket; el título va en el cuerpo del boleto.
 //   3 NOCHE    el flyer sangra por un costado y el título ocupa el resto.
 // Tocar el flyer lo abre entero en los tres (el hero siempre lo recorta).
-function Hero({ event, direccion }: { event: Event; direccion: Direccion }) {
+function Hero({ event, direccion, marca }: { event: Event; direccion: Direccion; marca: string }) {
   const mapsHref = hrefMapa(event);
   const [zoom, setZoom] = useState(false);
   // `cerrando` existe para que el visor tenga SALIDA: antes se desmontaba de
@@ -617,7 +637,6 @@ function Hero({ event, direccion }: { event: Event; direccion: Direccion }) {
     return () => clearTimeout(t);
   }, [cerrando]);
   const donde = [event.venue_name, distrito(event.venue_address)].filter(Boolean).join(' · ');
-  const kicker = [fmtCortoMayus(event.starts_at), donde].filter(Boolean).join(' · ');
 
   useEffect(() => {
     if (!zoom) return;
@@ -679,10 +698,11 @@ function Hero({ event, direccion }: { event: Event; direccion: Direccion }) {
           EDITORIAL va arriba de todo y el flyer viene después. Lo ordena el
           CSS con `order`, no dos árboles distintos. */}
       <div className="b-hero__over">
-        <p className="b-kicker">{kicker}</p>
+        <p className="b-kicker">{marca}</p>
         <h1 className="b-hero__name">{event.name}</h1>
-        {/* La fecha va UNA vez acá (en el kicker) y una en la ficha. Editorial
-            sumaba un subtítulo con la misma fecha: en Standly se leía tres veces. */}
+        {/* La fecha NO va acá: va una vez en la línea de arriba del panel
+            (.b-meta) y, en escritorio, en la ficha bajo el flyer (y la línea
+            del panel se oculta). En Standly llegó a leerse tres veces. */}
       </div>
     </>
   );

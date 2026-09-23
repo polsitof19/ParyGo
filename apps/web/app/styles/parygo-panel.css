@@ -624,7 +624,7 @@
 
 /* ============================================================
    Motion. Entrada con --ease (sale rápido, llega suave); hovers y
-   presiones con --spring. Todo apagado con reduced-motion.
+   presiones con --ease, sin rebote. Todo apagado con reduced-motion.
    ============================================================ */
 
 /* Presión. El panel se usa desde el teléfono: el :hover no existe ahí, así que

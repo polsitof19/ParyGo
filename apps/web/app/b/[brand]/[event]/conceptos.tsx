@@ -19,6 +19,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Minus, Plus, Lock, Ticket, Smartphone, Mail } from 'lucide-react';
 import { formatPEN } from '@/lib/utils';
+import { fmtCuando, fmtHora, distrito } from '@/lib/eventoTexto';
+export { fmtCuando, fmtHora, distrito };
 
 export type { Direccion } from '@/lib/concepto';
 
@@ -58,13 +60,6 @@ export type TicketType = {
 };
 
 // ---------------------------------------------------------------- fechas ---
-export function fmtCuando(iso: string): string {
-  const d = new Date(iso);
-  const dia = new Intl.DateTimeFormat('es-PE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Lima' }).format(d);
-  const limpio = dia.replace(/,/g, '');
-  return `${limpio.charAt(0).toUpperCase()}${limpio.slice(1)} · ${fmtHora(iso).toLowerCase()}`;
-}
-
 export function fmtCortoMayus(iso: string): string {
   const d = new Date(iso);
   const dia = new Intl.DateTimeFormat('es-PE', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'America/Lima' })
@@ -77,25 +72,12 @@ export function fmtDiaLargo(iso: string): string {
     .format(new Date(iso)).replace(/,/g, '').toUpperCase();
 }
 
-export function fmtHora(iso: string): string {
-  return new Intl.DateTimeFormat('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })
-    .format(new Date(iso)).replace(/\s?a\.?\s?m\.?/i, ' AM').replace(/\s?p\.?\s?m\.?/i, ' PM').replace(/\s+/g, ' ').trim();
-}
-
 /** "27 set" — para el corte de una fase. */
 export function fmtDia(iso: string): string {
   return new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', timeZone: 'America/Lima' })
     .format(new Date(iso)).replace(/[-.]/g, ' ').trim();
 }
 
-/** Distrito deducible de la dirección; si no se puede, no inventa. */
-export function distrito(dir?: string | null): string | null {
-  const partes = (dir ?? '').split(',').map((x) => x.trim()).filter(Boolean);
-  if (partes.length < 2) return null;
-  const sinCiudad = partes.filter((x) => !/^(lima|per[uú])$/i.test(x));
-  if (sinCiudad.length < 2) return null;
-  return sinCiudad[sinCiudad.length - 1] ?? null;
-}
 
 /** Qué incluye, en pocas palabras, para que la fila no crezca. */
 export function resumirIncluye(desc?: string | null): string | null {

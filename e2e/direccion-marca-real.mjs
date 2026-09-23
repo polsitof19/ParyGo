@@ -83,7 +83,15 @@ export async function verificarDireccion({ browser, prod = false, base = BASE } 
         ? ['.b-sum', '.b-cta', '.b-tks', '.b-sum__lb']
           .map((s) => [s, caja(s)]).filter(([, c]) => c && encima(c)).map(([s]) => s)
         : null;
+      // Orden aprobado de los bloques en el teléfono.
+      const orden = ['.b-hero', '.b-tks', '.b-trust', '.b1-simple', '.b-info']
+        .map((s) => [s, caja(s)?.top ?? null]);
+      const meta = document.querySelector('.b-meta');
+      const cta = document.querySelector('.b-cta');
+      const fondoCta = cta ? getComputedStyle(cta).backgroundColor : null;
       return {
+        orden, meta: visible(meta) ? meta.innerText.replace(/\s+/g, ' ') : null, fondoCta,
+        pgBg: getComputedStyle(document.querySelector('.client-shell')).getPropertyValue('--pg-bg').trim(),
         titulo, flyer: caja('.b-hero'), rail: caja('.b-sum'), compraArriba,
         clases: buy?.className ?? '',
         maxW: buy ? getComputedStyle(buy).maxWidth : null,
@@ -108,7 +116,12 @@ export async function verificarDireccion({ browser, prod = false, base = BASE } 
     const anchoOk = ancho === 1440 ? m.maxW === '1120px' : m.maxW === '560px';
     check(`${tag} · el CSS de ${dir} está APLICADO (ancho de la compra)`, anchoOk, m.maxW);
     check(`${tag} · sin subtítulo de fecha repetido (b2-cuando)`, m.cuando === 0, m.cuando);
-    check(`${tag} · la fecha está arriba (kicker)`, !!m.kicker, m.kicker);
+    // Las variables de color de la compra existen (a508bde las había borrado y
+    // la barra de pagar salía transparente, con la página viéndose a través).
+    check(`${tag} · --pg-bg está definida`, !!m.pgBg, m.pgBg);
+    // El kicker del hero es la MARCA; la fecha va en la línea del panel (390) o
+    // en la ficha bajo el flyer (1440). Nunca en el kicker: se repetía.
+    check(`${tag} · el kicker del hero es la marca, sin la fecha`, !!m.kicker && !/\d{1,2}:\d{2}/.test(m.kicker), m.kicker);
     if (ancho === 1440) {
       check(`${tag} · y una vez en la ficha de datos`, !!m.ficha, m.ficha);
       const { titulo: t, rail, flyer } = m;
@@ -123,7 +136,54 @@ export async function verificarDireccion({ browser, prod = false, base = BASE } 
     } else {
       // En el teléfono no hay rail: la compra va en la barra de abajo.
       check(`${tag} · sin rail en el teléfono`, !m.rail, JSON.stringify(m.rail));
+      check(`${tag} · cuándo y dónde, una vez, en la línea del panel`, !!m.meta && /\d{1,2}:\d{2}/.test(m.meta), m.meta);
+      // La barra de pagar tiene fondo (alfa ≥ .9): no se ve la página a través.
+      const alfa = (() => {
+        const c = m.fondoCta ?? '';
+        if (/^rgb\(/.test(c)) return 1;
+        const n = c.match(/[\d.]+(?=\s*\)$)/);
+        return n ? Number(n[0]) : 0;
+      })();
+      check(`${tag} · la barra de pagar tiene fondo`, alfa >= 0.9, m.fondoCta);
+      // hero → entradas → confianza → pasos → dónde.
+      const tops = m.orden.map(([, t]) => t);
+      const enOrden = tops.every((t) => t !== null) && tops.every((t, i) => i === 0 || t > tops[i - 1]);
+      check(`${tag} · bloques en el orden aprobado (hero → entradas → confianza → pasos → dónde)`,
+        enOrden, JSON.stringify(m.orden));
     }
+  }
+
+  // La HOME de la marca (2026-09-23): en el sistema nuevo (.bh) y sin una
+  // sola regla de la vieja (.bl: tarjetas blancas con sombra y blobs).
+  const home = prod ? `https://${ev.brand.slug}.parygo.com/` : `${base}/`;
+  for (const ancho of [1440, 390]) {
+    const ctx = await browser.newContext({
+      viewport: { width: ancho, height: ancho === 390 ? 844 : 900 },
+      ...(prod ? {} : { extraHTTPHeaders: { 'x-parygo-brand-slug': ev.brand.slug } }),
+    });
+    const p = await ctx.newPage();
+    const r = await p.goto(`${home}?nc=${Date.now()}`, { waitUntil: 'networkidle', timeout: 90000 });
+    const h = await p.evaluate((slug) => {
+      const legacy = [...document.styleSheets].reduce((n, s) => {
+        try { return n + [...s.cssRules].filter((x) => /\.bl(-|\b)/.test(x.cssText)).length; } catch { return n; }
+      }, 0);
+      return {
+        bh: !!document.querySelector('main.bh'),
+        nodosBl: document.querySelectorAll('[class^="bl"], [class*=" bl"]').length,
+        legacy,
+        h1: document.querySelector('h1')?.innerText ?? null,
+        eventos: document.querySelectorAll('.bh-ev').length,
+        linkEvento: !!document.querySelector(`.bh-ev a[href="/${slug}"]`),
+        accion: document.querySelector('.bh-ev__go')?.innerText.trim() ?? null,
+      };
+    }, ev.slug);
+    await ctx.close();
+    const tag = `home ${ancho}`;
+    check(`${tag} · responde 200`, r?.status() === 200, r?.status());
+    check(`${tag} · usa el sistema nuevo (main.bh)`, h.bh, JSON.stringify(h));
+    check(`${tag} · sin CSS ni nodos de la home vieja (.bl)`, h.legacy === 0 && h.nodosBl === 0, `reglas=${h.legacy} nodos=${h.nodosBl}`);
+    check(`${tag} · el evento publicado está y lleva a su compra`, h.eventos >= 1 && h.linkEvento, JSON.stringify(h));
+    check(`${tag} · la acción dice reclamar o comprar`, /^(Reclama tu entrada gratis|Comprar entradas)/.test(h.accion ?? ''), h.accion);
   }
   return checks;
 }
