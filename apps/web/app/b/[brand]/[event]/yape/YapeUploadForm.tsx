@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Upload } from 'lucide-react';
+import { Loader2, Upload, ImagePlus } from 'lucide-react';
 import { formatPEN } from '@/lib/utils';
 import { submitYapeProof } from './actions';
 
@@ -47,7 +47,7 @@ export function YapeUploadForm({ orderId, expectedAmountCents, buyerName }: Prop
           window.location.href = res.redirectUrl;
         });
       }}
-      style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+      className="b-yapeform"
     >
       <div className="c-field">
         <label htmlFor="amount" className="c-label">Monto que yapeaste (S/)</label>
@@ -82,24 +82,24 @@ export function YapeUploadForm({ orderId, expectedAmountCents, buyerName }: Prop
             puede tener un control que se vea prestado. */}
         <div className="c-file">
           <input id="receipt" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif" required onChange={handleFile} className="c-file__input" />
+          {/* La zona es la <label>: tocar cualquier parte abre el selector. */}
           <label htmlFor="receipt" className="c-file__btn">
-            {file ? 'Cambiar captura' : 'Elegir captura'}
+            <ImagePlus aria-hidden="true" />
+            {file ? 'Cambiar captura' : 'Sube la captura de tu Yape'}
+            <span className="c-file__name">{file?.name ?? 'PNG o JPG, hasta 5 MB'}</span>
           </label>
-          <span className="c-file__name">{file?.name ?? 'Ninguna elegida'}</span>
         </div>
         {previewUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={previewUrl} alt="" style={{ marginTop: 10, maxHeight: 240, borderRadius: 'var(--r-ctl)', border: '1px solid var(--cream-3)' }} />
+          <img src={previewUrl} alt="" className="c-file__prev" />
         )}
       </div>
 
-      <button type="submit" className="b-btn b-btn--go" style={{ width: '100%' }} disabled={pending || !file}>
+      <button type="submit" className="b-btn b-btn--go" disabled={pending || !file}>
         {pending ? <><Loader2 className="h-4 w-4 animate-spin" /> Subiendo…</> : <><Upload className="h-4 w-4" /> Listo, ya yapeé</>}
       </button>
 
-      <p className="c-muted-3" style={{ textAlign: 'center', fontSize: 12.5 }}>
-        Te confirmamos por email en minutos.
-      </p>
+      <p className="c-muted-3">Te confirmamos por email en minutos.</p>
     </form>
   );
 }

@@ -17,7 +17,7 @@
 //              de la marca solo en el botón y una línea.
 
 import { useEffect, useRef, useState } from 'react';
-import { Minus, Plus, Lock, Ticket, Smartphone, Mail } from 'lucide-react';
+import { Minus, Plus, Lock, Ticket, User, Mail } from 'lucide-react';
 import { formatPEN } from '@/lib/utils';
 import { fmtCuando, fmtHora, distrito } from '@/lib/eventoTexto';
 export { fmtCuando, fmtHora, distrito };
@@ -158,17 +158,14 @@ export function Accion({
     return <Lock className="b-ph__lock" aria-label={estado === 'futura' ? 'Todavía no disponible' : 'Fase terminada'} />;
   }
   if (t.soldOut) return <span className="b-ph__ago">Agotada</span>;
-  if (cur === 0) {
-    return (
-      <button type="button" onClick={onInc} className="b-add" aria-label={`Sumar ${t.name}`}>
-        <Plus aria-hidden="true" />
-      </button>
-    );
-  }
+  // El stepper está SIEMPRE montado (el − apagado en 0). Antes el "+" solo se
+  // reemplazaba por − n + al primer toque: cambiaba de lugar bajo el dedo y
+  // remontaba el control. Ahora lo único que se vuelve a montar es el NÚMERO
+  // (key={cur}), que es lo que anima; la fila y los botones quedan quietos.
   return (
-    <span className="b-qty" aria-live="polite">
-      <button type="button" onClick={onDec} aria-label={`Restar ${t.name}`} className="b-qbtn"><Minus aria-hidden="true" /></button>
-      <span key={cur} className="b-qval">{cur}</span>
+    <span className="b-qty">
+      <button type="button" onClick={onDec} aria-label={`Restar ${t.name}`} className="b-qbtn b-qbtn--dec" disabled={cur === 0}><Minus aria-hidden="true" /></button>
+      <span className="b-qval" aria-live="polite"><span key={cur} className="b-qval__n">{cur}</span></span>
       <button type="button" onClick={onInc} aria-label={`Sumar ${t.name}`} className="b-qbtn b-qbtn--add"><Plus aria-hidden="true" /></button>
     </span>
   );
@@ -192,7 +189,11 @@ export function FilaEntrada({ t, escalera, cur, incluye, onInc, onDec }: FilaPro
   const vigente = escalera.find((f) => f.estado === 'vigente') ?? escalera[0]!;
   const iVig = escalera.indexOf(vigente);
   return (
-    <div className={`b-ty b1-ty${t.soldOut ? ' b-ty--out' : ''}`}>
+    <div className={`b-ty b1-ty${t.soldOut ? ' b-ty--out' : ''}${cur > 0 ? ' b-ty--on' : ''}`}>
+      {/* La barra de 3px de la fila elegida: color de la marca (brandMark),
+          decorativa, sin texto. Existe siempre y se escala; no se monta al
+          elegir, así la fila no cambia de alto ni se vuelve a pintar entera. */}
+      <span className="b-ty__bar" aria-hidden="true" />
       <div className="b1-ty__head">
         <div className="b1-ty__id">
           <h3 className="b1-ty__nm">{t.name}</h3>
@@ -236,12 +237,12 @@ export function AsiDeSimple({ conYape, gratis = false }: { conYape: boolean; gra
   const pasos = gratis
     ? [
         { Icono: Ticket, t: 'Eliges', d: 'Sumas las entradas que quieres.' },
-        { Icono: Smartphone, t: 'Dejas tus datos', d: 'Nombre, correo y teléfono. Nada de pagos.' },
+        { Icono: User, t: 'Dejas tus datos', d: 'Nombre, correo y teléfono. Nada de pagos.' },
         { Icono: Mail, t: 'Tu QR al toque', d: 'Te aparece en pantalla y te llega al correo.' },
       ]
     : [
     { Icono: Ticket, t: 'Eliges', d: 'Sumas las entradas que quieres.' },
-    { Icono: Smartphone, t: conYape ? 'Yapeas' : 'Pagas', d: conYape ? 'Yapeas el monto exacto y subes la captura.' : 'Pagas con tu tarjeta.' },
+    { Icono: User, t: conYape ? 'Yapeas' : 'Pagas', d: conYape ? 'Yapeas el monto exacto y subes la captura.' : 'Pagas con tu tarjeta.' },
     { Icono: Mail, t: 'Tu QR al correo', d: 'Te llega tu entrada. La muestras en la puerta.' },
   ];
   return (
@@ -251,7 +252,7 @@ export function AsiDeSimple({ conYape, gratis = false }: { conYape: boolean; gra
         {pasos.map(({ Icono, t, d }, i) => (
           <li key={t} className="b1-paso">
             <span className="b1-paso__n" aria-hidden="true"><Icono /></span>
-            <h3 className="b1-paso__t">{i + 1}. {t}</h3>
+            <h3 className="b1-paso__t"><span className="b1-paso__i">{i + 1}.</span> {t}</h3>
             <p className="b1-paso__d">{d}</p>
           </li>
         ))}

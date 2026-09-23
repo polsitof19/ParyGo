@@ -1,11 +1,10 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { Calendar, MapPin, Check } from 'lucide-react';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateQrSvg } from '@/lib/qr';
 import { formatEventDate } from '@/lib/utils';
-import { optimizedImage } from '@/lib/imageUrl';
-import { DownloadQrButton } from '../../DownloadQrButton';
+import { TicketPass } from '../../TicketPass';
+import { LineaEntrada } from '../../Responsable';
 
 // QR generado server-side, sin dependencias Node-only → corre en edge.
 export const runtime = 'edge';
@@ -19,7 +18,7 @@ type OrderView = {
   status: string;
   payment_method: 'mercadopago' | 'yape_manual';
   event: { name: string; starts_at: string; venue_name: string | null; cover_url: string | null } | null;
-  brand: { slug: string; name: string; whatsapp_e164: string | null; theme_json: { logo_url?: string | null } | null } | null;
+  brand: { slug: string; name: string; whatsapp_e164: string | null; contact_email: string | null; theme_json: { logo_url?: string | null } | null } | null;
   tickets: {
     qr_code: string;
     ticket_type_name: string;
@@ -38,7 +37,7 @@ async function loadOrder(brandSlug: string, orderId: string): Promise<OrderView 
     .select(`
       id, status, payment_method,
       event:events ( name, starts_at, venue_name, cover_url ),
-      brand:brands ( slug, name, whatsapp_e164, theme_json ),
+      brand:brands ( slug, name, whatsapp_e164, contact_email, theme_json ),
       tickets ( qr_code, ticket_type_name, ticket_number, attendee_name, invalidated_at, validated_at )
     `)
     .eq('id', orderId)
@@ -71,81 +70,73 @@ export default async function OrderPage({ params }: { params: { brand: string; o
     if (rejected) {
       return (
         <main className="c-state">
-          <span className="c-eyebrow" style={{ color: 'var(--alert, #dc2626)' }}>Comprobante rechazado</span>
-          <h1 className="c-h1" style={{ fontSize: 26, marginTop: 8 }}>No se emitieron entradas</h1>
-          <p className="c-muted" style={{ marginTop: 10 }}>Tu comprobante no pudo validarse, así que no hay entradas para este pedido y no quedó ningún cargo de nuestra parte. Si crees que es un error, contacta al organizador.</p>
-          {wa && <a href={wa} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand-ink)', fontWeight: 600 }}>Escribir al organizador por WhatsApp</a>}
+          <span className="c-eyebrow c-state__dot c-state__dot--alert">Comprobante rechazado</span>
+          <h1 className="c-h1">No se emitieron entradas</h1>
+          <p className="c-muted">Tu comprobante no pudo validarse, así que no hay entradas para este pedido y no quedó ningún cargo de nuestra parte. Si crees que es un error, escribe al organizador.</p>
+          {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className="c-state__link">Escribir al organizador por WhatsApp</a>}
         </main>
       );
     }
     return (
       <main className="c-state">
-        <span className="c-eyebrow" style={{ color: 'var(--warn)' }}>Comprobante en revisión</span>
-        <h1 className="c-h1" style={{ fontSize: 26, marginTop: 8 }}>Estamos verificando tu Yape</h1>
-        <p className="c-muted" style={{ marginTop: 10 }}>El organizador está revisando tu comprobante. Te avisamos por email apenas se apruebe y aquí vas a ver tus QR. Suele tomar 5–15 minutos en horario operativo.</p>
-        {wa && <a href={wa} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 16, color: 'var(--brand-ink)', fontWeight: 600 }}>¿Pasó algo? WhatsApp soporte</a>}
+        <span className="c-eyebrow c-state__dot c-state__dot--warn">Comprobante en revisión</span>
+        <h1 className="c-h1">Estamos verificando tu Yape</h1>
+        <p className="c-muted">El organizador está revisando tu comprobante. Te avisamos por email apenas se apruebe y aquí vas a ver tus QR. Suele tomar de 5 a 15 minutos en horario de atención.</p>
+        {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className="c-state__link">¿Pasó algo? Escríbenos por WhatsApp</a>}
       </main>
     );
   }
 
-  // Pre-generar el SVG del QR por entrada (edge-safe). El PNG de descarga se
-  // genera en el navegador (DownloadQrButton).
+  // El SVG del QR se arma en el server (edge-safe); la imagen para guardar o
+  // compartir se compone en el navegador.
   const rendered = await Promise.all(
     tickets.map(async (t) => ({ ...t, svg: await generateQrSvg(t.qr_code) }))
   );
+  const logo = brand?.theme_json?.logo_url ?? null;
 
   return (
-    <main className="c-ticket" style={{ padding: '24px 16px 48px' }}>
-      <div style={{ textAlign: 'center', marginBottom: 18 }}>
-        <span className="c-eyebrow">Tus entradas</span>
-        <h1 className="c-h1" style={{ fontSize: 24, marginTop: 6 }}>{event?.name}</h1>
-        {event?.starts_at && <p className="c-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 14 }}><Calendar className="h-3.5 w-3.5" /> {formatEventDate(event.starts_at)}</p>}
-        {event?.venue_name && <p className="c-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14 }}><MapPin className="h-3.5 w-3.5" /> {event.venue_name}</p>}
-        <p className="c-muted-3" style={{ fontSize: 13, marginTop: 10 }}>
-          {rendered.length === 1 ? '1 entrada' : `${rendered.length} entradas`} · cada una con su QR. Muestra un QR por persona en la puerta.
-        </p>
-      </div>
+    <main className="c-ticket c-checkout-canvas">
+      <span className="c-eyebrow">Tus entradas</span>
+      <h1 className="c-h1" style={{ marginTop: 'var(--b-s1)' }}>{event?.name}</h1>
+      <p className="c-muted-3" style={{ marginTop: 'var(--b-s1)' }}>
+        {rendered.length === 1 ? '1 entrada' : `${rendered.length} entradas`}{event?.starts_at ? ` · ${formatEventDate(event.starts_at)}` : ''}. Un QR por persona en la puerta.
+      </p>
 
-      <div className="s-stack" style={{ gap: 16 }}>
+      <div className="c-ticket__list">
         {rendered.map((t, i) => {
-          const used = !!t.validated_at;
           const voided = !!t.invalidated_at;
+          const used = !!t.validated_at;
           return (
-            <article key={t.qr_code} className="c-ticket__card">
-              {/* Arte del evento + logo de la marca como cabecera (igual que /t/);
-                  cae a la banda de color si el evento no tiene cover. */}
-              {event?.cover_url ? (
-                <div className="c-ticket__art">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={optimizedImage(event.cover_url, { width: 840, quality: 78 })} alt="" decoding="async" />
-                  <div className="c-ticket__art-veil" />
-                  {brand?.theme_json?.logo_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img className="c-ticket__logo" src={optimizedImage(brand.theme_json.logo_url, { width: 200, quality: 82 })} alt={brand.name} decoding="async" />
-                  )}
-                </div>
-              ) : (
-                <div className="c-ticket__band" />
-              )}
-              <div style={{ padding: '16px 22px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-                <p className="c-eyebrow">Entrada {i + 1}/{rendered.length} · {t.ticket_type_name}</p>
-                {voided ? <span className="c-validated" style={{ color: 'var(--alert)' }}>Anulada</span>
-                  : used ? <span className="c-validated"><Check className="h-3.5 w-3.5" /> Ya ingresó</span> : null}
-              </div>
-              <div style={{ padding: '4px 22px 0' }}>
-                <p style={{ fontWeight: 700 }}>{t.attendee_name ?? '—'}</p>
-                <p className="c-muted-3" style={{ fontSize: 12, letterSpacing: '0.04em' }}>{t.ticket_number}</p>
-              </div>
-              <div className="c-ticket__perf" style={{ margin: '16px 0 0' }} />
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '18px 22px 24px' }}>
-                <div className="c-qr" role="img" aria-label={`QR de la entrada ${i + 1}`} style={voided ? { opacity: 0.35, filter: 'grayscale(1)' } : undefined} dangerouslySetInnerHTML={{ __html: t.svg }} />
-                {!voided && <DownloadQrButton qrCode={t.qr_code} fileName={t.ticket_number} block />}
-                {voided && <p className="c-muted-3" style={{ fontSize: 12 }}>Esta entrada fue anulada y no vale en puerta.</p>}
-              </div>
-            </article>
+            <div key={t.qr_code} className="c-ticket__card">
+              {rendered.length > 1 && <p className="c-eyebrow c-ticket__n">Entrada {i + 1} de {rendered.length}</p>}
+              <TicketPass
+                qrSvg={t.svg}
+                qrCode={t.qr_code}
+                ticketTypeName={t.ticket_type_name}
+                attendeeName={t.attendee_name}
+                eventName={event?.name ?? 'Tu entrada'}
+                startsAt={event?.starts_at ?? null}
+                venueName={event?.venue_name ?? null}
+                brandName={brand?.name ?? 'parygo'}
+                brandLogoUrl={logo}
+                brandWhatsapp={brand?.whatsapp_e164 ?? null}
+                state={voided
+                  ? { kind: 'dead', reason: 'Esta entrada fue anulada y no vale en la puerta.' }
+                  : used
+                    ? { kind: 'used', at: new Date(t.validated_at!).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' }) }
+                    : { kind: 'ok' }}
+                showFooter={false}
+                reenviar={false}
+                n={rendered.length > 1 ? i + 1 : undefined}
+              />
+            </div>
           );
         })}
       </div>
+
+      {brand && (
+        <LineaEntrada marca={{ name: brand.name, whatsapp_e164: brand.whatsapp_e164, contact_email: brand.contact_email }} />
+      )}
     </main>
   );
 }

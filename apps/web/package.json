@@ -19,6 +19,7 @@
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "date-fns": "4.1.0",
+    "geist": "1.7.2",
     "idb": "8.0.1",
     "lucide-react": "0.469.0",
     "mercadopago": "2.0.15",

@@ -4,6 +4,7 @@
 // Capturas + results.json en tmp/e2e/.
 import { chromium } from 'playwright';
 import { resolve } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import {
   OUT, BASE, BRAND, FORBIDDEN_SLUGS, env, svc, anon, log, sleep, otpSession, sessionCookies,
   limaLocal, saveJson, toasts, bodyText,
@@ -70,7 +71,7 @@ const typeBy = async (name) => (await dbTypes()).find((t) => t.name === name);
 const dbOrder = async (id) =>
   (await svc.from('orders').select('id, status, total_cents, subtotal_cents, discount_cents, promo_code_id, email_sent_at, brand_id, event_id').eq('id', id).single()).data;
 const dbTickets = async (orderId) =>
-  (await svc.from('tickets').select('id, qr_code, ticket_type_name, max_scans, scan_count').eq('order_id', orderId)).data ?? [];
+  (await svc.from('tickets').select('id, qr_code, ticket_number, ticket_type_name, max_scans, scan_count').eq('order_id', orderId)).data ?? [];
 // Stock efectivo "tomado" (vendidas + reservas activas) — la fuente de verdad es el ledger 0031.
 async function activeHolds(ticketTypeId) {
   const { data, error } = await svc.from('stock_reservations').select('*').eq('ticket_type_id', ticketTypeId);
@@ -132,6 +133,19 @@ const PROOF = resolve(OUT, 'proof.png');
   await page.setContent(`<body style="margin:0;font-family:sans-serif"><div style="background:#742384;color:#fff;padding:24px;text-align:center"><b style="font-size:22px">yape</b><div style="font-size:30px;font-weight:800">S/ E2E</div></div><p style="padding:16px">Comprobante DUMMY de prueba E2E ${STAMP}</p></body>`);
   await page.screenshot({ path: PROOF });
   await ctx.close();
+}
+
+// Flyers SINTÉTICOS de demotest (no hay marca de prueba con flyer y los de
+// Code/Hoesky no se tocan): uno 4:5 (Canvas) y uno con forma de captura de
+// pantalla, más alto que 1:2 (Editorial).
+const FLYER = resolve(OUT, 'flyer-4x5.png');
+const FLYER_ALTO = resolve(OUT, 'flyer-captura.png');
+for (const [file, w, h, bg] of [[FLYER, 1080, 1350, 'linear-gradient(160deg,#3a1c71,#d76d77 60%,#ffaf7b)'], [FLYER_ALTO, 1080, 2400, 'linear-gradient(180deg,#111,#2c3e50)']]) {
+  const b = await chromium.launch();
+  const pg = await b.newPage({ viewport: { width: w, height: h } });
+  await pg.setContent(`<body style="margin:0;width:${w}px;height:${h}px;background:${bg};font-family:sans-serif;color:#fff;display:grid;place-items:center"><div style="text-align:center"><div style="font-size:120px;font-weight:900">E2E</div><div style="font-size:48px">flyer de prueba ${STAMP}</div></div></body>`);
+  await pg.screenshot({ path: file });
+  await b.close();
 }
 
 // ---------------- sesiones ----------------
@@ -424,6 +438,65 @@ await step('B', 'Organizador: crear evento, entradas, promo, preventa, publicar,
   }
 });
 
+// ---------------- tema noche (design/noche, 2026-09-23) ----------------
+// Lo que NO puede aparecer escrito en nada que vea el comprador: el código de
+// la entrada (ticket_number, TKT-…), el qr_code ni una URL.
+const PROHIBIDO_URL = /https?:\/\/|www\.|\b[a-z0-9-]+\.parygo\.com\b/i;
+function filtraCodigos(texto, tickets) {
+  const hall = [];
+  for (const t of tickets) {
+    if (t.ticket_number && texto.includes(t.ticket_number)) hall.push(t.ticket_number);
+    if (t.qr_code && texto.toLowerCase().includes(t.qr_code.toLowerCase())) hall.push(`qr:${t.qr_code.slice(0, 8)}…`);
+  }
+  if (/\bTKT[-_ ]?\w+/i.test(texto)) hall.push('TKT…');
+  const url = texto.match(PROHIBIDO_URL);
+  if (url) hall.push(`url:${url[0]}`);
+  return hall;
+}
+// Contraste WCAG de dos colores CSS resueltos en la página (rgba sobre opaco).
+async function contrasteEnPagina(page, pares) {
+  return page.evaluate((pares) => {
+    const shell = document.querySelector('.client-shell');
+    const v = (n) => getComputedStyle(shell).getPropertyValue(n).trim();
+    const aRgba = (css) => {
+      const d = document.createElement('div'); d.style.color = css; document.body.appendChild(d);
+      const m = getComputedStyle(d).color.match(/[\d.]+/g).map(Number); d.remove();
+      return { r: m[0], g: m[1], b: m[2], a: m[3] ?? 1 };
+    };
+    const lin = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+    const L = (c) => 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b);
+    return pares.map(([fg, bg]) => {
+      const f = aRgba(v(fg)); const b = aRgba(v(bg));
+      const comp = { r: f.r * f.a + b.r * (1 - f.a), g: f.g * f.a + b.g * (1 - f.a), b: f.b * f.a + b.b * (1 - f.a) };
+      const [x, y] = [L(comp), L(b)].sort((p, q) => q - p);
+      return { fg, bg, fgv: v(fg), bgv: v(bg), ratio: Math.round(((x + 0.05) / (y + 0.05)) * 100) / 100 };
+    });
+  }, pares);
+}
+// Graba los fillText del canvas (lo que la imagen de la entrada ESCRIBE) y lo
+// que se abre con window.open (WhatsApp), y apaga Web Share para forzar el
+// camino de escritorio: descargar el PNG + abrir wa.me/?text=.
+await buyer.ctx.addInitScript(() => {
+  window.__canvasTexts = [];
+  const orig = CanvasRenderingContext2D.prototype.fillText;
+  CanvasRenderingContext2D.prototype.fillText = function (t, ...r) { window.__canvasTexts.push(String(t)); return orig.call(this, t, ...r); };
+  window.__abiertos = [];
+  window.open = (u) => { window.__abiertos.push(String(u)); return null; };
+  try { Object.defineProperty(Navigator.prototype, 'canShare', { value: undefined, configurable: true }); } catch {}
+});
+
+// Sube el flyer del evento E2E por el panel (la misma acción que usa el
+// organizador, que guarda cover_w/cover_h). A nivel módulo: la usan C y M.
+async function subirFlyer(archivo) {
+  const p = adm.page;
+  await go(p, `/admin/events/${S.eventId}/editar`);
+  await p.locator('#cover-file').setInputFiles(archivo);
+  // El submit del formulario (la <label> del input también dice 'Cambiar flyer').
+  await p.locator('form:has(#cover-file) button[type=submit]').click();
+  await p.getByText('Flyer actualizado.').waitFor({ timeout: 45000 });
+  return (await svc.from('events').select('cover_url, cover_w, cover_h').eq('id', S.eventId).single()).data;
+}
+
 if (!S.eventId) {
   log('Sin evento: se abortan C→K');
 } else {
@@ -524,6 +597,8 @@ if (!S.eventId) {
 
   // =====================================================================
   await step('C', 'Página pública: marca, selector, morph, totales con promo, checkout', async () => {
+    const cov = await subirFlyer(FLYER);
+    check('C', 'flyer 4:5 de prueba subido por el panel (cover_w/h guardados)', cov?.cover_w === 1080 && cov?.cover_h === 1350, JSON.stringify(cov));
     const p = buyer.page;
     await go(p, '/');
     const landing = await bodyText(p, 500);
@@ -533,6 +608,43 @@ if (!S.eventId) {
     check('C', 'cosmético 7: la landing no dice "desde S/ 0" (la Cortesía no cuenta) y muestra "desde S/ 20"', // /i y \s: la home nueva (2026-09-23) escribe "Desde" con mayúscula, y
     // formatPEN separa "S/" del número con un espacio de no separación.
     !/desde S\/\s?0\b/i.test(landing) && /desde S\/\s?20\b/i.test(landing), (landing.match(/desde S\/\s?\d+/gi) ?? []).join(' | '));
+    // (2) Contraste del tema noche, leído de la página real: --ink-2 y --ink-3
+    //     sobre --bg y --surface, ≥ 4.5:1.
+    await go(p, `/${EVENT_SLUG}`);
+    const cr = await contrasteEnPagina(p, [['--ink-2', '--bg'], ['--ink-2', '--surface'], ['--ink-3', '--bg'], ['--ink-3', '--surface']]);
+    check('C', 'noche: --ink-2 y --ink-3 sobre --bg y --surface ≥ 4.5:1 (medido en la página)', cr.length === 4 && cr.every((x) => x.ratio >= 4.5), cr.map((x) => `${x.fg}(${x.fgv})/${x.bg}(${x.bgv})=${x.ratio}`).join(' · '));
+
+    // (3) El stepper NO remonta la fila: la imagen del hero y la fila son los
+    //     MISMOS nodos después de sumar y restar, y el src no cambia (el
+    //     evento tiene el flyer de prueba que subió el panel).
+    {
+      const st = await newCtx('stepper', { brandHeader: true, viewport: { width: 390, height: 844 } });
+      await st.page.goto(`${BASE}/${EVENT_SLUG}`, { waitUntil: 'load', timeout: 90000 });
+      await settle(st.page);
+      const antes = await st.page.evaluate(() => {
+        const img = document.querySelector('.b-hero__shot img');
+        const fila = document.querySelector('.b1-ty');
+        if (img) img.__marca = 'hero'; if (fila) fila.__marca = 'fila';
+        return { src: img?.currentSrc || img?.src || null, completa: img?.complete ?? null };
+      });
+      await vis(st.page.getByRole('button', { name: 'Sumar General' })).click();
+      await sleep(250);
+      await vis(st.page.getByRole('button', { name: 'Sumar General' })).click();
+      await sleep(250);
+      await vis(st.page.getByRole('button', { name: 'Restar General' })).click();
+      await sleep(900); // la reserva va con debounce de 400
+      const despues = await st.page.evaluate(() => {
+        const img = document.querySelector('.b-hero__shot img');
+        const fila = [...document.querySelectorAll('.b1-ty')].find((f) => f.querySelector('.b-qval')?.textContent?.trim() === '1') ?? document.querySelector('.b1-ty');
+        return { marcaHero: img?.__marca ?? null, marcaFila: document.querySelector('.b1-ty')?.__marca ?? null, src: img?.currentSrc || img?.src || null, completa: img?.complete ?? null, elegida: !!fila?.classList.contains('b-ty--on') };
+      });
+      check('C', 'stepper: la imagen del hero conserva su nodo y su src (no se remonta)', !!antes.src && despues.marcaHero === 'hero' && despues.src === antes.src && despues.completa === true, JSON.stringify({ antes, despues }));
+      check('C', 'stepper: la fila es el mismo nodo y queda elegida', despues.marcaFila === 'fila' && despues.elegida, JSON.stringify(despues));
+      await vis(st.page.getByRole('button', { name: 'Restar General' })).click(); // deja el carrito en 0
+      await sleep(900);
+      await st.ctx.close();
+    }
+
     const email = `e2e-c-${STAMP}@test.local`;
     S.buyerC = email;
     const r = await buy({ items: { General: 2, VIP: 1 }, email, name: `Comprador C ${STAMP}`, promo: PROMO, tag: 'C', shots: true });
@@ -589,9 +701,61 @@ if (!S.eventId) {
       const txt = await bodyText(buyer.page, 300);
       await shot(buyer.page, 'E', 'ticket-t-uuid');
       check('E', '/t/[uuid] carga con QR', qrEls > 0 && !/no encontr|404/i.test(txt), `qrEls=${qrEls} · "${txt.slice(0, 140)}"`);
+      // (1) Ni la entrada en pantalla, ni la imagen que se guarda, ni el
+      //     texto de WhatsApp llevan el código de la entrada o una URL.
+      const pantalla = await buyer.page.evaluate(() => document.body.innerText);
+      check('E', 'la entrada en pantalla no muestra ticket_number, qr_code ni URL', filtraCodigos(pantalla, tk).length === 0, filtraCodigos(pantalla, tk).join(' | ') || 'limpia');
+      await buyer.page.evaluate(() => { window.__canvasTexts = []; window.__abiertos = []; });
+      const [descarga] = await Promise.all([
+        buyer.page.waitForEvent('download', { timeout: 20000 }).catch(() => null),
+        vis(buyer.page.getByRole('button', { name: /Guardar imagen/ })).click(),
+      ]);
+      const textosPng = await buyer.page.evaluate(() => window.__canvasTexts.slice());
+      check('E', 'PNG "Guardar imagen": se descarga y su texto no lleva código ni URL', !!descarga && textosPng.length > 0 && filtraCodigos(textosPng.join('\n'), tk).length === 0,
+        `archivo=${descarga?.suggestedFilename() ?? '—'} · textos=${JSON.stringify(textosPng).slice(0, 220)}`);
+      await Promise.all([
+        buyer.page.waitForEvent('download', { timeout: 20000 }).catch(() => null),
+        vis(buyer.page.getByRole('button', { name: /^WhatsApp$/ })).click(),
+      ]);
+      await sleep(400);
+      const abiertos = await buyer.page.evaluate(() => window.__abiertos.slice());
+      const wa = abiertos.find((u) => u.startsWith('https://wa.me/')) ?? '';
+      const waTexto = wa ? decodeURIComponent(new URL(wa).searchParams.get('text') ?? '') : '';
+      check('E', 'WhatsApp: abre wa.me/?text= (sin número del organizador) y el texto no lleva código ni URL',
+        /^https:\/\/wa\.me\/\?text=/.test(wa) && /Mi entrada para/.test(waTexto) && filtraCodigos(waTexto, tk).length === 0, `${wa.slice(0, 40)}… · "${waTexto}"`);
+
+      // El EMAIL real de este pedido, armado sin mandarlo (mismo query y render
+      // que sendTicketEmail). Visible + texto plano sin código ni URL; QR inline
+      // por cid (hasta 5) y adjunto; un botón "Ver mi entrada".
+      let correo = null;
+      try {
+        const out = execFileSync('npx', ['tsx', '../../e2e/email-entrada.mts', S.orders.C, JSON.stringify(resolve(OUT, 'email-C.html'))], { cwd: resolve(OUT, '..', '..', 'apps', 'web'), encoding: 'utf8', shell: true, timeout: 120000 });
+        correo = JSON.parse(out.trim().split('\n').pop());
+      } catch (e) { note('E', `email-entrada.ts falló: ${String(e.message).slice(0, 200)}`); }
+      if (correo?.ok) {
+        const hallV = filtraCodigos(correo.visible, correo.tickets);
+        const hallT = filtraCodigos(correo.text, correo.tickets);
+        check('E', 'email: el HTML VISIBLE no lleva ticket_number, qr_code ni URL', hallV.length === 0, hallV.join(' | ') || correo.visible.slice(0, 160));
+        check('E', 'email: el texto plano no lleva ticket_number, qr_code ni URL', hallT.length === 0, hallT.join(' | ') || correo.text.slice(0, 160));
+        const n = correo.tickets.length;
+        const inl = Math.min(n, 5);
+        const conCid = correo.attachments.filter((a) => a.content_id);
+        check('E', `email: ${inl} QR inline (cid) y ${n} PNG adjuntos`, correo.cids.length === inl && conCid.length === inl && correo.attachments.length === n + inl && correo.cids.every((c) => conCid.some((a) => a.content_id === c)),
+          JSON.stringify({ cids: correo.cids, adj: correo.attachments }));
+        check('E', 'email: un botón "Ver mi entrada/s" (la URL solo en el href) y sin "link permanente"', /Ver mis? entradas?/.test(correo.visible) && correo.hrefs.some((h) => /\/pedido\//.test(h)) && !/link permanente/i.test(correo.visible + correo.text), correo.hrefs.join(' ').slice(0, 200));
+        check('E', 'email: tuteo y sin exclamaciones', !/[¡!]/.test(correo.visible + correo.text) && !/\b(guardá|abrí|tenés|podés|querés)\b/i.test(correo.visible + correo.text), correo.visible.slice(0, 120));
+      } else {
+        check('E', 'email: se pudo armar el correo del pedido', false, JSON.stringify(correo));
+      }
+
       await go(buyer.page, `/pedido/${S.orders.C}`);
       await shot(buyer.page, 'E', 'pedido-qrs');
       note('E', `QR cards en /pedido: ${await buyer.page.locator('.c-ticket__card').count()}`);
+      const ped = await buyer.page.evaluate(() => document.body.innerText);
+      check('E', '/pedido no muestra ticket_number, qr_code ni URL', filtraCodigos(ped, tk).length === 0, filtraCodigos(ped, tk).join(' | ') || 'limpio');
+      await go(buyer.page, `/${EVENT_SLUG}/confirmacion?order=${S.orders.C}`);
+      const conf = await buyer.page.evaluate(() => document.body.innerText);
+      check('E', 'confirmación: sin ticket_number, qr_code, URL ni "link permanente"', filtraCodigos(conf, tk).length === 0 && !/link permanente/i.test(conf), filtraCodigos(conf, tk).join(' | ') || 'limpia');
     }
   });
 
@@ -1058,12 +1222,21 @@ if (!S.eventId) {
   });
 }
 
-// M — la página de compra de una marca REAL (no de prueba), solo lectura: lleva
-// su dirección de diseño con el CSS aplicado y la fecha no se repite. Ver
-// e2e/direccion-marca-real.mjs (nació de Standly, 2026-09-23).
-await step('M', 'Marca real: dirección, su CSS y la composición de escritorio (1440 y 390)', async () => {
-  const { verificarDireccion } = await import('./direccion-marca-real.mjs');
-  for (const c of await verificarDireccion({ browser })) check('M', c.name, c.ok, c.detail);
+// M — el TEMA NOCHE medido sobre DEMOTEST (antes leía la página de una marca
+// real —Standly— y la regla nueva lo prohíbe; lo que medía antes está escrito
+// en e2e/direccion-marca-real.mjs). Canvas con el flyer 4:5 que subió el
+// panel; Editorial subiendo un flyer con forma de captura; al final vuelve el
+// 4:5 para que las capturas salgan en Canvas.
+await step('M', 'Tema noche en demotest: canvas, editorial y home (1440 y 390)', async () => {
+  const mod = await import('./direccion-marca-real.mjs');
+  for (const x of await mod.verificarCanvas({ browser })) check('M', x.name, x.ok, x.detail);
+  for (const x of await mod.verificarHome({ browser })) check('M', x.name, x.ok, x.detail);
+  if (S.eventId && adm) {
+    const alto = await subirFlyer(FLYER_ALTO);
+    check('M', 'flyer con forma de captura subido (1080×2400)', alto?.cover_h === 2400, JSON.stringify(alto));
+    for (const x of await mod.verificarEditorial({ browser })) check('M', x.name, x.ok, x.detail);
+    await subirFlyer(FLYER);
+  }
 });
 
 // Almighty/Code intactos (solo lectura): la marca code no fue tocada por la suite.

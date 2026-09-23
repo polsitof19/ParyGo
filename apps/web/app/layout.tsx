@@ -13,17 +13,26 @@ import './globals.css';
 // ningún componente; Fredoka y JetBrains solo estas cuatro pantallas sueltas
 // (/, error, not-found y el bloque de códigos de puerta), que ahora usan las
 // del sistema como el resto de la app.
+//
+// preload: false (2026-09-23). El sitio del COMPRADOR (b/[brand]) va en Geist
+// y no usa ninguna de las dos: con preload, cada visita a la compra se bajaba
+// igual Bricolage y Hanken porque este layout envuelve todo. Sin preload el
+// @font-face sigue declarado y el navegador baja el archivo solo si algo lo
+// usa. Las superficies que sí las usan (paneles, puerta, login, legal) las
+// declaran en SU layout, y ahí sí se precargan.
 const bricolage = Bricolage_Grotesque({
   weight: ['700', '800'],
   subsets: ['latin'],
   variable: '--font-bricolage',
   display: 'swap',
+  preload: false,
 });
 const hanken = Hanken_Grotesk({
   weight: ['300', '400', '500', '600', '700'],
   subsets: ['latin'],
   variable: '--font-hanken',
   display: 'swap',
+  preload: false,
 });
 
 export const viewport: Viewport = {

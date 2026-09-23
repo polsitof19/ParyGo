@@ -304,6 +304,56 @@ que el super admin está mirando una marca en SOLO LECTURA, y tiene que verse
 ajeno al panel para que nadie lo confunda con la marca. Son los cuatro valores
 que el detector marca en los paneles, y se dejan marcados.
 
+## El comprador: tema noche (2026-09-23)
+
+Las superficies del comprador (b/[brand]/*: compra, datos, Yape, confirmación,
+/pedido, /t/[uuid] y la home de marca) van en **negro neutro**, con el tema
+`pg-noche` de parygo-tokens.css. Regla de fondos del comprador: blanco
+#FFFFFF o negro #0A0A0A, nunca crema ni marrón. Todo lo de "papel" de arriba
+sigue valiendo para los paneles y la landing, NO para el comprador.
+
+| Token | Valor | Uso |
+|---|---|---|
+| `--bg` | #0A0A0A | página |
+| `--surface` | #141414 | filas de entrada, tarjetas, campos |
+| `--surface-2` | #1C1C1C | mapa, iconos de pasos |
+| `--selected` | #202020 | fila elegida |
+| `--ink` | #FFFFFF | texto |
+| `--ink-2` | #A3A3A3 | secundario (≥ 6.46:1) |
+| `--ink-3` | #8A8A8A | etiquetas (≥ 4.72:1; #7A7A7A fallaba) |
+| `--line` | rgba(255,255,255,.12) | bordes |
+| `--brand-mark` | brandMark(hex) | punto, barra de 3px, foco (≥ 3:1 sobre #0A0A0A) |
+| `--brand-fill`/`--on-fill` | brandFillPair(hex,'neutra') | el ÚNICO texto sobre la marca |
+
+**Tipografía:** Geist (paquete `geist`, next/font/local) en todo; ni
+Bricolage ni Hanken. Escala FIJA: h1 40/.95/800 −0.04em en teléfono y
+76/.9/800 −0.05em desde 1024; títulos internos 32/.98/800; total 22/800;
+precio 18/700 tabular; cantidad 17/700; cuerpo 15–16/1.5; secundario
+12.5–13; etiquetas 11 mayúsculas .1em 500 en `--ink-3`. Sin serif ni
+itálica.
+
+**Piezas (maqueta aprobada):** cabecera de 56 con el logo real a 26 de alto;
+banda de 216 (radio 16) con el flyer entero sobre su copia difuminada
+(blur 28, brillo .55); filas `--surface` radio 14, elegida en `--selected`
+con barra de 3px; stepper de 42 (− borde blanco .22, + relleno blanco);
+barra de pagar de 86, rgba(10,10,10,.72) + blur(20) saturate(180%);
+escritorio 360 / fluido / 320 en 1120 con el flyer a 360×450; campos de 48
+radio 12, foco borde blanco .45 + anillo blanco .08; entrada en tarjeta
+BLANCA radio 20 con franja de 8px de la marca y QR de 216.
+
+**Motion:** una curva, `cubic-bezier(0.23, 1, 0.32, 1)`. Solo transform y
+opacity. Entrada escalonada solo en la primera carga (0/60/120/200/280/360,
+320ms). Botones 160ms, `:active` scale(.97) en 100ms. El número del stepper
+entra de scale(.96)/opacity .5 en 160ms, sin rebote, y la fila NO se
+remonta. Barra de selección scaleY .4→1 en 160ms. QR scale(.95)+opacity en
+400ms, una vez. Hovers solo con `(hover: hover) and (pointer: fine)`; los
+links bajan a opacity .7, nunca al color de la marca. `prefers-reduced-motion`
+= fundido de 200ms sin desplazamiento (no `animation: none`).
+`prefers-reduced-transparency` = barra y cabecera sólidas.
+
+**Excepción que sigue vigente:** el flyer difuminado con brightness(.55)
+detrás de la banda es una máscara sobre una FOTO ajena, no una sombra.
+
 ## Shapes
 
 - Controles 9px, botones 10px, tarjetas 14px, pastillas 999px.

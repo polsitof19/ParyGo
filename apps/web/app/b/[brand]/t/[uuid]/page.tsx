@@ -24,7 +24,6 @@ type TicketView = {
   id: string;
   qr_code: string;
   ticket_type_name: string;
-  ticket_number: string;
   attendee_name: string | null;
   validated_at: string | null;
   invalidated_at: string | null;
@@ -47,7 +46,7 @@ async function loadTicket(brandSlug: string, qrCode: string): Promise<TicketView
   const res = await admin
     .from('tickets')
     .select(`
-      id, qr_code, ticket_type_name, ticket_number, attendee_name, validated_at, invalidated_at,
+      id, qr_code, ticket_type_name, attendee_name, validated_at, invalidated_at,
       event:events ( name, starts_at, venue_name, cancelled_at, allow_transfer ),
       brand:brands ( slug, name, whatsapp_e164, contact_email, theme_json )
     `)
@@ -79,16 +78,15 @@ export default async function TicketPage({ params, searchParams }: Props) {
 
   if (t.invalidated_at) {
     return (
-      <main className={`c-state c-checkout-canvas`}>
-        <span className="c-eyebrow" style={{ color: 'var(--alert)' }}>Entrada invalidada</span>
-        <h1 className="c-h1" style={{ fontSize: 28, marginTop: 8 }}>Esta entrada ya no es válida</h1>
-        <p className="c-muted" style={{ marginTop: 10 }}>Fue devuelta o cancelada. Contacta al promotor si crees que es un error.</p>
+      <main className="c-state c-checkout-canvas">
+        <span className="c-eyebrow c-state__dot c-state__dot--alert">Entrada invalidada</span>
+        <h1 className="c-h1">Esta entrada ya no es válida</h1>
+        <p className="c-muted">Fue devuelta o cancelada. Escribe al organizador si crees que es un error.</p>
       </main>
     );
   }
 
   const qrSvg = await generateQrSvg(t.qr_code);
-  const ticketUrl = `https://${brand?.slug}.parygo.com/t/${t.qr_code}`;
 
   // Estado de la entrada, arriba de todo: si ya entró o si el evento se cayó,
   // el comprador tiene que enterarse antes de llegar a la puerta.
@@ -99,11 +97,10 @@ export default async function TicketPage({ params, searchParams }: Props) {
       : { kind: 'ok' };
 
   return (
-    <main className={`c-checkout-canvas`} style={{ maxWidth: 452, margin: '0 auto', padding: '24px 16px 48px' }}>
+    <main className="c-ticket c-checkout-canvas">
       <TicketPass
         qrSvg={qrSvg}
         qrCode={t.qr_code}
-        ticketNumber={t.ticket_number}
         ticketTypeName={t.ticket_type_name}
         attendeeName={t.attendee_name}
         eventName={event?.name ?? 'Tu entrada'}
@@ -113,7 +110,6 @@ export default async function TicketPage({ params, searchParams }: Props) {
         brandLogoUrl={brand?.theme_json?.logo_url ?? null}
         brandWhatsapp={brand?.whatsapp_e164 ?? null}
         brandEmail={brand?.contact_email ?? null}
-        shareUrl={ticketUrl}
         state={state}
       />
       {/* El contacto del organizador ya va en el pie de la entrada

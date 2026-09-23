@@ -8,6 +8,8 @@
  *   - --ink, --ink-2, --ink-3 (texto) sobre --paper, --paper-2, --paper-3, --surface  → ≥ 4.5
  *   - --ink sobre --accent (texto de botón primario)                                  → ≥ 4.5
  *   - --accent-deep sobre --paper (h1 de la landing, display ≥56px)                   → ≥ 3.0
+ *   - TEMA NOCHE (.pg.pg-noche, comprador): --ink, --ink-2, --ink-3 sobre
+ *     --bg, --surface, --surface-2, --selected                                         → ≥ 4.5
  * Qué NO mide: --accent/--peri/--ok/--warn/--alert como texto — la regla dura
  * del archivo prohíbe usarlos para texto; acá solo se informa su valor.
  *
@@ -17,8 +19,19 @@ const fs = require('fs');
 const path = require('path');
 
 const css = fs.readFileSync(path.join(__dirname, '..', 'apps/web/app/styles/parygo-tokens.css'), 'utf8');
-const tok = {};
-for (const m of css.matchAll(/--([a-z0-9-]+):\s*([^;]+);/g)) tok[m[1]] = m[2].trim();
+// Cada bloque por separado: el tema noche redefine --ink y --paper, y un
+// parser plano del archivo entero se quedaba con los valores de noche para
+// medir el papel.
+function bloque(selector) {
+  const i = css.indexOf(`${selector} {`);
+  if (i < 0) throw new Error(`no está el bloque ${selector}`);
+  const cuerpo = css.slice(i, css.indexOf('}', i));
+  const out = {};
+  for (const m of cuerpo.matchAll(/--([a-z0-9-]+):\s*([^;]+);/g)) out[m[1]] = m[2].trim();
+  return out;
+}
+const tok = bloque('\n.pg');
+const noche = bloque('.pg.pg-noche');
 
 function parse(v) {
   let m = /^#([0-9a-f]{6})$/i.exec(v);
@@ -40,6 +53,11 @@ for (const t of ['ink', 'ink-2', 'ink-3']) for (const p of papers) row(`--${t} s
 row('--ink sobre --accent (botón)', ratio(parse(tok.ink), parse(tok.accent)), 4.5);
 row('--ink sobre --accent-deep (hover)', ratio(parse(tok.ink), parse(tok['accent-deep'])), 4.5);
 row('--accent-deep sobre --paper (h1 ≥56px)', ratio(parse(tok['accent-deep']), parse(tok.paper)), 3.0);
+// Tema noche: el texto del comprador sobre las cuatro superficies neutras.
+// El peor caso es --selected (#202020), la fila elegida.
+console.log('\nTema noche (superficies del comprador):');
+for (const t of ['ink', 'ink-2', 'ink-3']) for (const p of ['bg', 'surface', 'surface-2', 'selected']) row(`noche --${t} sobre --${p}`, ratio(parse(noche[t]), parse(noche[p])), 4.5);
+console.log(`     noche --line sobre --bg ${ratio(parse(noche.line), parse(noche.bg)).toFixed(2)}:1 (hairline decorativo, informativo)`);
 console.log('\nInformativo (PROHIBIDOS como texto por la regla dura):');
 for (const t of ['accent', 'peri', 'ok', 'warn', 'alert']) console.log(`     --${t.padEnd(8)} sobre --paper   ${ratio(parse(tok[t]), parse(tok.paper)).toFixed(2)}:1 · blanco encima ${ratio({ r: 255, g: 255, b: 255, a: 1 }, parse(tok[t])).toFixed(2)}:1`);
 process.exit(fail ? 1 : 0);

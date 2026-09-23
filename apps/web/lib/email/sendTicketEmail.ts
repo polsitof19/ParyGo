@@ -12,11 +12,10 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv, publicEnv } from '@/lib/env';
-import { formatPEN, formatEventDate, whatsappLink } from '@/lib/utils';
-import { brandColor, brandInk, brandFillPair } from '@/lib/brandColors';
+import { formatPEN, formatEventDate } from '@/lib/utils';
 // La línea de responsabilidad del organizador es la MISMA que la del sitio:
 // el texto vive en un solo lugar para que no se desincronicen.
-import { textoPago, contactoHref } from '@/lib/organizador';
+import { renderTicketEmail, adjuntosEntradas } from './ticketEmail';
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
@@ -49,30 +48,73 @@ type OrderWithJoins = {
     qr_code: string;
     ticket_number: string;
     ticket_type_name: string;
+    attendee_name: string | null;
+    invalidated_at: string | null;
   }[];
 };
 
-export async function sendTicketEmail(orderId: string): Promise<SendTicketEmailResult> {
-  const apiKey = serverEnv.RESEND_API_KEY;
-  const fromEmail = serverEnv.RESEND_FROM_EMAIL ?? 'tickets@parygo.com';
+// Lee el pedido y ARMA el correo (asunto, HTML, texto, adjuntos) sin mandar
+// nada. Separado del envío para que el E2E revise el correo REAL de un
+// pedido de demotest —mismo query, mismo render— sin depender de Resend.
+export async function armarEmailDePedido(orderId: string, admin = createAdminClient()) {
   const supportWhatsapp = publicEnv.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? '';
-
-  if (!apiKey) {
-    return { ok: true, status: 'skipped', reason: 'no_api_key' };
-  }
-
-  const admin = createAdminClient();
   const res = await admin
     .from('orders')
     .select(`
       id, brand_id, buyer_name, buyer_email, total_cents, email_sent_at,
       brand:brands ( name, slug, whatsapp_e164, contact_email, theme_json ),
       event:events ( name, starts_at, venue_name ),
-      tickets ( qr_code, ticket_number, ticket_type_name )
+      tickets ( qr_code, ticket_number, ticket_type_name, attendee_name, invalidated_at )
     `)
     .eq('id', orderId)
     .maybeSingle();
   const order = res.data as unknown as OrderWithJoins | null;
+  // Una entrada ANULADA no viaja: su QR ya no entra, y como imagen adjunta
+  // sería algo que se puede reenviar o revender como si valiera.
+  const vigentes = (order?.tickets ?? []).filter((t) => !t.invalidated_at);
+  if (!order || vigentes.length === 0) return { order, correo: null };
+
+  const brand = order.brand;
+  const event = order.event;
+  const subdomain = brand?.slug ? `https://${brand.slug}.parygo.com` : 'https://app.parygo.com';
+  // El botón "Ver mi entrada" lleva a la página del PEDIDO (todos los QR de la
+  // orden). La URL va SOLO en el href del botón: el correo no la escribe. La
+  // entrada en sí viaja en el cuerpo (QR inline) y como adjunto.
+  const verUrl = `${subdomain}/pedido/${order.id}`;
+  // Orden estable (el número de entrada); el número NO se muestra.
+  const tickets = vigentes.slice().sort((x, y) => x.ticket_number.localeCompare(y.ticket_number));
+  const theme = brand?.theme_json ?? {};
+
+  const { html, text, subject } = renderTicketEmail({
+    motivo: 'compra',
+    buyerName: order.buyer_name,
+    eventName: event?.name ?? 'tu evento',
+    eventDate: event?.starts_at ? formatEventDate(event.starts_at) : '',
+    venue: event?.venue_name ?? '',
+    brandName: brand?.name ?? 'el organizador',
+    brandPrimary: theme.primary_color,
+    logoUrl: theme.logo_url ?? null,
+    brandWhatsapp: brand?.whatsapp_e164 ?? null,
+    brandEmail: brand?.contact_email ?? null,
+    supportWhatsapp,
+    total: formatPEN(order.total_cents),
+    verUrl,
+    entradas: tickets.map((t) => ({ ticketTypeName: t.ticket_type_name, attendeeName: t.attendee_name })),
+  });
+  const attachments = await adjuntosEntradas(tickets.map((t) => t.qr_code));
+  return { order, correo: { html, text, subject, attachments } };
+}
+
+export async function sendTicketEmail(orderId: string): Promise<SendTicketEmailResult> {
+  const apiKey = serverEnv.RESEND_API_KEY;
+  const fromEmail = serverEnv.RESEND_FROM_EMAIL ?? 'tickets@parygo.com';
+
+  if (!apiKey) {
+    return { ok: true, status: 'skipped', reason: 'no_api_key' };
+  }
+
+  const admin = createAdminClient();
+  const { order, correo } = await armarEmailDePedido(orderId, admin);
 
   if (!order) {
     return { ok: false, status: 'error', reason: 'order_not_found' };
@@ -83,77 +125,23 @@ export async function sendTicketEmail(orderId: string): Promise<SendTicketEmailR
   if (!order.buyer_email) {
     return { ok: true, status: 'skipped', reason: 'no_buyer_email' };
   }
-  if (!order.tickets || order.tickets.length === 0) {
+  if (!correo) {
     // Caller invoked us before tickets exist — refuse so a retry after
     // issuance can succeed.
     return { ok: true, status: 'skipped', reason: 'no_tickets' };
   }
 
   const brand = order.brand;
-  const event = order.event;
-  const subdomain = brand?.slug ? `https://${brand.slug}.parygo.com` : 'https://app.parygo.com';
-  // Linkea a la página del PEDIDO (muestra TODOS los QR de la orden, no solo el
-  // primero). /t/<uuid> individual sigue existiendo para escaneo en puerta.
-  const ticketUrl = `${subdomain}/pedido/${order.id}`;
-  const eventName = event?.name ?? 'tu evento';
-  const eventDate = event?.starts_at ? formatEventDate(event.starts_at) : '';
-  const venue = event?.venue_name ?? '';
-  const brandName = brand?.name ?? 'el promotor';
-
-  // Branding de la marca: color principal + logo. Aplicamos el MISMO contraste
-  // automático que el sitio público — el email tiene fondo claro, así que:
-  //  - `primary` (vivo) va de fondo del botón, con texto `onBrand` legible encima.
-  //  - `ink` (brandInk) es la variante oscurecida del color para usarlo como
-  //    TEXTO/acento sobre el fondo claro (un #FFEE8C claro se oscurece para leerse).
-  const theme = brand?.theme_json ?? {};
-  const primary = brandColor(theme.primary_color);
-  // El BOTÓN usa el par medido a 4.5:1 (brandFillPair), no el color crudo de la
-  // marca: el promotor elige cualquier color y no hay forma de garantizar que
-  // el texto se lea encima. El color crudo se sigue usando en la banda de 6px,
-  // que no lleva texto. Misma regla que la web y que la previa del super admin.
-  const par = brandFillPair(primary);
-  const onBrand = par.on;
-  const brandBtn = par.fill;
-  const ink = brandInk(theme.primary_color);
-  const logoUrl = theme.logo_url ?? null;
-
-  const html = renderHtml({
-    eventName,
-    eventDate,
-    venue,
-    brandName,
-    brandSlug: brand?.slug ?? '',
-    buyerName: order.buyer_name,
-    total: formatPEN(order.total_cents),
-    ticketUrl,
-    tickets: order.tickets,
-    brandWhatsapp: brand?.whatsapp_e164 ?? null,
-    brandEmail: brand?.contact_email ?? null,
-    supportWhatsapp,
-    primary,
-    onBrand,
-    brandBtn,
-    ink,
-    logoUrl,
-  });
-  const text = renderText({
-    eventName,
-    eventDate,
-    venue,
-    brandName,
-    buyerName: order.buyer_name,
-    total: formatPEN(order.total_cents),
-    ticketUrl,
-    tickets: order.tickets,
-    brandWhatsapp: brand?.whatsapp_e164 ?? null,
-  });
+  const brandName = brand?.name ?? 'el organizador';
+  const { html, text, subject, attachments } = correo;
 
   const payload: Record<string, unknown> = {
     from: `${brandName} <${fromEmail}>`,
     to: [order.buyer_email],
-    subject: `Tu entrada para ${eventName}`,
+    subject,
     html,
     text,
+    attachments,
     tags: [
       { name: 'kind', value: 'ticket_delivery' },
       { name: 'brand', value: brand?.slug ?? 'unknown' },
@@ -222,189 +210,4 @@ export async function sendTicketEmail(orderId: string): Promise<SendTicketEmailR
   });
 
   return { ok: true, status: 'sent', resendId: resendId ?? '' };
-}
-
-// -------------------------------------------------------------
-// HTML template — inline styles for max email-client compatibility
-// -------------------------------------------------------------
-function renderHtml(p: {
-  eventName: string;
-  eventDate: string;
-  venue: string;
-  brandName: string;
-  brandSlug: string;
-  buyerName: string;
-  total: string;
-  ticketUrl: string;
-  tickets: { ticket_number: string; ticket_type_name: string; qr_code: string }[];
-  brandWhatsapp: string | null;
-  brandEmail: string | null;
-  supportWhatsapp: string;
-  primary: string;
-  onBrand: string;
-  brandBtn: string;
-  ink: string;
-  logoUrl: string | null;
-}): string {
-  // Sistema (web-safe, identidad cálida): fondo crema, tinta cálida, sans elegante.
-  const FONT = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
-  const CREAM = '#FBF7F0';
-  const CREAM3 = '#EFE6D6';
-  const INK = '#231C17';
-  const INK2 = '#6B5F54';
-  const INK3 = '#A89B8C';
-
-  const ticketRows = p.tickets
-    .map(
-      (t) =>
-        `<tr><td style="padding:5px 0;font-family:${FONT};font-size:13px;line-height:1.4;color:${INK2}"><strong style="color:${INK}">${escapeHtml(
-          t.ticket_number
-        )}</strong> &middot; ${escapeHtml(t.ticket_type_name)}</td></tr>`
-    )
-    .join('');
-
-  // Encabezado de marca: logo si existe; si no, el nombre en tinta.
-  const brandHeader = p.logoUrl
-    ? `<img src="${escapeHtml(p.logoUrl)}" alt="${escapeHtml(p.brandName)}" height="44" style="display:block;height:44px;width:auto;max-height:44px;border:0;outline:none;text-decoration:none">`
-    : `<span style="font-family:${FONT};font-size:20px;font-weight:800;letter-spacing:-0.02em;color:${INK}">${escapeHtml(p.brandName)}</span>`;
-
-  const brandWaButton = p.brandWhatsapp
-    ? `<a href="${whatsappLink(
-        p.brandWhatsapp.replace(/[^\d]/g, ''),
-        `Hola, tengo una consulta con mi entrada para ${p.eventName}`
-      )}" style="display:inline-block;padding:11px 20px;background:#ffffff;border:1.5px solid ${CREAM3};border-radius:999px;color:${INK};text-decoration:none;font-family:${FONT};font-weight:600;font-size:13px">WhatsApp ${escapeHtml(
-        p.brandName
-      )}</a>`
-    : '';
-
-  const supportLine = p.supportWhatsapp
-    ? `<p style="margin:14px 0 0;font-family:${FONT};font-size:12px;line-height:1.5;color:${INK3}">&iquest;Problema con tu entrada? Soporte ParyGo: <a href="https://wa.me/${p.supportWhatsapp.replace(
-        /[^\d]/g,
-        ''
-      )}" style="color:${p.ink};font-weight:600;text-decoration:none">WhatsApp</a></p>`
-    : '';
-
-  // Quién responde por el evento, al pie. Se calcula UNA vez: antes se llamaba
-  // a contactoHref tres veces dentro del template y era fácil que una de las
-  // tres se olvidara de escapar.
-  const marcaDelPie = { name: p.brandName, whatsapp_e164: p.brandWhatsapp, contact_email: p.brandEmail };
-  const hrefDelPie = contactoHref(marcaDelPie);
-
-  return `<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(p.eventName)}</title></head>
-<body style="margin:0;padding:0;background:${CREAM};-webkit-text-size-adjust:100%">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CREAM}">
-  <tr><td align="center" style="padding:32px 16px">
-    <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border:1px solid ${CREAM3};border-radius:20px;overflow:hidden">
-      <!-- banda de color de la marca -->
-      <tr><td style="height:6px;background:${p.primary};font-size:0;line-height:0">&nbsp;</td></tr>
-      <!-- logo de la marca -->
-      <tr><td style="padding:26px 32px 0">${brandHeader}</td></tr>
-      <!-- cabecera del evento -->
-      <tr>
-        <td style="padding:18px 32px 0">
-          <p style="margin:0;font-family:${FONT};font-size:11px;line-height:1;font-weight:700;letter-spacing:.14em;color:${p.ink};text-transform:uppercase">&#10003; Compra confirmada</p>
-          <h1 style="margin:10px 0 0;font-family:${FONT};font-size:27px;line-height:1.15;font-weight:800;letter-spacing:-0.02em;color:${INK}">${escapeHtml(
-            p.eventName
-          )}</h1>
-          <p style="margin:7px 0 0;font-family:${FONT};font-size:14px;line-height:1.4;color:${INK2}">${escapeHtml(
-            p.eventDate
-          )}${p.venue ? ' &middot; ' + escapeHtml(p.venue) : ''}</p>
-        </td>
-      </tr>
-      <!-- saludo + botón -->
-      <tr>
-        <td style="padding:20px 32px 0">
-          <p style="margin:0 0 18px;font-family:${FONT};font-size:15px;line-height:1.5;color:${INK}">Hola ${escapeHtml(
-            p.buyerName
-          )}, tu pago fue aprobado. Esta es tu entrada &mdash; guard&aacute; este email o abr&iacute; tu entrada con el bot&oacute;n.</p>
-          <a href="${
-            p.ticketUrl
-          }" style="display:inline-block;padding:15px 28px;background:${p.brandBtn};color:${p.onBrand};text-decoration:none;font-family:${FONT};font-weight:700;font-size:15px;border-radius:999px">${p.tickets.length > 1 ? 'Ver mis entradas con QR' : 'Ver mi entrada con QR'} &rarr;</a>
-          <p style="margin:12px 0 0;font-family:${FONT};font-size:12px;line-height:1.4;color:${INK3}">Tu link permanente: <a href="${
-            p.ticketUrl
-          }" style="color:${p.ink};text-decoration:none">${escapeHtml(p.ticketUrl)}</a></p>
-        </td>
-      </tr>
-      <!-- resumen -->
-      <tr>
-        <td style="padding:22px 32px 0">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${CREAM3}">
-            <tr><td style="font-family:${FONT};font-size:11px;line-height:1;font-weight:700;letter-spacing:.14em;color:${INK3};text-transform:uppercase;padding:16px 0 8px">Resumen</td></tr>
-            <tr><td style="font-family:${FONT};font-size:14px;line-height:1.5;color:${INK};padding-bottom:4px"><strong>Total:</strong> ${escapeHtml(
-              p.total
-            )}</td></tr>
-            ${ticketRows}
-          </table>
-        </td>
-      </tr>
-      <!-- contacto de la marca -->
-      <tr>
-        <td style="padding:20px 32px 30px">
-          ${brandWaButton}
-          ${supportLine}
-        </td>
-      </tr>
-    </table>
-    <!-- responsabilidad del organizador (misma línea que el sitio).
-         El href va escapado igual que el texto: es un dato de la BD dentro de
-         un atributo HTML, y este email sale firmado por ParyGo. -->
-    <p style="margin:22px 0 0;font-family:${FONT};font-size:11px;line-height:1.5;color:${INK3};text-align:center">${escapeHtml(
-      textoPago(marcaDelPie)
-    )}${
-      hrefDelPie
-        ? ` <a href="${escapeHtml(hrefDelPie)}" style="color:${INK2};text-decoration:underline">&rarr;</a>`
-        : '.'
-    }</p>
-    <!-- pie parygo -->
-    <p style="margin:10px 0 0;font-family:${FONT};font-size:11px;line-height:1.4;color:${INK3};text-align:center">Enviado por ${escapeHtml(
-      p.brandName
-    )} &middot; <span style="color:${INK2};font-weight:700">parygo<span style="color:#FF6A3D">.</span></span></p>
-  </td></tr>
-</table>
-</body></html>`;
-}
-
-// -------------------------------------------------------------
-// Plaintext fallback
-// -------------------------------------------------------------
-function renderText(p: {
-  eventName: string;
-  eventDate: string;
-  venue: string;
-  brandName: string;
-  buyerName: string;
-  total: string;
-  ticketUrl: string;
-  tickets: { ticket_number: string; ticket_type_name: string }[];
-  brandWhatsapp: string | null;
-}): string {
-  const lines = [
-    `COMPRA CONFIRMADA — ${p.eventName}`,
-    `${p.eventDate}${p.venue ? ' · ' + p.venue : ''}`,
-    '',
-    `Hola ${p.buyerName}, tu pago fue aprobado.`,
-    '',
-    `Ver tu entrada con QR:`,
-    p.ticketUrl,
-    '',
-    `Total: ${p.total}`,
-    'Entradas:',
-    ...p.tickets.map((t) => `  · ${t.ticket_number} (${t.ticket_type_name})`),
-  ];
-  if (p.brandWhatsapp) {
-    lines.push('', `WhatsApp ${p.brandName}: ${p.brandWhatsapp}`);
-  }
-  lines.push('', `${textoPago({ name: p.brandName })}.`);
-  lines.push('', `Enviado por ${p.brandName} via ParyGo.`);
-  return lines.join('\n');
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }

@@ -136,8 +136,23 @@ para OK de Paul.
   blobs, rellenos sin texto. NUNCA color de texto ni texto blanco encima.
   Razón: en páginas públicas de marca --accent toma var(--brand), elegido por el
   promotor, y no hay forma de garantizar contraste sobre un color arbitrario.
+- FONDOS NEUTROS en las superficies del COMPRADOR (regla vigente desde el
+  2026-09-23, reemplaza a "papel crema" ahí): blanco #FFFFFF o negro #0A0A0A;
+  nunca crema, marrón ni tintes cálidos. Aplica a b/[brand]/* (compra, datos,
+  Yape, confirmación, /pedido, /t/[uuid], home de marca) y a los emails de
+  ENTRADA (compra y transferencia). El comprador va en NEGRO: tema `pg-noche`
+  de parygo-tokens.css (--bg #0A0A0A, --surface #141414, --surface-2 #1C1C1C,
+  --selected #202020, --ink #FFF, --ink-2 #A3A3A3, --ink-3 #8A8A8A; #7A7A7A de
+  la maqueta daba 4.30 sobre --surface y se corrigió). Geist (paquete `geist`)
+  en todo, sin Bricolage ni Hanken. El email de entrada va en BLANCO.
+  PENDIENTES para otra rama (siguen en crema, no tocarlos en design/noche):
+  la landing, los paneles (organizador y super admin) y los emails de
+  recordatorio, cancelado, cambio de fecha y Yape.
 - Botón primario = TINTA sobre acento (5.91:1 medido). Blanco sobre naranja da
-  2.85:1 y FALLA AA — no usarlo nunca.
+  2.85:1 y FALLA AA — no usarlo nunca. En el COMPRADOR y los emails de entrada
+  el botón es `brandFillPair(hex, 'neutra')`: blanco o #0A0A0A sobre el color
+  de la marca, el que llegue a 4.5:1 (prefiere blanco; Code: blanco sobre
+  #C8371F = 5.22:1). Nunca blanco "a mano": una marca clara lleva #0A0A0A.
 - Única excepción documentada: la palabra de acento del h1 de la landing
   (display ≥56px) usa --accent-deep #E8552A con el subrayado ondulado como
   segunda señal. Medido 3.41:1, sobre el mínimo 3:1 de texto grande. Por debajo
@@ -147,16 +162,28 @@ para OK de Paul.
   superficies: alfa .630. No bajarlos sin volver a medir contra --paper-3.
 - Los semánticos (--ok, --warn, --alert) fallan AA como color de texto sobre
   papel: el texto de un estado va en --ink y el color lo lleva el punto.
-- Sitio del comprador (app/b/[brand]): monta `pg client-shell` y usa los mismos
-  tokens; client.css solo alias (--cream*/--white/--hairline) + --accent =
-  var(--brand). El COLOR DE MARCA NUNCA PORTA TEXTO: contrastOn (YIQ) no
-  garantizaba nada (con el tangerina daba blanco sobre naranja = 2.85:1). Lo
-  único que lleva texto encima es el par que devuelve `brandFillPair()`
-  (--brand-fill/--on-fill), medido a 4.5:1; el color crudo queda para puntos,
-  barra de fila activa, anillo de foco y la barra de 4px del header.
-  `npm run test:contrast` verifica TRES caminos contra 14 colores de marca:
-  el par de relleno, su HOVER (`brandFillHover()`) y el color como tinta
-  (`brandInk()`).
+- Sitio del comprador (app/b/[brand]): monta `pg pg-noche client-shell`;
+  client.css (primitivas, entrada, estados), compra.css (evento, datos, Yape;
+  reemplazó a direcciones.css) y landing.css (home). --accent = --brand-mark.
+  El COLOR DE MARCA NUNCA PORTA TEXTO: contrastOn (YIQ) no garantizaba nada.
+  Lo único que lleva texto encima es el par de `brandFillPair(hex, 'neutra')`
+  (--brand-fill/--on-fill), medido a 4.5:1. Como punto, barra de 3px de la
+  fila elegida o anillo de foco va `brandMark()` (--brand-mark): el color
+  aclarado lo mínimo para llegar a 3:1 contra #0A0A0A (WCAG 1.4.11), porque
+  una marca oscura desaparecía sobre el negro. `npm run test:contrast`
+  verifica CINCO caminos contra 16 colores de marca: el par papel, su hover,
+  brandInk, el par neutro con su hover, y brandMark; y check-variant-contrast
+  mide el texto de noche sobre sus 4 superficies y la entrada blanca, falla si
+  un fondo de noche deja de ser neutro o si una fila se "apaga" con opacity.
+- La ENTRADA y el email NO muestran el código de la entrada (ticket_number,
+  TKT-…) ni el qr_code ni ninguna URL escrita: el QR es la entrada. El código
+  sigue en la base y en el panel del organizador para soporte y escaneo. El
+  email lleva el QR inline por cid (hasta 5) + un PNG adjunto por entrada + un
+  botón "Ver mi entrada" (la URL solo en el href). "WhatsApp" en la entrada
+  comparte la IMAGEN (Web Share) o descarga el PNG y abre wa.me/?text= con
+  "Mi entrada para <evento> · <fecha>"; ya no va al organizador. El E2E
+  (paso E) falla si aparece un código o un http en pantalla, PNG, WhatsApp,
+  HTML visible o texto plano del email.
 - El HOVER de un relleno de marca es OTRO COLOR MEDIDO, nunca `filter:
   brightness()`. Un filtro mueve el relleno DESPUÉS de que el test midió el
   par: con #E91E63 el botón de pagar caía de 4.58:1 a 4.20:1 justo cuando el
@@ -169,19 +196,27 @@ para OK de Paul.
   rechaza que vuelva el umbral viejo.
 - CERO tamaños y radios sueltos en el CSS: cada uno sale de la rampa de su
   superficie (--s-* en paneles, --b-* en el comprador) o de los tokens de radio
-  (--r-ctl/--r-btn/--r-card/--r-pill). Las excepciones son tres y están
-  escritas en apps/web/DESIGN.md: el tier display FLUIDO de la página de marca
-  (--b-d1/2/3, que NO vale en el checkout), los dos saltos de NOCHE, y los
-  velos sobre FOTO, que sí llevan negro puro porque son máscaras de
-  legibilidad sobre una imagen ajena, no sombras sobre papel.
+  (--r-ctl/--r-btn/--r-card/--r-pill). El comprador tiene escala FIJA, sin
+  clamp (h1 40 en teléfono / 76 desde 1024, títulos 32, precio 18, etiquetas
+  11). Excepción escrita en apps/web/DESIGN.md: los velos sobre FOTO (el
+  flyer difuminado con brightness(.55) detrás de la banda) son máscaras de
+  legibilidad sobre una imagen ajena, no sombras.
+- Motion del comprador: una sola curva cubic-bezier(0.23, 1, 0.32, 1), solo
+  transform/opacity, nada > 320ms salvo el QR (400). Entrada escalonada solo
+  en la primera carga (hero 0 · título 60 · entradas 120 · pasos 200 · dónde
+  280 · barra 360); stepper sin rebote y SIN remontar la fila (el E2E lo
+  verifica); hovers solo con puntero fino; reduced-motion = fundido de 200ms,
+  no animation:none; reduced-transparency = barra y cabecera sólidas.
 - El panel NO anima al cargar (solo .s-notice) y TODO control presionable
   tiene `:active { transform: scale(.97) }`. El organizador trabaja desde el
   teléfono: ahí el :hover no existe y sin :active no hay ninguna señal de que
   el control recibió el toque. El fade-up escalonado de filas se sacó: se veía
   decenas de veces por día y es la firma del dashboard generado.
-- Estado de las superficies: landing, super admin, panel del organizador y
-  checkout/entrada YA están en el sistema. La entrada del comprador (QR) vive
-  en app/b/[brand]/TicketPass.tsx, compartida por /t/[uuid] y la confirmación.
+- Estado de las superficies: landing, super admin y panel del organizador en
+  el sistema de papel; el comprador (compra, entrada, home de marca) en el
+  tema noche (rama design/noche). La entrada (QR) vive en
+  app/b/[brand]/TicketPass.tsx, compartida por /t/[uuid], /pedido y la
+  confirmación; la imagen que se guarda/comparte, en SaveTicketImage.tsx.
 - PANELES (organizador + super admin): CERO TARJETAS FLOTANTES. Nada de
   rectángulos blancos con sombra sobre el papel; la estructura la hacen
   hairlines (1px --line), jerarquía tipográfica y espacio. `.s-card` ya no es
@@ -276,15 +311,19 @@ para no romper la app vieja desplegada.
   Un tipo S/0 de un evento pago NACE cortesía por trigger (0059), porque los
   tipos se crean por tres caminos distintos —el builder inserta vía RPC, o sea
   SQL— y un default que vive en tres lugares se desincroniza.
-- MARCAS DE PRUEBA (0057, 2026-09-22). brands.is_test: demotest, ensayo-paul y
-  koko. Los contadores del super admin las excluyen, y "Yape por revisar"
+- MARCAS DE PRUEBA (0057, 2026-09-22). brands.is_test: SOLO demotest (verificado
+  el 2026-09-23: ensayo-paul y koko ya no existen en la base). Es la única marca
+  para pruebas. Ninguna marca de prueba tiene flyer propio y los de Code y
+  Hoesky no se tocan, así que el E2E le SUBE un flyer SINTÉTICO por el panel al
+  evento de demotest (paso C: 1080×1350, dirección Canvas; paso M: 1080×2400
+  con forma de captura para medir Editorial y vuelta al 4:5). `?flyer=<slug>`
+  (el helper de preview) ya no tiene de dónde sacar un flyer de prueba.
+  Los contadores del super admin las excluyen, y "Yape por revisar"
   cuenta solo órdenes CON comprobante subido (una pendiente sin comprobante es
   un checkout abandonado, no trabajo de nadie). Medido: marcas activas 4 → 2,
   Yape por revisar 12 → 0; el 97% de lo "cobrado" que se veía eran corridas del
   E2E. NO afecta nada del flujo de compra: una marca de prueba funciona igual,
   solo que no suma a las métricas, y SIGUE en la lista con un badge "Prueba".
-  Ojo con koko: tiene una venta real de S/60 y un evento publicado; si alguna
-  vez pasa a ser cliente de verdad hay que desmarcarla o sus ventas no aparecen.
 
 ## Reportar
 Por paso, con evidencia (la migración, el test de concurrencia, los tests de

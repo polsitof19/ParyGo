@@ -57,6 +57,8 @@ export async function transferTicketAction(_prev: TransferState, formData: FormD
       admin.from('brands').select('name, slug, whatsapp_e164, contact_email, theme_json').eq('id', r.brand_id!).maybeSingle(),
       admin.from('events').select('name, starts_at, venue_name').eq('id', r.event_id!).maybeSingle(),
     ]);
+    // El tipo de la entrada NUEVA (la transferencia la re-emite con otro qr).
+    const { data: nueva } = await admin.from('tickets').select('ticket_type_name').eq('qr_code', r.new_qr).maybeSingle();
     if (brand?.slug) {
       const ticketUrl = `https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/t/${r.new_qr}`;
       await sendTransferredTicketEmail({
@@ -66,6 +68,8 @@ export async function transferTicketAction(_prev: TransferState, formData: FormD
         startsAtIso: (event?.starts_at as string | null) ?? '',
         venue: (event?.venue_name as string | null) ?? null,
         ticketUrl,
+        qrCode: r.new_qr,
+        ticketTypeName: (nueva?.ticket_type_name as string | null) ?? 'Entrada',
         brand: {
           name: brand.name, slug: brand.slug, whatsapp_e164: brand.whatsapp_e164,
           contact_email: brand.contact_email,

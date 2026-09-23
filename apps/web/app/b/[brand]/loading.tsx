@@ -1,5 +1,6 @@
 // Renderiza mientras carga el layout de la marca, así que NO está dentro de
-// .client-shell todavía → estilos cálidos autocontenidos (inline).
+// .client-shell todavía → estilos autocontenidos (inline), ya en el negro
+// neutro del tema noche para que no haya un destello crema antes de la página.
 export default function BrandLoading() {
   return (
     <main
@@ -7,8 +8,8 @@ export default function BrandLoading() {
         minHeight: '70vh',
         display: 'grid',
         placeItems: 'center',
-        background: '#FBF7F0',
-        color: '#6B5F54',
+        background: '#0A0A0A',
+        color: '#A3A3A3',
         fontFamily: 'system-ui, sans-serif',
         fontSize: 14,
       }}
@@ -19,8 +20,8 @@ export default function BrandLoading() {
             width: 38,
             height: 38,
             borderRadius: '50%',
-            border: '3px solid #EFE6D6',
-            borderTopColor: '#FF6A3D',
+            border: '3px solid rgba(255,255,255,0.12)',
+            borderTopColor: '#FFFFFF',
             display: 'inline-block',
             animation: 'cload-spin 0.9s linear infinite',
           }}

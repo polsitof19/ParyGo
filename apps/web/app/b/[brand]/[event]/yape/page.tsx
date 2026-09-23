@@ -68,7 +68,7 @@ export default async function YapeUploadPage({
   }
   if (!order.brand?.yape_number) {
     return (
-      <main className={`c-state c-checkout-canvas`}><p style={{ color: 'var(--alert)' }}>Este promotor no tiene Yape configurado.</p></main>
+      <main className="c-state c-checkout-canvas"><p className="c-state__dot c-state__dot--alert">Este organizador no tiene Yape configurado.</p></main>
     );
   }
 
@@ -77,54 +77,45 @@ export default async function YapeUploadPage({
   const qrUrl = order.brand.yape_qr_url ?? order.brand.theme_json?.yape_qr_url ?? null;
 
   return (
-    <main className={`b-buy c-checkout-canvas`} style={{ paddingTop: 26 }}>
+    <main className="b-buy b-yape c-checkout-canvas">
       <div className="b-head">
-        <h1 className="b-head__t">Yapea {formatPEN(order.total_cents)} exactos y sube tu captura</h1>
+        <h1 className="b-head__t">Yapea y sube tu captura</h1>
+        <p className="b-head__s">{order.event?.name}</p>
       </div>
 
-      {/* 1 · A quién le yapeas */}
+      {/* 1 · A quién le yapeas: el QR del organizador (brands.yape_qr_url,
+          0054; theme_json como respaldo) y su número. Sin QR se yapea al
+          número, que funciona igual: el QR es una comodidad. */}
       <div className="b-panel">
-        <p className="b-panel__t">1 · Yapea a este número</p>
-        <div className="b-yapenum">
-          <span>{order.brand.yape_number}</span>
-          <CopyButton value={order.brand.yape_number} label="número" />
-        </div>
-        <p className="b-yapeheld">{order.brand.yape_holder ?? order.brand.name}</p>
-      </div>
-
-      {/* 2 · El QR del organizador. Vive en brands.yape_qr_url (0054); se lee
-          theme_json como respaldo por si quedara alguno de antes. Sin QR se
-          muestra el estado vacío y el comprador yapea al número, que funciona
-          igual: el QR es una comodidad, no un requisito. */}
-      <div className="b-panel">
-        <p className="b-panel__t">2 · O escanea su QR</p>
-        {qrUrl ? (
-          <div className="b-yapeqr">
-            {/* Morado Yape + nombre en TEXTO (no falsificamos el logo del BCP) */}
-            <p className="b-yapeqr__t"><span aria-hidden /> Escanea con Yape</p>
-            <a href={qrUrl} target="_blank" rel="noopener noreferrer">
+        <p className="b-panel__t">Yapea a</p>
+        <div className={`b-yapecard${qrUrl ? '' : ' b-yapecard--sinqr'}`}>
+          {qrUrl && (
+            <a href={qrUrl} target="_blank" rel="noopener noreferrer" className="b-yapeqr" aria-label="Abrir el QR de Yape en grande">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={qrUrl} alt={`QR de Yape de ${order.brand.yape_holder ?? order.brand.name}`} />
             </a>
-            <p className="c-help" style={{ textAlign: 'center' }}>Toca el QR para ampliarlo</p>
+          )}
+          <div>
+            <p className="b-yapenum">{order.brand.yape_number}</p>
+            <p className="b-yapeheld">{order.brand.yape_holder ?? order.brand.name}</p>
+            <CopyButton value={order.brand.yape_number} label="número" />
           </div>
-        ) : (
-          <div className="b-yapeqr b-yapeqr--vacio">
-            <span className="b-yapeqr__ph" aria-hidden="true" />
-            <p>QR no disponible, yapea al número</p>
-          </div>
-        )}
+        </div>
       </div>
 
-      {/* 3 · Monto exacto + captura */}
+      {/* 2 · El monto exacto: el dato que se copia, el más grande. */}
       <div className="b-panel">
-        <p className="b-panel__t">3 · El monto exacto</p>
+        <p className="b-panel__t">El monto exacto</p>
         <div className="b-monto">
           <span>{formatPEN(order.total_cents)}</span>
           <CopyButton value={(order.total_cents / 100).toFixed(2)} label="monto" />
         </div>
         <p className="b-aviso">Si yapeas de menos o de más, el organizador puede rechazar el comprobante.</p>
-        <div className="c-divider" />
+      </div>
+
+      {/* 3 · El comprobante. */}
+      <div className="b-panel">
+        <p className="b-panel__t">Tu comprobante</p>
         <YapeUploadForm
           orderId={order.id}
           brandId={order.brand.slug}
@@ -136,7 +127,7 @@ export default async function YapeUploadPage({
 
       {/* A dónde va la plata y a quién escribirle: ParyGo no cobra la entrada,
           el Yape entra directo a la cuenta del organizador. */}
-      <LineaPago marca={order.brand} evento={order.event?.name} />
+      <LineaPago marca={order.brand} evento={order.event?.name} className="b-legal" />
     </main>
   );
 }

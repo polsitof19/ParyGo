@@ -9,9 +9,14 @@
 // La safe-area se emula con --pg-safe-* inyectado, porque env() en WebKit
 // headless siempre da 0. Ver NOTA-safe-area en el informe.
 //
-// node e2e/audit-iphone.mjs [--panel super|admin|puerta|all] [--shot pref]
-//                           [--only sub] [--w 390,430]
-import { webkit } from 'playwright';
+// node e2e/audit-iphone.mjs [--panel super|admin|puerta|compra|all] [--shot pref]
+//                           [--only sub] [--w 390,430] [--motor chromium]
+//
+// CLS: WebKit NO implementa la API de Layout Instability, así que en WebKit
+// el CLS sale null. Con --motor chromium la misma pasada (viewport, UA y
+// toque del iPhone) mide el CLS acumulado de la carga (layout-shift sin
+// input reciente), que es lo que pide el gate del comprador (< 0.1).
+import { webkit, chromium } from 'playwright';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,6 +33,7 @@ const PANEL = flag('--panel', 'all');
 const SHOT = flag('--shot', null);
 const ONLY = flag('--only', null);
 const ANCHOS = flag('--w', '390,430').split(',').map(Number);
+const MOTOR = flag('--motor', 'webkit') === 'chromium' ? chromium : webkit;
 if (SHOT) mkdirSync(resolve(OUT, 'shots'), { recursive: true });
 
 const IPHONE_UA =
@@ -176,7 +182,8 @@ const MEDIR = () => {
     vacios.push({ q: path(e), h: Math.round(r.height) });
   }
 
-  return { ...out, fuera, desliza, cortado, toque, montados, stats, shell, vacios };
+  const cls = typeof window.__cls === 'number' ? Math.round(window.__cls * 1000) / 1000 : null;
+  return { ...out, fuera, desliza, cortado, toque, montados, stats, shell, vacios, cls };
 };
 
 const V = (await vistas(PANEL)).filter((v) => !ONLY || v.id.includes(ONLY));
@@ -194,7 +201,7 @@ for (const rol of new Set(V.map((v) => v.sesion))) {
   log('sesion ' + rol + ' lista (' + email + ')');
 }
 
-const browser = await webkit.launch();
+const browser = await MOTOR.launch();
 const informe = [];
 for (const w of ANCHOS) {
   for (const rol of new Set(V.map((v) => v.sesion))) {
@@ -209,6 +216,14 @@ for (const w of ANCHOS) {
     if (rol !== 'anon') await ctx.addCookies(sessionCookies(sesiones[rol], BASE));
     // Emulacion de safe-area: env() da 0 en headless, asi que se inyecta como
     // padding del root para verificar que nada se rompe con la isla y la barra.
+    // CLS acumulado de la carga (donde el motor lo soporte).
+    await ctx.addInitScript(() => {
+      try {
+        window.__cls = 0;
+        new PerformanceObserver((l) => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__cls += e.value; })
+          .observe({ type: 'layout-shift', buffered: true });
+      } catch { window.__cls = undefined; }
+    });
     await ctx.addInitScript(
       ({ s }) => {
         const st = document.createElement('style');
@@ -228,7 +243,7 @@ for (const w of ANCHOS) {
         String(m.scrollW).padStart(4) + '/' + m.W + ' ' + st.padEnd(12) +
         ' fuera:' + m.fuera.length + ' desliza:' + m.desliza.length + ' cortado:' + m.cortado.length +
         ' toque:' + m.toque.length + ' montados:' + m.montados.length + ' stats:' + m.stats.length +
-        ' vacios:' + m.vacios.length
+        ' vacios:' + m.vacios.length + (m.cls !== null ? ' cls:' + m.cls : '')
       );
       informe.push({ w, status: resp?.status() ?? null, ...v, ...m });
       if (SHOT) await page.screenshot({ path: resolve(OUT, 'shots', SHOT + '-' + v.id + '-' + w + '.png'), fullPage: true });

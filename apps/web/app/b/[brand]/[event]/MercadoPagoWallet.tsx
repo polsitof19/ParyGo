@@ -99,10 +99,10 @@ export function MercadoPagoWallet({
       )}
       {/* MP injects the Wallet button here */}
       <div id={CONTAINER_ID} ref={containerRef} style={{ marginTop: 12 }} />
-      <a href={initPoint} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textAlign: 'center', marginTop: 12, color: 'var(--brand-ink)', fontWeight: 600, fontSize: 13.5 }}>
+      <a href={initPoint} target="_blank" rel="noopener noreferrer" className="b-link">
         {failed ? 'Continuar en MercadoPago →' : '¿No ves el botón? Continuar en MercadoPago →'}
       </a>
-      <p className="c-reassure" style={{ marginTop: 12 }}>🔒 El pago se procesa en MercadoPago · tu QR llega al confirmar</p>
+      <p className="c-reassure" style={{ marginTop: 'var(--b-sm)' }}>El pago se procesa en MercadoPago. Tu QR llega al confirmar.</p>
     </div>
   );
 }

@@ -58,17 +58,38 @@ function toHex([r, g, b]) {
 function mix(rgb, target, m) {
   return [rgb[0] + (target[0] - rgb[0]) * m, rgb[1] + (target[1] - rgb[1]) * m, rgb[2] + (target[2] - rgb[2]) * m];
 }
-// Copia de brandFillPair (apps/web/lib/brandColors.ts).
-function brandFillPair(hex) {
+// Copia de tintas/brandMark (apps/web/lib/brandColors.ts).
+const NEGRO = [0x0a, 0x0a, 0x0a];
+const BLANCO = [0xff, 0xff, 0xff];
+function tintas(modo) {
+  return modo === 'neutra'
+    ? { oscura: NEGRO, clara: BLANCO, oscuraHex: '#0A0A0A', claraHex: '#FFFFFF' }
+    : { oscura: INK, clara: PAPER, oscuraHex: INK_HEX, claraHex: PAPER_HEX };
+}
+function brandMark(hex) {
   const rgb = hex ? parseHex(hex) : null;
-  if (!rgb) return { fill: '#FF6A3D', on: INK_HEX };
-  const onInk = contrastBetween(rgb, INK);
-  const onPaper = contrastBetween(rgb, PAPER);
-  if (onInk >= 4.5) return { fill: toHex(rgb), on: INK_HEX };
-  if (onPaper >= 4.5) return { fill: toHex(rgb), on: PAPER_HEX };
-  const hacia = onInk >= onPaper ? PAPER : INK;
-  const texto = onInk >= onPaper ? INK : PAPER;
-  const textoHex = onInk >= onPaper ? INK_HEX : PAPER_HEX;
+  if (!rgb) return '#FF6A3D';
+  if (contrastBetween(rgb, NEGRO) >= 3) return toHex(rgb);
+  for (let m = 0.02; m <= 1.001; m += 0.02) {
+    const candidato = toHex(mix(rgb, BLANCO, m));
+    if (contrastBetween(parseHex(candidato), NEGRO) >= 3) return candidato;
+  }
+  return '#FFFFFF';
+}
+
+// Copia de brandFillPair (apps/web/lib/brandColors.ts).
+function brandFillPair(hex, modo = 'papel') {
+  const t = tintas(modo);
+  const rgb = hex ? parseHex(hex) : null;
+  if (!rgb) return { fill: '#FF6A3D', on: t.oscuraHex };
+  const onInk = contrastBetween(rgb, t.oscura);
+  const onPaper = contrastBetween(rgb, t.clara);
+  if (modo === 'neutra' && onPaper >= 4.5) return { fill: toHex(rgb), on: t.claraHex };
+  if (onInk >= 4.5) return { fill: toHex(rgb), on: t.oscuraHex };
+  if (onPaper >= 4.5) return { fill: toHex(rgb), on: t.claraHex };
+  const hacia = onInk >= onPaper ? t.clara : t.oscura;
+  const texto = onInk >= onPaper ? t.oscura : t.clara;
+  const textoHex = onInk >= onPaper ? t.oscuraHex : t.claraHex;
   for (let m = 0.04; m <= 1.001; m += 0.04) {
     const mezcla = mix(rgb, hacia, m);
     if (contrastBetween(mezcla, texto) >= 4.5) return { fill: toHex(mezcla), on: textoHex };
@@ -89,15 +110,16 @@ function brandInk(hex) {
 }
 
 // Copia de brandFillHover (apps/web/lib/brandColors.ts).
-function brandFillHover(hex) {
-  const { fill, on } = brandFillPair(hex);
+function brandFillHover(hex, modo = 'papel') {
+  const { fill, on } = brandFillPair(hex, modo);
   const rgb = parseHex(fill);
-  const texto = on === INK_HEX ? INK : PAPER;
+  const t = tintas(modo);
+  const texto = on === t.oscuraHex ? t.oscura : t.clara;
   for (let m = 0.12; m >= 0.02; m -= 0.02) {
     const candidato = toHex(mix(rgb, texto, m));
     if (contrastBetween(parseHex(candidato), texto) >= 4.5) return candidato;
   }
-  const lejos = on === INK_HEX ? [255, 255, 255] : [0, 0, 0];
+  const lejos = on === t.oscuraHex ? [255, 255, 255] : [0, 0, 0];
   return toHex(mix(rgb, lejos, 0.12));
 }
 
@@ -110,7 +132,9 @@ const MARCAS = [
   ['amarillo', '#F5D90A'],
   ['rojo medio', '#D7472F'],
   ['verde medio', '#2E9E6B'],
+  ['code (Tío Code)', '#C8371F'],
   ['azul marino', '#1A1A2E'],
+  ['bordó', '#5A0F1E'],
   ['morado', '#742284'],
   ['negro', '#000000'],
   ['blanco', '#FFFFFF'],
@@ -160,6 +184,37 @@ for (const [nombre, color] of MARCAS) {
   );
 }
 
+// TEMA NOCHE (comprador). El botón primario usa el par NEUTRO: blanco o
+// #0A0A0A sobre el relleno, nunca crema. Mismo piso 4.5:1, también el hover.
+console.log(`\nTema noche: par NEUTRO relleno/texto y su hover, brandFillPair(hex, 'neutra') (AA 4.5:1)\n`);
+for (const [nombre, color] of MARCAS) {
+  const { fill, on } = brandFillPair(color, 'neutra');
+  const hover = brandFillHover(color, 'neutra');
+  const r = contrastBetween(parseHex(fill), parseHex(on));
+  const rh = contrastBetween(parseHex(hover), parseHex(on));
+  const neutro = on === '#FFFFFF' || on === '#0A0A0A';
+  const ok = r >= MIN && rh >= MIN && neutro && hover.toLowerCase() !== fill.toLowerCase();
+  if (!ok) fallos += 1;
+  console.log(`${ok ? 'OK  ' : 'FALLA'} ${nombre.padEnd(20)} ${color.padEnd(14)} →  relleno ${fill} · hover ${hover} · texto ${on}  ${r.toFixed(2)}:1 / ${rh.toFixed(2)}:1`);
+}
+// La maqueta aprobada: blanco sobre el rojo de Code.
+{
+  const code = brandFillPair('#C8371F', 'neutra');
+  if (code.on !== '#FFFFFF' || code.fill.toLowerCase() !== '#c8371f') { fallos += 1; console.log(`FALLA code debería ser blanco sobre #C8371F intacto: ${JSON.stringify(code)}`); }
+}
+
+// brandMark: el color de marca como punto/barra/anillo sobre #0A0A0A. No es
+// texto: el piso es 3:1 (WCAG 1.4.11). Un azul marino no puede desaparecer.
+console.log('\nTema noche: el color de marca como MARCA sobre #0A0A0A, brandMark (mínimo 3:1)\n');
+for (const [nombre, color] of MARCAS) {
+  const marca = brandMark(color);
+  const r = contrastBetween(parseHex(marca), NEGRO);
+  const ok = r >= 3;
+  if (!ok) fallos += 1;
+  const movido = parseHex(color) && marca.toLowerCase() !== color.toLowerCase();
+  console.log(`${ok ? 'OK  ' : 'FALLA'} ${nombre.padEnd(20)} ${color.padEnd(14)} →  marca ${marca}  ${r.toFixed(2)}:1${movido ? '  (aclarado para que se vea)' : ''}`);
+}
+
 // Las copias de arriba tienen que seguir siendo las MISMAS funciones que usa la app.
 // Sin importar el .ts (CI corre en Node 20): se compara el texto de la fuente.
 const aqui = dirname(fileURLToPath(import.meta.url));
@@ -167,16 +222,21 @@ const fuente = readFileSync(join(aqui, '..', 'apps', 'web', 'lib', 'brandColors.
 const cuerpoTs = fuente.slice(fuente.indexOf('export function brandFillPair'));
 const cuerpoInk = fuente.slice(fuente.indexOf('export function brandInk'), fuente.indexOf('export function brandFillHover'));
 const cuerpoHover = fuente.slice(fuente.indexOf('export function brandFillHover'), fuente.indexOf('// `hex` con alpha'));
-const cuerpo = cuerpoTs + cuerpoInk + cuerpoHover;
+const cuerpoMark = fuente.slice(fuente.indexOf('export function brandMark'), fuente.indexOf('export function brandFillPair'));
+const cuerpo = cuerpoTs + cuerpoInk + cuerpoHover + cuerpoMark;
 const pasos = [
   'if (onInk >= 4.5) return',
   'if (onPaper >= 4.5) return',
-  'const hacia = onInk >= onPaper ? PAPER : INK;',
+  'const hacia = onInk >= onPaper ? t.clara : t.oscura;',
+  "if (modo === 'neutra' && onPaper >= 4.5) return",
+  'if (contrastBetween(rgb, NEGRO) >= 3) return toHex(rgb);',
+  'for (let m = 0.02; m <= 1.001; m += 0.02)',
+  'contrastBetween(parseHex(candidato)!, NEGRO) >= 3',
   'for (let m = 0.04; m <= 1.001; m += 0.04)',
   'if (contrastBetween(rgb, PAPER_3) >= 4.5) return toHex(rgb);',
   'for (let f = 0.995; f >= 0; f -= 0.005)',
   'contrastBetween(parseHex(candidato)!, PAPER_3) >= 4.5',
-  'const texto = on === INK_HEX ? INK : PAPER;',
+  'const texto = on === t.oscuraHex ? t.oscura : t.clara;',
   'for (let m = 0.12; m >= 0.02; m -= 0.02)',
 ];
 const faltan = pasos.filter((p) => !cuerpo.includes(p));
@@ -223,4 +283,4 @@ if (fallos > 0) {
   console.error(`\n${fallos} caso(s) no llegan a ${MIN}:1. brandFillPair y brandInk tienen que garantizarlo.`);
   process.exit(1);
 }
-console.log(`\nOK — los ${MARCAS.length} colores pasan ${MIN}:1 por los TRES caminos: relleno+texto (brandFillPair), su hover (brandFillHover) y el color como tinta (brandInk). Copias al día con brandColors.ts.`);
+console.log(`\nOK — los ${MARCAS.length} colores pasan ${MIN}:1 por los CINCO caminos: relleno+texto (brandFillPair), su hover (brandFillHover), el color como tinta (brandInk), el par NEUTRO del tema noche con su hover, y la marca sobre negro (brandMark, 3:1). Copias al día con brandColors.ts.`);
