@@ -258,7 +258,6 @@ export function EventCheckoutPanel({
   // la edad mínima. Es lo que la gente pregunta antes de mirar las entradas.
   const lineaHero = [
     event.is_free ? 'Entrada libre con registro' : aLaVenta.length ? `Entradas desde ${formatPEN(desdeCents)}` : 'Entradas agotadas',
-    event.min_age > 0 ? `+${event.min_age}` : null,
   ].filter(Boolean).join(' · ');
   // Ahorro por cantidad (bulk) — solo si NO hay código (son excluyentes).
   const bulkSavings = applied ? 0 : sorted.reduce((s, t) => { const q = qty[t.id] ?? 0; return s + q * (t.active_price_cents - bulkUnitPrice(t, q)); }, 0);
@@ -359,7 +358,8 @@ export function EventCheckoutPanel({
 function fraseConfianza(pago: string): string {
   // Evento gratis: no hay pago que explicar. Lo que hay que prometer es que el
   // QR sale al instante y que no se cobra nada.
-  if (pago === 'gratis') return 'No pagas nada: dejas tus datos y tu entrada te llega al correo al toque.';
+  // Evento gratis: sin frase (Paul, 2026-09-23: se lee como relleno).
+  if (pago === 'gratis') return '';
   if (/tarjeta/i.test(pago) && /Yape/i.test(pago)) return 'Pagas por Yape o tarjeta y tu entrada te llega al correo al toque.';
   if (/tarjeta/i.test(pago)) return 'Pagas con tarjeta y tu entrada te llega al correo al toque.';
   return 'Pagas por Yape y tu entrada te llega al correo al toque.';
@@ -403,7 +403,7 @@ function fraseConfianza(pago: string): string {
                 return <FilaEntrada key={t.id} {...props} />;
               })}
             </section>
-            <p className="b-trust">{fraseConfianza(payLabel)}</p>
+            {fraseConfianza(payLabel) && <p className="b-trust">{fraseConfianza(payLabel)}</p>}
 
             <AsiDeSimple conYape={!!brand.yape_number} gratis={eventoGratis} />
 

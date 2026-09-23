@@ -38,8 +38,10 @@ export function contactoHref(marca: MarcaContacto, texto?: string): string | nul
 
 /** Página de compra: la línea legal chica del final. */
 export function textoLegal(marca: MarcaContacto, minAge: number): string {
-  const edad = minAge > 0 ? `+${minAge} · ` : '';
-  return `${edad}Cancelaciones y devoluciones las gestiona ${marca.name}`;
+  // Sin el "+18" (Paul, 2026-09-23): la edad la pide la casilla de
+  // confirmación cuando el evento la exige, no un rótulo en la página.
+  void minAge;
+  return `Cancelaciones y devoluciones las gestiona ${marca.name}`;
 }
 
 /** Pantalla de Yape, confirmación y email: a dónde va la plata y a quién escribirle. */
