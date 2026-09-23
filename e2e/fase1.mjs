@@ -1282,8 +1282,13 @@ if (!S.eventId) {
     const ord = una.orderId ? (await svc.from('orders').select('status, total_cents').eq('id', una.orderId).maybeSingle()).data : null;
     const tks = una.orderId ? (await svc.from('tickets').select('id').eq('order_id', una.orderId)).data ?? [] : [];
     check('N', 'con 1 entrada se emite GRATIS: orden pagada S/ 0 y 1 QR', /confirmacion/.test(una.url) && ord?.status === 'paid' && ord?.total_cents === 0 && tks.length === 1, `${una.url} · ${JSON.stringify(ord)} · tickets=${tks.length}`);
-    const otra = await buy({ items: { General: 1 }, email: emailN, name: `Reclamo N ${STAMP}`, promo: code, tag: 'N' });
-    check('N', 'el mismo email no puede reclamar dos veces', otra.res !== 'nav', `${otra.res} · ${otra.toasts.join(' | ')}`);
+    // Segundo intento con el mismo email: el código NO se aplica (límite por
+    // email) y, si la persona sigue, es una compra normal que queda pendiente
+    // de pago. Lo que importa: no nace una SEGUNDA entrada gratis.
+    await buy({ items: { General: 1 }, email: emailN, name: `Reclamo N ${STAMP}`, promo: code, tag: 'N' });
+    const gratisN = (await svc.from('orders').select('id').eq('event_id', S.eventId).eq('buyer_email', emailN).eq('status', 'paid').eq('total_cents', 0)).data ?? [];
+    const usosN = (await svc.from('promo_redemptions').select('id').eq('promo_code_id', pc.id).in('status', ['held', 'consumed'])).data ?? [];
+    check('N', 'el mismo email no puede reclamar dos veces (sigue 1 sola entrada gratis y 1 uso)', gratisN.length === 1 && usosN.length === 1, `gratis=${gratisN.length} · usos=${usosN.length}`);
   });
 }
 
