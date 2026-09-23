@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { requireSession, type SessionUser } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { limaToIso, shiftEnd, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
-import { eventOverAt } from '@/lib/publicTicketGuard';
+import { eventOverAt, isPubliclyOffered } from '@/lib/publicTicketGuard';
 import { puedeEscribirComoSuper, type ModoEscrituraSuper } from '@/lib/impersonation';
 import { auditarEscrituraSuper, diffDeCampos } from '@/lib/auditoriaSuper';
 import { formatEventDate } from '@/lib/utils';
@@ -628,6 +628,28 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   // que marcar cortesía un tipo con precio falla con un mensaje claro en vez
   // de dejar un estado incoherente.
   update.is_courtesy = isCourtesy;
+
+  // NO dejar un evento PUBLICADO sin nada a la venta (2026-09-23: la única
+  // entrada del evento gratis de Code quedó marcada "Cortesía" desde el panel
+  // y la página de compra mostró "Las entradas estarán disponibles pronto").
+  // Si este tipo deja de ofrecerse al público y no queda otro que se ofrezca,
+  // se rechaza con una explicación en vez de romper la venta.
+  {
+    const { data: ev } = await admin.from('events').select('is_published, is_free').eq('id', eventId).maybeSingle();
+    if (ev?.is_published) {
+      const eventoEsGratis = ev.is_free === true;
+      const precioNuevo = Number.isFinite(newPriceCents) ? newPriceCents : tt.price_cents;
+      const eraPublica = tt.is_active && isPubliclyOffered(tt.price_cents, { eventoEsGratis, esCortesia: tt.is_courtesy });
+      const seraPublica = isActive && isPubliclyOffered(precioNuevo, { eventoEsGratis, esCortesia: isCourtesy });
+      if (eraPublica && !seraPublica) {
+        const { data: otras } = await admin.from('ticket_types').select('id, price_cents, is_active, is_courtesy').eq('event_id', eventId).neq('id', tt.id);
+        const quedaAlguna = (otras ?? []).some((o) => o.is_active && isPubliclyOffered(o.price_cents, { eventoEsGratis, esCortesia: o.is_courtesy }));
+        if (!quedaAlguna) {
+          return { ok: false, message: 'Es la única entrada a la venta de tu evento publicado: si la pausas o la marcas como cortesía, tu página se queda sin entradas. Crea otra entrada primero, o pasa el evento a borrador.' };
+        }
+      }
+    }
+  }
 
   // --- Descuento por cantidad (bulk): min 0 (off) o 2-50; pct 0-90 ---
   // Tope 10 = máximo por compra (Zod en checkout); umbrales mayores serían inalcanzables.

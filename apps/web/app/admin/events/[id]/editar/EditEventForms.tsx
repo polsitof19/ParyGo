@@ -270,7 +270,7 @@ export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false }:
               <p className="s-hint">Se muestra debajo del nombre en el checkout. Una línea por beneficio. No afecta precio ni cantidad.</p>
             </div>
             <div className="s-field">
-              <label className="s-check"><input type="checkbox" name="is_courtesy" defaultChecked={tt.isCourtesy} disabled={ro} /> Cortesía</label>
+              <label className="s-check"><input type="checkbox" name="is_courtesy" defaultChecked={tt.isCourtesy} disabled={ro} /> Solo invitados (cortesía): no se muestra en tu página</label>
               <p className="s-hint">Solo para invitados: no se vende al público, ni en un evento gratis.</p>
             </div>
             <BulkFields minQty={tt.bulkMinQty} pct={tt.bulkDiscountPct} disabled={ro} />
