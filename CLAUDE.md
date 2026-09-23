@@ -18,6 +18,10 @@ supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se regist
 - Supabase mdxtpevisjiqpeklhxdv = ÚNICO proyecto = PRODUCCIÓN. Cuidado con DDL.
 - SUPABASE_ACCESS_TOKEN vive en apps/web/.env.local (gitignored). Nunca commitearlo,
   nunca imprimirlo, nunca escribirlo a otro archivo.
+- LANZAMIENTO DE CODE (2026-09-23): se dejó SOLO "Standly en Cocos" (gratis,
+  sáb 26 set) en cero — las 7 órdenes eran pruebas de Paul (quedaron
+  'refunded', entradas anuladas, respaldo en tmp/respaldos/); Almighty
+  archivado. Script: supabase/limpieza-code-lanzamiento-2026-09-23.mjs.
 - Cliente piloto = "Tío Code" (slug code). Su evento "Almighty" TERMINÓ el
   2026-06-21 SIN VENTAS (0 órdenes pagas) y está despublicado. Saldo de eventos
   de Code = 3. Sigue siendo cliente real: NO tocar Code/Almighty en tests.
