@@ -44,16 +44,16 @@ export default async function AdminSettingsPage() {
   return (
     <div style={{ maxWidth: 680, margin: '0 auto' }}>
       <Link href="/admin" className="s-back">
-        <ChevronLeft className="h-3.5 w-3.5" /> Tu panel
+        <ChevronLeft className="h-3.5 w-3.5" /> Tus eventos
       </Link>
 
       <header style={{ marginBottom: 22 }}>
-        <span className="eyebrow">Configuración · {brand.name}</span>
-        <h1 className="s-h1" style={{ marginTop: 8 }}>Tu marca</h1>
+        <span className="eyebrow">{brand.name}</span>
+        <h1 className="s-h1" style={{ marginTop: 8 }}>Mi marca</h1>
         <p className="s-card__desc">
           {impersonating
             ? 'Estás viendo la configuración de la marca en solo lectura. No puedes editarla desde aquí.'
-            : 'Edita tus datos públicos y de cobro. Los cambios se aplican al instante.'}
+            : 'Tus datos de contacto, cómo cobras (Yape o tarjeta) y tu logo. Los cambios se aplican al instante.'}
         </p>
       </header>
 

@@ -227,6 +227,22 @@ para OK de Paul.
   UN solo botón primario por pantalla (tinta sobre acento, radio 10); el resto
   son botones de TEXTO (.s-btn--soft/--ghost). Nav en texto con subrayado de
   2px en el activo, sin pastillas. Nada centrado en toda la app.
+- PANEL DEL ORGANIZADOR, estructura (rama panel/ordenado, 2026-09-23):
+  CUATRO secciones, iguales en celular y compu: Eventos · Escáner · Equipo ·
+  Mi marca (arriba en la compu; barra FIJA abajo en ≤640). Cada evento, CUATRO
+  pestañas siempre a la vista: Resumen (cómo va · Revisar Yape · Reporte) ·
+  Evento (datos, fecha, lugar, entradas y precios, flyer, gestión: UNA sola
+  pantalla, /editar; /entradas redirige ahí) · Personas (compradores ·
+  promotores · cortesías) · Puerta (en vivo · equipo). Crear evento = un
+  formulario en 3 pasos numerados (lo básico → entradas → detalles), link del
+  evento auto desde el nombre. El E2E (paso J) verifica las pestañas, las
+  secciones y el redirect.
+- ESCÁNER: /scan sin sesión va a /login?next=/scan y el login VUELVE al
+  escáner (lib/loginNext.ts, con test de open redirect en
+  e2e/login-next.test.mts); antes terminaba en el panel y "parecía que se
+  reiniciaba". Cámara trasera a 720p (sin límite Safari de iPhone recargaba la
+  pestaña). El organizador tiene "Panel" para volver; /puerta tiene "Entra con
+  tu email y contraseña" → escáner.
 
 ## PROHIBIDO: pruebas de carga contra producción
 El 2026-09-22 tiré la base de producción durante una hora corriendo el arnés de

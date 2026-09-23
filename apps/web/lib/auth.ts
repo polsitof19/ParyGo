@@ -72,14 +72,16 @@ export async function destinationForUser(
     .eq('user_id', userId)
     .maybeSingle();
   if (profile?.is_super_admin) return '/cabina-7k29x';
-  const { data: membership } = await supabase
+  // Todas las membresías, y el organizador PRIMERO: con .limit(1) sin orden,
+  // alguien que es organizador de una marca y validador de otra caía en un
+  // destino al azar.
+  const { data: memberships } = await supabase
     .from('brand_members')
     .select('role')
-    .eq('user_id', userId)
-    .limit(1)
-    .maybeSingle();
-  if (membership?.role === 'brand_admin') return '/admin';
-  if (membership?.role === 'validator') return '/scan';
+    .eq('user_id', userId);
+  const roles = new Set((memberships ?? []).map((m) => m.role));
+  if (roles.has('brand_admin')) return '/admin';
+  if (roles.has('validator')) return '/scan';
   return '/';
 }
 

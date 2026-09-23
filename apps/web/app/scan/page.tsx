@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { requireSession } from '@/lib/auth';
+import { getSessionUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Scanner } from './Scanner';
 
@@ -7,10 +7,12 @@ export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 export default async function ScanPage() {
-  const user = await requireSession();
-  const membership = user.brandMemberships.find(
-    (m) => m.role === 'validator' || m.role === 'brand_admin'
-  );
+  const user = await getSessionUser();
+  if (!user) redirect('/login?next=/scan');
+  // Misma elección que el layout: el organizador primero.
+  const membership =
+    user.brandMemberships.find((m) => m.role === 'brand_admin') ??
+    user.brandMemberships.find((m) => m.role === 'validator');
   if (!membership) redirect(user.isSuperAdmin ? '/cabina-7k29x' : '/login');
 
   const supabase = createClient();
@@ -39,7 +41,7 @@ export default async function ScanPage() {
       </div>
 
       {!events || events.length === 0 ? (
-        <div className="k-empty">No hay eventos cargados para validar. Pedile al promotor que publique el evento.</div>
+        <div className="k-empty">No hay eventos cargados para validar. Pídele al organizador que publique el evento.</div>
       ) : (
         <Scanner events={events} brandName={brand.name} />
       )}

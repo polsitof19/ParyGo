@@ -69,7 +69,7 @@ export default async function EventClientsPage({ params, searchParams }: { param
   return (
     <>
       <div style={{ marginBottom: 14 }}>
-        <span className="eyebrow">Clientes</span>
+        <span className="eyebrow">Personas</span>
         <h2 className="s-h2" style={{ marginTop: 2 }}>Compradores</h2>
         <p className="s-card__desc">
           {total} comprador{total === 1 ? '' : 'es'} pagados · datos privados de tu marca.

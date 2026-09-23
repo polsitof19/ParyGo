@@ -39,7 +39,11 @@ export default function LoginPage({
         <div className="auth-card">
           <p className="auth-eyebrow">Acceso</p>
           <h1 className="auth-h1">Inicia sesión</h1>
-          <p className="auth-sub">Organizadores y staff entran con su email y contraseña.</p>
+          <p className="auth-sub">
+            {searchParams.next === '/scan'
+              ? 'Entra con tu email y contraseña para abrir el escáner de la puerta.'
+              : 'Organizadores y staff entran con su email y contraseña.'}
+          </p>
 
           <LoginForm next={searchParams.next} />
 

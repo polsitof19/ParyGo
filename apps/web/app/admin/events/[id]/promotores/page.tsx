@@ -96,7 +96,7 @@ export default async function PromotersPage({ params }: { params: { id: string }
   return (
     <>
       <div style={{ marginBottom: 14 }}>
-        <span className="eyebrow">Ventas y pagos</span>
+        <span className="eyebrow">Personas</span>
         <h2 className="s-h2" style={{ marginTop: 6 }}>Promotores</h2>
         <p className="s-card__desc">Crea códigos para tus RR.PP. y mira cuánto vendió cada uno.</p>
       </div>

@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { destinationForUser } from '@/lib/auth';
+import { volverA } from '@/lib/loginNext';
 
 export type LoginState = {
   ok: boolean;
@@ -60,5 +61,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   }
 
   await admin.rpc('clear_auth_attempts', { p_kind: 'login', p_identifier: email });
-  redirect(await destinationForUser(supabase, data.user.id));
+  const destino = await destinationForUser(supabase, data.user.id);
+  redirect(volverA(String(formData.get('next') ?? ''), destino));
 }
+

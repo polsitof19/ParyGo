@@ -7,7 +7,7 @@ import { CourtesyForm } from '../editar/CourtesyForm';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-// Cortesías — grupo "Ventas y pagos". Antes vivía dentro de "Editar evento",
+// Cortesías — pestaña "Personas". Antes vivía dentro de "Editar evento",
 // pero emitir entradas gratis no es editar el evento (ver handoff de paneles).
 // Acá: emitir + ver lo ya emitido (antes no había dónde verlo).
 export default async function CourtesiesPage({ params }: { params: { id: string } }) {
@@ -39,7 +39,7 @@ export default async function CourtesiesPage({ params }: { params: { id: string 
   return (
     <>
       <div style={{ marginBottom: 14 }}>
-        <span className="eyebrow">Ventas y pagos</span>
+        <span className="eyebrow">Personas</span>
         <h2 className="s-h2" style={{ marginTop: 6 }}>Cortesías</h2>
         <p className="s-card__desc">
           Entradas gratis para invitados, prensa o RR.PP. Son entradas reales, escaneables en puerta, y <strong>descuentan del aforo</strong>.

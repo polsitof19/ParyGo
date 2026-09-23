@@ -48,7 +48,7 @@ export async function vistas(panel = 'all') {
     ...(e
       ? [
           { id: 'org-evento', url: '/admin/events/' + e, sesion: 'admin' },
-          { id: 'org-ev-entradas', url: '/admin/events/' + e + '/entradas', sesion: 'admin' },
+          
           { id: 'org-ev-clientes', url: '/admin/events/' + e + '/clientes', sesion: 'admin' },
           { id: 'org-ev-yape', url: '/admin/events/' + e + '/yape', sesion: 'admin' },
           { id: 'org-ev-accesos', url: '/admin/events/' + e + '/accesos', sesion: 'admin' },

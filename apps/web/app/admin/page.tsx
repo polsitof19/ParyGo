@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronDown, Plus, ScanLine, Settings, ArrowRight } from 'lucide-react';
+import { ChevronDown, Plus, ScanLine, ArrowRight } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createClient } from '@/lib/supabase/server';
@@ -29,7 +29,7 @@ export default async function AdminHomePage() {
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
-    .select('id, slug, name, contact_email, whatsapp_e164, yape_number, yape_holder, theme_json, event_balance')
+    .select('id, slug, name, yape_number, event_balance')
     .eq('id', brandId)
     .single();
   if (!brand) return null;
@@ -111,6 +111,14 @@ export default async function AdminHomePage() {
   // cortesía (las cortesías no son venta).
   const saleOrderIds = new Set(paidOrderRows.filter((o) => o.payment_method !== 'courtesy').map((o) => o.id));
   const soldTickets = (validTicketRows ?? []).filter((t) => saleOrderIds.has(t.order_id as string)).length;
+  // Vendidas por evento (misma regla: válidas y no cortesía), para la lista.
+  const eventoDeOrden = new Map(paidOrderRows.map((o) => [o.id, o.event_id] as const));
+  const soldByEvent = new Map<string, number>();
+  for (const t of (validTicketRows ?? []) as { order_id: string }[]) {
+    if (!saleOrderIds.has(t.order_id)) continue;
+    const ev = eventoDeOrden.get(t.order_id);
+    if (ev) soldByEvent.set(ev, (soldByEvent.get(ev) ?? 0) + 1);
+  }
   const nowMs = Date.now();
   // Próximo evento = el publicado, no archivado, más cercano que todavía no pasó.
   const nextEvent = activeEvents
@@ -124,7 +132,6 @@ export default async function AdminHomePage() {
     .filter((o) => !ordersWithTickets.has(o.id))
     .map((o) => ({ id: o.id, buyerName: o.buyer_name, totalCents: o.total_cents ?? 0, createdAt: o.created_at, eventName: eventNameById.get(o.event_id) ?? 'Evento' }));
 
-  const theme = (brand.theme_json ?? {}) as { logo_url?: string | null; primary_color?: string; secondary_color?: string };
   const balance = brand.event_balance ?? 0;
   const canCreate = balance > 0;
 
@@ -137,7 +144,7 @@ export default async function AdminHomePage() {
   const setupSteps: SetupStep[] = [
     { key: 'cobro', title: 'Configura tu cobro', desc: 'Carga tu Yape (o tus credenciales de tarjeta) para recibir los pagos.', done: cobroReady, href: '/admin/settings', cta: 'Configurar' },
     { key: 'evento', title: 'Crea tu primer evento', desc: 'Nombre, fecha y lugar. Te toma un par de minutos.', done: hasEvent, href: '/admin/events/new', cta: 'Crear' },
-    { key: 'entradas', title: 'Carga tus entradas', desc: 'Define tipos de entrada, precios y cupos.', done: hasTickets, href: firstEventId ? `/admin/events/${firstEventId}/entradas` : '/admin/events/new', cta: 'Cargar' },
+    { key: 'entradas', title: 'Carga tus entradas', desc: 'Define tipos de entrada, precios y cupos.', done: hasTickets, href: firstEventId ? `/admin/events/${firstEventId}/editar#entradas` : '/admin/events/new', cta: 'Cargar' },
     { key: 'publicar', title: 'Publica tu evento', desc: 'Cuando esté listo, ponlo en vivo para empezar a vender.', done: publishedCount > 0, href: firstEventId ? `/admin/events/${firstEventId}` : '/admin/events/new', cta: 'Publicar' },
   ];
 
@@ -249,10 +256,15 @@ export default async function AdminHomePage() {
             {activeEvents.map((e) => {
               const pend = pendingByEvent.get(e.id) ?? 0;
               const sales = salesByEvent.get(e.id) ?? 0;
+              const vendidas = soldByEvent.get(e.id) ?? 0;
               const start = new Date(e.starts_at);
-              const past = start.getTime() < Date.now();
+              // "Pasado" recién cuando terminó la noche (12h después del inicio):
+              // el mismo día el evento es "Hoy", no "Pasado".
+              const past = start.getTime() + 12 * 3600 * 1000 < Date.now();
+              const hoy = !past && start.toLocaleDateString('es-PE', { timeZone: 'America/Lima' }) === new Date().toLocaleDateString('es-PE', { timeZone: 'America/Lima' });
               const status = !e.is_published ? { cls: 's-badge--draft', label: 'Borrador' }
                 : past ? { cls: 's-badge--draft', label: 'Pasado' }
+                : hoy ? { cls: 's-badge--todo', label: 'Hoy' }
                 : sales > 0 ? { cls: 's-badge--ok', label: 'Vendiendo' }
                 : { cls: 's-badge--ok', label: 'Publicado' };
               return (
@@ -274,6 +286,7 @@ export default async function AdminHomePage() {
                       </span>
                     </span>
                     <span className="a-evrow__side">
+                      <span className="a-evrow__sold">{vendidas} vendida{vendidas === 1 ? '' : 's'}</span>
                       {sales > 0 && <span className="a-evrow__money">{formatPEN(sales)}</span>}
                       {pend > 0 && <span className="s-badge s-badge--todo">{pend} Yape</span>}
                     </span>
@@ -286,7 +299,8 @@ export default async function AdminHomePage() {
         )}
       </section>
 
-      {/* 5) LO RARO, PLEGADO: archivados y los datos de la marca. */}
+      {/* 5) LO RARO, PLEGADO: los archivados. Los datos de la marca tienen su
+          propia sección ("Mi marca") en la navegación. */}
       <div className="s-folds">
         {archivedEvents.length > 0 && (
           <details className="s-fold">
@@ -316,53 +330,8 @@ export default async function AdminHomePage() {
           </details>
         )}
 
-        <details className="s-fold">
-          <summary>
-            <span className="s-fold__t">
-              Tu marca
-              <span className="s-fold__hint">Datos públicos y de cobro de {brand.name}.</span>
-            </span>
-            <ChevronDown aria-hidden="true" />
-          </summary>
-          <div className="s-fold__body">
-            <div className="s-grid-2">
-              <dl className="s-deflist">
-                <Row label="Email">{brand.contact_email ?? '—'}</Row>
-                <Row label="WhatsApp">{brand.whatsapp_e164 ?? '—'}</Row>
-              </dl>
-              <dl className="s-deflist">
-                <Row label="Yape número">{brand.yape_number ?? '—'}</Row>
-                <Row label="Yape titular">{brand.yape_holder ?? '—'}</Row>
-                <Row label="Colores">
-                  <span style={{ display: 'inline-flex', gap: 6 }}>
-                    <Swatch hex={theme.primary_color} />
-                    <Swatch hex={theme.secondary_color} />
-                  </span>
-                </Row>
-              </dl>
-            </div>
-            {!impersonating && (
-              <Link href="/admin/settings" className="s-btn s-btn--soft s-btn--sm">
-                <Settings className="h-4 w-4" /> Editar tu marca
-              </Link>
-            )}
-          </div>
-        </details>
       </div>
     </>
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="s-defrow">
-      <dt className="s-defrow__k">{label}</dt>
-      <dd className="s-defrow__v">{children}</dd>
-    </div>
-  );
-}
-
-function Swatch({ hex }: { hex?: string }) {
-  if (!hex) return <span className="s-muted-3">—</span>;
-  return <span className="a-swatch" style={{ background: hex }} title={hex} />;
-}

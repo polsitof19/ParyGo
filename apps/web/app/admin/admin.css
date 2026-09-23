@@ -8,81 +8,89 @@
    texto en tinta; el color aparece solo cuando hay algo que hacer.
    ============================================================ */
 
-/* ---------- Navegación del evento: 4 grupos en vez de 8 pestañas ----------
-   Mi evento · Ventas y pagos · Puerta y equipo · Reporte. El grupo lleva una
-   etiqueta chica; el activo se marca con tinta + barra de acento debajo
-   (decorativa, sin texto encima). En el teléfono se PLIEGA — ver el bloque
-   "El nav del evento en el teléfono" más abajo. */
-.admin-shell .a-nav { margin-top: 4px; border-bottom: 1px solid var(--line); }
-.admin-shell .a-nav__groups {
-  display: flex; align-items: stretch; gap: 0;
-  overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+/* ---------- Navegación del evento: CUATRO pestañas ----------
+   Resumen · Evento · Personas · Puerta. Las cuatro entran en una fila
+   también en 390 (sin deslizar y sin plegar): tinta, y el activo con la
+   barra de acento de 2px debajo (decorativa). Debajo, la fila de la pestaña
+   activa (Cómo va · Revisar Yape · Reporte, etc.), en texto más chico. */
+.admin-shell .a-tabs { margin-top: 4px; }
+.admin-shell .a-tabs__row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
+.admin-shell .a-tabs__item {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: 48px; padding: 0 var(--s-s1);
+  font-size: var(--s-ctl); font-weight: 700; color: var(--ink-2); white-space: nowrap;
+  transition: color .18s, transform .14s ease-out;
 }
-.admin-shell .a-nav__groups::-webkit-scrollbar { display: none; }
-/* El botón de plegado solo existe en el teléfono (ver el bloque ≤640). */
-.admin-shell .a-nav__toggle { display: none; }
-.admin-shell .a-nav__group { display: flex; flex-direction: column; gap: 2px; padding: 0 14px; flex: none; }
-.admin-shell .a-nav__group:first-child { padding-left: 0; }
-.admin-shell .a-nav__group + .a-nav__group { border-left: 1px solid var(--line); }
-.admin-shell .a-nav__label { font-size: var(--s-lb); font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); padding: 0 10px; white-space: nowrap; }
-.admin-shell .a-nav__items { display: flex; gap: 2px; }
-.admin-shell .a-nav__item {
-  position: relative; display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
-  min-height: 44px; padding: 10px 10px 13px; font-size: var(--s-ui); font-weight: 600; color: var(--ink-2);
-  border-radius: 0; transition: color .18s;
+.admin-shell .a-tabs__item::after { content: ""; position: absolute; left: var(--s-s1); right: var(--s-s1); bottom: -1px; height: 2px; background: transparent; }
+.admin-shell .a-tabs__item[aria-current="page"] { color: var(--ink); }
+.admin-shell .a-tabs__item[aria-current="page"]::after { background: var(--accent); }
+.admin-shell .a-tabs__item:active { transform: scale(.97); }
+@media (min-width: 641px) {
+  /* En la compu las pestañas van a la izquierda, del ancho de su texto. */
+  .admin-shell .a-tabs__row { display: flex; gap: var(--s-s3); }
+  .admin-shell .a-tabs__item { padding: 0; }
+  .admin-shell .a-tabs__item::after { left: 0; right: 0; }
 }
-.admin-shell .a-nav__item:hover { color: var(--ink); }
-.admin-shell .a-nav__item svg { width: 15px; height: 15px; flex: none; }
-.admin-shell .a-nav__item[aria-current="page"] { color: var(--ink); }
-/* Activo: subrayado de 2px pegado al hairline del grupo. Sin pastilla. */
-.admin-shell .a-nav__item[aria-current="page"]::after {
-  content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px;
-  background: var(--accent);
+.admin-shell .a-tabs__subs { display: flex; flex-wrap: wrap; gap: 0 var(--s-s3); padding-top: var(--s-s1); }
+.admin-shell .a-tabs__sub {
+  position: relative; display: inline-flex; align-items: center; gap: 7px; min-height: 44px;
+  font-size: var(--s-ui); font-weight: 600; color: var(--ink-2);
+  transition: color .18s, transform .14s ease-out;
 }
-/* Contador de pendientes en la pestaña: punto de acento + número en tinta. */
+.admin-shell .a-tabs__sub[aria-current="page"] { color: var(--ink); text-decoration: underline; text-decoration-thickness: 2px; text-decoration-color: var(--accent); text-underline-offset: 6px; }
+.admin-shell .a-tabs__sub:active { transform: scale(.97); }
+@media (hover: hover) and (pointer: fine) {
+  .admin-shell .a-tabs__item:hover, .admin-shell .a-tabs__sub:hover { color: var(--ink); }
+}
+/* Contador (Yapes por revisar): punto de acento + número en tinta. */
 .admin-shell .a-nav__count { display: inline-flex; align-items: center; gap: 5px; padding: 0; background: none; color: var(--ink); font-size: var(--s-micro); font-weight: 700; font-variant-numeric: tabular-nums; }
 .admin-shell .a-nav__count::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
-
-/* ---------- El nav del evento en el teléfono: PLEGADO ----------
-   Medido en iPhone (390x844): los 4 grupos con sus 10 entradas piden 937px en
-   una pantalla de 358 → 2,6 pantallas de deslizamiento horizontal, con las
-   últimas secciones invisibles y sin señal de que existían.
-   En ≤640 el nav pasa a ser una línea que dice DÓNDE estás y se abre en una
-   lista completa, apilada, sin deslizar nada. Los grupos siguen siendo los
-   mismos y ninguna entrada se esconde: se pliegan, que es distinto. */
-@media (max-width: 640px) {
-  .admin-shell .a-nav { border-bottom: 0; margin-top: 0; }
-  .admin-shell .a-nav__toggle {
-    display: flex; align-items: center; gap: 12px; width: 100%;
-    min-height: 48px; padding: 6px 0;
-    background: none; border: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
-    text-align: left; color: var(--ink); cursor: pointer; font: inherit;
-  }
-  .admin-shell .a-nav__toggle-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
-  .admin-shell .a-nav__toggle-k { font-size: var(--s-lb); font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
-  .admin-shell .a-nav__toggle-v { font-size: var(--s-ctl); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .admin-shell .a-nav__toggle-chev { width: 16px; height: 16px; flex: none; color: var(--ink-3); transition: transform .18s var(--ease); }
-  .admin-shell .a-nav--open .a-nav__toggle-chev { transform: rotate(180deg); }
-  .admin-shell .a-nav--open .a-nav__toggle { border-bottom-color: transparent; }
-
-  /* Cerrado: los grupos no están. Abierto: apilados y a lo ancho. */
-  .admin-shell .a-nav__groups { display: none; }
-  .admin-shell .a-nav--open .a-nav__groups {
-    display: block; overflow: visible;
-    border-bottom: 1px solid var(--line); padding-bottom: 8px;
-  }
-  .admin-shell .a-nav__group { display: block; padding: 0; }
-  .admin-shell .a-nav__group + .a-nav__group { border-left: 0; margin-top: 10px; }
-  .admin-shell .a-nav__group:first-child { padding-left: 0; }
-  .admin-shell .a-nav__label { padding: 0; display: block; margin-bottom: 2px; }
-  .admin-shell .a-nav__items { display: flex; flex-wrap: wrap; gap: 0 18px; }
-  .admin-shell .a-nav__item { padding: 6px 0; min-height: 44px; }
-  /* Sin barra flotante: el activo se subraya donde está. */
-  .admin-shell .a-nav__item[aria-current="page"]::after { left: 0; right: 0; bottom: 6px; }
-}
 @media (prefers-reduced-motion: reduce) {
-  .admin-shell .a-nav__toggle-chev { transition: none; }
+  .admin-shell .a-tabs__item:active, .admin-shell .a-tabs__sub:active { transform: none; }
 }
+
+/* ---------- Navegación del panel: las cuatro secciones ----------
+   Eventos · Escáner · Equipo · Mi marca. En la compu, arriba en texto. En el
+   celular (≤640) la fila de arriba se va y aparece la BARRA DE ABAJO, fija,
+   con ícono y nombre: el pulgar llega y siempre se ve dónde se está. */
+.admin-shell .s-nav .s-nav__ico { display: none; }
+.admin-shell .s-tabbar { display: none; }
+@media (max-width: 640px) {
+  .admin-shell .s-topbar .s-nav { display: none; }
+  .admin-shell .s-tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--paper); border-top: 1px solid var(--line);
+  }
+  .admin-shell .s-tabbar a {
+    position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    min-height: 60px; font-size: var(--s-micro); font-weight: 600; color: var(--ink-2);
+    transition: color .18s, transform .14s ease-out;
+  }
+  .admin-shell .s-tabbar a svg { width: 22px; height: 22px; }
+  .admin-shell .s-tabbar a[aria-current="page"] { color: var(--ink); }
+  .admin-shell .s-tabbar a[aria-current="page"]::before { content: ""; position: absolute; top: -1px; left: 28%; right: 28%; height: 2px; background: var(--accent); }
+  .admin-shell .s-tabbar a:active { transform: scale(.97); }
+  /* Que la barra no tape el final de la página. */
+  .admin-shell .s-wrap { padding-bottom: calc(var(--s-s6) + 60px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) { .admin-shell .s-tabbar a:active { transform: none; } }
+
+/* ---------- La pantalla del evento: índice y anclas ---------- */
+.admin-shell .a-jump { display: flex; flex-wrap: wrap; gap: 0 var(--s-s3); margin-bottom: var(--s-s2); }
+.admin-shell .a-jump a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; font-size: var(--s-ui); font-weight: 600; color: var(--ink-2); text-decoration: underline; text-underline-offset: 4px; }
+.admin-shell .a-anchor { scroll-margin-top: 84px; }
+
+/* ---------- Crear evento: pasos numerados ---------- */
+.admin-shell .a-step { display: flex; align-items: center; gap: 10px; }
+.admin-shell .a-step__n {
+  display: inline-grid; place-items: center; width: 26px; height: 26px; flex: none; border-radius: 50%;
+  background: var(--accent); color: var(--ink); font-size: var(--s-meta); font-weight: 800;
+}
+
+/* ---------- Lista de eventos: vendidas ---------- */
+.admin-shell .a-evrow__sold { font-size: var(--s-meta); font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* ---------- "¿Cómo va?" — franja de 4 números arriba de todo ----------
    Cuatro números grandes separados por hairlines verticales (la regla vive en
@@ -192,6 +200,13 @@
 
 /* ---------- Cabecera de evento ---------- */
 .admin-shell .a-evhead { display: flex; align-items: flex-start; gap: 16px; }
+/* La cabecera del evento: flyer y nombre JUNTOS a la izquierda. Hereda de
+   .s-pagehead un space-between que en escritorio mandaba el nombre al otro
+   extremo de la pantalla, y en el celular apilaba el flyer arriba del nombre. */
+.admin-shell .s-pagehead.a-evhead { justify-content: flex-start; align-items: center; flex-direction: row; flex-wrap: nowrap; margin-bottom: var(--s-s3); }
+.admin-shell .s-pagehead.a-evhead > div { min-width: 0; }
+.admin-shell .s-pagehead.a-evhead .s-h1 { margin-top: 0; overflow-wrap: anywhere; }
+@media (max-width: 560px) { .admin-shell .a-evhead__thumb { width: 56px; height: 56px; } }
 .admin-shell .a-evhead__thumb { flex-shrink: 0; display: block; width: 64px; height: 64px; border-radius: var(--r-ctl); overflow: hidden; transition: opacity .18s; }
 .admin-shell .a-evhead__thumb:hover { opacity: .85; }
 .admin-shell .a-evhead__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -408,7 +423,7 @@
 
 /* ---------- Impresión / PDF (reporte post-evento) ---------- */
 @media print {
-  .s-topbar, .a-nav, .s-back, .no-print, .publish-control, .a-evhead__thumb, .a-quick { display: none !important; }
+  .s-topbar, .s-tabbar, .a-tabs, .s-back, .no-print, .publish-control, .a-evhead__thumb, .a-quick { display: none !important; }
   .admin-shell { background: #fff !important; }
   .s-wrap { padding: 0 !important; max-width: 100% !important; }
   .s-card { border-top: 1px solid var(--line) !important; box-shadow: none !important; break-inside: avoid; }
