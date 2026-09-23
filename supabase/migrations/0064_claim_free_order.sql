@@ -61,6 +61,9 @@
 --     que antes, sin idempotencia.
 -- =============================================================
 
+-- ADD COLUMN pide ACCESS EXCLUSIVE sobre orders: si hay una transacción larga,
+-- mejor que la migración falle a los 5s que dejar el checkout en cola detrás.
+set lock_timeout = '5s';
 alter table public.orders add column if not exists claim_id uuid;
 create unique index if not exists orders_claim_id_uniq
   on public.orders (claim_id) where claim_id is not null;

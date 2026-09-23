@@ -296,6 +296,9 @@ export function EventCheckoutPanel({
     startTransition(async () => {
       const res = await startCheckout({ ...input, sessionId: sessionIdRef.current });
       if (!res.ok) { toast.error(res.message ?? 'Error en el checkout'); return; }
+      // Reclamo confirmado: el próximo (volver atrás y pedir otra, si el límite
+      // por persona lo permite) es OTRO reclamo y lleva otro id.
+      claimRef.current = null;
       if ('mp' in res) { if (mpPublicKey) setMpCheckout(res.mp); else window.location.href = res.mp.initPoint; return; }
       if ('redirectUrl' in res) window.location.href = res.redirectUrl;
     });
