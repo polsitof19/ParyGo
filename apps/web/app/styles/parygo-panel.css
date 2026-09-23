@@ -52,6 +52,12 @@
        micro 12   microcopy (pie, nota al pie de tabla)
      Documentados en DESIGN.md junto con el resto de la rampa. */
   --s-lead: 18px; --s-ctl: 15px; --s-ui: 14px; --s-micro: 12px;
+  /* Tema noche (2026-09-23):
+       field 16  texto dentro de un campo (16 = iOS no hace zoom al enfocar)
+       cifra 20  las tres cifras del evento que viene
+       hero  24→36  nombre del evento que viene (el título más grande)
+       word  19  wordmark "parygo." del super admin */
+  --s-field: 16px; --s-cifra: 20px; --s-hero: 24px; --s-word: 19px;
   /* d1 — CIFRA HÉROE (2026-09-22). Un solo número por pantalla: lo que está
      esperando al usuario ("5 Yapes"). Es la jerarquía por TAMAÑO del ADN de
      las referencias (DICE separa display y cuerpo 5.9×): acá d1/body es 2.5×
@@ -74,6 +80,9 @@
 }
 @media (min-width: 1024px) {
   .pg-panel { --s-t1: 36px; --s-t2: 22px; --s-body: 15px; --s-num: 26px; --s-d1: 56px; }
+}
+@media (min-width: 900px) {
+  .pg-panel { --s-hero: 36px; }
 }
 .pg-panel *, .pg-panel *::before, .pg-panel *::after { box-sizing: border-box; }
 .pg-panel a { color: inherit; text-decoration: none; }
@@ -276,7 +285,7 @@ html:has(.pg-panel), body:has(.pg-panel) { background: #0A0A0A; }
 .pg-panel .s-input {
   width: 100%; height: 48px; padding: 0 14px; background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.14); border-radius: var(--r-btn);
-  font-family: var(--body); font-size: 16px; color: var(--ink);
+  font-family: var(--body); font-size: var(--s-field); color: var(--ink);
   transition: border-color .18s, box-shadow .18s;
 }
 .pg-panel textarea.s-input { height: auto; min-height: 96px; padding: 12px 14px; line-height: 1.5; resize: vertical; }
@@ -327,6 +336,9 @@ html:has(.pg-panel), body:has(.pg-panel) { background: #0A0A0A; }
    lleva aire: con los campos en caja, la etiqueta de abajo quedaba pegada al
    borde del campo de arriba. */
 .pg-panel :is(.s-field, .s-form-grid) + :is(.s-field, .s-form-grid) { margin-top: var(--s-s3); }
+/* Ayuda debajo de un campo y, pegada, la etiqueta del siguiente (formularios
+   sin .s-field): el aire lo pone la etiqueta. */
+.pg-panel :is(.s-hint, .s-input) + .s-label { margin-top: var(--s-s3); }
 
 /* ---------- Casilla y plegable ----------
    Estaban en admin.css scopeados a .admin-shell, pero el super admin los usa
@@ -572,11 +584,11 @@ html:has(.pg-panel), body:has(.pg-panel) { background: #0A0A0A; }
    al scrollear en iPhone. */
 .pg-panel .s-topbar { position: sticky; top: 0; z-index: 40; background: var(--bg); border-bottom: 1px solid var(--line); }
 .pg-panel .s-topbar__inner { min-height: 60px; display: flex; align-items: center; gap: 12px; padding: 8px var(--pad); }
-.pg-panel .s-logo { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; min-width: 0; font-family: var(--display); font-weight: 600; font-size: 16px; letter-spacing: -0.01em; white-space: nowrap; }
+.pg-panel .s-logo { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; min-width: 0; font-family: var(--display); font-weight: 600; font-size: var(--s-field); letter-spacing: -0.01em; white-space: nowrap; }
 .pg-panel .s-logo__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* Wordmark de parygo (super admin): el punto en acento es la excepción
    documentada del sistema, un glifo decorativo. */
-.pg-panel .s-logo--word { font-weight: 700; font-size: 19px; letter-spacing: -0.03em; }
+.pg-panel .s-logo--word { font-weight: 700; font-size: var(--s-word); letter-spacing: -0.03em; }
 .pg-panel .s-logo .dot { color: var(--accent); flex: none; }
 .pg-panel .s-logo .tag { font-family: var(--body); font-size: var(--s-meta); font-weight: 500; letter-spacing: 0; color: var(--ink-3); margin-left: 2px; }
 .pg-panel .s-nav { display: none; }
@@ -693,7 +705,7 @@ html:has(.pg-panel), body:has(.pg-panel) { background: #0A0A0A; }
    el único bloque con fondo (--surface) de la pantalla. Punto naranja, qué es
    en 15/600, por qué importa en 13, y la acción a la derecha. La etiqueta
    ("Por revisar") queda para el lector de pantalla. */
-.pg-panel .s-due { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; padding: 14px 16px; margin: 0 0 var(--s-s3); background: var(--surface); border-radius: 12px; }
+.pg-panel .s-due { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; padding: 14px 16px; margin: 0 0 var(--s-s3); background: var(--surface); border-radius: var(--r-ctl); }
 .pg-panel .s-due__txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 220px; }
 .pg-panel .s-due__k { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .pg-panel .s-due__n { display: inline-flex; align-items: center; gap: 12px; font-family: var(--body); font-weight: 600; font-size: var(--s-ctl); line-height: 1.35; font-variant-numeric: tabular-nums; color: var(--ink); }

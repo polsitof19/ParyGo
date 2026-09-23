@@ -125,6 +125,15 @@ export default async function AdminHomePage() {
     .filter((e) => e.is_published && Date.parse(e.starts_at) > nowMs - 12 * 3600 * 1000)
     .sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at))[0] ?? null;
   const nextDays = nextEvent ? Math.ceil((Date.parse(nextEvent.starts_at) - nowMs) / 86400000) : null;
+  // Aforo del próximo evento: misma regla que el Resumen del evento (tipos con
+  // cupo; sold incluye cortesías, que también ocupan lugar). Sin tipos con
+  // cupo (todo ilimitado) no hay barra.
+  const { data: nextTypes } = nextEvent
+    ? await adminCli.from('ticket_types').select('capacity, sold, is_unlimited').eq('event_id', nextEvent.id)
+    : { data: null };
+  const nextCapped = (nextTypes ?? []).filter((t) => !t.is_unlimited);
+  const nextCap = nextCapped.reduce((a, t) => a + (t.capacity ?? 0), 0);
+  const nextPct = nextCap > 0 ? Math.min(100, Math.round((nextCapped.reduce((a, t) => a + (t.sold ?? 0), 0) / nextCap) * 100)) : null;
   const nextWhen = nextDays === null ? null : nextDays <= 0 ? 'hoy' : nextDays === 1 ? 'mañana' : `en ${nextDays} días`;
   const nextPublicUrl = nextEvent ? `https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${nextEvent.slug}` : null;
   const firstPendingEvent = activeEvents.find((e) => (pendingByEvent.get(e.id) ?? 0) > 0) ?? null;
@@ -274,9 +283,16 @@ export default async function AdminHomePage() {
           </div>
 
           <Link href={`/admin/events/${nextEvent.id}`} className="a-next__nums" aria-label={`Cómo va ${nextEvent.name}`}>
+            {/* La plata primero, como en el Resumen del evento. */}
+            <span><b>{formatPEN(salesByEvent.get(nextEvent.id) ?? 0)}</b>cobrado</span>
             <span><b>{soldByEvent.get(nextEvent.id) ?? 0}</b>vendidas</span>
             <span><b>{courtesyByEvent.get(nextEvent.id) ?? 0}</b>cortesías</span>
-            <span><b>{formatPEN(salesByEvent.get(nextEvent.id) ?? 0)}</b>cobrado</span>
+            {nextPct !== null && (
+              <span className="a-next__cap">
+                <span className="a-meter" aria-hidden="true"><span className="a-meter__fill" style={{ width: `${nextPct}%` }} /></span>
+                {nextPct}% del aforo ocupado
+              </span>
+            )}
           </Link>
 
           <EventButtons publicUrl={nextPublicUrl} isPublished={!!nextEvent.is_published} scannerPrimary={!hasDue} readOnly={impersonating} />

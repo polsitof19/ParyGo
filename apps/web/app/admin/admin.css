@@ -94,18 +94,22 @@
 .admin-shell .a-next__flyer { flex: none; width: 100px; height: 120px; border-radius: var(--r-btn); overflow: hidden; background: var(--surface-2); display: grid; place-items: center; font-weight: 600; font-size: var(--s-t2); color: var(--ink-3); }
 .admin-shell .a-next__flyer img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .admin-shell .a-next__id { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.admin-shell .a-next__title { font-family: var(--display); font-weight: 600; font-size: 24px; line-height: 1.12; letter-spacing: -0.025em; overflow-wrap: anywhere; }
+.admin-shell .a-next__title { font-family: var(--display); font-weight: 600; font-size: var(--s-hero); line-height: 1.12; letter-spacing: -0.025em; overflow-wrap: anywhere; }
 .admin-shell .a-next__title a:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; }
 .admin-shell .a-next__when { font-size: var(--s-ui); color: var(--ink-2); line-height: 1.45; }
 .admin-shell .a-next__state { color: var(--ink); font-weight: 600; }
 .admin-shell .a-next__nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 20px; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); transition: background-color .18s; }
 .admin-shell .a-next__nums > span { display: flex; flex-direction: column; gap: 2px; font-size: var(--s-micro); color: var(--ink-2); min-width: 0; }
-.admin-shell .a-next__nums b { font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: -0.02em; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-shell .a-next__nums b { font-family: var(--display); font-weight: 600; font-size: var(--s-cifra); letter-spacing: -0.02em; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (hover: hover) and (pointer: fine) { .admin-shell .a-next__nums:hover { background: var(--sel); } }
+/* La barra de aforo cruza las tres columnas, debajo de las cifras. */
+.admin-shell .a-next__nums > .a-next__cap { grid-column: 1 / -1; gap: 8px; }
+.admin-shell .a-next__cap .a-meter { display: block; margin-top: 4px; }
+.admin-shell .a-next__cap .a-meter__fill { display: block; }
 @media (min-width: 900px) {
   .admin-shell .a-next__flyer { width: 176px; height: 220px; }
   .admin-shell .a-next__head { gap: 24px; }
-  .admin-shell .a-next__title { font-size: 36px; letter-spacing: -0.03em; }
+  .admin-shell .a-next__title { letter-spacing: -0.03em; }
   .admin-shell .a-next__nums { max-width: 600px; }
 }
 
@@ -143,7 +147,7 @@
 /* ---------- Ventas por día: columnas ---------- */
 .admin-shell .a-chart { list-style: none; margin: 0; padding: 0; display: flex; align-items: flex-end; gap: 6px; height: 120px; border-bottom: 1px solid var(--line); }
 .admin-shell .a-chart__col { flex: 1 1 0; max-width: 48px; min-width: 0; height: 100%; display: flex; align-items: flex-end; }
-.admin-shell .a-chart__bar { display: block; width: 100%; border-radius: 3px 3px 0 0; background: var(--surface-2); }
+.admin-shell .a-chart__bar { display: block; width: 100%; background: var(--surface-2); }
 .admin-shell .a-chart__col--last .a-chart__bar { background: var(--ink); }
 .admin-shell .a-chart__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .admin-shell .a-chart__axis { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; font-size: var(--s-micro); color: var(--ink-2); font-variant-numeric: tabular-nums; }
@@ -251,7 +255,7 @@
 .admin-shell .a-evrow:active { background: var(--sel); }
 .admin-shell .a-evrow:hover .a-evrow__title { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px; }
 .admin-shell .a-evrow--past .a-evrow__thumb, .admin-shell .a-evrow--past .a-evrow__title { opacity: .62; }
-.admin-shell .a-evrow__thumb { position: relative; flex: none; width: 48px; height: 60px; border-radius: 8px; overflow: hidden; background: var(--surface-2); display: grid; place-items: center; font-family: var(--display); font-weight: 600; font-size: var(--s-t2); color: var(--ink-3); }
+.admin-shell .a-evrow__thumb { position: relative; flex: none; width: 48px; height: 60px; border-radius: var(--r-btn); overflow: hidden; background: var(--surface-2); display: grid; place-items: center; font-family: var(--display); font-weight: 600; font-size: var(--s-t2); color: var(--ink-3); }
 .admin-shell .a-evrow__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .admin-shell .a-evrow__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .admin-shell .a-evrow__title { font-weight: 600; font-size: var(--s-body); line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -345,11 +349,11 @@
 .admin-shell .a-yrow { border: 0; border-top: 1px solid var(--line); border-radius: 0; background: none; }
 .admin-shell .a-yrow + .a-yrow { margin-top: 0; }
 .admin-shell .a-yrow:first-child { border-top: 0; }
-.admin-shell .a-yrow--open { background: var(--surface); border-radius: 12px; border-top-color: transparent; }
+.admin-shell .a-yrow--open { background: var(--surface); border-radius: var(--r-ctl); border-top-color: transparent; }
 .admin-shell .a-yrow--open + .a-yrow { border-top-color: transparent; }
 .admin-shell .a-yrow--open .a-yrow__head,
 .admin-shell .a-yrow--open .a-yrow__body { padding-left: 14px; }
-.admin-shell .a-yrow__head { display: flex; align-items: center; gap: 12px; padding: var(--s-s1) 0; flex-wrap: wrap; transition: padding-left .18s var(--ease); }
+.admin-shell .a-yrow__head { display: flex; align-items: center; gap: 12px; padding: var(--s-s1) 0; flex-wrap: wrap; }
 .admin-shell .a-yrow__toggle {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   background: none; border: 0; padding: 4px 0; text-align: left; cursor: pointer; color: var(--ink); font: inherit;
@@ -378,7 +382,7 @@
    secundario quedaba MÁS visible que "Aprobar" y el ojo iba al rechazo. */
 .admin-shell .a-yrow:not(.a-yrow--open) .s-btn--soft { border-color: transparent; padding: 0 2px; color: var(--ink-2); }
 .admin-shell .a-yrow:not(.a-yrow--open) .s-btn--soft:hover:not(:disabled) { color: var(--ink); }
-.admin-shell .a-yrow__body { border-top: 1px solid var(--line); padding: 18px 0 16px; transition: padding-left .18s var(--ease); }
+.admin-shell .a-yrow__body { border-top: 1px solid var(--line); padding: 18px 0 16px; }
 @media (prefers-reduced-motion: reduce) { .admin-shell .a-yrow__chev { transition: none; } }
 @media (max-width: 560px) {
   .admin-shell .a-yrow__payer { max-width: 100%; }

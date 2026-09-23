@@ -20,8 +20,9 @@ el próximo evento con su flyer, tres cifras y dos botones, y debajo filas de
 acciones agrupadas por para qué sirven (Asistentes · Venta). Rechaza el
 dashboard de tarjetas de métricas y la grilla de acciones sin agrupar.
 
-OWN-WORLD: tema noche. Fondo #0A0A0A, superficie #151515, hairline #1F1F1F,
-tinta #FAFAFA, secundario #8F8F8F; verde #4ADE80 (ok), ámbar #FBBF24 (aviso),
+OWN-WORLD: tema noche, los tokens de .pg.pg-noche (la referencia usaba
+#151515/#FAFAFA/#8F8F8F; se tomaron los ya medidos). Fondo #0A0A0A,
+superficie #141414, hairline blanco .12, tinta #FFFFFF, secundario #A3A3A3; verde #4ADE80 (ok), ámbar #FBBF24 (aviso),
 naranja #FF5B1F solo en puntos/badges. Geist 600 en títulos (24 teléfono / 36
 escritorio, tracking -0.025em), filas de 52 con hairline, primario = relleno
 #FAFAFA con texto #0A0A0A radio 10 alto 48, secundario = borde #1F1F1F.
@@ -34,7 +35,7 @@ marca necesita algo.
 FIRST VIEWPORT: teléfono = cabecera de 60 (logo, marca, salir); fila
 "N Yapes por aprobar" en #151515 si hay; flyer 100×120 + nombre + fecha +
 estado; cifras cobrado · vendidas · cortesías con barra de aforo que abre
-"Cómo va la venta"; Abrir escáner (primario) y Copiar link; barra fija abajo
+"Cómo va la venta" (cobrado primero); Abrir escáner (primario) y Copiar link; barra fija abajo
 Eventos · Escáner · Equipo · Mi marca. Escritorio = barra lateral de 248 con
 la misma navegación.
 

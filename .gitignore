@@ -60,3 +60,7 @@ tmp/
 
 # Graphify (mapa del repo, local)
 graphify-out/
+
+# impeccable: logs de las rondas de preguntas (locales)
+apps/web/.impeccable/questions/
+apps/web/.impeccable/review/
