@@ -4,7 +4,7 @@ import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { EventCoverUploader } from '../EventCoverUploader';
-import { EditEventForm, TicketTypeEditor, NewTicketTypeForm, type TtRow } from './EditEventForms';
+import { EditEventForm } from './EditEventForms';
 import { PostponeEvent } from './PostponeEvent';
 import { CancelEvent } from './CancelEvent';
 import { CloneEventButton } from './CloneEventButton';
@@ -37,38 +37,22 @@ export default async function EditEventPage({ params }: { params: { id: string }
   // ¿Hay alguna venta? (define si la fecha queda bloqueada)
   // Además contamos órdenes y tickets para saber si el evento se puede ELIMINAR
   // (solo eventos vacíos: 0 órdenes y 0 tickets).
-  const [{ count: soldCount }, { count: orderCount }, { count: ticketCount }, { data: tts }] = await Promise.all([
+  const [{ count: soldCount }, { count: orderCount }, { count: ticketCount }] = await Promise.all([
     admin.from('ticket_types').select('id', { count: 'exact', head: true }).eq('event_id', event.id).gt('sold', 0),
     admin.from('orders').select('id', { count: 'exact', head: true }).eq('event_id', event.id),
     admin.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', event.id),
-    // Los tipos de entrada viven en ESTA pantalla (antes, en otra pestaña).
-    admin
-      .from('ticket_types')
-      .select('id, name, description, price_cents, capacity, sold, is_unlimited, is_active, is_courtesy, sort_order, bulk_min_qty, bulk_discount_pct')
-      .eq('event_id', event.id)
-      .order('sort_order'),
   ]);
-  const rows: TtRow[] = (tts ?? []).map((t) => ({
-    id: t.id, name: t.name, description: t.description ?? '', priceCents: t.price_cents, capacity: t.capacity ?? 0,
-    sold: t.sold ?? 0, isUnlimited: t.is_unlimited, isActive: t.is_active, isCourtesy: t.is_courtesy ?? false,
-    bulkMinQty: t.bulk_min_qty ?? 0, bulkDiscountPct: t.bulk_discount_pct ?? 0,
-  }));
   const hasSales = (soldCount ?? 0) > 0;
   const canDelete = (orderCount ?? 0) === 0 && (ticketCount ?? 0) === 0;
 
 
   return (
     <>
-      {/* UNA pantalla para todo lo del evento, en el orden en que se piensa:
-          nombre, fecha y lugar → las entradas y sus precios → el flyer → lo
-          raro (postergar, clonar, cancelar, archivar), plegado al final. */}
-      <nav className="a-jump" aria-label="Ir a">
-        <a href="#datos">Datos y fecha</a>
-        <a href="#entradas">Entradas y precios</a>
-        <a href="#flyer">Flyer</a>
-      </nav>
+      {/* DATOS DEL EVENTO (desde 2026-09-23 las entradas tienen su propia
+          sección): nombre, fecha y lugar → el flyer → lo raro (postergar,
+          clonar, cancelar, archivar), plegado al final. */}
       <div id="datos" className="a-anchor" style={{ marginBottom: 14 }}>
-        <h2 className="s-h2">Datos, fecha y lugar</h2>
+        <h1 className="s-h1">Datos del evento</h1>
         <p className="s-card__desc">
           {impersonating
             ? 'Estás viendo este evento en solo lectura. No puedes editarlo desde aquí.'
@@ -102,27 +86,6 @@ export default async function EditEventPage({ params }: { params: { id: string }
           readOnly={impersonating}
         />
       </div>
-
-      {/* Entradas y precios: cada tipo con su cupo y su precio; el nuevo, abajo. */}
-      <section id="entradas" className="a-anchor s-section">
-        <h2 className="s-h2">Entradas y precios</h2>
-        <p className="s-card__desc" style={{ marginBottom: 12 }}>
-          {impersonating
-            ? 'Solo lectura: los tipos de entrada se muestran tal cual.'
-            : 'El precio de los que ya compraron queda congelado. Puedes subir el cupo y crear tipos nuevos.'}
-        </p>
-        <div className="s-stack" style={{ gap: 10 }}>
-          {rows.length === 0
-            ? <div className="s-card"><p className="s-empty">Este evento no tiene tipos de entrada todavía. Crea el primero abajo.</p></div>
-            : rows.map((t) => <div key={t.id} className="s-card"><TicketTypeEditor eventId={event.id} tt={t} readOnly={impersonating} /></div>)}
-        </div>
-        {!impersonating && (
-          <>
-            <h3 className="s-h3" style={{ margin: '24px 0 12px' }}>Nuevo tipo de entrada</h3>
-            <div className="s-card"><NewTicketTypeForm eventId={event.id} /></div>
-          </>
-        )}
-      </section>
 
       <section id="flyer" className="a-anchor s-section">
         <h2 className="s-h2" style={{ marginBottom: 12 }}>Flyer</h2>

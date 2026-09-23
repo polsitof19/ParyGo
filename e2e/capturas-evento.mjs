@@ -23,7 +23,7 @@ if (prox && !eraPub) await svc.from('events').update({ is_published: true }).eq(
 try {
   const sess = await otpSession(ADMIN);
   const browser = await chromium.launch();
-  const VISTAS = [['inicio', '/admin'], ...(rico ? [['ev-resumen', `/admin/events/${rico.id}`], ['ev-estadisticas', `/admin/events/${rico.id}/estadisticas`], ['ev-yape', `/admin/events/${rico.id}/yape`], ['ev-clientes', `/admin/events/${rico.id}/clientes`], ['ev-editar', `/admin/events/${rico.id}/editar`], ['ev-accesos', `/admin/events/${rico.id}/accesos`]] : [])];
+  const VISTAS = [['inicio', '/admin'], ...(rico ? [['ev-entradas', `/admin/events/${rico.id}/entradas`]] : []), ...(rico ? [['ev-resumen', `/admin/events/${rico.id}`], ['ev-estadisticas', `/admin/events/${rico.id}/estadisticas`], ['ev-cortesias', `/admin/events/${rico.id}/cortesias`], ['ev-yape', `/admin/events/${rico.id}/yape`], ['ev-clientes', `/admin/events/${rico.id}/clientes`], ['ev-editar', `/admin/events/${rico.id}/editar`], ['ev-accesos', `/admin/events/${rico.id}/accesos`]] : [])];
   for (const ancho of [390, 1440]) {
     const movil = ancho === 390;
     const ctx = await browser.newContext({ viewport: { width: ancho, height: movil ? 844 : 900 }, deviceScaleFactor: movil ? 2 : 1, isMobile: movil, hasTouch: movil, colorScheme: ESQUEMA });

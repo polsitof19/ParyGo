@@ -48,16 +48,16 @@ for (const ancho of [390, 1440]) {
   const secciones = (await p.locator(sel).allInnerTexts()).map((t) => t.trim());
   check(`${ancho} · panel en 4 secciones (${movil ? 'barra de abajo' : 'arriba'})`, secciones.join('|') === 'Eventos|Escáner|Equipo|Mi marca', secciones.join(' | '));
   await p.screenshot({ path: resolve(OUT, `eventos-${ancho}.png`), fullPage: !movil });
-  const primero = p.locator('a.a-evrow').first();
+  const primero = p.locator('a.a-evcard').first();
   if (await primero.count()) {
     await primero.click();
     await p.waitForURL(/\/admin\/events\//, { timeout: 30000 });
     await p.waitForTimeout(1500);
-    const tabs = (await p.locator('.a-tabs__item').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').replace(/\d+$/, '').trim());
-    check(`${ancho} · evento en 4 pestañas`, tabs.join('|') === 'Resumen|Evento|Personas|Puerta', tabs.join(' | '));
+    const menu = (await p.locator('.a-menu__t').allInnerTexts()).map((t) => t.trim());
+    check(`${ancho} · evento = menú con Estadísticas primero`, menu[0] === 'Estadísticas' && menu[1] === 'Entradas' && menu.length >= 7, menu.join(' | '));
     await p.screenshot({ path: resolve(OUT, `evento-${ancho}.png`), fullPage: !movil });
-    await p.goto(p.url().replace(/(\/admin\/events\/[0-9a-f-]+).*/, '$1/editar'), { waitUntil: 'load' });
-    check(`${ancho} · Evento: datos y entradas en una pantalla`, (await p.locator('#datos').count()) === 1 && (await p.locator('#entradas').count()) === 1);
+    await p.goto(p.url().replace(/(\/admin\/events\/[0-9a-f-]+).*/, '$1/entradas'), { waitUntil: 'load' });
+    check(`${ancho} · Entradas: sección propia`, (await p.locator('#entradas').count()) === 1);
   }
   await p.goto(`${BASE}/scan`, { waitUntil: 'load' });
   await p.waitForTimeout(3000);

@@ -579,6 +579,15 @@ export async function deleteEventAction(
   return { ok: true };
 }
 
+// Color del tipo (punto en el checkout). Estricto: #RRGGBB o vacío (= sin
+// color). undefined = el formulario no mandó el campo (no se toca); false = inválido.
+function parseColorHex(formData: FormData): string | null | undefined | false {
+  if (!formData.has('color_hex')) return undefined;
+  const v = String(formData.get('color_hex') ?? '').trim();
+  if (v === '') return null;
+  return /^#[0-9a-fA-F]{6}$/.test(v) ? v.toUpperCase() : false;
+}
+
 // ===== 2) Editar un tipo de entrada (con la REGLA SEGURA) =====
 // sin ventas → libre; con ventas → NO bajar capacidad debajo de lo vendido, NO
 // cambiar precio (congelado en order_items). Subir capacidad: sí. Precio: solo si
@@ -611,6 +620,9 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   const description = String(formData.get('description') ?? '').trim().slice(0, 280);
 
   const update: Record<string, unknown> = { name, is_active: isActive, description: description || null };
+  const colorHex = parseColorHex(formData);
+  if (colorHex === false) return { ok: false, message: 'Color inválido.' };
+  if (colorHex !== undefined) update.color_hex = colorHex;
   // Cortesía = lista de invitados: nunca se ofrece al público, ni siquiera en
   // un evento gratis. La BD además exige precio 0 (constraint de la 0056), así
   // que marcar cortesía un tipo con precio falla con un mensaje claro en vez
@@ -692,7 +704,9 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
   if (name.length < 1) return { ok: false, message: 'Pon un nombre.' };
   const description = String(formData.get('description') ?? '').trim().slice(0, 280);
   const isUnlimited = formData.get('is_unlimited') === 'on';
-  const priceCents = Math.round(parseFloat(String(formData.get('price_soles') ?? '')) * 100);
+  const colorHex = parseColorHex(formData);
+  if (colorHex === false) return { ok: false, message: 'Color inválido.' };
+  const priceCents =Math.round(parseFloat(String(formData.get('price_soles') ?? '')) * 100);
   if (!Number.isFinite(priceCents) || priceCents < 0) return { ok: false, message: 'Precio inválido.' };
   const capacity = isUnlimited ? 0 : parseInt(String(formData.get('capacity') ?? ''), 10);
   if (!isUnlimited && (!Number.isFinite(capacity) || capacity < 1)) return { ok: false, message: 'Capacidad inválida.' };
@@ -711,7 +725,7 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
 
   const { data: created, error } = await admin
     .from('ticket_types')
-    .insert({ event_id: eventId, name, description: description || null, price_cents: priceCents, capacity, is_unlimited: isUnlimited, is_active: true, sort_order: sortOrder, sold: 0, reserved: 0, max_scans: 1, bulk_min_qty: bulkMinQty, bulk_discount_pct: bulkPct })
+    .insert({ event_id: eventId, name, description: description || null, price_cents: priceCents, capacity, is_unlimited: isUnlimited, is_active: true, sort_order: sortOrder, sold: 0, reserved: 0, max_scans: 1, bulk_min_qty: bulkMinQty, bulk_discount_pct: bulkPct, color_hex: colorHex ?? null })
     .select('id')
     .single();
   if (error || !created) return { ok: false, message: error?.message ?? 'No se pudo crear el tipo.' };

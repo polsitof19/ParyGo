@@ -43,7 +43,7 @@ for (const [motor, ancho, alto, movil] of [[webkit, 390, 844, true], [chromium, 
     let clics = 0;
     await page.goto(BASE + '/admin', { waitUntil: 'domcontentloaded' });
     // Clic 1: la fila del primer evento activo de la lista.
-    await page.locator('a.a-evrow').first().click();
+    await page.locator('a.a-evcard').first().click();
     clics++;
     await page.waitForURL(/\/admin\/events\/[^/]+$/);
     // La acción tiene que estar A LA VISTA sin abrir nada (sin nav plegado).

@@ -231,6 +231,8 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
           plegado. Antes la cola de Yapes quedaba debajo de los cuatro números,
           las acciones y las alertas: en 390 caía a ~900px del borde. */}
 
+      <h1 className="s-h1" style={{ marginBottom: 'var(--s-s3)' }}>Estadísticas</h1>
+
       {/* 2) ¿Cómo va? — cuatro números. La plata primero: es lo que se pregunta. */}
       <div className="a-pulse">
         <div className="s-stat">

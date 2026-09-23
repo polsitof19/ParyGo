@@ -345,7 +345,7 @@ html:has(.pg-panel), body:has(.pg-panel) { background: #0A0A0A; }
 .pg-panel .s-input:focus { outline: none; border-color: var(--field-focus); box-shadow: 0 0 0 3px var(--field-ring); }
 .pg-panel .s-input:disabled { color: var(--ink-2); border-style: dashed; }
 /* Chico en ANCHO, no en alto: 34px de alto no se puede tocar. */
-.pg-panel .s-input--sm { width: auto; max-width: 200px; height: 44px; font-size: var(--s-meta); }
+.pg-panel .s-input--sm { width: auto; max-width: 200px; height: 44px; font-size: var(--s-field); } /* 16: con menos, iOS hace zoom al tocar el campo */
 .pg-panel .s-select { -webkit-appearance: none; appearance: none; cursor: pointer; padding-right: 26px;
   background-image: var(--chev);
   background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px; }
@@ -370,7 +370,7 @@ html:has(.pg-panel), body:has(.pg-panel) { background: #0A0A0A; }
 /* Selector de color: 44 de alto como cualquier control (medía 42 y el hex que
    WebKit dibuja adentro quedaba recortado). El hex se lee en el campo de al
    lado, que es el que se puede copiar. */
-.pg-panel .s-colorpick { height: 48px; width: 52px; flex: none; cursor: pointer; border-radius: var(--r-ctl); border: 1px solid var(--line); background: transparent; padding: 3px; }
+.pg-panel .s-colorpick { font-size: var(--s-field); height: 48px; width: 52px; flex: none; cursor: pointer; border-radius: var(--r-ctl); border: 1px solid var(--line); background: transparent; padding: 3px; }
 /* Error / éxito de campo: punto de color + texto en tinta (--alert 4.35:1 y
    --ok 3.38:1 como texto no llegan a AA). flex, no inline-flex: dos errores
    hermanos no deben quedar uno al lado del otro. */

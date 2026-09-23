@@ -1,11 +1,13 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { ChevronDown, Plus } from 'lucide-react';
 import { useFormFeedback } from '@/components/useFormFeedback';
+import { formatPEN } from '@/lib/utils';
 import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, type EditState } from '../edit-actions';
 
-export type TtRow = { id: string; name: string; description: string; priceCents: number; capacity: number; sold: number; isUnlimited: boolean; isActive: boolean; isCourtesy: boolean; bulkMinQty: number; bulkDiscountPct: number };
+export type TtRow = { id: string; name: string; description: string; priceCents: number; capacity: number; sold: number; isUnlimited: boolean; isActive: boolean; isCourtesy: boolean; bulkMinQty: number; bulkDiscountPct: number; colorHex: string | null };
 
 // Campos de descuento por cantidad (compartidos entre crear y editar).
 function BulkFields({ minQty, pct, disabled }: { minQty?: number; pct?: number; disabled?: boolean }) {
@@ -136,7 +138,7 @@ export function EditEventForm(p: { eventId: string; name: string; description: s
         </div>
       </details>
       <Banner state={state} />
-      {!ro && <div className="s-form-actions"><Submit label="Guardar evento" /></div>}
+      {!ro && <div className="s-form-actions"><Submit label="Guardar datos del evento" /></div>}
     </form>
   );
 }
@@ -165,74 +167,173 @@ function guardFreePrice(e: React.FormEvent<HTMLFormElement>, previousPriceCents?
   if (hidden) hidden.value = '1';
 }
 
-export function TicketTypeEditor({ eventId, tt, readOnly = false }: { eventId: string; tt: TtRow; readOnly?: boolean }) {
-  const [state, action] = useFormFeedback(updateTicketTypeAction, initial);
-  const hasSales = tt.sold > 0;
-  const ro = readOnly;
+// Con la casilla "Gratis" marcada, esa casilla ES la confirmación del S/0
+// (confirm_free=1): no hace falta el confirm(). Sin marcarla, un precio 0
+// escrito a mano pasa por guardFreePrice como antes. El server revalida igual.
+function guardPrice(e: React.FormEvent<HTMLFormElement>, free: boolean, previousPriceCents?: number) {
+  if (!free) return guardFreePrice(e, previousPriceCents);
+  const form = e.currentTarget;
+  const hidden = form.elements.namedItem('confirm_free') as HTMLInputElement | null;
+  const priceEl = form.elements.namedItem('price_soles') as HTMLInputElement | null;
+  if (hidden) hidden.value = '';
+  if (!priceEl || priceEl.disabled) return;
+  if ((form.elements.namedItem('is_unlimited') as HTMLInputElement | null)?.checked) {
+    e.preventDefault();
+    window.alert('Una entrada no puede ser gratis y sin límite a la vez. Pon una capacidad o un precio.');
+    return;
+  }
+  if (hidden) hidden.value = '1';
+}
+
+// Colores rápidos para el punto del tipo (decorativo: nunca lleva texto encima).
+const SWATCHES = ['#FF1F8F', '#E8552A', '#F5B301', '#22A06B', '#2F6FEB', '#8B5CF6'];
+
+function ColorField({ id, initial, disabled }: { id: string; initial: string | null; disabled?: boolean }) {
+  const [color, setColor] = useState((initial ?? '').toUpperCase());
   return (
-    <form action={action} onSubmit={(e) => guardFreePrice(e, tt.priceCents)}>
-      <input type="hidden" name="event_id" value={eventId} />
-      <input type="hidden" name="ticket_type_id" value={tt.id} />
-      <input type="hidden" name="confirm_free" defaultValue="" />
-      <div className="s-card__head" style={{ marginBottom: 10 }}>
-        <span className="a-evrow__name" style={{ fontSize: 16 }}>{tt.name}</span>
-        <span className="s-muted" style={{ fontSize: 13 }}>{tt.isUnlimited ? 'Ilimitado' : `${tt.sold}/${tt.capacity} vendidas`}</span>
+    <div className="s-field">
+      <label className="s-label" htmlFor={id}>Color</label>
+      <input type="hidden" name="color_hex" value={color} />
+      <div className="a-tt-colors">
+        <input id={id} type="color" className="s-colorpick" value={color || '#888888'} onChange={(e) => setColor(e.target.value.toUpperCase())} disabled={disabled} />
+        {SWATCHES.map((c) => (
+          <button key={c} type="button" className="a-tt-swatch" style={{ '--sw': c } as React.CSSProperties} aria-label={`Usar el color ${c}`} aria-pressed={color === c} onClick={() => setColor(c)} disabled={disabled} />
+        ))}
+        {color && !disabled && <button type="button" className="s-btn s-btn--ghost s-btn--sm" onClick={() => setColor('')}>Sin color</button>}
       </div>
-      <div className="s-form-grid">
-        <div className="s-field"><label className="s-label">Nombre</label>
-          <input name="name" defaultValue={tt.name} className="s-input" disabled={ro} /></div>
-        <div className="s-field">
-          <label className="s-label">Precio (S/){hasSales && !ro && <span className="s-muted" style={{ fontWeight: 500 }}> · congelado, hay ventas</span>}</label>
-          <input name="price_soles" type="number" step="0.5" min={0} defaultValue={(tt.priceCents / 100).toFixed(2)} className="s-input" disabled={hasSales || ro} title={hasSales ? 'No editable: ya tiene ventas' : undefined} />
-        </div>
-      </div>
-      <div className="s-field">
-        <label className="s-label">Descripción (opcional)</label>
-        <textarea name="description" defaultValue={tt.description} className="s-input" rows={2} maxLength={280} placeholder={'Barra libre toda la noche\nAcceso preferencial'} style={{ resize: 'vertical' }} disabled={ro} />
-        <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Se muestra debajo del nombre en el checkout. Una línea por beneficio. No afecta precio ni cantidad.</p>
-      </div>
-      <div className="s-form-grid s-field">
-        <div className="s-field">
-          <label className="s-label">Capacidad{!tt.isUnlimited && tt.sold > 0 && !ro && <span className="s-muted" style={{ fontWeight: 500 }}> · mín. {tt.sold} (vendidas)</span>}</label>
-          <input name="capacity" type="number" min={Math.max(1, tt.sold)} defaultValue={tt.capacity || ''} className="s-input" disabled={tt.isUnlimited || ro} />
-        </div>
-        <div className="s-field" style={{ display: 'flex', gap: 16, alignItems: 'flex-end', paddingBottom: 6 }}>
-          <label className="s-check" style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}><input type="checkbox" name="is_unlimited" defaultChecked={tt.isUnlimited} disabled={ro} /> Ilimitado</label>
-          <label className="s-check" style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}><input type="checkbox" name="is_active" defaultChecked={tt.isActive} disabled={ro} /> Activo</label>
-          <label className="s-check" style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}><input type="checkbox" name="is_courtesy" defaultChecked={tt.isCourtesy} disabled={ro} /> Cortesía</label>
-        </div>
-      </div>
-      <BulkFields minQty={tt.bulkMinQty} pct={tt.bulkDiscountPct} disabled={ro} />
-      <Banner state={state} />
-      {!ro && <div className="s-form-actions"><Submit label="Guardar tipo" /></div>}
-    </form>
+      <p className="s-hint">Para reconocer esta entrada de un vistazo.</p>
+    </div>
   );
 }
 
-export function NewTicketTypeForm({ eventId }: { eventId: string }) {
-  const [state, action] = useFormFeedback(createTicketTypeAction, initial);
+function PriceField({ id, defaultSoles, free, onFree, locked, eventIsFree }: { id: string; defaultSoles?: string; free: boolean; onFree: (v: boolean) => void; locked?: boolean; eventIsFree: boolean }) {
   return (
-    <form action={action} onSubmit={(e) => guardFreePrice(e)} className="s-stack" style={{ gap: 12 }} key={state.ok ? Math.random() : 'f'}>
+    <div className="s-field">
+      <label className="s-label" htmlFor={id}>Precio (S/){locked && <span className="s-muted" style={{ fontWeight: 500 }}> · congelado, hay ventas</span>}</label>
+      {free
+        ? <input type="hidden" name="price_soles" value="0" disabled={locked} />
+        : <input id={id} name="price_soles" type="number" step="0.5" min={0} defaultValue={defaultSoles} placeholder="50" className="s-input" required={!locked} disabled={locked} title={locked ? 'No editable: ya tiene ventas' : undefined} />}
+      <label className="s-check"><input type="checkbox" checked={free} onChange={(e) => onFree(e.target.checked)} disabled={locked} /> Gratis</label>
+      {free && !eventIsFree && (
+        <p className="s-hint">En un evento con precio, una entrada gratis es de cortesía: no se vende al público; la repartes desde Cortesías o con un código.</p>
+      )}
+    </div>
+  );
+}
+
+// Una fila por tipo de entrada: plegada muestra lo que importa (color, nombre,
+// precio, vendidas); abierta se edita y tiene SU botón de guardar.
+export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false }: { eventId: string; eventIsFree: boolean; tt: TtRow; readOnly?: boolean }) {
+  const [state, action] = useFormFeedback(updateTicketTypeAction, initial);
+  const [free, setFree] = useState(tt.priceCents === 0);
+  const hasSales = tt.sold > 0;
+  const ro = readOnly;
+  const price = tt.isCourtesy ? 'Cortesía' : tt.priceCents === 0 ? 'Gratis' : formatPEN(tt.priceCents);
+  const stock = tt.isUnlimited ? `${tt.sold} vendidas · sin límite` : `${tt.sold} de ${tt.capacity} vendidas`;
+  return (
+    <details className="s-fold">
+      <summary>
+        <span className="a-tt-sum">
+          <span className={tt.colorHex ? 'a-tt-dot a-tt-dot--on' : 'a-tt-dot'} style={tt.colorHex ? ({ '--sw': tt.colorHex } as React.CSSProperties) : undefined} aria-hidden="true" />
+          <span className="a-tt-name">{tt.name}</span>
+          <span className="a-tt-meta">{price} · {stock}{!tt.isActive && ' · pausada'}</span>
+        </span>
+        <ChevronDown aria-hidden="true" />
+      </summary>
+      <div className="s-fold__body">
+        <form action={action} onSubmit={(e) => guardPrice(e, free, tt.priceCents)}>
+          <input type="hidden" name="event_id" value={eventId} />
+          <input type="hidden" name="ticket_type_id" value={tt.id} />
+          <input type="hidden" name="confirm_free" defaultValue="" />
+          <div className="s-form-grid">
+            <div className="s-field"><label className="s-label" htmlFor={`tt-name-${tt.id}`}>Nombre</label>
+              <input id={`tt-name-${tt.id}`} name="name" defaultValue={tt.name} className="s-input" disabled={ro} /></div>
+            <PriceField id={`tt-price-${tt.id}`} defaultSoles={(tt.priceCents / 100).toFixed(2)} free={free} onFree={setFree} locked={hasSales || ro} eventIsFree={eventIsFree} />
+          </div>
+          <div className="s-form-grid">
+            <div className="s-field">
+              <label className="s-label" htmlFor={`tt-cap-${tt.id}`}>Capacidad{!tt.isUnlimited && tt.sold > 0 && !ro && <span className="s-muted" style={{ fontWeight: 500 }}> · mín. {tt.sold} (vendidas)</span>}</label>
+              <input id={`tt-cap-${tt.id}`} name="capacity" type="number" min={Math.max(1, tt.sold)} defaultValue={tt.capacity || ''} className="s-input" disabled={tt.isUnlimited || ro} />
+              <label className="s-check"><input type="checkbox" name="is_unlimited" defaultChecked={tt.isUnlimited} disabled={ro} /> Sin límite</label>
+            </div>
+            <ColorField id={`tt-color-${tt.id}`} initial={tt.colorHex} disabled={ro} />
+          </div>
+          <div className="s-field">
+            <label className="s-check"><input type="checkbox" name="is_active" defaultChecked={tt.isActive} disabled={ro} /> A la venta</label>
+            <p className="s-hint">Desmárcala para pausar esta entrada sin borrarla.</p>
+          </div>
+          <details className="s-details">
+            <summary>Más opciones</summary>
+            <div className="s-field">
+              <label className="s-label" htmlFor={`tt-desc-${tt.id}`}>Descripción (opcional)</label>
+              <textarea id={`tt-desc-${tt.id}`} name="description" defaultValue={tt.description} className="s-input" rows={2} maxLength={280} placeholder={'Barra libre toda la noche\nAcceso preferencial'} style={{ resize: 'vertical' }} disabled={ro} />
+              <p className="s-hint">Se muestra debajo del nombre en el checkout. Una línea por beneficio. No afecta precio ni cantidad.</p>
+            </div>
+            <div className="s-field">
+              <label className="s-check"><input type="checkbox" name="is_courtesy" defaultChecked={tt.isCourtesy} disabled={ro} /> Cortesía</label>
+              <p className="s-hint">Solo para invitados: no se vende al público, ni en un evento gratis.</p>
+            </div>
+            <BulkFields minQty={tt.bulkMinQty} pct={tt.bulkDiscountPct} disabled={ro} />
+          </details>
+          <Banner state={state} />
+          {!ro && <div className="s-form-actions"><Submit label={`Guardar cambios de ${tt.name}`} /></div>}
+        </form>
+      </div>
+    </details>
+  );
+}
+
+export function NewTicketTypeForm({ eventId, eventIsFree }: { eventId: string; eventIsFree: boolean }) {
+  const [state, action] = useFormFeedback(createTicketTypeAction, initial);
+  // Tras crear, el formulario se vacía (remonta con una key nueva).
+  const [round, setRound] = useState(0);
+  useEffect(() => { if (state.ok) setRound((r) => r + 1); }, [state]);
+  return (
+    <details className="s-fold">
+      <summary>
+        <span className="a-tt-sum">
+          <Plus className="a-tt-plus" aria-hidden="true" />
+          <span className="a-tt-name">Agregar tipo de entrada</span>
+        </span>
+        <ChevronDown aria-hidden="true" />
+      </summary>
+      <div className="s-fold__body">
+        <NewTicketTypeFields key={round} eventId={eventId} eventIsFree={eventIsFree} action={action} />
+        <Banner state={state} />
+      </div>
+    </details>
+  );
+}
+
+function NewTicketTypeFields({ eventId, eventIsFree, action }: { eventId: string; eventIsFree: boolean; action: (fd: FormData) => void }) {
+  const [free, setFree] = useState(false);
+  return (
+    <form action={action} onSubmit={(e) => guardPrice(e, free)}>
       <input type="hidden" name="event_id" value={eventId} />
       <input type="hidden" name="confirm_free" defaultValue="" />
       <div className="s-form-grid">
-        <div className="s-field"><label className="s-label">Nombre</label><input name="name" placeholder="VIP" className="s-input" required /></div>
-        <div className="s-field"><label className="s-label">Precio (S/)</label><input name="price_soles" type="number" step="0.5" min={0} placeholder="50" className="s-input" required /></div>
-      </div>
-      <div className="s-field">
-        <label className="s-label">Descripción (opcional)</label>
-        <textarea name="description" className="s-input" rows={2} maxLength={280} placeholder={'Barra libre toda la noche\nAcceso preferencial'} style={{ resize: 'vertical' }} />
-        <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Se muestra debajo del nombre en el checkout. Una línea por beneficio.</p>
+        <div className="s-field"><label className="s-label" htmlFor="tt-new-name">Nombre</label>
+          <input id="tt-new-name" name="name" placeholder="VIP" className="s-input" required /></div>
+        <PriceField id="tt-new-price" free={free} onFree={setFree} eventIsFree={eventIsFree} />
       </div>
       <div className="s-form-grid">
-        <div className="s-field"><label className="s-label">Capacidad</label><input name="capacity" type="number" min={1} placeholder="100" className="s-input" /></div>
-        <div className="s-field" style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 8 }}>
-          <label className="s-check" style={{ display: 'inline-flex', gap: 7, alignItems: 'center' }}><input type="checkbox" name="is_unlimited" /> Stock ilimitado</label>
+        <div className="s-field">
+          <label className="s-label" htmlFor="tt-new-cap">Capacidad</label>
+          <input id="tt-new-cap" name="capacity" type="number" min={1} placeholder="100" className="s-input" />
+          <label className="s-check"><input type="checkbox" name="is_unlimited" /> Sin límite</label>
         </div>
+        <ColorField id="tt-new-color" initial={null} />
       </div>
-      <BulkFields />
-      <Banner state={state} />
-      <div className="s-form-actions"><Submit label="Crear tipo" /></div>
+      <details className="s-details">
+        <summary>Más opciones</summary>
+        <div className="s-field">
+          <label className="s-label" htmlFor="tt-new-desc">Descripción (opcional)</label>
+          <textarea id="tt-new-desc" name="description" className="s-input" rows={2} maxLength={280} placeholder={'Barra libre toda la noche\nAcceso preferencial'} style={{ resize: 'vertical' }} />
+          <p className="s-hint">Se muestra debajo del nombre en el checkout. Una línea por beneficio.</p>
+        </div>
+        <BulkFields />
+      </details>
+      <div className="s-form-actions"><Submit label="Agregar tipo de entrada" /></div>
     </form>
   );
 }

@@ -32,7 +32,7 @@ if (FORBIDDEN_SLUGS.has(BRAND)) throw new Error('marca prohibida');
 // ---------------- resultados ----------------
 const R = {};
 const S = { stamp: STAMP, eventSlug: EVENT_SLUG, promo: PROMO, orders: {} };
-const LETTERS = 'ABCDEFGHIJKLM'.split('');
+const LETTERS = 'ABCDEFGHIJKLMN'.split('');
 for (const k of LETTERS) R[k] = { ok: null, checks: [], notes: [] };
 const check = (k, name, cond, detail = '') => {
   R[k].checks.push({ name, ok: !!cond, detail: String(detail).slice(0, 400) });
@@ -341,7 +341,8 @@ await step('B', 'Organizador: crear evento, entradas, promo, preventa, publicar,
   check('B', `promo ${PROMO} 20% creada`, promoRow?.discount_type === 'percent' && Number(promoRow?.discount_value) === 20, JSON.stringify(promoRow) + ' ' + (await toasts(p)).join('|'));
   await shot(p, 'B', 'promo-creada');
 
-  // Publicar
+  // Publicar (desde la página del evento: ahí vive el control de publicación).
+  await go(p, `/admin/events/${S.eventId}`);
   await p.getByRole('button', { name: /Publicar evento/ }).click();
   await sleep(3000);
   const pub = (await svc.from('events').select('is_published').eq('id', S.eventId).single()).data;
@@ -395,14 +396,14 @@ await step('B', 'Organizador: crear evento, entradas, promo, preventa, publicar,
   const ev0 = (await svc.from('events').select('starts_at, ends_at').eq('id', S.eventId).single()).data;
   await go(p, `/admin/events/${S.eventId}/editar`);
   await p.fill('#ev-date', limaLocal(new Date(Date.parse(ev0.starts_at) + day)));
-  await p.getByRole('button', { name: 'Guardar evento' }).click();
+  await p.getByRole('button', { name: 'Guardar datos del evento' }).click();
   await sleep(3500);
   const ev1 = (await svc.from('events').select('starts_at, ends_at').eq('id', S.eventId).single()).data;
   const durOk = Date.parse(ev1.ends_at) - Date.parse(ev1.starts_at) === Date.parse(ev0.ends_at) - Date.parse(ev0.starts_at);
   check('B', 'bug4: editar la fecha (+1 día) corre el fin igual (misma duración)', Date.parse(ev1.starts_at) - Date.parse(ev0.starts_at) === day && durOk, `${ev0.starts_at}→${ev1.starts_at} · fin ${ev0.ends_at}→${ev1.ends_at}`);
   await go(p, `/admin/events/${S.eventId}/editar`);
   await p.fill('#ev-date', limaLocal(new Date(now.getTime() - 2 * day)));
-  await p.getByRole('button', { name: 'Guardar evento' }).click();
+  await p.getByRole('button', { name: 'Guardar datos del evento' }).click();
   await sleep(3500);
   const editMsg = (await p.locator('.s-banner--err, .s-banner--ok').allInnerTexts()).join(' | ');
   const ev2 = (await svc.from('events').select('starts_at').eq('id', S.eventId).single()).data;
@@ -491,7 +492,7 @@ async function subirFlyer(archivo) {
   const p = adm.page;
   await go(p, `/admin/events/${S.eventId}/editar`);
   await p.locator('#cover-file').setInputFiles(archivo);
-  // El submit del formulario (la <label> del input también dice 'Cambiar flyer').
+  // El submit del formulario (aparece recién con una imagen elegida).
   await p.locator('form:has(#cover-file) button[type=submit]').click();
   await p.getByText('Flyer actualizado.').waitFor({ timeout: 45000 });
   return (await svc.from('events').select('cover_url, cover_w, cover_h').eq('id', S.eventId).single()).data;
@@ -988,12 +989,12 @@ if (!S.eventId) {
   // =====================================================================
   await step('J', 'Panel: ventas en tiempo real y asistentes', async () => {
     const p = adm.page;
-    // Estructura del panel (panel/ordenado, 2026-09-23): el evento tiene
-    // CUATRO pestañas a la vista (Resumen · Evento · Personas · Puerta) y la
+    // Estructura del panel (panel/lanzamiento, 2026-09-23): el evento es un
+    // MENÚ de secciones en el orden en que se usan (Estadísticas primero) y la
     // navegación del panel, cuatro secciones (Eventos · Escáner · Equipo · Mi marca).
     await go(p, `/admin/events/${S.eventId}`);
-    const tabs = (await p.locator('.a-tabs__item').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').replace(/\d+$/, '').trim());
-    check('J', 'evento en 4 pestañas: Resumen · Evento · Personas · Puerta', tabs.join('|') === 'Resumen|Evento|Personas|Puerta', tabs.join(' | '));
+    const menu = (await p.locator('.a-menu__t').allInnerTexts()).map((t) => t.trim());
+    check('J', 'evento = menú: Estadísticas · Entradas · Yapes · Cortesías y códigos · Compradores · Promotores · Puerta · Datos del evento', menu.join('|') === 'Estadísticas|Entradas|Yapes|Cortesías y códigos|Compradores|Promotores|Puerta|Datos del evento', menu.join(' | '));
     const secciones = (await p.locator('.s-topbar .s-nav a').allInnerTexts()).map((t) => t.trim());
     check('J', 'panel en 4 secciones: Eventos · Escáner · Equipo · Mi marca', secciones.join('|') === 'Eventos|Escáner|Equipo|Mi marca', secciones.join(' | '));
     // El escáner SIN sesión: pide login y VUELVE al escáner (antes el
@@ -1014,20 +1015,22 @@ if (!S.eventId) {
       check('J', 'el organizador tiene "Panel" para volver desde el escáner', (await sc.page.locator('a.k-panel[href="/admin"]').count()) === 1);
       await sc.ctx.close();
     }
-    // Entradas y fecha en UNA pantalla; el link viejo /entradas redirige ahí.
+    // Entradas es su propia sección; los datos del evento, otra.
     await go(p, `/admin/events/${S.eventId}/entradas`);
-    check('J', '/entradas lleva a la pantalla del evento con datos y tipos de entrada', /\/editar/.test(p.url()) && (await p.locator('#entradas').count()) === 1 && (await p.locator('#datos').count()) === 1, p.url());
+    const nTipos = await p.locator('#entradas .s-fold').count();
+    check('J', 'Entradas: sección propia con los tipos del evento', /\/entradas$/.test(p.url()) && nTipos >= 3, `${p.url()} · filas=${nTipos}`);
+    await go(p, `/admin/events/${S.eventId}/editar`);
+    check('J', 'Datos del evento: sección propia (sin las entradas)', (await p.locator('#datos').count()) === 1 && (await p.locator('#entradas').count()) === 0, p.url());
     // (panel/lanzamiento) El inicio del evento NO muestra cifras (Paul: "S/ 0
     // cobrado · 3 vendidas" no debe verse); los números viven en Estadísticas.
     await go(p, `/admin/events/${S.eventId}`);
-    const subs = (await p.locator('.a-tabs__sub').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').replace(/\d+$/, '').trim());
-    check('J', 'Inicio sin cifras; sub-pestañas Inicio · Yapes · Estadísticas', (await p.locator('.a-pulse, .a-next__nums').count()) === 0 && subs.join('|') === 'Inicio|Yapes|Estadísticas', subs.join(' | '));
+    check('J', 'el evento abre sin cifras de venta (viven en Estadísticas)', (await p.locator('.a-pulse, .a-next__nums').count()) === 0);
     await go(p, `/admin/events/${S.eventId}/estadisticas`);
     const pulse = (await p.locator('.a-pulse').innerText().catch(() => '')).replace(/\s+/g, ' ');
     check('J', 'Estadísticas arranca con los cuatro números (vendidas / recaudado / cuándo / entraron)', /VENDIDAS/i.test(pulse) && /RECAUDADO/i.test(pulse) && /CUÁNDO/i.test(pulse), pulse.slice(0, 160));
     await go(p, `/admin/events/${S.eventId}/cortesias`);
     const cort = await bodyText(p, 2000);
-    check('J', 'Cortesías muestra lo emitido (10 entradas)', /10 entradas de cortesía/.test(cort), (cort.match(/\d+ entradas? de cortesía[^.]*/) ?? [''])[0]);
+    check('J', 'Cortesías lista cada entrada emitida (10) con su link', /10 emitidas/.test(cort) && (cort.match(/Copiar link/g) ?? []).length >= 10, (cort.match(/\d+ emitidas?[^.]*/) ?? [''])[0]);
     await go(p, `/admin/events/${S.eventId}`);
     await shot(p, 'J', 'resumen');
     await go(p, `/admin/events/${S.eventId}/estadisticas`);
@@ -1251,6 +1254,33 @@ if (!S.eventId) {
     }
     // El evento queda archivado acá mismo (además cleanup archiva los e2e-*).
     await svc.from('events').update({ archived_at: new Date().toISOString(), is_published: false }).eq('id', evG.id);
+  });
+
+  // N — "Códigos para reclamar" (panel/lanzamiento): el organizador crea el
+  // código desde Cortesías; en la página del evento (que COBRA) el código
+  // vale 1 entrada por uso: con 2 se rechaza sin crear orden pagada, con 1 se
+  // emite sin pagar, y el mismo email no puede usarlo otra vez.
+  await step('N', 'Código para reclamar: 1 entrada gratis por uso en evento pago', async () => {
+    const p = adm.page;
+    await go(p, `/admin/events/${S.eventId}/cortesias`);
+    const code = `R${STAMP.slice(-5)}`.toUpperCase();
+    await p.getByLabel('Código', { exact: true }).fill(code);
+    await p.getByLabel(/Cuántas personas/).fill('3');
+    await p.getByRole('button', { name: 'Crear código' }).click();
+    let pc = null;
+    for (let i = 0; i < 30 && !pc; i++) { pc = (await svc.from('promo_codes').select('id, code, discount_type, max_uses, per_email_limit').eq('event_id', S.eventId).eq('code', code).maybeSingle()).data; if (!pc) await sleep(500); }
+    check('N', 'el código se crea desde Cortesías (gratis, 3 usos, 1 por email)', pc?.discount_type === 'free' && pc?.max_uses === 3 && pc?.per_email_limit === 1, JSON.stringify(pc));
+    if (!pc) return;
+    const emailN = `e2e-n-${STAMP}@test.local`;
+    const dos = await buy({ items: { General: 2 }, email: emailN, name: `Reclamo N ${STAMP}`, promo: code, tag: 'N' });
+    const pagadasDos = (await svc.from('orders').select('id').eq('event_id', S.eventId).eq('buyer_email', emailN).eq('status', 'paid')).data ?? [];
+    check('N', 'con 2 entradas el código se rechaza ("vale para 1 entrada") y no emite nada', dos.res !== 'nav' && dos.toasts.some((t) => /1 entrada/i.test(t)) && pagadasDos.length === 0, `${dos.res} · ${dos.toasts.join(' | ')}`);
+    const una = await buy({ items: { General: 1 }, email: emailN, name: `Reclamo N ${STAMP}`, promo: code, tag: 'N' });
+    const ord = una.orderId ? (await svc.from('orders').select('status, total_cents').eq('id', una.orderId).maybeSingle()).data : null;
+    const tks = una.orderId ? (await svc.from('tickets').select('id').eq('order_id', una.orderId)).data ?? [] : [];
+    check('N', 'con 1 entrada se emite GRATIS: orden pagada S/ 0 y 1 QR', /confirmacion/.test(una.url) && ord?.status === 'paid' && ord?.total_cents === 0 && tks.length === 1, `${una.url} · ${JSON.stringify(ord)} · tickets=${tks.length}`);
+    const otra = await buy({ items: { General: 1 }, email: emailN, name: `Reclamo N ${STAMP}`, promo: code, tag: 'N' });
+    check('N', 'el mismo email no puede reclamar dos veces', otra.res !== 'nav', `${otra.res} · ${otra.toasts.join(' | ')}`);
   });
 }
 

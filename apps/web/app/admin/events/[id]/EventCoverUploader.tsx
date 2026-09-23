@@ -64,7 +64,7 @@ export function EventCoverUploader({ eventId, currentUrl, readOnly = false }: { 
               <div className="s-file">
                 <input id="cover-file" ref={inputRef} type="file" name="cover" accept="image/png,image/jpeg,image/webp" onChange={onPick} className="s-file__input" />
                 <label htmlFor="cover-file" className="s-btn s-btn--soft s-btn--sm s-file__btn">
-                  {currentUrl ? 'Cambiar flyer' : 'Elegir flyer'}
+                  {currentUrl ? 'Elegir otra imagen' : 'Elegir imagen'}
                 </label>
                 <span className="s-file__name">{fileName ?? (currentUrl ? 'El actual' : 'Ninguno elegido')}</span>
               </div>
@@ -92,9 +92,12 @@ export function EventCoverUploader({ eventId, currentUrl, readOnly = false }: { 
 
 function SubmitBtn({ hasFile, hasCurrent }: { hasFile: boolean; hasCurrent: boolean }) {
   const { pending } = useFormStatus();
+  // Había dos botones "Cambiar flyer" (elegir y subir) y confundían: el de
+  // elegir dice "Elegir imagen" y este aparece recién con una imagen elegida.
+  if (!hasFile && !pending) return null;
   return (
-    <button type="submit" className="s-btn s-btn--primary s-btn--sm" disabled={pending || !hasFile}>
-      <ImagePlus className="h-4 w-4" /> {pending ? 'Subiendo…' : hasCurrent ? 'Cambiar flyer' : 'Subir flyer'}
+    <button type="submit" className="s-btn s-btn--primary s-btn--sm" disabled={pending}>
+      <ImagePlus className="h-4 w-4" /> {pending ? 'Subiendo…' : hasCurrent ? 'Guardar flyer nuevo' : 'Guardar flyer'}
     </button>
   );
 }
