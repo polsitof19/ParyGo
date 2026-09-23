@@ -39,7 +39,6 @@ export default async function CourtesiesPage({ params }: { params: { id: string 
   return (
     <>
       <div style={{ marginBottom: 14 }}>
-        <span className="eyebrow">Personas</span>
         <h2 className="s-h2" style={{ marginTop: 6 }}>Cortesías</h2>
         <p className="s-card__desc">
           Entradas gratis para invitados, prensa o RR.PP. Son entradas reales, escaneables en puerta, y <strong>descuentan del aforo</strong>.

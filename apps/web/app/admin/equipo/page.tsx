@@ -23,7 +23,6 @@ export default async function AdminTeamPage() {
 
       <div className="s-pagehead" style={{ marginBottom: 18 }}>
         <div>
-          <span className="eyebrow">Equipo</span>
           <h1 className="s-h1" style={{ marginTop: 8 }}>Equipo de puerta</h1>
           <p className="s-card__desc">
             Tu staff valida entradas con su email y contraseña, o con su código personal de puerta.

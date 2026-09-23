@@ -3,31 +3,25 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { ExternalLink, Link2, Gift, ScanLine, Check, Search, Send, Download, Trophy } from 'lucide-react';
+import { ExternalLink, Link2, Gift, ScanLine, Check, Search, Send, Download, BarChart3, PencilLine } from 'lucide-react';
 
-// Acciones rápidas del evento, VISIBLES (móvil incluido): lo que el organizador
-// hace más seguido, a un toque desde el Resumen y desde la home (próximo
-// evento). Antes buscar comprador, reenviar entrada, exportar asistentes y
-// ventas por promotor vivían detrás del nav plegado del evento: 3 toques y
-// había que saber dónde estaban.
-//
-// Rejilla de filas (.s-acts): dos columnas en el teléfono, cuatro en
-// escritorio. Todos son botones de TEXTO: el primario de la pantalla es otro.
-export function QuickActions({
-  eventId,
+// Los dos botones del evento que viene: ABRIR ESCÁNER y COPIAR LINK. Son lo
+// que el organizador hace la noche del evento y los días antes (compartir),
+// así que van como botones y no como filas. El escáner es el primario salvo
+// que la pantalla ya tenga otro (Yapes por aprobar): uno solo por pantalla.
+export function EventButtons({
   publicUrl,
   isPublished,
+  scannerPrimary = true,
   readOnly = false,
-  label = 'Acciones',
 }: {
-  eventId: string;
   publicUrl: string | null;
   isPublished: boolean;
+  scannerPrimary?: boolean;
   readOnly?: boolean;
-  label?: string;
 }) {
   const [copied, setCopied] = useState(false);
-  const base = `/admin/events/${eventId}`;
+  const live = Boolean(publicUrl && isPublished);
 
   async function copy() {
     if (!publicUrl) return;
@@ -41,64 +35,101 @@ export function QuickActions({
     }
   }
 
+  if (readOnly && !live) return null;
+  return (
+    <div className="a-evbtns">
+      {!readOnly && (
+        <Link href="/scan" className={`s-btn ${scannerPrimary ? 's-btn--primary' : 's-btn--soft'}`}>
+          <ScanLine aria-hidden="true" /> Abrir escáner
+        </Link>
+      )}
+      {live && (
+        <button type="button" onClick={copy} className="s-btn s-btn--soft">
+          {copied ? <Check aria-hidden="true" /> : <Link2 aria-hidden="true" />} {copied ? 'Copiado' : 'Copiar link'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// Acciones del evento, VISIBLES y AGRUPADAS por para qué sirven (referencia
+// aprobada 2026-09-23): "Asistentes" (la gente que compró) y "Venta" (lo que
+// mueve la plata). Filas de 52 con ícono y chevron, como un menú de ajustes;
+// una columna en el teléfono, dos en la compu (.s-acts, parygo-panel.css).
+export function QuickActions({
+  eventId,
+  publicUrl,
+  isPublished,
+  readOnly = false,
+  showEdit = false,
+}: {
+  eventId: string;
+  publicUrl: string | null;
+  isPublished: boolean;
+  readOnly?: boolean;
+  showEdit?: boolean;
+}) {
+  const base = `/admin/events/${eventId}`;
   const live = Boolean(publicUrl && isPublished);
 
   return (
-    <nav aria-label={label}>
-      <span className="s-acts__k">{label}</span>
-      <ul className="s-acts">
-        <li>
-          <Link href={`${base}/clientes?buscar=1`} className="s-act">
-            <Search aria-hidden="true" /><span>Buscar comprador</span>
-          </Link>
-        </li>
-        {/* Reenviar es escritura (manda un email): no en solo lectura. */}
-        {!readOnly && (
+    <nav aria-label="Acciones del evento" className="a-actgroups">
+      <div>
+        <span className="s-acts__k">Asistentes</span>
+        <ul className="s-acts">
           <li>
-            <Link href={`${base}/clientes?reenviar=1`} className="s-act">
-              <Send aria-hidden="true" /><span>Reenviar entrada</span>
+            <Link href={`${base}/clientes?buscar=1`} className="s-act">
+              <Search aria-hidden="true" /><span>Buscar comprador</span>
             </Link>
           </li>
-        )}
-        <li>
-          {/* Descarga directa del CSV completo (misma ruta que "CSV completo"
-              en Compradores): un toque, sin pasar por la lista. */}
-          <a href={`/api/admin/events/${eventId}/export-clientes`} className="s-act" download>
-            <Download aria-hidden="true" /><span>Exportar asistentes</span>
-          </a>
-        </li>
-        <li>
-          <Link href={`${base}/promotores`} className="s-act">
-            <Trophy aria-hidden="true" /><span>Ventas por promotor</span>
-          </Link>
-        </li>
-        {!readOnly && (
+          {/* Reenviar es escritura (manda un email): no en solo lectura. */}
+          {!readOnly && (
+            <li>
+              <Link href={`${base}/clientes?reenviar=1`} className="s-act">
+                <Send aria-hidden="true" /><span>Reenviar entrada</span>
+              </Link>
+            </li>
+          )}
           <li>
-            <Link href={`${base}/cortesias`} className="s-act">
-              <Gift aria-hidden="true" /><span>Emitir cortesías</span>
-            </Link>
-          </li>
-        )}
-        <li>
-          <Link href="/scan" className="s-act">
-            <ScanLine aria-hidden="true" /><span>Abrir escáner</span>
-          </Link>
-        </li>
-        {live && (
-          <li>
-            <button type="button" onClick={copy} className="s-act">
-              {copied ? <Check aria-hidden="true" /> : <Link2 aria-hidden="true" />}<span>{copied ? 'Copiado' : 'Copiar link'}</span>
-            </button>
-          </li>
-        )}
-        {live && (
-          <li>
-            <a href={publicUrl!} target="_blank" rel="noopener noreferrer" className="s-act">
-              <ExternalLink aria-hidden="true" /><span>Ver página pública</span>
+            {/* Descarga directa del CSV completo (misma ruta que "CSV completo"
+                en Compradores): un toque, sin pasar por la lista. */}
+            <a href={`/api/admin/events/${eventId}/export-clientes`} className="s-act" download>
+              <Download aria-hidden="true" /><span>Exportar asistentes</span>
             </a>
           </li>
-        )}
-      </ul>
+        </ul>
+      </div>
+      <div>
+        <span className="s-acts__k">Venta</span>
+        <ul className="s-acts">
+          {!readOnly && (
+            <li>
+              <Link href={`${base}/cortesias`} className="s-act">
+                <Gift aria-hidden="true" /><span>Emitir cortesías</span>
+              </Link>
+            </li>
+          )}
+          <li>
+            <Link href={`${base}/promotores`} className="s-act">
+              <BarChart3 aria-hidden="true" /><span>Ventas por promotor</span>
+            </Link>
+          </li>
+          {showEdit && !readOnly && (
+            <li>
+              <Link href={`${base}/editar`} className="s-act">
+                <PencilLine aria-hidden="true" /><span>Editar evento y entradas</span>
+              </Link>
+            </li>
+          )}
+          {live && (
+            <li>
+              <a href={publicUrl!} target="_blank" rel="noopener noreferrer" className="s-act">
+                <ExternalLink aria-hidden="true" /><span>Ver página pública</span>
+              </a>
+            </li>
+          )}
+        </ul>
+      </div>
     </nav>
   );
 }

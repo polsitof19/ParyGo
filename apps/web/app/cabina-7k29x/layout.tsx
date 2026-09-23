@@ -1,4 +1,4 @@
-import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
+import { GeistSans } from 'geist/font/sans';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { SuperTopbar } from './SuperTopbar';
@@ -12,20 +12,10 @@ import './super.css';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-// Warm v7 type system, scoped to the super panel via the .super-shell wrapper
-// (does not affect the brand admin / scan / public app).
-const bricolage = Bricolage_Grotesque({
-  weight: ['600', '700', '800'],
-  subsets: ['latin'],
-  variable: '--font-bricolage',
-  display: 'swap',
-});
-const hanken = Hanken_Grotesk({
-  weight: ['300', '400', '500', '600', '700'],
-  subsets: ['latin'],
-  variable: '--font-hanken',
-  display: 'swap',
-});
+// Tema NOCHE (2026-09-23), el mismo del comprador: fondo #0A0A0A y Geist en
+// todo. Los tokens son los de .pg.pg-noche (medidos por test:contrast); lo
+// propio del panel vive en parygo-panel.css.
+
 
 export default async function SuperLayout({ children }: { children: React.ReactNode }) {
   const user = await requireSession({ superAdmin: true });
@@ -40,7 +30,7 @@ export default async function SuperLayout({ children }: { children: React.ReactN
   return (
     // `pg` = tokens · `pg-panel` = componentes compartidos con el panel del
     // organizador · `super-shell` = lo propio del super admin.
-    <div className={`pg pg-panel super-shell ${bricolage.variable} ${hanken.variable}`}>
+    <div className={`pg pg-noche pg-panel super-shell ${GeistSans.variable}`}>
       <SuperTopbar email={user.email} pendingRequests={pendingRequests ?? 0} />
       <main className="s-wrap">{children}</main>
     </div>

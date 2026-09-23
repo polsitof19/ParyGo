@@ -19,13 +19,12 @@ export default function NewBrandPage({ searchParams }: { searchParams: { request
   const initialEmail = requestId ? (searchParams.email ?? '').slice(0, 200) : '';
 
   return (
-    <div style={{ maxWidth: 560, margin: '0 auto' }}>
+    <div style={{ maxWidth: 560 }}>
       <Link href={requestId ? '/cabina-7k29x/solicitudes' : '/cabina-7k29x'} className="s-back">
         <ChevronLeft className="h-3.5 w-3.5" /> {requestId ? 'Solicitudes' : 'Marcas'}
       </Link>
 
       <header style={{ marginBottom: 22 }}>
-        <span className="eyebrow">{requestId ? 'Aprobar solicitud' : 'Nueva marca'}</span>
         <h1 className="s-h1" style={{ marginTop: 8 }}>Crear marca y dueño</h1>
         <p className="s-card__desc">
           En un paso: la marca, su subdominio y el dueño con su acceso. El saldo se carga después con un clic.

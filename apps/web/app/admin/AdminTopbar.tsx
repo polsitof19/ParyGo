@@ -10,8 +10,8 @@ import { BrandLogo } from '@/components/BrandLogo';
 //   Escáner   la puerta (abre /scan; desde ahí "Panel" vuelve acá)
 //   Equipo    quién escanea en la puerta
 //   Mi marca  datos, cobro (Yape / tarjeta) y logo
-// En computadora van arriba, en texto con subrayado. En el celular van ABAJO,
-// fijas, con ícono y nombre: el pulgar llega y siempre se sabe dónde se está.
+// En la computadora van en la barra LATERAL; en el celular, ABAJO y fijas,
+// con ícono y nombre (parygo-panel.css, "Navegación de los paneles").
 const NAV = [
   { href: '/admin', label: 'Eventos', Icono: CalendarDays },
   { href: '/scan', label: 'Escáner', Icono: ScanLine },
@@ -41,11 +41,9 @@ export function AdminTopbar({ brandName, email, logoUrl, soloLectura = false }: 
       <header className="s-topbar">
         <div className="s-topbar__inner">
           {/* El que se recorta con "…" es el NOMBRE, no el lockup entero. */}
-          <Link href="/admin" className="s-logo" style={{ gap: 10 }}>
-            {logoUrl && <BrandLogo src={logoUrl} alt="" size={28} ring={false} />}
+          <Link href="/admin" className="s-logo">
+            {logoUrl && <BrandLogo src={logoUrl} alt="" size={30} ring={false} />}
             <span className="s-logo__name">{brandName}</span>
-            <span className="dot">.</span>
-            <span className="tag">Tu panel</span>
           </Link>
 
           <nav className="s-nav" aria-label="Secciones">{items}</nav>
@@ -54,7 +52,8 @@ export function AdminTopbar({ brandName, email, logoUrl, soloLectura = false }: 
             <span className="s-email">{email}</span>
             <form action="/auth/logout" method="post">
               <button type="submit" aria-label="Cerrar sesión" className="s-iconbtn">
-                <LogOut className="h-4 w-4" />
+                <LogOut className="s-nav__ico" aria-hidden="true" />
+                <span className="s-iconbtn__txt">Cerrar sesión</span>
               </button>
             </form>
           </div>

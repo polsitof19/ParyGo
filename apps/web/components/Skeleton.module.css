@@ -1,7 +1,9 @@
 .sk {
   display: block;
   border-radius: 10px;
-  background: linear-gradient(100deg, rgba(0,0,0,.05) 30%, rgba(0,0,0,.10) 50%, rgba(0,0,0,.05) 70%);
+  /* Gris a media luz: se lee igual sobre papel claro y sobre el negro de los
+     paneles (tema noche). Un negro translúcido desaparecía sobre #0A0A0A. */
+  background: linear-gradient(100deg, rgba(128,128,128,.10) 30%, rgba(128,128,128,.20) 50%, rgba(128,128,128,.10) 70%);
   background-size: 200% 100%;
   animation: skShimmer 1.25s ease-in-out infinite;
 }
@@ -21,5 +23,5 @@
 
 /* Respeta prefers-reduced-motion: sin shimmer, solo un gris suave. */
 @media (prefers-reduced-motion: reduce) {
-  .sk { animation: none; background: rgba(0,0,0,.07); }
+  .sk { animation: none; background: rgba(128,128,128,.14); }
 }
