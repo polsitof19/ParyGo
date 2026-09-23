@@ -1,23 +1,30 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
+import type { Viewport } from 'next';
+import { GeistSans } from 'geist/font/sans';
 import { createClient } from '@/lib/supabase/server';
-import { brandColor, brandFillPair, brandFillHover, brandInk, withAlpha } from './brandTheme';
-import { BrandLogo } from '@/components/BrandLogo';
-// Orden: tokens del sistema primero; client.css los alias y los pisa donde el
-// sitio del comprador manda (el acento ES el color de la marca).
+import { optimizedImage } from '@/lib/imageUrl';
+import { brandColor, brandFillPair, brandFillHover, brandMark } from './brandTheme';
+// Orden: tokens del sistema primero (el tema noche vive ahí); client.css pone
+// la superficie del comprador y compra.css / landing.css las pantallas.
 import '../../styles/parygo-tokens.css';
 import './client.css';
-import './direcciones.css';
+import './compra.css';
 import './landing.css';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-const bricolage = Bricolage_Grotesque({ weight: ['700', '800'], subsets: ['latin'], variable: '--font-bricolage', display: 'swap' });
-const hanken = Hanken_Grotesk({ weight: ['300', '400', '500', '600', '700'], subsets: ['latin'], variable: '--font-hanken', display: 'swap' });
+// La barra del navegador del teléfono toma el negro de la página, no el crema
+// del layout raíz: si no, arriba de la compra quedaba una franja clara.
+export const viewport: Viewport = { themeColor: '#0A0A0A' };
+
 // Layout de las páginas públicas por marca. El middleware reescribe
 // <slug>.parygo.com/* → /b/<slug>/*, así que este segmento recibe el slug.
+//
+// TEMA NOCHE (2026-09-23): fondo negro neutro, Geist en todo, el color de la
+// marca como acento. Esta superficie NO carga Bricolage ni Hanken: la letra
+// es Geist (paquete oficial `geist`, next/font/local, OFL) y nada más.
 export default async function BrandLayout({
   children,
   params,
@@ -37,54 +44,60 @@ export default async function BrandLayout({
 
   const theme = (brand.theme_json ?? {}) as { primary_color?: string; logo_url?: string | null };
   const primary = brandColor(theme.primary_color);
-  // Par relleno+texto del color de marca, medido a AA 4.5:1 (ver brandColors).
-  // El color crudo (--brand) queda solo para puntos, barras y anillos: nunca
-  // lleva texto "a ojo" porque el promotor elige cualquier color.
-  const { fill: brandFill, on: onFill } = brandFillPair(theme.primary_color);
-  // El hover del relleno es otro color MEDIDO, no un filtro de brillo: un
-  // filtro mueve el par después de que el test lo midió y lo saca de AA.
-  const brandFillHov = brandFillHover(theme.primary_color);
-  const brandSoft = withAlpha(primary, 0.12);
-  // Variante legible del color de marca para texto/acento sobre crema (oscurece
-  // los colores muy claros como el amarillo; deja intactos los medios/oscuros).
-  const brandTextInk = brandInk(theme.primary_color);
+  // Par relleno+texto del color de marca, medido a AA 4.5:1 con las tintas
+  // NEUTRAS del tema noche: blanco o #0A0A0A, nunca crema. Para Code da blanco
+  // sobre #C8371F (5.22:1), que es el botón de la maqueta aprobada.
+  const { fill: brandFill, on: onFill } = brandFillPair(theme.primary_color, 'neutra');
+  // El hover del relleno es otro color MEDIDO, no un filtro de brillo.
+  const brandFillHov = brandFillHover(theme.primary_color, 'neutra');
+  // El color como MARCA (punto, barra de la fila elegida, anillo de foco):
+  // aclarado lo mínimo para llegar a 3:1 contra el negro.
+  const marca = brandMark(theme.primary_color);
   const logoUrl = theme.logo_url ?? null;
 
   return (
     <div
-      className={`pg client-shell ${bricolage.variable} ${hanken.variable}`}
+      className={`pg pg-noche client-shell ${GeistSans.variable}`}
       style={
         {
           '--brand': primary,
+          '--brand-mark': marca,
           '--brand-fill': brandFill,
           '--on-fill': onFill,
           '--brand-fill-hover': brandFillHov,
-          '--brand-soft': brandSoft,
-          '--brand-deep': brandTextInk,
         } as React.CSSProperties
       }
     >
+      {/* El body del layout raíz está en Hanken (tailwind font-sans) y NO ve
+          --font-geist-sans, que vive en este shell: con un var() sin definir la
+          regla quedaba inválida y el body heredaba Hanken, que WebKit igual
+          descargaba (los toasts y el route announcer viven ahí; WebKit la baja
+          aunque solo la tenga el <html>). Acá va el nombre REAL de la familia
+          que registró next/font, para html y body. */}
+      <style>{`html:has(.client-shell),body:has(.client-shell){font-family:${GeistSans.style.fontFamily};background:#0A0A0A}`}</style>
       <header className="c-header">
         <div className="c-header__inner">
-          <Link href="/" className="c-lockup" aria-label={brand.name}>
+          <Link href="/" className="c-lockup" aria-label={`${brand.name}, inicio`}>
             {logoUrl ? (
-              <BrandLogo src={logoUrl} alt="" size={36} eager ring />
+              // El logo REAL, a 26px de alto y con su ancho: nada de círculo
+              // ni de recorte. Con logo, el nombre no se repite en texto.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                className="c-lockup__logo"
+                src={optimizedImage(logoUrl, { width: 240, quality: 85 })}
+                alt={brand.name}
+                height={26}
+                decoding="async"
+              />
             ) : (
-              // Sin logo: la inicial sobre el color de la marca con su texto
-              // medido (nunca el naranja de parygo, que sería de otra marca).
-              <span className="c-lockup__mark" aria-hidden="true">{(brand.name.trim()[0] ?? '?').toUpperCase()}</span>
-            )}
-            {/* El nombre se muestra SIEMPRE (con o sin logo): un logo-ícono claro
-                podría fundirse con una barra clara y dejar la marca invisible. */}
-            <span className="c-lockup__txt">
               <span className="c-lockup__name">{brand.name}</span>
-              <span className="c-lockup__ofi">Venta oficial</span>
-            </span>
+            )}
+            <span className="c-lockup__ofi">Venta oficial</span>
           </Link>
           <span className="c-powered">
             powered by{' '}
             <a href="https://parygo.com" target="_blank" rel="noopener noreferrer"><b>parygo</b></a>
-            <span className="c-powered__dot" />
+            <span className="c-powered__dot" aria-hidden="true" />
           </span>
         </div>
       </header>

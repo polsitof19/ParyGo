@@ -1,7 +1,7 @@
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
-import { Mail, Check } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { resendMyTickets, type ResendResult } from './actions';
 
 const initial: ResendResult = { ok: false, message: '' };
@@ -12,7 +12,7 @@ export function ResendForm() {
   const sent = state.ok && !!state.message;
 
   return (
-    <form action={action} className="c-card" style={{ marginTop: 18 }}>
+    <form action={action} style={{ marginTop: 'var(--b-s4)' }}>
       <div className="c-field">
         <label htmlFor="email" className="c-label">Tu email</label>
         <input
@@ -23,14 +23,13 @@ export function ResendForm() {
       </div>
       {state.message && (
         <p
-          className="c-help"
+          className={`c-help c-state__dot c-state__dot--${sent ? 'ok' : 'alert'}`}
           role="status"
-          style={{ marginTop: 4, color: sent ? 'var(--ok)' : 'var(--alert)', display: 'flex', alignItems: 'center', gap: 6 }}
         >
-          {sent && <Check className="h-4 w-4" />} {state.message}
+          {state.message}
         </p>
       )}
-      <div style={{ marginTop: 14 }}>
+      <div style={{ marginTop: 'var(--b-s3)' }}>
         <Submit />
       </div>
     </form>
@@ -40,8 +39,8 @@ export function ResendForm() {
 function Submit() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className="c-btn c-btn--brand" disabled={pending} style={{ width: '100%' }}>
-      <Mail className="h-4 w-4" /> {pending ? 'Enviando…' : 'Reenviar mi entrada'}
+    <button type="submit" className="c-btn c-btn--brand c-btn--block c-btn--lg" disabled={pending}>
+      <Mail aria-hidden="true" /> {pending ? 'Enviando…' : 'Reenviar mi entrada'}
     </button>
   );
 }

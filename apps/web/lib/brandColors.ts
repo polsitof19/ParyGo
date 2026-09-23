@@ -75,17 +75,18 @@ export function brandInk(hex?: string | null): string {
 // el texto (el gesto clásico de "se hunde") hasta un 12%, y se retrocede de a
 // 2% mientras no llegue a 4.5:1. Si ni el 2% entra —el relleno ya estaba al
 // límite— se va para el lado contrario, que siempre SUBE el contraste.
-export function brandFillHover(hex?: string | null): string {
-  const { fill, on } = brandFillPair(hex);
+export function brandFillHover(hex?: string | null, modo: Tintas = 'papel'): string {
+  const { fill, on } = brandFillPair(hex, modo);
   const rgb = parseHex(fill)!;
-  const texto = on === INK_HEX ? INK : PAPER;
+  const t = tintas(modo);
+  const texto = on === t.oscuraHex ? t.oscura : t.clara;
   for (let m = 0.12; m >= 0.02; m -= 0.02) {
     const candidato = toHex(mix(rgb, texto, m));
     if (contrastBetween(parseHex(candidato)!, texto) >= 4.5) return candidato;
   }
   // Sin margen para profundizar: se aleja del texto. Alejarse de blanco o de
   // negro puro (no de PAPER/INK) garantiza que el contraste no baje nunca.
-  const lejos: [number, number, number] = on === INK_HEX ? [255, 255, 255] : [0, 0, 0];
+  const lejos: [number, number, number] = on === t.oscuraHex ? [255, 255, 255] : [0, 0, 0];
   return toHex(mix(rgb, lejos, 0.12));
 }
 
@@ -124,6 +125,41 @@ function mix(rgb: [number, number, number], target: [number, number, number], m:
   return [rgb[0] + (target[0] - rgb[0]) * m, rgb[1] + (target[1] - rgb[1]) * m, rgb[2] + (target[2] - rgb[2]) * m];
 }
 
+// Las dos tintas que pueden ir SOBRE el relleno de marca.
+//   'papel'   tinta cálida #231C17 / papel crema #FBF7F0 — landing y paneles.
+//   'neutra'  #0A0A0A / blanco #FFFFFF — superficies del comprador (tema
+//             noche) y emails de entrada: fondos neutros, nunca crema.
+// En 'neutra' se PREFIERE el blanco cuando llega a 4.5:1: es el botón de la
+// maqueta aprobada (blanco sobre el rojo de Code, 5.22:1). En 'papel' se
+// prefiere la tinta, como siempre.
+export type Tintas = 'papel' | 'neutra';
+const NEGRO: [number, number, number] = [0x0a, 0x0a, 0x0a];
+const BLANCO: [number, number, number] = [0xff, 0xff, 0xff];
+function tintas(modo: Tintas) {
+  return modo === 'neutra'
+    ? { oscura: NEGRO, clara: BLANCO, oscuraHex: '#0A0A0A', claraHex: '#FFFFFF' }
+    : { oscura: INK, clara: PAPER, oscuraHex: INK_HEX, claraHex: PAPER_HEX };
+}
+
+// ⚠ Copia en scripts/check-brand-contrast.mjs — si la tocás, tocá la otra.
+//
+// El color de marca como MARCA sobre el fondo negro del comprador: el punto,
+// la barra de 3px de la fila elegida, el anillo de foco. No lleva texto, así
+// que el piso es el de WCAG 1.4.11 para lo que no es texto: 3:1 contra
+// #0A0A0A. Una marca oscura (azul marino, bordó) se volvía invisible sobre el
+// negro; acá se aclara hacia blanco lo MÍNIMO necesario, de a 2%, midiendo el
+// hex ya redondeado. Si el color ya llega, va tal cual.
+export function brandMark(hex?: string | null): string {
+  const rgb = hex ? parseHex(hex) : null;
+  if (!rgb) return '#FF6A3D';
+  if (contrastBetween(rgb, NEGRO) >= 3) return toHex(rgb);
+  for (let m = 0.02; m <= 1.001; m += 0.02) {
+    const candidato = toHex(mix(rgb, BLANCO, m));
+    if (contrastBetween(parseHex(candidato)!, NEGRO) >= 3) return candidato;
+  }
+  return '#FFFFFF';
+}
+
 // ⚠ Si tocás esta función, tocá también su copia en
 // scripts/check-brand-contrast.mjs (el CI corre en Node 20 y sin npm install,
 // así que no puede importar este .ts). Ese test falla si las dos se separan.
@@ -138,17 +174,19 @@ function mix(rgb: [number, number, number], target: [number, number, number], m:
 // obligaría a lavar el color hasta perder la marca—. Y si el color es de tono
 // medio, donde NINGUNA de las dos llega, se corre el relleno lo mínimo hacia
 // el lado que menos lo cambia.
-export function brandFillPair(hex?: string | null): { fill: string; on: string } {
+export function brandFillPair(hex?: string | null, modo: Tintas = 'papel'): { fill: string; on: string } {
+  const t = tintas(modo);
   const rgb = hex ? parseHex(hex) : null;
-  if (!rgb) return { fill: '#FF6A3D', on: INK_HEX }; // tangerina parygo: 5.91:1
-  const onInk = contrastBetween(rgb, INK);
-  const onPaper = contrastBetween(rgb, PAPER);
-  if (onInk >= 4.5) return { fill: toHex(rgb), on: INK_HEX };
-  if (onPaper >= 4.5) return { fill: toHex(rgb), on: PAPER_HEX };
+  if (!rgb) return { fill: '#FF6A3D', on: t.oscuraHex }; // tangerina parygo: 5.91:1 con tinta
+  const onInk = contrastBetween(rgb, t.oscura);
+  const onPaper = contrastBetween(rgb, t.clara);
+  if (modo === 'neutra' && onPaper >= 4.5) return { fill: toHex(rgb), on: t.claraHex };
+  if (onInk >= 4.5) return { fill: toHex(rgb), on: t.oscuraHex };
+  if (onPaper >= 4.5) return { fill: toHex(rgb), on: t.claraHex };
   // Tono medio: ninguna de las dos se lee. Se ajusta hacia el lado más cercano.
-  const hacia = onInk >= onPaper ? PAPER : INK;
-  const texto = onInk >= onPaper ? INK : PAPER;
-  const textoHex = onInk >= onPaper ? INK_HEX : PAPER_HEX;
+  const hacia = onInk >= onPaper ? t.clara : t.oscura;
+  const texto = onInk >= onPaper ? t.oscura : t.clara;
+  const textoHex = onInk >= onPaper ? t.oscuraHex : t.claraHex;
   for (let m = 0.04; m <= 1.001; m += 0.04) {
     const mezcla = mix(rgb, hacia, m);
     if (contrastBetween(mezcla, texto) >= 4.5) return { fill: toHex(mezcla), on: textoHex };

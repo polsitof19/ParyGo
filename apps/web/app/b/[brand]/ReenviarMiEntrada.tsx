@@ -15,7 +15,7 @@ export function ReenviarMiEntrada({ qrCode }: { qrCode: string }) {
   return (
     <button
       type="button"
-      className="c-btn c-btn--soft"
+      className="c-btn c-btn--ghost"
       disabled={pending || listo}
       onClick={() =>
         start(async () => {

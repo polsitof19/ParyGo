@@ -25,15 +25,15 @@ export function TransferTicket({ qrCode }: { qrCode: string }) {
 
   if (state.ok) {
     return (
-      <div className="c-card" style={{ marginTop: 16, borderColor: 'var(--brand)' }}>
-        <p style={{ fontWeight: 700, color: 'var(--brand-ink)' }}>✓ Entrada transferida</p>
-        <p className="c-muted" style={{ fontSize: 13.5, marginTop: 4 }}>{state.message}</p>
+      <div className="c-card" style={{ marginTop: 'var(--b-s3)' }}>
+        <p className="c-state__dot c-state__dot--ok" style={{ fontWeight: 700 }}>Entrada transferida</p>
+        <p className="c-muted" style={{ marginTop: 'var(--b-sx)', fontSize: 'var(--b-meta)' }}>{state.message}</p>
       </div>
     );
   }
 
   return (
-    <div className="c-card" style={{ marginTop: 16 }}>
+    <div style={{ marginTop: 'var(--b-s3)' }}>
       {!open ? (
         <button type="button" onClick={() => setOpen(true)} className="c-btn c-btn--soft c-btn--block">
           <Gift className="h-4 w-4" /> Transferir o regalar esta entrada
@@ -42,7 +42,7 @@ export function TransferTicket({ qrCode }: { qrCode: string }) {
         <form action={action} className="c-stack" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <input type="hidden" name="qr" value={qrCode} />
           <p className="c-card__title" style={{ marginBottom: 0 }}>Transferir entrada</p>
-          <p className="c-muted" style={{ fontSize: 12.5 }}>Le mandamos el QR al nuevo dueño y <strong>este enlace deja de funcionar</strong>. No se puede deshacer.</p>
+          <p className="c-muted" style={{ fontSize: 'var(--b-sec)' }}>Le mandamos el QR al nuevo dueño y <strong>este enlace deja de funcionar</strong>. No se puede deshacer.</p>
           <div className="c-field">
             <label className="c-label" htmlFor="t-name">Nombre del nuevo dueño</label>
             <input id="t-name" name="new_name" required minLength={2} maxLength={120} className="c-input" placeholder="Nombre y apellido" autoComplete="off" />

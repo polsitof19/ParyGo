@@ -1,138 +1,98 @@
 /* ============================================================
-   HOME DE MARCA (<slug>.parygo.com) — .bh
+   HOME DE MARCA (<slug>.parygo.com) — .bh — tema noche
    ============================================================
-   En el sistema de la compra: los mismos tokens (papel, tinta, --line),
-   Bricolage para display y Hanken para cuerpo, la escala fija --b-* y
-   el tier display fluido --b-d* (esta es una de las dos pantallas de
-   PRESENTACIÓN donde DESIGN.md lo permite). Estética Canvas: manda la
-   imagen; la estructura la hacen hairlines, tipografía y espacio.
+   Negro neutro, Geist, la escala fija del comprador. Arriba el logo
+   REAL a 56 (sin el nombre en texto si hay logo), "VENTA OFICIAL ·
+   LIMA" y una línea. Cada evento es una tarjeta --surface con la misma
+   banda de la compra: el flyer entero sobre su copia difuminada.
 
-   CERO CAJAS: ni tarjetas blancas, ni sombras, ni blobs. El flyer es la
-   única superficie, y va ENTERO (proporción real, o un 4:5 con la copia
-   difuminada detrás si es una captura más alta que eso).
-
-   El color de marca NO porta texto: aparece como trazo (el subrayado de
-   la acción) y en la inicial del logo de respaldo, que usa el par medido
-   --brand-fill / --on-fill.
-
-   Reemplaza entera a la home vieja (.bl): 2026-09-23.
+   El primer evento lleva el único botón primario de la pantalla (el par
+   medido de la marca); los siguientes, la acción en texto.
    ============================================================ */
 .client-shell .bh {
-  max-width: 1120px; margin: 0 auto;
-  padding: var(--b-s4) var(--pad) var(--b-s6);
+  max-width: 640px; margin: 0 auto;
+  padding: var(--b-s5) var(--pad) var(--b-s5);
 }
 
 /* ---------- La marca ---------- */
-.client-shell .bh-marca { display: flex; align-items: center; gap: var(--b-s2); }
-.client-shell .bh-marca__ini {
-  width: 64px; height: 64px; flex: none; border-radius: 50%;
-  display: grid; place-items: center;
-  background: var(--brand-fill); color: var(--on-fill);
-  font-family: var(--display); font-weight: 800; font-size: var(--b-t2); line-height: 1;
-}
-.client-shell .bh-marca__txt { display: flex; flex-direction: column; min-width: 0; }
-.client-shell .bh-marca__ofi { margin-top: var(--b-s1); font-size: var(--b-meta); font-weight: 600; color: var(--ink-2); }
+.client-shell .bh-marca { display: flex; flex-direction: column; align-items: flex-start; }
+.client-shell .bh-marca__logo { display: block; height: 56px; width: auto; max-width: 240px; object-fit: contain; }
 .client-shell .bh-marca__nm {
   margin: 0; font-family: var(--display); font-weight: 800;
-  font-size: var(--b-d2); line-height: .96; letter-spacing: -.035em; color: var(--ink);
+  font-size: var(--b-h1); line-height: var(--b-h1-lh); letter-spacing: var(--b-h1-tr);
   overflow-wrap: anywhere;
 }
+.client-shell .bh-marca__ofi { margin-top: var(--b-s3); font-size: var(--b-lb); font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.client-shell .bh-marca__p { margin-top: var(--b-s1); max-width: 44ch; font-size: var(--b-ctl); line-height: 1.5; color: var(--ink-2); }
 
-/* ---------- La lista ---------- */
-.client-shell .bh-sec {
-  margin: var(--b-s5) 0 0; padding-bottom: var(--b-s1);
-  font-family: var(--body); font-size: var(--b-lb); font-weight: 700;
-  letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3);
-  border-bottom: 2px solid var(--ink);
-}
-.client-shell .bh-lista { list-style: none; margin: 0; padding: 0; }
-.client-shell .bh-ev { border-bottom: 1px solid var(--line); }
+/* ---------- Los eventos ---------- */
+.client-shell .bh-sec { margin: var(--b-s5) 0 var(--b-sm); font-size: var(--b-lb); font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.client-shell .bh-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--b-s2); }
 .client-shell .bh-ev__a {
-  display: grid; gap: var(--b-s3); padding: var(--b-s4) 0;
-  color: inherit; text-decoration: none;
+  display: block; padding: var(--b-sm); color: inherit;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card);
+  transition: transform var(--t-ctl) var(--ease);
 }
-.client-shell .bh-ev__a:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; border-radius: var(--r-ctl); }
+.client-shell .bh-ev__a:active { transform: scale(.97); transition-duration: var(--t-press); }
 
-/* El flyer: entero, con su proporción. */
+/* La banda: la misma de la compra, alto reservado. */
 .client-shell .bh-ev__art {
-  position: relative; display: block; overflow: hidden;
-  border-radius: var(--r-card); background: var(--paper-3);
+  position: relative; display: block; height: var(--b-band); overflow: hidden;
+  border-radius: var(--r-band); background: var(--surface-2); isolation: isolate;
 }
-.client-shell .bh-ev__art img {
-  position: relative; z-index: 1; display: block;
-  width: 100%; height: 100%; object-fit: contain;
-}
-/* Captura más alta que 4:5: el póster entero sobre su copia difuminada.
-   Negro por debajo a propósito —es el fondo de una FOTO ajena, la misma
-   excepción documentada del hero de la compra—. */
-.client-shell .bh-ev__art--alto { background: #14110E; }
 .client-shell .bh-ev__blur {
-  position: absolute; inset: -6%; z-index: 0;
+  position: absolute; inset: -12%; z-index: 0;
   background-size: cover; background-position: center;
-  filter: blur(28px) saturate(115%) brightness(.55);
+  filter: blur(28px) brightness(.55);
 }
-.client-shell .bh-ev__art--vacio { display: grid; place-items: center; }
-.client-shell .bh-ev__inicial {
-  font-family: var(--display); font-weight: 800; font-size: var(--b-d2);
-  color: var(--ink-3);
-}
+.client-shell .bh-ev__art img { position: relative; z-index: 1; display: block; height: 100%; width: auto; max-width: 100%; margin: 0 auto; object-fit: contain; }
 
-/* El texto: cuándo, dónde, el nombre, "desde" y la acción. */
-.client-shell .bh-ev__txt { display: flex; flex-direction: column; min-width: 0; }
-.client-shell .bh-ev__cuando { font-size: var(--b-meta); font-weight: 600; color: var(--ink); }
-.client-shell .bh-ev__donde { margin-top: 2px; font-size: var(--b-meta); color: var(--ink-2); }
+.client-shell .bh-ev__txt { display: flex; flex-direction: column; min-width: 0; padding: var(--b-s2) var(--b-sx) var(--b-sx); }
+.client-shell .bh-ev__cuando { font-size: var(--b-lb); font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); line-height: 1.4; }
 .client-shell .bh-ev__nm {
-  margin-top: var(--b-s2); font-family: var(--display); font-weight: 800;
-  font-size: var(--b-t1); line-height: 1.02; letter-spacing: -.03em; color: var(--ink);
-  text-wrap: balance;
+  margin-top: var(--b-s1); font-family: var(--display); font-weight: 800;
+  font-size: var(--b-t2); line-height: .98; letter-spacing: -0.03em; text-wrap: balance;
 }
-.client-shell .bh-ev__desde {
-  margin-top: var(--b-s1); font-size: var(--b-body); font-weight: 600;
-  color: var(--ink); font-variant-numeric: tabular-nums;
-}
-/* La acción es TEXTO (un solo primario por pantalla, y acá puede haber
-   varios eventos). El color de marca va en el trazo, nunca en la letra. */
+.client-shell .bh-ev__desde { margin-top: var(--b-s1); font-size: var(--b-ctl); color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .client-shell .bh-ev__go {
   align-self: flex-start; display: inline-flex; align-items: center; gap: var(--b-s1);
-  min-height: 44px; margin-top: var(--b-s2);
-  font-size: var(--b-body); font-weight: 700; color: var(--ink);
-  text-decoration: underline; text-decoration-color: var(--brand);
-  text-decoration-thickness: 2px; text-underline-offset: 6px;
+  min-height: 44px; margin-top: var(--b-sm);
+  font-size: var(--b-ctl); font-weight: 600; color: var(--ink);
 }
-.client-shell .bh-ev__go svg { width: 17px; height: 17px; transition: transform .2s var(--ease); }
-.client-shell .bh-ev__a:hover .bh-ev__go svg { transform: translateX(3px); }
-.client-shell .bh-ev__a:active .bh-ev__go { transform: scale(.97); }
+.client-shell .bh-ev__go svg { width: 17px; height: 17px; }
+/* El primero: pastilla del par medido de la marca, a lo ancho. */
+.client-shell .bh-ev__go--pri {
+  align-self: stretch; justify-content: center; height: var(--b-pill); margin-top: var(--b-s2);
+  border-radius: var(--r-pill); background: var(--brand-fill); color: var(--on-fill);
+}
 
 /* ---------- Sin eventos ---------- */
-.client-shell .bh-vacio { margin-top: var(--b-s5); padding-top: var(--b-s4); border-top: 2px solid var(--ink); }
-.client-shell .bh-vacio__t {
-  margin: 0; font-family: var(--display); font-weight: 800;
-  font-size: var(--b-d1); line-height: 1; letter-spacing: -.03em; color: var(--ink);
-}
-.client-shell .bh-vacio__p { margin: var(--b-s2) 0 0; max-width: 40ch; font-size: var(--b-body); line-height: 1.45; color: var(--ink-2); }
+.client-shell .bh-vacio { margin-top: var(--b-s5); padding: var(--b-s3); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); }
+.client-shell .bh-vacio__t { margin: 0; font-weight: 800; font-size: var(--b-t2); line-height: .98; letter-spacing: -0.03em; }
+.client-shell .bh-vacio__p { margin-top: var(--b-s1); max-width: 40ch; font-size: var(--b-ctl); line-height: 1.5; color: var(--ink-2); }
 
-/* ---------- Escritorio: cada evento es una fila, flyer a la izquierda ---------- */
-@media (min-width: 768px) {
-  .client-shell .bh { padding-top: var(--b-s5); }
-  .client-shell .bh-ev__a {
-    grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
-    gap: var(--b-s5); align-items: center;
-  }
-  .client-shell .bh-ev__nm { font-size: var(--b-d2); line-height: .96; letter-spacing: -.035em; }
-}
+/* ---------- Pie ---------- */
+.client-shell .bh .c-foot { margin: 0; padding: var(--b-s4) 0 0; }
+.client-shell .bh .bh-powered { padding-top: var(--b-s1); display: flex; align-items: center; gap: var(--b-sx); }
+.client-shell .bh-powered b { font-weight: 700; color: var(--ink-2); }
+.client-shell .bh-powered a { text-decoration: none; }
 
-@media (prefers-reduced-motion: reduce) {
-  .client-shell .bh-ev__go svg { transition: none; }
-  .client-shell .bh-ev__a:hover .bh-ev__go svg { transform: none; }
-  .client-shell .bh-ev__a:active .bh-ev__go { transform: none; }
-}
-
-/* En la home la presentación de la marca ES el lockup, en grande: el header
-   lo repetía (logo, nombre y "Venta oficial" dos veces en la misma pantalla)
-   y, sin él, en el teléfono quedaba una barra vacía ("powered by" ya se oculta
-   bajo 860). Así que en la home no hay header; la franja de 4px de la marca
-   —la señal que sí manda CLAUDE.md— pasa al borde de arriba de la página. */
+/* En la home la presentación de la marca ES el logo en grande: la cabecera
+   lo repetía, así que acá no hay cabecera (el "powered by" pasa al pie). */
 .client-shell:has(> .bh) .c-header { display: none; }
-.client-shell:has(> .bh) { box-shadow: inset 0 4px 0 var(--brand); }
-/* El pie de responsabilidad, alineado como todo lo demás: nada centrado. */
-.client-shell .bh .c-foot--resp { text-align: left; width: auto; max-width: 56ch; margin: 0; padding: var(--b-s4) 0 0; }
+
+/* Entrada escalonada: marca 0 · lista 60. */
+.client-shell .bh-marca,
+.client-shell .bh > section { animation: b-in var(--t-in) var(--ease) both; }
+.client-shell .bh > section { animation-delay: 60ms; }
+
+@media (hover: hover) and (pointer: fine) {
+  .client-shell .bh-ev__a:hover { border-color: rgba(255, 255, 255, 0.22); }
+  .client-shell .bh-ev__a:hover .bh-ev__go--pri { background: var(--brand-fill-hover); }
+  .client-shell .bh-powered a:hover { opacity: .7; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .client-shell .bh-marca,
+  .client-shell .bh > section { animation-name: c-fade; animation-duration: 200ms; animation-delay: 0ms; }
+  .client-shell .bh-ev__a:active { transform: none; box-shadow: inset 0 0 0 999px var(--sel); }
+}

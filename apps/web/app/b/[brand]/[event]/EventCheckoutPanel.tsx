@@ -2,19 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Lock, ArrowRight } from 'lucide-react';
+import { Loader2, Lock, ArrowRight, MapPin } from 'lucide-react';
 import { formatPEN } from '@/lib/utils';
 import { optimizedImage } from '@/lib/imageUrl';
 import {
   type Brand, type Event, type TicketType,
-  armarEscalera, resumirIncluye, distrito, hrefMapa,
-  fmtCuando, fmtDiaLargo, fmtHora,
+  armarEscalera, resumirIncluye, distrito, hrefMapa, fmtCortoMayus,
   FilaEntrada, AsiDeSimple,
 } from './conceptos';
 import { startCheckout, previewPromo, type CheckoutInput } from './actions';
 import { reserveStock } from '@/lib/reservations';
 import { MercadoPagoWallet } from './MercadoPagoWallet';
-import { ShareEvent } from './ShareEvent';
 import { LineaLegal } from '../Responsable';
 import { claseDireccion, type Direccion } from '@/lib/concepto';
 
@@ -67,6 +65,10 @@ export function EventCheckoutPanel({
   // avanzar: el paso que entra tiene que venir del lado por donde se fue el
   // anterior, o el movimiento no informa nada.
   const [shownStep, setShownStep] = useState<1 | 2>(1);
+  // La entrada escalonada (hero, título, entradas, pasos, dónde, barra) es de
+  // la PRIMERA carga. Volver de "Tus datos" no la repite: ahí el movimiento
+  // lo hace el cambio de paso.
+  const [primera, setPrimera] = useState(true);
   const [leaving, setLeaving] = useState(false);
   const [atras, setAtras] = useState(false);
   const setStep = useCallback((next: 1 | 2) => {
@@ -75,6 +77,7 @@ export function EventCheckoutPanel({
     // llevar adentro el setAtras/setLeaving. `step` alcanza como fuente única
     // —es el paso lógico— y la dependencia lo mantiene fresco.
     if (step === next) return;
+    setPrimera(false);
     setAtras(next < step);
     setLeaving(true);
     setStepRaw(next);
@@ -251,6 +254,12 @@ export function EventCheckoutPanel({
   // "Desde" de la barra vacía: la entrada más barata que todavía se vende.
   const aLaVenta = sorted.filter((t) => !t.soldOut);
   const desdeCents = aLaVenta.length ? Math.min(...aLaVenta.map((t) => t.active_price_cents)) : 0;
+  // La línea bajo el título: el precio de entrada (o "libre" si es gratis) y
+  // la edad mínima. Es lo que la gente pregunta antes de mirar las entradas.
+  const lineaHero = [
+    event.is_free ? 'Entrada libre con registro' : aLaVenta.length ? `Entradas desde ${formatPEN(desdeCents)}` : 'Entradas agotadas',
+    event.min_age > 0 ? `+${event.min_age}` : null,
+  ].filter(Boolean).join(' · ');
   // Ahorro por cantidad (bulk) — solo si NO hay código (son excluyentes).
   const bulkSavings = applied ? 0 : sorted.reduce((s, t) => { const q = qty[t.id] ?? 0; return s + q * (t.active_price_cents - bulkUnitPrice(t, q)); }, 0);
   const docLabel = docType === 'dni' ? 'DNI' : docType === 'ce' ? 'Carné ext.' : 'Pasaporte';
@@ -357,7 +366,7 @@ function fraseConfianza(pago: string): string {
 }
 
   return (
-    <section id="entradas" className={`b-buy ${claseDireccion(direccion)}${shownStep === 2 ? ' b-buy--datos' : ''}${totalItems === 0 ? ' b-buy--vacio' : ''}`}>
+    <section id="entradas" className={`b-buy ${claseDireccion(direccion)}${shownStep === 2 ? ' b-buy--datos' : ''}${totalItems === 0 ? ' b-buy--vacio' : ''}${primera ? ' b-buy--primera' : ''}`}>
       {mpCheckout && mpPublicKey ? (
         <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}${atras ? ' c-stepwrap--back' : ''}`}>
           <div className="b-head">
@@ -372,7 +381,7 @@ function fraseConfianza(pago: string): string {
         /* ---------- PANTALLA 1: el flyer y las entradas ---------- */
         <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}${atras ? ' c-stepwrap--back' : ''}`} key="step1">
         <div className="b-stage">
-          <Hero event={event} direccion={direccion} />
+          <Hero event={event} direccion={direccion} linea={lineaHero} />
 
           <div className="b-list">
             {/* En EDITORIAL la lista es una sección con nombre propio; en
@@ -617,21 +626,19 @@ function fraseConfianza(pago: string): string {
   );
 }
 
-// ========================= El hero, por dirección =========================
-// Los tres muestran el mismo flyer y el mismo título; lo que cambia es cuánto
-// pesa cada uno y dónde cae el texto:
-//   1 CARTEL   el flyer ocupa casi toda la primera pantalla y el título va
-//              encima, grande. Es un afiche.
-//   2 ENTRADA  el flyer es chico y entra DENTRO del boleto, como la foto de
-//              un ticket; el título va en el cuerpo del boleto.
-//   3 NOCHE    el flyer sangra por un costado y el título ocupa el resto.
-// Tocar el flyer lo abre entero en los tres (el hero siempre lo recorta).
-function Hero({ event, direccion }: { event: Event; direccion: Direccion }) {
+// ================================ El hero ================================
+// Teléfono: una BANDA de 216 con el flyer ENTERO centrado sobre una copia del
+// mismo flyer difuminada (blur 28, brillo .55). Nunca texto sobre el flyer:
+// debajo van el eyebrow (cuándo · dónde), el nombre y una línea con el punto
+// de la marca. Escritorio: el flyer a 360×450 en su columna, con la ficha del
+// lugar debajo. Canvas y Editorial comparten este markup; Editorial (un flyer
+// que no sirve: una captura, o ninguno) cambia el orden y el alto en el CSS.
+// Tocar el flyer lo abre entero.
+function Hero({ event, linea }: { event: Event; direccion: Direccion; linea: string }) {
   const mapsHref = hrefMapa(event);
   const [zoom, setZoom] = useState(false);
   // `cerrando` existe para que el visor tenga SALIDA: antes se desmontaba de
-  // golpe mientras la entrada sí estaba animada, que es la asimetría que
-  // hace que algo se sienta roto. Sale por el mismo camino que entró.
+  // golpe mientras la entrada sí estaba animada. Sale por el mismo camino.
   const [cerrando, setCerrando] = useState(false);
   const cerrarZoom = useCallback(() => {
     const reduce = typeof window !== 'undefined'
@@ -639,16 +646,12 @@ function Hero({ event, direccion }: { event: Event; direccion: Direccion }) {
     if (reduce) { setZoom(false); return; }
     setCerrando(true);
   }, []);
-  // El desmontaje espera a que termine la salida, y el temporizador se limpia:
-  // si el árbol se va antes (una navegación justo después de cerrar), el
-  // callback no queda vivo. Mismo patrón que la transición entre pasos.
+  // El desmontaje espera a que termine la salida, y el temporizador se limpia.
   useEffect(() => {
     if (!cerrando) return;
     const t = setTimeout(() => { setCerrando(false); setZoom(false); }, 160);
     return () => clearTimeout(t);
   }, [cerrando]);
-  const donde = [event.venue_name, distrito(event.venue_address)].filter(Boolean).join(' · ');
-
   useEffect(() => {
     if (!zoom) return;
     const cerrar = (e: KeyboardEvent) => { if (e.key === 'Escape') cerrarZoom(); };
@@ -656,64 +659,49 @@ function Hero({ event, direccion }: { event: Event; direccion: Direccion }) {
     return () => window.removeEventListener('keydown', cerrar);
   }, [zoom, cerrarZoom]);
 
-  // En EDITORIAL el flyer es una banda y el título NO se apoya encima: se
-  // pide más chico y no lleva degradado. En CANVAS sangra y sí lo lleva.
-  const ancho = direccion === 'editorial' ? 640 : 900;
+  const lugar = [event.venue_name, distrito(event.venue_address)].filter(Boolean).join(', ');
+  const eyebrow = [fmtCortoMayus(event.starts_at), lugar.toUpperCase()].filter(Boolean).join(' · ');
 
   return (
     <>
       <header className="b-hero">
-      {event.cover_url ? (
-        <button type="button" className="b-hero__shot" onClick={() => setZoom(true)} aria-label={`Ver el flyer de ${event.name} completo`}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {/* El póster ENTERO sobre una copia difuminada y oscurecida de sí
-              mismo. Es la única forma de meter un flyer vertical en una banda
-              apaisada sin tirar la mitad del afiche: lo que rellena el hueco
-              es el propio flyer, fuera de foco. Va en los tres conceptos, así
-              que el recorte es 0% en todos. Decorativo: sin texto encima. */}
-          <span
-            className="b-hero__blur" aria-hidden="true"
-            style={{ backgroundImage: `url(${JSON.stringify(optimizedImage(event.cover_url, { width: 640, quality: 45 }))})` }}
-          />
-          <img src={optimizedImage(event.cover_url, { width: ancho, quality: 80 })} alt={`Flyer de ${event.name}`} decoding="async" />
-          {direccion === 'canvas' && <span className="b-hero__fade" aria-hidden="true" />}
-        </button>
-      ) : (
-        // Sin flyer NO se dibuja nada. El marcador era un bloque de 203px con
-        // un degradado casi invisible: medido en la página ya publicada de
-        // Standly (b-hero__shot--ph, top 221, alto 203) se veía como un hueco
-        // vacío arriba de todo. Un evento sin flyer arranca por su nombre, que
-        // es lo que tiene. Cuando el promotor suba el flyer, vuelve la imagen.
-        null
-      )}
+        {event.cover_url ? (
+          <button type="button" className="b-hero__shot" onClick={() => setZoom(true)} aria-label={`Ver el flyer de ${event.name} completo`}>
+            {/* El relleno de la banda es el propio flyer fuera de foco. Se pide
+                chiquito (96px): con 28px de blur no se nota, y el teléfono no
+                se baja dos veces la imagen grande. */}
+            <span
+              className="b-hero__blur" aria-hidden="true"
+              style={{ backgroundImage: `url(${JSON.stringify(optimizedImage(event.cover_url, { width: 96, quality: 40 }))})` }}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={optimizedImage(event.cover_url, { width: 720, quality: 80 })} alt={`Flyer de ${event.name}`} decoding="async" />
+          </button>
+        ) : null}
 
-      {/* Ficha bajo el póster: solo en escritorio (en teléfono los datos
-          van sobre el flyer, en una línea). */}
-      <div className="b-aside">
-        <p>{fmtDiaLargo(event.starts_at)}</p>
-        <p>{fmtHora(event.starts_at)}</p>
-        {donde && <p>{donde}</p>}
-        {mapsHref && <a href={mapsHref} target="_blank" rel="noopener noreferrer">Cómo llegar →</a>}
-      </div>
+        {/* Ficha bajo el flyer: solo en escritorio. La fecha ya va en el
+            eyebrow del título; acá, dónde y cómo llegar. */}
+        <div className="b-aside">
+          {event.venue_name && <p className="b-aside__nm">{event.venue_name}</p>}
+          {event.venue_address && <p className="b-aside__dir">{event.venue_address}</p>}
+          {mapsHref && <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="b-link">Cómo llegar →</a>}
+        </div>
 
-      {zoom && event.cover_url && (
-        <button type="button" className={`b-lightbox${cerrando ? ' b-lightbox--out' : ''}`} onClick={cerrarZoom} aria-label="Cerrar el flyer">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={optimizedImage(event.cover_url, { width: 1200, quality: 86 })} alt={`Flyer de ${event.name}`} />
-          <span className="b-lightbox__hint">Toca para cerrar</span>
-        </button>
-      )}
+        {zoom && event.cover_url && (
+          <button type="button" className={`b-lightbox${cerrando ? ' b-lightbox--out' : ''}`} onClick={cerrarZoom} aria-label="Cerrar el flyer">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={optimizedImage(event.cover_url, { width: 1200, quality: 86 })} alt={`Flyer de ${event.name}`} />
+            <span className="b-lightbox__hint">Toca para cerrar</span>
+          </button>
+        )}
       </header>
 
-      {/* El bloque de título, DEBAJO del flyer en las dos direcciones (en
-          el teléfono) y en la columna del centro (en escritorio). */}
+      {/* El título, DEBAJO del flyer en el teléfono y en la columna del centro
+          en escritorio. Nunca encima de la imagen. */}
       <div className="b-hero__over">
-        {/* NUNCA texto sobre el flyer: el título y cuándo/dónde van DEBAJO,
-            en tinta sobre papel. Sin eyebrow de marca: ya está en el header. */}
+        <p className="b-kicker">{eyebrow}</p>
         <h1 className="b-hero__name">{event.name}</h1>
-        <p className="b-hero__cuando">{[fmtCuando(event.starts_at), donde].filter(Boolean).join(' · ')}</p>
-        {/* En escritorio esta línea se oculta: cuándo y dónde ya están en la
-            ficha bajo el flyer. En Standly llegó a leerse tres veces. */}
+        {linea && <p className="b-hero__linea"><span className="b-dot" aria-hidden="true" />{linea}</p>}
       </div>
     </>
   );
@@ -724,36 +712,33 @@ function Hero({ event, direccion }: { event: Event; direccion: Direccion }) {
 // gestiona cancelaciones y devoluciones, con su contacto.
 function MasInfo({ event, brand }: { event: Event; brand: Brand }) {
   const mapsHref = hrefMapa(event);
-  const direccion = [event.venue_address, distrito(event.venue_address) ? null : event.venue_name]
-    .filter(Boolean).join(', ');
+  const direccion = event.venue_address ?? '';
 
   return (
     <section className="b-info">
       {(event.venue_name || event.venue_address) && (
-        <div className="b-info__b">
-          <p className="b-lb">Dónde es</p>
-          {event.venue_address && (
-            <iframe
-              className="b-map"
-              src={`https://www.google.com/maps?q=${encodeURIComponent(event.venue_address)}&z=16&output=embed`}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              title={`Mapa de ${event.venue_name ?? 'el lugar'}`}
-            />
-          )}
-          <p className="b-info__dir">
-            {event.venue_name}
-            {direccion && <><br />{direccion}</>}
-          </p>
-          {mapsHref && (
-            <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="b-info__link">Cómo llegar →</a>
-          )}
+        <div className="b-info__b b-info__donde">
+          <h2 className="b1-h2">Dónde es</h2>
+          <div className="b-donde">
+            {/* El mapa es un bloque de 118 en --surface-2 con el pin; el mapa
+                de verdad se abre en "Cómo llegar". El iframe de Google era un
+                rectángulo blanco de 280px en una página negra, y un tercero
+                cargando en la pantalla que cobra. */}
+            <span className="b-map" aria-hidden="true"><MapPin /></span>
+            <div className="b-donde__txt">
+              {event.venue_name && <p className="b-donde__nm">{event.venue_name}</p>}
+              {direccion && <p className="b-info__dir">{direccion}</p>}
+              {mapsHref && (
+                <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="b-link b-info__link">Cómo llegar →</a>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
       {event.description && (
         <div className="b-info__b">
-          <p className="b-lb">Sobre el evento</p>
+          <h2 className="b1-h2">Sobre el evento</h2>
           <p className="b-info__txt">{event.description}</p>
         </div>
       )}

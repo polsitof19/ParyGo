@@ -27,7 +27,6 @@ export function CopyButton({ value, label }: { value: string; label: string }) {
       onClick={copy}
       aria-label={`Copiar ${label}`}
       className="c-btn c-btn--soft"
-      style={{ height: 34, padding: '0 12px', fontSize: 13 }}
     >
       {copied ? <><Check className="h-4 w-4" /> Copiado</> : <><Copy className="h-4 w-4" /> Copiar {label}</>}
     </button>

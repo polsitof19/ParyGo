@@ -37,7 +37,8 @@ export function LineaPago({ marca, evento, className = 'c-foot' }: { marca: Marc
   return (
     <p className={className}>
       {textoPago(marca)}
-      {href ? <> <a href={href} target="_blank" rel="noopener noreferrer">→</a></> : '.'}
+      {/* Con texto, no un "→" suelto de 10px que no se podía tocar. */}
+      {href ? <> · <a href={href} target="_blank" rel="noopener noreferrer">Contacto →</a></> : '.'}
     </p>
   );
 }

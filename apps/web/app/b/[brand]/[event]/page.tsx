@@ -193,12 +193,10 @@ export default async function EventPage({ params, searchParams }: Props) {
   if (ended) {
     return (
       <main className="c-state">
-        <span className="c-eyebrow">{brand.name}</span>
-        <h1 className="c-h1" style={{ fontSize: 30, marginTop: 8 }}>Este evento ya terminó</h1>
-        <p className="c-muted" style={{ marginTop: 10 }}>Mira los próximos eventos de {brand.name}.</p>
-        <div style={{ marginTop: 20 }}>
-          <a className="c-btn c-btn--brand" href="/">Ver otros eventos</a>
-        </div>
+        <span className="c-eyebrow">{event.name}</span>
+        <h1 className="c-h1">Este evento ya terminó</h1>
+        <p className="c-muted">Mira los próximos eventos de {brand.name}.</p>
+        <a className="c-btn c-btn--brand" href="/">Ver otros eventos</a>
       </main>
     );
   }
@@ -279,7 +277,7 @@ export default async function EventPage({ params, searchParams }: Props) {
     <>
       <EventStructuredData brand={brand} event={event} ticketTypes={ticketTypes} />
 
-      <article className={`c-checkout-canvas ${claseDireccion(direccion)}`} style={{ paddingBottom: 64 }}>
+      <article className={`c-checkout-canvas ${claseDireccion(direccion)}`}>
         {/* CHECKOUT (hero, entradas, datos/pago, resumen y "dónde" viven en el panel) */}
         <EventCheckoutPanel
           brand={brand}
@@ -293,23 +291,18 @@ export default async function EventPage({ params, searchParams }: Props) {
         />
 
         {/* SOPORTE */}
-        <p className="c-foot">
-          ¿Ya compraste y perdiste tu entrada?{' '}
-          <a href="/reenviar" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>Reenvíala a tu email</a>
-          {brand.whatsapp_e164 && (
-            <>
-              {' · '}
-              <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>
-                WhatsApp soporte
-              </a>
-            </>
-          )}
-        </p>
-        <p className="c-foot" style={{ marginTop: 6, fontSize: 12 }}>
-          <a href="/terminos" style={{ color: 'var(--ink-3)' }}>Términos</a>
-          {' · '}
-          <a href="/privacidad" style={{ color: 'var(--ink-3)' }}>Privacidad</a>
-        </p>
+        <footer className="c-foot c-foot--compra">
+          <p>
+            ¿Ya compraste y perdiste tu entrada? <a href="/reenviar">Reenvíala a tu email</a>
+            {brand.whatsapp_e164 && (
+              <>
+                {' · '}
+                <a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>
+              </>
+            )}
+          </p>
+          <p><a href="/terminos">Términos</a> · <a href="/privacidad">Privacidad</a></p>
+        </footer>
 
         <p className="sr-only">
           Entradas desde {formatPEN(Math.min(...(ticketTypes.length ? ticketTypes.map((t) => t.active_price_cents) : [0])))}.

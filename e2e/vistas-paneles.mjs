@@ -69,8 +69,34 @@ export async function vistas(panel = 'all') {
     { id: 'puerta-scan', url: '/scan', sesion: 'validator' },
     { id: 'puerta-codigo', url: '/puerta', sesion: 'anon' },
   ];
+  // El sitio del COMPRADOR de demotest, tema noche (design/noche). Rutas
+  // /b/demotest/… directas (el middleware las deja pasar en local). La compra
+  // lleva el flyer 4:5 de prueba que sube el E2E (Canvas). Pedido y entrada,
+  // de la última orden pagada de demotest; Yape, de una pendiente. Solo se mira.
+  const cmp = [];
+  if (panel === 'compra' || panel === 'all') {
+    const { data: evs } = await svc.from('events').select('slug').eq('brand_id', DEMOTEST)
+      .eq('is_published', true).is('archived_at', null).gt('starts_at', new Date().toISOString())
+      .order('created_at', { ascending: false }).limit(1);
+    const slug = evs?.[0]?.slug;
+    cmp.push({ id: 'compra-home', url: '/b/demotest', sesion: 'anon' });
+    if (slug) {
+      cmp.push({ id: 'compra-canvas', url: `/b/demotest/${slug}`, sesion: 'anon' });
+      const { data: ev } = await svc.from('events').select('id').eq('slug', slug).eq('brand_id', DEMOTEST).maybeSingle();
+      if (!ev) return panel === 'compra' ? cmp : [...sup, ...adm, ...pta, ...cmp];
+      const { data: pag } = await svc.from('orders').select('id, tickets(qr_code)').eq('event_id', ev.id).eq('status', 'paid').order('created_at', { ascending: false }).limit(5);
+      const conQr = (pag ?? []).find((o) => o.tickets?.length);
+      if (conQr) {
+        cmp.push({ id: 'compra-pedido', url: `/b/demotest/pedido/${conQr.id}`, sesion: 'anon' });
+        cmp.push({ id: 'compra-entrada', url: `/b/demotest/t/${conQr.tickets[0].qr_code}`, sesion: 'anon' });
+      }
+      const { data: pend } = await svc.from('orders').select('id').eq('event_id', ev.id).eq('status', 'pending_yape_review').order('created_at', { ascending: false }).limit(1);
+      if (pend?.[0]) cmp.push({ id: 'compra-yape', url: `/b/demotest/${slug}/yape?order=${pend[0].id}`, sesion: 'anon' });
+    }
+  }
+  if (panel === 'compra') return cmp;
   if (panel === 'super') return sup;
   if (panel === 'admin') return adm;
   if (panel === 'puerta') return pta;
-  return [...sup, ...adm, ...pta];
+  return [...sup, ...adm, ...pta, ...cmp];
 }

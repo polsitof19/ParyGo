@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/server';
 import { formatPEN } from '@/lib/utils';
 import { isPubliclyOffered } from '@/lib/publicTicketGuard';
 import { optimizedImage } from '@/lib/imageUrl';
-import { BrandLogo } from '@/components/BrandLogo';
 import { fmtCuando, distrito } from '@/lib/eventoTexto';
 import { PieMarca } from './Responsable';
 
@@ -13,67 +12,43 @@ export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 // =============================================================
-// Home de marca (<slug>.parygo.com), en el sistema de la compra.
-// Una sola cosa que hacer: elegir el evento y entrar. Arriba la marca
-// (logo, nombre, "Venta oficial"); después cada evento publicado como
-// una pieza grande —el flyer ENTERO, cuándo y dónde, el nombre y la
-// acción—, sin cajas: papel, tinta, hairlines. Estética Canvas: manda
-// la imagen, el color de marca no porta texto.
-//
-// Reemplaza a la home vieja (.bl: tarjetas blancas con sombra, blobs,
-// pastilla "desde" sobre el flyer). Ni una regla de aquella queda.
+// Home de marca (<slug>.parygo.com) — tema noche (2026-09-23)
 // =============================================================
+// Una sola cosa que hacer: elegir el evento y entrar. Arriba la marca con su
+// logo a 56 (sin el nombre en texto si hay logo), "VENTA OFICIAL · LIMA" y
+// una línea. Después, cada evento publicado como una tarjeta con la MISMA
+// banda de la compra (el flyer entero sobre su copia difuminada), cuándo y
+// dónde, el nombre y la acción. El primero lleva el único botón primario; los
+// siguientes, la acción en texto.
 
 type EvRow = {
   id: string; slug: string; name: string; starts_at: string;
   venue_name: string | null; venue_address: string | null;
-  cover_url: string | null; cover_w: number | null; cover_h: number | null;
+  cover_url: string | null;
   is_free: boolean;
 };
 
-// Un flyer más alto que 4:5 (una captura de pantalla) no estira la página:
-// va entero dentro de un cuadro 4:5 sobre una copia difuminada de sí mismo,
-// igual que el hero de la compra. Sin medidas, se asume 4:5.
-const TOPE = 4 / 5;
-
-function Evento({ e, desde }: { e: EvRow; desde: number | null }) {
-  const ratio = e.cover_w && e.cover_h ? e.cover_w / e.cover_h : TOPE;
-  const alto = ratio < TOPE;
-  const donde = [e.venue_name, distrito(e.venue_address)].filter(Boolean).join(' · ');
+function Evento({ e, desde, primero }: { e: EvRow; desde: number | null; primero: boolean }) {
+  const donde = [e.venue_name, distrito(e.venue_address)].filter(Boolean).join(', ');
   const gratis = e.is_free || desde === 0;
   return (
     <li className="bh-ev">
       <Link href={`/${e.slug}`} className="bh-ev__a">
-        <span
-          className={`bh-ev__art${alto ? ' bh-ev__art--alto' : ''}${e.cover_url ? '' : ' bh-ev__art--vacio'}`}
-          style={{ aspectRatio: String(Math.max(ratio, TOPE)) }}
-        >
-          {e.cover_url ? (
-            <>
-              {alto && (
-                <span
-                  className="bh-ev__blur" aria-hidden="true"
-                  style={{ backgroundImage: `url(${JSON.stringify(optimizedImage(e.cover_url, { width: 480, quality: 40 }))})` }}
-                />
-              )}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={optimizedImage(e.cover_url, { width: 900, quality: 78 })}
-                alt={`Flyer de ${e.name}`}
-                width={e.cover_w ?? undefined} height={e.cover_h ?? undefined}
-                decoding="async"
-              />
-            </>
-          ) : (
-            <span className="bh-ev__inicial" aria-hidden="true">{(e.name.trim()[0] ?? '·').toUpperCase()}</span>
-          )}
-        </span>
+        {e.cover_url ? (
+          <span className="bh-ev__art">
+            <span
+              className="bh-ev__blur" aria-hidden="true"
+              style={{ backgroundImage: `url(${JSON.stringify(optimizedImage(e.cover_url, { width: 96, quality: 40 }))})` }}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={optimizedImage(e.cover_url, { width: 720, quality: 80 })} alt={`Flyer de ${e.name}`} decoding="async" />
+          </span>
+        ) : null}
         <span className="bh-ev__txt">
-          <span className="bh-ev__cuando">{fmtCuando(e.starts_at)}</span>
-          {donde && <span className="bh-ev__donde">{donde}</span>}
+          <span className="bh-ev__cuando">{[fmtCuando(e.starts_at), donde].filter(Boolean).join(' · ')}</span>
           <span className="bh-ev__nm">{e.name}</span>
           {!gratis && desde != null && <span className="bh-ev__desde">Desde {formatPEN(desde)}</span>}
-          <span className="bh-ev__go">
+          <span className={`bh-ev__go${primero ? ' bh-ev__go--pri' : ''}`}>
             {gratis ? 'Reclama tu entrada gratis' : 'Comprar entradas'} <ArrowRight aria-hidden="true" />
           </span>
         </span>
@@ -96,7 +71,7 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
   const now = new Date().toISOString();
   const { data: upcoming } = await supabase
     .from('events')
-    .select('id, slug, name, starts_at, venue_name, venue_address, cover_url, cover_w, cover_h, is_free')
+    .select('id, slug, name, starts_at, venue_name, venue_address, cover_url, is_free')
     .eq('brand_id', brand.id)
     .eq('is_published', true)
     .is('archived_at', null)
@@ -127,16 +102,18 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
     <main className="bh">
       <header className="bh-marca">
         {logoUrl ? (
-          <BrandLogo src={logoUrl} alt="" size={64} eager ring />
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="bh-marca__logo" src={optimizedImage(logoUrl, { width: 480, quality: 85 })} alt="" height={56} decoding="async" />
+            <h1 className="sr-only">{brand.name}</h1>
+          </>
         ) : (
-          <span className="bh-marca__ini" aria-hidden="true">{(brand.name.trim()[0] ?? '?').toUpperCase()}</span>
-        )}
-        <span className="bh-marca__txt">
           <h1 className="bh-marca__nm">{brand.name}</h1>
-          {/* Debajo del nombre, no encima: una etiqueta en mayúsculas sobre el
-              h1 es el kicker que delata una página generada. */}
-          <span className="bh-marca__ofi">Venta oficial</span>
-        </span>
+        )}
+        <p className="bh-marca__ofi">Venta oficial · Lima</p>
+        <p className="bh-marca__p">
+          Entradas oficiales de {brand.name}. Eliges, pagas y tu QR te llega al correo.
+        </p>
       </header>
 
       {eventos.length === 0 ? (
@@ -148,13 +125,17 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
         <section aria-labelledby="bh-eventos">
           <h2 className="bh-sec" id="bh-eventos">{eventos.length === 1 ? 'Próximo evento' : 'Próximos eventos'}</h2>
           <ol className="bh-lista">
-            {eventos.map((e) => <Evento key={e.id} e={e} desde={desdePorEvento.get(e.id) ?? null} />)}
+            {eventos.map((e, i) => <Evento key={e.id} e={e} desde={desdePorEvento.get(e.id) ?? null} primero={i === 0} />)}
           </ol>
         </section>
       )}
 
-      {/* Quién responde por los eventos de esta página. */}
+      {/* Quién responde por los eventos de esta página, y quién vende. */}
       <PieMarca marca={brand} />
+      <p className="c-foot bh-powered">
+        powered by <a href="https://parygo.com" target="_blank" rel="noopener noreferrer"><b>parygo</b></a>
+        <span className="c-powered__dot" aria-hidden="true" />
+      </p>
     </main>
   );
 }
