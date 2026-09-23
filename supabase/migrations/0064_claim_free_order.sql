@@ -42,8 +42,10 @@
 -- SEGURIDAD: SECURITY DEFINER, solo service-role. Revoke EXPLÍCITO de anon y
 -- authenticated (lección de la 0014: `revoke from public` no alcanza).
 -- lock_timeout acotado: en un pico, los reclamos del mismo tipo se forman en
--- fila detrás del lock de ticket_types; mejor un "intenta de nuevo" a los 8s
--- que conexiones colgadas en una instancia Free.
+-- fila detrás del lock de ticket_types, y acá ese lock se sostiene durante la
+-- emisión y el encolado (antes se soltaba al terminar la reserva). Mejor un
+-- "intenta de nuevo" a los 4s que el pool de PostgREST de una instancia Free
+-- lleno de conexiones esperando; statement_timeout de 10s como techo total.
 -- =============================================================
 
 create or replace function public.claim_free_order(
@@ -64,8 +66,9 @@ create or replace function public.claim_free_order(
 ) returns jsonb
 language plpgsql
 security definer
-set search_path to 'public'
-set lock_timeout to '8s'
+set search_path to public, pg_temp
+set lock_timeout to '4s'
+set statement_timeout to '10s'
 as $$
 declare
   v_event    record;
