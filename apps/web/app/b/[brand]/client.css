@@ -773,7 +773,6 @@
 .client-shell .b1-paso__t { margin: 0; font-family: var(--display); font-weight: 800; font-size: var(--b-body); letter-spacing: -0.01em; }
 .client-shell .b1-paso__d { margin: 4px 0 0; font-size: var(--b-meta); line-height: 1.45; color: var(--pg-fg-2); }
 
-.client-shell .b2-cuando { margin: var(--b-s1) 0 0; font-size: var(--b-meta); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--pg-fg-2); }
 
 /* Tipografía de boleto en la cabecera de cada tipo. */
 

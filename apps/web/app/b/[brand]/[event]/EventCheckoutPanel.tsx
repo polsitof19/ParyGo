@@ -8,7 +8,7 @@ import { optimizedImage } from '@/lib/imageUrl';
 import {
   type Brand, type Event, type TicketType,
   armarEscalera, resumirIncluye, distrito, hrefMapa,
-  fmtCortoMayus, fmtCuando, fmtDiaLargo, fmtHora,
+  fmtCortoMayus, fmtDiaLargo, fmtHora,
   FilaEntrada, AsiDeSimple,
 } from './conceptos';
 import { startCheckout, previewPromo, type CheckoutInput } from './actions';
@@ -681,7 +681,8 @@ function Hero({ event, direccion }: { event: Event; direccion: Direccion }) {
       <div className="b-hero__over">
         <p className="b-kicker">{kicker}</p>
         <h1 className="b-hero__name">{event.name}</h1>
-        {direccion === 'editorial' && <p className="b2-cuando">{fmtCuando(event.starts_at)}</p>}
+        {/* La fecha va UNA vez acá (en el kicker) y una en la ficha. Editorial
+            sumaba un subtítulo con la misma fecha: en Standly se leía tres veces. */}
       </div>
     </>
   );

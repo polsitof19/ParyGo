@@ -15,7 +15,19 @@
 
 export type Medidas = { width: number; height: number };
 
-const TOPE_MS = 1200; // si tarda más que esto, no vale la pena: se sigue sin medir.
+// 2,5s, no 1,2s. La primera lectura de un flyer recién subido va en FRÍO
+// (Worker en Lima → storage en us-west-1, con DNS y TLS nuevos): medido el
+// 2026-09-23, 1,06s desde Lima solo la descarga. Con 1,2s el detector se pasaba
+// del tope justo cuando el promotor abría su evento para ver el flyer nuevo, y la
+// página salía en EDITORIAL (flyer en banda, título arriba). Corre en paralelo
+// con las consultas, así que solo cuesta en ese primer pedido en frío.
+const TOPE_MS = 2500;
+
+// Medidas ya leídas, por URL. La URL del flyer cambia con cada subida (el nombre
+// es nuevo), así que no hay nada que invalidar: dentro de un mismo isolate, el
+// mismo flyer se mide UNA vez y la dirección deja de depender de la red.
+const MEDIDAS = new Map<string, Medidas>();
+const MEDIDAS_TOPE = 500;
 
 // 8 KB, no 1 KB. PNG, GIF y WebP traen las medidas en los primeros 30 bytes,
 // pero el JPEG las tiene DESPUÉS de sus segmentos de metadatos: un export de
@@ -88,6 +100,8 @@ function leerJPEG(b: DataView): Medidas | null {
  */
 export async function medidasDeImagen(url: string | null | undefined): Promise<Medidas | null> {
   if (!url) return null;
+  const ya = MEDIDAS.get(url);
+  if (ya) return ya;
   const corte = new AbortController();
   const reloj = setTimeout(() => corte.abort(), TOPE_MS);
   try {
@@ -112,6 +126,8 @@ export async function medidasDeImagen(url: string | null | undefined): Promise<M
     const b = new DataView(buf);
     const m = leerPNG(b) ?? leerJPEG(b) ?? leerWebP(b) ?? leerGIF(b);
     if (!m || !m.width || !m.height) return null;
+    if (MEDIDAS.size >= MEDIDAS_TOPE) MEDIDAS.clear();
+    MEDIDAS.set(url, m);
     return m;
   } catch {
     return null;

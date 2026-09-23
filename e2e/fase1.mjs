@@ -31,7 +31,7 @@ if (FORBIDDEN_SLUGS.has(BRAND)) throw new Error('marca prohibida');
 // ---------------- resultados ----------------
 const R = {};
 const S = { stamp: STAMP, eventSlug: EVENT_SLUG, promo: PROMO, orders: {} };
-const LETTERS = 'ABCDEFGHIJKL'.split('');
+const LETTERS = 'ABCDEFGHIJKLM'.split('');
 for (const k of LETTERS) R[k] = { ok: null, checks: [], notes: [] };
 const check = (k, name, cond, detail = '') => {
   R[k].checks.push({ name, ok: !!cond, detail: String(detail).slice(0, 400) });
@@ -1048,6 +1048,14 @@ if (!S.eventId) {
     await svc.from('events').update({ archived_at: new Date().toISOString(), is_published: false }).eq('id', evG.id);
   });
 }
+
+// M — la página de compra de una marca REAL (no de prueba), solo lectura: lleva
+// su dirección de diseño con el CSS aplicado y la fecha no se repite. Ver
+// e2e/direccion-marca-real.mjs (nació de Standly, 2026-09-23).
+await step('M', 'Marca real: dirección de diseño y su CSS aplicados (1440 y 390)', async () => {
+  const { verificarDireccion } = await import('./direccion-marca-real.mjs');
+  for (const c of await verificarDireccion({ browser })) check('M', c.name, c.ok, c.detail);
+});
 
 // Almighty/Code intactos (solo lectura): la marca code no fue tocada por la suite.
 S.consoleErrors = consoleErrors.slice(0, 60);

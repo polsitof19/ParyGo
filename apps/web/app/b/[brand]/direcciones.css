@@ -181,7 +181,6 @@
   color: var(--ink); text-shadow: none;
   line-height: .92; letter-spacing: -.035em;
 }
-.client-shell .b-editorial .b2-cuando { color: var(--ink-2); }
 .client-shell .b-editorial .b-list { padding-top: var(--b-s4); }
 
 /* El título de la sección es una ETIQUETA con regla, no un titular: en
