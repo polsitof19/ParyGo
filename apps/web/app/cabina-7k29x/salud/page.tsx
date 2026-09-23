@@ -22,6 +22,14 @@ function limaTodayStartUtc(nowMs: number): string {
   return `${ymd}T05:00:00.000Z`; // medianoche Lima = 05:00 UTC
 }
 
+// Nombres legibles de los eventos de contexto (los de escritura traen el suyo).
+const ETIQUETA_SUPER: Record<string, string> = {
+  super_edit_mode_on: 'encendió el modo edición',
+  super_edit_mode_off: 'apagó el modo edición',
+  impersonation_started: 'entró a la marca',
+  impersonation_ended: 'salió de la marca',
+};
+
 export default async function SaludPage() {
   await requireSession({ superAdmin: true });
   const admin = createAdminClient();
@@ -36,7 +44,7 @@ export default async function SaludPage() {
   const prueba = await idsMarcasDePrueba(admin);
 
   const [
-    njRes, yapeRes, ordersTodayRes, ticketsTodayRes, oversellRes, brandsRes, eventsRes,
+    njRes, yapeRes, ordersTodayRes, ticketsTodayRes, oversellRes, brandsRes, eventsRes, superRes,
   ] = await Promise.all([
     // Cola de emails de los últimos 14 días (volumen chico → se agrega en JS).
     admin.from('notification_jobs').select('status, kind, attempts, last_error, created_at, sent_at').gte('created_at', since14d).order('created_at', { ascending: false }).limit(500),
@@ -48,6 +56,13 @@ export default async function SaludPage() {
     // contamos oversell (sold > capacity) en JS. Volumen chico (no ilimitados).
     admin.from('ticket_types').select('sold, capacity').eq('is_unlimited', false),
     admin.from('brands').select('id', HEAD).is('archived_at', null).eq('is_test', false),
+    // Acciones del super admin sobre marcas ajenas (auditoría del modo edición).
+    admin.from('events_log')
+      .select('created_at, type, payload, brand_id, event_id, order_id, actor_user_id, brand:brands ( name, slug )')
+      .in('type', ['super_admin_write', 'super_edit_mode_on', 'super_edit_mode_off', 'impersonation_started', 'impersonation_ended'])
+      .gte('created_at', since14d)
+      .order('created_at', { ascending: false })
+      .limit(80),
     // Igual que el resto: sin marcas de prueba. demotest sola tiene 50+
     // eventos publicados de corridas del E2E.
     sinMarcasDePrueba(admin.from('events').select('id', HEAD).eq('is_published', true).is('archived_at', null), prueba),
@@ -57,6 +72,7 @@ export default async function SaludPage() {
   const isFailed = (s: string) => s === 'failed' || s === 'error';
   const isSent = (s: string) => s === 'sent';
   const isPending = (s: string) => !isFailed(s) && !isSent(s); // pending/queued/claimed/sending…
+  const superAcciones = (superRes.data ?? []) as unknown as { created_at: string; type: string; payload: unknown; brand: { name: string; slug: string } | { name: string; slug: string }[] | null }[];
   const njPending = nj.filter((j) => isPending(j.status)).length;
   const njFailed = nj.filter((j) => isFailed(j.status));
   const njSent14d = nj.filter((j) => isSent(j.status)).length;
@@ -100,6 +116,48 @@ export default async function SaludPage() {
         <Kpi label="Eventos publicados" value={eventsPublished} />
         <Kpi label="Órdenes pagadas hoy" value={ordersToday} sub="horario Lima" />
         <Kpi label="Entradas emitidas hoy" value={ticketsToday} sub="horario Lima" />
+      </div>
+
+
+      {/* Acciones de super admin: qué tocó Paul en la cuenta de otro. Es el
+          contrapeso del modo edición — si no se puede reconstruir después, no
+          debería poder hacerse. */}
+      <div className="s-card" style={{ marginBottom: 16 }}>
+        <h2 className="s-card__title">Acciones de super admin</h2>
+        <p className="s-card__desc">
+          Entradas y salidas de una marca, encendido del modo edición y cada escritura hecha con él · últimos 14 días
+        </p>
+        {superAcciones.length === 0 ? (
+          <p className="s-empty">Ninguna en los últimos 14 días.</p>
+        ) : (
+          <ul className="s-hlist" style={{ marginTop: 12 }}>
+            {superAcciones.map((a, i) => {
+              const marca = Array.isArray(a.brand) ? a.brand[0] : a.brand;
+              const p = (a.payload ?? {}) as { accion?: string; modo?: string; diff?: unknown; acting_email?: string };
+              const escritura = a.type === 'super_admin_write';
+              return (
+                <li key={i}>
+                  <div className="s-hlist__row">
+                    <span style={{ minWidth: 0 }}>
+                      <strong>{escritura ? (p.accion ?? 'escritura') : ETIQUETA_SUPER[a.type] ?? a.type}</strong>
+                      <span className="s-muted s-small"> · {marca?.name ?? 'marca'}</span>
+                      {escritura && p.modo === 'edicion' && (
+                        <span className="s-badge s-badge--todo s-badge--inline">modo edición</span>
+                      )}
+                    </span>
+                    <span className="s-muted s-small" style={{ flexShrink: 0 }}>
+                      {new Date(a.created_at).toLocaleString('es-PE', { timeZone: 'America/Lima', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  {p.acting_email && <p className="s-muted s-small">por {p.acting_email}</p>}
+                  {escritura && p.diff != null && Object.keys(p.diff as object).length > 0 && (
+                    <p className="s-muted s-small" style={{ wordBreak: 'break-word' }}>{JSON.stringify(p.diff).slice(0, 220)}</p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
 
       {/* Cola de emails: el punto aparece solo si hay fallidos. */}

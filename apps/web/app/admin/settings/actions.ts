@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { nanoid } from 'nanoid';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { contextoEscritura } from '@/lib/impersonation';
+import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { serverEnv } from '@/lib/env';
 import { validateMercadoPagoToken } from '@/lib/mercadopago';
 
@@ -43,11 +45,11 @@ export async function updateBrandSettingsAction(
   const user = await requireSession();
   // ENFORCEMENT: the brand comes from the session membership, NEVER the form.
   // A brand_admin can only ever edit their own brand.
-  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) {
+  const ctxW = contextoEscritura(user);
+  if (!ctxW) {
     return { ok: false, message: 'No tienes acceso de promotor.' };
   }
-  const brandId = membership.brandId;
+  const brandId = ctxW.brandId;
 
   const parsed = schema.safeParse({
     contact_email: formData.get('contact_email') ?? '',
@@ -172,6 +174,7 @@ export async function updateBrandSettingsAction(
     type: 'brand_settings_updated',
     payload: { logo_changed: Boolean(file instanceof File && file.size > 0) },
   });
+  await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId, accion: 'brand_settings_updated', diff: { logo_changed: Boolean(file instanceof File && file.size > 0) } });
 
   revalidatePath('/admin');
   revalidatePath('/admin/settings');
@@ -211,11 +214,11 @@ export async function updateMpCredentialsAction(
 ): Promise<SettingsState> {
   const user = await requireSession();
   // ENFORCEMENT: el brand sale de la sesión, NUNCA del form.
-  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) {
+  const ctxW = contextoEscritura(user);
+  if (!ctxW) {
     return { ok: false, message: 'No tienes acceso de promotor.' };
   }
-  const brandId = membership.brandId;
+  const brandId = ctxW.brandId;
   const admin = createAdminClient();
   const intent = String(formData.get('intent') ?? 'save');
 
@@ -234,6 +237,7 @@ export async function updateMpCredentialsAction(
       type: 'brand_mp_credentials_removed',
       payload: {},
     });
+    await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId, accion: 'brand_mp_credentials_removed' });
     revalidatePath('/admin/settings');
     return { ok: true, message: 'Credenciales de MercadoPago eliminadas. Tu checkout vuelve a solo Yape.' };
   }
@@ -273,6 +277,8 @@ export async function updateMpCredentialsAction(
     type: 'brand_mp_credentials_updated',
     payload: {}, // NUNCA logueamos el token
   });
+  // Tampoco en la auditoría: solo que se cambiaron.
+  await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId, accion: 'brand_mp_credentials_updated' });
 
   revalidatePath('/admin/settings');
   return { ok: true, message: 'Credenciales de MercadoPago validadas y guardadas. Ya puedes cobrar con tarjeta.' };

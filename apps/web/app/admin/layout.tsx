@@ -55,7 +55,7 @@ export default async function AdminLayout({
 
   return (
     <div className={`pg pg-panel admin-shell ${bricolage.variable} ${hanken.variable}`}>
-      {ctx.impersonating && <ImpersonationBanner brandName={brand?.name ?? 'la marca'} />}
+      {ctx.impersonating && <ImpersonationBanner brandName={brand?.name ?? "la marca"} modoEdicion={ctx.modoEdicion} />}
       <AdminTopbar brandName={brand?.name ?? 'Tu marca'} email={user.email} logoUrl={logoUrl} />
       <main className="s-wrap">{children}</main>
     </div>

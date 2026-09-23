@@ -14,7 +14,7 @@ export default async function CourtesiesPage({ params }: { params: { id: string 
   const user = await requireSession();
   const ctx = ownerBrandContext(user);
   if (!ctx) notFound();
-  const impersonating = ctx.impersonating;
+  const impersonating = ctx.soloLectura;
 
   const admin = createAdminClient();
   const { data: event } = await admin.from('events').select('id, brand_id').eq('id', params.id).maybeSingle();

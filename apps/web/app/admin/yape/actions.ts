@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
-import { isImpersonating } from '@/lib/impersonation';
+import { puedeEscribirComoSuper } from '@/lib/impersonation';
+import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { issueTicketsForOrder } from '@/lib/tickets';
 import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
@@ -29,8 +30,12 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
   // SOLO-LECTURA en impersonación: el super admin NO puede aprobar/rechazar Yape
   // (escritura de dinero) mientras "ve" la marca. Su camino es por membresía
   // (que no tiene) o super-sin-impersonar. Iguala el patrón de las otras guardas.
+  // Quién escribe: el dueño por su membresía, o el super admin — desde la
+  // cabina, o DENTRO de la marca con el modo edición encendido. Viendo la
+  // marca sin ese modo, no pasa.
+  const modoSuper = puedeEscribirComoSuper(user, proof.brand_id as string);
   const canAct =
-    (user.isSuperAdmin && !isImpersonating()) ||
+    modoSuper !== null ||
     user.brandMemberships.some(
       (m) => m.brandId === proof.brand_id && m.role === 'brand_admin'
     );
@@ -77,6 +82,9 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
           'No hay cupo: el evento se agotó. No se emitieron entradas. Rechaza esta orden y reembolsa el Yape.',
       };
     }
+    // El comprobante YA quedó aprobado: esa escritura existió aunque la emisión
+    // fallara, así que se firma igual.
+    await auditarEscrituraSuper(admin, { user, modo: modoSuper, brandId: proof.brand_id as string, orderId: proof.order_id as string, accion: 'yape_approved_issue_failed', diff: { proof_id: proofId, error: issue.error } });
     return { ok: false, message: `Tickets fallaron: ${issue.error}` };
   }
 
@@ -87,6 +95,7 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
     type: 'yape_approved',
     payload: { proof_id: proofId, tickets_issued: issue.ticketIds.length },
   });
+  await auditarEscrituraSuper(admin, { user, modo: modoSuper, brandId: proof.brand_id as string, orderId: proof.order_id as string, accion: 'yape_approved', diff: { proof_id: proofId } });
 
   // Fire the ticket delivery email. Failures here MUST NOT roll back the
   // approval — the order is already paid and the tickets already exist;
@@ -132,8 +141,12 @@ export async function rejectYapeProof(proofId: string, reason: string): Promise<
   // SOLO-LECTURA en impersonación: el super admin NO puede aprobar/rechazar Yape
   // (escritura de dinero) mientras "ve" la marca. Su camino es por membresía
   // (que no tiene) o super-sin-impersonar. Iguala el patrón de las otras guardas.
+  // Quién escribe: el dueño por su membresía, o el super admin — desde la
+  // cabina, o DENTRO de la marca con el modo edición encendido. Viendo la
+  // marca sin ese modo, no pasa.
+  const modoSuper = puedeEscribirComoSuper(user, proof.brand_id as string);
   const canAct =
-    (user.isSuperAdmin && !isImpersonating()) ||
+    modoSuper !== null ||
     user.brandMemberships.some(
       (m) => m.brandId === proof.brand_id && m.role === 'brand_admin'
     );
@@ -171,6 +184,7 @@ export async function rejectYapeProof(proofId: string, reason: string): Promise<
     type: 'yape_rejected',
     payload: { proof_id: proofId, reason },
   });
+  await auditarEscrituraSuper(admin, { user, modo: modoSuper, brandId: proof.brand_id as string, orderId: proof.order_id as string, accion: 'yape_rejected', diff: { motivo: reason || null } });
 
   // Avisar al comprador del rechazo (best-effort: si el email falla NO revierte
   // el rechazo; la orden ya quedó 'failed' y el stock liberado).

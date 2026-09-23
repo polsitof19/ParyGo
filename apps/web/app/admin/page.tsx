@@ -24,7 +24,7 @@ export default async function AdminHomePage() {
   const ctx = ownerBrandContext(user);
   if (!ctx) return null;
   const brandId = ctx.brandId;
-  const impersonating = ctx.impersonating;
+  const impersonating = ctx.soloLectura;
 
   const supabase = createClient();
   const { data: brand } = await supabase

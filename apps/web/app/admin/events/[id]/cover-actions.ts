@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { isImpersonating } from '@/lib/impersonation';
+import { puedeEscribirComoSuper } from '@/lib/impersonation';
+import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { uploadEventCover } from '@/lib/brandAssets';
 
 export type CoverState = { ok: boolean; message: string | null };
@@ -32,8 +33,12 @@ export async function setEventCoverAction(
   if (!ev || !ev.brand_id) return { ok: false, message: 'Evento no encontrado.' };
 
   // SOLO-LECTURA en impersonación: el camino super-admin se deniega con la cookie.
+  // Quién escribe: el dueño por su membresía, o el super admin — desde la
+  // cabina, o DENTRO de la marca con el modo edición encendido. Viendo la
+  // marca sin ese modo, no pasa.
+  const modoSuper = puedeEscribirComoSuper(user, ev.brand_id as string);
   const authorized =
-    (user.isSuperAdmin && !isImpersonating()) ||
+    modoSuper !== null ||
     user.brandMemberships.some((m) => m.brandId === ev.brand_id && m.role === 'brand_admin');
   if (!authorized) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
@@ -57,6 +62,7 @@ export async function setEventCoverAction(
     type: 'event_cover_updated',
     payload: { by: user.isSuperAdmin ? 'super_admin' : 'brand_admin' },
   });
+  await auditarEscrituraSuper(admin, { user, modo: modoSuper, brandId: ev.brand_id as string, eventId: eventId, accion: 'event_cover_updated', diff: { archivo: file.name, bytes: file.size } });
 
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/cabina-7k29x/events/${eventId}`);

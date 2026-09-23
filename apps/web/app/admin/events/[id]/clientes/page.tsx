@@ -80,9 +80,9 @@ export default async function EventClientsPage({ params, searchParams }: { param
         rows={rows}
         eventId={event.id}
         eventName={event.name}
-        impersonating={ctx.impersonating}
+        impersonating={ctx.soloLectura}
         focusSearch={Boolean(searchParams.buscar || searchParams.reenviar)}
-        hint={searchParams.reenviar && !ctx.impersonating ? 'Busca al comprador y toca «Reenviar QR»: le llega otra vez el email con su entrada.' : null}
+        hint={searchParams.reenviar && !ctx.soloLectura ? 'Busca al comprador y toca «Reenviar QR»: le llega otra vez el email con su entrada.' : null}
       />
       {totalPages > 1 && (
         <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 16 }} aria-label="Paginación de compradores">
