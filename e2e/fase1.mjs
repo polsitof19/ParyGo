@@ -1052,7 +1052,7 @@ if (!S.eventId) {
 // M — la página de compra de una marca REAL (no de prueba), solo lectura: lleva
 // su dirección de diseño con el CSS aplicado y la fecha no se repite. Ver
 // e2e/direccion-marca-real.mjs (nació de Standly, 2026-09-23).
-await step('M', 'Marca real: dirección de diseño y su CSS aplicados (1440 y 390)', async () => {
+await step('M', 'Marca real: dirección, su CSS y la composición de escritorio (1440 y 390)', async () => {
   const { verificarDireccion } = await import('./direccion-marca-real.mjs');
   for (const c of await verificarDireccion({ browser })) check('M', c.name, c.ok, c.detail);
 });

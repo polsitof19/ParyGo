@@ -6,10 +6,10 @@
 // guarda nada. Leer el encabezado es lo más barato que hay sin migración:
 // los primeros bytes de un PNG/JPEG/WebP/GIF ya traen ancho y alto.
 //
-// DEUDA ANOTADA: lo correcto a futuro es guardar ancho y alto al subir el
-// flyer (una migración chica: events.cover_w / cover_h). Eso saca esta
-// petición del camino de la página que cobra. Mientras tanto, acá va con
-// Range de 8 KB y un presupuesto de tiempo duro.
+// Desde la 0065 las medidas se guardan al subir el flyer (events.cover_w /
+// cover_h, con medidasDeBytes) y la página las toma de la fila. La lectura por
+// red de acá abajo queda SOLO de respaldo para una fila sin medir: Range de
+// 8 KB y un presupuesto de tiempo duro.
 //
 // Runtime edge: solo fetch y ArrayBuffer, nada de Node.
 
@@ -92,6 +92,24 @@ function leerJPEG(b: DataView): Medidas | null {
 }
 
 /**
+ * Ancho y alto a partir de los BYTES de la imagen (el archivo entero o su
+ * comienzo). Lo usa la subida del flyer, que ya tiene el archivo en memoria:
+ * medir ahí no cuesta nada. Nunca lanza.
+ */
+export function medidasDeBytes(buf: ArrayBuffer | Uint8Array): Medidas | null {
+  try {
+    const u8 = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+    if (u8.byteLength < 10) return null;
+    const b = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    const m = leerPNG(b) ?? leerJPEG(b) ?? leerWebP(b) ?? leerGIF(b);
+    if (!m || !m.width || !m.height) return null;
+    return m;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Ancho y alto de la imagen, o null si no se pudo saber.
  *
  * NUNCA lanza: quien llama decide qué hacer con el null, y el criterio del
@@ -121,11 +139,8 @@ export async function medidasDeImagen(url: string | null | undefined): Promise<M
     // function, en la página que cobra, que es justo lo que este módulo
     // existe para no hacer. Si eso pasa, no se mide y se cae en editorial.
     if (r.status !== 206) return null;
-    const buf = await r.arrayBuffer();
-    if (buf.byteLength < 10) return null;
-    const b = new DataView(buf);
-    const m = leerPNG(b) ?? leerJPEG(b) ?? leerWebP(b) ?? leerGIF(b);
-    if (!m || !m.width || !m.height) return null;
+    const m = medidasDeBytes(await r.arrayBuffer());
+    if (!m) return null;
     if (MEDIDAS.size >= MEDIDAS_TOPE) MEDIDAS.clear();
     MEDIDAS.set(url, m);
     return m;

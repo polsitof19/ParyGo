@@ -41,12 +41,19 @@ export const DIRECCION_SEGURA: Direccion = 'editorial';
 /**
  * Decide la dirección a partir del flyer del evento.
  *
- * Hace UNA petición de 1 KB a la imagen (Range), cacheada y con tope de
- * tiempo. Conviene llamarla en paralelo con las consultas de la página, no
- * en serie: es la página que cobra.
+ * Con las medidas guardadas al subir el flyer (events.cover_w/cover_h, 0065)
+ * decide SIN red. Solo si la fila no las tiene hace una petición chica a la
+ * imagen (Range) con tope de tiempo; en ese caso conviene llamarla en paralelo
+ * con las consultas de la página, no en serie: es la página que cobra.
  */
-export async function decidirDireccion(coverUrl: string | null | undefined): Promise<Direccion> {
+export async function decidirDireccion(
+  coverUrl: string | null | undefined,
+  medidas?: { w: number | null | undefined; h: number | null | undefined },
+): Promise<Direccion> {
   if (!coverUrl) return 'editorial';
+  if (medidas?.w && medidas?.h) {
+    return pareceCaptura(medidas.w, medidas.h).esCaptura ? 'editorial' : 'canvas';
+  }
   const m = await medidasDeImagen(coverUrl);
   if (!m) return DIRECCION_SEGURA;
   return pareceCaptura(m.width, m.height).esCaptura ? 'editorial' : 'canvas';

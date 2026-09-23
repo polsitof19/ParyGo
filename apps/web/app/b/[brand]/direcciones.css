@@ -33,17 +33,16 @@
    ============================================================ */
 
 /* ------------------------------------------------------------
-   UNA COLUMNA, EN LOS DOS ANCHOS Y EN LAS DOS DIRECCIONES
+   UNA COLUMNA HASTA 1023; TRES DESDE 1024 (bloque al final)
    ------------------------------------------------------------
-   La base trae, de ≥1024, una grilla de dos columnas heredada del
-   concepto CARTEL: el flyer pegajoso a la izquierda y, a la derecha,
+   La base trae una grilla heredada del concepto CARTEL con
    `.b-list { display: contents }` para que sus hijos caigan en celdas.
-   El concepto que estaba en producción nunca la usaba —se la pisaba
-   con `display: block`— así que quedó sin mantener: con el markup de
-   hoy aprieta las filas hasta partir el texto en una palabra por
-   renglón y deja el título sin celda.
-   Las dos direcciones van en una sola columna, que es lo que ya se
-   servía. El escritorio gana ancho, no una segunda columna. */
+   Con el markup de hoy eso aprieta las filas hasta partir el texto en
+   una palabra por renglón, así que acá se neutraliza: teléfono y tablet
+   van en una columna. El escritorio NO: una columna de 720 con el
+   resumen suelto arriba del título es lo que Paul vio "horrible" el
+   2026-09-23. Desde 1024 manda la grilla de tres columnas del final
+   de este archivo, con la lista como UN bloque (nunca `contents`). */
 .client-shell .b-canvas .b-stage,
 .client-shell .b-editorial .b-stage { display: block; }
 .client-shell .b-canvas .b-list,
@@ -218,3 +217,99 @@
 .client-shell .b-editorial .b1-line__n--on .b1-line__sub { color: inherit; opacity: .78; }
 .client-shell .b-editorial .b1-line__n--on .b1-line__pr { color: inherit; }
 .client-shell .b-editorial .b1-line__n--on .b1-line__dot { display: none; }
+
+
+/* ============================================================
+   ESCRITORIO (≥1024) — TRES COLUMNAS, EN LAS DOS DIRECCIONES
+   ============================================================
+   La composición que se había benchmarkeado en redesign/compra
+   (e40c686), antes de los conceptos:
+
+     [ flyer ENTERO, sticky ] [ título · entradas · pasos · dónde ] [ Tu compra, sticky ]
+       ≤340                     el resto (≥340)                       320
+
+   Contenedor de 1120, el mismo que el header. La lista es UN bloque en
+   la celda del centro —no `display: contents`, que es lo que partía las
+   filas—, y el resumen vive en su propia celda a la derecha: nunca arriba
+   del título, que es donde caía con el `display: flex` de editorial (el
+   resumen no tenía `order` y se iba primero).
+
+   El flyer va entero, con su proporción: en la columna no hay banda que
+   recortar. Solo una captura muy alta (hoesky, 1:2.2) toca el techo de
+   alto, y ahí la copia difuminada rellena los costados como en la banda.
+
+   Es la misma receta para canvas y editorial: en escritorio el flyer ya
+   no sangra ni es una banda, así que la diferencia entre las dos queda en
+   lo tipográfico (la etiqueta con regla, la fase vigente en relleno). */
+@media (min-width: 1024px) {
+  .client-shell .b-buy.b-canvas,
+  .client-shell .b-buy.b-editorial { max-width: 1120px; }
+
+  .client-shell .b-canvas .b-stage,
+  .client-shell .b-editorial .b-stage {
+    display: grid;
+    grid-template-columns: minmax(0, 340px) minmax(340px, 1fr) 320px;
+    grid-template-areas:
+      "flyer titulo resumen"
+      "flyer lista  resumen";
+    grid-template-rows: auto 1fr;
+    gap: 0 var(--b-s4);
+    align-items: start;
+    padding-top: var(--b-s5);
+  }
+
+  /* Columna izquierda: el flyer y su ficha, pegados al scroll. */
+  .client-shell .b-canvas .b-hero,
+  .client-shell .b-editorial .b-hero {
+    grid-area: flyer; position: sticky; top: 92px; margin: 0; order: 0;
+  }
+  .client-shell .b-canvas .b-hero__shot,
+  .client-shell .b-editorial .b-hero__shot { border-radius: var(--r-card); }
+  .client-shell .b-canvas .b-hero__shot img,
+  .client-shell .b-editorial .b-hero__shot img {
+    height: auto; aspect-ratio: auto; object-fit: contain;
+    max-height: calc(100vh - 260px);
+  }
+  .client-shell .b-canvas .b-hero__blur,
+  .client-shell .b-editorial .b-hero__blur { display: block; }
+  .client-shell .b-canvas .b-hero__fade,
+  .client-shell .b-editorial .b-hero__fade { display: none; }
+
+  /* Centro, arriba: el título en tinta, fuera del flyer. */
+  .client-shell .b-canvas .b-hero__over,
+  .client-shell .b-editorial .b-hero__over {
+    grid-area: titulo; order: 0;
+    position: static; height: auto; display: block;
+    padding: 0 0 var(--b-s3); pointer-events: auto;
+  }
+  .client-shell .b-canvas .b-kicker,
+  .client-shell .b-editorial .b-kicker { color: var(--ink-3); text-shadow: none; }
+  .client-shell .b-canvas .b-hero__name,
+  .client-shell .b-editorial .b-hero__name {
+    color: var(--ink); text-shadow: none;
+    line-height: .96; letter-spacing: -.035em;
+  }
+
+  /* Centro, abajo: entradas, confianza, pasos y dónde, en un bloque. En
+     canvas deja de ser el panel de papel montado sobre la imagen: acá no
+     hay imagen debajo. */
+  .client-shell .b-canvas .b-list,
+  .client-shell .b-editorial .b-list {
+    grid-area: lista; order: 0; display: block;
+    margin: 0; padding: 0; background: none; border-radius: 0;
+  }
+  /* Tres pasos en una columna de ~350 no entran de a tres. */
+  .client-shell .b-canvas .b1-pasos,
+  .client-shell .b-editorial .b1-pasos { grid-template-columns: 1fr; gap: var(--b-s3); }
+
+  /* Derecha: Tu compra. */
+  .client-shell .b-canvas .b-sum,
+  .client-shell .b-editorial .b-sum { grid-area: resumen; order: 0; }
+
+  /* Las pantallas sin grilla (tus datos, el pago con tarjeta) no se estiran
+     a 1120: un formulario a lo ancho no se lee. */
+  .client-shell .b-canvas > .c-stepwrap:not(:has(> .b-stage)),
+  .client-shell .b-editorial > .c-stepwrap:not(:has(> .b-stage)) {
+    max-width: 640px; margin-left: auto; margin-right: auto;
+  }
+}

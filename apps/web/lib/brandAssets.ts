@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid';
 import type { createAdminClient } from '@/lib/supabase/admin';
+import { medidasDeBytes } from '@/lib/imageSize';
 
 // Tipos permitidos para el flyer de un evento (foto). SVG queda para el logo.
 const COVER_TYPES: Record<string, string> = {
@@ -49,8 +50,10 @@ export async function uploadBrandLogo(
   return { ok: true, url: data.publicUrl };
 }
 
+// width/height: medidas del flyer leídas de los bytes que se acaban de subir
+// (null si el encabezado no se pudo leer). Van a events.cover_w/cover_h (0065).
 export type CoverUploadResult =
-  | { ok: true; url: string }
+  | { ok: true; url: string; width: number | null; height: number | null }
   | { ok: false; message: string };
 
 // Sube el flyer de un evento al bucket público `brand-assets` bajo el prefijo de
@@ -75,5 +78,14 @@ export async function uploadEventCover(
   if (error) return { ok: false, message: `No se pudo subir el flyer: ${error.message}` };
 
   const { data } = admin.storage.from('brand-assets').getPublicUrl(path);
-  return { ok: true, url: data.publicUrl };
+  const m = medidasDeBytes(bytes);
+  return { ok: true, url: data.publicUrl, width: m?.width ?? null, height: m?.height ?? null };
+}
+
+/** Las columnas de medidas para un UPDATE de events: las dos o ninguna (0065). */
+export function coverDims(up: { width: number | null; height: number | null }) {
+  const ok = (n: number | null): n is number => n !== null && n >= 1 && n <= 20000;
+  return ok(up.width) && ok(up.height)
+    ? { cover_w: up.width, cover_h: up.height }
+    : { cover_w: null, cover_h: null };
 }

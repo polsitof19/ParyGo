@@ -19,7 +19,12 @@
 //     flyer (Canvas salvo que no haya flyer o tenga forma de captura, < 1:2);
 //   · las reglas de esa dirección están cargadas Y aplicadas (ancho de la
 //     columna de compra, que solo lo pone direcciones.css);
-//   · la fecha aparece dos veces, no tres: arriba (kicker) y en la ficha.
+//   · la fecha aparece dos veces, no tres: arriba (kicker) y en la ficha;
+//   · en 1440, la composición de escritorio (tres columnas en 1120): el flyer
+//     a la izquierda, "Tu compra" como rail a la DERECHA del título, y ningún
+//     bloque de compra (resumen, barra, entradas) arriba del título. Nació de
+//     la captura de Paul del 2026-09-23: "Tu compra" suelto arriba del nombre
+//     y todo en una columna de 720.
 import { chromium } from 'playwright';
 import { svc, BASE } from './lib.mjs';
 
@@ -61,7 +66,25 @@ export async function verificarDireccion({ browser, prod = false, base = BASE } 
       const visible = (el) => !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
       const kicker = document.querySelector('.b-kicker');
       const fichaFecha = document.querySelector('.b-aside p');
+      // Cajas en coordenadas de documento, solo de lo visible.
+      const caja = (sel) => {
+        const el = document.querySelector(sel);
+        if (!visible(el)) return null;
+        const r = el.getBoundingClientRect();
+        return { top: r.top + scrollY, bottom: r.bottom + scrollY, left: r.left, right: r.right, width: r.width };
+      };
+      const titulo = caja('.b-hero__name');
+      // "Arriba del título" = entero por encima de él, o en su misma columna y
+      // empezando antes. El rail de la derecha arranca a la altura del bloque
+      // de título (kicker incluido) y eso es lo buscado, no un defecto.
+      const encima = (c) => c.bottom <= titulo.top + 1
+        || (c.left < titulo.right && c.right > titulo.left && c.top < titulo.top);
+      const compraArriba = titulo
+        ? ['.b-sum', '.b-cta', '.b-tks', '.b-sum__lb']
+          .map((s) => [s, caja(s)]).filter(([, c]) => c && encima(c)).map(([s]) => s)
+        : null;
       return {
+        titulo, flyer: caja('.b-hero'), rail: caja('.b-sum'), compraArriba,
         clases: buy?.className ?? '',
         maxW: buy ? getComputedStyle(buy).maxWidth : null,
         nat: img ? [img.naturalWidth, img.naturalHeight] : null,
@@ -80,14 +103,27 @@ export async function verificarDireccion({ browser, prod = false, base = BASE } 
       : m.nat[0] / m.nat[1] < MAS_ANGOSTA_QUE ? 'editorial' : 'canvas';
     check(`${tag} · la dirección es la que le toca al flyer (${m.nat ? m.nat.join('×') : 'sin flyer'} → ${esperada})`, dir === esperada, dir);
     check(`${tag} · el CSS de las direcciones está cargado`, m.reglasCanvas > 0 && m.reglasEditorial > 0, `canvas=${m.reglasCanvas} editorial=${m.reglasEditorial}`);
-    // Solo direcciones.css le pone ancho a la columna: si no cargó, queda 'none'.
-    const anchoOk = ancho === 1440
-      ? m.maxW === (dir === 'canvas' ? '720px' : '760px')
-      : m.maxW === '560px';
+    // Solo direcciones.css le pone ancho a la columna: si no cargó, queda
+    // 'none'. En escritorio las dos direcciones van en el contenedor de 1120.
+    const anchoOk = ancho === 1440 ? m.maxW === '1120px' : m.maxW === '560px';
     check(`${tag} · el CSS de ${dir} está APLICADO (ancho de la compra)`, anchoOk, m.maxW);
     check(`${tag} · sin subtítulo de fecha repetido (b2-cuando)`, m.cuando === 0, m.cuando);
     check(`${tag} · la fecha está arriba (kicker)`, !!m.kicker, m.kicker);
-    if (ancho === 1440) check(`${tag} · y una vez en la ficha de datos`, !!m.ficha, m.ficha);
+    if (ancho === 1440) {
+      check(`${tag} · y una vez en la ficha de datos`, !!m.ficha, m.ficha);
+      const { titulo: t, rail, flyer } = m;
+      check(`${tag} · "Tu compra" es un rail a la DERECHA del título`,
+        !!(t && rail && rail.left >= t.right && rail.right > 1440 / 2),
+        JSON.stringify({ titulo: t, rail }));
+      check(`${tag} · el flyer va a la IZQUIERDA del título`,
+        !ev.cover_url || !!(t && flyer && flyer.right <= t.left),
+        JSON.stringify({ flyer, titulo: t }));
+      check(`${tag} · ningún bloque de compra aparece arriba del título`,
+        Array.isArray(m.compraArriba) && m.compraArriba.length === 0, JSON.stringify(m.compraArriba));
+    } else {
+      // En el teléfono no hay rail: la compra va en la barra de abajo.
+      check(`${tag} · sin rail en el teléfono`, !m.rail, JSON.stringify(m.rail));
+    }
   }
   return checks;
 }

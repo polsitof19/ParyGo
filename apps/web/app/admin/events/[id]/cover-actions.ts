@@ -5,7 +5,7 @@ import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { puedeEscribirComoSuper } from '@/lib/impersonation';
 import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
-import { uploadEventCover } from '@/lib/brandAssets';
+import { uploadEventCover, coverDims } from '@/lib/brandAssets';
 
 export type CoverState = { ok: boolean; message: string | null };
 
@@ -13,7 +13,8 @@ export type CoverState = { ok: boolean; message: string | null };
 // del evento) O al SUPER ADMIN (sobre cualquier marca). El brand_id y el slug del
 // path de storage salen del ROW del evento (DB, server-trusted), NUNCA del form,
 // y el UPDATE se scopea a ese mismo brand_id. Un brand_admin de otra marca queda
-// fuera (su membership no coincide con ev.brand_id). Solo escribe events.cover_url.
+// fuera (su membership no coincide con ev.brand_id). Solo escribe events.cover_url
+// y sus medidas (cover_w/cover_h, 0065).
 export async function setEventCoverAction(
   _prev: CoverState,
   formData: FormData
@@ -50,7 +51,9 @@ export async function setEventCoverAction(
 
   const { error } = await admin
     .from('events')
-    .update({ cover_url: up.url })
+    // Las medidas viajan con la URL: un flyer nuevo sin medir deja NULL, nunca
+    // las medidas del anterior (la página decidiría con una forma que ya no es).
+    .update({ cover_url: up.url, ...coverDims(up) })
     .eq('id', eventId)
     .eq('brand_id', ev.brand_id); // candado a la marca del row (server-trusted)
   if (error) return { ok: false, message: error.message };

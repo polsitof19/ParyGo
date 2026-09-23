@@ -386,7 +386,7 @@ export async function cloneEventAction(eventId: string): Promise<{ ok: boolean; 
   const admin = createAdminClient();
   const { data: ev } = await admin
     .from('events')
-    .select('slug, name, description, starts_at, ends_at, venue_name, venue_address, venue_maps_url, venue_lat, venue_lng, cover_url, min_age, refund_policy')
+    .select('slug, name, description, starts_at, ends_at, venue_name, venue_address, venue_maps_url, venue_lat, venue_lng, cover_url, cover_w, cover_h, min_age, refund_policy')
     .eq('id', eventId)
     .eq('brand_id', brandId)
     .maybeSingle();
@@ -471,10 +471,14 @@ export async function cloneEventAction(eventId: string): Promise<{ ok: boolean; 
 
   // create_brand_event no acepta venue_maps_url/lat/lng → los copiamos aparte
   // (best-effort, scopeado a la marca; si falla no rompe el clon ya creado).
-  if (ev.venue_maps_url || ev.venue_lat != null || ev.venue_lng != null) {
+  // Igual las medidas del flyer (0065): el clon usa la misma imagen.
+  if (ev.venue_maps_url || ev.venue_lat != null || ev.venue_lng != null || ev.cover_w != null) {
     await admin
       .from('events')
-      .update({ venue_maps_url: ev.venue_maps_url, venue_lat: ev.venue_lat, venue_lng: ev.venue_lng })
+      .update({
+        venue_maps_url: ev.venue_maps_url, venue_lat: ev.venue_lat, venue_lng: ev.venue_lng,
+        cover_w: ev.cover_w, cover_h: ev.cover_h,
+      })
       .eq('id', newId as string)
       .eq('brand_id', brandId);
   }

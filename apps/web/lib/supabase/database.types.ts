@@ -120,6 +120,8 @@ export type Database = {
           archived_at: string | null
           brand_id: string
           cover_url: string | null
+          cover_w: number | null
+          cover_h: number | null
           created_at: string
           description: string | null
           ends_at: string | null
@@ -152,6 +154,8 @@ export type Database = {
           archived_at?: string | null
           brand_id: string
           cover_url?: string | null
+          cover_w?: number | null
+          cover_h?: number | null
           created_at?: string
           description?: string | null
           ends_at?: string | null
@@ -182,6 +186,8 @@ export type Database = {
           archived_at?: string | null
           brand_id?: string
           cover_url?: string | null
+          cover_w?: number | null
+          cover_h?: number | null
           created_at?: string
           description?: string | null
           ends_at?: string | null

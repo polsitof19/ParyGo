@@ -7,7 +7,7 @@ import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { contextoEscritura } from '@/lib/impersonation';
 import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
-import { uploadEventCover } from '@/lib/brandAssets';
+import { uploadEventCover, coverDims } from '@/lib/brandAssets';
 import { limaToIso, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
 
 export type FormState = {
@@ -109,12 +109,14 @@ export async function createBrandEventAction(
   // Flyer opcional: subir a brand-assets bajo el prefijo de la marca de la
   // sesión (la RLS exige <slug>/...). El slug sale de la sesión, nunca del form.
   let coverUrl: string | null = null;
+  let dims: ReturnType<typeof coverDims> | null = null;
   const coverFile = formData.get('cover');
   if (coverFile instanceof File && coverFile.size > 0) {
     const { data: b } = await admin.from('brands').select('slug').eq('id', brandId).single();
     const up = await uploadEventCover(admin, b!.slug, coverFile);
     if (!up.ok) return { ok: false, message: up.message, fieldErrors: { cover: up.message } };
     coverUrl = up.url;
+    dims = coverDims(up);
   }
 
   const { data: newEventId, error } = await admin.rpc('create_brand_event', {
@@ -144,6 +146,13 @@ export async function createBrandEventAction(
   if (!error && newEventId && formData.get('is_free') === 'on') {
     const { error: freeErr } = await admin.from('events').update({ is_free: true }).eq('id', newEventId);
     if (freeErr) console.error('[createEvent] no se pudo marcar gratis', { newEventId, detalle: freeErr.message });
+  }
+
+  // Las medidas del flyer (0065), por la misma razón: create_brand_event no
+  // las conoce. Si esto falla, la página las mide por red (el respaldo).
+  if (!error && newEventId && dims?.cover_w) {
+    const { error: dimErr } = await admin.from('events').update(dims).eq('id', newEventId);
+    if (dimErr) console.error('[createEvent] no se guardaron las medidas del flyer', { newEventId, detalle: dimErr.message });
   }
 
   if (error || !newEventId) {

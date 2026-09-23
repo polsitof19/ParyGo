@@ -40,7 +40,7 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
     .select(`
       id, slug, name, description, starts_at, ends_at,
       venue_name, venue_address, venue_lat, venue_lng, venue_maps_url,
-      cover_url, min_age, require_age_confirmation, require_dni, collect_attendee_names, refund_policy, is_published, is_free
+      cover_url, cover_w, cover_h, min_age, require_age_confirmation, require_dni, collect_attendee_names, refund_policy, is_published, is_free
     `)
     .eq('brand_id', brand.id)
     .eq('slug', eventSlug)
@@ -175,10 +175,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function EventPage({ params, searchParams }: Props) {
   const data = await loadEvent(params.brand, params.event);
   if (!data) notFound();
-  // La medición del flyer SALE YA, sin await: mientras corre, la página sigue
-  // resolviendo el resto. Esperarla acá, en serie después de loadEvent, le
-  // sumaba hasta 1.2s a la página que cobra. Se recoge al final, donde se usa.
-  const midiendoFlyer = decidirDireccion(data.event.cover_url);
+  // La dirección sale de las medidas guardadas al subir el flyer (0065), sin
+  // red. Solo una fila sin medir cae en la lectura por red, y por eso SALE YA,
+  // sin await: mientras corre, la página sigue resolviendo el resto. Se recoge
+  // al final, donde se usa.
+  const midiendoFlyer = decidirDireccion(data.event.cover_url, { w: data.event.cover_w, h: data.event.cover_h });
   const { brand, event, ticketTypes, mpConfigured, mpPublicKey } = data;
 
   // Guarda de evento pasado: un link viejo de un evento ya terminado NO debe
@@ -294,7 +295,7 @@ export default async function EventPage({ params, searchParams }: Props) {
         {/* SOPORTE */}
         <p className="c-foot">
           ¿Ya compraste y perdiste tu entrada?{' '}
-          <a href="/reenviar" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>Reenviála a tu email</a>
+          <a href="/reenviar" style={{ color: 'var(--brand-ink)', fontWeight: 600 }}>Reenvíala a tu email</a>
           {brand.whatsapp_e164 && (
             <>
               {' · '}
