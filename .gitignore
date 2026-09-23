@@ -54,3 +54,9 @@ coverage/
 
 # Smoke test evidence
 tmp/
+# Playwright CLI output (may contain credentials)
+.playwright-cli/
+.playwright/
+
+# Graphify (mapa del repo, local)
+graphify-out/

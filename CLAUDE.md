@@ -348,3 +348,24 @@ permisos por JWT, el security-review). Pausar antes de pasos de riesgo para OK.
 ## Modelo / costo
 Opus para diseño (Plan) y lo de riesgo. Sonnet/Haiku para subagents mecánicos
 (review, tests). No quemar Opus en tareas mecánicas.
+
+## Herramientas
+- **Context7** (MCP global): consultarlo ANTES de usar cualquier API de Next,
+  Supabase o Resend. La doc de memoria envejece; Context7 trae la de la versión.
+- **Graphify**: consultar el grafo antes de leer archivos a ciegas
+  (`graphify query "<pregunta>"`, `graphify explain "<símbolo>"`,
+  `graphify path "<A>" "<B>"`). Regenerarlo tras cambios grandes con
+  `graphify update .` (solo AST, sin LLM, sin costo). Salida en graphify-out/
+  (gitignored; cada máquina lo genera). Los hooks que lo recuerdan viven en
+  .claude/settings.local.json (ruta del exe propia de cada PC, no se commitean).
+  En Windows, si el shim `graphify` de uv falla, usar `graphify.exe` o
+  `python -m graphify` con el Python de `%APPDATA%\uv\tools\graphifyy`.
+- **Playwright CLI** (`playwright-cli`): capturas y QA a 390 y 1440.
+- **Agent-skills** (/spec /plan /review…): solo apoyo. Mandan las reglas de
+  este archivo: gates, nada a refactor/monorepo sin OK de Paul, security-reviewer
+  en pagos.
+- **Ponytail**: código mínimo, pero NUNCA recortar validación, seguridad ni
+  manejo de errores del flujo de compra.
+- **UI UX Pro Max / SkillUI / impeccable**: solo referencia. Manda el sistema
+  de ParyGo: fondos blanco/negro neutro, Geist, sin tarjetas flotantes. La salida
+  de SkillUI vive en tmp/skillui/ y no se aplica a nada.
