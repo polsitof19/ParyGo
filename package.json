@@ -17,7 +17,7 @@
     "test:hooks": "node .claude/hooks/__tests__/run.js",
     "test:tokens": "node scripts/check-tokens-sync.js",
     "test:redirects": "node apps/landing/functions/_middleware.test.mjs",
-    "test:contrast": "node scripts/check-tokens-contrast.js && node scripts/check-brand-contrast.mjs && node scripts/check-variant-contrast.mjs && node scripts/check-scan-contrast.mjs"
+    "test:contrast": "node scripts/check-tokens-contrast.js && node scripts/check-brand-contrast.mjs && node scripts/check-variant-contrast.mjs && node scripts/check-scan-contrast.mjs && node scripts/check-panel-contrast.mjs"
   },
   "engines": {
     "node": ">=20.0.0"

@@ -9,6 +9,8 @@ import { fileURLToPath } from 'node:url';
 import { otpSession, sessionCookies, BASE, svc } from './lib.mjs';
 import { ADMIN, DEMOTEST, eventoDemo } from './vistas-paneles.mjs';
 
+// ESQUEMA=dark|light: tema del teléfono a emular (por defecto claro).
+const ESQUEMA = process.env.ESQUEMA === 'dark' ? 'dark' : 'light';
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'tmp', 'capturas', 'panel');
 mkdirSync(OUT, { recursive: true });
 const { data: brand } = await svc.from('brands').select('archived_at').eq('id', DEMOTEST).single();
@@ -21,16 +23,16 @@ if (prox && !eraPub) await svc.from('events').update({ is_published: true }).eq(
 try {
   const sess = await otpSession(ADMIN);
   const browser = await chromium.launch();
-  const VISTAS = [['inicio', '/admin'], ...(rico ? [['ev-resumen', `/admin/events/${rico.id}`], ['ev-yape', `/admin/events/${rico.id}/yape`], ['ev-clientes', `/admin/events/${rico.id}/clientes`], ['ev-editar', `/admin/events/${rico.id}/editar`], ['ev-accesos', `/admin/events/${rico.id}/accesos`]] : [])];
+  const VISTAS = [['inicio', '/admin'], ...(rico ? [['ev-resumen', `/admin/events/${rico.id}`], ['ev-estadisticas', `/admin/events/${rico.id}/estadisticas`], ['ev-yape', `/admin/events/${rico.id}/yape`], ['ev-clientes', `/admin/events/${rico.id}/clientes`], ['ev-editar', `/admin/events/${rico.id}/editar`], ['ev-accesos', `/admin/events/${rico.id}/accesos`]] : [])];
   for (const ancho of [390, 1440]) {
     const movil = ancho === 390;
-    const ctx = await browser.newContext({ viewport: { width: ancho, height: movil ? 844 : 900 }, deviceScaleFactor: movil ? 2 : 1, isMobile: movil, hasTouch: movil });
+    const ctx = await browser.newContext({ viewport: { width: ancho, height: movil ? 844 : 900 }, deviceScaleFactor: movil ? 2 : 1, isMobile: movil, hasTouch: movil, colorScheme: ESQUEMA });
     await ctx.addCookies(sessionCookies(sess, BASE));
     const page = await ctx.newPage();
     for (const [id, url] of VISTAS) {
       await page.goto(BASE + url, { waitUntil: 'load', timeout: 90000 }).catch(() => null);
       await page.waitForTimeout(1500);
-      await page.screenshot({ path: resolve(OUT, `${id}-${ancho}.png`), fullPage: true });
+      await page.screenshot({ path: resolve(OUT, `${id}-${ancho}-${ESQUEMA}.png`), fullPage: true });
     }
     await ctx.close();
   }

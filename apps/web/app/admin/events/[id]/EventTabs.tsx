@@ -5,7 +5,8 @@ import { usePathname } from 'next/navigation';
 
 // Navegación de un evento: CUATRO pestañas, cada una con sus partes a la vista.
 //
-//   Resumen   cómo va (vendidas, recaudado, Yapes por revisar) · Revisar Yape · Reporte
+//   Resumen   cómo va (lo pendiente, tres cifras, acciones) · Yapes · Estadísticas
+//             (el detalle; el reporte para imprimir se abre desde ahí)
 //   Evento    datos, fecha, lugar, entradas y precios, flyer — UNA sola pantalla
 //   Personas  compradores · promotores (RR.PP.) · cortesías
 //   Puerta    control en vivo · equipo de puerta
@@ -21,7 +22,7 @@ type Tab = { key: string; label: string; href: string; subs: Sub[] };
 const TABS: Tab[] = [
   {
     key: 'resumen', label: 'Resumen', href: '',
-    subs: [{ seg: '', label: 'Cómo va' }, { seg: '/yape', label: 'Revisar Yape' }, { seg: '/reporte', label: 'Reporte' }],
+    subs: [{ seg: '', label: 'Cómo va' }, { seg: '/yape', label: 'Yapes' }, { seg: '/estadisticas', label: 'Estadísticas' }],
   },
   {
     key: 'evento', label: 'Evento', href: '/editar',
@@ -40,7 +41,10 @@ const TABS: Tab[] = [
 export function EventTabs({ eventId, yapePending }: { eventId: string; yapePending: number }) {
   const path = usePathname() ?? '';
   const base = `/admin/events/${eventId}`;
-  const esSub = (seg: string) => (seg === '' ? path === base : path === base + seg || path.startsWith(base + seg + '/'));
+  const esSub = (seg: string) => (seg === '' ? path === base
+    // El reporte para imprimir cuelga de Estadísticas.
+    : seg === '/estadisticas' && path.startsWith(base + '/reporte') ? true
+    : path === base + seg || path.startsWith(base + seg + '/'));
   const activa = TABS.find((t) => t.subs.some((s) => esSub(s.seg)))
     ?? (path.startsWith(base + '/entradas') ? TABS[1] : TABS[0])!;
 

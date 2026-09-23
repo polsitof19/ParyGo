@@ -1,17 +1,20 @@
 import Link from 'next/link';
+import { ChevronDown, Printer } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
-import { YapeReviewRow } from '@/app/admin/yape/YapeReviewRow';
 import { publicEnv } from '@/lib/env';
-import { EventButtons, QuickActions } from './QuickActions';
+
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-export default async function AdminEventResumenPage({ params }: { params: { id: string } }) {
+// Estadísticas del evento: todo el detalle que antes llenaba el inicio del
+// evento (cuatro números, por tipo, por día, rechazados). El inicio ("Cómo
+// va") quedó con lo que se usa: pendiente, tres cifras y acciones.
+export default async function AdminEventEstadisticasPage({ params }: { params: { id: string } }) {
   const user = await requireSession();
   const ctx = ownerBrandContext(user);
   if (!ctx) notFound();
@@ -135,12 +138,7 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
     pendOrderIds.length > 0
       ? admin.from('order_items').select('order_id, ticket_type_name, quantity').in('order_id', pendOrderIds).then((r) => r.data)
       : Promise.resolve(null),
-    Promise.all(
-      pendingProofs.map(async (p) => {
-        const { data: signed } = await admin.storage.from('yape-proofs').createSignedUrl(p.receipt_url, 60 * 10);
-        return { ...p, signedReceiptUrl: signed?.signedUrl ?? null, items: [] as { name: string; quantity: number }[] };
-      })
-    ),
+    Promise.resolve([] as { items: { name: string; quantity: number }[]; order: ProofRow['order'] }[]),
   ]);
 
   // Recaudación por tipo (order_items de pagadas).
@@ -233,60 +231,39 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
           plegado. Antes la cola de Yapes quedaba debajo de los cuatro números,
           las acciones y las alertas: en 390 caía a ~900px del borde. */}
 
-      {/* 1) PENDIENTE — la cola de Yapes con la cifra héroe. Aprobar/Rechazar
-          son los reales (YapeReviewRow); el primario es el de la fila abierta. */}
-      {pendingCount > 0 && (
-        <section className="s-due-queue" aria-labelledby="yape-inline-title">
-          <div className="s-due s-due--queue">
-            <div className="s-due__txt">
-              <span className="s-due__k">Por revisar</span>
-              <h2 id="yape-inline-title" className="s-due__n">
-                {pendingCount} Yape{pendingCount === 1 ? '' : 's'}
-              </h2>
-              {/* La instrucción va UNA vez arriba de la lista, no repetida en cada fila. */}
-              <p className="s-due__sub">
-                {formatPEN(pendingCents)} esperando tu aprobación. Abre tu Yape → Movimientos: si el monto, el N° de
-                operación y el nombre coinciden, aprueba. Toca una fila para ver la captura.
-              </p>
-            </div>
-          </div>
-          <div>
-            {pendingReview.map((p) => (
-              <YapeReviewRow
-                key={p.id}
-                proofId={p.id}
-                receiptUrl={p.signedReceiptUrl}
-                amountCents={p.amount_cents}
-                expectedAmountCents={p.order?.total_cents ?? 0}
-                amountMatches={p.amount_cents === p.order?.total_cents}
-                operationNumber={p.operation_number}
-                payerName={p.payer_name}
-                securityCode={p.security_code}
-                buyerName={p.order?.buyer_name ?? ''}
-                buyerEmail={p.order?.buyer_email ?? ''}
-                buyerPhone={p.order?.buyer_phone ?? ''}
-                createdAt={p.created_at}
-                total={formatPEN(p.order?.total_cents ?? 0)}
-                items={p.items}
-                impersonating={impersonating}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 2) ¿Cómo va? — tres cifras y el aforo, nada más. El detalle (por
-          tipo, por día, escaneados, rechazados) vive en Estadísticas: en el
-          inicio del evento se leía como un tablero y no como "qué hago". */}
-      <Link href={`/admin/events/${event.id}/estadisticas`} className="a-next__nums a-evnums">
-        <span><b>{formatPEN(confirmedCents)}</b>cobrado{pendingCount > 0 && ` · +${formatPEN(pendingCents)} por aprobar`}</span>
-        <span><b>{soldTickets}</b>vendidas</span>
-        <span><b>{courtesyTickets}</b>cortesías</span>
-        <span className="a-next__cap">
-          {soldPct !== null && <span className="a-meter" aria-hidden="true"><span className="a-meter__fill" style={{ width: `${soldPct}%` }} /></span>}
-          <span className="a-evnums__more">{soldPct !== null ? `${soldPct}% del aforo ocupado · ` : ''}{when} · Ver estadísticas</span>
-        </span>
-      </Link>
+      {/* 2) ¿Cómo va? — cuatro números. La plata primero: es lo que se pregunta. */}
+      <div className="a-pulse">
+        <div className="s-stat">
+          <span className="s-stat__label">Recaudado</span>
+          <span className="s-stat__value">{formatPEN(confirmedCents)}</span>
+          <span className="s-stat__sub">
+            {pendingCount > 0
+              ? `+ ${formatPEN(pendingCents)} por aprobar`
+              : showMp
+                ? `Yape ${formatPEN(byMethod.yape.cents)} · tarjeta ${formatPEN(byMethod.mp.cents)}`
+                : 'confirmado en tu Yape'}
+          </span>
+        </div>
+        <div className="s-stat">
+          <span className="s-stat__label">Vendidas</span>
+          <span className="s-stat__value">{soldTickets}</span>
+          <span className="s-stat__sub">
+            {soldPct !== null ? `${soldPct}% del aforo ocupado` : 'aforo ilimitado'}
+            {courtesyTickets > 0 && ` · +${courtesyTickets} cortesía${courtesyTickets === 1 ? '' : 's'}`}
+          </span>
+          {soldPct !== null && <div className="a-meter" aria-hidden="true"><div className="a-meter__fill" style={{ width: `${soldPct}%` }} /></div>}
+        </div>
+        <div className="s-stat">
+          <span className="s-stat__label">Cuándo</span>
+          <span className="s-stat__value s-stat__value--text">{when}</span>
+          <span className="s-stat__sub">{whenSub}</span>
+        </div>
+        <div className="s-stat">
+          <span className="s-stat__label">Entraron</span>
+          <span className="s-stat__value">{totalScanned}</span>
+          <span className="s-stat__sub">escaneados en puerta</span>
+        </div>
+      </div>
 
       {/* Alertas del evento: punto + texto en tinta. */}
       {alerts.length > 0 && (
@@ -295,16 +272,112 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
         </ul>
       )}
 
-      {noSalesYet && pendingCount === 0 && (
-        <p className="s-notice" style={{ marginBottom: 16 }}>Aún no vendiste. Comparte tu link en historias y grupos: es lo que más mueve la venta.</p>
+      {/* Entradas por tipo */}
+      <section className="s-section">
+        <h2 className="s-h2" style={{ marginBottom: 12 }}>Entradas por tipo</h2>
+        {types.length === 0 ? (
+          <div className="s-card"><p className="s-empty">Este evento no tiene tipos de entrada todavía.</p></div>
+        ) : (
+          <div className="s-card s-card--flush" style={{ overflowX: 'auto' }}>
+            {/* s-table--stack: en ≤640 la tabla se vuelve lista y cada número
+                se lleva su etiqueta (data-l), en vez de deslizar 540px de
+                ancho dentro de una pantalla de 358. */}
+            <table className="a-typetable s-table--stack">
+              <thead><tr><th>Tipo</th><th className="num">Capacidad</th><th className="num">Emitidas</th><th className="num">Libres</th><th className="num">Escaneados</th><th className="num">Recaudado</th></tr></thead>
+              <tbody>
+                {types.map((t) => {
+                  const sold = t.sold ?? 0;
+                  const libres = t.is_unlimited ? null : Math.max(0, t.capacity - sold);
+                  const scanned = scannedByType.get(t.id) ?? 0;
+                  const rec = recByType.get(t.id) ?? 0;
+                  const phase = phaseByType.get(t.id);
+                  return (
+                    <tr key={t.id}>
+                      <td>
+                        <strong>{t.name}</strong>{!t.is_active && <span className="s-badge s-badge--draft s-badge--inline">inactivo</span>}
+                        {phase && <span className="a-phase">Precio actual: {phase}</span>}
+                      </td>
+                      <td className="num" data-l="Capacidad">{t.is_unlimited ? '∞' : t.capacity}</td>
+                      <td className="num" data-l="Emitidas">{sold}</td>
+                      <td className="num" data-l="Libres">{t.is_unlimited ? '—' : libres}</td>
+                      <td className="num" data-l="Escaneados">{scanned}</td>
+                      <td className="num" data-l="Recaudado">{formatPEN(rec)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td>Total</td>
+                  <td className="num" data-l="Capacidad">{capTotal > 0 ? capTotal : (hasUnlimited ? '∞' : '—')}</td>
+                  <td className="num" data-l="Emitidas">{totalSold}</td>
+                  <td className="num" data-l="Libres">{capTotal > 0 ? Math.max(0, capTotal - soldCapped) : '—'}</td>
+                  <td className="num" data-l="Escaneados">{totalScanned}</td>
+                  <td className="num" data-l="Recaudado">{formatPEN(recTotal)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* Ventas por día: una columna por día (los últimos 14 con ventas); la
+          última, en blanco. El monto de cada día va en el title y en el texto
+          para lectores de pantalla. */}
+      {paidRows.length > 0 && byDay.length > 0 && (
+        <section className="s-section">
+          <h2 className="s-h2" style={{ marginBottom: 12 }}>Ventas por día</h2>
+          <div className="s-card">
+            <ol className="a-chart" aria-label="Ventas por día">
+              {byDay.map(([day, cents], i) => (
+                <li key={day} className={`a-chart__col${i === byDay.length - 1 ? ' a-chart__col--last' : ''}`} title={`${day}: ${formatPEN(cents)}`}>
+                  <span className="a-chart__bar" style={{ height: `${Math.max(4, Math.round((cents / maxDay) * 100))}%` }} />
+                  <span className="a-chart__sr">{day}: {formatPEN(cents)}</span>
+                </li>
+              ))}
+            </ol>
+            <div className="a-chart__axis">
+              <span>{byDay[0]![0]}</span>
+              <span>{byDay[byDay.length - 1]![0]} · {formatPEN(byDay[byDay.length - 1]![1])}</span>
+            </div>
+          </div>
+        </section>
       )}
 
-      {/* 3) Los dos botones (escáner · copiar link) y las acciones agrupadas.
-          Con Yapes por aprobar el primario es el de la fila abierta: el
-          escáner baja a secundario (uno solo por pantalla). */}
-      <EventButtons publicUrl={publicUrl} isPublished={!!event.is_published} scannerPrimary={pendingCount === 0} readOnly={impersonating} />
-      <QuickActions eventId={event.id} publicUrl={publicUrl} isPublished={!!event.is_published} readOnly={impersonating} showPublic={false} />
+      <p className="a-print">
+        <Link href={`/admin/events/${event.id}/reporte`} className="s-btn s-btn--soft s-btn--sm">
+          <Printer aria-hidden="true" /> Reporte para imprimir
+        </Link>
+      </p>
 
+      {/* 5) LO RARO, PLEGADO — los rechazados son historial, no trabajo. */}
+      {rejectedRows.length > 0 && (
+        <details className="s-fold s-folds">
+          <summary>
+            <span className="s-fold__t">
+              Yapes rechazados ({rejectedRows.length})
+              <span className="s-fold__hint">Los comprobantes que no aprobaste, con el motivo.</span>
+            </span>
+            <ChevronDown aria-hidden="true" />
+          </summary>
+          <div className="s-fold__body">
+            <ul className="s-hlist">
+              {rejectedRows.map((r) => (
+                <li key={r.id} className="s-hlist__row">
+                  <span style={{ minWidth: 0 }}>
+                    <strong>{r.order?.buyer_name ?? '—'}</strong><span className="s-muted s-small"> · {r.order?.buyer_email}</span>
+                    {r.reject_reason && <span className="s-muted s-small" style={{ display: 'block' }}>Motivo: {r.reject_reason}</span>}
+                  </span>
+                  <span className="s-muted s-small" style={{ textAlign: 'right', flexShrink: 0 }}>
+                    {formatPEN(r.amount_cents)}<br />
+                    {r.reviewed_at && new Date(r.reviewed_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </details>
+      )}
     </>
   );
 }
