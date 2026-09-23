@@ -311,15 +311,19 @@ para no romper la app vieja desplegada.
   Un tipo S/0 de un evento pago NACE cortesía por trigger (0059), porque los
   tipos se crean por tres caminos distintos —el builder inserta vía RPC, o sea
   SQL— y un default que vive en tres lugares se desincroniza.
-- MARCAS DE PRUEBA (0057, 2026-09-22). brands.is_test: demotest, ensayo-paul y
-  koko. Los contadores del super admin las excluyen, y "Yape por revisar"
+- MARCAS DE PRUEBA (0057, 2026-09-22). brands.is_test: SOLO demotest (verificado
+  el 2026-09-23: ensayo-paul y koko ya no existen en la base). Es la única marca
+  para pruebas. Ninguna marca de prueba tiene flyer propio y los de Code y
+  Hoesky no se tocan, así que el E2E le SUBE un flyer SINTÉTICO por el panel al
+  evento de demotest (paso C: 1080×1350, dirección Canvas; paso M: 1080×2400
+  con forma de captura para medir Editorial y vuelta al 4:5). `?flyer=<slug>`
+  (el helper de preview) ya no tiene de dónde sacar un flyer de prueba.
+  Los contadores del super admin las excluyen, y "Yape por revisar"
   cuenta solo órdenes CON comprobante subido (una pendiente sin comprobante es
   un checkout abandonado, no trabajo de nadie). Medido: marcas activas 4 → 2,
   Yape por revisar 12 → 0; el 97% de lo "cobrado" que se veía eran corridas del
   E2E. NO afecta nada del flujo de compra: una marca de prueba funciona igual,
   solo que no suma a las métricas, y SIGUE en la lista con un badge "Prueba".
-  Ojo con koko: tiene una venta real de S/60 y un evento publicado; si alguna
-  vez pasa a ser cliente de verdad hay que desmarcarla o sus ventas no aparecen.
 
 ## Reportar
 Por paso, con evidencia (la migración, el test de concurrencia, los tests de

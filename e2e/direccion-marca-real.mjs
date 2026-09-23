@@ -2,6 +2,8 @@
 // medidas sobre DEMOTEST. Solo LEE: GETs de páginas públicas, nada más.
 //
 //   node e2e/direccion-marca-real.mjs              (server local en :3001)
+//   E2E_PROD=1 node e2e/direccion-marca-real.mjs   (contra demotest.parygo.com;
+//                                                   E2E_EDITORIAL=1 mide Editorial)
 //
 // Además corre como paso M de e2e/fase1.mjs.
 //
@@ -105,14 +107,18 @@ const MEDIR = () => {
   };
 };
 
+// En local la marca la elige el header (el middleware lo acepta en
+// localhost); en producción la elige el subdominio y el header no va.
+const PROD = process.env.E2E_PROD === '1';
+const BASE_PROD = `https://${MARCA}.parygo.com`;
 function preparar() {
   const checks = [];
   const check = (name, ok, detail = '') => checks.push({ name, ok: !!ok, detail: String(detail).slice(0, 300) });
-  return { checks, check, hdr: { 'x-parygo-brand-slug': MARCA } };
+  return { checks, check, hdr: PROD ? {} : { 'x-parygo-brand-slug': MARCA } };
 }
 
 /** Canvas: el evento de demotest con su flyer 4:5, a 1440 y 390. */
-export async function verificarCanvas({ browser, base = BASE } = {}) {
+export async function verificarCanvas({ browser, base = PROD ? BASE_PROD : BASE } = {}) {
   const { checks, check, hdr } = preparar();
   const ev = await eventoDemo();
   if (!ev) { check('hay un evento publicado de demotest para medir', false, 'ninguno'); return checks; }
@@ -154,7 +160,7 @@ export async function verificarCanvas({ browser, base = BASE } = {}) {
 }
 
 /** Editorial: el flyer tiene forma de captura (o no hay): título arriba, banda de 160. */
-export async function verificarEditorial({ browser, base = BASE } = {}) {
+export async function verificarEditorial({ browser, base = PROD ? BASE_PROD : BASE } = {}) {
   const { checks, check, hdr } = preparar();
   const ev = await eventoDemo();
   if (!ev) { check('hay un evento publicado de demotest para medir', false, 'ninguno'); return checks; }
@@ -175,7 +181,7 @@ export async function verificarEditorial({ browser, base = BASE } = {}) {
 }
 
 /** La HOME de la marca: tema noche, logo o nombre, la tarjeta del evento. */
-export async function verificarHome({ browser, base = BASE } = {}) {
+export async function verificarHome({ browser, base = PROD ? BASE_PROD : BASE } = {}) {
   const { checks, check, hdr } = preparar();
   const ev = await eventoDemo();
   if (!ev) { check('hay un evento publicado de demotest para medir', false, 'ninguno'); return checks; }
@@ -212,7 +218,9 @@ export async function verificarDireccion(o = {}) {
 if (process.argv[1]?.endsWith('direccion-marca-real.mjs')) {
   const motor = process.env.E2E_ENGINE === 'webkit' ? webkit : chromium;
   const browser = await motor.launch();
-  const checks = await verificarDireccion({ browser });
+  const checks = process.env.E2E_EDITORIAL === '1'
+    ? await verificarEditorial({ browser })
+    : await verificarDireccion({ browser });
   await browser.close();
   for (const c of checks) console.log(`${c.ok ? '✔' : '✘'} ${c.name}${c.detail ? ' — ' + c.detail : ''}`);
   const fallas = checks.filter((c) => !c.ok).length;
