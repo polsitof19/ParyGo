@@ -1017,11 +1017,11 @@ if (!S.eventId) {
     // Entradas y fecha en UNA pantalla; el link viejo /entradas redirige ahí.
     await go(p, `/admin/events/${S.eventId}/entradas`);
     check('J', '/entradas lleva a la pantalla del evento con datos y tipos de entrada', /\/editar/.test(p.url()) && (await p.locator('#entradas').count()) === 1 && (await p.locator('#datos').count()) === 1, p.url());
-    // (panel/estadisticas) El inicio del evento quedó corto: tres cifras que
-    // abren Estadísticas, donde viven los cuatro números, la tabla y el gráfico.
+    // (panel/lanzamiento) El inicio del evento NO muestra cifras (Paul: "S/ 0
+    // cobrado · 3 vendidas" no debe verse); los números viven en Estadísticas.
     await go(p, `/admin/events/${S.eventId}`);
-    const cortas = (await p.locator('a.a-evnums').innerText().catch(() => '')).replace(/\s+/g, ' ');
-    check('J', 'Cómo va: tres cifras que abren Estadísticas (cobrado / vendidas / cortesías)', /cobrado/i.test(cortas) && /vendidas/i.test(cortas) && /cortesías/i.test(cortas) && (await p.locator('a.a-evnums[href$="/estadisticas"]').count()) === 1, cortas.slice(0, 160));
+    const subs = (await p.locator('.a-tabs__sub').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').replace(/\d+$/, '').trim());
+    check('J', 'Inicio sin cifras; sub-pestañas Inicio · Yapes · Estadísticas', (await p.locator('.a-pulse, .a-next__nums').count()) === 0 && subs.join('|') === 'Inicio|Yapes|Estadísticas', subs.join(' | '));
     await go(p, `/admin/events/${S.eventId}/estadisticas`);
     const pulse = (await p.locator('.a-pulse').innerText().catch(() => '')).replace(/\s+/g, ' ');
     check('J', 'Estadísticas arranca con los cuatro números (vendidas / recaudado / cuándo / entraron)', /VENDIDAS/i.test(pulse) && /RECAUDADO/i.test(pulse) && /CUÁNDO/i.test(pulse), pulse.slice(0, 160));

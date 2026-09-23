@@ -275,19 +275,6 @@ export default async function AdminEventResumenPage({ params }: { params: { id: 
         </section>
       )}
 
-      {/* 2) ¿Cómo va? — tres cifras y el aforo, nada más. El detalle (por
-          tipo, por día, escaneados, rechazados) vive en Estadísticas: en el
-          inicio del evento se leía como un tablero y no como "qué hago". */}
-      <Link href={`/admin/events/${event.id}/estadisticas`} className="a-next__nums a-evnums">
-        <span><b>{formatPEN(confirmedCents)}</b>cobrado{pendingCount > 0 && ` · +${formatPEN(pendingCents)} por aprobar`}</span>
-        <span><b>{soldTickets}</b>vendidas</span>
-        <span><b>{courtesyTickets}</b>cortesías</span>
-        <span className="a-next__cap">
-          {soldPct !== null && <span className="a-meter" aria-hidden="true"><span className="a-meter__fill" style={{ width: `${soldPct}%` }} /></span>}
-          <span className="a-evnums__more">{soldPct !== null ? `${soldPct}% del aforo ocupado · ` : ''}{when} · Ver estadísticas</span>
-        </span>
-      </Link>
-
       {/* Alertas del evento: punto + texto en tinta. */}
       {alerts.length > 0 && (
         <ul className="a-chips">

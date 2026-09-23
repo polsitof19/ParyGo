@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 
 // Navegación de un evento: CUATRO pestañas, cada una con sus partes a la vista.
 //
-//   Resumen   cómo va (lo pendiente, tres cifras, acciones) · Yapes · Estadísticas
+//   Resumen   inicio (lo pendiente, botones, acciones) · Yapes · Estadísticas
 //             (el detalle; el reporte para imprimir se abre desde ahí)
 //   Evento    datos, fecha, lugar, entradas y precios, flyer — UNA sola pantalla
 //   Personas  compradores · promotores (RR.PP.) · cortesías
@@ -22,7 +22,7 @@ type Tab = { key: string; label: string; href: string; subs: Sub[] };
 const TABS: Tab[] = [
   {
     key: 'resumen', label: 'Resumen', href: '',
-    subs: [{ seg: '', label: 'Cómo va' }, { seg: '/yape', label: 'Yapes' }, { seg: '/estadisticas', label: 'Estadísticas' }],
+    subs: [{ seg: '', label: 'Inicio' }, { seg: '/yape', label: 'Yapes' }, { seg: '/estadisticas', label: 'Estadísticas' }],
   },
   {
     key: 'evento', label: 'Evento', href: '/editar',
