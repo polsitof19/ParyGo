@@ -11,15 +11,15 @@ export function Final() {
           <div className="final__inner">
             <h2 className="h2" id="final-title">¿Armamos tu próximo evento?</h2>
             <p>
-              Escríbenos por WhatsApp y te dejamos vendiendo en 24 horas. Sin compromiso.
-              {' '}¿Prefieres correo? Escríbenos a{' '}
+              Escríbenos a{' '}
               <a href="mailto:parygoasistencia@gmail.com" style={{ textDecoration: 'underline' }}>
                 parygoasistencia@gmail.com
-              </a>.
+              </a>{' '}
+              y te dejamos vendiendo en 24 horas. Sin compromiso.
             </p>
             <div className="final__ctas">
-              <a href={CTA.final} className="btn btn-primary btn-lg" target="_blank" rel="noopener noreferrer">
-                Escribir por WhatsApp <span className="arrow" aria-hidden="true">→</span>
+              <a href={CTA.final} className="btn btn-primary btn-lg">
+                Escríbenos <span className="arrow" aria-hidden="true">→</span>
               </a>
               <a href="#precios" className="btn btn-soft btn-lg">Ver precios</a>
             </div>

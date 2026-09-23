@@ -53,8 +53,6 @@ export function Header() {
           <a
             href={CTA.hero}
             className="btn btn-primary btn--sm"
-            target="_blank"
-            rel="noopener noreferrer"
           >
             Empezar
           </a>

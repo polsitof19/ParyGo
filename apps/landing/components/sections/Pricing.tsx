@@ -48,7 +48,7 @@ export function Pricing() {
                 ))}
               </ul>
               <div className="plan__cta">
-                <a href={p.href} className={`btn ${p.btn}`} target="_blank" rel="noopener noreferrer">Elegir</a>
+                <a href={p.href} className={`btn ${p.btn}`}>Elegir</a>
               </div>
             </article>
           ))}

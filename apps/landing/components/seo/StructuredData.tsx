@@ -11,12 +11,11 @@ const organization = {
     {
       '@type': 'ContactPoint',
       contactType: 'sales',
-      telephone: '+56932881230',
+      email: SITE.email,
       availableLanguage: ['Spanish'],
       areaServed: ['PE', 'LATAM'],
     },
   ],
-  sameAs: [`https://wa.me/${SITE.whatsappNumber}`],
 };
 
 const service = {

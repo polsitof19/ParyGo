@@ -51,7 +51,7 @@ export function Hero() {
               Discotecas, conciertos, fiestas, cumpleaños. Vende entradas, cobra directo y controla quién entra.
             </p>
             <div className="hero__ctas reveal">
-              <a href={CTA.hero} className="btn btn-primary btn-lg" target="_blank" rel="noopener noreferrer">
+              <a href={CTA.hero} className="btn btn-primary btn-lg">
                 Empezar <span className="arrow" aria-hidden="true">→</span>
               </a>
               <a href="#como" className="btn btn-ghost">
