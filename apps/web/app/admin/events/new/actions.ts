@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { contextoEscritura } from '@/lib/impersonation';
+import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { uploadEventCover } from '@/lib/brandAssets';
 import { limaToIso, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
 
@@ -50,11 +52,11 @@ export async function createBrandEventAction(
 ): Promise<FormState> {
   const user = await requireSession();
   // ENFORCEMENT: brand from the session membership, NEVER the form.
-  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) {
+  const ctxW = contextoEscritura(user);
+  if (!ctxW) {
     return { ok: false, message: 'No tienes acceso de promotor.' };
   }
-  const brandId = membership.brandId;
+  const brandId = ctxW.brandId;
 
   const raw = Object.fromEntries(formData.entries());
   const parsedEvent = eventSchema.safeParse(raw);
@@ -163,6 +165,8 @@ export async function createBrandEventAction(
     }
     return { ok: false, message: msg || 'No se pudo crear el evento.' };
   }
+  // Crear un evento gasta saldo de la marca: si fue el super admin, queda firmado.
+  await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId, eventId: newEventId as string, accion: 'event_created', diff: { slug: parsedEvent.data.slug, is_free: formData.get('is_free') === 'on' } });
 
   revalidatePath('/admin');
   redirect(`/admin/events/${newEventId}`);

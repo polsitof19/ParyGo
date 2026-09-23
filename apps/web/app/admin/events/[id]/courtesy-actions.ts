@@ -3,7 +3,8 @@
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
-import { isImpersonating } from '@/lib/impersonation';
+import { puedeEscribirComoSuper } from '@/lib/impersonation';
+import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { issueTicketsForOrder } from '@/lib/tickets';
 import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
@@ -50,8 +51,12 @@ export async function issueCourtesyTicketsAction(
     .eq('id', parsed.data.eventId)
     .maybeSingle();
   if (!event || !event.brand_id) return { ok: false, message: 'Evento no encontrado.' };
+  // Quién escribe: el dueño por su membresía, o el super admin — desde la
+  // cabina, o DENTRO de la marca con el modo edición encendido. Viendo la
+  // marca sin ese modo, no pasa.
+  const modoSuper = puedeEscribirComoSuper(user, event.brand_id as string);
   const authorized =
-    (user.isSuperAdmin && !isImpersonating()) ||
+    modoSuper !== null ||
     user.brandMemberships.some((m) => m.brandId === event.brand_id && m.role === 'brand_admin');
   if (!authorized) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
@@ -146,6 +151,7 @@ export async function issueCourtesyTicketsAction(
     type: 'courtesy_issued',
     payload: { ticket_type_id: tt.id, ticket_type_name: tt.name, qty, email, email_sent: emailSent, email_status: emailRes.status },
   });
+  await auditarEscrituraSuper(admin, { user, modo: modoSuper, brandId: event.brand_id as string, eventId: parsed.data.eventId, accion: 'courtesy_issued', diff: { ticket_type_id: parsed.data.ticketTypeId, cantidad: parsed.data.quantity, email: parsed.data.email } });
 
   revalidatePath(`/admin/events/${event.id}`);
   revalidatePath(`/admin/events/${event.id}/cortesias`);

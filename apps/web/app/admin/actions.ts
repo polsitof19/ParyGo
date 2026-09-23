@@ -3,7 +3,8 @@
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
-import { isImpersonating } from '@/lib/impersonation';
+import { contextoEscritura } from '@/lib/impersonation';
+import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { issueTicketsForOrder } from '@/lib/tickets';
 import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
@@ -31,12 +32,8 @@ export async function voidTicketAction(
   formData: FormData
 ): Promise<VoidTicketState> {
   const user = await requireSession();
-  // SOLO-LECTURA en impersonación: anular un ticket es escritura de acceso →
-  // denegada mientras el super admin "ve" una marca (defensa explícita, no solo
-  // por ausencia de membership).
-  if (isImpersonating()) return { ok: false, message: 'No autorizado durante impersonación.' };
-  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) return { ok: false, message: 'No autorizado.' };
+  const ctxW = contextoEscritura(user);
+  if (!ctxW) return { ok: false, message: 'No autorizado.' };
 
   const ticketId = String(formData.get('ticket_id') ?? '');
   const reason = String(formData.get('reason') ?? '').slice(0, 200);
@@ -49,7 +46,7 @@ export async function voidTicketAction(
     .select('id, brand_id, event_id, order_id, invalidated_at, ticket_number')
     .eq('id', ticketId)
     .maybeSingle();
-  if (!tk || tk.brand_id !== membership.brandId) {
+  if (!tk || tk.brand_id !== ctxW.brandId) {
     return { ok: false, message: 'Esa entrada no es de tu marca.' };
   }
   if (tk.invalidated_at) {
@@ -61,7 +58,7 @@ export async function voidTicketAction(
     .from('tickets')
     .update({ invalidated_at: new Date().toISOString() })
     .eq('id', ticketId)
-    .eq('brand_id', membership.brandId)
+    .eq('brand_id', ctxW.brandId)
     .is('invalidated_at', null)
     .select('id')
     .maybeSingle();
@@ -69,7 +66,7 @@ export async function voidTicketAction(
   if (!updated) return { ok: true, message: 'Esa entrada ya estaba anulada.' };
 
   await admin.from('events_log').insert({
-    brand_id: membership.brandId,
+    brand_id: ctxW.brandId,
     event_id: tk.event_id,
     ticket_id: tk.id,
     order_id: tk.order_id,
@@ -77,6 +74,7 @@ export async function voidTicketAction(
     type: 'ticket_voided',
     payload: { ticket_number: tk.ticket_number, reason: reason || null },
   });
+  await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId: ctxW.brandId, eventId: tk.event_id, orderId: tk.order_id, ticketId: tk.id, accion: 'ticket_voided', diff: { ticket_number: tk.ticket_number, reason: reason || null } });
 
   revalidatePath(`/admin/events/${tk.event_id}/clientes`);
   revalidatePath(`/admin/events/${tk.event_id}`);
@@ -97,10 +95,9 @@ export async function reissueTicketsAction(
   formData: FormData
 ): Promise<ReissueState> {
   const user = await requireSession();
-  // SOLO-LECTURA en impersonación: re-emitir tickets es escritura → denegada.
-  if (isImpersonating()) return { ok: false, message: 'No autorizado durante impersonación.' };
-  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) return { ok: false, message: 'No autorizado.' };
+  // Escritura: dueño de la marca, o super admin con el modo edición encendido.
+  const ctxW = contextoEscritura(user);
+  if (!ctxW) return { ok: false, message: 'No autorizado.' };
 
   const orderId = String(formData.get('order_id') ?? '');
   if (!orderId) return { ok: false, message: 'Orden inválida.' };
@@ -112,7 +109,7 @@ export async function reissueTicketsAction(
     .select('id, brand_id, status')
     .eq('id', orderId)
     .maybeSingle();
-  if (!order || order.brand_id !== membership.brandId) {
+  if (!order || order.brand_id !== ctxW.brandId) {
     return { ok: false, message: 'Esa orden no es de tu marca.' };
   }
   if (order.status !== 'paid') {
@@ -121,12 +118,13 @@ export async function reissueTicketsAction(
 
   const res = await issueTicketsForOrder({ orderId, reason: 'yape_approved' });
   if (!res.ok) return { ok: false, message: `No se pudieron re-emitir: ${res.error}` };
+  await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId: ctxW.brandId, orderId, accion: 'tickets_reissued', diff: { already_existed: res.alreadyIssued, count: res.ticketIds.length } });
 
   // Mandar el email con el QR (best-effort: si falla, los tickets ya existen).
   try { await sendTicketEmail(orderId); } catch { /* el dueño puede reenviar aparte */ }
 
   await admin.from('events_log').insert({
-    brand_id: membership.brandId,
+    brand_id: ctxW.brandId,
     order_id: orderId,
     actor_user_id: user.id,
     type: 'tickets_reissued_recovery',
@@ -150,8 +148,8 @@ export async function setValidatorPasswordAction(
   formData: FormData
 ): Promise<SetPwdState> {
   const user = await requireSession();
-  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) return { ok: false, message: 'No autorizado.' };
+  const ctxW = contextoEscritura(user);
+  if (!ctxW) return { ok: false, message: 'No autorizado.' };
   const userId = String(formData.get('user_id') ?? '');
   const password = String(formData.get('password') ?? '');
   if (password.length < 8) return { ok: false, message: 'Mínimo 8 caracteres.' };
@@ -160,12 +158,14 @@ export async function setValidatorPasswordAction(
   // Target MUST be a validator of THIS brand.
   const { data: m } = await admin
     .from('brand_members')
-    .select('id').eq('brand_id', membership.brandId).eq('user_id', userId).eq('role', 'validator')
+    .select('id').eq('brand_id', ctxW.brandId).eq('user_id', userId).eq('role', 'validator')
     .maybeSingle();
   if (!m) return { ok: false, message: 'Ese validador no es de tu marca.' };
 
   const { error } = await admin.auth.admin.updateUserById(userId, { password, email_confirm: true });
   if (error) return { ok: false, message: 'No se pudo actualizar la contraseña.' };
+  // La contraseña nunca va al diff: solo a quién se le cambió.
+  await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId: ctxW.brandId, accion: 'validator_password_set', diff: { validator_user_id: userId } });
   revalidatePath('/admin');
   return { ok: true, message: 'Contraseña actualizada.' };
 }
@@ -177,9 +177,9 @@ export async function generatePersonalCodeAction(
   formData: FormData
 ): Promise<GateCodeState> {
   const user = await requireSession();
-  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) return { ok: false, message: 'No autorizado.' };
-  const brandId = membership.brandId;
+  const ctxW = contextoEscritura(user);
+  if (!ctxW) return { ok: false, message: 'No autorizado.' };
+  const brandId = ctxW.brandId;
   const userId = String(formData.get('user_id') ?? '');
 
   const admin = createAdminClient();
@@ -201,6 +201,7 @@ export async function generatePersonalCodeAction(
   });
   const res = data as { ok?: boolean; code?: string } | null;
   if (error || !res?.ok || !res.code) return { ok: false, message: 'No se pudo generar el código.' };
+  await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId, accion: 'validator_personal_code_generated', diff: { validator_user_id: userId } });
   revalidatePath('/admin');
   return { ok: true, code: res.code, label: m.display_name ?? 'Validador', message: '' };
 }
@@ -217,9 +218,9 @@ export async function generateGateCodeAction(
   formData: FormData
 ): Promise<GateCodeState> {
   const user = await requireSession();
-  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) return { ok: false, message: 'No tienes acceso de promotor.' };
-  const brandId = membership.brandId;
+  const ctxW = contextoEscritura(user);
+  if (!ctxW) return { ok: false, message: 'No tienes acceso de promotor.' };
+  const brandId = ctxW.brandId;
   const label = (String(formData.get('device_label') ?? '').trim() || 'Puerta').slice(0, 40);
 
   const admin = createAdminClient();
@@ -246,6 +247,7 @@ export async function generateGateCodeAction(
   });
   const res = data as { ok?: boolean; code?: string } | null;
   if (error || !res?.ok || !res.code) return { ok: false, message: error?.message ?? 'No se pudo generar el código.' };
+  await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId, accion: 'gate_code_generated', diff: { label, gate_user_id: userId } });
 
   revalidatePath('/admin');
   return { ok: true, code: res.code, label, message: `Código para "${label}": ${res.code}` };
@@ -256,12 +258,14 @@ export async function revokeGateCodeAction(
   formData: FormData
 ): Promise<GateCodeState> {
   const user = await requireSession();
-  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) return { ok: false, message: 'No autorizado.' };
+  const ctxW = contextoEscritura(user);
+  if (!ctxW) return { ok: false, message: 'No autorizado.' };
   const id = String(formData.get('code_id') ?? '');
   const admin = createAdminClient();
   // Scoped to the admin's brand inside the RPC (p_brand_id from session).
-  await admin.rpc('revoke_validator_code', { p_id: id, p_brand_id: membership.brandId });
+  const { error } = await admin.rpc('revoke_validator_code', { p_id: id, p_brand_id: ctxW.brandId });
+  if (error) return { ok: false, message: 'No se pudo revocar el código.' };
+  await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId: ctxW.brandId, accion: 'gate_code_revoked', diff: { code_id: id } });
   revalidatePath('/admin');
   return { ok: true, message: 'Código revocado.' };
 }
@@ -273,9 +277,9 @@ export async function inviteValidatorAction(
   const user = await requireSession();
   // ENFORCEMENT: brand from the session, never the form. A brand_admin can only
   // add validators to THEIR OWN brand.
-  const membership = user.brandMemberships.find((m) => m.role === 'brand_admin');
-  if (!membership) return { ok: false, message: 'No tienes acceso de promotor.' };
-  const brandId = membership.brandId;
+  const ctxW = contextoEscritura(user);
+  if (!ctxW) return { ok: false, message: 'No tienes acceso de promotor.' };
+  const brandId = ctxW.brandId;
 
   const parsed = schema.safeParse({ email: formData.get('email') });
   if (!parsed.success) return { ok: false, message: 'Email inválido.' };
@@ -313,6 +317,7 @@ export async function inviteValidatorAction(
     type: 'validator_invited',
     payload: { email },
   });
+  await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId, accion: 'validator_invited', diff: { email } });
 
   revalidatePath('/admin');
   return { ok: true, message: `Validador invitado: ${email}. Recibe un link para entrar al escáner.` };

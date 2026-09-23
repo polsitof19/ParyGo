@@ -193,6 +193,33 @@ para OK de Paul.
   son botones de TEXTO (.s-btn--soft/--ghost). Nav en texto con subrayado de
   2px en el activo, sin pastillas. Nada centrado en toda la app.
 
+## PROHIBIDO: pruebas de carga contra producción
+El 2026-09-22 tiré la base de producción durante una hora corriendo el arnés de
+carga contra ella: 3000 reclamos en 60s (y antes otras dos tandas de 2000 y
+1200). Postgres dejó de aceptar conexiones —"Failed to connect to database"— y
+la página pública del evento publicado de Code quedó colgada. Volvió recién con
+un reinicio del proyecto por la Management API; no se perdió ningún dato.
+Además las ~9000 órdenes y ~8000 entradas que dejó la carga agotaron el
+presupuesto de disco (IO) de la instancia y la base quedó lentísima horas
+después; hubo que pausar los crons, borrar todo con respaldo
+(supabase/limpiar-datos-de-prueba.mjs) y hacer VACUUM ANALYZE.
+
+REGLAS, sin excepción:
+- PROHIBIDO correr pruebas de carga contra la base de producción. SOLO contra
+  un Supabase Branch o un proyecto Supabase aparte (branching requiere Pro:
+  mientras sigamos en Free, eso significa proyecto aparte o no se corre).
+- NO correr `e2e/carga-*.mjs` contra producción (ni la base ni el dominio). Son
+  herramientas de medición, no de rutina; quedaron versionadas para el día que
+  haya un entorno donde valga usarlas.
+- Nada de escrituras masivas contra la base real. El techo de lo aceptable es
+  lo que hace el E2E de fase 1: decenas de filas, no miles.
+- Antes de cualquier prueba de volumen, PREGUNTAR a Paul. La instancia es
+  Supabase Free (sin add-on de cómputo, `selected_addons: []` verificado por
+  API) y no tiene margen.
+- Si la base se cae: `/v1/projects/<ref>/health` dice la verdad aunque el
+  proyecto figure ACTIVE_HEALTHY, y el reinicio por la Management API es la
+  remediación que funcionó.
+
 ## Migraciones
 NO HAY BASE DE ENSAYO. demotest es una MARCA dentro de producción, no un
 entorno, y un branch de Supabase tampoco sirve: hasta la 0053 el historial no

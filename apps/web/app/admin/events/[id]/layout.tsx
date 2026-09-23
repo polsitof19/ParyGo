@@ -81,7 +81,7 @@ export default async function EventLayout({
           )}
         </div>
       </header>
-      <PublishControl eventId={event.id} isPublished={!!event.is_published} impersonating={ctx.impersonating} />
+      <PublishControl eventId={event.id} isPublished={!!event.is_published} impersonating={ctx.soloLectura} />
       <EventTabs eventId={event.id} yapePending={yapePending} />
       <div style={{ marginTop: 18 }}>{children}</div>
     </>

@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireSession } from '@/lib/auth';
 import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
+import { puedeEscribirComoSuper } from '@/lib/impersonation';
+import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 
 // =============================================================
 // POST /api/admin/resend-ticket-email
@@ -72,12 +74,17 @@ export async function POST(req: NextRequest) {
   // las de SU marca. Antes solo se exigía ser brand_admin de ALGUNA marca → un
   // brand_admin de la marca A podía reenviar / limpiar email_sent_at de órdenes
   // de la marca B. Mismo 403 para "no es tuya" y "no existe" (no filtra existencia).
-  if (!user.isSuperAdmin) {
-    const ownsBrand =
-      !!ord && user.brandMemberships.some((m) => m.role === 'brand_admin' && m.brandId === ord.brand_id);
-    if (!ownsBrand) {
-      return NextResponse.json({ ok: false, reason: 'forbidden' }, { status: 403 });
-    }
+  // Y el super admin pasa por la MISMA puerta que el resto del panel: desde la
+  // cabina sí; DENTRO de una marca, solo con el modo edición encendido y solo
+  // sobre esa marca. Antes acá alcanzaba con ser super admin: mientras "veía"
+  // una marca en modo lectura podía igual reenviar la entrada de cualquier
+  // orden de CUALQUIER marca forzando el POST (la interfaz escondía el botón,
+  // que no es lo mismo que negarlo).
+  const modoSuper = ord?.brand_id ? puedeEscribirComoSuper(user, ord.brand_id as string) : null;
+  const esDuenio =
+    !!ord && user.brandMemberships.some((m) => m.role === 'brand_admin' && m.brandId === ord.brand_id);
+  if (!esDuenio && !modoSuper) {
+    return NextResponse.json({ ok: false, reason: 'forbidden' }, { status: 403 });
   }
 
   if (body.force) {
@@ -89,6 +96,14 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const result = await sendTicketEmail(orderId);
-  return NextResponse.json(result);
+  // try/finally: con force, email_sent_at ya se borró arriba; si el envío tira,
+  // esa escritura igual existió y tiene que quedar firmada.
+  try {
+    const result = await sendTicketEmail(orderId);
+    return NextResponse.json(result);
+  } finally {
+    if (ord?.brand_id) {
+      await auditarEscrituraSuper(admin, { user, modo: esDuenio ? null : modoSuper, brandId: ord.brand_id as string, orderId, accion: 'ticket_email_resent', diff: { force: !!body.force } });
+    }
+  }
 }

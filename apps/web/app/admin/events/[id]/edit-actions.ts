@@ -3,25 +3,32 @@
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { requireSession } from '@/lib/auth';
+import { requireSession, type SessionUser } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { limaToIso, shiftEnd, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
 import { eventOverAt } from '@/lib/publicTicketGuard';
-import { isImpersonating } from '@/lib/impersonation';
+import { puedeEscribirComoSuper, type ModoEscrituraSuper } from '@/lib/impersonation';
+import { auditarEscrituraSuper, diffDeCampos } from '@/lib/auditoriaSuper';
 import { formatEventDate } from '@/lib/utils';
 
 export type EditState = { ok: boolean; message: string | null };
 
-// Autoriza brand_admin del evento; devuelve brand_id o null.
-// SOLO-LECTURA en impersonación: mientras el super admin "ve" una marca (cookie
-// de impersonación presente), el camino super-admin queda DENEGADO — no puede
-// escribir aunque se fuerce el POST. El brand_admin (por membresía) no se afecta.
-async function authEvent(eventId: string, userId: string, isSuper: boolean, memberships: { brandId: string; role: string }[]) {
+// Autoriza sobre un evento y dice POR QUÉ CAMINO se autorizó:
+//   modo null      → es el dueño de la marca, por su membresía;
+//   modo 'cabina'  → super admin desde el panel de plataforma;
+//   modo 'edicion' → super admin DENTRO de la marca, con el modo edición
+//                    encendido (queda auditado).
+// El super admin que está viendo la marca SIN modo edición no pasa: esa es la
+// diferencia entre mirar y tocar.
+async function authEvent(eventId: string, user: SessionUser) {
   const admin = createAdminClient();
   const { data: ev } = await admin.from('events').select('id, brand_id').eq('id', eventId).maybeSingle();
   if (!ev || !ev.brand_id) return null; // brand_id nulo (huérfano) → rechazar explícito
-  const ok = (isSuper && !isImpersonating()) || memberships.some((m) => m.brandId === ev.brand_id && m.role === 'brand_admin');
-  return ok ? (ev.brand_id as string) : null;
+  const brandId = ev.brand_id as string;
+  const esDuenio = user.brandMemberships.some((m) => m.brandId === brandId && m.role === 'brand_admin');
+  if (esDuenio) return { brandId, modo: null as ModoEscrituraSuper | null };
+  const modo = puedeEscribirComoSuper(user, brandId);
+  return modo ? { brandId, modo } : null;
 }
 
 // limaToIso (datetime-local en hora de Lima → UTC ISO) vive en lib/eventValidation,
@@ -44,7 +51,8 @@ const eventSchema = z.object({
 export async function updateEventAction(_prev: EditState, formData: FormData): Promise<EditState> {
   const user = await requireSession();
   const eventId = String(formData.get('event_id') ?? '');
-  const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
+  const auth = await authEvent(eventId, user);
+  const brandId = auth?.brandId ?? null;
   if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   const parsed = eventSchema.safeParse({
@@ -72,7 +80,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   // — la gente compró con esta fecha. Aplica al dueño Y al super admin.
   const { data: current } = await admin
     .from('events')
-    .select('starts_at, ends_at, is_published, is_free')
+    .select('starts_at, ends_at, is_published, is_free, name')
     .eq('id', eventId)
     .maybeSingle();
   const dateChanging = current?.starts_at
@@ -149,6 +157,9 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
     type: dateChanging ? 'event_date_changed' : 'event_edited',
     payload: dateChanging ? { from: current?.starts_at ?? null, to: startsIso } : {},
   });
+  // Auditoría de super admin: además del registro de dominio de arriba, queda
+  // firmado QUIÉN lo hizo y sobre qué marca (solo si actuó como super admin).
+  await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId, accion: dateChanging ? 'event_date_changed' : 'event_edited', diff: diffDeCampos(current ?? null, { starts_at: startsIso, ends_at: endsIso, is_free: isFree, name: parsed.data.name }) });
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
   revalidatePath(`/cabina-7k29x/events/${eventId}`);
@@ -165,7 +176,8 @@ export async function setEventPublishedAction(
   publish: boolean
 ): Promise<{ ok: boolean; message?: string }> {
   const user = await requireSession();
-  const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
+  const auth = await authEvent(eventId, user);
+  const brandId = auth?.brandId ?? null;
   if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   const admin = createAdminClient();
@@ -197,6 +209,9 @@ export async function setEventPublishedAction(
     brand_id: brandId, event_id: eventId, actor_user_id: user.id,
     type: publish ? 'event_published' : 'event_unpublished', payload: {},
   });
+  // Auditoría de super admin: además del registro de dominio de arriba, queda
+  // firmado QUIÉN lo hizo y sobre qué marca (solo si actuó como super admin).
+  await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId, accion: publish ? 'event_published' : 'event_unpublished', diff: { is_published: publish } });
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath('/admin');
   return { ok: true };
@@ -214,7 +229,8 @@ export async function postponeEventAction(
   newStartsAtLima: string
 ): Promise<{ ok: boolean; message?: string; queued?: number }> {
   const user = await requireSession();
-  const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
+  const auth = await authEvent(eventId, user);
+  const brandId = auth?.brandId ?? null;
   if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   const startsIso = limaToIso(newStartsAtLima);
@@ -251,6 +267,9 @@ export async function postponeEventAction(
     brand_id: brandId, event_id: eventId, actor_user_id: user.id,
     type: 'event_postponed', payload: { from: oldStartsAt, to: startsIso },
   });
+  // Auditoría de super admin: además del registro de dominio de arriba, queda
+  // firmado QUIÉN lo hizo y sobre qué marca (solo si actuó como super admin).
+  await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId: eventId, accion: 'event_postponed', diff: { from: oldStartsAt, to: startsIso } });
 
   // ENCOLAR los avisos (NO enviarlos en el request). El worker (pg_cron →
   // /api/cron/postpone-emails) los entrega en tandas, con idempotencia por
@@ -273,6 +292,9 @@ export async function postponeEventAction(
     brand_id: brandId, event_id: eventId, actor_user_id: user.id,
     type: 'event_postponed_notified', payload: { queued },
   });
+  // Auditoría de super admin: además del registro de dominio de arriba, queda
+  // firmado QUIÉN lo hizo y sobre qué marca (solo si actuó como super admin).
+  await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId: eventId, accion: 'event_postponed_notified', diff: { queued } });
 
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
@@ -291,7 +313,8 @@ export async function cancelEventAction(
   reason: string
 ): Promise<{ ok: boolean; message?: string; queued?: number }> {
   const user = await requireSession();
-  const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
+  const auth = await authEvent(eventId, user);
+  const brandId = auth?.brandId ?? null;
   if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   const cleanReason = (reason ?? '').trim().slice(0, 500);
@@ -318,6 +341,9 @@ export async function cancelEventAction(
     brand_id: brandId, event_id: eventId, actor_user_id: user.id,
     type: 'event_cancelled', payload: { reason: cleanReason || null },
   });
+  // Auditoría de super admin: además del registro de dominio de arriba, queda
+  // firmado QUIÉN lo hizo y sobre qué marca (solo si actuó como super admin).
+  await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId: eventId, accion: 'event_cancelled', diff: { reason: cleanReason || null } });
 
   // ENCOLAR el aviso (uno por comprador con entrada válida). El worker
   // (/api/cron/notifications) lo entrega en tandas, idempotente por destinatario.
@@ -335,6 +361,9 @@ export async function cancelEventAction(
     brand_id: brandId, event_id: eventId, actor_user_id: user.id,
     type: 'event_cancelled_notified', payload: { queued },
   });
+  // Auditoría de super admin: además del registro de dominio de arriba, queda
+  // firmado QUIÉN lo hizo y sobre qué marca (solo si actuó como super admin).
+  await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId: eventId, accion: 'event_cancelled_notified', diff: { queued } });
 
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
@@ -350,7 +379,8 @@ export async function cancelEventAction(
 // (denegado en impersonación: el super admin viendo NO crea eventos).
 export async function cloneEventAction(eventId: string): Promise<{ ok: boolean; message?: string }> {
   const user = await requireSession();
-  const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
+  const auth = await authEvent(eventId, user);
+  const brandId = auth?.brandId ?? null;
   if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   const admin = createAdminClient();
@@ -437,6 +467,7 @@ export async function cloneEventAction(eventId: string): Promise<{ ok: boolean; 
     }
     return { ok: false, message: msg || 'No se pudo clonar el evento.' };
   }
+  await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId: newId as string, accion: 'event_cloned', diff: { from_event_id: eventId } });
 
   // create_brand_event no acepta venue_maps_url/lat/lng → los copiamos aparte
   // (best-effort, scopeado a la marca; si falla no rompe el clon ya creado).
@@ -462,7 +493,8 @@ export async function setEventArchivedAction(
   archived: boolean
 ): Promise<{ ok: boolean; message?: string }> {
   const user = await requireSession();
-  const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
+  const auth = await authEvent(eventId, user);
+  const brandId = auth?.brandId ?? null;
   if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   const admin = createAdminClient();
@@ -476,6 +508,9 @@ export async function setEventArchivedAction(
     brand_id: brandId, event_id: eventId, actor_user_id: user.id,
     type: archived ? 'event_archived' : 'event_unarchived', payload: {},
   });
+  // Auditoría de super admin: además del registro de dominio de arriba, queda
+  // firmado QUIÉN lo hizo y sobre qué marca (solo si actuó como super admin).
+  await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId, accion: archived ? 'event_archived' : 'event_unarchived', diff: { archived } });
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath('/admin');
   revalidatePath(`/cabina-7k29x/events/${eventId}`);
@@ -492,7 +527,8 @@ export async function deleteEventAction(
   confirmName: string
 ): Promise<{ ok: boolean; message?: string }> {
   const user = await requireSession();
-  const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
+  const auth = await authEvent(eventId, user);
+  const brandId = auth?.brandId ?? null;
   if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   const admin = createAdminClient();
@@ -521,6 +557,9 @@ export async function deleteEventAction(
     brand_id: brandId, event_id: eventId, actor_user_id: user.id,
     type: 'event_deleted', payload: { name: ev.name },
   });
+  // Auditoría de super admin: además del registro de dominio de arriba, queda
+  // firmado QUIÉN lo hizo y sobre qué marca (solo si actuó como super admin).
+  await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId: eventId, accion: 'event_deleted', diff: { name: ev.name } });
 
   const { error } = await admin.from('events').delete().eq('id', eventId).eq('brand_id', brandId);
   if (error) return { ok: false, message: error.message };
@@ -544,7 +583,8 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   const user = await requireSession();
   const ttId = String(formData.get('ticket_type_id') ?? '');
   const eventId = String(formData.get('event_id') ?? '');
-  const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
+  const auth = await authEvent(eventId, user);
+  const brandId = auth?.brandId ?? null;
   if (!brandId) return { ok: false, message: 'No tienes permiso.' };
 
   const admin = createAdminClient();
@@ -628,6 +668,9 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   if (error) return { ok: false, message: error.message };
 
   await admin.from('events_log').insert({ brand_id: brandId, event_id: eventId, actor_user_id: user.id, type: 'ticket_type_edited', payload: { ticket_type_id: ttId } });
+  // Auditoría de super admin: además del registro de dominio de arriba, queda
+  // firmado QUIÉN lo hizo y sobre qué marca (solo si actuó como super admin).
+  await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId: eventId, accion: 'ticket_type_edited', diff: { ticket_type_id: ttId, cambios: update } });
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
   return { ok: true, message: `"${name}" actualizado.` };
@@ -637,7 +680,8 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
 export async function createTicketTypeAction(_prev: EditState, formData: FormData): Promise<EditState> {
   const user = await requireSession();
   const eventId = String(formData.get('event_id') ?? '');
-  const brandId = await authEvent(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
+  const auth = await authEvent(eventId, user);
+  const brandId = auth?.brandId ?? null;
   if (!brandId) return { ok: false, message: 'No tienes permiso.' };
 
   const name = String(formData.get('name') ?? '').trim().slice(0, 80);
@@ -672,6 +716,9 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
   await admin.from('ticket_type_price_phases').insert({ ticket_type_id: created.id, name: 'Base', price_cents: priceCents, starts_at: null, ends_at: null, sort_order: 0 });
 
   await admin.from('events_log').insert({ brand_id: brandId, event_id: eventId, actor_user_id: user.id, type: 'ticket_type_created', payload: { ticket_type_id: created.id, name } });
+  // Auditoría de super admin: además del registro de dominio de arriba, queda
+  // firmado QUIÉN lo hizo y sobre qué marca (solo si actuó como super admin).
+  await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId, accion: 'ticket_type_created', diff: { ticket_type_id: created.id } });
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
   return { ok: true, message: `"${name}" creado.` };

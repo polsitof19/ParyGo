@@ -1,9 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireSession } from '@/lib/auth';
+import { requireSession, type SessionUser } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { isImpersonating } from '@/lib/impersonation';
+import { puedeEscribirComoSuper, type ModoEscrituraSuper } from '@/lib/impersonation';
+import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { sendPromoCodeEmail } from '@/lib/email/sendPromoCodeEmail';
 
 type CreateResult = { ok: true; id: string } | { ok: false; message: string };
@@ -18,7 +19,8 @@ export async function sendPromoCodeByEmailAction(
   email: string
 ): Promise<SendCodeResult> {
   const user = await requireSession();
-  const brandId = await authorizeEventBrandAdmin(eventId, user.id, user.isSuperAdmin, user.brandMemberships);
+  const auth = await authorizeEventBrandAdmin(eventId, user);
+  const brandId = auth?.brandId ?? null;
   if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   const to = (email ?? '').trim();
@@ -46,6 +48,7 @@ export async function sendPromoCodeByEmailAction(
     type: 'promo_code_emailed',
     payload: { code: code.code, to },
   });
+  await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId, accion: 'promo_code_emailed', diff: { code: code.code, to } });
 
   return { ok: true, message: `Código ${code.code} enviado a ${to}.` };
 }
@@ -68,7 +71,7 @@ export type CreatePromoInput = {
 
 // Verify the caller is brand_admin of the event's brand. Returns the brand_id
 // on success so the action can scope its writes; returns null when forbidden.
-async function authorizeEventBrandAdmin(eventId: string, userId: string, isSuper: boolean, memberships: { brandId: string; role: string }[]) {
+async function authorizeEventBrandAdmin(eventId: string, user: SessionUser) {
   const admin = createAdminClient();
   const { data: event } = await admin
     .from('events')
@@ -76,25 +79,21 @@ async function authorizeEventBrandAdmin(eventId: string, userId: string, isSuper
     .eq('id', eventId)
     .maybeSingle();
   if (!event) return null;
-  // SOLO-LECTURA en impersonación: el camino super-admin se deniega mientras la
-  // cookie de impersonación esté presente (no escribir como nadie al "ver").
-  const canAct =
-    (isSuper && !isImpersonating()) ||
-    memberships.some((m) => m.brandId === event.brand_id && m.role === 'brand_admin');
-  if (!canAct) return null;
-  return event.brand_id as string;
+  // El dueño por membresía, o el super admin: desde la cabina, o dentro de la
+  // marca con el modo edición encendido. Viéndola sin ese modo, no pasa.
+  const brandId = event.brand_id as string;
+  const esDuenio = user.brandMemberships.some((m) => m.brandId === brandId && m.role === 'brand_admin');
+  if (esDuenio) return { brandId, modo: null as ModoEscrituraSuper | null };
+  const modo = puedeEscribirComoSuper(user, brandId);
+  return modo ? { brandId, modo } : null;
 }
 
 export async function createPromoCode(input: CreatePromoInput): Promise<CreateResult> {
   const user = await requireSession();
   const admin = createAdminClient();
 
-  const brandId = await authorizeEventBrandAdmin(
-    input.eventId,
-    user.id,
-    user.isSuperAdmin,
-    user.brandMemberships
-  );
+  const auth = await authorizeEventBrandAdmin(input.eventId, user);
+  const brandId = auth?.brandId ?? null;
   if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
 
   // ---- Server-side validation (never trust the client) ----
@@ -180,6 +179,7 @@ export async function createPromoCode(input: CreatePromoInput): Promise<CreateRe
     }
     return { ok: false, message: 'No se pudo crear el código. Intenta de nuevo.' };
   }
+  await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId: input.eventId, accion: 'promo_code_created', diff: { promo_code_id: data, code, discount_type: input.discountType, discount_value: discountValue } });
 
   revalidatePath(`/admin/events/${input.eventId}`);
   revalidatePath(`/admin/events/${input.eventId}/promotores`);
@@ -190,12 +190,8 @@ export async function revokePromoCode(promoCodeId: string, eventId: string): Pro
   const user = await requireSession();
   const admin = createAdminClient();
 
-  const brandId = await authorizeEventBrandAdmin(
-    eventId,
-    user.id,
-    user.isSuperAdmin,
-    user.brandMemberships
-  );
+  const auth = await authorizeEventBrandAdmin(eventId, user);
+  const brandId = auth?.brandId ?? null;
   if (!brandId) return { ok: false, message: 'No tienes permiso.' };
 
   // Scope the update to this brand + event so a forged id can't touch another
@@ -212,6 +208,7 @@ export async function revokePromoCode(promoCodeId: string, eventId: string): Pro
   if (error || !updated) {
     return { ok: false, message: 'No se pudo desactivar el código.' };
   }
+  await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId, accion: 'promo_code_revoked', diff: { promo_code_id: promoCodeId } });
 
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/promotores`);

@@ -38,7 +38,7 @@ export default async function EventTeamPage({ params }: { params: { id: string }
         </Link>
       </div>
 
-      <TeamPanel brandId={ctx.brandId} impersonating={ctx.impersonating} />
+      <TeamPanel brandId={ctx.brandId} impersonating={ctx.soloLectura} />
     </>
   );
 }

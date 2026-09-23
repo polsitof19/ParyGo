@@ -107,7 +107,7 @@ export default async function PromotersPage({ params }: { params: { id: string }
         ticketTypes={(types ?? []).map((t) => ({ id: t.id, name: t.name }))}
         codes={(codes ?? []) as PromoCodeRow[]}
         sales={sales}
-        impersonating={ctx.impersonating}
+        impersonating={ctx.soloLectura}
       />
 
       {/* 2) Ranking */}

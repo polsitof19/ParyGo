@@ -14,7 +14,7 @@ export default async function AdminSettingsPage() {
   const user = await requireSession();
   const ctx = ownerBrandContext(user);
   if (!ctx) return null;
-  const impersonating = ctx.impersonating;
+  const impersonating = ctx.soloLectura;
 
   // Ambas lecturas dependen solo de ctx.brandId (no una de la otra) → en paralelo.
   // MP status: service_role; never decrypts, returns only booleans.

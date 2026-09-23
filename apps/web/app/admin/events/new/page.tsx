@@ -15,7 +15,9 @@ export default async function NewBrandEventPage() {
   if (!ctx) redirect('/login');
   // Crear evento es escritura: en solo lectura (super admin viendo la marca) no
   // se entra al form. El RPC es el guard real; esto es UX.
-  if (ctx.impersonating) redirect('/admin');
+  // Con el modo edición encendido el super admin puede crear un evento para
+  // la marca; consume el saldo de ELLA, igual que si lo creara el promotor.
+  if (ctx.soloLectura) redirect('/admin');
 
   const supabase = createClient();
   const { data: brand } = await supabase
