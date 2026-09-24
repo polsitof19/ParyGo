@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv, publicEnv } from '@/lib/env';
 import { formatPEN } from '@/lib/utils';
 import { isPubliclyOffered } from '@/lib/publicTicketGuard';
+import { mismoToken, normalizarToken, tokensPrivados } from '@/lib/privateAccess';
 import { decidirDireccion, claseDireccion } from '@/lib/concepto';
 import { optimizedImage } from '@/lib/imageUrl';
 import { EventCheckoutPanel } from './EventCheckoutPanel';
@@ -22,10 +23,10 @@ async function sha256Hex(s: string): Promise<string> {
 
 type Props = {
   params: { brand: string; event: string };
-  searchParams?: { ref?: string | string[]; v?: string | string[]; c?: string | string[]; flyer?: string | string[] };
+  searchParams?: { ref?: string | string[]; v?: string | string[]; c?: string | string[]; flyer?: string | string[]; acceso?: string | string[] };
 };
 
-async function loadEvent(brandSlug: string, eventSlug: string) {
+async function loadEvent(brandSlug: string, eventSlug: string, acceso: string | null = null) {
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
@@ -110,9 +111,17 @@ async function loadEvent(brandSlug: string, eventSlug: string) {
   // Tipos S/0 (p. ej. "Cortesía") no se ofrecen al público: se emiten desde el
   // panel. El server (reserva y checkout) aplica la misma regla en
   // lib/publicTicketGuard — esto es solo la presentación.
-  const publicTicketTypes = ticketTypesWithPhase.filter((t) =>
+  // ENTRADAS PRIVADAS (0066): un tipo con link privado NO se ofrece al público;
+  // con ?acceso=<SU token> se muestra PRIMERO (y puede costar S/0 aunque el
+  // evento cobre). El server (reserva y checkout) exige el mismo token.
+  const privados = await tokensPrivados(createAdminClient(), ticketTypesWithPhase.map((t) => t.id));
+  const tok = normalizarToken(acceso);
+  const conLink = ticketTypesWithPhase.filter((t) => privados.has(t.id) && mismoToken(privados.get(t.id), tok));
+  const publicas = ticketTypesWithPhase.filter((t) =>
+    !privados.has(t.id) &&
     isPubliclyOffered(t.active_price_cents, { eventoEsGratis: event.is_free === true, esCortesia: t.is_courtesy === true })
   );
+  const publicTicketTypes = [...conLink, ...publicas];
 
   // MercadoPago: the card option only shows if THIS brand configured MP creds.
   // The public_key (inherently public) is read server-side and handed to the
@@ -173,7 +182,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function EventPage({ params, searchParams }: Props) {
-  const data = await loadEvent(params.brand, params.event);
+  const accesoRaw = Array.isArray(searchParams?.acceso) ? searchParams?.acceso[0] : searchParams?.acceso;
+  const data = await loadEvent(params.brand, params.event, accesoRaw ?? null);
   if (!data) notFound();
   // La dirección sale de las medidas guardadas al subir el flyer (0065), sin
   // red. Solo una fila sin medir cae en la lectura por red, y por eso SALE YA,
@@ -286,6 +296,7 @@ export default async function EventPage({ params, searchParams }: Props) {
           mpConfigured={mpConfigured}
           mpPublicKey={mpPublicKey}
           refCode={refCode}
+          accessToken={normalizarToken(accesoRaw) ?? undefined}
           shareUrl={shareUrl}
           direccion={direccion}
         />

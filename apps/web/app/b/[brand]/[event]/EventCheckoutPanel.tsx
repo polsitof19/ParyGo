@@ -39,10 +39,12 @@ function bulkUnitPrice(t: TicketType, q: number): number {
 }
 
 export function EventCheckoutPanel({
-  brand, event, ticketTypes, mpConfigured, mpPublicKey, refCode = '', shareUrl, direccion = 'editorial',
+  brand, event, ticketTypes, mpConfigured, mpPublicKey, refCode = '', accessToken, shareUrl, direccion = 'editorial',
 }: {
   brand: Brand; event: Event; ticketTypes: TicketType[]; mpConfigured: boolean; mpPublicKey: string | null;
   refCode?: string; shareUrl: string;
+  /** Token del link privado (?acceso=): viaja al reservar y al confirmar (0066). */
+  accessToken?: string;
   // Dirección de diseño, decidida por el flyer en el server. Solo
   // presentación: no cambia precio, stock, pago ni emisión.
   direccion?: Direccion;
@@ -144,7 +146,7 @@ export function EventCheckoutPanel({
         const want = qty[ticketTypeId] ?? 0;
         const have = lastReserved.current[ticketTypeId] ?? 0;
         if (want === have) return;
-        const res = await reserveStock(sid, ticketTypeId, want);
+        const res = await reserveStock(sid, ticketTypeId, want, accessToken ?? null);
         if (!res.ok) {
           // Mensaje SIN número (no exponer cuántas quedan). Si el server informa
           // el máximo disponible, ajustamos el stepper en silencio.
@@ -201,7 +203,7 @@ export function EventCheckoutPanel({
       let shortfall = false;
       for (const [ticketTypeId, want] of Object.entries(qty)) {
         if (want <= 0) continue;
-        const res = await reserveStock(sid, ticketTypeId, want);
+        const res = await reserveStock(sid, ticketTypeId, want, accessToken ?? null);
         if (cancelled) return;
         if (!res.ok) {
           shortfall = true;
@@ -297,6 +299,7 @@ export function EventCheckoutPanel({
       buyerDocType: docType,
       buyerDni: String(fd.get('buyer_dni') ?? '').trim(),
       ageOk, marketingOptIn: fd.get('marketing_opt_in') === '1',
+      accessToken: accessToken ?? '',
       method,
       items: event.collect_attendee_names
         ? itemsForPromo.map((it) => ({ ...it, attendeeNames: (attendeeNames[it.ticketTypeId] ?? []).slice(0, it.quantity) }))

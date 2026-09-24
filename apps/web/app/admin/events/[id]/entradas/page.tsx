@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { publicEnv } from '@/lib/env';
+import { tokensPrivados } from '@/lib/privateAccess';
 import { TicketTypeEditor, NewTicketTypeForm, type TtRow } from '../editar/EditEventForms';
 
 export const runtime = 'edge';
@@ -17,7 +19,7 @@ export default async function EventTicketsPage({ params }: { params: { id: strin
   const impersonating = ctx.soloLectura;
 
   const admin = createAdminClient();
-  const { data: event } = await admin.from('events').select('id, brand_id, is_free').eq('id', params.id).maybeSingle();
+  const { data: event } = await admin.from('events').select('id, brand_id, is_free, slug, name').eq('id', params.id).maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
 
   const { data: tts } = await admin
@@ -31,6 +33,17 @@ export default async function EventTicketsPage({ params }: { params: { id: strin
     bulkMinQty: t.bulk_min_qty ?? 0, bulkDiscountPct: t.bulk_discount_pct ?? 0, colorHex: t.color_hex ?? null,
   }));
   const eventIsFree = event.is_free ?? false;
+  // Link de cada entrada PRIVADA (0066). Solo el dueño lo ve: la tabla es service role.
+  const [privados, { data: brand }] = await Promise.all([
+    tokensPrivados(admin, rows.map((r) => r.id)),
+    admin.from('brands').select('slug').eq('id', ctx.brandId).maybeSingle(),
+  ]);
+  const linkDe = (id: string) => {
+    const tk = privados.get(id);
+    if (tk === undefined) return null;
+    if (!brand?.slug || !/^[A-Z0-9]+$/.test(tk)) return '';
+    return `https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${event.slug}?acceso=${tk}`;
+  };
 
   return (
     <section id="entradas" className="a-anchor">
@@ -42,7 +55,7 @@ export default async function EventTicketsPage({ params }: { params: { id: strin
       </p>
       <div className="s-folds">
         {rows.length === 0 && <p className="s-empty">Este evento no tiene entradas todavía. Crea la primera abajo.</p>}
-        {rows.map((t) => <TicketTypeEditor key={t.id} eventId={event.id} eventIsFree={eventIsFree} tt={t} readOnly={impersonating} />)}
+        {rows.map((t) => <TicketTypeEditor key={t.id} eventId={event.id} eventIsFree={eventIsFree} tt={t} readOnly={impersonating} linkPrivado={impersonating ? null : linkDe(t.id)} eventName={event.name} />)}
         {!impersonating && <NewTicketTypeForm eventId={event.id} eventIsFree={eventIsFree} />}
       </div>
     </section>

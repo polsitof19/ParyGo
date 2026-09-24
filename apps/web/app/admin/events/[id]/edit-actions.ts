@@ -7,6 +7,7 @@ import { requireSession, type SessionUser } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { limaToIso, shiftEnd, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
 import { eventOverAt, isPubliclyOffered } from '@/lib/publicTicketGuard';
+import { generarToken, tokensPrivados } from '@/lib/privateAccess';
 import { puedeEscribirComoSuper, type ModoEscrituraSuper } from '@/lib/impersonation';
 import { auditarEscrituraSuper, diffDeCampos } from '@/lib/auditoriaSuper';
 import { formatEventDate } from '@/lib/utils';
@@ -644,7 +645,9 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
       const seraPublica = isActive && isPubliclyOffered(precioFinal, { eventoEsGratis, esCortesia: isCourtesy });
       if (eraPublica && !seraPublica) {
         const { data: otras } = await admin.from('ticket_types').select('id, price_cents, is_active, is_courtesy').eq('event_id', eventId).neq('id', tt.id);
-        const quedaAlguna = (otras ?? []).some((o) => o.is_active && isPubliclyOffered(o.price_cents, { eventoEsGratis, esCortesia: o.is_courtesy }));
+        // Una entrada PRIVADA (solo con link, 0066) no cuenta como "a la venta".
+        const privadas = await tokensPrivados(admin, (otras ?? []).map((o) => o.id));
+        const quedaAlguna = (otras ?? []).some((o) => o.is_active && !privadas.has(o.id) && isPubliclyOffered(o.price_cents, { eventoEsGratis, esCortesia: o.is_courtesy }));
         if (!quedaAlguna) {
           return { ok: false, message: 'Es la única entrada a la venta de tu evento publicado: si la pausas, tu página se queda sin entradas. Crea otra entrada primero, o pasa el evento a borrador.' };
         }
@@ -746,15 +749,24 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
   const { data: maxRow } = await admin.from('ticket_types').select('sort_order').eq('event_id', eventId).order('sort_order', { ascending: false }).limit(1).maybeSingle();
   const sortOrder = (maxRow?.sort_order ?? -1) + 1;
 
+  // Una privada nace PAUSADA y se activa recién con su token puesto: nunca
+  // queda un instante a la venta en la página pública.
+  const privada = formData.get('privada') === 'on';
   const { data: created, error } = await admin
     .from('ticket_types')
-    .insert({ event_id: eventId, name, description: description || null, price_cents: priceCents, capacity, is_unlimited: isUnlimited, is_active: true, sort_order: sortOrder, sold: 0, reserved: 0, max_scans: 1, bulk_min_qty: bulkMinQty, bulk_discount_pct: bulkPct, color_hex: colorHex ?? null })
+    .insert({ event_id: eventId, name, description: description || null, price_cents: priceCents, capacity, is_unlimited: isUnlimited, is_active: !privada, sort_order: sortOrder, sold: 0, reserved: 0, max_scans: 1, bulk_min_qty: bulkMinQty, bulk_discount_pct: bulkPct, color_hex: colorHex ?? null })
     .select('id')
     .single();
   if (error || !created) return { ok: false, message: error?.message ?? 'No se pudo crear el tipo.' };
 
   // Fase base (todo el período) para que el precio activo se resuelva como los demás.
   await admin.from('ticket_type_price_phases').insert({ ticket_type_id: created.id, name: 'Base', price_cents: priceCents, starts_at: null, ends_at: null, sort_order: 0 });
+  // Privada desde el inicio (solo con link, 0066).
+  if (privada) {
+    const { error: ePriv } = await admin.from('ticket_type_access').insert({ ticket_type_id: created.id, token: generarToken() });
+    if (ePriv) return { ok: false, message: 'Se creó la entrada PAUSADA pero no su link privado. Ábrela, toca "Hacerla privada" y actívala.' };
+    await admin.from('ticket_types').update({ is_active: true }).eq('id', created.id);
+  }
 
   await admin.from('events_log').insert({ brand_id: brandId, event_id: eventId, actor_user_id: user.id, type: 'ticket_type_created', payload: { ticket_type_id: created.id, name } });
   // Auditoría de super admin: además del registro de dominio de arriba, queda
@@ -763,4 +775,48 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
   return { ok: true, message: `"${name}" creado.` };
+}
+
+// ===== Entradas PRIVADAS con link (0066) =====
+// Privada = el tipo tiene fila en ticket_type_access: no se ofrece al público y
+// solo se reclama/compra con …/<evento>?acceso=TOKEN. Hacerla pública borra la
+// fila; cambiar el link genera otro token (el viejo deja de servir al toque).
+// Mismo guard que el resto: dueño por membresía o super admin en modo edición.
+export async function setTicketTypePrivateAction(_prev: EditState, formData: FormData): Promise<EditState> {
+  const user = await requireSession();
+  const eventId = String(formData.get('event_id') ?? '');
+  const ttId = String(formData.get('ticket_type_id') ?? '');
+  const accion = String(formData.get('accion') ?? '');
+  const auth = await authEvent(eventId, user);
+  const brandId = auth?.brandId ?? null;
+  if (!brandId) return { ok: false, message: 'No tienes permiso.' };
+
+  const admin = createAdminClient();
+  const { data: tt } = await admin.from('ticket_types').select('id, event_id, name').eq('id', ttId).maybeSingle();
+  if (!tt || tt.event_id !== eventId) return { ok: false, message: 'Esa entrada no es de este evento.' };
+
+  let message: string;
+  if (accion === 'privada' || accion === 'cambiar') {
+    const token = generarToken();
+    const { error } = await admin.from('ticket_type_access').upsert(
+      { ticket_type_id: tt.id, token, rotated_at: accion === 'cambiar' ? new Date().toISOString() : null },
+      { onConflict: 'ticket_type_id' },
+    );
+    if (error) return { ok: false, message: 'No se pudo generar el link. Intenta de nuevo.' };
+    message = accion === 'cambiar'
+      ? `Link de "${tt.name}" cambiado. El anterior ya no sirve.`
+      : `"${tt.name}" ahora es privada: solo se ve con su link.`;
+  } else if (accion === 'publica') {
+    const { error } = await admin.from('ticket_type_access').delete().eq('ticket_type_id', tt.id);
+    if (error) return { ok: false, message: 'No se pudo hacer pública. Intenta de nuevo.' };
+    message = `"${tt.name}" ahora es pública.`;
+  } else {
+    return { ok: false, message: 'Acción inválida.' };
+  }
+
+  await admin.from('events_log').insert({ brand_id: brandId, event_id: eventId, actor_user_id: user.id, type: 'ticket_type_access_changed', payload: { ticket_type_id: tt.id, accion } });
+  await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId, accion: 'ticket_type_access_changed', diff: { ticket_type_id: tt.id, accion } });
+  revalidatePath(`/admin/events/${eventId}/entradas`);
+  revalidatePath(`/admin/events/${eventId}`);
+  return { ok: true, message };
 }

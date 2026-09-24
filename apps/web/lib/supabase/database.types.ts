@@ -818,6 +818,35 @@ export type Database = {
           },
         ]
       }
+      ticket_type_access: {
+        Row: {
+          created_at: string
+          rotated_at: string | null
+          ticket_type_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          rotated_at?: string | null
+          ticket_type_id: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          rotated_at?: string | null
+          ticket_type_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_type_access_ticket_type_id_fkey"
+            columns: ["ticket_type_id"]
+            isOneToOne: true
+            referencedRelation: "ticket_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_types: {
         Row: {
           capacity: number

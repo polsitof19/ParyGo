@@ -32,7 +32,7 @@ if (FORBIDDEN_SLUGS.has(BRAND)) throw new Error('marca prohibida');
 // ---------------- resultados ----------------
 const R = {};
 const S = { stamp: STAMP, eventSlug: EVENT_SLUG, promo: PROMO, orders: {} };
-const LETTERS = 'ABCDEFGHIJKLMN'.split('');
+const LETTERS = 'ABCDEFGHIJKLMNO'.split('');
 for (const k of LETTERS) R[k] = { ok: null, checks: [], notes: [] };
 const check = (k, name, cond, detail = '') => {
   R[k].checks.push({ name, ok: !!cond, detail: String(detail).slice(0, 400) });
@@ -505,9 +505,9 @@ if (!S.eventId) {
   log('Sin evento: se abortan C→K');
 } else {
   // ---------------- compra por UI ----------------
-  async function buy({ items, email, name, promo, method = 'yape', tag, shots = false }) {
+  async function buy({ items, email, name, promo, method = 'yape', tag, shots = false, query = '' }) {
     const p = buyer.page;
-    await go(p, `/${EVENT_SLUG}`);
+    await go(p, `/${EVENT_SLUG}${query}`);
     if (shots) await shot(p, tag, 'evento');
     // La reserva del carrito es una server action con debounce de 400 ms: esperar
     // a que vuelva su respuesta antes de mirar el estado del botón.
@@ -1289,6 +1289,72 @@ if (!S.eventId) {
     const gratisN = (await svc.from('orders').select('id').eq('event_id', S.eventId).eq('buyer_email', emailN).eq('status', 'paid').eq('total_cents', 0)).data ?? [];
     const usosN = (await svc.from('promo_redemptions').select('id').eq('promo_code_id', pc.id).in('status', ['held', 'consumed'])).data ?? [];
     check('N', 'el mismo email no puede reclamar dos veces (sigue 1 sola entrada gratis y 1 uso)', gratisN.length === 1 && usosN.length === 1, `gratis=${gratisN.length} · usos=${usosN.length}`);
+  });
+
+  // O — ENTRADA PRIVADA CON LINK (0066): el organizador crea "Dybala" S/0
+  // privada desde Entradas; sin link no aparece ni se reserva ni se emite
+  // (tampoco con un token falso armado a mano); con el link se reclama gratis
+  // aunque el evento cobre; "Cambiar link" deja inservible el anterior.
+  await step('O', 'Entrada privada con link: solo con el link se ve y se reclama', async () => {
+    const p = adm.page;
+    const nombre = `Dybala ${STAMP.slice(-4)}`;
+    await go(p, `/admin/events/${S.eventId}/entradas`);
+    await p.locator('summary', { hasText: 'Agregar tipo de entrada' }).click();
+    await p.fill('#tt-new-name', nombre);
+    await p.locator('.s-fold[open] label.s-check', { hasText: 'Gratis' }).locator('input').check();
+    await p.fill('#tt-new-cap', '5');
+    await p.locator('input[name="privada"]').check();
+    await p.getByRole('button', { name: 'Agregar tipo de entrada' }).click();
+    let tt = null;
+    for (let i = 0; i < 30 && !tt; i++) { tt = (await svc.from('ticket_types').select('id, price_cents').eq('event_id', S.eventId).eq('name', nombre).maybeSingle()).data; if (!tt) await sleep(500); }
+    // El token se escribe DESPUÉS del tipo (el tipo nace pausado hasta tenerlo).
+    let acc = null;
+    for (let i = 0; tt && i < 30 && !acc; i++) { acc = (await svc.from('ticket_type_access').select('token').eq('ticket_type_id', tt.id).maybeSingle()).data; if (!acc) await sleep(500); }
+    check('O', 'se crea privada desde Entradas (S/0 con token)', tt?.price_cents === 0 && /^[A-Z0-9]{10}$/.test(acc?.token ?? ''), JSON.stringify({ tt, acc }));
+    if (!tt || !acc) return;
+    await go(p, `/admin/events/${S.eventId}/entradas`);
+    await p.locator('summary', { hasText: nombre }).click();
+    const linkOk = await p.locator('.a-priv').getByRole('button', { name: /Copiar link/ }).count();
+    await shot(p, 'O', 'panel-privada');
+    check('O', 'el panel muestra "Copiar link" en la entrada privada', linkOk === 1, `copiar=${linkOk}`);
+
+    const pb = buyer.page;
+    await go(pb, `/${EVENT_SLUG}`);
+    const sinLink = await pb.getByRole('button', { name: `Sumar ${nombre}` }).count();
+    await go(pb, `/${EVENT_SLUG}?acceso=MALO234567`);
+    const tokFalso = await pb.getByRole('button', { name: `Sumar ${nombre}` }).count();
+    check('O', 'sin link o con un link falso NO aparece', sinLink === 0 && tokFalso === 0, `sin=${sinLink} falso=${tokFalso}`);
+
+    const resReqP = pb.waitForRequest((q) => q.method() === 'POST' && !!q.headers()['next-action'] && (q.postData() || '').includes(tt.id), { timeout: 30000 }).catch(() => null);
+    const emailO = `e2e-o-${STAMP}@test.local`;
+    const r = await buy({ items: { [nombre]: 1 }, email: emailO, name: `Privada O ${STAMP}`, tag: 'O', query: `?acceso=${acc.token}`, shots: true });
+    const ord = r.orderId ? (await svc.from('orders').select('status, total_cents').eq('id', r.orderId).maybeSingle()).data : null;
+    const tks = r.orderId ? (await svc.from('tickets').select('id').eq('order_id', r.orderId)).data ?? [] : [];
+    check('O', 'con el link se reclama GRATIS aunque el evento cobre: pagada S/0 y 1 QR', /confirmacion/.test(r.url) && ord?.status === 'paid' && ord?.total_cents === 0 && tks.length === 1, `${r.res} · ${r.url} · ${JSON.stringify(ord)} · tickets=${tks.length} · ${r.toasts.join(' | ')}`);
+
+    // Server armado a mano: reserva y checkout sin token / con token falso.
+    const rq = await resReqP;
+    if (rq) {
+      const reserveReq = { url: rq.url(), headers: rq.headers(), body: rq.postData() };
+      const [sid] = JSON.parse(reserveReq.body);
+      const h0 = await holdsOn(tt.id);
+      const a = await replayAction(pb, reserveReq, [sid, tt.id, 1]);
+      const b = await replayAction(pb, reserveReq, [sid, tt.id, 1, 'MALO234567']);
+      check('O', 'reserva armada a mano sin token / con token falso → rechazada, 0 cupo', /no disponible/i.test(a.text) && /no disponible/i.test(b.text) && (await holdsOn(tt.id)) === h0, `${a.text.slice(-100)} || ${b.text.slice(-100)}`);
+    } else note('O', 'no se capturó la reserva de la privada');
+    if (r.checkoutReq) {
+      const base = JSON.parse(r.checkoutReq.body)[0];
+      const emailX = `e2e-o-forjado-${STAMP}@test.local`;
+      const c1 = await replayAction(pb, r.checkoutReq, [{ ...base, buyerEmail: emailX, accessToken: '', items: [{ ticketTypeId: tt.id, quantity: 1 }] }]);
+      const c2 = await replayAction(pb, r.checkoutReq, [{ ...base, buyerEmail: emailX, accessToken: 'MALO234567', items: [{ ticketTypeId: tt.id, quantity: 1 }] }]);
+      // Cambiar link: el token anterior deja de servir.
+      await p.getByRole('button', { name: /Cambiar link/ }).click();
+      let nuevo = acc.token;
+      for (let i = 0; i < 30 && nuevo === acc.token; i++) { nuevo = (await svc.from('ticket_type_access').select('token').eq('ticket_type_id', tt.id).maybeSingle()).data?.token ?? acc.token; if (nuevo === acc.token) await sleep(500); }
+      const c3 = await replayAction(pb, r.checkoutReq, [{ ...base, buyerEmail: emailX, accessToken: acc.token, items: [{ ticketTypeId: tt.id, quantity: 1 }] }]);
+      const { data: forj } = await svc.from('orders').select('id').eq('buyer_email', emailX);
+      check('O', 'checkout armado a mano sin token / falso / link viejo → "no disponible", sin orden', [c1, c2, c3].every((c) => /no disponible/i.test(c.text)) && (forj ?? []).length === 0 && nuevo !== acc.token, `${c1.text.slice(-80)} || ${c2.text.slice(-80)} || ${c3.text.slice(-80)} · órdenes=${(forj ?? []).length}`);
+    } else note('O', 'no se capturó el checkout de la privada');
   });
 }
 

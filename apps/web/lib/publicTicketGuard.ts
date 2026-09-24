@@ -1,4 +1,5 @@
 import type { createAdminClient } from '@/lib/supabase/admin';
+import { mismoToken, normalizarToken, tokensPrivados } from '@/lib/privateAccess';
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -32,7 +33,7 @@ export function eventOverAt(startsAt: string, endsAt: string | null): number {
 }
 
 export type PublicTypeCheck =
-  | { ok: true; eventId: string; brandId: string; activePriceCents: number }
+  | { ok: true; eventId: string; brandId: string; activePriceCents: number; privada?: boolean }
   | { ok: false; message: string };
 
 // Guard server-side ÚNICO para cualquier camino público que toque stock
@@ -51,6 +52,10 @@ export type GuardContexto = {
   event?: { id: string; brand_id: string | null; is_published: boolean; archived_at: string | null; cancelled_at: string | null; starts_at: string; ends_at: string | null; is_free: boolean | null } | null;
   brandArchivedAt?: string | null | undefined;
   activePrices?: { ticket_type_id: string; active_price_cents: number }[] | null;
+  /** Token del link privado que trajo el comprador (?acceso=). */
+  acceso?: string | null;
+  /** Tokens de los tipos privados, si quien llama ya los leyó. */
+  privados?: Map<string, string>;
 };
 
 export async function checkPublicTicketType(
@@ -110,6 +115,16 @@ export async function checkPublicTicketType(
     activePrices = data ?? [];
   }
   const activePriceCents = (activePrices ?? []).find((r) => r.ticket_type_id === tt.id)?.active_price_cents ?? tt.price_cents;
+  // ENTRADA PRIVADA (0066): solo con SU token. Con el token correcto se ofrece
+  // aunque cueste S/0 en un evento que cobra (es la cortesía del promotor);
+  // sin él, no existe para el público.
+  const privados = ctx?.privados ?? (await tokensPrivados(admin, [tt.id]));
+  const tokenPrivado = privados.get(tt.id);
+  if (tokenPrivado !== undefined) {
+    if (!mismoToken(tokenPrivado, normalizarToken(ctx?.acceso))) return unavailable;
+    return { ok: true, eventId: event.id, brandId: event.brand_id, activePriceCents, privada: true };
+  }
+
   // Fail-closed: si el evento no trajo is_free (deploy viejo, fila rara), se
   // comporta como evento pago y el tipo S/0 queda oculto — que es el estado
   // seguro. Nunca al revés.

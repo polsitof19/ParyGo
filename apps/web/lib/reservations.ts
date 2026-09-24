@@ -17,7 +17,9 @@ export type ReserveResult =
 export async function reserveStock(
   sessionId: string,
   ticketTypeId: string,
-  quantity: number
+  quantity: number,
+  // Token del link privado (?acceso=). Sin él, un tipo privado no reserva cupo.
+  acceso?: string | null
 ): Promise<ReserveResult> {
   if (!sessionId || sessionId.length < 8) {
     return { ok: false, kind: 'invalid', message: 'Sesión inválida. Recarga la página.' };
@@ -33,7 +35,7 @@ export async function reserveStock(
   // público (S/0 en evento pago, inactivo, evento no publicado/terminado, marca
   // archivada) no puede retener cupo. Soltar (quantity 0) siempre se permite.
   if (quantity > 0) {
-    const check = await checkPublicTicketType(admin, ticketTypeId);
+    const check = await checkPublicTicketType(admin, ticketTypeId, { acceso: acceso ?? null });
     if (!check.ok) return { ok: false, kind: 'unavailable', message: check.message, available: 0 };
   }
   const { data, error } = await admin.rpc('create_or_refresh_stock_reservation', {

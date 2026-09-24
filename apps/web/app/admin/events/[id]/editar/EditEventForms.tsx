@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { ChevronDown, Plus } from 'lucide-react';
+import { ChevronDown, Plus, Link2, Lock, MessageCircle, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 import { useFormFeedback } from '@/components/useFormFeedback';
 import { formatPEN } from '@/lib/utils';
-import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, type EditState } from '../edit-actions';
+import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, setTicketTypePrivateAction, type EditState } from '../edit-actions';
 
 export type TtRow = { id: string; name: string; description: string; priceCents: number; capacity: number; sold: number; isUnlimited: boolean; isActive: boolean; isCourtesy: boolean; bulkMinQty: number; bulkDiscountPct: number; colorHex: string | null };
 
@@ -223,7 +224,7 @@ function PriceField({ id, defaultSoles, free, onFree, locked, eventIsFree }: { i
 
 // Una fila por tipo de entrada: plegada muestra lo que importa (color, nombre,
 // precio, vendidas); abierta se edita y tiene SU botón de guardar.
-export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false }: { eventId: string; eventIsFree: boolean; tt: TtRow; readOnly?: boolean }) {
+export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false, linkPrivado = null, eventName = '' }: { eventId: string; eventIsFree: boolean; tt: TtRow; readOnly?: boolean; linkPrivado?: string | null; eventName?: string }) {
   const [state, action] = useFormFeedback(updateTicketTypeAction, initial);
   const [free, setFree] = useState(tt.priceCents === 0);
   const hasSales = tt.sold > 0;
@@ -236,7 +237,7 @@ export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false }:
         <span className="a-tt-sum">
           <span className={tt.colorHex ? 'a-tt-dot a-tt-dot--on' : 'a-tt-dot'} style={tt.colorHex ? ({ '--sw': tt.colorHex } as React.CSSProperties) : undefined} aria-hidden="true" />
           <span className="a-tt-name">{tt.name}</span>
-          <span className="a-tt-meta">{price} · {stock}{!tt.isActive && ' · pausada'}</span>
+          <span className="a-tt-meta">{price} · {stock}{!tt.isActive && ' · pausada'}{linkPrivado && ' · privada (solo con link)'}</span>
         </span>
         <ChevronDown aria-hidden="true" />
       </summary>
@@ -274,6 +275,7 @@ export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false }:
           <Banner state={state} />
           {!ro && <div className="s-form-actions"><Submit label={`Guardar cambios de ${tt.name}`} /></div>}
         </form>
+        {!ro && <PrivateLink eventId={eventId} tt={tt} link={linkPrivado} eventName={eventName} />}
       </div>
     </details>
   );
@@ -320,6 +322,10 @@ function NewTicketTypeFields({ eventId, eventIsFree, action }: { eventId: string
         </div>
         <ColorField id="tt-new-color" initial={null} />
       </div>
+      <div className="s-field">
+        <label className="s-check"><input type="checkbox" name="privada" /> Privada: solo con link</label>
+        <p className="s-hint">No aparece en tu página. Te damos un link para mandarle a un promotor: solo quien entra con ese link la ve y la reclama.</p>
+      </div>
       <details className="s-details">
         <summary>Más opciones</summary>
         <div className="s-field">
@@ -331,5 +337,54 @@ function NewTicketTypeFields({ eventId, eventIsFree, action }: { eventId: string
       </details>
       <div className="s-form-actions"><Submit label="Agregar tipo de entrada" /></div>
     </form>
+  );
+}
+
+// ENTRADA PRIVADA CON LINK (0066). Formulario aparte del de "Guardar cambios":
+// hacerla privada, copiar/compartir su link, cambiarlo (el viejo deja de
+// servir) o volverla pública. El token lo genera el server.
+function PrivateLink({ eventId, tt, link, eventName }: { eventId: string; tt: TtRow; link: string | null; eventName: string }) {
+  const [state, action] = useFormFeedback(setTicketTypePrivateAction, initial);
+  void state;
+  async function copiar() {
+    if (!link) return;
+    try { await navigator.clipboard.writeText(link); toast.success('Link copiado. Mándaselo a tu promotor.'); }
+    catch { toast.error('No se pudo copiar. Mantén apretado el link.'); }
+  }
+  const wa = link ? `https://wa.me/?text=${encodeURIComponent(`Reclama tu entrada "${tt.name}"${eventName ? ` para ${eventName}` : ''}: ${link}`)}` : '';
+  return (
+    <div className="a-priv">
+      <div className="a-priv__head">
+        <Lock aria-hidden="true" />
+        <div>
+          <strong>{link ? 'Privada: solo con link' : 'Link privado'}</strong>
+          <p className="s-hint" style={{ marginTop: 2 }}>
+            {link
+              ? 'No aparece en tu página. Solo quien entra con este link la ve y la reclama.'
+              : 'Hazla privada para mandarle un link a un promotor: no aparece en tu página.'}
+          </p>
+        </div>
+      </div>
+      <form action={action} className="a-priv__acts">
+        <input type="hidden" name="event_id" value={eventId} />
+        <input type="hidden" name="ticket_type_id" value={tt.id} />
+        {link ? (
+          <>
+            <button type="button" className="s-btn s-btn--soft s-btn--sm" onClick={copiar}><Link2 aria-hidden="true" /> Copiar link</button>
+            <a className="s-btn s-btn--soft s-btn--sm" href={wa} target="_blank" rel="noopener noreferrer"><MessageCircle aria-hidden="true" /> WhatsApp</a>
+            <button type="submit" name="accion" value="cambiar" className="s-btn s-btn--ghost s-btn--sm"
+              onClick={(e) => { if (!confirm('¿Cambiar el link? El link anterior deja de servir.')) e.preventDefault(); }}>
+              <RefreshCw aria-hidden="true" /> Cambiar link
+            </button>
+            <button type="submit" name="accion" value="publica" className="s-btn s-btn--ghost s-btn--sm"
+              onClick={(e) => { if (!confirm(`¿Hacer pública "${tt.name}"? Va a aparecer en tu página para todos.`)) e.preventDefault(); }}>
+              Hacerla pública
+            </button>
+          </>
+        ) : (
+          <button type="submit" name="accion" value="privada" className="s-btn s-btn--soft s-btn--sm"><Lock aria-hidden="true" /> Hacerla privada</button>
+        )}
+      </form>
+    </div>
   );
 }

@@ -8,6 +8,7 @@ import { createMercadoPagoPreference } from '@/lib/mercadopago';
 import { issueTicketsForOrder } from '@/lib/tickets';
 import { enqueueTicketEmail } from '@/lib/email/enqueueTicketEmail';
 import { checkPublicTicketType, eventOverAt } from '@/lib/publicTicketGuard';
+import { mismoToken, normalizarToken, tokensPrivados } from '@/lib/privateAccess';
 
 export type CheckoutInput = {
   eventId: string;
@@ -35,6 +36,8 @@ export type CheckoutInput = {
   // mismo reclamo: si la respuesta se perdió, el reintento devuelve la orden
   // que ya existe en vez de crear otra (0064, orders.claim_id UNIQUE).
   claimId?: string;
+  /** Token del link privado (?acceso=), 0066. */
+  accessToken?: string;
 };
 
 const PROMO_ERRORS: Record<string, string> = {
@@ -84,6 +87,8 @@ const schema = z.object({
   promoCode: z.string().min(2).max(32).optional().or(z.literal('')),
   freeHint: z.boolean().optional(),
   claimId: z.string().uuid().optional(),
+  // Token del link privado (?acceso=) con el que entró el comprador (0066).
+  accessToken: z.string().max(40).optional().or(z.literal('')),
 });
 
 type Atribucion = {
@@ -214,6 +219,18 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   const proto = reqHeaders.get('x-forwarded-proto') ?? 'https';
   const atrib = atribucion(reqHeaders);
 
+  // ENTRADAS PRIVADAS (0066): antes que NADA (también antes del reclamo en un
+  // viaje, que no sabe de links), cada tipo privado pedido exige SU token.
+  const privados = await tokensPrivados(admin, parsed.data.items.map((i) => i.ticketTypeId));
+  const accesoTok = normalizarToken(parsed.data.accessToken);
+  for (const it of parsed.data.items) {
+    const tk = privados.get(it.ticketTypeId);
+    if (tk !== undefined && !mismoToken(tk, accesoTok)) return { ok: false, message: 'Tipo de entrada no disponible.' };
+  }
+  // Todo lo pedido es de un link privado válido: puede costar S/0 aunque el
+  // evento cobre (la cortesía del promotor).
+  const todoPrivado = parsed.data.items.length > 0 && parsed.data.items.every((i) => privados.has(i.ticketTypeId));
+
   // Evento gratis sin código: un solo viaje (0064). Con código promo va por el
   // camino de siempre, que es el que sabe aplicarlo.
   if (parsed.data.freeHint && !(parsed.data.promoCode ?? '').trim()) {
@@ -313,6 +330,8 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
       },
       brandArchivedAt: brandRow.archived_at ?? null,
       activePrices: activePrices ?? null,
+      acceso: accesoTok,
+      privados,
     });
     if (!check.ok) return { ok: false, message: check.message };
     if (check.eventId !== event.id) return { ok: false, message: 'Tipo de entrada no disponible.' };
@@ -390,7 +409,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // La condición es la misma que manda en el resto del sistema —evento gratis
   // Y total 0— y se vuelve a exigir más abajo antes de emitir: un total 0
   // inesperado en un evento que cobra no emite nada.
-  if (totalCents < 0 || (totalCents === 0 && event.is_free !== true)) {
+  if (totalCents < 0 || (totalCents === 0 && event.is_free !== true && !todoPrivado)) {
     return { ok: false, message: 'Total inválido.' };
   }
 
@@ -516,7 +535,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // Se exige las DOS cosas —evento marcado gratis Y total 0— a propósito: un
   // total 0 inesperado en un evento pago no puede terminar emitiendo entradas
   // gratis. Con solo una de las dos condiciones, no se emite nada.
-  let isFree = event.is_free === true && totalCents === 0;
+  let isFree = (event.is_free === true || todoPrivado) && totalCents === 0;
   if (promoCode) {
     const { data: applyRes, error: applyErr } = await admin.rpc('apply_promo_to_order', {
       p_order_id: order.id,
@@ -585,7 +604,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     const [issue] = await Promise.all([
       issueTicketsForOrder({
         orderId: order.id,
-        reason: event.is_free === true ? 'free_event' : 'yape_approved',
+        reason: event.is_free === true || todoPrivado ? 'free_event' : 'yape_approved',
       }),
       logCreada,
     ]);

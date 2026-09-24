@@ -4,6 +4,8 @@ import { ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { formatPEN } from '@/lib/utils';
 import { isPubliclyOffered } from '@/lib/publicTicketGuard';
+import { tokensPrivados } from '@/lib/privateAccess';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { optimizedImage } from '@/lib/imageUrl';
 import { fmtCuando, distrito } from '@/lib/eventoTexto';
 import { PieMarca } from './Responsable';
@@ -87,11 +89,14 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
   if (eventos.length) {
     const { data: tts } = await supabase
       .from('ticket_types')
-      .select('event_id, price_cents, is_active, is_courtesy')
+      .select('id, event_id, price_cents, is_active, is_courtesy')
       .in('event_id', eventos.map((e) => e.id))
       .eq('is_active', true);
     const esGratis = new Map(eventos.map((e) => [e.id, e.is_free === true]));
-    for (const t of (tts ?? []) as { event_id: string; price_cents: number; is_courtesy: boolean }[]) {
+    // Las entradas privadas (0066, solo con link) no cuentan para el "desde".
+    const privados = await tokensPrivados(createAdminClient(), (tts ?? []).map((t) => t.id as string));
+    for (const t of (tts ?? []) as { id: string; event_id: string; price_cents: number; is_courtesy: boolean }[]) {
+      if (privados.has(t.id)) continue;
       if (!isPubliclyOffered(t.price_cents, { eventoEsGratis: esGratis.get(t.event_id), esCortesia: t.is_courtesy })) continue;
       const ya = desdePorEvento.get(t.event_id);
       if (ya === undefined || t.price_cents < ya) desdePorEvento.set(t.event_id, t.price_cents);

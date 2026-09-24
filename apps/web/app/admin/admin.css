@@ -612,3 +612,10 @@
 .admin-shell .a-menu__d { font-size: var(--s-meta); color: var(--ink-2); }
 .admin-shell .a-menu__chev { width: 18px; height: 18px; flex: none; color: var(--ink-3); }
 @media (min-width: 900px) { .admin-shell .a-menu { max-width: 720px; } }
+
+/* Entrada PRIVADA con link (0066): bloque con hairline arriba, sin tarjeta. */
+.admin-shell .a-priv { margin-top: var(--s-s3); padding-top: var(--s-s3); border-top: 1px solid var(--line); }
+.admin-shell .a-priv__head { display: flex; gap: var(--s-s2); align-items: flex-start; }
+.admin-shell .a-priv__head > svg { width: 18px; height: 18px; flex: none; color: var(--ink-2); }
+.admin-shell .a-priv__acts { display: flex; flex-wrap: wrap; gap: var(--s-s1); margin-top: var(--s-s2); }
+.admin-shell .a-priv__acts svg { width: 16px; height: 16px; }

@@ -316,7 +316,7 @@ organizador daba "permission denied" y "Mi marca" salía EN BLANCO. El panel
 ya la lee con service role acotada a la marca; la migración del grant queda
 para cuando Paul la apruebe (no hace falta para que ande).
 
-Incrementales, idempotentes, numeradas (vamos por 0059). Backwards-compatible
+Incrementales, idempotentes, numeradas (vamos por 0067). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
 para no romper la app vieja desplegada.
 
@@ -347,6 +347,16 @@ para no romper la app vieja desplegada.
   congelado). Antes un uso se llevaba hasta 10 entradas. El organizador los
   crea en Cortesías ("Códigos para reclamar": gratis, N usos, 1 por email).
   Cubierto por el paso N del E2E.
+- ENTRADAS PRIVADAS CON LINK (0066, 2026-09-23). Un tipo es privado si tiene
+  fila en ticket_type_access (tabla SOLO service role: el token no puede ir en
+  ticket_types, que se lee con la anon key). No se ofrece en la página; solo
+  con <marca>.parygo.com/<evento>?acceso=TOKEN se ve, se reserva y se emite
+  (guard + startCheckout, comparación en tiempo constante, fail-closed si no
+  se puede leer la tabla). Un S/0 privado se reclama gratis aunque el evento
+  cobre (todoPrivado), pero un carrito mixto paga lo público. El organizador:
+  Entradas → la entrada → Hacerla privada / Copiar link / WhatsApp / Cambiar
+  link (el viejo muere) / Hacerla pública; o la casilla Privada al crear. En
+  solo lectura (super mirando) el token NO se manda al navegador. Paso O del E2E.
 - CORTESÍAS: se emiten al email del organizador (precargado) y la página
   Cortesías lista CADA entrada con "Copiar link" y "WhatsApp" (la URL solo
   en el href/portapapeles, nunca escrita). Cada QR entra una vez.
