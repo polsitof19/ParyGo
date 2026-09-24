@@ -125,8 +125,10 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
   const paidIds = paidRows.map((o) => o.id);
   const pendOrderIds = pendingProofs.map((p) => p.order?.id).filter((x): x is string => !!x);
   const [recItems, phaseRows, pendItems, pendingReview] = await Promise.all([
+    // Por join, no .in(paidIds): con ~400 órdenes la URL no pasaba ("fetch
+    // failed") y la recaudación por tipo salía en 0.
     paidIds.length > 0
-      ? admin.from('order_items').select('ticket_type_id, subtotal_cents').in('order_id', paidIds).then((r) => r.data)
+      ? todas((a, b) => admin.from('order_items').select('ticket_type_id, subtotal_cents, order:orders!inner ( id )').eq('order.event_id', event.id).eq('order.status', 'paid').order('id').range(a, b))
       : Promise.resolve(null),
     types.length > 0
       ? admin
