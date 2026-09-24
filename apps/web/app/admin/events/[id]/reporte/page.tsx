@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
+import { todas } from '@/lib/todas';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
@@ -37,8 +38,8 @@ export default async function ReportePage({ params }: { params: { id: string } }
   const [ttRes, statsRes, ordRes, oiRes, promoRes, redRes] = await Promise.all([
     admin.from('ticket_types').select('id, name, sort_order').eq('event_id', event.id).order('sort_order'),
     admin.rpc('event_ticket_stats', { p_event_id: event.id }),
-    admin.from('orders').select('total_cents, payment_method').eq('event_id', event.id).eq('status', 'paid'),
-    admin.from('order_items').select('ticket_type_id, subtotal_cents, orders!inner(event_id, status)').eq('orders.event_id', event.id).eq('orders.status', 'paid'),
+    todas((a, b) => admin.from('orders').select('id, total_cents, payment_method').eq('event_id', event.id).eq('status', 'paid').order('id').range(a, b)).then((data) => ({ data })),
+    todas((a, b) => admin.from('order_items').select('id, ticket_type_id, subtotal_cents, orders!inner(event_id, status)').eq('orders.event_id', event.id).eq('orders.status', 'paid').order('id').range(a, b)).then((data) => ({ data })),
     admin.from('promo_codes').select('id, code, label').eq('event_id', event.id),
     admin.from('promo_redemptions').select(`promo_code_id, orders!inner(total_cents, status, event_id, order_items(quantity))`).eq('event_id', event.id).eq('status', 'consumed'),
   ]);

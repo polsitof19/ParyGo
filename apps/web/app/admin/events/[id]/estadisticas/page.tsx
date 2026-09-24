@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ChevronDown, Printer } from 'lucide-react';
+import { todas } from '@/lib/todas';
 import { notFound } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
@@ -45,7 +46,7 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
     { data: ticketRows },
     { data: mpStatus },
   ] = await Promise.all([
-    admin.from('orders').select('id, total_cents, payment_method, created_at').eq('event_id', event.id).eq('status', 'paid'),
+    todas((a, b) => admin.from('orders').select('id, total_cents, payment_method, created_at').eq('event_id', event.id).eq('status', 'paid').order('id').range(a, b)).then((data) => ({ data })),
     admin.from('ticket_types').select('id, name, price_cents, capacity, sold, is_unlimited, is_active, sort_order').eq('event_id', event.id).order('sort_order'),
     admin.rpc('event_ticket_stats', { p_event_id: event.id }),
     admin
@@ -62,7 +63,7 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
       .eq('brand_id', event.brand_id).eq('status', 'rejected').order('reviewed_at', { ascending: false }).limit(50),
     // Tickets válidos del evento: para separar entradas VENDIDAS de cortesías
     // (ticket_types.sold cuenta las dos cosas juntas).
-    admin.from('tickets').select('order_id').eq('event_id', event.id).is('invalidated_at', null),
+    todas((a, b) => admin.from('tickets').select('order_id').eq('event_id', event.id).is('invalidated_at', null).order('id').range(a, b)).then((data) => ({ data })),
     // ¿La marca cobra con tarjeta? Si nunca configuró MercadoPago, la caja de MP
     // en "Tu dinero" es ruido: siempre S/ 0. Solo booleanos (no desencripta).
     admin.rpc('get_brand_mp_status', { p_brand_id: event.brand_id }),

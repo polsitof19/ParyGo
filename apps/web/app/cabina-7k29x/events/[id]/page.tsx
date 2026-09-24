@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { todas } from '@/lib/todas';
 import { ChevronLeft, ExternalLink } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { formatPEN } from '@/lib/utils';
@@ -53,10 +54,9 @@ export default async function EventDetailPage({ params }: { params: { id: string
       .eq('event_id', event.id)
       .order('sort_order'),
     supabase
-      .from('orders')
-      .select('id, status, total_cents', { count: 'exact' })
-      .eq('event_id', event.id)
-      .limit(5000),
+      // Todas, paginadas: .limit(5000) no pasaba del tope de 1000 de PostgREST.
+      .from('orders').select('id', { count: 'exact', head: true }).eq('event_id', event.id)
+      .then(async (c) => ({ count: c.count, data: await todas((a, b) => supabase.from('orders').select('id, status, total_cents').eq('event_id', event.id).order('id').range(a, b)) })),
     supabase
       .from('tickets')
       .select('id', { count: 'exact', head: true })

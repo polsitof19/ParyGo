@@ -12,6 +12,7 @@ import { publicEnv } from '@/lib/env';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { setEventArchivedAction } from './events/[id]/edit-actions';
 import { pruebaDisponible } from '@/lib/prueba';
+import { todas } from '@/lib/todas';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -80,9 +81,12 @@ export default async function AdminHomePage() {
   // traían las pagadas dos veces (una para sumar, otra para recuperación).
   const eventNameById = new Map((events ?? []).map((e) => [e.id, e.name] as const));
   const eventIds = (events ?? []).map((e) => e.id);
-  const [{ data: paidRows }, { data: ticketOrderRows }, { count: activeTypeCount }, { data: mpStatus }, { data: validTicketRows }] = await Promise.all([
-    adminCli.from('orders').select('id, buyer_name, total_cents, created_at, event_id, payment_method').eq('brand_id', brand.id).eq('status', 'paid'),
-    adminCli.from('tickets').select('order_id').eq('brand_id', brand.id),
+  // Órdenes y entradas van PAGINADAS (todas): PostgREST corta en 1000 filas y,
+  // con Code pasando las 1000 entradas, las órdenes más nuevas aparecían
+  // "pagadas sin tickets" aunque los tenían.
+  const [paidRows, ticketOrderRows, { count: activeTypeCount }, { data: mpStatus }, validTicketRows] = await Promise.all([
+    todas((a, b) => adminCli.from('orders').select('id, buyer_name, total_cents, created_at, event_id, payment_method').eq('brand_id', brand.id).eq('status', 'paid').order('id').range(a, b)),
+    todas((a, b) => adminCli.from('tickets').select('order_id').eq('brand_id', brand.id).order('id').range(a, b)),
     eventIds.length
       ? adminCli.from('ticket_types').select('id', { count: 'exact', head: true }).in('event_id', eventIds).eq('is_active', true)
       : Promise.resolve({ count: 0 } as { count: number | null }),
@@ -90,7 +94,7 @@ export default async function AdminHomePage() {
     // Solo entradas válidas (no anuladas) para "Vendidas" — misma regla que el
     // Resumen del evento. ticketOrderRows (sin filtrar) sigue siendo para la
     // detección de órdenes pagadas sin tickets.
-    adminCli.from('tickets').select('order_id').eq('brand_id', brand.id).is('invalidated_at', null),
+    todas((a, b) => adminCli.from('tickets').select('order_id').eq('brand_id', brand.id).is('invalidated_at', null).order('id').range(a, b)),
   ]);
   const mpRow = Array.isArray(mpStatus) ? mpStatus[0] : null;
   const mpConfigured = Boolean(mpRow?.has_access_token && mpRow?.has_public_key);

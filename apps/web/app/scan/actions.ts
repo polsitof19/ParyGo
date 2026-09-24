@@ -1,5 +1,6 @@
 'use server';
 
+import { todas } from '@/lib/todas';
 import { requireSession, type SessionUser } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -158,11 +159,21 @@ export async function preloadEventAction(eventId: string): Promise<PreloadResult
     return { ok: false, message: 'No tienes acceso a este evento.' };
   }
 
-  const { data: tickets } = await admin
-    .from('tickets')
-    .select('qr_code, attendee_name, ticket_type_name, max_scans, scan_count, order:orders ( buyer_dni, buyer_doc_type )')
-    .eq('event_id', eventId)
-    .is('invalidated_at', null);
+  // TODAS, paginadas: con más de 1000 entradas, PostgREST cortaba en 1000 y la
+  // puerta sin señal daba "no encontrada" a entradas válidas.
+  let tickets;
+  try {
+    tickets = await todas((desde, hasta) => admin
+      .from('tickets')
+      .select('qr_code, attendee_name, ticket_type_name, max_scans, scan_count, order:orders ( buyer_dni, buyer_doc_type )')
+      .eq('event_id', eventId)
+      .is('invalidated_at', null)
+      .order('id')
+      .range(desde, hasta));
+  } catch {
+    // Nunca una lista a medias: mejor que la puerta sepa que no se precargó.
+    return { ok: false, message: 'No se pudieron descargar las entradas. Intenta de nuevo.' };
+  }
 
   const list = (tickets ?? []).map((t) => {
     const ord = Array.isArray(t.order) ? t.order[0] : t.order;
