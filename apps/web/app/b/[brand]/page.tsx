@@ -32,7 +32,9 @@ type EvRow = {
 
 function Evento({ e, desde, primero }: { e: EvRow; desde: number | null; primero: boolean }) {
   const donde = [e.venue_name, distrito(e.venue_address)].filter(Boolean).join(', ');
-  const gratis = e.is_free || desde === 0;
+  // `desde` es el mínimo PAGO: un evento gratis que además vende entradas
+  // pagas (Standly: cortesía libre + VIP/GENERAL) se compra, no se "reclama".
+  const gratis = e.is_free && desde == null;
   return (
     <li className="bh-ev">
       <Link href={`/${e.slug}`} className="bh-ev__a">
@@ -98,6 +100,7 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
     for (const t of (tts ?? []) as { id: string; event_id: string; price_cents: number; is_courtesy: boolean }[]) {
       if (privados.has(t.id)) continue;
       if (!isPubliclyOffered(t.price_cents, { eventoEsGratis: esGratis.get(t.event_id), esCortesia: t.is_courtesy })) continue;
+      if (t.price_cents === 0) continue; // las gratis no son un "desde"
       const ya = desdePorEvento.get(t.event_id);
       if (ya === undefined || t.price_cents < ya) desdePorEvento.set(t.event_id, t.price_cents);
     }

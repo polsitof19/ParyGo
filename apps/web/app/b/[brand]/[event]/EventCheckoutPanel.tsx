@@ -258,11 +258,16 @@ export function EventCheckoutPanel({
   const plata = (c: number) => (event.is_free && c === 0 ? 'Gratis' : formatPEN(c));
   // "Desde" de la barra vacía: la entrada más barata que todavía se vende.
   const aLaVenta = sorted.filter((t) => !t.soldOut);
-  const desdeCents = aLaVenta.length ? Math.min(...aLaVenta.map((t) => t.active_price_cents)) : 0;
+  // Un evento marcado gratis puede además VENDER entradas (Standly: cortesía
+  // libre + VIP/GENERAL). El copy de "gratis" es solo para cuando TODO lo que
+  // se ofrece es gratis; si hay pagas, se compra y el "desde" es la paga más barata.
+  const pagas = aLaVenta.filter((t) => t.active_price_cents > 0);
+  const soloGratis = event.is_free === true && pagas.length === 0;
+  const desdeCents = pagas.length ? Math.min(...pagas.map((t) => t.active_price_cents)) : 0;
   // La línea bajo el título: el precio de entrada (o "libre" si es gratis) y
   // la edad mínima. Es lo que la gente pregunta antes de mirar las entradas.
   const lineaHero = [
-    event.is_free ? 'Entrada libre con registro' : aLaVenta.length ? `Entradas desde ${formatPEN(desdeCents)}` : 'Entradas agotadas',
+    soloGratis ? 'Entrada libre con registro' : pagas.length ? `Entradas desde ${formatPEN(desdeCents)}` : 'Entradas agotadas',
   ].filter(Boolean).join(' · ');
   // Ahorro por cantidad (bulk) — solo si NO hay código (son excluyentes).
   const bulkSavings = applied ? 0 : sorted.reduce((s, t) => { const q = qty[t.id] ?? 0; return s + q * (t.active_price_cents - bulkUnitPrice(t, q)); }, 0);
@@ -273,7 +278,9 @@ export function EventCheckoutPanel({
   // antes de emitir sin pago (evento gratis Y total 0): si un evento gratis
   // tuviera además un tipo pago, el total deja de ser 0 y esto vuelve a ser una
   // compra normal, como corresponde.
-  const eventoGratis = event.is_free === true && finalTotal === 0;
+  // Con el carrito vacío el total es 0 sin que nada sea gratis: ahí solo vale
+  // si todo lo que se ofrece es gratis (si no, "Nada de pagos" mentía).
+  const eventoGratis = event.is_free === true && finalTotal === 0 && (totalItems > 0 || soloGratis);
   const esGratis = applied?.isFree === true || eventoGratis;
 
   // Label ÚNICO del CTA (mismo texto en el botón del rail y en la barra mobile).
@@ -355,8 +362,8 @@ export function EventCheckoutPanel({
   // Un solo texto para el botón del paso 1, en la barra (teléfono) y en el
   // rail (escritorio): antes el rail decía "Continuar" y la barra otra cosa.
   const etiquetaPaso1 = totalItems === 0
-    ? (event.is_free ? 'Elige tu entrada' : 'Elige tus entradas')
-    : event.is_free
+    ? (soloGratis ? 'Elige tu entrada' : 'Elige tus entradas')
+    : eventoGratis
       ? <>Reclamar entrada gratis <ArrowRight aria-hidden="true" /></>
       : <>{esGratis ? 'Continuar' : ctaMetodo} <ArrowRight aria-hidden="true" /></>;
 
@@ -598,7 +605,7 @@ function fraseConfianza(pago: string): string {
       {!mpCheckout && (
         <div className="b-cta">
           <div className="b-cta__t">
-            {totalItems === 0 && event.is_free ? (
+            {totalItems === 0 && soloGratis ? (
               // Gratis y vacía: no hay un "desde" que decir.
               <span className="n n--solo">Elige tu entrada</span>
             ) : totalItems === 0 ? (
