@@ -57,7 +57,7 @@ export function SettingsForm(props: Props) {
         <p className="s-section-lead" style={{ marginBottom: 6 }}>Cobro Yape</p>
         <p className="s-card__desc" style={{ marginBottom: 14 }}>Estos datos los ven tus compradores al pagar. Cambian al instante en tu página pública.</p>
         <Field label="Número de Yape" htmlFor="yape_number" error={err.yape_number}>
-          <input id="yape_number" name="yape_number" defaultValue={props.yapeNumber} placeholder="999000111" className="s-input" disabled={ro} />
+          <input id="yape_number" name="yape_number" type="tel" inputMode="numeric" autoComplete="off" defaultValue={props.yapeNumber} placeholder="999000111" className="s-input" disabled={ro} />
         </Field>
         <div className="s-field">
           <Field label="Titular de la cuenta" htmlFor="yape_holder" error={err.yape_holder}>

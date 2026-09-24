@@ -32,7 +32,7 @@ if (FORBIDDEN_SLUGS.has(BRAND)) throw new Error('marca prohibida');
 // ---------------- resultados ----------------
 const R = {};
 const S = { stamp: STAMP, eventSlug: EVENT_SLUG, promo: PROMO, orders: {} };
-const LETTERS = 'ABCDEFGHIJKLMNO'.split('');
+const LETTERS = 'ABCDEFGHIJKLMNOP'.split('');
 for (const k of LETTERS) R[k] = { ok: null, checks: [], notes: [] };
 const check = (k, name, cond, detail = '') => {
   R[k].checks.push({ name, ok: !!cond, detail: String(detail).slice(0, 400) });
@@ -1389,6 +1389,50 @@ if (!S.eventId) {
       const { data: forj } = await svc.from('orders').select('id').eq('buyer_email', emailX);
       check('O', 'checkout armado a mano sin token / falso / link viejo → "no disponible", sin orden', [c1, c2, c3].every((c) => /no disponible/i.test(c.text)) && (forj ?? []).length === 0 && nuevo !== acc.token, `${c1.text.slice(-80)} || ${c2.text.slice(-80)} || ${c3.text.slice(-80)} · órdenes=${(forj ?? []).length}`);
     } else note('O', 'no se capturó el checkout de la privada');
+  });
+
+  // P — YAPE DEL ORGANIZADOR, de punta a punta desde "Mi marca": número mal
+  // escrito → rechazado; con espacios → se guarda limpio; QR subido → el
+  // comprador lo ve (con el número) en la pantalla de pago. Y una marca SIN
+  // Yape no le crea una orden al comprador para dejarlo en un callejón.
+  await step('P', 'Yape del organizador: cargar número y QR en Mi marca → el comprador lo ve', async () => {
+    const p = adm.page;
+    const { data: b0 } = await svc.from('brands').select('id, yape_number, yape_qr_url').eq('slug', BRAND).maybeSingle();
+    const num = b0?.yape_number ?? '999000111';
+    await go(p, '/admin/settings');
+    await p.fill('#yape_number', '12345');
+    await p.getByRole('button', { name: 'Guardar configuración' }).click();
+    await sleep(2500);
+    const b1 = (await svc.from('brands').select('yape_number').eq('id', b0.id).maybeSingle()).data;
+    const errTxt = await bodyText(p, 4000);
+    check('P', 'un número mal escrito se rechaza y no se guarda', b1?.yape_number === num && /9 dígitos/.test(errTxt), `${b1?.yape_number} · ${/9 dígitos/.test(errTxt)}`);
+
+    await go(p, '/admin/settings');
+    await p.fill('#yape_number', `${num.slice(0, 3)} ${num.slice(3, 6)} ${num.slice(6)}`);
+    await p.locator('#yape_qr').setInputFiles(PROOF);
+    await p.getByRole('button', { name: 'Guardar configuración' }).click();
+    let b2 = null;
+    for (let i = 0; i < 30; i++) { b2 = (await svc.from('brands').select('yape_number, yape_qr_url').eq('id', b0.id).maybeSingle()).data; if (b2?.yape_qr_url && b2.yape_qr_url !== b0.yape_qr_url) break; await sleep(500); }
+    await shot(p, 'P', 'mi-marca-yape');
+    check('P', 'Mi marca guarda el número limpio y el QR', b2?.yape_number === num && !!b2?.yape_qr_url && b2.yape_qr_url !== b0.yape_qr_url, JSON.stringify(b2));
+
+    const r = await buy({ items: { General: 1 }, email: `e2e-p-${STAMP}@test.local`, name: `Yape P ${STAMP}`, tag: 'P' });
+    const pb = buyer.page;
+    const qrSrc = await pb.locator('.b-yapeqr img').getAttribute('src').catch(() => null);
+    const numTxt = (await pb.locator('.b-yapenum').innerText().catch(() => '')).trim();
+    await shot(pb, 'P', 'pantalla-yape-con-qr');
+    check('P', 'el comprador ve el QR y el número del organizador al pagar', /\/yape\?order=/.test(r.url) && qrSrc === b2?.yape_qr_url && numTxt.replace(/\D/g, '') === num, `${r.url} · qr=${qrSrc === b2?.yape_qr_url} · num=${numTxt}`);
+
+    // Marca sin número: el checkout con Yape se corta ANTES de crear la orden.
+    await svc.from('brands').update({ yape_number: null }).eq('id', b0.id);
+    try {
+      const emailX = `e2e-p-sinyape-${STAMP}@test.local`;
+      const x = await buy({ items: { General: 1 }, email: emailX, name: `Sin Yape ${STAMP}`, tag: 'P' });
+      const { data: ordX } = await svc.from('orders').select('id').eq('buyer_email', emailX);
+      check('P', 'marca sin Yape: aviso claro y NINGUNA orden creada', x.res !== 'nav' && x.toasts.some((t) => /no activó el pago con Yape/i.test(t)) && (ordX ?? []).length === 0, `${x.res} · ${x.toasts.join(' | ')} · órdenes=${(ordX ?? []).length}`);
+    } finally {
+      await svc.from('brands').update({ yape_number: num }).eq('id', b0.id);
+    }
   });
 }
 

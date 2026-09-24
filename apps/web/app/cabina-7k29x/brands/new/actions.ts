@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import { yapeNumberSchema } from '@/lib/yapeNumber';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
@@ -30,7 +31,7 @@ const schema = z.object({
     .regex(/^\+\d{8,15}$/, 'Formato +51999000000')
     .optional()
     .or(z.literal('')),
-  yape_number: z.string().max(40).optional().or(z.literal('')),
+  yape_number: yapeNumberSchema,
   yape_holder: z.string().max(80).optional().or(z.literal('')),
   mp_access_token: z.string().min(10).optional().or(z.literal('')),
   mp_public_key: z.string().min(10).optional().or(z.literal('')),

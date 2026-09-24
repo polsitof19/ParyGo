@@ -295,7 +295,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // validaciones; lo único que cambia es que no se esperan una a la otra.
   const ticketTypeIds = parsed.data.items.map((i) => i.ticketTypeId);
   const [brandRes, ttRes, apRes] = await Promise.all([
-    admin.from('brands').select('archived_at').eq('id', event.brand_id).maybeSingle(),
+    admin.from('brands').select('archived_at, yape_number').eq('id', event.brand_id).maybeSingle(),
     admin
       .from('ticket_types')
       .select('id, name, price_cents, capacity, sold, is_active, is_unlimited, event_id, bulk_min_qty, bulk_discount_pct, is_courtesy')
@@ -444,6 +444,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   if (promoCodeInput && privados.size > 0) {
     return { ok: false, message: 'Los códigos no aplican a las entradas de invitación.' };
   }
+  let promoGratis = false;
   if (promoCodeInput) {
     const { data: pv, error: pvErr } = await admin.rpc('preview_promo', {
       p_event_id: event.id,
@@ -461,6 +462,14 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     if (r.is_free === true && event.is_free !== true && qtyTotal > 1) {
       return { ok: false, message: 'Este código vale para 1 entrada. Elige solo una.' };
     }
+    promoGratis = r.is_free === true;
+  }
+
+  // Yape sin número cargado: antes se creaba la orden y el comprador caía en
+  // "Este organizador no tiene Yape configurado" DESPUÉS de dejar sus datos.
+  // Se corta acá, sin orden ni cupo retenido. (Lo gratis no pasa por Yape.)
+  if (parsed.data.method === 'yape_manual' && totalCents > 0 && !promoGratis && !brandRow.yape_number?.trim()) {
+    return { ok: false, message: 'Este organizador todavía no activó el pago con Yape. Escríbele para comprar tu entrada.' };
   }
 
   // 4. Insert order + order_items in a "transaction" (best-effort, no real BEGIN

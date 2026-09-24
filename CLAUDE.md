@@ -63,6 +63,14 @@ supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se regist
 - Una máquina a la vez por rama.
 
 ## Pagos — estado real (audit 2026-09-15)
+- YAPE DEL ORGANIZADOR (2026-09-24): el número se valida en los TRES
+  escritores (Mi marca y super admin crear/editar) con lib/yapeNumber.ts:
+  celular de 9 dígitos que empieza en 9 (limpia espacios, guiones y +51).
+  startCheckout corta un pago con Yape de una marca SIN número ANTES de crear
+  la orden (antes el comprador dejaba sus datos y caía en "no tiene Yape
+  configurado"). Paso P del E2E: número mal escrito rechazado, número + QR
+  desde Mi marca, el comprador ve QR y número al pagar, marca sin Yape → 0
+  órdenes. Code tiene número pero NO QR subido (funciona igual, con "copiar").
 - Yape manual: COMPLETO punta a punta. Comprobante público → revisión en panel
   (autenticada, scoped por marca, transición de estado atómica) → emisión →
   email. Es el camino que cobra hoy.

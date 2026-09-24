@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import { yapeNumberSchema } from '@/lib/yapeNumber';
 import { revalidatePath } from 'next/cache';
 import { nanoid } from 'nanoid';
 import { requireSession } from '@/lib/auth';
@@ -23,7 +24,7 @@ const schema = z.object({
     .regex(/^\+\d{8,15}$/, 'Formato +51999000111')
     .optional()
     .or(z.literal('')),
-  yape_number: z.string().max(20).optional().or(z.literal('')),
+  yape_number: yapeNumberSchema,
   yape_holder: z.string().max(120).optional().or(z.literal('')),
   instagram: z.string().max(120).optional().or(z.literal('')),
   primary_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Color inválido'),
