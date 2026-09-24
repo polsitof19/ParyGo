@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { ChevronDown, Plus, Link2, Lock, MessageCircle, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Link2, Lock, MessageCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFormFeedback } from '@/components/useFormFeedback';
 import { formatPEN } from '@/lib/utils';
-import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, setTicketTypePrivateAction, type EditState } from '../edit-actions';
+import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, setTicketTypePrivateAction, moveTicketTypeAction, type EditState } from '../edit-actions';
 
 export type TtRow = { id: string; name: string; description: string; priceCents: number; capacity: number; sold: number; isUnlimited: boolean; isActive: boolean; isCourtesy: boolean; bulkMinQty: number; bulkDiscountPct: number; colorHex: string | null };
 
@@ -224,7 +224,7 @@ function PriceField({ id, defaultSoles, free, onFree, locked, eventIsFree }: { i
 
 // Una fila por tipo de entrada: plegada muestra lo que importa (color, nombre,
 // precio, vendidas); abierta se edita y tiene SU botón de guardar.
-export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false, linkPrivado = null, limitePrivado = null, eventName = '' }: { eventId: string; eventIsFree: boolean; tt: TtRow; readOnly?: boolean; linkPrivado?: string | null; limitePrivado?: number | null; eventName?: string }) {
+export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false, linkPrivado = null, limitePrivado = null, eventName = '', isFirst = false, isLast = false }: { eventId: string; eventIsFree: boolean; tt: TtRow; readOnly?: boolean; linkPrivado?: string | null; limitePrivado?: number | null; eventName?: string; isFirst?: boolean; isLast?: boolean }) {
   const [state, action] = useFormFeedback(updateTicketTypeAction, initial);
   const [free, setFree] = useState(tt.priceCents === 0);
   const hasSales = tt.sold > 0;
@@ -275,9 +275,25 @@ export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false, l
           <Banner state={state} />
           {!ro && <div className="s-form-actions"><Submit label={`Guardar cambios de ${tt.name}`} /></div>}
         </form>
+        {!ro && !(isFirst && isLast) && <MoveTicketType eventId={eventId} ttId={tt.id} isFirst={isFirst} isLast={isLast} />}
         {!ro && <PrivateLink eventId={eventId} tt={tt} link={linkPrivado} limite={limitePrivado} eventName={eventName} />}
       </div>
     </details>
+  );
+}
+
+// Orden en la página de compra: la entrada sube o baja un lugar.
+function MoveTicketType({ eventId, ttId, isFirst, isLast }: { eventId: string; ttId: string; isFirst: boolean; isLast: boolean }) {
+  const [state, action] = useFormFeedback(moveTicketTypeAction, initial);
+  void state;
+  return (
+    <form action={action} className="s-form-actions">
+      <input type="hidden" name="event_id" value={eventId} />
+      <input type="hidden" name="ticket_type_id" value={ttId} />
+      <span className="s-hint">Orden en tu página</span>
+      <button type="submit" name="dir" value="up" className="s-btn s-btn--soft s-btn--sm" disabled={isFirst}><ChevronUp aria-hidden="true" /> Subir</button>
+      <button type="submit" name="dir" value="down" className="s-btn s-btn--soft s-btn--sm" disabled={isLast}><ChevronDown aria-hidden="true" /> Bajar</button>
+    </form>
   );
 }
 

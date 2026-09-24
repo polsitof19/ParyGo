@@ -832,3 +832,32 @@ export async function setTicketTypePrivateAction(_prev: EditState, formData: For
   revalidatePath(`/admin/events/${eventId}`);
   return { ok: true, message };
 }
+
+// ===== Orden de las entradas en la página de compra =====
+// Mueve una entrada un lugar arriba/abajo y renumera todas 0..n-1 (así un
+// sort_order repetido de datos viejos también queda arreglado). Solo toca el
+// orden de presentación: nada de precio, stock ni pago.
+export async function moveTicketTypeAction(_prev: EditState, formData: FormData): Promise<EditState> {
+  const user = await requireSession();
+  const eventId = String(formData.get('event_id') ?? '');
+  const ttId = String(formData.get('ticket_type_id') ?? '');
+  const dir = formData.get('dir') === 'up' ? -1 : 1;
+  const auth = await authEvent(eventId, user);
+  if (!auth?.brandId) return { ok: false, message: 'No tienes permiso.' };
+
+  const admin = createAdminClient();
+  const { data: tts, error } = await admin.from('ticket_types').select('id').eq('event_id', eventId).order('sort_order').order('created_at');
+  if (error || !tts) return { ok: false, message: 'No se pudo leer las entradas.' };
+  const ids = tts.map((t) => t.id as string);
+  const i = ids.indexOf(ttId);
+  const j = i + dir;
+  if (i < 0) return { ok: false, message: 'Esa entrada no es de este evento.' };
+  if (j < 0 || j >= ids.length) return { ok: true, message: null };
+  [ids[i], ids[j]] = [ids[j]!, ids[i]!];
+
+  const res = await Promise.all(ids.map((id, n) => admin.from('ticket_types').update({ sort_order: n }).eq('id', id).eq('event_id', eventId)));
+  if (res.some((r) => r.error)) return { ok: false, message: 'No se pudo guardar el orden. Intenta de nuevo.' };
+  await auditarEscrituraSuper(admin, { user, modo: auth.modo ?? null, brandId: auth.brandId, eventId, accion: 'ticket_type_moved', diff: { ticket_type_id: ttId, dir } });
+  revalidatePath(`/admin/events/${eventId}/entradas`);
+  return { ok: true, message: null };
+}

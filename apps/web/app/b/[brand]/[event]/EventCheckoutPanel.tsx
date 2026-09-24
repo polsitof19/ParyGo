@@ -51,7 +51,8 @@ export function EventCheckoutPanel({
   direccion?: Direccion;
 }) {
   const sorted = useMemo(
-    () => [...ticketTypes].sort((a, b) => a.active_price_cents - b.active_price_cents || a.sort_order - b.sort_order),
+    // El orden lo decide el organizador en Entradas (Subir/Bajar).
+    () => [...ticketTypes].sort((a, b) => a.sort_order - b.sort_order),
     [ticketTypes]
   );
 

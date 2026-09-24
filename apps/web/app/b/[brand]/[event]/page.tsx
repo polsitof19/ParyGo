@@ -56,9 +56,7 @@ async function loadEvent(brandSlug: string, eventSlug: string, acceso: string | 
     .eq('event_id', event.id)
     .eq('is_active', true)
     .order('sort_order')
-    // Display order: HIGHEST price first (anchoring). After fetching by
-    // sort_order, we resort client-side to allow promoters to override.
-    ;
+    .order('created_at');
 
   // Resolve the ACTIVE price phase per ticket type (single source of truth in
   // SQL). Falls back to ticket_types.price_cents for types without phases.
