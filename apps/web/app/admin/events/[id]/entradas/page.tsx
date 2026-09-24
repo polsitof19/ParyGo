@@ -4,6 +4,7 @@ import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { publicEnv } from '@/lib/env';
 import { tokensPrivados, limitesPrivados } from '@/lib/privateAccess';
+import { PRUEBA_TOPE_ENTRADAS } from '@/lib/prueba';
 import { TicketTypeEditor, NewTicketTypeForm, type TtRow } from '../editar/EditEventForms';
 
 export const runtime = 'edge';
@@ -19,7 +20,7 @@ export default async function EventTicketsPage({ params }: { params: { id: strin
   const impersonating = ctx.soloLectura;
 
   const admin = createAdminClient();
-  const { data: event } = await admin.from('events').select('id, brand_id, is_free, slug, name').eq('id', params.id).maybeSingle();
+  const { data: event } = await admin.from('events').select('id, brand_id, is_free, slug, name, es_prueba').eq('id', params.id).maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
 
   const { data: tts } = await admin
@@ -55,6 +56,11 @@ export default async function EventTicketsPage({ params }: { params: { id: strin
           ? 'Solo lectura: los tipos de entrada se muestran tal cual.'
           : 'Toca una entrada para editarla; cada una se guarda con su propio botón. A quienes ya compraron se les respeta el precio que pagaron.'}
       </p>
+      {event.es_prueba && (
+        <p className="s-card__desc" style={{ marginBottom: 'var(--s-s3)' }}>
+          Evento de prueba gratis: hasta {PRUEBA_TOPE_ENTRADAS} entradas en total, sumando todos los tipos. Tienes {rows.reduce((s, r) => s + r.capacity, 0)} de {PRUEBA_TOPE_ENTRADAS} cargadas.
+        </p>
+      )}
       <div className="s-folds">
         {rows.length === 0 && <p className="s-empty">Este evento no tiene entradas todavía. Crea la primera abajo.</p>}
         {rows.map((t, i) => <TicketTypeEditor key={t.id} isFirst={i === 0} isLast={i === rows.length - 1} eventId={event.id} eventIsFree={eventIsFree} tt={t} readOnly={impersonating} linkPrivado={impersonating ? null : linkDe(t.id)} limitePrivado={limites.get(t.id) ?? null} eventName={event.name} />)}

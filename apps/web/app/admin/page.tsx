@@ -11,6 +11,7 @@ import { LowBalanceNotice } from './LowBalanceNotice';
 import { publicEnv } from '@/lib/env';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { setEventArchivedAction } from './events/[id]/edit-actions';
+import { pruebaDisponible } from '@/lib/prueba';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -128,7 +129,8 @@ export default async function AdminHomePage() {
     .map((o) => ({ id: o.id, buyerName: o.buyer_name, totalCents: o.total_cents ?? 0, createdAt: o.created_at, eventName: eventNameById.get(o.event_id) ?? 'Evento' }));
 
   const balance = brand.event_balance ?? 0;
-  const canCreate = balance > 0;
+  // Sin saldo, la prueba gratis (0069) también deja crear (una sola vez).
+  const canCreate = balance > 0 || (!impersonating && (await pruebaDisponible(brandId)));
 
   // Setup guiado (Grupo B): progreso DERIVADO de los datos (no hay flag en BD).
   // Pasos = configurar cobro → crear evento → cargar entradas → publicar.
@@ -225,7 +227,8 @@ export default async function AdminHomePage() {
       )}
 
       {/* Aviso de saldo bajo (solo dueño): es una tarea, va arriba. */}
-      {!impersonating && (
+      {/* Con la prueba gratis sin usar, "te quedaste sin saldo" sería falso. */}
+      {!impersonating && !(balance === 0 && canCreate) && (
         <LowBalanceNotice balance={balance} brandName={brand.name} supportWhatsapp={publicEnv.NEXT_PUBLIC_SUPPORT_WHATSAPP} />
       )}
 

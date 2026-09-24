@@ -117,6 +117,11 @@ export function CreateBrandForm({ requestId, initialName = '', initialEmail = ''
         {state.fieldErrors?.owner_password && <p className="s-err">{state.fieldErrors.owner_password}</p>}
       </div>
 
+      <div className="s-field">
+        <label className="s-check"><input type="checkbox" name="prueba_gratis" defaultChecked /> Dar prueba gratis</label>
+        <p className="s-hint">1 evento sin saldo, hasta 50 entradas en total. Se usa una sola vez.</p>
+      </div>
+
       <div className="s-divider" />
       <p className="s-section-lead">Marca visual (opcional)</p>
       <p className="s-hint" style={{ marginTop: 2, marginBottom: 12 }}>

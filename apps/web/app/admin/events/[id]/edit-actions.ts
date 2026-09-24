@@ -11,6 +11,7 @@ import { generarToken, tokensPrivados, parseMaxPorPersona } from '@/lib/privateA
 import { puedeEscribirComoSuper, type ModoEscrituraSuper } from '@/lib/impersonation';
 import { auditarEscrituraSuper, diffDeCampos } from '@/lib/auditoriaSuper';
 import { formatEventDate } from '@/lib/utils';
+import { mensajePrueba } from '@/lib/prueba';
 
 export type EditState = { ok: boolean; message: string | null };
 
@@ -687,10 +688,6 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
       return { ok: false, message: 'Este tipo tiene fases de preventa; el precio se gestiona por fases (no editable aquí).' };
     }
     update.price_cents = newPriceCents;
-    // Si hay UNA fase base (sin ventas), la alineamos para que el precio activo coincida.
-    if (phaseCount === 1) {
-      await admin.from('ticket_type_price_phases').update({ price_cents: newPriceCents }).eq('ticket_type_id', ttId);
-    }
   }
 
   // Reglas de precio sobre el estado RESULTANTE (precio/fases + ilimitado). La
@@ -707,7 +704,14 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   if (pricingErr) return { ok: false, message: pricingErr };
 
   const { error } = await admin.from('ticket_types').update(update).eq('id', ttId).eq('event_id', eventId);
-  if (error) return { ok: false, message: error.message };
+  if (error) return { ok: false, message: mensajePrueba(error.message) ?? error.message };
+  // Si hay UNA fase base (sin ventas), la alineamos para que el precio activo
+  // coincida. DESPUÉS del update del tipo: antes corría primero y, si una
+  // validación de abajo o el tope de la prueba (0069) rechazaba el guardado,
+  // la fase (el precio que se COBRA) quedaba con el precio nuevo igual.
+  if (priceChanged && (phaseRows ?? []).length === 1) {
+    await admin.from('ticket_type_price_phases').update({ price_cents: update.price_cents as number }).eq('ticket_type_id', ttId);
+  }
 
   await admin.from('events_log').insert({ brand_id: brandId, event_id: eventId, actor_user_id: user.id, type: 'ticket_type_edited', payload: { ticket_type_id: ttId } });
   // Auditoría de super admin: además del registro de dominio de arriba, queda
@@ -757,7 +761,7 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
     .insert({ event_id: eventId, name, description: description || null, price_cents: priceCents, capacity, is_unlimited: isUnlimited, is_active: !privada, sort_order: sortOrder, sold: 0, reserved: 0, max_scans: 1, bulk_min_qty: bulkMinQty, bulk_discount_pct: bulkPct, color_hex: colorHex ?? null })
     .select('id')
     .single();
-  if (error || !created) return { ok: false, message: error?.message ?? 'No se pudo crear el tipo.' };
+  if (error || !created) return { ok: false, message: mensajePrueba(error?.message) ?? error?.message ?? 'No se pudo crear el tipo.' };
 
   // Fase base (todo el período) para que el precio activo se resuelva como los demás.
   await admin.from('ticket_type_price_phases').insert({ ticket_type_id: created.id, name: 'Base', price_cents: priceCents, starts_at: null, ends_at: null, sort_order: 0 });

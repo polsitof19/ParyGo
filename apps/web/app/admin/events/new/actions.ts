@@ -9,6 +9,7 @@ import { contextoEscritura } from '@/lib/impersonation';
 import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { uploadEventCover, coverDims } from '@/lib/brandAssets';
 import { limaToIso, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
+import { mensajePrueba } from '@/lib/prueba';
 
 export type FormState = {
   ok: boolean;
@@ -119,7 +120,12 @@ export async function createBrandEventAction(
     dims = coverDims(up);
   }
 
-  const { data: newEventId, error } = await admin.rpc('create_brand_event', {
+  // Con saldo, el camino de siempre. Sin saldo, la prueba gratis (0069) si la
+  // marca la tiene: create_brand_trial_event la gasta y topa el evento a 50.
+  // Ambos RPC son atómicos: esta lectura solo elige el camino, no autoriza.
+  const { data: bal } = await admin.from('brands').select('event_balance, prueba_disponible').eq('id', brandId).single();
+  const usarPrueba = (bal?.event_balance ?? 0) <= 0 && bal?.prueba_disponible === true;
+  const { data: newEventId, error } = await admin.rpc(usarPrueba ? 'create_brand_trial_event' : 'create_brand_event', {
     p_brand_id: brandId, // from session
     p_actor_user_id: user.id,
     p_event: {
@@ -157,7 +163,9 @@ export async function createBrandEventAction(
 
   if (error || !newEventId) {
     const msg = error?.message ?? '';
-    if (msg.includes('INSUFFICIENT_BALANCE')) {
+    const tope = mensajePrueba(msg);
+    if (tope) return { ok: false, message: tope };
+    if (msg.includes('INSUFFICIENT_BALANCE') || msg.includes('NO_TRIAL')) {
       return { ok: false, message: 'Tu marca no tiene saldo de eventos. Contacta a ParyGo para cargar un pack.' };
     }
     if (msg.includes('NO_TICKET_TYPES')) {

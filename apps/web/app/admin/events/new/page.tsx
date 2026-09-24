@@ -5,6 +5,7 @@ import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createClient } from '@/lib/supabase/server';
 import { EventBuilder } from './EventBuilder';
+import { pruebaDisponible, PRUEBA_TOPE_ENTRADAS } from '@/lib/prueba';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -27,8 +28,10 @@ export default async function NewBrandEventPage() {
     .single();
   if (!brand) redirect('/admin');
 
-  // Hard gate (UX): sin saldo → no llega al form. El RPC es el guard real.
-  if ((brand.event_balance ?? 0) <= 0) redirect('/admin');
+  // Hard gate (UX): sin saldo ni prueba → no llega al form. El RPC es el guard real.
+  const conSaldo = (brand.event_balance ?? 0) > 0;
+  const prueba = !conSaldo && (await pruebaDisponible(ctx.brandId));
+  if (!conSaldo && !prueba) redirect('/admin');
 
   return (
     <div style={{ maxWidth: 680 }}>
@@ -38,7 +41,9 @@ export default async function NewBrandEventPage() {
       <header style={{ marginBottom: 22 }}>
         <h1 className="s-h1" style={{ marginTop: 8 }}>Crear evento</h1>
         <p className="s-card__desc">
-          Tres pasos: lo básico, las entradas y (si quieres) los detalles. Usa 1 de tu saldo ({brand.event_balance} disponible{brand.event_balance === 1 ? '' : 's'}). Se crea en borrador y lo publicas cuando esté listo.
+          {prueba
+            ? `Tres pasos: lo básico, las entradas y (si quieres) los detalles. Es tu evento de prueba gratis: hasta ${PRUEBA_TOPE_ENTRADAS} entradas en total, sumando todos los tipos. Se crea en borrador y lo publicas cuando esté listo.`
+            : <>Tres pasos: lo básico, las entradas y (si quieres) los detalles. Usa 1 de tu saldo ({brand.event_balance} disponible{brand.event_balance === 1 ? '' : 's'}). Se crea en borrador y lo publicas cuando esté listo.</>}
         </p>
       </header>
       <EventBuilder />

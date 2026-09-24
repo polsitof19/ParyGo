@@ -273,6 +273,8 @@ export async function createBrandWithOwnerAction(
       name: parsed.data.name,
       contact_email: email,
       theme_json: themeJson,
+      // Prueba gratis (0069): 1 evento sin saldo, hasta 50 entradas.
+      prueba_disponible: formData.get('prueba_gratis') === 'on',
     })
     .select('id, slug')
     .single();

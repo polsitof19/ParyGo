@@ -58,6 +58,7 @@ export type Database = {
           id: string
           instagram: string | null
           is_test: boolean
+          prueba_disponible: boolean
           mp_access_token_enc: string | null
           mp_public_key_enc: string | null
           name: string
@@ -79,6 +80,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           is_test?: boolean
+          prueba_disponible?: boolean
           mp_access_token_enc?: string | null
           mp_public_key_enc?: string | null
           name: string
@@ -100,6 +102,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           is_test?: boolean
+          prueba_disponible?: boolean
           mp_access_token_enc?: string | null
           mp_public_key_enc?: string | null
           name?: string
@@ -130,6 +133,7 @@ export type Database = {
           // 0060: NULL = sin límite. Agregada A MANO (regenerar el archivo entero
           // rompe tipos afinados; ver CLAUDE.md).
           max_per_person: number | null
+          es_prueba: boolean
           is_published: boolean
           min_age: number
           require_age_confirmation: boolean
@@ -162,6 +166,7 @@ export type Database = {
           id?: string
           is_free?: boolean
           max_per_person?: number | null
+          es_prueba?: boolean
           is_published?: boolean
           min_age?: number
           require_age_confirmation?: boolean
@@ -194,6 +199,7 @@ export type Database = {
           id?: string
           is_free?: boolean
           max_per_person?: number | null
+          es_prueba?: boolean
           is_published?: boolean
           min_age?: number
           require_age_confirmation?: boolean
@@ -1233,6 +1239,15 @@ export type Database = {
         Returns: string
       }
       create_brand_event: {
+        Args: {
+          p_brand_id: string
+          p_actor_user_id: string
+          p_event: Json
+          p_ticket_types: Json
+        }
+        Returns: string
+      }
+      create_brand_trial_event: {
         Args: {
           p_brand_id: string
           p_actor_user_id: string
