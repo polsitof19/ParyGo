@@ -1,0 +1,60 @@
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { requireSession } from '@/lib/auth';
+import { ownerBrandContext } from '@/lib/impersonation';
+import { createAdminClient } from '@/lib/supabase/admin';
+
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
+
+// Resultado de una compra de paquete (0070). Solo MUESTRA el estado: quien
+// acredita es el webhook de MP o la vuelta de PayPal (settle_pack_purchase).
+export default async function CompraListaPage({ searchParams }: { searchParams: { compra?: string; estado?: string } }) {
+  const user = await requireSession();
+  const ctx = ownerBrandContext(user);
+  if (!ctx) redirect('/login');
+
+  const admin = createAdminClient();
+  const id = /^[0-9a-f-]{36}$/i.test(searchParams.compra ?? '') ? searchParams.compra! : null;
+  // Acotada a la marca de la sesión: no se lee una compra ajena por su id.
+  const { data: compra } = id
+    ? await admin.from('pack_purchases').select('id, pack, provider, provider_ref, status').eq('id', id).eq('brand_id', ctx.brandId).maybeSingle()
+    : { data: null };
+  const { data: brand } = await admin.from('brands').select('event_balance').eq('id', ctx.brandId).single();
+
+  let titulo: string;
+  let texto: string;
+  if (compra?.status === 'paid') {
+    titulo = 'Listo, ya tienes tus eventos';
+    texto = `Se sumaron ${compra.pack} evento${compra.pack === 1 ? '' : 's'} a tu saldo. Ahora tienes ${brand?.event_balance ?? 0}.`;
+  } else if (compra?.status === 'failed') {
+    titulo = 'El pago no se completó';
+    texto = 'No se sumó nada a tu saldo. Si se te cobró, escríbenos y lo revisamos.';
+  } else if (compra) {
+    titulo = 'Estamos confirmando tu pago';
+    texto = 'Suele tardar unos segundos. Recarga esta página en un momento; si el pago se aprobó, tu saldo se suma solo.';
+  } else {
+    titulo = 'No encontramos esa compra';
+    texto = 'Si pagaste y no ves tu saldo, escríbenos y lo revisamos.';
+  }
+
+  // PayPal: si la vuelta falló (red, sesión), reintentar la vuelta es seguro:
+  // el cobro es idempotente y un pago ya cobrado no se acredita dos veces.
+  const reintentarPaypal = compra && compra.provider === 'paypal' && compra.status === 'pending' && compra.provider_ref
+    ? `/api/paypal/volver?compra=${compra.id}&token=${encodeURIComponent(compra.provider_ref)}`
+    : null;
+
+  return (
+    <div style={{ maxWidth: 680 }}>
+      <h1 className="s-h1">{titulo}</h1>
+      <p className="s-card__desc" style={{ marginBottom: 'var(--s-s3)' }}>{texto}</p>
+      <div className="s-form-actions" style={{ borderTop: 0, paddingTop: 0 }}>
+        {compra?.status === 'paid'
+          ? <Link href="/admin/events/new" className="s-btn s-btn--primary s-btn--sm">Crear evento</Link>
+          : <Link href={`/admin/comprar/listo?compra=${compra?.id ?? ''}`} className="s-btn s-btn--soft s-btn--sm">Recargar</Link>}
+        {reintentarPaypal && <a href={reintentarPaypal} className="s-btn s-btn--ghost s-btn--sm">Confirmar con PayPal</a>}
+        <Link href="/admin" className="s-btn s-btn--ghost s-btn--sm">Volver al panel</Link>
+      </div>
+    </div>
+  );
+}

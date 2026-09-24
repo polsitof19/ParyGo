@@ -179,9 +179,9 @@ export default async function AdminHomePage() {
       <Plus aria-hidden="true" /> Crear evento
     </Link>
   ) : (
-    <button type="button" className="s-btn s-btn--soft s-btn--sm" disabled title="Sin saldo de eventos">
-      <Plus aria-hidden="true" /> Crear evento
-    </button>
+    <Link href="/admin/comprar" className="s-btn s-btn--soft s-btn--sm">
+      <Plus aria-hidden="true" /> Comprar eventos
+    </Link>
   );
 
   // EVENTOS como TARJETAS con su flyer (pedido de Paul, 2026-09-23): con dos o
@@ -235,7 +235,7 @@ export default async function AdminHomePage() {
       {/* Aviso de saldo bajo (solo dueño): es una tarea, va arriba. */}
       {/* Con la prueba gratis sin usar, "te quedaste sin saldo" sería falso. */}
       {!impersonating && !(balance === 0 && canCreate) && (
-        <LowBalanceNotice balance={balance} brandName={brand.name} supportWhatsapp={publicEnv.NEXT_PUBLIC_SUPPORT_WHATSAPP} />
+        <LowBalanceNotice balance={balance} />
       )}
 
       {/* Recuperación de tickets — solo aparece si hay órdenes pagadas sin tickets.

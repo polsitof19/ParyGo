@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      pack_purchases: {
+        Row: {
+          id: string
+          brand_id: string
+          pack: number
+          provider: string
+          currency: string
+          amount_cents: number
+          status: string
+          provider_ref: string | null
+          provider_payment_id: string | null
+          created_by: string | null
+          created_at: string
+          paid_at: string | null
+        }
+        Insert: {
+          id?: string
+          brand_id: string
+          pack: number
+          provider: string
+          currency: string
+          amount_cents: number
+          status?: string
+          provider_ref?: string | null
+          provider_payment_id?: string | null
+          created_by?: string | null
+          created_at?: string
+          paid_at?: string | null
+        }
+        Update: {
+          id?: string
+          brand_id?: string
+          pack?: number
+          provider?: string
+          currency?: string
+          amount_cents?: number
+          status?: string
+          provider_ref?: string | null
+          provider_payment_id?: string | null
+          created_by?: string | null
+          created_at?: string
+          paid_at?: string | null
+        }
+        Relationships: []
+      }
       brand_members: {
         Row: {
           brand_id: string
@@ -1246,6 +1291,16 @@ export type Database = {
           p_ticket_types: Json
         }
         Returns: string
+      }
+      settle_pack_purchase: {
+        Args: {
+          p_purchase_id: string
+          p_provider: string
+          p_payment_id: string
+          p_paid_cents: number
+          p_currency: string
+        }
+        Returns: Json
       }
       create_brand_trial_event: {
         Args: {
