@@ -355,7 +355,9 @@ para no romper la app vieja desplegada.
   se puede leer la tabla). Un S/0 privado se reclama gratis aunque el evento
   cobre (todoPrivado), pero un carrito mixto paga lo público. El organizador:
   Entradas → la entrada → Hacerla privada / Copiar link / WhatsApp / Cambiar
-  link (el viejo muere) / Hacerla pública; o la casilla Privada al crear. En
+  link (el viejo muere) / Hacerla pública; o la casilla Privada al crear.
+  Con el link se ve SOLO la privada (sin las públicas: cada promotor lleva su
+  conteo), y el checkout rechaza mezclarla con una pública. En
   solo lectura (super mirando) el token NO se manda al navegador. Paso O del E2E.
 - CORTESÍAS: se emiten al email del organizador (precargado) y la página
   Cortesías lista CADA entrada con "Copiar link" y "WhatsApp" (la URL solo

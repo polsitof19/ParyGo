@@ -230,6 +230,11 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // Todo lo pedido es de un link privado válido: puede costar S/0 aunque el
   // evento cobre (la cortesía del promotor).
   const todoPrivado = parsed.data.items.length > 0 && parsed.data.items.every((i) => privados.has(i.ticketTypeId));
+  // Con un link privado solo se reclama la entrada de ese link: el que entró
+  // por el promotor cuenta para el promotor, no se lleva una pública.
+  if (accesoTok && [...privados.values()].some((tk) => mismoToken(tk, accesoTok)) && !todoPrivado) {
+    return { ok: false, message: 'Con este link solo puedes reclamar la entrada de tu invitación.' };
+  }
 
   // Evento gratis sin código: un solo viaje (0064). Con código promo va por el
   // camino de siempre, que es el que sabe aplicarlo.

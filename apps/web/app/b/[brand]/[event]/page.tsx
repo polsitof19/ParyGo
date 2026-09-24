@@ -112,7 +112,8 @@ async function loadEvent(brandSlug: string, eventSlug: string, acceso: string | 
   // panel. El server (reserva y checkout) aplica la misma regla en
   // lib/publicTicketGuard — esto es solo la presentación.
   // ENTRADAS PRIVADAS (0066): un tipo con link privado NO se ofrece al público;
-  // con ?acceso=<SU token> se muestra PRIMERO (y puede costar S/0 aunque el
+  // con ?acceso=<SU token> se muestra SOLA —sin las públicas, para que el
+  // organizador sepa cuántos trajo cada promotor— (y puede costar S/0 aunque el
   // evento cobre). El server (reserva y checkout) exige el mismo token.
   const privados = await tokensPrivados(createAdminClient(), ticketTypesWithPhase.map((t) => t.id));
   const tok = normalizarToken(acceso);
@@ -121,7 +122,7 @@ async function loadEvent(brandSlug: string, eventSlug: string, acceso: string | 
     !privados.has(t.id) &&
     isPubliclyOffered(t.active_price_cents, { eventoEsGratis: event.is_free === true, esCortesia: t.is_courtesy === true })
   );
-  const publicTicketTypes = [...conLink, ...publicas];
+  const publicTicketTypes = conLink.length > 0 ? conLink : publicas;
 
   // MercadoPago: the card option only shows if THIS brand configured MP creds.
   // The public_key (inherently public) is read server-side and handed to the

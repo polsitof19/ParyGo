@@ -1325,6 +1325,10 @@ if (!S.eventId) {
     const tokFalso = await pb.getByRole('button', { name: `Sumar ${nombre}` }).count();
     check('O', 'sin link o con un link falso NO aparece', sinLink === 0 && tokFalso === 0, `sin=${sinLink} falso=${tokFalso}`);
 
+    await go(pb, `/${EVENT_SLUG}?acceso=${acc.token}`);
+    const privVis = await pb.getByRole('button', { name: `Sumar ${nombre}` }).count();
+    const pubVis = await pb.getByRole('button', { name: 'Sumar General' }).count();
+    check('O', 'con el link se ve SOLO la entrada privada (sin las públicas)', privVis === 1 && pubVis === 0, `privada=${privVis} general=${pubVis}`);
     const resReqP = pb.waitForRequest((q) => q.method() === 'POST' && !!q.headers()['next-action'] && (q.postData() || '').includes(tt.id), { timeout: 30000 }).catch(() => null);
     const emailO = `e2e-o-${STAMP}@test.local`;
     const r = await buy({ items: { [nombre]: 1 }, email: emailO, name: `Privada O ${STAMP}`, tag: 'O', query: `?acceso=${acc.token}`, shots: true });
