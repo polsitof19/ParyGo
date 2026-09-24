@@ -321,7 +321,11 @@ export default async function EventPage({ params, searchParams }: Props) {
         </footer>
 
         <p className="sr-only">
-          Entradas desde {formatPEN(Math.min(...(ticketTypes.length ? ticketTypes.map((t) => t.active_price_cents) : [0])))}.
+          {(() => {
+            // Mismo criterio que la barra: el "desde" es la paga más barata; sin pagas, es gratis.
+            const pagas = ticketTypes.map((t) => t.active_price_cents).filter((c) => c > 0);
+            return pagas.length ? `Entradas desde ${formatPEN(Math.min(...pagas))}.` : 'Entrada gratis.';
+          })()}
         </p>
       </article>
     </>
