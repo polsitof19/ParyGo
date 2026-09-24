@@ -125,7 +125,9 @@ export function armarEscalera(t: TicketType): Peldano[] {
       const sub = f.ends_at ? `${nombre} · hasta el ${fmtDia(f.ends_at)}` : nombre;
       return { titulo: t.name, sub, precio: f.price_cents, estado };
     }
-    let sub: string | null = null;
+    // Una preventa que ya pasó se lee como "Agotada" (así lo anuncia el
+    // organizador en su flyer), no como una fila muda.
+    let sub: string | null = estado === 'pasada' ? 'Agotada' : null;
     if (estado === 'futura' && f.starts_at) {
       const previa = ordenadas[i - 1]?.ends_at;
       const mismoDia = previa ? fmtDia(previa) === fmtDia(f.starts_at) : false;
