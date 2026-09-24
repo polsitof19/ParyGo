@@ -259,11 +259,12 @@
 /* ---------- Yape ---------- */
 .client-shell .b-buy.b-yape { max-width: 640px; }
 .client-shell .b-yapecard {
-  display: grid; grid-template-columns: var(--b-yape-qr) minmax(0, 1fr); gap: var(--b-s2); align-items: center;
+  /* QR arriba y grande (se escanea desde otro teléfono), número debajo. */
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--b-s2);
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: var(--b-s2);
 }
-.client-shell .b-yapecard--sinqr { grid-template-columns: minmax(0, 1fr); }
-.client-shell .b-yapeqr { display: block; width: var(--b-yape-qr); height: var(--b-yape-qr); padding: 6px; border-radius: var(--r-ctl); background: #FFFFFF; }
+.client-shell .b-yapeqr { display: block; width: var(--b-yape-qr); max-width: 100%; aspect-ratio: 1; padding: 6px; border-radius: var(--r-ctl); background: #FFFFFF; }
+.client-shell .b-yapeacts { display: flex; flex-wrap: wrap; gap: var(--b-sm); }
 .client-shell .b-yapeqr img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .client-shell .b-yapenum { font-size: var(--b-total); font-weight: 800; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; line-height: 1.15; }
 .client-shell .b-yapeheld { margin-top: 2px; font-size: var(--b-meta); color: var(--ink-2); }

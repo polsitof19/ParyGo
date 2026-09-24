@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
 import { YapeUploadForm } from './YapeUploadForm';
 import { CopyButton } from './CopyButton';
+import { DownloadQrButton } from './DownloadQrButton';
 import { LineaPago } from '../../Responsable';
 import { publicEnv } from '@/lib/env';
 
@@ -98,7 +99,11 @@ export default async function YapeUploadPage({
           <div>
             <p className="b-yapenum">{order.brand.yape_number}</p>
             <p className="b-yapeheld">{order.brand.yape_holder ?? order.brand.name}</p>
-            <CopyButton value={order.brand.yape_number} label="número" />
+            <div className="b-yapeacts">
+              <CopyButton value={order.brand.yape_number} label="número" />
+              {qrUrl && <DownloadQrButton url={qrUrl} nombre={`yape-${order.brand.slug}`} />}
+            </div>
+            {qrUrl && <p className="b-aviso">Guarda el QR y, al escanear en Yape, elígelo desde tu galería.</p>}
           </div>
         </div>
       </div>
