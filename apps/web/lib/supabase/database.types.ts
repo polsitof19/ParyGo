@@ -821,18 +821,21 @@ export type Database = {
       ticket_type_access: {
         Row: {
           created_at: string
+          max_por_persona: number | null
           rotated_at: string | null
           ticket_type_id: string
           token: string
         }
         Insert: {
           created_at?: string
+          max_por_persona?: number | null
           rotated_at?: string | null
           ticket_type_id: string
           token: string
         }
         Update: {
           created_at?: string
+          max_por_persona?: number | null
           rotated_at?: string | null
           ticket_type_id?: string
           token?: string

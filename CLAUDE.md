@@ -316,7 +316,7 @@ organizador daba "permission denied" y "Mi marca" salía EN BLANCO. El panel
 ya la lee con service role acotada a la marca; la migración del grant queda
 para cuando Paul la apruebe (no hace falta para que ande).
 
-Incrementales, idempotentes, numeradas (vamos por 0067). Backwards-compatible
+Incrementales, idempotentes, numeradas (vamos por 0069). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
 para no romper la app vieja desplegada.
 
@@ -357,7 +357,16 @@ para no romper la app vieja desplegada.
   Entradas → la entrada → Hacerla privada / Copiar link / WhatsApp / Cambiar
   link (el viejo muere) / Hacerla pública; o la casilla Privada al crear.
   Con el link se ve SOLO la privada (sin las públicas: cada promotor lleva su
-  conteo), y el checkout rechaza mezclarla con una pública. En
+  conteo), y el checkout rechaza mezclarla con una pública.
+  CUÁNTAS POR PERSONA (0067 + 0068): ticket_type_access.max_por_persona, lo
+  pone el organizador en la entrada ("Guardar límite"; NULL = sin límite;
+  default 1 si es gratis, sin límite si es paga). Lo aplica reserve_order_stock
+  (embudo de startCheckout Y claim_free_order) con advisory lock por (tipo,
+  email) y (tipo, documento) → 'private_claim_limit'. Test de concurrencia en
+  el paso O (2 simultáneos del mismo correo → 1 entrada). Los códigos promo NO
+  aplican a entradas de link (el tope se mide antes del promo: privada paga +
+  código 100% lo esquivaba). El documento se compara en MAYÚSCULAS en los dos
+  topes (0060 y 0067). En
   solo lectura (super mirando) el token NO se manda al navegador. Paso O del E2E.
 - CORTESÍAS: se emiten al email del organizador (precargado) y la página
   Cortesías lista CADA entrada con "Copiar link" y "WhatsApp" (la URL solo

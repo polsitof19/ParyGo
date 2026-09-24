@@ -6,7 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv, publicEnv } from '@/lib/env';
 import { formatPEN } from '@/lib/utils';
 import { isPubliclyOffered } from '@/lib/publicTicketGuard';
-import { mismoToken, normalizarToken, tokensPrivados } from '@/lib/privateAccess';
+import { mismoToken, normalizarToken, tokensPrivados, limitesPrivados } from '@/lib/privateAccess';
 import { decidirDireccion, claseDireccion } from '@/lib/concepto';
 import { optimizedImage } from '@/lib/imageUrl';
 import { EventCheckoutPanel } from './EventCheckoutPanel';
@@ -123,6 +123,10 @@ async function loadEvent(brandSlug: string, eventSlug: string, acceso: string | 
     isPubliclyOffered(t.active_price_cents, { eventoEsGratis: event.is_free === true, esCortesia: t.is_courtesy === true })
   );
   const publicTicketTypes = conLink.length > 0 ? conLink : publicas;
+  // Cuántas por persona de cada entrada del link (0068): solo tope del selector;
+  // el límite real lo aplica reserve_order_stock.
+  const limites = conLink.length > 0 ? await limitesPrivados(createAdminClient(), conLink.map((t) => t.id)) : new Map<string, number | null>();
+  const topePorTipo = Object.fromEntries([...limites].filter(([, n]) => n !== null)) as Record<string, number>;
 
   // MercadoPago: the card option only shows if THIS brand configured MP creds.
   // The public_key (inherently public) is read server-side and handed to the
@@ -148,6 +152,7 @@ async function loadEvent(brandSlug: string, eventSlug: string, acceso: string | 
     brand,
     event,
     ticketTypes: publicTicketTypes,
+    topePorTipo,
     // MP is only really usable if BOTH the creds and the decrypted public_key are present.
     mpConfigured: mpConfigured && Boolean(mpPublicKey),
     mpPublicKey,
@@ -298,6 +303,7 @@ export default async function EventPage({ params, searchParams }: Props) {
           mpPublicKey={mpPublicKey}
           refCode={refCode}
           accessToken={normalizarToken(accesoRaw) ?? undefined}
+          topePorTipo={data.topePorTipo}
           shareUrl={shareUrl}
           direccion={direccion}
         />

@@ -224,7 +224,7 @@ function PriceField({ id, defaultSoles, free, onFree, locked, eventIsFree }: { i
 
 // Una fila por tipo de entrada: plegada muestra lo que importa (color, nombre,
 // precio, vendidas); abierta se edita y tiene SU botón de guardar.
-export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false, linkPrivado = null, eventName = '' }: { eventId: string; eventIsFree: boolean; tt: TtRow; readOnly?: boolean; linkPrivado?: string | null; eventName?: string }) {
+export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false, linkPrivado = null, limitePrivado = null, eventName = '' }: { eventId: string; eventIsFree: boolean; tt: TtRow; readOnly?: boolean; linkPrivado?: string | null; limitePrivado?: number | null; eventName?: string }) {
   const [state, action] = useFormFeedback(updateTicketTypeAction, initial);
   const [free, setFree] = useState(tt.priceCents === 0);
   const hasSales = tt.sold > 0;
@@ -237,7 +237,7 @@ export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false, l
         <span className="a-tt-sum">
           <span className={tt.colorHex ? 'a-tt-dot a-tt-dot--on' : 'a-tt-dot'} style={tt.colorHex ? ({ '--sw': tt.colorHex } as React.CSSProperties) : undefined} aria-hidden="true" />
           <span className="a-tt-name">{tt.name}</span>
-          <span className="a-tt-meta">{price} · {stock}{!tt.isActive && ' · pausada'}{linkPrivado && ' · privada (solo con link)'}</span>
+          <span className="a-tt-meta">{price} · {stock}{!tt.isActive && ' · pausada'}{linkPrivado && ` · privada (solo con link)${limitePrivado ? ` · ${limitePrivado} por persona` : ''}`}</span>
         </span>
         <ChevronDown aria-hidden="true" />
       </summary>
@@ -275,7 +275,7 @@ export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false, l
           <Banner state={state} />
           {!ro && <div className="s-form-actions"><Submit label={`Guardar cambios de ${tt.name}`} /></div>}
         </form>
-        {!ro && <PrivateLink eventId={eventId} tt={tt} link={linkPrivado} eventName={eventName} />}
+        {!ro && <PrivateLink eventId={eventId} tt={tt} link={linkPrivado} limite={limitePrivado} eventName={eventName} />}
       </div>
     </details>
   );
@@ -305,6 +305,7 @@ export function NewTicketTypeForm({ eventId, eventIsFree }: { eventId: string; e
 
 function NewTicketTypeFields({ eventId, eventIsFree, action }: { eventId: string; eventIsFree: boolean; action: (fd: FormData) => void }) {
   const [free, setFree] = useState(false);
+  const [privada, setPrivada] = useState(false);
   return (
     <form action={action} onSubmit={(e) => guardPrice(e, free)}>
       <input type="hidden" name="event_id" value={eventId} />
@@ -323,9 +324,16 @@ function NewTicketTypeFields({ eventId, eventIsFree, action }: { eventId: string
         <ColorField id="tt-new-color" initial={null} />
       </div>
       <div className="s-field">
-        <label className="s-check"><input type="checkbox" name="privada" /> Privada: solo con link</label>
+        <label className="s-check"><input type="checkbox" name="privada" checked={privada} onChange={(e) => setPrivada(e.target.checked)} /> Privada: solo con link</label>
         <p className="s-hint">No aparece en tu página. Te damos un link para mandarle a un promotor: solo quien entra con ese link la ve y la reclama.</p>
       </div>
+      {privada && (
+        <div className="s-field">
+          <label className="s-label" htmlFor="tt-new-max">Cuántas puede reclamar cada persona</label>
+          <input key={String(free)} id="tt-new-max" name="max_por_persona" type="number" inputMode="numeric" min={1} max={100} defaultValue={free ? '1' : ''} placeholder="Sin límite" className="s-input" />
+          <p className="s-hint">Se cuenta por correo y por documento. Déjalo vacío para no limitar.</p>
+        </div>
+      )}
       <details className="s-details">
         <summary>Más opciones</summary>
         <div className="s-field">
@@ -343,9 +351,10 @@ function NewTicketTypeFields({ eventId, eventIsFree, action }: { eventId: string
 // ENTRADA PRIVADA CON LINK (0066). Formulario aparte del de "Guardar cambios":
 // hacerla privada, copiar/compartir su link, cambiarlo (el viejo deja de
 // servir) o volverla pública. El token lo genera el server.
-function PrivateLink({ eventId, tt, link, eventName }: { eventId: string; tt: TtRow; link: string | null; eventName: string }) {
+function PrivateLink({ eventId, tt, link, limite, eventName }: { eventId: string; tt: TtRow; link: string | null; limite: number | null; eventName: string }) {
   const [state, action] = useFormFeedback(setTicketTypePrivateAction, initial);
-  void state;
+  const [stateLim, actionLim] = useFormFeedback(setTicketTypePrivateAction, initial);
+  void state; void stateLim;
   async function copiar() {
     if (!link) return;
     try { await navigator.clipboard.writeText(link); toast.success('Link copiado. Mándaselo a tu promotor.'); }
@@ -385,6 +394,21 @@ function PrivateLink({ eventId, tt, link, eventName }: { eventId: string; tt: Tt
           <button type="submit" name="accion" value="privada" className="s-btn s-btn--soft s-btn--sm"><Lock aria-hidden="true" /> Hacerla privada</button>
         )}
       </form>
+      {link && (
+        // Cuántas por persona (0068): formulario aparte para que Enter en el
+        // número no dispare "Cambiar link".
+        <form action={actionLim} className="s-field a-priv__lim">
+          <input type="hidden" name="event_id" value={eventId} />
+          <input type="hidden" name="ticket_type_id" value={tt.id} />
+          <input type="hidden" name="accion" value="limite" />
+          <label className="s-label" htmlFor={`max-${tt.id}`}>Cuántas puede reclamar cada persona</label>
+          <div className="a-priv__acts">
+            <input id={`max-${tt.id}`} name="max_por_persona" type="number" inputMode="numeric" min={1} max={100} defaultValue={limite ?? ''} placeholder="Sin límite" className="s-input a-priv__num" />
+            <button type="submit" className="s-btn s-btn--soft s-btn--sm">Guardar límite</button>
+          </div>
+          <p className="s-hint">Se cuenta por correo y por documento. Vacío = sin límite.</p>
+        </form>
+      )}
     </div>
   );
 }

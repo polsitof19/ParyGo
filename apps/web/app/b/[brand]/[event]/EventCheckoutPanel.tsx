@@ -39,12 +39,13 @@ function bulkUnitPrice(t: TicketType, q: number): number {
 }
 
 export function EventCheckoutPanel({
-  brand, event, ticketTypes, mpConfigured, mpPublicKey, refCode = '', accessToken, shareUrl, direccion = 'editorial',
+  brand, event, ticketTypes, mpConfigured, mpPublicKey, refCode = '', accessToken, topePorTipo, shareUrl, direccion = 'editorial',
 }: {
   brand: Brand; event: Event; ticketTypes: TicketType[]; mpConfigured: boolean; mpPublicKey: string | null;
   refCode?: string; shareUrl: string;
   /** Token del link privado (?acceso=): viaja al reservar y al confirmar (0066). */
   accessToken?: string;
+  topePorTipo?: Record<string, number>;
   // Dirección de diseño, decidida por el flyer en el server. Solo
   // presentación: no cambia precio, stock, pago ni emisión.
   direccion?: Direccion;
@@ -176,7 +177,8 @@ export function EventCheckoutPanel({
   function inc(t: TicketType) {
     const current = qty[t.id] ?? 0;
     if (t.soldOut) return;
-    const tope = event.max_per_person ?? 10;
+    // Entrada de link privado: el tope que puso el organizador (0068).
+    const tope = Math.min(topePorTipo?.[t.id] ?? 10, event.max_per_person ?? 10);
     if (current >= tope) { toast.error(`Máximo ${tope} por persona`); return; }
     // El tope real de stock lo enforcea reserveStock (atómico) + reserve_order_stock
     // al confirmar; acá solo limitamos el máximo por compra. No exponemos el cupo.

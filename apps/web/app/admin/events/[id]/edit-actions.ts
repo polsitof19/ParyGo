@@ -7,7 +7,7 @@ import { requireSession, type SessionUser } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { limaToIso, shiftEnd, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
 import { eventOverAt, isPubliclyOffered } from '@/lib/publicTicketGuard';
-import { generarToken, tokensPrivados } from '@/lib/privateAccess';
+import { generarToken, tokensPrivados, parseMaxPorPersona } from '@/lib/privateAccess';
 import { puedeEscribirComoSuper, type ModoEscrituraSuper } from '@/lib/impersonation';
 import { auditarEscrituraSuper, diffDeCampos } from '@/lib/auditoriaSuper';
 import { formatEventDate } from '@/lib/utils';
@@ -763,7 +763,9 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
   await admin.from('ticket_type_price_phases').insert({ ticket_type_id: created.id, name: 'Base', price_cents: priceCents, starts_at: null, ends_at: null, sort_order: 0 });
   // Privada desde el inicio (solo con link, 0066).
   if (privada) {
-    const { error: ePriv } = await admin.from('ticket_type_access').insert({ ticket_type_id: created.id, token: generarToken() });
+    // Cuántas por persona (0068): lo que puso el organizador; por defecto 1 si es gratis.
+    const lim = parseMaxPorPersona(formData.get('max_por_persona'));
+    const { error: ePriv } = await admin.from('ticket_type_access').insert({ ticket_type_id: created.id, token: generarToken(), max_por_persona: lim === undefined ? (priceCents === 0 ? 1 : null) : lim });
     if (ePriv) return { ok: false, message: 'Se creó la entrada PAUSADA pero no su link privado. Ábrela, toca "Hacerla privada" y actívala.' };
     await admin.from('ticket_types').update({ is_active: true }).eq('id', created.id);
   }
@@ -792,14 +794,24 @@ export async function setTicketTypePrivateAction(_prev: EditState, formData: For
   if (!brandId) return { ok: false, message: 'No tienes permiso.' };
 
   const admin = createAdminClient();
-  const { data: tt } = await admin.from('ticket_types').select('id, event_id, name').eq('id', ttId).maybeSingle();
+  const { data: tt } = await admin.from('ticket_types').select('id, event_id, name, price_cents').eq('id', ttId).maybeSingle();
   if (!tt || tt.event_id !== eventId) return { ok: false, message: 'Esa entrada no es de este evento.' };
 
   let message: string;
-  if (accion === 'privada' || accion === 'cambiar') {
+  if (accion === 'limite') {
+    // Cuántas puede reclamar cada persona con el link (0068). Lo aplica
+    // reserve_order_stock bajo lock; acá solo se guarda el número.
+    const lim = parseMaxPorPersona(formData.get('max_por_persona'));
+    if (lim === undefined) return { ok: false, message: 'Pon un número del 1 al 100, o déjalo vacío para no limitar.' };
+    const { data: upd, error } = await admin.from('ticket_type_access').update({ max_por_persona: lim }).eq('ticket_type_id', tt.id).select('ticket_type_id');
+    if (error || !upd?.length) return { ok: false, message: 'No se pudo guardar. Intenta de nuevo.' };
+    message = lim === null ? `"${tt.name}": sin límite por persona.` : `"${tt.name}": hasta ${lim} por persona.`;
+  } else if (accion === 'privada' || accion === 'cambiar') {
     const token = generarToken();
     const { error } = await admin.from('ticket_type_access').upsert(
-      { ticket_type_id: tt.id, token, rotated_at: accion === 'cambiar' ? new Date().toISOString() : null },
+      accion === 'cambiar'
+        ? { ticket_type_id: tt.id, token, rotated_at: new Date().toISOString() }
+        : { ticket_type_id: tt.id, token, rotated_at: null, max_por_persona: tt.price_cents === 0 ? 1 : null },
       { onConflict: 'ticket_type_id' },
     );
     if (error) return { ok: false, message: 'No se pudo generar el link. Intenta de nuevo.' };
@@ -814,7 +826,7 @@ export async function setTicketTypePrivateAction(_prev: EditState, formData: For
     return { ok: false, message: 'Acción inválida.' };
   }
 
-  await admin.from('events_log').insert({ brand_id: brandId, event_id: eventId, actor_user_id: user.id, type: 'ticket_type_access_changed', payload: { ticket_type_id: tt.id, accion } });
+  await admin.from('events_log').insert({ brand_id: brandId, event_id: eventId, actor_user_id: user.id, type: 'ticket_type_access_changed', payload: { ticket_type_id: tt.id, accion, max_por_persona: String(formData.get('max_por_persona') ?? '') } });
   await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId, accion: 'ticket_type_access_changed', diff: { ticket_type_id: tt.id, accion } });
   revalidatePath(`/admin/events/${eventId}/entradas`);
   revalidatePath(`/admin/events/${eventId}`);

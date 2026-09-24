@@ -3,7 +3,7 @@ import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { publicEnv } from '@/lib/env';
-import { tokensPrivados } from '@/lib/privateAccess';
+import { tokensPrivados, limitesPrivados } from '@/lib/privateAccess';
 import { TicketTypeEditor, NewTicketTypeForm, type TtRow } from '../editar/EditEventForms';
 
 export const runtime = 'edge';
@@ -34,8 +34,9 @@ export default async function EventTicketsPage({ params }: { params: { id: strin
   }));
   const eventIsFree = event.is_free ?? false;
   // Link de cada entrada PRIVADA (0066). Solo el dueño lo ve: la tabla es service role.
-  const [privados, { data: brand }] = await Promise.all([
+  const [privados, limites, { data: brand }] = await Promise.all([
     tokensPrivados(admin, rows.map((r) => r.id)),
+    limitesPrivados(admin, rows.map((r) => r.id)),
     admin.from('brands').select('slug').eq('id', ctx.brandId).maybeSingle(),
   ]);
   const linkDe = (id: string) => {
@@ -55,7 +56,7 @@ export default async function EventTicketsPage({ params }: { params: { id: strin
       </p>
       <div className="s-folds">
         {rows.length === 0 && <p className="s-empty">Este evento no tiene entradas todavía. Crea la primera abajo.</p>}
-        {rows.map((t) => <TicketTypeEditor key={t.id} eventId={event.id} eventIsFree={eventIsFree} tt={t} readOnly={impersonating} linkPrivado={impersonating ? null : linkDe(t.id)} eventName={event.name} />)}
+        {rows.map((t) => <TicketTypeEditor key={t.id} eventId={event.id} eventIsFree={eventIsFree} tt={t} readOnly={impersonating} linkPrivado={impersonating ? null : linkDe(t.id)} limitePrivado={limites.get(t.id) ?? null} eventName={event.name} />)}
         {!impersonating && <NewTicketTypeForm eventId={event.id} eventIsFree={eventIsFree} />}
       </div>
     </section>

@@ -123,6 +123,19 @@ function atribucion(reqHeaders: ReturnType<typeof headers>): Atribucion {
 
 // Rechazos del reclamo, con el MISMO texto que el camino de siempre.
 function mensajeRechazo(msg: string): string {
+  // Entrada privada: hasta N por persona, N lo pone el organizador (0067/0068).
+  if (/private_claim_limit/.test(msg)) {
+    const lim = Number(msg.match(/limit=(\d+)/)?.[1] ?? 1);
+    const pedidas = Number(msg.match(/requested=(\d+)/)?.[1] ?? 0);
+    if (lim === 1) {
+      return pedidas > 1
+        ? 'Esta entrada es 1 por persona: elige solo una.'
+        : 'Esta entrada es 1 por persona y ya la reclamaste con tu correo o tu documento.';
+    }
+    return pedidas > lim
+      ? `Esta entrada es hasta ${lim} por persona: elige ${lim} o menos.`
+      : `Esta entrada es hasta ${lim} por persona y ya llegaste a ese máximo con tu correo o tu documento.`;
+  }
   // Límite por persona (0060): el número sale del propio error.
   const limite = /per_person_limit/.test(msg) ? Number(msg.match(/limit=(\d+)/)?.[1] ?? 0) : 0;
   if (limite > 0) {
@@ -425,6 +438,12 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // reservar stock, así un código inválido/vencido/agotado no retiene cupo ni
   // un instante. El monto autoritativo lo sigue calculando apply_promo_to_order.
   const promoCodeInput = (parsed.data.promoCode ?? '').trim();
+  // Las entradas por link (0066) no llevan código: el link ya es el canal del
+  // promotor, y el tope 1-por-persona (0067) se mide ANTES del promo, así que
+  // una privada paga + código 100% lo esquivaría (security-review).
+  if (promoCodeInput && privados.size > 0) {
+    return { ok: false, message: 'Los códigos no aplican a las entradas de invitación.' };
+  }
   if (promoCodeInput) {
     const { data: pv, error: pvErr } = await admin.rpc('preview_promo', {
       p_event_id: event.id,
@@ -510,23 +529,9 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     await admin.from('orders').update({ status: 'failed' }).eq('id', order.id);
     await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
     const msg = reserveErr.message ?? '';
-    const agotado = /insufficient_stock/.test(msg);
-    // Límite por persona (0060). El RPC es el que decide —bajo advisory lock—,
-    // así que acá solo se traduce su error a algo que el comprador entienda.
-    // El número sale del propio error para no volver a consultarlo.
-    const limite = /per_person_limit/.test(msg) ? Number(msg.match(/limit=(\d+)/)?.[1] ?? 0) : 0;
-    if (limite > 0) {
-      return {
-        ok: false,
-        message: `Este evento permite ${limite} entrada${limite === 1 ? '' : 's'} por persona, y ya llegaste a ese máximo con tu correo o tu documento.`,
-      };
-    }
-    return {
-      ok: false,
-      message: agotado
-        ? 'Se agotaron las entradas mientras completabas la compra.'
-        : 'No se pudo reservar el stock. Intenta de nuevo.',
-    };
+    // Límite por persona (0060) y entrada privada 1 por persona (0067): decide
+    // el RPC bajo advisory lock; acá solo se traduce su error.
+    return { ok: false, message: mensajeRechazo(msg) };
   }
 
   // Promo code: validate + apply ATOMICALLY (rewrites order_items + order to

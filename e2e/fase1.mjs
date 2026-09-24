@@ -1351,7 +1351,37 @@ if (!S.eventId) {
       const emailX = `e2e-o-forjado-${STAMP}@test.local`;
       const c1 = await replayAction(pb, r.checkoutReq, [{ ...base, buyerEmail: emailX, accessToken: '', items: [{ ticketTypeId: tt.id, quantity: 1 }] }]);
       const c2 = await replayAction(pb, r.checkoutReq, [{ ...base, buyerEmail: emailX, accessToken: 'MALO234567', items: [{ ticketTypeId: tt.id, quantity: 1 }] }]);
+      // 0067: 1 por persona. El mismo email otra vez → rechazo; 2 en una orden → rechazo.
+      const rep = await replayAction(pb, r.checkoutReq, [{ ...base, buyerEmail: emailO, accessToken: acc.token, items: [{ ticketTypeId: tt.id, quantity: 1 }] }]);
+      const dosQ = await replayAction(pb, r.checkoutReq, [{ ...base, buyerEmail: `e2e-o-dos-${STAMP}@test.local`, accessToken: acc.token, items: [{ ticketTypeId: tt.id, quantity: 2 }] }]);
+      const pagO = (await svc.from('orders').select('id').eq('buyer_email', emailO).eq('status', 'paid')).data ?? [];
+      check('O', '1 por persona: el mismo correo no reclama otra vez y 2 en una orden se rechaza', /ya la reclamaste/i.test(rep.text) && /solo una/i.test(dosQ.text) && pagO.length === 1, `${rep.text.slice(-90)} || ${dosQ.text.slice(-90)} · pagadas=${pagO.length}`);
+      const conCod = await replayAction(pb, r.checkoutReq, [{ ...base, buyerEmail: `e2e-o-cod-${STAMP}@test.local`, accessToken: acc.token, promoCode: 'CUALQUIERA1', items: [{ ticketTypeId: tt.id, quantity: 1 }] }]);
+      check('O', 'un código promo no aplica a la entrada del link', /no aplican/i.test(conCod.text), conCod.text.slice(-90));
+      // Concurrencia: dos reclamos SIMULTÁNEOS del mismo correo → uno pasa, el otro no.
+      const emailC = `e2e-o-conc-${STAMP}@test.local`;
+      // Documento propio: el tope cuenta email Y documento, y el de base ya reclamó.
+      const args = { ...base, buyerEmail: emailC, buyerDni: String(10000000 + Math.floor(Math.random() * 89999999)), accessToken: acc.token, items: [{ ticketTypeId: tt.id, quantity: 1 }] };
+      const [k1, k2] = await Promise.all([
+        replayAction(pb, r.checkoutReq, [{ ...args, sessionId: `${base.sessionId}-c1` }]),
+        replayAction(pb, r.checkoutReq, [{ ...args, sessionId: `${base.sessionId}-c2` }]),
+      ]);
+      const pagC = (await svc.from('orders').select('id').eq('buyer_email', emailC).eq('status', 'paid')).data ?? [];
+      const tkC = pagC.length ? (await svc.from('tickets').select('id').in('order_id', pagC.map((o) => o.id))).data ?? [] : [];
+      check('O', 'concurrencia: 2 reclamos simultáneos del mismo correo → 1 entrada', pagC.length === 1 && tkC.length === 1 && [k1, k2].filter((k) => /ya la reclamaste/i.test(k.text)).length === 1, `pagadas=${pagC.length} tickets=${tkC.length} · ${k1.text.slice(-70)} || ${k2.text.slice(-70)}`);
+      // 0068: el organizador sube el tope a 2 desde el panel → el mismo correo
+      // reclama una más, y la tercera se rechaza con "hasta 2".
+      await p.locator(`#max-${tt.id}`).fill('2');
+      await p.getByRole('button', { name: 'Guardar límite' }).click();
+      let lim = null;
+      for (let i = 0; i < 30 && lim !== 2; i++) { lim = (await svc.from('ticket_type_access').select('max_por_persona').eq('ticket_type_id', tt.id).maybeSingle()).data?.max_por_persona ?? null; if (lim !== 2) await sleep(500); }
+      const seg = await replayAction(pb, r.checkoutReq, [{ ...base, buyerEmail: emailO, accessToken: acc.token, sessionId: `${base.sessionId}-l2`, items: [{ ticketTypeId: tt.id, quantity: 1 }] }]);
+      const ter = await replayAction(pb, r.checkoutReq, [{ ...base, buyerEmail: emailO, accessToken: acc.token, sessionId: `${base.sessionId}-l3`, items: [{ ticketTypeId: tt.id, quantity: 1 }] }]);
+      const pagO2 = (await svc.from('orders').select('id').eq('buyer_email', emailO).eq('status', 'paid')).data ?? [];
+      check('O', 'el organizador pone 2 por persona: el mismo correo reclama 1 más y la 3ª se rechaza', lim === 2 && /confirmacion/.test(seg.text) && /hasta 2 por persona/i.test(ter.text) && pagO2.length === 2, `lim=${lim} · ${seg.text.slice(-80)} || ${ter.text.slice(-90)} · pagadas=${pagO2.length}`);
       // Cambiar link: el token anterior deja de servir.
+      // Guardar el límite recarga la fila plegada: se vuelve a abrir.
+      if (!(await p.getByRole('button', { name: /Cambiar link/ }).isVisible().catch(() => false))) await p.locator('summary', { hasText: nombre }).click();
       await p.getByRole('button', { name: /Cambiar link/ }).click();
       let nuevo = acc.token;
       for (let i = 0; i < 30 && nuevo === acc.token; i++) { nuevo = (await svc.from('ticket_type_access').select('token').eq('ticket_type_id', tt.id).maybeSingle()).data?.token ?? acc.token; if (nuevo === acc.token) await sleep(500); }

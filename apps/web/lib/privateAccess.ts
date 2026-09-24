@@ -43,3 +43,20 @@ export async function tokensPrivados(admin: Admin, ticketTypeIds: string[]): Pro
   }
   return new Map((data ?? []).map((r) => [r.ticket_type_id as string, r.token as string]));
 }
+
+/** Map tipo → cuántas por persona (null = sin límite) de los tipos privados (0068). */
+export async function limitesPrivados(admin: Admin, ticketTypeIds: string[]): Promise<Map<string, number | null>> {
+  if (ticketTypeIds.length === 0) return new Map();
+  const { data } = await admin.from('ticket_type_access').select('ticket_type_id, max_por_persona').in('ticket_type_id', ticketTypeIds);
+  // Solo informativo (panel y tope del selector): el límite real lo aplica
+  // reserve_order_stock bajo lock. Si falla, el selector usa su tope de siempre.
+  return new Map((data ?? []).map((r) => [r.ticket_type_id as string, (r.max_por_persona as number | null) ?? null]));
+}
+
+/** "Cuántas por persona" del formulario: 1..100, vacío = sin límite; undefined = inválido. */
+export function parseMaxPorPersona(v: FormDataEntryValue | null): number | null | undefined {
+  const s = String(v ?? '').trim();
+  if (s === '') return null;
+  const n = Number(s);
+  return Number.isInteger(n) && n >= 1 && n <= 100 ? n : undefined;
+}

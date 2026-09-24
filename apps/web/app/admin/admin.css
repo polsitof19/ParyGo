@@ -619,3 +619,5 @@
 .admin-shell .a-priv__head > svg { width: 18px; height: 18px; flex: none; color: var(--ink-2); }
 .admin-shell .a-priv__acts { display: flex; flex-wrap: wrap; gap: var(--s-s1); margin-top: var(--s-s2); }
 .admin-shell .a-priv__acts svg { width: 16px; height: 16px; }
+.admin-shell .a-priv__lim { margin-top: var(--s-s3); }
+.admin-shell .a-priv__num { max-width: 160px; }
