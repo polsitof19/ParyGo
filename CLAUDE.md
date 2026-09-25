@@ -324,7 +324,21 @@ organizador daba "permission denied" y "Mi marca" salía EN BLANCO. El panel
 ya la lee con service role acotada a la marca; la migración del grant queda
 para cuando Paul la apruebe (no hace falta para que ande).
 
-Incrementales, idempotentes, numeradas (vamos por 0069). Backwards-compatible
+PACKS DE EVENTOS (0070, APLICADA en prod 2026-09-25; código aún SIN SUBIR a
+pedido de Paul). El organizador compra 1/3/5/10 eventos en /admin/comprar con
+MP (cuenta de Paul, PEN) o PayPal (USD); settle_pack_purchase es el único
+camino que suma saldo. Webhook /api/webhooks/parygo-mp: se configura en el
+PANEL de MP ("Tus integraciones" → Webhooks, evento Pagos), NO con
+notification_url en la preferencia (esa tiene prioridad y la firma
+x-signature es de la config del panel). Respaldo: /admin/comprar/listo
+re-pide el pago a MP al volver (?payment_id=). Env en Cloudflare (Secret):
+PARYGO_MP_ACCESS_TOKEN, PARYGO_MP_WEBHOOK_SECRET (y PAYPAL_CLIENT_ID/SECRET/
+ENV). Sin ellas los botones salen apagados. Tests: supabase/ensayo-0070.mjs y
+e2e/packs-rpc.mjs (JWT real + concurrencia, 10/10). El cobro de ENTRADAS por
+MP de cada marca todavía pone notification_url en la preferencia: revisar
+igual antes de que una marca cobre con tarjeta.
+
+Incrementales, idempotentes, numeradas (vamos por 0070). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
 para no romper la app vieja desplegada.
 
