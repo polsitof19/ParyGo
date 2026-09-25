@@ -1,4 +1,5 @@
 import { nanoid } from 'nanoid';
+import { textos, type Idioma } from '@/lib/idioma';
 import type { createAdminClient } from '@/lib/supabase/admin';
 import { medidasDeBytes } from '@/lib/imageSize';
 
@@ -63,19 +64,21 @@ export type CoverUploadResult =
 export async function uploadEventCover(
   admin: ReturnType<typeof createAdminClient>,
   brandSlug: string,
-  file: File
+  file: File,
+  l: Idioma = 'es'
 ): Promise<CoverUploadResult> {
+  const { t } = textos(l);
   const ext = COVER_TYPES[file.type];
-  if (!ext) return { ok: false, message: 'El flyer debe ser PNG, JPG o WEBP.' };
-  if (file.size === 0) return { ok: false, message: 'El archivo está vacío.' };
-  if (file.size > MAX_BYTES) return { ok: false, message: 'El flyer supera 10 MB.' };
+  if (!ext) return { ok: false, message: t('El flyer debe ser PNG, JPG o WEBP.', 'The flyer must be PNG, JPG or WEBP.') };
+  if (file.size === 0) return { ok: false, message: t('El archivo está vacío.', 'The file is empty.') };
+  if (file.size > MAX_BYTES) return { ok: false, message: t('El flyer supera 10 MB.', 'The flyer exceeds 10 MB.') };
 
   const path = `${brandSlug}/event-${nanoid(10)}.${ext}`;
   const bytes = new Uint8Array(await file.arrayBuffer());
   const { error } = await admin.storage
     .from('brand-assets')
     .upload(path, bytes, { contentType: file.type, cacheControl: '3600', upsert: true });
-  if (error) return { ok: false, message: `No se pudo subir el flyer: ${error.message}` };
+  if (error) return { ok: false, message: t(`No se pudo subir el flyer: ${error.message}`, `The flyer could not be uploaded: ${error.message}`) };
 
   const { data } = admin.storage.from('brand-assets').getPublicUrl(path);
   const m = medidasDeBytes(bytes);

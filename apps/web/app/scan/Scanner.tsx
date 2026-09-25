@@ -7,26 +7,31 @@ import { validateScanAction, previewScanAction, preloadEventAction, type ScanRes
 import {
   cacheTickets, getCachedTicket, bumpLocalScan, enqueueScan, pendingScans, markScanSynced, getDeviceId,
 } from '@/lib/offline-scan';
+import { useTextos } from '@/components/IdiomaPanel';
 
 type EventOpt = { id: string; name: string; starts_at: string };
 type Shown = ScanResult & { offline?: boolean };
 type Phase = 'scan' | 'preview' | 'result';
+type Tr = (es: string, en: string) => string;
 
 const UUID_RE = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/;
 
 // tone: 'ok' | 'warn' | 'deny' → caracteriza color + sonido del resultado.
-const STATUS: Record<string, { tone: 'ok' | 'warn' | 'deny'; label: string }> = {
-  OK: { tone: 'ok', label: 'ACCESO OK' },
-  REENTRY: { tone: 'warn', label: 'RE-ENTRADA' },
-  ALREADY_USED: { tone: 'deny', label: 'YA USADO' },
-  NOT_FOUND: { tone: 'deny', label: 'TICKET INVÁLIDO' },
-  NOT_AUTHORIZED: { tone: 'deny', label: 'NO AUTORIZADO' },
-  INVALIDATED: { tone: 'deny', label: 'ENTRADA ANULADA' },
-  ERROR: { tone: 'deny', label: 'ERROR · REINTENTÁ' },
-  OFFLINE_UNKNOWN: { tone: 'warn', label: 'VERIFICAR MANUAL' },
-};
+function getStatus(t: Tr): Record<string, { tone: 'ok' | 'warn' | 'deny'; label: string }> {
+  return {
+    OK: { tone: 'ok', label: t('ACCESO OK', 'ACCESS OK') },
+    REENTRY: { tone: 'warn', label: t('RE-ENTRADA', 'RE-ENTRY') },
+    ALREADY_USED: { tone: 'deny', label: t('YA USADO', 'ALREADY USED') },
+    NOT_FOUND: { tone: 'deny', label: t('TICKET INVÁLIDO', 'INVALID TICKET') },
+    NOT_AUTHORIZED: { tone: 'deny', label: t('NO AUTORIZADO', 'NOT AUTHORIZED') },
+    INVALIDATED: { tone: 'deny', label: t('ENTRADA ANULADA', 'TICKET VOIDED') },
+    ERROR: { tone: 'deny', label: t('ERROR · REINTENTÁ', 'ERROR · RETRY') },
+    OFFLINE_UNKNOWN: { tone: 'warn', label: t('VERIFICAR MANUAL', 'CHECK MANUALLY') },
+  };
+}
 
-const docLabel = (t?: string | null) => (t === 'ce' ? 'CE' : t === 'passport' ? 'Pasaporte' : 'DNI');
+const docLabel = (docType: string | null | undefined, t: Tr) =>
+  docType === 'ce' ? 'CE' : docType === 'passport' ? t('Pasaporte', 'Passport') : 'DNI';
 
 // ¿Se puede ofrecer PASAR en la previsualización? Solo si es válido (OK) o si
 // es un cache-miss offline (VERIFICAR MANUAL → el validador chequea el doc a mano
@@ -34,6 +39,8 @@ const docLabel = (t?: string | null) => (t === 'ce' ? 'CE' : t === 'passport' ? 
 const canPassStatus = (s: string) => s === 'OK' || s === 'OFFLINE_UNKNOWN';
 
 export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: string }) {
+  const { t, loc } = useTextos();
+  const STATUS = getStatus(t);
   const [eventId, setEventId] = useState(events[0]?.id ?? '');
   const [online, setOnline] = useState(true);
   const [phase, setPhase] = useState<Phase>('scan');
@@ -221,9 +228,9 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
   const pv = preview;
   const pvTone = pv ? (STATUS[pv.status]?.tone ?? 'deny') : 'deny';
   const pvLabel = pv
-    ? pv.status === 'OK' ? 'VÁLIDO'
-    : pv.status === 'OFFLINE_UNKNOWN' ? 'VERIFICAR MANUAL'
-    : (STATUS[pv.status]?.label ?? 'TICKET INVÁLIDO')
+    ? pv.status === 'OK' ? t('VÁLIDO', 'VALID')
+    : pv.status === 'OFFLINE_UNKNOWN' ? t('VERIFICAR MANUAL', 'CHECK MANUALLY')
+    : (STATUS[pv.status]?.label ?? t('TICKET INVÁLIDO', 'INVALID TICKET'))
     : '';
   const pvCanPass = pv ? canPassStatus(pv.status) : false;
 
@@ -233,14 +240,14 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
     <div className="k-stack">
       {/* Barra superior: evento + estado */}
       <div className="k-top">
-        <select value={eventId} onChange={(e) => { setEventId(e.target.value); reset(); }} className="k-select" aria-label="Evento" disabled={phase !== 'scan'}>
+        <select value={eventId} onChange={(e) => { setEventId(e.target.value); reset(); }} className="k-select" aria-label={t('Evento', 'Event')} disabled={phase !== 'scan'}>
           {events.map((ev) => (<option key={ev.id} value={ev.id}>{ev.name}</option>))}
         </select>
         <div className="k-status">
-          <span className={online ? 'k-dot k-dot--on' : 'k-dot k-dot--off'}>● {online ? 'Online' : 'Offline'}</span>
-          {pending > 0 && <span className="k-pend">{pending} por sincronizar</span>}
+          <span className={online ? 'k-dot k-dot--on' : 'k-dot k-dot--off'}>● {online ? t('Online', 'Online') : t('Offline', 'Offline')}</span>
+          {pending > 0 && <span className="k-pend">{t(`${pending} por sincronizar`, `${pending} to sync`)}</span>}
           <span className="k-count">{validated}/{total}</span>
-          <button type="button" onClick={toggleMute} className="k-icon" aria-label={muted ? 'Activar sonido' : 'Silenciar'}>
+          <button type="button" onClick={toggleMute} className="k-icon" aria-label={muted ? t('Activar sonido', 'Turn on sound') : t('Silenciar', 'Mute')}>
             {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </button>
         </div>
@@ -255,27 +262,27 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
             </div>
             <p className="k-result__label">{pvLabel}</p>
             {pv.attendee_name && <p className="k-result__name">{pv.attendee_name}</p>}
-            {pv.buyer_dni && <p className="k-result__doc">{docLabel(pv.buyer_doc_type)} {pv.buyer_dni}</p>}
+            {pv.buyer_dni && <p className="k-result__doc">{docLabel(pv.buyer_doc_type, t)} {pv.buyer_dni}</p>}
             {pv.ticket_type_name && <p className="k-result__type">{pv.ticket_type_name}</p>}
             {pv.status === 'OK' && pv.max_scans != null && pv.max_scans > 1 && (pv.scan_count ?? 0) > 0 && (
-              <p className="k-result__sub">reingreso {(pv.scan_count ?? 0) + 1}/{pv.max_scans}</p>
+              <p className="k-result__sub">{t(`reingreso ${(pv.scan_count ?? 0) + 1}/${pv.max_scans}`, `re-entry ${(pv.scan_count ?? 0) + 1}/${pv.max_scans}`)}</p>
             )}
-            {pv.status === 'ALREADY_USED' && pv.first_validated_at && <p className="k-result__sub">primer ingreso {new Date(pv.first_validated_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}</p>}
-            {pv.status === 'OFFLINE_UNKNOWN' && <p className="k-result__sub">No está en la lista precargada. Revisa el documento a mano.</p>}
-            {pv.status === 'OK' && <p className="k-result__sub">Revisa el documento y confirma el ingreso.</p>}
-            {pv.offline && <p className="k-result__off">offline · se sincronizará</p>}
+            {pv.status === 'ALREADY_USED' && pv.first_validated_at && <p className="k-result__sub">{t(`primer ingreso ${new Date(pv.first_validated_at).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}`, `first check-in ${new Date(pv.first_validated_at).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}`)}</p>}
+            {pv.status === 'OFFLINE_UNKNOWN' && <p className="k-result__sub">{t('No está en la lista precargada. Revisa el documento a mano.', 'Not in the preloaded list. Check the document manually.')}</p>}
+            {pv.status === 'OK' && <p className="k-result__sub">{t('Revisa el documento y confirma el ingreso.', 'Check the document and confirm entry.')}</p>}
+            {pv.offline && <p className="k-result__off">{t('offline · se sincronizará', 'offline · will sync')}</p>}
           </div>
 
           {pvCanPass ? (
             <div className="k-confirm">
               <button type="button" className="k-pass" onClick={() => confirm(pendingQr)} disabled={busy}>
-                <Check className="k-pass__ico" /> {busy ? 'CONFIRMANDO…' : 'PASAR'}
+                <Check className="k-pass__ico" /> {busy ? t('CONFIRMANDO…', 'CONFIRMING…') : t('PASAR', 'ADMIT')}
               </button>
-              <button type="button" className="k-nopass" onClick={reset} disabled={busy}>NO PASAR</button>
+              <button type="button" className="k-nopass" onClick={reset} disabled={busy}>{t('NO PASAR', 'DENY')}</button>
             </div>
           ) : (
             <button type="button" className="k-btn k-btn--soft k-btn--block" onClick={reset} disabled={busy}>
-              Escanear otro
+              {t('Escanear otro', 'Scan another')}
             </button>
           )}
         </>
@@ -290,13 +297,13 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
             </div>
             <p className="k-result__label">{rs.label}</p>
             {result.attendee_name && <p className="k-result__name">{result.attendee_name}</p>}
-            {result.buyer_dni && <p className="k-result__doc">{docLabel(result.buyer_doc_type)} {result.buyer_dni}</p>}
+            {result.buyer_dni && <p className="k-result__doc">{docLabel(result.buyer_doc_type, t)} {result.buyer_dni}</p>}
             {result.ticket_type_name && <p className="k-result__type">{result.ticket_type_name}</p>}
-            {result.status === 'REENTRY' && result.max_scans != null && <p className="k-result__sub">re-entrada {result.scan_count}/{result.max_scans}</p>}
-            {result.status === 'ALREADY_USED' && result.first_validated_at && <p className="k-result__sub">primer ingreso {new Date(result.first_validated_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}</p>}
-            {result.offline && <p className="k-result__off">offline · se sincronizará</p>}
+            {result.status === 'REENTRY' && result.max_scans != null && <p className="k-result__sub">{t(`re-entrada ${result.scan_count}/${result.max_scans}`, `re-entry ${result.scan_count}/${result.max_scans}`)}</p>}
+            {result.status === 'ALREADY_USED' && result.first_validated_at && <p className="k-result__sub">{t(`primer ingreso ${new Date(result.first_validated_at).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}`, `first check-in ${new Date(result.first_validated_at).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}`)}</p>}
+            {result.offline && <p className="k-result__off">{t('offline · se sincronizará', 'offline · will sync')}</p>}
           </div>
-          <button type="button" className="k-btn k-btn--brand k-btn--block" onClick={reset}>Escanear otro</button>
+          <button type="button" className="k-btn k-btn--brand k-btn--block" onClick={reset}>{t('Escanear otro', 'Scan another')}</button>
         </>
       )}
 
@@ -307,7 +314,7 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
             {cameraOn ? (
               <QrScanner
                 onScan={(codes) => { setCameraError(null); onDetect(codes); }}
-                onError={(e) => setCameraError(e instanceof Error ? e.message : 'No se pudo abrir la cámara')}
+                onError={(e) => setCameraError(e instanceof Error ? e.message : t('No se pudo abrir la cámara', 'Could not open the camera'))}
                 formats={['qr_code']}
                 // Cámara TRASERA a 720p. Sin límite, Safari de iPhone abría el
                 // video a la resolución máxima del sensor y, con la memoria al
@@ -319,32 +326,32 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
                 styles={{ container: { width: '100%' } }}
               />
             ) : (
-              <div className="k-cam__off">Cámara pausada</div>
+              <div className="k-cam__off">{t('Cámara pausada', 'Camera paused')}</div>
             )}
           </div>
           {cameraError && cameraOn && (
-            <p className="k-camerr" role="alert">No se pudo usar la cámara ({cameraError}). Usa el código manual abajo.</p>
+            <p className="k-camerr" role="alert">{t(`No se pudo usar la cámara (${cameraError}). Usa el código manual abajo.`, `Could not use the camera (${cameraError}). Use the manual code below.`)}</p>
           )}
 
           <div className="k-row">
             <button type="button" className="k-btn k-btn--soft" onClick={() => setCameraOn((v) => !v)}>
-              {cameraOn ? <><CameraOff className="h-4 w-4" /> Pausar</> : <><Camera className="h-4 w-4" /> Reanudar</>}
+              {cameraOn ? <><CameraOff className="h-4 w-4" /> {t('Pausar', 'Pause')}</> : <><Camera className="h-4 w-4" /> {t('Reanudar', 'Resume')}</>}
             </button>
-            {busy && <span className="k-muted">leyendo…</span>}
+            {busy && <span className="k-muted">{t('leyendo…', 'reading…')}</span>}
           </div>
 
           {/* Fallback manual */}
           <form onSubmit={submitManual} className="k-row" style={{ alignItems: 'flex-end' }}>
             <div style={{ flex: 1 }}>
-              <label htmlFor="manual-scan" className="k-label">Código manual (si la cámara falla)</label>
-              <input id="manual-scan" value={manual} onChange={(e) => setManual(e.target.value)} placeholder="UUID del ticket" className="k-input" />
+              <label htmlFor="manual-scan" className="k-label">{t('Código manual (si la cámara falla)', 'Manual code (if the camera fails)')}</label>
+              <input id="manual-scan" value={manual} onChange={(e) => setManual(e.target.value)} placeholder={t('UUID del ticket', 'Ticket UUID')} className="k-input" />
             </div>
-            <button type="submit" className="k-btn k-btn--brand" disabled={busy}>Revisar</button>
+            <button type="submit" className="k-btn k-btn--brand" disabled={busy}>{t('Revisar', 'Check')}</button>
           </form>
         </>
       )}
 
-      <p className="k-foot">Puerta de {brandName}</p>
+      <p className="k-foot">{t(`Puerta de ${brandName}`, `Door of ${brandName}`)}</p>
     </div>
   );
 }

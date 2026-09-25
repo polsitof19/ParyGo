@@ -1,34 +1,71 @@
 import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { esIdioma, type Idioma } from '@/lib/idioma';
 
 export type SessionUser = {
   id: string;
   email: string;
   isSuperAdmin: boolean;
-  brandMemberships: { brandId: string; role: 'brand_admin' | 'validator' }[];
+  // idioma = el de esa marca (0073), para el panel y el escáner.
+  brandMemberships: { brandId: string; role: 'brand_admin' | 'validator'; idioma: Idioma }[];
 };
 
 // Cached per-request user lookup. Returns null if not authenticated.
+// getUser() (verifica con Supabase) va EN PARALELO con el perfil y las
+// membresías, que se piden con el id del token de la cookie: un viaje en vez
+// de dos. Si getUser no confirma ESE mismo id, no hay sesión y lo leído se
+// descarta; y las dos lecturas van con el JWT, que PostgREST valida igual.
+const idDelToken = (jwt: string | undefined): string | null => {
+  try {
+    const p = jwt?.split('.')[1];
+    return p ? (JSON.parse(atob(p.replace(/-/g, '+').replace(/_/g, '/'))).sub ?? null) : null;
+  } catch {
+    return null;
+  }
+};
+
+// Membresías con el idioma de cada marca embebido (cero viajes extra). Si el
+// embebido fallara (p. ej. falta el grant de la columna, como pasó con
+// yape_qr_url), se reintenta sin idioma: perder el inglés es un detalle,
+// quedarse sin membresías sería dejar a todos afuera del panel.
+type Membresia = { brand_id: string; role: string; brand?: { idioma?: string } | null };
+async function membresias(supabase: ReturnType<typeof createClient>, uid: string): Promise<{ data: Membresia[] | null }> {
+  const r = await supabase.from('brand_members').select('brand_id, role, brand:brands ( idioma )').eq('user_id', uid);
+  if (!r.error) return { data: r.data as unknown as Membresia[] };
+  const sin = await supabase.from('brand_members').select('brand_id, role').eq('user_id', uid);
+  return { data: (sin.data ?? null) as Membresia[] | null };
+}
+
 export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const supabase = createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+    data: { session },
+  } = await supabase.auth.getSession();
+  const uid = idDelToken(session?.access_token);
+  if (!uid) return null;
 
-  const [{ data: profile }, { data: memberships }] = await Promise.all([
-    supabase.from('user_profiles').select('is_super_admin').eq('user_id', user.id).maybeSingle(),
-    supabase.from('brand_members').select('brand_id, role').eq('user_id', user.id),
+  const [
+    {
+      data: { user },
+    },
+    { data: profile },
+    { data: memberships },
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('user_profiles').select('is_super_admin').eq('user_id', uid).maybeSingle(),
+    membresias(supabase, uid),
   ]);
+  if (!user || user.id !== uid) return null;
 
   return {
     id: user.id,
     email: user.email ?? '',
     isSuperAdmin: profile?.is_super_admin ?? false,
     brandMemberships: (memberships ?? []).map((m) => ({
-      brandId: m.brand_id as string,
+      brandId: m.brand_id,
       role: m.role as 'brand_admin' | 'validator',
+      idioma: esIdioma(m.brand?.idioma) ? (m.brand?.idioma as Idioma) : 'es',
     })),
   };
 });

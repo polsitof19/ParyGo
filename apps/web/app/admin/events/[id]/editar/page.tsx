@@ -11,6 +11,7 @@ import { CloneEventButton } from './CloneEventButton';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { DangerDeleteButton } from '@/components/manage/DangerDeleteButton';
 import { setEventArchivedAction, deleteEventAction } from '../edit-actions';
+import { textosPanel } from '@/lib/idiomaServer';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -25,6 +26,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
   const ctx = ownerBrandContext(user);
   if (!ctx) notFound();
   const impersonating = ctx.soloLectura;
+  const { t } = await textosPanel();
 
   const admin = createAdminClient();
   const { data: event } = await admin
@@ -52,16 +54,16 @@ export default async function EditEventPage({ params }: { params: { id: string }
           sección): nombre, fecha y lugar → el flyer → lo raro (postergar,
           clonar, cancelar, archivar), plegado al final. */}
       <div id="datos" className="a-anchor" style={{ marginBottom: 14 }}>
-        <h1 className="s-h1">Datos del evento</h1>
+        <h1 className="s-h1">{t('Datos del evento', 'Event details')}</h1>
         <p className="s-card__desc">
           {impersonating
-            ? 'Estás viendo este evento en solo lectura. No puedes editarlo desde aquí.'
-            : 'Los cambios se ven al instante en la página pública.'}
+            ? t('Estás viendo este evento en solo lectura. No puedes editarlo desde aquí.', 'You are viewing this event in read-only mode. You cannot edit it from here.')
+            : t('Los cambios se ven al instante en la página pública.', 'Changes are visible instantly on the public page.')}
         </p>
       </div>
       {impersonating && (
         <p className="s-banner" style={{ marginBottom: 14 }} role="status">
-          Solo lectura — los datos se muestran tal cual, sin posibilidad de editarlos.
+          {t('Solo lectura — los datos se muestran tal cual, sin posibilidad de editarlos.', 'Read-only — data is shown as is, with no way to edit it.')}
         </p>
       )}
       <div className="s-card">
@@ -88,7 +90,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
       </div>
 
       <section id="flyer" className="a-anchor s-section">
-        <h2 className="s-h2" style={{ marginBottom: 12 }}>Flyer</h2>
+        <h2 className="s-h2" style={{ marginBottom: 12 }}>{t('Flyer', 'Flyer')}</h2>
         <div className="s-card"><EventCoverUploader eventId={event.id} currentUrl={event.cover_url} readOnly={impersonating} /></div>
       </section>
 
@@ -98,8 +100,8 @@ export default async function EditEventPage({ params }: { params: { id: string }
       {!impersonating && (
         <details className="a-accordion a-accordion--danger" style={{ marginTop: 24 }}>
           <summary>
-            <span className="a-accordion__title"><ShieldAlert className="h-4 w-4" /> Zona de gestión</span>
-            <span className="a-accordion__hint">Postergar, clonar, cancelar, archivar o eliminar el evento</span>
+            <span className="a-accordion__title"><ShieldAlert className="h-4 w-4" /> {t('Zona de gestión', 'Management zone')}</span>
+            <span className="a-accordion__hint">{t('Postergar, clonar, cancelar, archivar o eliminar el evento', 'Reschedule, duplicate, cancel, archive or delete the event')}</span>
           </summary>
           <div className="a-accordion__body">
             {/* Postergar: solo cuando hay ventas (la fecha de arriba queda bloqueada). */}
@@ -119,33 +121,33 @@ export default async function EditEventPage({ params }: { params: { id: string }
             <div className="s-card" style={{ marginTop: 16 }}>
               <div className="s-card__head">
                 <div>
-                  <h3 className="s-h3">Archivar evento</h3>
+                  <h3 className="s-h3">{t('Archivar evento', 'Archive event')}</h3>
                   <p className="s-card__desc">
                     {event.archived_at
-                      ? 'Este evento está archivado: no se vende y no aparece en público. Puedes desarchivarlo cuando quieras.'
-                      : 'Al archivar deja de venderse y desaparece del público, pero conservas todo su historial. Es reversible.'}
+                      ? t('Este evento está archivado: no se vende y no aparece en público. Puedes desarchivarlo cuando quieras.', 'This event is archived: it does not sell and does not appear publicly. You can unarchive it whenever you want.')
+                      : t('Al archivar deja de venderse y desaparece del público, pero conservas todo su historial. Es reversible.', 'When archived it stops selling and disappears from the public, but you keep its whole history. It is reversible.')}
                   </p>
                 </div>
                 <ArchiveToggle
                   id={event.id}
                   archived={!!event.archived_at}
                   action={setEventArchivedAction}
-                  noun="el evento"
+                  noun={t('el evento', 'the event')}
                 />
               </div>
 
               <div className="s-divider" />
 
-              <h3 className="s-h3">Eliminar definitivamente</h3>
+              <h3 className="s-h3">{t('Eliminar definitivamente', 'Delete permanently')}</h3>
               <p className="s-card__desc" style={{ marginBottom: 12 }}>
-                Borra el evento para siempre. Solo es posible si no tiene ninguna venta.
+                {t('Borra el evento para siempre. Solo es posible si no tiene ninguna venta.', 'Deletes the event forever. Only possible if it has no sales.')}
               </p>
               <DangerDeleteButton
                 id={event.id}
                 name={event.name}
                 action={deleteEventAction}
                 canDelete={canDelete}
-                noun="el evento"
+                noun={t('el evento', 'the event')}
               />
             </div>
           </div>

@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { yapeNumberSchema } from '@/lib/yapeNumber';
+import { yapeNumberSchemaCon, YAPE_NUMERO_ES, YAPE_NUMERO_EN } from '@/lib/yapeNumber';
 import { revalidatePath } from 'next/cache';
 import { nanoid } from 'nanoid';
 import { requireSession } from '@/lib/auth';
@@ -10,6 +10,8 @@ import { contextoEscritura } from '@/lib/impersonation';
 import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { serverEnv } from '@/lib/env';
 import { validateMercadoPagoToken } from '@/lib/mercadopago';
+import { esIdioma, type Textos } from '@/lib/idioma';
+import { textosPanel, idiomaPanel } from '@/lib/idiomaServer';
 
 export type SettingsState = {
   ok: boolean;
@@ -17,18 +19,18 @@ export type SettingsState = {
   fieldErrors?: Partial<Record<string, string>>;
 };
 
-const schema = z.object({
-  contact_email: z.string().email('Email inválido').optional().or(z.literal('')),
+const schema = (t: Textos['t']) => z.object({
+  contact_email: z.string().email(t('Email inválido', 'Invalid email')).optional().or(z.literal('')),
   whatsapp_e164: z
     .string()
-    .regex(/^\+\d{8,15}$/, 'Formato +51999000111')
+    .regex(/^\+\d{8,15}$/, t('Formato +51999000111', 'Format +51999000111'))
     .optional()
     .or(z.literal('')),
-  yape_number: yapeNumberSchema,
+  yape_number: yapeNumberSchemaCon(t(YAPE_NUMERO_ES, YAPE_NUMERO_EN)),
   yape_holder: z.string().max(120).optional().or(z.literal('')),
   instagram: z.string().max(120).optional().or(z.literal('')),
-  primary_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Color inválido'),
-  secondary_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Color inválido'),
+  primary_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, t('Color inválido', 'Invalid color')),
+  secondary_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, t('Color inválido', 'Invalid color')),
 });
 
 // Solo rasterizados (sin SVG): el bucket es público y un SVG con <script> sería
@@ -44,15 +46,16 @@ export async function updateBrandSettingsAction(
   formData: FormData
 ): Promise<SettingsState> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   // ENFORCEMENT: the brand comes from the session membership, NEVER the form.
   // A brand_admin can only ever edit their own brand.
   const ctxW = contextoEscritura(user);
   if (!ctxW) {
-    return { ok: false, message: 'No tienes acceso de promotor.' };
+    return { ok: false, message: t('No tienes acceso de promotor.', "You don't have promoter access.") };
   }
   const brandId = ctxW.brandId;
 
-  const parsed = schema.safeParse({
+  const parsed = schema(t).safeParse({
     contact_email: formData.get('contact_email') ?? '',
     whatsapp_e164: formData.get('whatsapp_e164') ?? '',
     yape_number: formData.get('yape_number') ?? '',
@@ -67,7 +70,7 @@ export async function updateBrandSettingsAction(
       const p = e.path.join('.');
       if (p) fieldErrors[p] = e.message;
     }
-    return { ok: false, message: 'Revisa los campos marcados.', fieldErrors };
+    return { ok: false, message: t('Revisa los campos marcados.', 'Check the marked fields.'), fieldErrors };
   }
 
   const admin = createAdminClient();
@@ -79,7 +82,7 @@ export async function updateBrandSettingsAction(
     .eq('id', brandId)
     .single();
   if (brandErr || !brand) {
-    return { ok: false, message: 'No se pudo cargar la marca.' };
+    return { ok: false, message: t('No se pudo cargar la marca.', 'Could not load the brand.') };
   }
 
   const theme = (brand.theme_json ?? {}) as Record<string, unknown>;
@@ -94,10 +97,10 @@ export async function updateBrandSettingsAction(
   if (file instanceof File && file.size > 0) {
     const ext = LOGO_TYPES[file.type];
     if (!ext) {
-      return { ok: false, message: 'Logo: usa PNG, JPG o WEBP.', fieldErrors: { logo: 'Tipo no permitido' } };
+      return { ok: false, message: t('Logo: usa PNG, JPG o WEBP.', 'Logo: use PNG, JPG or WEBP.'), fieldErrors: { logo: t('Tipo no permitido', 'Type not allowed') } };
     }
     if (file.size > 2 * 1024 * 1024) {
-      return { ok: false, message: 'El logo supera 2 MB.', fieldErrors: { logo: 'Muy grande' } };
+      return { ok: false, message: t('El logo supera 2 MB.', 'The logo exceeds 2 MB.'), fieldErrors: { logo: t('Muy grande', 'Too large') } };
     }
     const path = `${brand.slug}/logo-${nanoid(8)}.${ext}`;
     const bytes = new Uint8Array(await file.arrayBuffer());
@@ -105,7 +108,7 @@ export async function updateBrandSettingsAction(
       .from('brand-assets')
       .upload(path, bytes, { contentType: file.type, cacheControl: '3600', upsert: true });
     if (upErr) {
-      return { ok: false, message: `No se pudo subir el logo: ${upErr.message}` };
+      return { ok: false, message: t(`No se pudo subir el logo: ${upErr.message}`, `Could not upload the logo: ${upErr.message}`) };
     }
     const { data: pub } = admin.storage.from('brand-assets').getPublicUrl(path);
     logoUrl = pub.publicUrl;
@@ -120,10 +123,10 @@ export async function updateBrandSettingsAction(
   if (qrFile instanceof File && qrFile.size > 0) {
     const ext = LOGO_TYPES[qrFile.type];
     if (!ext) {
-      return { ok: false, message: 'QR de Yape: usa PNG, JPG o WEBP.', fieldErrors: { yape_qr: 'Tipo no permitido' } };
+      return { ok: false, message: t('QR de Yape: usa PNG, JPG o WEBP.', 'Yape QR: use PNG, JPG or WEBP.'), fieldErrors: { yape_qr: t('Tipo no permitido', 'Type not allowed') } };
     }
     if (qrFile.size > 2 * 1024 * 1024) {
-      return { ok: false, message: 'El QR supera 2 MB.', fieldErrors: { yape_qr: 'Muy grande' } };
+      return { ok: false, message: t('El QR supera 2 MB.', 'The QR exceeds 2 MB.'), fieldErrors: { yape_qr: t('Muy grande', 'Too large') } };
     }
     const path = `${brand.slug}/yape-qr-${nanoid(8)}.${ext}`;
     const bytes = new Uint8Array(await qrFile.arrayBuffer());
@@ -131,7 +134,7 @@ export async function updateBrandSettingsAction(
       .from('brand-assets')
       .upload(path, bytes, { contentType: qrFile.type, cacheControl: '3600', upsert: true });
     if (upErr) {
-      return { ok: false, message: `No se pudo subir el QR: ${upErr.message}` };
+      return { ok: false, message: t(`No se pudo subir el QR: ${upErr.message}`, `Could not upload the QR: ${upErr.message}`) };
     }
     const { data: pub } = admin.storage.from('brand-assets').getPublicUrl(path);
     yapeQrUrl = pub.publicUrl;
@@ -179,7 +182,7 @@ export async function updateBrandSettingsAction(
 
   revalidatePath('/admin');
   revalidatePath('/admin/settings');
-  return { ok: true, message: 'Configuración guardada. Los cambios ya están en vivo.' };
+  return { ok: true, message: t('Configuración guardada. Los cambios ya están en vivo.', 'Settings saved. The changes are already live.') };
 }
 
 // =============================================================
@@ -194,19 +197,19 @@ export async function updateBrandSettingsAction(
 // TEST- (sandbox). El prefijo atrapa typos y campos cruzados antes de pegarle a
 // MP; el access_token además se valida CONTRA MP abajo (la verdad real).
 const MP_CRED_RE = /^(APP_USR-|TEST-)/;
-const mpSchema = z.object({
+const mpSchema = (t: Textos['t']) => z.object({
   mp_access_token: z
     .string()
     .trim()
-    .min(10, 'Access token demasiado corto')
+    .min(10, t('Access token demasiado corto', 'Access token too short'))
     .max(400)
-    .regex(MP_CRED_RE, 'El access token debe empezar con APP_USR- o TEST-'),
+    .regex(MP_CRED_RE, t('El access token debe empezar con APP_USR- o TEST-', 'The access token must start with APP_USR- or TEST-')),
   mp_public_key: z
     .string()
     .trim()
-    .min(10, 'Public key demasiado corta')
+    .min(10, t('Public key demasiado corta', 'Public key too short'))
     .max(400)
-    .regex(MP_CRED_RE, 'La public key debe empezar con APP_USR- o TEST-'),
+    .regex(MP_CRED_RE, t('La public key debe empezar con APP_USR- o TEST-', 'The public key must start with APP_USR- or TEST-')),
 });
 
 export async function updateMpCredentialsAction(
@@ -214,10 +217,11 @@ export async function updateMpCredentialsAction(
   formData: FormData
 ): Promise<SettingsState> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   // ENFORCEMENT: el brand sale de la sesión, NUNCA del form.
   const ctxW = contextoEscritura(user);
   if (!ctxW) {
-    return { ok: false, message: 'No tienes acceso de promotor.' };
+    return { ok: false, message: t('No tienes acceso de promotor.', "You don't have promoter access.") };
   }
   const brandId = ctxW.brandId;
   const admin = createAdminClient();
@@ -240,11 +244,11 @@ export async function updateMpCredentialsAction(
     });
     await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId, accion: 'brand_mp_credentials_removed' });
     revalidatePath('/admin/settings');
-    return { ok: true, message: 'Credenciales de MercadoPago eliminadas. Tu checkout vuelve a solo Yape.' };
+    return { ok: true, message: t('Credenciales de MercadoPago eliminadas. Tu checkout vuelve a solo Yape.', 'MercadoPago credentials removed. Your checkout is back to Yape only.') };
   }
 
   // Guardar / actualizar.
-  const parsed = mpSchema.safeParse({
+  const parsed = mpSchema(t).safeParse({
     mp_access_token: formData.get('mp_access_token') ?? '',
     mp_public_key: formData.get('mp_public_key') ?? '',
   });
@@ -254,14 +258,14 @@ export async function updateMpCredentialsAction(
       const p = e.path.join('.');
       if (p) fieldErrors[p] = e.message;
     }
-    return { ok: false, message: 'Revisa las credenciales.', fieldErrors };
+    return { ok: false, message: t('Revisa las credenciales.', 'Check your credentials.'), fieldErrors };
   }
 
   // Validación REAL contra MercadoPago antes de persistir (evita guardar un
   // token con typo / revocado que rompería el checkout más tarde).
-  const check = await validateMercadoPagoToken(parsed.data.mp_access_token);
+  const check = await validateMercadoPagoToken(parsed.data.mp_access_token, await idiomaPanel());
   if (!check.ok) {
-    return { ok: false, message: check.error ?? 'El access token no es válido.', fieldErrors: { mp_access_token: 'Inválido' } };
+    return { ok: false, message: check.error ?? t('El access token no es válido.', 'The access token is not valid.'), fieldErrors: { mp_access_token: t('Inválido', 'Invalid') } };
   }
 
   const { error } = await admin.rpc('set_brand_mp_credentials', {
@@ -282,5 +286,21 @@ export async function updateMpCredentialsAction(
   await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId, accion: 'brand_mp_credentials_updated' });
 
   revalidatePath('/admin/settings');
-  return { ok: true, message: 'Credenciales de MercadoPago validadas y guardadas. Ya puedes cobrar con tarjeta.' };
+  return { ok: true, message: t('Credenciales de MercadoPago validadas y guardadas. Ya puedes cobrar con tarjeta.', 'MercadoPago credentials validated and saved. You can now charge with card.') };
+}
+
+// Idioma del panel de la marca (0073). La marca sale de la sesión, nunca del
+// cliente; el valor se valida contra la lista cerrada (el CHECK de la base es
+// la segunda red).
+export async function cambiarIdiomaAction(idioma: string): Promise<{ ok: boolean }> {
+  if (!esIdioma(idioma)) return { ok: false };
+  const user = await requireSession();
+  const ctxW = contextoEscritura(user);
+  if (!ctxW) return { ok: false };
+  const admin = createAdminClient();
+  const { error } = await admin.from('brands').update({ idioma }).eq('id', ctxW.brandId);
+  if (error) return { ok: false };
+  await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId: ctxW.brandId, accion: 'brand_idioma_updated', diff: { idioma } });
+  revalidatePath('/admin', 'layout');
+  return { ok: true };
 }

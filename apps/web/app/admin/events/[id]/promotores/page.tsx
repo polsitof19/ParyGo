@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { todas } from '@/lib/todas';
 import { formatPEN } from '@/lib/utils';
 import { PromoCodeManager, type PromoCodeRow, type PromoSales } from '../PromoCodeManager';
+import { textosPanel } from '@/lib/idiomaServer';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -25,6 +26,7 @@ export default async function PromotersPage({ params }: { params: { id: string }
   const user = await requireSession();
   const ctx = ownerBrandContext(user);
   if (!ctx) notFound();
+  const { t } = await textosPanel();
 
   const admin = createAdminClient();
   // TENANCY: el evento debe ser de la marca activa (sesión o impersonada).
@@ -99,8 +101,8 @@ export default async function PromotersPage({ params }: { params: { id: string }
   return (
     <>
       <div style={{ marginBottom: 14 }}>
-        <h2 className="s-h2" style={{ marginTop: 6 }}>Promotores</h2>
-        <p className="s-card__desc">Crea códigos para tus RR.PP. y mira cuánto vendió cada uno.</p>
+        <h2 className="s-h2" style={{ marginTop: 6 }}>{t('Promotores', 'Promoters')}</h2>
+        <p className="s-card__desc">{t('Crea códigos para tus RR.PP. y mira cuánto vendió cada uno.', 'Create codes for your promoters and see how much each one sold.')}</p>
       </div>
 
       {/* 1) Crear y gestionar códigos */}
@@ -114,12 +116,15 @@ export default async function PromotersPage({ params }: { params: { id: string }
 
       {/* 2) Ranking */}
       <div className="s-section">
-        <h3 className="s-h3" style={{ marginBottom: 4 }}>Ranking</h3>
+        <h3 className="s-h3" style={{ marginBottom: 4 }}>{t('Ranking', 'Ranking')}</h3>
         <p className="s-card__desc" style={{ marginBottom: 12 }}>
-          {rows.length} código{rows.length === 1 ? '' : 's'} · {totalClicks} clic{totalClicks === 1 ? '' : 's'} · {totalEntradas} entrada{totalEntradas === 1 ? '' : 's'} colocadas · {formatPEN(totalRecaudado)} recaudado
+          {t(
+            `${rows.length} código${rows.length === 1 ? '' : 's'} · ${totalClicks} clic${totalClicks === 1 ? '' : 's'} · ${totalEntradas} entrada${totalEntradas === 1 ? '' : 's'} colocadas · ${formatPEN(totalRecaudado)} recaudado`,
+            `${rows.length} code${rows.length === 1 ? '' : 's'} · ${totalClicks} click${totalClicks === 1 ? '' : 's'} · ${totalEntradas} ticket${totalEntradas === 1 ? '' : 's'} placed · ${formatPEN(totalRecaudado)} collected`,
+          )}
         </p>
         {rows.length === 0 ? (
-          <div className="s-card"><p className="s-empty">Todavía no hay códigos. Crea el primero arriba y comparte el link de tu promotor.</p></div>
+          <div className="s-card"><p className="s-empty">{t('Todavía no hay códigos. Crea el primero arriba y comparte el link de tu promotor.', 'No codes yet. Create the first one above and share your promoter link.')}</p></div>
         ) : (
           <div className="s-card s-card--flush">
             <ol className="a-rank">
@@ -129,15 +134,15 @@ export default async function PromotersPage({ params }: { params: { id: string }
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <p className="a-rank__name">{r.label || r.code}</p>
                     <p className="s-muted s-small">
-                      Código <strong>{r.code}</strong>
-                      {' · '}{r.clicks} clic{r.clicks === 1 ? '' : 's'}
-                      {r.clicks > 0 && <> · {Math.round((r.entradas / r.clicks) * 100)}% conversión</>}
-                      {r.descuentoCents > 0 && <> · {formatPEN(r.descuentoCents)} en descuentos</>}
+                      {t('Código', 'Code')} <strong>{r.code}</strong>
+                      {' · '}{t(`${r.clicks} clic${r.clicks === 1 ? '' : 's'}`, `${r.clicks} click${r.clicks === 1 ? '' : 's'}`)}
+                      {r.clicks > 0 && <> · {t(`${Math.round((r.entradas / r.clicks) * 100)}% conversión`, `${Math.round((r.entradas / r.clicks) * 100)}% conversion`)}</>}
+                      {r.descuentoCents > 0 && <> · {t(`${formatPEN(r.descuentoCents)} en descuentos`, `${formatPEN(r.descuentoCents)} in discounts`)}</>}
                     </p>
                   </div>
                   <div className="a-rank__num">
                     <p className="a-rank__money">{formatPEN(r.recaudadoCents)}</p>
-                    <p className="s-muted s-small">{r.entradas} entrada{r.entradas === 1 ? '' : 's'}</p>
+                    <p className="s-muted s-small">{t(`${r.entradas} entrada${r.entradas === 1 ? '' : 's'}`, `${r.entradas} ticket${r.entradas === 1 ? '' : 's'}`)}</p>
                   </div>
                 </li>
               ))}

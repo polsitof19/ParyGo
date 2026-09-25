@@ -3,6 +3,7 @@
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { useTextos } from '@/components/IdiomaPanel';
 
 type ArchiveAction = (
   id: string,
@@ -33,21 +34,25 @@ export function ArchiveToggle({
 }) {
   const [pending, start] = useTransition();
   const router = useRouter();
+  const { t } = useTextos();
 
   const onClick = () => {
     if (!archived) {
       const msg =
         confirmText ??
-        `¿Archivar ${noun}? Dejará de venderse y desaparece del público. Puedes desarchivarlo después.`;
+        t(
+          `¿Archivar ${noun}? Dejará de venderse y desaparece del público. Puedes desarchivarlo después.`,
+          `Archive ${noun}? It will stop selling and disappear from the public. You can unarchive it later.`
+        );
       if (!window.confirm(msg)) return;
     }
     start(async () => {
       const res = await action(id, !archived);
       if (res.ok) {
-        toast.success(archived ? 'Desarchivado' : 'Archivado');
+        toast.success(archived ? t('Desarchivado', 'Unarchived') : t('Archivado', 'Archived'));
         router.refresh();
       } else {
-        toast.error(res.message ?? 'No se pudo completar la acción.');
+        toast.error(res.message ?? t('No se pudo completar la acción.', 'Could not complete the action.'));
       }
     });
   };
@@ -60,7 +65,7 @@ export function ArchiveToggle({
       onClick={onClick}
       aria-busy={pending}
     >
-      {pending ? '…' : archived ? 'Desarchivar' : 'Archivar'}
+      {pending ? '…' : archived ? t('Desarchivar', 'Unarchive') : t('Archivar', 'Archive')}
     </button>
   );
 }

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Link2, ScanLine, Check } from 'lucide-react';
+import { useTextos } from '@/components/IdiomaPanel';
 
 // Los dos botones del evento que viene: ABRIR ESCÁNER y COPIAR LINK. Son lo
 // que el organizador hace la noche del evento y los días antes (compartir),
@@ -20,6 +21,7 @@ export function EventButtons({
   scannerPrimary?: boolean;
   readOnly?: boolean;
 }) {
+  const { t } = useTextos();
   const [copied, setCopied] = useState(false);
   const live = Boolean(publicUrl && isPublished);
 
@@ -28,10 +30,10 @@ export function EventButtons({
     try {
       await navigator.clipboard.writeText(publicUrl);
       setCopied(true);
-      toast.success('Link copiado. Pégalo en tu historia o en WhatsApp.');
+      toast.success(t('Link copiado. Pégalo en tu historia o en WhatsApp.', 'Link copied. Paste it in your story or on WhatsApp.'));
       setTimeout(() => setCopied(false), 2200);
     } catch {
-      toast.error('No se pudo copiar. Mantén apretado el link de la página pública.');
+      toast.error(t('No se pudo copiar. Mantén apretado el link de la página pública.', 'Could not copy. Press and hold the public page link.'));
     }
   }
 
@@ -40,12 +42,12 @@ export function EventButtons({
     <div className="a-evbtns">
       {!readOnly && (
         <Link href="/scan" className={`s-btn ${scannerPrimary ? 's-btn--primary' : 's-btn--soft'}`}>
-          <ScanLine aria-hidden="true" /> Abrir escáner
+          <ScanLine aria-hidden="true" /> {t('Abrir escáner', 'Open scanner')}
         </Link>
       )}
       {live && (
         <button type="button" onClick={copy} className="s-btn s-btn--soft">
-          {copied ? <Check aria-hidden="true" /> : <Link2 aria-hidden="true" />} {copied ? 'Copiado' : 'Copiar link'}
+          {copied ? <Check aria-hidden="true" /> : <Link2 aria-hidden="true" />} {copied ? t('Copiado', 'Copied') : t('Copiar link', 'Copy link')}
         </button>
       )}
     </div>

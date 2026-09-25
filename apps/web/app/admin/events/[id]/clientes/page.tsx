@@ -4,6 +4,7 @@ import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ClientsTable, type ClientRow } from './ClientsTable';
+import { textosPanel } from '@/lib/idiomaServer';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -14,6 +15,7 @@ export default async function EventClientsPage({ params, searchParams }: { param
   const user = await requireSession();
   const ctx = ownerBrandContext(user);
   if (!ctx) notFound();
+  const { t } = await textosPanel();
 
   const admin = createAdminClient();
   // ENFORCEMENT: el evento debe ser de la marca activa (brand de la sesión o la
@@ -69,10 +71,13 @@ export default async function EventClientsPage({ params, searchParams }: { param
   return (
     <>
       <div style={{ marginBottom: 14 }}>
-        <h2 className="s-h2" style={{ marginTop: 2 }}>Compradores</h2>
+        <h2 className="s-h2" style={{ marginTop: 2 }}>{t('Compradores', 'Buyers')}</h2>
         <p className="s-card__desc">
-          {total} comprador{total === 1 ? '' : 'es'} pagados · datos privados de tu marca.
-          {totalPages > 1 && <> · página {page} de {totalPages}</>}
+          {t(
+            `${total} comprador${total === 1 ? '' : 'es'} pagados · datos privados de tu marca.`,
+            `${total} paid buyer${total === 1 ? '' : 's'} · private data of your brand.`,
+          )}
+          {totalPages > 1 && <> · {t(`página ${page} de ${totalPages}`, `page ${page} of ${totalPages}`)}</>}
         </p>
       </div>
       <ClientsTable
@@ -81,20 +86,20 @@ export default async function EventClientsPage({ params, searchParams }: { param
         eventName={event.name}
         impersonating={ctx.soloLectura}
         focusSearch={Boolean(searchParams.buscar || searchParams.reenviar)}
-        hint={searchParams.reenviar && !ctx.soloLectura ? 'Busca al comprador y toca «Reenviar QR»: le llega otra vez el email con su entrada.' : null}
+        hint={searchParams.reenviar && !ctx.soloLectura ? t('Busca al comprador y toca «Reenviar QR»: le llega otra vez el email con su entrada.', 'Search for the buyer and tap "Resend QR": the ticket email arrives again.') : null}
       />
       {totalPages > 1 && (
-        <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 16 }} aria-label="Paginación de compradores">
+        <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 16 }} aria-label={t('Paginación de compradores', 'Buyer pagination')}>
           {page > 1 ? (
-            <Link href={`/admin/events/${event.id}/clientes?page=${page - 1}`} className="s-btn s-btn--soft s-btn--sm">Anterior</Link>
+            <Link href={`/admin/events/${event.id}/clientes?page=${page - 1}`} className="s-btn s-btn--soft s-btn--sm">{t('Anterior', 'Previous')}</Link>
           ) : (
-            <button type="button" className="s-btn s-btn--soft s-btn--sm" disabled>Anterior</button>
+            <button type="button" className="s-btn s-btn--soft s-btn--sm" disabled>{t('Anterior', 'Previous')}</button>
           )}
-          <span className="s-muted" style={{ fontSize: 13 }}>Página {page} de {totalPages}</span>
+          <span className="s-muted" style={{ fontSize: 13 }}>{t(`Página ${page} de ${totalPages}`, `Page ${page} of ${totalPages}`)}</span>
           {page < totalPages ? (
-            <Link href={`/admin/events/${event.id}/clientes?page=${page + 1}`} className="s-btn s-btn--soft s-btn--sm">Siguiente</Link>
+            <Link href={`/admin/events/${event.id}/clientes?page=${page + 1}`} className="s-btn s-btn--soft s-btn--sm">{t('Siguiente', 'Next')}</Link>
           ) : (
-            <button type="button" className="s-btn s-btn--soft s-btn--sm" disabled>Siguiente</button>
+            <button type="button" className="s-btn s-btn--soft s-btn--sm" disabled>{t('Siguiente', 'Next')}</button>
           )}
         </nav>
       )}

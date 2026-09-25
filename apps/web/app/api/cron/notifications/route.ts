@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
   const brandIds = [...new Set(rows.map((r) => r.brand_id).filter((x): x is string => !!x))];
   const { data: brandsData } = await admin
     .from('brands')
-    .select('id, name, slug, whatsapp_e164, contact_email, theme_json')
+    .select('id, name, slug, whatsapp_e164, contact_email, theme_json, idioma')
     .in('id', brandIds);
   const brandById = new Map((brandsData ?? []).map((b) => [b.id, b]));
 
@@ -105,6 +105,7 @@ export async function POST(req: NextRequest) {
         res = await sendYapePendingDigestEmail({
           to: r.recipient_email, eventName: String(p.event_name ?? ''), eventId: r.event_id,
           brand: brandForEmail, pendingCount: Number(p.pending_count ?? 0), idempotencyKey: r.dedupe_key,
+          lang: brand.idioma === 'en' ? 'en' : 'es',
         });
       } else if (r.kind === 'event_reminder') {
         res = await sendEventReminderEmail({

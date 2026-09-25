@@ -4,6 +4,7 @@ import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
 import { enLotes, todas } from '@/lib/todas';
+import { textosPanel } from '@/lib/idiomaServer';
 import { YapeReviewRow } from '../../../yape/YapeReviewRow';
 import { LiveRefresh } from '../LiveRefresh';
 
@@ -25,6 +26,7 @@ export default async function EventYapePage({ params }: { params: { id: string }
   const admin = createAdminClient();
   const { data: event } = await admin.from('events').select('id, brand_id').eq('id', params.id).maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
+  const { t } = await textosPanel();
 
   const data = await todas((a, b) => admin
     .from('yape_proofs')
@@ -73,7 +75,7 @@ export default async function EventYapePage({ params }: { params: { id: string }
       .in('order_id', lote));
     for (const it of (oi ?? []) as { order_id: string; ticket_type_name: string | null; quantity: number | null }[]) {
       const arr = itemsByOrder.get(it.order_id) ?? [];
-      arr.push({ name: it.ticket_type_name ?? 'Entrada', quantity: it.quantity ?? 0 });
+      arr.push({ name: it.ticket_type_name ?? t('Entrada', 'Ticket'), quantity: it.quantity ?? 0 });
       itemsByOrder.set(it.order_id, arr);
     }
   }
@@ -89,19 +91,21 @@ export default async function EventYapePage({ params }: { params: { id: string }
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
         <div>
-          <h2 className="s-h2" style={{ marginTop: 2 }}>Comprobantes pendientes {withUrls.length > 0 && <span className="s-badge s-badge--alert" style={{ marginLeft: 8 }}>{withUrls.length}</span>}</h2>
+          <h2 className="s-h2" style={{ marginTop: 2 }}>{t('Comprobantes pendientes', 'Pending receipts')} {withUrls.length > 0 && <span className="s-badge s-badge--alert" style={{ marginLeft: 8 }}>{withUrls.length}</span>}</h2>
         </div>
         <LiveRefresh seconds={25} />
       </div>
 
       {withUrls.length === 0 ? (
-        <div className="s-card"><p className="s-empty">No hay comprobantes por revisar. Los nuevos aparecen solos, sin recargar.</p></div>
+        <div className="s-card"><p className="s-empty">{t('No hay comprobantes por revisar. Los nuevos aparecen solos, sin recargar.', 'No receipts to review. New ones appear automatically, without reloading.')}</p></div>
       ) : (
         <>
           {/* La instrucción va UNA vez arriba de la lista, no repetida en cada fila. */}
           <p className="s-card__desc" style={{ marginBottom: 12 }}>
-            Abre tu Yape → Movimientos y busca cada transferencia. Si el monto, el N° de operación y el nombre coinciden, aprueba.
-            Toca una fila para ver la captura y el detalle.
+            {t(
+              'Abre tu Yape → Movimientos y busca cada transferencia. Si el monto, el N° de operación y el nombre coinciden, aprueba. Toca una fila para ver la captura y el detalle.',
+              'Open your Yape → Transactions and look up each transfer. If the amount, operation number and name match, approve it. Tap a row to see the screenshot and details.'
+            )}
           </p>
           <div>
             {withUrls.map((p) => (

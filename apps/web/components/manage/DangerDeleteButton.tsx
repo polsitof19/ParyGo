@@ -2,6 +2,7 @@
 
 import { useId, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTextos } from '@/components/IdiomaPanel';
 
 type DeleteAction = (
   id: string,
@@ -26,7 +27,7 @@ export function DangerDeleteButton({
   canDelete,
   noun = 'esto',
   /** Aviso cuando no se puede borrar. Por defecto el de "tiene ventas". */
-  cannotDeleteReason = 'No se puede eliminar: tiene ventas. Archívalo en su lugar.',
+  cannotDeleteReason,
 }: {
   id: string;
   /** Nombre exacto que el usuario debe escribir para confirmar. */
@@ -43,11 +44,12 @@ export function DangerDeleteButton({
   const router = useRouter();
   const inputId = useId();
   const helpId = useId();
+  const { t } = useTextos();
 
   if (!canDelete) {
     return (
       <p className="s-banner s-banner--err" role="status">
-        {cannotDeleteReason}
+        {cannotDeleteReason ?? t('No se puede eliminar: tiene ventas. Archívalo en su lugar.', 'Cannot delete: it has sales. Archive it instead.')}
       </p>
     );
   }
@@ -65,7 +67,7 @@ export function DangerDeleteButton({
           setOpen(true);
         }}
       >
-        Eliminar definitivamente
+        {t('Eliminar definitivamente', 'Delete permanently')}
       </button>
     );
   }
@@ -79,7 +81,7 @@ export function DangerDeleteButton({
         // El padre revalida; navegamos hacia atrás / refrescamos.
         router.refresh();
       } else {
-        setError(res.message ?? 'No se pudo eliminar.');
+        setError(res.message ?? t('No se pudo eliminar.', 'Could not delete.'));
       }
     });
   };
@@ -89,14 +91,13 @@ export function DangerDeleteButton({
       className="s-card s-card--confirm-danger"
     >
       <p className="s-card__desc" style={{ marginBottom: 10 }}>
-        Esta acción es permanente y no se puede deshacer. Para confirmar, escribe el
-        nombre exacto de {noun}:{' '}
+        {t(`Esta acción es permanente y no se puede deshacer. Para confirmar, escribe el nombre exacto de ${noun}:`, `This action is permanent and cannot be undone. To confirm, type the exact name of ${noun}:`)}{' '}
         <strong style={{ color: 'var(--ink)' }}>{name}</strong>
       </p>
 
       <div className="s-field">
         <label className="s-label" htmlFor={inputId}>
-          Escribe el nombre para confirmar
+          {t('Escribe el nombre para confirmar', 'Type the name to confirm')}
         </label>
         <input
           id={inputId}
@@ -112,7 +113,7 @@ export function DangerDeleteButton({
           disabled={pending}
         />
         <p id={helpId} className="s-card__desc" style={{ marginTop: 6, fontSize: 12.5 }}>
-          {matches ? 'El nombre coincide.' : 'Debe coincidir exactamente.'}
+          {matches ? t('El nombre coincide.', 'The name matches.') : t('Debe coincidir exactamente.', 'It must match exactly.')}
         </p>
       </div>
 
@@ -130,7 +131,7 @@ export function DangerDeleteButton({
           disabled={!matches || pending}
           aria-busy={pending}
         >
-          {pending ? 'Eliminando…' : 'Eliminar definitivamente'}
+          {pending ? t('Eliminando…', 'Deleting…') : t('Eliminar definitivamente', 'Delete permanently')}
         </button>
         <button
           type="button"
@@ -142,7 +143,7 @@ export function DangerDeleteButton({
           }}
           disabled={pending}
         >
-          Cancelar
+          {t('Cancelar', 'Cancel')}
         </button>
       </div>
     </div>

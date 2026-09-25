@@ -4,8 +4,11 @@ import { z } from 'zod';
 // espacios, guiones y el +51 (se limpian). Un número mal tipeado manda la plata
 // de los compradores a otra persona, así que lo validan TODOS los que escriben
 // brands.yape_number: Mi marca y el super admin (crear y editar marca).
-export const yapeNumberSchema = z
+export const yapeNumberSchemaCon = (mensaje: string) => z
   .string()
   .transform((v) => v.replace(/[\s-]/g, '').replace(/^\+?51(?=9\d{8}$)/, ''))
-  .refine((v) => v === '' || /^9\d{8}$/.test(v), 'Pon el celular de Yape: 9 dígitos, empieza con 9')
+  .refine((v) => v === '' || /^9\d{8}$/.test(v), mensaje)
   .optional();
+export const YAPE_NUMERO_ES = 'Pon el celular de Yape: 9 dígitos, empieza con 9';
+export const YAPE_NUMERO_EN = 'Enter the Yape mobile number: 9 digits, starting with 9';
+export const yapeNumberSchema = yapeNumberSchemaCon(YAPE_NUMERO_ES);

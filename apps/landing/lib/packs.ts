@@ -4,8 +4,8 @@
 // Sin 'use client' a propósito: lo leen también componentes de servidor
 // (StructuredData).
 export const PACKS = [
-  { eventos: 1, pen: 150, usd: 45 },
-  { eventos: 3, pen: 390, usd: 115 },
-  { eventos: 5, pen: 600, usd: 175 },
-  { eventos: 10, pen: 1100, usd: 320 },
+  { eventos: 1, pen: 150, usd: 59 },
+  { eventos: 3, pen: 390, usd: 149 },
+  { eventos: 5, pen: 600, usd: 229 },
+  { eventos: 10, pen: 1100, usd: 399 },
 ] as const;

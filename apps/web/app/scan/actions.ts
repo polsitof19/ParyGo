@@ -2,6 +2,7 @@
 
 import { todas } from '@/lib/todas';
 import { requireSession, type SessionUser } from '@/lib/auth';
+import { textosPanel } from '@/lib/idiomaServer';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export type ScanResult = {
@@ -147,6 +148,7 @@ export async function previewScanAction(input: { qr: string }): Promise<ScanResu
 
 export async function preloadEventAction(eventId: string): Promise<PreloadResult> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const admin = createAdminClient();
 
   const { data: ev } = await admin
@@ -154,9 +156,9 @@ export async function preloadEventAction(eventId: string): Promise<PreloadResult
     .select('brand_id')
     .eq('id', eventId)
     .maybeSingle();
-  if (!ev) return { ok: false, message: 'Evento no encontrado.' };
+  if (!ev) return { ok: false, message: t('Evento no encontrado.', 'Event not found.') };
   if (!user.isSuperAdmin && !validatableBrandIds(user).includes(ev.brand_id)) {
-    return { ok: false, message: 'No tienes acceso a este evento.' };
+    return { ok: false, message: t('No tienes acceso a este evento.', 'You do not have access to this event.') };
   }
 
   // TODAS, paginadas: con más de 1000 entradas, PostgREST cortaba en 1000 y la
@@ -172,7 +174,7 @@ export async function preloadEventAction(eventId: string): Promise<PreloadResult
       .range(desde, hasta));
   } catch {
     // Nunca una lista a medias: mejor que la puerta sepa que no se precargó.
-    return { ok: false, message: 'No se pudieron descargar las entradas. Intenta de nuevo.' };
+    return { ok: false, message: t('No se pudieron descargar las entradas. Intenta de nuevo.', 'Could not download the tickets. Try again.') };
   }
 
   const list = (tickets ?? []).map((t) => {

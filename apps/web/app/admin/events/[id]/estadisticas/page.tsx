@@ -7,6 +7,7 @@ import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
 import { publicEnv } from '@/lib/env';
+import { textosPanel } from '@/lib/idiomaServer';
 
 
 export const runtime = 'edge';
@@ -20,6 +21,7 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
   const ctx = ownerBrandContext(user);
   if (!ctx) notFound();
   const impersonating = ctx.soloLectura;
+  const { t, loc } = await textosPanel();
 
   const admin = createAdminClient();
   const { data: event } = await admin
@@ -89,7 +91,7 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
   }
   const dayMap = new Map<string, number>();
   for (const o of paidRows) {
-    const day = new Date(o.created_at).toLocaleDateString('es-PE', { timeZone: 'America/Lima', day: '2-digit', month: 'short' });
+    const day = new Date(o.created_at).toLocaleDateString(loc, { timeZone: 'America/Lima', day: '2-digit', month: 'short' });
     dayMap.set(day, (dayMap.get(day) ?? 0) + (o.total_cents ?? 0));
   }
   const byDay = [...dayMap.entries()].slice(-14);
@@ -173,7 +175,7 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
   const pendItemsByOrder = new Map<string, { name: string; quantity: number }[]>();
   for (const it of (pendItems ?? []) as { order_id: string; ticket_type_name: string | null; quantity: number | null }[]) {
     const arr = pendItemsByOrder.get(it.order_id) ?? [];
-    arr.push({ name: it.ticket_type_name ?? 'Entrada', quantity: it.quantity ?? 0 });
+    arr.push({ name: it.ticket_type_name ?? t('Entrada', 'Ticket'), quantity: it.quantity ?? 0 });
     pendItemsByOrder.set(it.order_id, arr);
   }
   // Inyectar los items resueltos en cada proof pendiente (las URLs firmadas se
@@ -181,16 +183,16 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
   for (const p of pendingReview) p.items = pendItemsByOrder.get(p.order?.id ?? '') ?? [];
   // Alertas visuales (stock bajo / agotado / sube de precio pronto).
   const alerts: { tone: 'deny' | 'warn' | 'info'; text: string }[] = [];
-  for (const t of types) {
-    if (!t.is_unlimited && t.capacity > 0) {
-      const libres = Math.max(0, t.capacity - (t.sold ?? 0));
-      if (libres === 0) alerts.push({ tone: 'deny', text: `${t.name} agotado` });
-      else if (libres <= 10) alerts.push({ tone: 'warn', text: `Te quedan ${libres} ${t.name}` });
+  for (const tp of types) {
+    if (!tp.is_unlimited && tp.capacity > 0) {
+      const libres = Math.max(0, tp.capacity - (tp.sold ?? 0));
+      if (libres === 0) alerts.push({ tone: 'deny', text: t(`${tp.name} agotado`, `${tp.name} sold out`) });
+      else if (libres <= 10) alerts.push({ tone: 'warn', text: t(`Te quedan ${libres} ${tp.name}`, `${libres} ${tp.name} left`) });
     }
-    const nx = nextByType.get(t.id);
+    const nx = nextByType.get(tp.id);
     if (nx) {
       const hrs = (new Date(nx.at).getTime() - Date.now()) / 3600000;
-      if (hrs > 0 && hrs <= 72) alerts.push({ tone: 'info', text: `${t.name} sube a ${formatPEN(nx.cents)} el ${new Date(nx.at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}` });
+      if (hrs > 0 && hrs <= 72) alerts.push({ tone: 'info', text: t(`${tp.name} sube a ${formatPEN(nx.cents)} el ${new Date(nx.at).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}`, `${tp.name} goes up to ${formatPEN(nx.cents)} on ${new Date(nx.at).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}`) });
     }
   }
   const confirmedCents = byMethod.yape.cents + byMethod.mp.cents;
@@ -220,12 +222,12 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
   const startsMs = Date.parse(event.starts_at);
   const endsMs = event.ends_at ? Date.parse(event.ends_at) : startsMs + 18 * 3600 * 1000;
   const days = Math.ceil((startsMs - Date.now()) / 86400000);
-  const when = Date.now() > endsMs ? 'Terminó'
-    : Date.now() >= startsMs ? 'Es hoy — en curso'
-    : days <= 0 ? 'Hoy'
-    : days === 1 ? 'Mañana'
-    : `En ${days} días`;
-  const whenSub = new Date(event.starts_at).toLocaleString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' });
+  const when = Date.now() > endsMs ? t('Terminó', 'Ended')
+    : Date.now() >= startsMs ? t('Es hoy — en curso', 'Today — in progress')
+    : days <= 0 ? t('Hoy', 'Today')
+    : days === 1 ? t('Mañana', 'Tomorrow')
+    : t(`En ${days} días`, `In ${days} days`);
+  const whenSub = new Date(event.starts_at).toLocaleString(loc, { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' });
   const brandSlug = (Array.isArray(event.brand) ? event.brand[0] : event.brand)?.slug ?? null;
   const publicUrl = brandSlug ? `https://${brandSlug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${event.slug}` : null;
   const noSalesYet = event.is_published && soldTickets === 0 && Date.now() < endsMs;
@@ -236,39 +238,39 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
           plegado. Antes la cola de Yapes quedaba debajo de los cuatro números,
           las acciones y las alertas: en 390 caía a ~900px del borde. */}
 
-      <h1 className="s-h1" style={{ marginBottom: 'var(--s-s3)' }}>Estadísticas</h1>
+      <h1 className="s-h1" style={{ marginBottom: 'var(--s-s3)' }}>{t('Estadísticas', 'Statistics')}</h1>
 
       {/* 2) ¿Cómo va? — cuatro números. La plata primero: es lo que se pregunta. */}
       <div className="a-pulse">
         <div className="s-stat">
-          <span className="s-stat__label">Recaudado</span>
+          <span className="s-stat__label">{t('Recaudado', 'Collected')}</span>
           <span className="s-stat__value">{formatPEN(confirmedCents)}</span>
           <span className="s-stat__sub">
             {pendingCount > 0
-              ? `+ ${formatPEN(pendingCents)} por aprobar`
+              ? t(`+ ${formatPEN(pendingCents)} por aprobar`, `+ ${formatPEN(pendingCents)} to approve`)
               : showMp
-                ? `Yape ${formatPEN(byMethod.yape.cents)} · tarjeta ${formatPEN(byMethod.mp.cents)}`
-                : 'confirmado en tu Yape'}
+                ? t(`Yape ${formatPEN(byMethod.yape.cents)} · tarjeta ${formatPEN(byMethod.mp.cents)}`, `Yape ${formatPEN(byMethod.yape.cents)} · card ${formatPEN(byMethod.mp.cents)}`)
+                : t('confirmado en tu Yape', 'confirmed in your Yape')}
           </span>
         </div>
         <div className="s-stat">
-          <span className="s-stat__label">Vendidas</span>
+          <span className="s-stat__label">{t('Vendidas', 'Sold')}</span>
           <span className="s-stat__value">{soldTickets}</span>
           <span className="s-stat__sub">
-            {soldPct !== null ? `${soldPct}% del aforo ocupado` : 'aforo ilimitado'}
-            {courtesyTickets > 0 && ` · +${courtesyTickets} cortesía${courtesyTickets === 1 ? '' : 's'}`}
+            {soldPct !== null ? t(`${soldPct}% del aforo ocupado`, `${soldPct}% of capacity filled`) : t('aforo ilimitado', 'unlimited capacity')}
+            {courtesyTickets > 0 && ` · ${t(`+${courtesyTickets} cortesía${courtesyTickets === 1 ? '' : 's'}`, `+${courtesyTickets} complimentary`)}`}
           </span>
           {soldPct !== null && <div className="a-meter" aria-hidden="true"><div className="a-meter__fill" style={{ width: `${soldPct}%` }} /></div>}
         </div>
         <div className="s-stat">
-          <span className="s-stat__label">Cuándo</span>
+          <span className="s-stat__label">{t('Cuándo', 'When')}</span>
           <span className="s-stat__value s-stat__value--text">{when}</span>
           <span className="s-stat__sub">{whenSub}</span>
         </div>
         <div className="s-stat">
-          <span className="s-stat__label">Entraron</span>
+          <span className="s-stat__label">{t('Entraron', 'Entered')}</span>
           <span className="s-stat__value">{totalScanned}</span>
-          <span className="s-stat__sub">escaneados en puerta</span>
+          <span className="s-stat__sub">{t('escaneados en puerta', 'scanned at the door')}</span>
         </div>
       </div>
 
@@ -281,46 +283,46 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
 
       {/* Entradas por tipo */}
       <section className="s-section">
-        <h2 className="s-h2" style={{ marginBottom: 12 }}>Entradas por tipo</h2>
+        <h2 className="s-h2" style={{ marginBottom: 12 }}>{t('Entradas por tipo', 'Tickets by type')}</h2>
         {types.length === 0 ? (
-          <div className="s-card"><p className="s-empty">Este evento no tiene tipos de entrada todavía.</p></div>
+          <div className="s-card"><p className="s-empty">{t('Este evento no tiene tipos de entrada todavía.', 'This event has no ticket types yet.')}</p></div>
         ) : (
           <div className="s-card s-card--flush" style={{ overflowX: 'auto' }}>
             {/* s-table--stack: en ≤640 la tabla se vuelve lista y cada número
                 se lleva su etiqueta (data-l), en vez de deslizar 540px de
                 ancho dentro de una pantalla de 358. */}
             <table className="a-typetable s-table--stack">
-              <thead><tr><th>Tipo</th><th className="num">Capacidad</th><th className="num">Emitidas</th><th className="num">Libres</th><th className="num">Escaneados</th><th className="num">Recaudado</th></tr></thead>
+              <thead><tr><th>{t('Tipo', 'Type')}</th><th className="num">{t('Capacidad', 'Capacity')}</th><th className="num">{t('Emitidas', 'Issued')}</th><th className="num">{t('Libres', 'Available')}</th><th className="num">{t('Escaneados', 'Scanned')}</th><th className="num">{t('Recaudado', 'Collected')}</th></tr></thead>
               <tbody>
-                {types.map((t) => {
-                  const sold = t.sold ?? 0;
-                  const libres = t.is_unlimited ? null : Math.max(0, t.capacity - sold);
-                  const scanned = scannedByType.get(t.id) ?? 0;
-                  const rec = recByType.get(t.id) ?? 0;
-                  const phase = phaseByType.get(t.id);
+                {types.map((tp) => {
+                  const sold = tp.sold ?? 0;
+                  const libres = tp.is_unlimited ? null : Math.max(0, tp.capacity - sold);
+                  const scanned = scannedByType.get(tp.id) ?? 0;
+                  const rec = recByType.get(tp.id) ?? 0;
+                  const phase = phaseByType.get(tp.id);
                   return (
-                    <tr key={t.id}>
+                    <tr key={tp.id}>
                       <td>
-                        <strong>{t.name}</strong>{!t.is_active && <span className="s-badge s-badge--draft s-badge--inline">inactivo</span>}
-                        {phase && <span className="a-phase">Precio actual: {phase}</span>}
+                        <strong>{tp.name}</strong>{!tp.is_active && <span className="s-badge s-badge--draft s-badge--inline">{t('inactivo', 'inactive')}</span>}
+                        {phase && <span className="a-phase">{t('Precio actual:', 'Current price:')} {phase}</span>}
                       </td>
-                      <td className="num" data-l="Capacidad">{t.is_unlimited ? '∞' : t.capacity}</td>
-                      <td className="num" data-l="Emitidas">{sold}</td>
-                      <td className="num" data-l="Libres">{t.is_unlimited ? '—' : libres}</td>
-                      <td className="num" data-l="Escaneados">{scanned}</td>
-                      <td className="num" data-l="Recaudado">{formatPEN(rec)}</td>
+                      <td className="num" data-l={t('Capacidad', 'Capacity')}>{tp.is_unlimited ? '∞' : tp.capacity}</td>
+                      <td className="num" data-l={t('Emitidas', 'Issued')}>{sold}</td>
+                      <td className="num" data-l={t('Libres', 'Available')}>{tp.is_unlimited ? '—' : libres}</td>
+                      <td className="num" data-l={t('Escaneados', 'Scanned')}>{scanned}</td>
+                      <td className="num" data-l={t('Recaudado', 'Collected')}>{formatPEN(rec)}</td>
                     </tr>
                   );
                 })}
               </tbody>
               <tfoot>
                 <tr>
-                  <td>Total</td>
-                  <td className="num" data-l="Capacidad">{capTotal > 0 ? capTotal : (hasUnlimited ? '∞' : '—')}</td>
-                  <td className="num" data-l="Emitidas">{totalSold}</td>
-                  <td className="num" data-l="Libres">{capTotal > 0 ? Math.max(0, capTotal - soldCapped) : '—'}</td>
-                  <td className="num" data-l="Escaneados">{totalScanned}</td>
-                  <td className="num" data-l="Recaudado">{formatPEN(recTotal)}</td>
+                  <td>{t('Total', 'Total')}</td>
+                  <td className="num" data-l={t('Capacidad', 'Capacity')}>{capTotal > 0 ? capTotal : (hasUnlimited ? '∞' : '—')}</td>
+                  <td className="num" data-l={t('Emitidas', 'Issued')}>{totalSold}</td>
+                  <td className="num" data-l={t('Libres', 'Available')}>{capTotal > 0 ? Math.max(0, capTotal - soldCapped) : '—'}</td>
+                  <td className="num" data-l={t('Escaneados', 'Scanned')}>{totalScanned}</td>
+                  <td className="num" data-l={t('Recaudado', 'Collected')}>{formatPEN(recTotal)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -333,9 +335,9 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
           para lectores de pantalla. */}
       {paidRows.length > 0 && byDay.length > 0 && (
         <section className="s-section">
-          <h2 className="s-h2" style={{ marginBottom: 12 }}>Ventas por día</h2>
+          <h2 className="s-h2" style={{ marginBottom: 12 }}>{t('Ventas por día', 'Sales per day')}</h2>
           <div className="s-card">
-            <ol className="a-chart" aria-label="Ventas por día">
+            <ol className="a-chart" aria-label={t('Ventas por día', 'Sales per day')}>
               {byDay.map(([day, cents], i) => (
                 <li key={day} className={`a-chart__col${i === byDay.length - 1 ? ' a-chart__col--last' : ''}`} title={`${day}: ${formatPEN(cents)}`}>
                   <span className="a-chart__bar" style={{ height: `${Math.max(4, Math.round((cents / maxDay) * 100))}%` }} />
@@ -353,7 +355,7 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
 
       <p className="a-print">
         <Link href={`/admin/events/${event.id}/reporte`} className="s-btn s-btn--soft s-btn--sm">
-          <Printer aria-hidden="true" /> Reporte para imprimir
+          <Printer aria-hidden="true" /> {t('Reporte para imprimir', 'Printable report')}
         </Link>
       </p>
 
@@ -362,8 +364,8 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
         <details className="s-fold s-folds">
           <summary>
             <span className="s-fold__t">
-              Yapes rechazados ({rejectedRows.length})
-              <span className="s-fold__hint">Los comprobantes que no aprobaste, con el motivo.</span>
+              {t(`Yapes rechazados (${rejectedRows.length})`, `Rejected Yapes (${rejectedRows.length})`)}
+              <span className="s-fold__hint">{t('Los comprobantes que no aprobaste, con el motivo.', 'The receipts you did not approve, with the reason.')}</span>
             </span>
             <ChevronDown aria-hidden="true" />
           </summary>
@@ -373,11 +375,11 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
                 <li key={r.id} className="s-hlist__row">
                   <span style={{ minWidth: 0 }}>
                     <strong>{r.order?.buyer_name ?? '—'}</strong><span className="s-muted s-small"> · {r.order?.buyer_email}</span>
-                    {r.reject_reason && <span className="s-muted s-small" style={{ display: 'block' }}>Motivo: {r.reject_reason}</span>}
+                    {r.reject_reason && <span className="s-muted s-small" style={{ display: 'block' }}>{t('Motivo:', 'Reason:')} {r.reject_reason}</span>}
                   </span>
                   <span className="s-muted s-small" style={{ textAlign: 'right', flexShrink: 0 }}>
                     {formatPEN(r.amount_cents)}<br />
-                    {r.reviewed_at && new Date(r.reviewed_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
+                    {r.reviewed_at && new Date(r.reviewed_at).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
                   </span>
                 </li>
               ))}

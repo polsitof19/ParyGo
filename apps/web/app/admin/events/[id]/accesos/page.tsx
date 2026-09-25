@@ -4,24 +4,29 @@ import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { todas } from '@/lib/todas';
+import { textosPanel } from '@/lib/idiomaServer';
+import type { Textos } from '@/lib/idioma';
 import { LiveRefresh } from '../LiveRefresh';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' });
-
 // Resultados de ticket_scans que NO son ingreso: intentos rechazados en puerta.
-const REJECT_LABELS: Record<string, string> = {
-  ALREADY_USED: 'QR ya usado',
-  INVALIDATED: 'Entrada anulada',
-  NOT_AUTHORIZED: 'Validador sin permiso',
-};
+function rejectLabels(t: Textos['t']): Record<string, string> {
+  return {
+    ALREADY_USED: t('QR ya usado', 'QR already used'),
+    INVALIDATED: t('Entrada anulada', 'Ticket voided'),
+    NOT_AUTHORIZED: t('Validador sin permiso', 'Door staff without permission'),
+  };
+}
 
 export default async function EventAccessPage({ params }: { params: { id: string } }) {
   const user = await requireSession();
   const ctx = ownerBrandContext(user);
   if (!ctx) notFound();
+  const { t, loc } = await textosPanel();
+  const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' });
+  const REJECT_LABELS = rejectLabels(t);
 
   const admin = createAdminClient();
   const { data: event } = await admin
@@ -111,7 +116,7 @@ export default async function EventAccessPage({ params }: { params: { id: string
       id: r.id,
       result: r.result,
       scannedAt: r.scanned_at,
-      validator: r.validator_user_id ? nameByUser.get(r.validator_user_id) ?? 'validador' : null,
+      validator: r.validator_user_id ? nameByUser.get(r.validator_user_id) ?? t('validador', 'door staff') : null,
       ticketNumber: tk?.ticket_number ?? null,
       typeName: tk?.ticket_type_name ?? null,
     };
@@ -121,8 +126,8 @@ export default async function EventAccessPage({ params }: { params: { id: string
     <>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
         <div>
-          <h2 className="s-h2" style={{ marginTop: 6 }}>Control de puerta en vivo</h2>
-          <p className="s-card__desc">Quién ya ingresó y quién falta. Solo entradas válidas (no anuladas).</p>
+          <h2 className="s-h2" style={{ marginTop: 6 }}>{t('Control de puerta en vivo', 'Live door control')}</h2>
+          <p className="s-card__desc">{t('Quién ya ingresó y quién falta. Solo entradas válidas (no anuladas).', 'Who already checked in and who is missing. Valid tickets only (not voided).')}</p>
         </div>
         <LiveRefresh seconds={25} />
       </div>
@@ -130,21 +135,21 @@ export default async function EventAccessPage({ params }: { params: { id: string
       {/* AFORO AHORA */}
       <div className="s-card" style={{ marginBottom: 18 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-          <p className="eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><DoorOpen className="h-3.5 w-3.5" /> Aforo ahora</p>
-          <span className="s-muted" style={{ fontSize: 13 }}>{pct}% lleno</span>
+          <p className="eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><DoorOpen className="h-3.5 w-3.5" /> {t('Aforo ahora', 'Capacity now')}</p>
+          <span className="s-muted" style={{ fontSize: 13 }}>{t(`${pct}% lleno`, `${pct}% full`)}</span>
         </div>
         <p style={{ fontFamily: 'var(--display)', fontWeight: 800, fontSize: 24, marginTop: 8 }}>
-          Entraron {enteredTotal} de {totalValid}
-          <span className="s-muted" style={{ fontWeight: 600, fontSize: 15 }}> · faltan {outsideTotal}</span>
+          {t(`Entraron ${enteredTotal} de ${totalValid}`, `${enteredTotal} of ${totalValid} checked in`)}
+          <span className="s-muted" style={{ fontWeight: 600, fontSize: 15 }}> {t(`· faltan ${outsideTotal}`, `· ${outsideTotal} missing`)}</span>
         </p>
         <div className="a-bar" style={{ marginTop: 12, height: 12 }}><div className="a-bar__fill" style={{ width: `${pct}%` }} /></div>
-        {totalValid === 0 && <p className="s-empty" style={{ marginTop: 10 }}>No hay entradas válidas todavía.</p>}
+        {totalValid === 0 && <p className="s-empty" style={{ marginTop: 10 }}>{t('No hay entradas válidas todavía.', 'No valid tickets yet.')}</p>}
       </div>
 
       {/* Escaneados por tipo */}
       {typeRows.length > 0 && (
         <section style={{ marginBottom: 18 }}>
-          <h2 className="s-h2" style={{ marginBottom: 12 }}>Escaneados por tipo</h2>
+          <h2 className="s-h2" style={{ marginBottom: 12 }}>{t('Escaneados por tipo', 'Scanned by type')}</h2>
           <div className="s-card" style={{ padding: 0 }}>
             <ul className="s-stack" style={{ gap: 0, listStyle: 'none', margin: 0, padding: 0 }}>
               {typeRows.map(([name, r]) => {
@@ -165,24 +170,24 @@ export default async function EventAccessPage({ params }: { params: { id: string
       )}
 
       <section>
-        <h2 className="s-h2" style={{ marginBottom: 12 }}>Adentro <span className="s-badge s-badge--ok" style={{ marginLeft: 8 }}>{enteredTotal}</span></h2>
+        <h2 className="s-h2" style={{ marginBottom: 12 }}>{t('Adentro', 'Inside')} <span className="s-badge s-badge--ok" style={{ marginLeft: 8 }}>{enteredTotal}</span></h2>
         {enteredTotal === 0 ? (
-          <div className="s-card"><p className="s-empty">Todavía no ingresó nadie.</p></div>
+          <div className="s-card"><p className="s-empty">{t('Todavía no ingresó nadie.', 'No one has checked in yet.')}</p></div>
         ) : (
           <div className="s-card" style={{ padding: 0 }}>
             {enteredTotal > inside.length && (
-              <p className="s-muted" style={{ fontSize: 12.5, padding: '10px 16px 0' }}>Mostrando los primeros {inside.length} de {enteredTotal}.</p>
+              <p className="s-muted" style={{ fontSize: 12.5, padding: '10px 16px 0' }}>{t(`Mostrando los primeros ${inside.length} de ${enteredTotal}.`, `Showing the first ${inside.length} of ${enteredTotal}.`)}</p>
             )}
             <ul className="s-stack" style={{ gap: 0, listStyle: 'none', margin: 0, padding: 0 }}>
-              {inside.map((t) => (
-                <li key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 16px', borderTop: '1px solid var(--line)' }}>
+              {inside.map((tk) => (
+                <li key={tk.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 16px', borderTop: '1px solid var(--line)' }}>
                   <span style={{ minWidth: 0 }}>
-                    <span style={{ fontWeight: 600 }}>{t.attendee_name ?? '—'}</span>
-                    <span className="s-muted" style={{ fontSize: 13 }}> · {t.ticket_type_name} · {t.ticket_number}</span>
+                    <span style={{ fontWeight: 600 }}>{tk.attendee_name ?? '—'}</span>
+                    <span className="s-muted" style={{ fontSize: 13 }}> · {tk.ticket_type_name} · {tk.ticket_number}</span>
                   </span>
                   <span className="s-muted" style={{ fontSize: 12.5, textAlign: 'right', flexShrink: 0 }}>
-                    {t.validated_at && fmtTime(t.validated_at)}
-                    {t.validated_by && <><br />por {nameByUser.get(t.validated_by) ?? 'validador'}</>}
+                    {tk.validated_at && fmtTime(tk.validated_at)}
+                    {tk.validated_by && <><br />{t('por', 'by')} {nameByUser.get(tk.validated_by) ?? t('validador', 'door staff')}</>}
                   </span>
                 </li>
               ))}
@@ -192,20 +197,20 @@ export default async function EventAccessPage({ params }: { params: { id: string
       </section>
 
       <section style={{ marginTop: 24 }}>
-        <h2 className="s-h2" style={{ marginBottom: 12 }}>Falta ingresar <span className="s-badge s-badge--draft" style={{ marginLeft: 8 }}>{outsideTotal}</span></h2>
+        <h2 className="s-h2" style={{ marginBottom: 12 }}>{t('Falta ingresar', 'Not checked in')} <span className="s-badge s-badge--draft" style={{ marginLeft: 8 }}>{outsideTotal}</span></h2>
         {outsideTotal === 0 ? (
-          <div className="s-card"><p className="s-empty">{totalValid === 0 ? 'No hay entradas válidas todavía.' : 'Todos los que tienen entrada ya ingresaron.'}</p></div>
+          <div className="s-card"><p className="s-empty">{totalValid === 0 ? t('No hay entradas válidas todavía.', 'No valid tickets yet.') : t('Todos los que tienen entrada ya ingresaron.', 'Everyone with a ticket has already checked in.')}</p></div>
         ) : (
           <div className="s-card" style={{ padding: 0 }}>
             {outsideTotal > outside.length && (
-              <p className="s-muted" style={{ fontSize: 12.5, padding: '10px 16px 0' }}>Mostrando los primeros {outside.length} de {outsideTotal}.</p>
+              <p className="s-muted" style={{ fontSize: 12.5, padding: '10px 16px 0' }}>{t(`Mostrando los primeros ${outside.length} de ${outsideTotal}.`, `Showing the first ${outside.length} of ${outsideTotal}.`)}</p>
             )}
             <ul className="s-stack" style={{ gap: 0, listStyle: 'none', margin: 0, padding: 0 }}>
-              {outside.map((t) => (
-                <li key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 16px', borderTop: '1px solid var(--line)' }}>
+              {outside.map((tk) => (
+                <li key={tk.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 16px', borderTop: '1px solid var(--line)' }}>
                   <span style={{ minWidth: 0 }}>
-                    <span style={{ fontWeight: 600 }}>{t.attendee_name ?? '—'}</span>
-                    <span className="s-muted" style={{ fontSize: 13 }}> · {t.ticket_type_name} · {t.ticket_number}</span>
+                    <span style={{ fontWeight: 600 }}>{tk.attendee_name ?? '—'}</span>
+                    <span className="s-muted" style={{ fontSize: 13 }}> · {tk.ticket_type_name} · {tk.ticket_number}</span>
                   </span>
                 </li>
               ))}
@@ -217,15 +222,17 @@ export default async function EventAccessPage({ params }: { params: { id: string
       {/* Intentos rechazados en puerta */}
       <section style={{ marginTop: 24 }}>
         <h2 className="s-h2" style={{ marginBottom: 6, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <XCircle className="h-4 w-4" style={{ color: 'var(--ink-2)' }} /> Intentos rechazados
+          <XCircle className="h-4 w-4" style={{ color: 'var(--ink-2)' }} /> {t('Intentos rechazados', 'Rejected attempts')}
           <span className="s-badge s-badge--alert" style={{ marginLeft: 4 }}>{rejectRows.length}</span>
         </h2>
         <p className="s-card__desc" style={{ marginBottom: 12 }}>
-          QR ya usado, entrada anulada o validador sin permiso. Se registran cuando el validador confirma el ingreso en puerta;
-          la previsualización de solo lectura y los QR inexistentes no se guardan, así que esto es un piso, no el total exacto.
+          {t(
+            'QR ya usado, entrada anulada o validador sin permiso. Se registran cuando el validador confirma el ingreso en puerta; la previsualización de solo lectura y los QR inexistentes no se guardan, así que esto es un piso, no el total exacto.',
+            'QR already used, voided ticket, or door staff without permission. These are logged when the door staff confirms entry; the read-only preview and nonexistent QR codes are not saved, so this is a floor, not the exact total.'
+          )}
         </p>
         {rejectRows.length === 0 ? (
-          <div className="s-card"><p className="s-empty">Ningún intento rechazado registrado.</p></div>
+          <div className="s-card"><p className="s-empty">{t('Ningún intento rechazado registrado.', 'No rejected attempts logged.')}</p></div>
         ) : (
           <div className="s-card" style={{ padding: 0 }}>
             <ul className="s-stack" style={{ gap: 0, listStyle: 'none', margin: 0, padding: 0 }}>
@@ -237,7 +244,7 @@ export default async function EventAccessPage({ params }: { params: { id: string
                   </span>
                   <span className="s-muted" style={{ fontSize: 12.5, textAlign: 'right', flexShrink: 0 }}>
                     {fmtTime(r.scannedAt)}
-                    {r.validator && <><br />por {r.validator}</>}
+                    {r.validator && <><br />{t('por', 'by')} {r.validator}</>}
                   </span>
                 </li>
               ))}

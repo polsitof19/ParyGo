@@ -1,4 +1,5 @@
 import { mpCrearPreferenciaApi, mpLeerPago } from '@/lib/mpApi';
+import { textos, type Idioma } from '@/lib/idioma';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 // =============================================================
@@ -94,19 +95,21 @@ export async function createMercadoPagoPreference(
 // promoter can't store a typo'd / revoked token that would silently break
 // checkout later. Returns { ok } on 200, a friendly error otherwise.
 export async function validateMercadoPagoToken(
-  accessToken: string
+  accessToken: string,
+  l: Idioma = 'es'
 ): Promise<{ ok: boolean; error?: string }> {
+  const { t } = textos(l);
   try {
     const res = await fetch('https://api.mercadopago.com/users/me', {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (res.ok) return { ok: true };
     if (res.status === 401 || res.status === 403) {
-      return { ok: false, error: 'El access token no es válido o fue revocado por MercadoPago.' };
+      return { ok: false, error: t('El access token no es válido o fue revocado por MercadoPago.', 'The access token is invalid or was revoked by Mercado Pago.') };
     }
-    return { ok: false, error: `MercadoPago rechazó la validación (HTTP ${res.status}).` };
+    return { ok: false, error: t(`MercadoPago rechazó la validación (HTTP ${res.status}).`, `Mercado Pago rejected the validation (HTTP ${res.status}).`) };
   } catch {
-    return { ok: false, error: 'No se pudo contactar a MercadoPago para validar el token.' };
+    return { ok: false, error: t('No se pudo contactar a MercadoPago para validar el token.', 'Could not reach Mercado Pago to validate the token.') };
   }
 }
 

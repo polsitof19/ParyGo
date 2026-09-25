@@ -1,13 +1,15 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ValidatorManager } from './ValidatorManager';
 import { InviteValidator } from './InviteValidator';
+import { textosPanel } from '@/lib/idiomaServer';
 
 // Equipo de puerta de la MARCA (los validadores valen para todos los eventos).
 // Se usa desde Configuración → Equipo y desde el grupo "Puerta y equipo" de cada
 // evento; la lectura de validadores + códigos vive acá una sola vez.
 export async function TeamPanel({ brandId, impersonating }: { brandId: string; impersonating: boolean }) {
+  const { t } = await textosPanel();
   if (impersonating) {
-    return <p className="s-banner" role="status">Solo lectura — la gestión del equipo no está disponible desde aquí.</p>;
+    return <p className="s-banner" role="status">{t('Solo lectura — la gestión del equipo no está disponible desde aquí.', 'Read only — team management is not available from here.')}</p>;
   }
 
   const admin = createAdminClient();
@@ -29,10 +31,10 @@ export async function TeamPanel({ brandId, impersonating }: { brandId: string; i
 
   return (
     <div className="s-card">
-      <p className="s-section-lead">Tus validadores · contraseña + código personal</p>
+      <p className="s-section-lead">{t('Tus validadores · contraseña + código personal', 'Your door staff · password + personal code')}</p>
       <ValidatorManager validators={validators} />
       <div className="s-divider" />
-      <p className="s-section-lead">Invitar nuevo validador (por email)</p>
+      <p className="s-section-lead">{t('Invitar nuevo validador (por email)', 'Invite new door staff (by email)')}</p>
       <InviteValidator />
     </div>
   );

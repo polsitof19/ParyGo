@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { puedeEscribirComoSuper } from '@/lib/impersonation';
 import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { uploadEventCover, coverDims } from '@/lib/brandAssets';
+import { textosPanel, idiomaPanel } from '@/lib/idiomaServer';
 
 export type CoverState = { ok: boolean; message: string | null };
 
@@ -20,10 +21,11 @@ export async function setEventCoverAction(
   formData: FormData
 ): Promise<CoverState> {
   const user = await requireSession();
+  const { t } = await textosPanel();
 
   const eventId = String(formData.get('event_id') ?? '');
   const file = formData.get('cover');
-  if (!(file instanceof File) || file.size === 0) return { ok: false, message: 'Elige una imagen.' };
+  if (!(file instanceof File) || file.size === 0) return { ok: false, message: t('Elige una imagen.', 'Choose an image.') };
 
   const admin = createAdminClient();
   const { data: ev } = await admin
@@ -31,7 +33,7 @@ export async function setEventCoverAction(
     .select('id, brand_id, brand:brands ( slug )')
     .eq('id', eventId)
     .maybeSingle();
-  if (!ev || !ev.brand_id) return { ok: false, message: 'Evento no encontrado.' };
+  if (!ev || !ev.brand_id) return { ok: false, message: t('Evento no encontrado.', 'Event not found.') };
 
   // SOLO-LECTURA en impersonación: el camino super-admin se deniega con la cookie.
   // Quién escribe: el dueño por su membresía, o el super admin — desde la
@@ -41,12 +43,12 @@ export async function setEventCoverAction(
   const authorized =
     modoSuper !== null ||
     user.brandMemberships.some((m) => m.brandId === ev.brand_id && m.role === 'brand_admin');
-  if (!authorized) return { ok: false, message: 'No tienes permiso sobre este evento.' };
+  if (!authorized) return { ok: false, message: t('No tienes permiso sobre este evento.', 'You do not have permission over this event.') };
 
   const brand = Array.isArray(ev.brand) ? ev.brand[0] : ev.brand;
-  if (!brand?.slug) return { ok: false, message: 'Marca no encontrada.' };
+  if (!brand?.slug) return { ok: false, message: t('Marca no encontrada.', 'Brand not found.') };
 
-  const up = await uploadEventCover(admin, brand.slug, file);
+  const up = await uploadEventCover(admin, brand.slug, file, await idiomaPanel());
   if (!up.ok) return { ok: false, message: up.message };
 
   const { error } = await admin
@@ -69,5 +71,5 @@ export async function setEventCoverAction(
 
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/cabina-7k29x/events/${eventId}`);
-  return { ok: true, message: 'Flyer actualizado.' };
+  return { ok: true, message: t('Flyer actualizado.', 'Flyer updated.') };
 }

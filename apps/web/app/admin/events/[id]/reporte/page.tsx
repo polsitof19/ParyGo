@@ -5,6 +5,7 @@ import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
 import { PrintReportButton } from './PrintReportButton';
+import { textosPanel } from '@/lib/idiomaServer';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -24,6 +25,7 @@ export default async function ReportePage({ params }: { params: { id: string } }
   const user = await requireSession();
   const ctx = ownerBrandContext(user);
   if (!ctx) notFound();
+  const { t } = await textosPanel();
 
   const admin = createAdminClient();
   // TENANCY: el evento debe ser de la marca activa (sesión o impersonada).
@@ -82,7 +84,7 @@ export default async function ReportePage({ params }: { params: { id: string } }
     cur.n += 1; cur.cents += o.total_cents ?? 0;
     byMethod.set(k, cur);
   }
-  const methodLabel = (m: string) => (m === 'mercadopago' ? 'MercadoPago' : m === 'yape_manual' ? 'Yape' : m === 'courtesy' ? 'Cortesías' : m);
+  const methodLabel = (m: string) => (m === 'mercadopago' ? 'MercadoPago' : m === 'yape_manual' ? 'Yape' : m === 'courtesy' ? t('Cortesías', 'Complimentary') : m);
 
   // Ventas por promotor (reusa la lógica del panel de promotores).
   const promoCodes = (promoRes.data ?? []) as { id: string; code: string; label: string | null }[];
@@ -105,9 +107,9 @@ export default async function ReportePage({ params }: { params: { id: string } }
     <>
       <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <h2 className="s-h2" style={{ marginTop: 2 }}>{ended ? 'Reporte post-evento' : 'Reporte (en curso)'}</h2>
+          <h2 className="s-h2" style={{ marginTop: 2 }}>{ended ? t('Reporte post-evento', 'Post-event report') : t('Reporte (en curso)', 'Report (in progress)')}</h2>
           <p className="s-card__desc">
-            {ended ? 'Resumen final del evento.' : 'El evento todavía no terminó — los números siguen actualizándose.'} Datos privados de tu marca.
+            {ended ? t('Resumen final del evento.', 'Final summary of the event.') : t('El evento todavía no terminó — los números siguen actualizándose.', 'The event has not ended yet — numbers keep updating.')} {t('Datos privados de tu marca.', 'Private data of your brand.')}
           </p>
         </div>
         <PrintReportButton />
@@ -115,19 +117,19 @@ export default async function ReportePage({ params }: { params: { id: string } }
 
       {/* KPIs */}
       <div className="s-form-grid" style={{ gap: 12, marginBottom: 14 }}>
-        <Kpi label="Entradas vendidas" value={String(totalVendidas)} />
-        <Kpi label="Recaudado" value={formatPEN(totalRecaudado)} />
-        <Kpi label="Asistencia" value={`${asistenciaPct}%`} sub={`${totalEscaneadas} de ${totalVendidas} ingresaron`} />
-        <Kpi label="No-shows" value={String(noShows)} sub="vendidas que no ingresaron" />
+        <Kpi label={t('Entradas vendidas', 'Tickets sold')} value={String(totalVendidas)} />
+        <Kpi label={t('Recaudado', 'Collected')} value={formatPEN(totalRecaudado)} />
+        <Kpi label={t('Asistencia', 'Attendance')} value={`${asistenciaPct}%`} sub={t(`${totalEscaneadas} de ${totalVendidas} ingresaron`, `${totalEscaneadas} of ${totalVendidas} entered`)} />
+        <Kpi label={t('No-shows', 'No-shows')} value={String(noShows)} sub={t('vendidas que no ingresaron', 'sold but did not enter')} />
       </div>
 
       {/* Cuadre por método */}
       <div className="s-card" style={{ marginBottom: 14 }}>
-        <p className="s-card__title">Recaudado por método</p>
-        {byMethod.size === 0 ? <p className="s-empty">Sin ventas pagadas todavía.</p> : (
+        <p className="s-card__title">{t('Recaudado por método', 'Collected by method')}</p>
+        {byMethod.size === 0 ? <p className="s-empty">{t('Sin ventas pagadas todavía.', 'No paid sales yet.')}</p> : (
           <div className="s-stack" style={{ gap: 6, marginTop: 6 }}>
             {[...byMethod.entries()].map(([m, v]) => (
-              <Line key={m} left={`${methodLabel(m)} · ${v.n} orden${v.n === 1 ? '' : 'es'}`} right={formatPEN(v.cents)} />
+              <Line key={m} left={t(`${methodLabel(m)} · ${v.n} orden${v.n === 1 ? '' : 'es'}`, `${methodLabel(m)} · ${v.n} order${v.n === 1 ? '' : 's'}`)} right={formatPEN(v.cents)} />
             ))}
           </div>
         )}
@@ -135,8 +137,8 @@ export default async function ReportePage({ params }: { params: { id: string } }
 
       {/* Por tipo de entrada */}
       <div className="s-card" style={{ marginBottom: 14 }}>
-        <p className="s-card__title">Por tipo de entrada</p>
-        {typeRows.length === 0 ? <p className="s-empty">No hay tipos de entrada.</p> : (
+        <p className="s-card__title">{t('Por tipo de entrada', 'By ticket type')}</p>
+        {typeRows.length === 0 ? <p className="s-empty">{t('No hay tipos de entrada.', 'There are no ticket types.')}</p> : (
           <div className="s-stack" style={{ gap: 8, marginTop: 8 }}>
             {typeRows.map((r) => (
               <div key={r.id} style={{ borderTop: '1px solid var(--line)', paddingTop: 8 }}>
@@ -145,8 +147,11 @@ export default async function ReportePage({ params }: { params: { id: string } }
                   <span>{formatPEN(r.recaudadoCents)}</span>
                 </div>
                 <p className="s-muted" style={{ fontSize: 13, marginTop: 2 }}>
-                  {r.emitidas} vendidas · {r.escaneadas} ingresaron · {Math.max(0, r.emitidas - r.escaneadas)} no-shows
-                  {r.emitidas > 0 && <> · {Math.round((r.escaneadas / r.emitidas) * 100)}% asistencia</>}
+                  {t(
+                    `${r.emitidas} vendidas · ${r.escaneadas} ingresaron · ${Math.max(0, r.emitidas - r.escaneadas)} no-shows`,
+                    `${r.emitidas} sold · ${r.escaneadas} entered · ${Math.max(0, r.emitidas - r.escaneadas)} no-shows`,
+                  )}
+                  {r.emitidas > 0 && <> · {t(`${Math.round((r.escaneadas / r.emitidas) * 100)}% asistencia`, `${Math.round((r.escaneadas / r.emitidas) * 100)}% attendance`)}</>}
                 </p>
               </div>
             ))}
@@ -156,11 +161,11 @@ export default async function ReportePage({ params }: { params: { id: string } }
 
       {/* Ventas por promotor */}
       <div className="s-card">
-        <p className="s-card__title">Ventas por promotor (RR.PP.)</p>
-        {promoRows.length === 0 ? <p className="s-empty">No hubo ventas con código de promotor.</p> : (
+        <p className="s-card__title">{t('Ventas por promotor (RR.PP.)', 'Sales by promoter')}</p>
+        {promoRows.length === 0 ? <p className="s-empty">{t('No hubo ventas con código de promotor.', 'There were no sales with a promoter code.')}</p> : (
           <div className="s-stack" style={{ gap: 6, marginTop: 6 }}>
             {promoRows.map((r) => (
-              <Line key={r.code} left={`${r.label || r.code} · ${r.entradas} entrada${r.entradas === 1 ? '' : 's'}`} right={formatPEN(r.recaudadoCents)} />
+              <Line key={r.code} left={t(`${r.label || r.code} · ${r.entradas} entrada${r.entradas === 1 ? '' : 's'}`, `${r.label || r.code} · ${r.entradas} ticket${r.entradas === 1 ? '' : 's'}`)} right={formatPEN(r.recaudadoCents)} />
             ))}
           </div>
         )}

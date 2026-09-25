@@ -8,6 +8,7 @@ import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { issueTicketsForOrder } from '@/lib/tickets';
 import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
+import { textosPanel } from '@/lib/idiomaServer';
 
 export type CourtesyState = { ok: boolean; message: string | null };
 
@@ -30,6 +31,7 @@ export async function issueCourtesyTicketsAction(
   formData: FormData
 ): Promise<CourtesyState> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const parsed = schema.safeParse({
     eventId: formData.get('event_id'),
     ticketTypeId: formData.get('ticket_type_id'),
@@ -37,7 +39,7 @@ export async function issueCourtesyTicketsAction(
     email: formData.get('email'),
   });
   if (!parsed.success) {
-    return { ok: false, message: parsed.error.errors[0]?.message ?? `Datos inválidos (máx ${MAX_PER_OP} por envío).` };
+    return { ok: false, message: parsed.error.errors[0]?.message ?? t(`Datos inválidos (máx ${MAX_PER_OP} por envío).`, `Invalid data (max ${MAX_PER_OP} per submission).`) };
   }
 
   const admin = createAdminClient();
@@ -50,7 +52,7 @@ export async function issueCourtesyTicketsAction(
     .select('id, brand_id, name')
     .eq('id', parsed.data.eventId)
     .maybeSingle();
-  if (!event || !event.brand_id) return { ok: false, message: 'Evento no encontrado.' };
+  if (!event || !event.brand_id) return { ok: false, message: t('Evento no encontrado.', 'Event not found.') };
   // Quién escribe: el dueño por su membresía, o el super admin — desde la
   // cabina, o DENTRO de la marca con el modo edición encendido. Viendo la
   // marca sin ese modo, no pasa.
@@ -58,7 +60,7 @@ export async function issueCourtesyTicketsAction(
   const authorized =
     modoSuper !== null ||
     user.brandMemberships.some((m) => m.brandId === event.brand_id && m.role === 'brand_admin');
-  if (!authorized) return { ok: false, message: 'No tienes permiso sobre este evento.' };
+  if (!authorized) return { ok: false, message: t('No tienes permiso sobre este evento.', 'You do not have permission over this event.') };
 
   // TENANCY: el tipo de entrada debe pertenecer a ESTE evento (no de otro/otra marca).
   const { data: tt } = await admin
@@ -66,8 +68,8 @@ export async function issueCourtesyTicketsAction(
     .select('id, name, is_active, event_id')
     .eq('id', parsed.data.ticketTypeId)
     .maybeSingle();
-  if (!tt || tt.event_id !== event.id) return { ok: false, message: 'Ese tipo de entrada no es de este evento.' };
-  if (!tt.is_active) return { ok: false, message: 'Ese tipo de entrada no está activo.' };
+  if (!tt || tt.event_id !== event.id) return { ok: false, message: t('Ese tipo de entrada no es de este evento.', 'That ticket type does not belong to this event.') };
+  if (!tt.is_active) return { ok: false, message: t('Ese tipo de entrada no está activo.', 'That ticket type is not active.') };
 
   const email = parsed.data.email.trim().toLowerCase();
   const qty = parsed.data.quantity;
@@ -89,7 +91,7 @@ export async function issueCourtesyTicketsAction(
     })
     .select('id')
     .single();
-  if (oerr || !order) return { ok: false, message: oerr?.message ?? 'No se pudo crear la cortesía.' };
+  if (oerr || !order) return { ok: false, message: oerr?.message ?? t('No se pudo crear la cortesía.', 'Could not create the complimentary ticket.') };
 
   // 2. order_items (precio 0).
   const { error: ierr } = await admin.from('order_items').insert({
@@ -118,8 +120,8 @@ export async function issueCourtesyTicketsAction(
     return {
       ok: false,
       message: agotado
-        ? `No hay cupo para ${qty} cortesías de ${tt.name} (no puedes pasar la capacidad del tipo).`
-        : 'No se pudo reservar el cupo. Intenta de nuevo.',
+        ? t(`No hay cupo para ${qty} cortesías de ${tt.name} (no puedes pasar la capacidad del tipo).`, `No room for ${qty} complimentary tickets of ${tt.name} (you can't go over the ticket type's capacity).`)
+        : t('No se pudo reservar el cupo. Intenta de nuevo.', 'Could not reserve the capacity. Try again.'),
     };
   }
 
@@ -131,8 +133,8 @@ export async function issueCourtesyTicketsAction(
     return {
       ok: false,
       message: issue.error === 'oversold_no_capacity'
-        ? `No hay cupo para ${qty} cortesías de ${tt.name}.`
-        : `No se pudieron emitir las cortesías: ${issue.error}`,
+        ? t(`No hay cupo para ${qty} cortesías de ${tt.name}.`, `No room for ${qty} complimentary tickets of ${tt.name}.`)
+        : t(`No se pudieron emitir las cortesías: ${issue.error}`, `Could not issue the complimentary tickets: ${issue.error}`),
     };
   }
 
@@ -158,7 +160,7 @@ export async function issueCourtesyTicketsAction(
   return {
     ok: true,
     message: emailSent
-      ? `Listo: ${qty} ${tt.name} de cortesía enviadas a ${email}.`
-      : `Emitidas ${qty} ${tt.name}, pero el email a ${email} no se envió — reenvíalo desde la orden.`,
+      ? t(`Listo: ${qty} ${tt.name} de cortesía enviadas a ${email}.`, `Done: ${qty} ${tt.name} complimentary tickets sent to ${email}.`)
+      : t(`Emitidas ${qty} ${tt.name}, pero el email a ${email} no se envió — reenvíalo desde la orden.`, `Issued ${qty} ${tt.name}, but the email to ${email} was not sent — resend it from the order.`),
   };
 }

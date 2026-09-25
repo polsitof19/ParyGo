@@ -12,6 +12,7 @@ import { puedeEscribirComoSuper, type ModoEscrituraSuper } from '@/lib/impersona
 import { auditarEscrituraSuper, diffDeCampos } from '@/lib/auditoriaSuper';
 import { formatEventDate } from '@/lib/utils';
 import { mensajePrueba } from '@/lib/prueba';
+import { textosPanel, idiomaPanel } from '@/lib/idiomaServer';
 
 export type EditState = { ok: boolean; message: string | null };
 
@@ -52,10 +53,11 @@ const eventSchema = z.object({
 // ===== 1) Editar campos del evento (libre) =====
 export async function updateEventAction(_prev: EditState, formData: FormData): Promise<EditState> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const eventId = String(formData.get('event_id') ?? '');
   const auth = await authEvent(eventId, user);
   const brandId = auth?.brandId ?? null;
-  if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
+  if (!brandId) return { ok: false, message: t('No tienes permiso sobre este evento.', 'You do not have permission over this event.') };
 
   const parsed = eventSchema.safeParse({
     name: formData.get('name'), description: formData.get('description') ?? '',
@@ -64,7 +66,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
     min_age: formData.get('min_age') ?? '',
     max_per_person: formData.get('max_per_person') ?? '',
   });
-  if (!parsed.success) return { ok: false, message: 'Revisa los campos (el enlace de Maps debe empezar con https://).' };
+  if (!parsed.success) return { ok: false, message: t('Revisa los campos (el enlace de Maps debe empezar con https://).', 'Check the fields (the Maps link must start with https://).') };
   const requireAge = formData.get('require_age_confirmation') === 'on';
   const requireDni = formData.get('require_dni') === 'on';
   const isFree = formData.get('is_free') === 'on';
@@ -72,7 +74,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   const collectAttendeeNames = formData.get('collect_attendee_names') === 'on';
   const allowTransfer = formData.get('allow_transfer') === 'on';
   const startsIso = limaToIso(parsed.data.starts_at);
-  if (!startsIso) return { ok: false, message: 'Fecha/hora inválida.' };
+  if (!startsIso) return { ok: false, message: t('Fecha/hora inválida.', 'Invalid date/time.') };
 
   const admin = createAdminClient();
 
@@ -94,7 +96,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
     ? shiftEnd(current.starts_at, startsIso, current.ends_at ?? null)
     : current?.ends_at ?? null;
   if (dateChanging) {
-    const windowErr = validateEventWindow({ startsIso, endsIso, requireFutureStart: true });
+    const windowErr = validateEventWindow({ startsIso, endsIso, requireFutureStart: true }, await idiomaPanel());
     if (windowErr) return { ok: false, message: windowErr.message };
   }
   if (dateChanging && current?.is_published) {
@@ -104,7 +106,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
       .eq('event_id', eventId)
       .gt('sold', 0);
     if ((soldCount ?? 0) > 0) {
-      return { ok: false, message: 'No puedes cambiar la fecha: ya hay entradas vendidas con esta fecha.' };
+      return { ok: false, message: t('No puedes cambiar la fecha: ya hay entradas vendidas con esta fecha.', 'You cannot change the date: there are already tickets sold with this date.') };
     }
   }
 
@@ -120,7 +122,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
       .eq('event_id', eventId)
       .eq('status', 'paid');
     if ((pagas ?? 0) > 0) {
-      return { ok: false, message: 'No puedes cambiar si el evento es gratis: ya tiene ventas pagas.' };
+      return { ok: false, message: t('No puedes cambiar si el evento es gratis: ya tiene ventas pagas.', 'You cannot change whether the event is free: it already has paid sales.') };
     }
   }
 
@@ -165,7 +167,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
   revalidatePath(`/cabina-7k29x/events/${eventId}`);
-  return { ok: true, message: 'Evento actualizado.' };
+  return { ok: true, message: t('Evento actualizado.', 'Event updated.') };
 }
 
 // ===== 1.b) Publicar / despublicar el evento (brand_admin de SU evento) =====
@@ -178,9 +180,10 @@ export async function setEventPublishedAction(
   publish: boolean
 ): Promise<{ ok: boolean; message?: string }> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const auth = await authEvent(eventId, user);
   const brandId = auth?.brandId ?? null;
-  if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
+  if (!brandId) return { ok: false, message: t('No tienes permiso sobre este evento.', 'You do not have permission over this event.') };
 
   const admin = createAdminClient();
   // Guard: no publicar un evento sin al menos un tipo de entrada activo.
@@ -191,12 +194,12 @@ export async function setEventPublishedAction(
       .eq('event_id', eventId)
       .eq('is_active', true);
     if (!count || count === 0) {
-      return { ok: false, message: 'Agrega al menos un tipo de entrada activo antes de publicar.' };
+      return { ok: false, message: t('Agrega al menos un tipo de entrada activo antes de publicar.', 'Add at least one active ticket type before publishing.') };
     }
     // Guard: no publicar un evento que ya terminó (nadie podría comprar).
     const { data: ev } = await admin.from('events').select('starts_at, ends_at').eq('id', eventId).eq('brand_id', brandId).maybeSingle();
     if (ev && eventOverAt(ev.starts_at, ev.ends_at) < Date.now()) {
-      return { ok: false, message: 'Este evento ya terminó. Cambia la fecha antes de publicarlo.' };
+      return { ok: false, message: t('Este evento ya terminó. Cambia la fecha antes de publicarlo.', 'This event has already ended. Change the date before publishing it.') };
     }
   }
 
@@ -231,12 +234,13 @@ export async function postponeEventAction(
   newStartsAtLima: string
 ): Promise<{ ok: boolean; message?: string; queued?: number }> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const auth = await authEvent(eventId, user);
   const brandId = auth?.brandId ?? null;
-  if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
+  if (!brandId) return { ok: false, message: t('No tienes permiso sobre este evento.', 'You do not have permission over this event.') };
 
   const startsIso = limaToIso(newStartsAtLima);
-  if (!startsIso) return { ok: false, message: 'Fecha/hora inválida.' };
+  if (!startsIso) return { ok: false, message: t('Fecha/hora inválida.', 'Invalid date/time.') };
 
   const admin = createAdminClient();
   const { data: ev } = await admin
@@ -245,16 +249,16 @@ export async function postponeEventAction(
     .eq('id', eventId)
     .eq('brand_id', brandId)
     .maybeSingle();
-  if (!ev) return { ok: false, message: 'Evento no encontrado.' };
+  if (!ev) return { ok: false, message: t('Evento no encontrado.', 'Event not found.') };
 
   const oldStartsAt = ev.starts_at as string;
   if (new Date(oldStartsAt).getTime() === new Date(startsIso).getTime()) {
-    return { ok: false, message: 'Esa es la misma fecha. Elige una distinta.' };
+    return { ok: false, message: t('Esa es la misma fecha. Elige una distinta.', 'That is the same date. Choose a different one.') };
   }
   // Postergar = mover a una fecha FUTURA conservando la duración: el fin se corre
   // con el mismo delta (antes quedaba ends_at < starts_at → "terminado", sin venta).
   const endsIso = shiftEnd(oldStartsAt, startsIso, (ev.ends_at as string | null) ?? null);
-  const windowErr = validateEventWindow({ startsIso, endsIso, requireFutureStart: true });
+  const windowErr = validateEventWindow({ startsIso, endsIso, requireFutureStart: true }, await idiomaPanel());
   if (windowErr) return { ok: false, message: windowErr.message };
 
   // Mover la fecha. NO se tocan tickets ni órdenes.
@@ -315,9 +319,10 @@ export async function cancelEventAction(
   reason: string
 ): Promise<{ ok: boolean; message?: string; queued?: number }> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const auth = await authEvent(eventId, user);
   const brandId = auth?.brandId ?? null;
-  if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
+  if (!brandId) return { ok: false, message: t('No tienes permiso sobre este evento.', 'You do not have permission over this event.') };
 
   const cleanReason = (reason ?? '').trim().slice(0, 500);
 
@@ -328,8 +333,8 @@ export async function cancelEventAction(
     .eq('id', eventId)
     .eq('brand_id', brandId)
     .maybeSingle();
-  if (!ev) return { ok: false, message: 'Evento no encontrado.' };
-  if (ev.cancelled_at) return { ok: false, message: 'Este evento ya está cancelado.' };
+  if (!ev) return { ok: false, message: t('Evento no encontrado.', 'Event not found.') };
+  if (ev.cancelled_at) return { ok: false, message: t('Este evento ya está cancelado.', 'This event is already cancelled.') };
 
   // Marcar cancelado + despublicar (deja de venderse y sale del público).
   const { error: updErr } = await admin
@@ -381,9 +386,10 @@ export async function cancelEventAction(
 // (denegado en impersonación: el super admin viendo NO crea eventos).
 export async function cloneEventAction(eventId: string): Promise<{ ok: boolean; message?: string }> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const auth = await authEvent(eventId, user);
   const brandId = auth?.brandId ?? null;
-  if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
+  if (!brandId) return { ok: false, message: t('No tienes permiso sobre este evento.', 'You do not have permission over this event.') };
 
   const admin = createAdminClient();
   const { data: ev } = await admin
@@ -392,15 +398,15 @@ export async function cloneEventAction(eventId: string): Promise<{ ok: boolean; 
     .eq('id', eventId)
     .eq('brand_id', brandId)
     .maybeSingle();
-  if (!ev) return { ok: false, message: 'Evento no encontrado.' };
+  if (!ev) return { ok: false, message: t('Evento no encontrado.', 'Event not found.') };
   // El clon copia fechas y fases del original y gasta 1 de saldo: validar ANTES
   // del RPC. Un evento que ya pasó (o con fin antes del inicio) no se clona.
-  const cloneWindowErr = validateEventWindow({ startsIso: ev.starts_at, endsIso: ev.ends_at, requireFutureStart: true });
+  const cloneWindowErr = validateEventWindow({ startsIso: ev.starts_at, endsIso: ev.ends_at, requireFutureStart: true }, await idiomaPanel());
   if (cloneWindowErr) {
     return {
       ok: false,
       message: cloneWindowErr.field === 'starts_at'
-        ? 'Este evento ya pasó: el clon copiaría fechas y fases vencidas (y gastaría 1 de saldo). Crea uno nuevo desde "Crear evento".'
+        ? t('Este evento ya pasó: el clon copiaría fechas y fases vencidas (y gastaría 1 de saldo). Crea uno nuevo desde "Crear evento".', 'This event has already passed: the clone would copy expired dates and phases (and spend 1 from your balance). Create a new one from "Create event".')
         : cloneWindowErr.message,
     };
   }
@@ -410,7 +416,7 @@ export async function cloneEventAction(eventId: string): Promise<{ ok: boolean; 
     .select('id, name, price_cents, capacity, is_unlimited, sort_order')
     .eq('event_id', eventId)
     .order('sort_order');
-  if (!types || types.length === 0) return { ok: false, message: 'El evento no tiene tipos de entrada para clonar.' };
+  if (!types || types.length === 0) return { ok: false, message: t('El evento no tiene tipos de entrada para clonar.', 'The event has no ticket types to clone.') };
 
   const typeIds = types.map((t) => t.id);
   const { data: phases } = await admin
@@ -461,13 +467,13 @@ export async function cloneEventAction(eventId: string): Promise<{ ok: boolean; 
   if (error || !newId) {
     const msg = error?.message ?? '';
     if (msg.includes('INSUFFICIENT_BALANCE')) {
-      return { ok: false, message: 'No tienes saldo de eventos para clonar. Pide un pack a ParyGo.' };
+      return { ok: false, message: t('No tienes saldo de eventos para clonar. Pide un pack a ParyGo.', 'You have no event balance to clone. Ask ParyGo for a pack.') };
     }
     if (error?.code === '23505') {
       // Colisión de slug (rarísima por el sufijo random) → reintenta el botón.
-      return { ok: false, message: 'No se pudo generar el borrador. Prueba de nuevo.' };
+      return { ok: false, message: t('No se pudo generar el borrador. Prueba de nuevo.', 'Could not generate the draft. Try again.') };
     }
-    return { ok: false, message: msg || 'No se pudo clonar el evento.' };
+    return { ok: false, message: msg || t('No se pudo clonar el evento.', 'Could not clone the event.') };
   }
   await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId: newId as string, accion: 'event_cloned', diff: { from_event_id: eventId } });
 
@@ -499,9 +505,10 @@ export async function setEventArchivedAction(
   archived: boolean
 ): Promise<{ ok: boolean; message?: string }> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const auth = await authEvent(eventId, user);
   const brandId = auth?.brandId ?? null;
-  if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
+  if (!brandId) return { ok: false, message: t('No tienes permiso sobre este evento.', 'You do not have permission over this event.') };
 
   const admin = createAdminClient();
   const update = archived
@@ -533,9 +540,10 @@ export async function deleteEventAction(
   confirmName: string
 ): Promise<{ ok: boolean; message?: string }> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const auth = await authEvent(eventId, user);
   const brandId = auth?.brandId ?? null;
-  if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
+  if (!brandId) return { ok: false, message: t('No tienes permiso sobre este evento.', 'You do not have permission over this event.') };
 
   const admin = createAdminClient();
   const { data: ev } = await admin
@@ -544,9 +552,9 @@ export async function deleteEventAction(
     .eq('id', eventId)
     .eq('brand_id', brandId)
     .maybeSingle();
-  if (!ev) return { ok: false, message: 'Evento no encontrado.' };
+  if (!ev) return { ok: false, message: t('Evento no encontrado.', 'Event not found.') };
   if ((confirmName ?? '').trim() !== ev.name) {
-    return { ok: false, message: 'El nombre no coincide. Escribilo igual para confirmar.' };
+    return { ok: false, message: t('El nombre no coincide. Escribilo igual para confirmar.', "The name doesn't match. Type it exactly to confirm.") };
   }
 
   // Guard de historial: 0 órdenes Y 0 tickets, o se rechaza (archiva en su lugar).
@@ -555,7 +563,7 @@ export async function deleteEventAction(
     admin.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', eventId),
   ]);
   if ((orders ?? 0) > 0 || (tickets ?? 0) > 0) {
-    return { ok: false, message: 'No se puede eliminar: tiene ventas. Archiva en su lugar.' };
+    return { ok: false, message: t('No se puede eliminar: tiene ventas. Archiva en su lugar.', 'Cannot delete: it has sales. Archive it instead.') };
   }
 
   // Log ANTES de borrar (events_log.event_id queda SET NULL al borrar el evento).
@@ -596,11 +604,12 @@ function parseColorHex(formData: FormData): string | null | undefined | false {
 // el tipo NO tiene fases de preventa (>1 fase) — no tocamos la lógica de fases.
 export async function updateTicketTypeAction(_prev: EditState, formData: FormData): Promise<EditState> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const ttId = String(formData.get('ticket_type_id') ?? '');
   const eventId = String(formData.get('event_id') ?? '');
   const auth = await authEvent(eventId, user);
   const brandId = auth?.brandId ?? null;
-  if (!brandId) return { ok: false, message: 'No tienes permiso.' };
+  if (!brandId) return { ok: false, message: t('No tienes permiso.', 'You do not have permission.') };
 
   const admin = createAdminClient();
   const { data: tt } = await admin
@@ -608,7 +617,7 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
     .select('id, event_id, name, price_cents, capacity, sold, is_unlimited, is_active, is_courtesy')
     .eq('id', ttId)
     .maybeSingle();
-  if (!tt || tt.event_id !== eventId) return { ok: false, message: 'Ese tipo no es de este evento.' };
+  if (!tt || tt.event_id !== eventId) return { ok: false, message: t('Ese tipo no es de este evento.', 'That type does not belong to this event.') };
 
   const name = String(formData.get('name') ?? '').trim().slice(0, 80) || tt.name;
   const isActive = formData.get('is_active') === 'on';
@@ -632,7 +641,7 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
 
   const update: Record<string, unknown> = { name, is_active: isActive, description: description || null };
   const colorHex = parseColorHex(formData);
-  if (colorHex === false) return { ok: false, message: 'Color inválido.' };
+  if (colorHex === false) return { ok: false, message: t('Color inválido.', 'Invalid color.') };
   if (colorHex !== undefined) update.color_hex = colorHex;
   update.is_courtesy = isCourtesy;
 
@@ -650,7 +659,7 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
         const privadas = await tokensPrivados(admin, (otras ?? []).map((o) => o.id));
         const quedaAlguna = (otras ?? []).some((o) => o.is_active && !privadas.has(o.id) && isPubliclyOffered(o.price_cents, { eventoEsGratis, esCortesia: o.is_courtesy }));
         if (!quedaAlguna) {
-          return { ok: false, message: 'Es la única entrada a la venta de tu evento publicado: si la pausas, tu página se queda sin entradas. Crea otra entrada primero, o pasa el evento a borrador.' };
+          return { ok: false, message: t('Es la única entrada a la venta de tu evento publicado: si la pausas, tu página se queda sin entradas. Crea otra entrada primero, o pasa el evento a borrador.', 'This is the only ticket on sale for your published event: if you pause it, your page will be left without tickets. Create another ticket first, or set the event to draft.') };
         }
       }
     }
@@ -667,8 +676,8 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   if (isUnlimited) {
     update.is_unlimited = true;
   } else {
-    if (!Number.isFinite(newCapacity) || newCapacity < 1) return { ok: false, message: 'Capacidad inválida.' };
-    if (newCapacity < sold) return { ok: false, message: `No puedes bajar la capacidad por debajo de lo vendido (${sold}).` };
+    if (!Number.isFinite(newCapacity) || newCapacity < 1) return { ok: false, message: t('Capacidad inválida.', 'Invalid capacity.') };
+    if (newCapacity < sold) return { ok: false, message: t(`No puedes bajar la capacidad por debajo de lo vendido (${sold}).`, `You cannot lower the capacity below what's already sold (${sold}).`) };
     update.is_unlimited = false;
     update.capacity = newCapacity;
   }
@@ -680,12 +689,12 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   // --- Precio: con ventas, congelado; sin ventas, editable salvo preventa ---
   if (Number.isFinite(newPriceCents) && newPriceCents !== tt.price_cents) {
     if (sold > 0) {
-      return { ok: false, message: 'No se puede cambiar el precio de un tipo que ya tiene ventas (el precio queda congelado para quienes ya compraron).' };
+      return { ok: false, message: t('No se puede cambiar el precio de un tipo que ya tiene ventas (el precio queda congelado para quienes ya compraron).', 'You cannot change the price of a type that already has sales (the price stays frozen for those who already bought).') };
     }
-    if (newPriceCents < 0) return { ok: false, message: 'Precio inválido.' };
+    if (newPriceCents < 0) return { ok: false, message: t('Precio inválido.', 'Invalid price.') };
     const phaseCount = (phaseRows ?? []).length;
     if (phaseCount > 1) {
-      return { ok: false, message: 'Este tipo tiene fases de preventa; el precio se gestiona por fases (no editable aquí).' };
+      return { ok: false, message: t('Este tipo tiene fases de preventa; el precio se gestiona por fases (no editable aquí).', 'This type has presale phases; the price is managed by phases (not editable here).') };
     }
     update.price_cents = newPriceCents;
   }
@@ -699,12 +708,13 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   const becomingFree = priceChanged && update.price_cents === 0;
   const pricingErr = validateTicketTypePricing(
     [{ name, isUnlimited: (update.is_unlimited as boolean | undefined) ?? tt.is_unlimited, pricesCents: resultingPrices }],
-    { freeConfirmed: !becomingFree || formData.get('confirm_free') === '1' }
+    { freeConfirmed: !becomingFree || formData.get('confirm_free') === '1' },
+    await idiomaPanel()
   );
   if (pricingErr) return { ok: false, message: pricingErr };
 
   const { error } = await admin.from('ticket_types').update(update).eq('id', ttId).eq('event_id', eventId);
-  if (error) return { ok: false, message: mensajePrueba(error.message) ?? error.message };
+  if (error) return { ok: false, message: mensajePrueba(error.message, await idiomaPanel()) ?? error.message };
   // Si hay UNA fase base (sin ventas), la alineamos para que el precio activo
   // coincida. DESPUÉS del update del tipo: antes corría primero y, si una
   // validación de abajo o el tope de la prueba (0069) rechazaba el guardado,
@@ -719,30 +729,32 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId: eventId, accion: 'ticket_type_edited', diff: { ticket_type_id: ttId, cambios: update } });
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
-  return { ok: true, message: `"${name}" actualizado.` };
+  return { ok: true, message: t(`"${name}" actualizado.`, `"${name}" updated.`) };
 }
 
 // ===== 3) Crear un tipo de entrada nuevo (libre) =====
 export async function createTicketTypeAction(_prev: EditState, formData: FormData): Promise<EditState> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const eventId = String(formData.get('event_id') ?? '');
   const auth = await authEvent(eventId, user);
   const brandId = auth?.brandId ?? null;
-  if (!brandId) return { ok: false, message: 'No tienes permiso.' };
+  if (!brandId) return { ok: false, message: t('No tienes permiso.', 'You do not have permission.') };
 
   const name = String(formData.get('name') ?? '').trim().slice(0, 80);
-  if (name.length < 1) return { ok: false, message: 'Pon un nombre.' };
+  if (name.length < 1) return { ok: false, message: t('Pon un nombre.', 'Enter a name.') };
   const description = String(formData.get('description') ?? '').trim().slice(0, 280);
   const isUnlimited = formData.get('is_unlimited') === 'on';
   const colorHex = parseColorHex(formData);
-  if (colorHex === false) return { ok: false, message: 'Color inválido.' };
+  if (colorHex === false) return { ok: false, message: t('Color inválido.', 'Invalid color.') };
   const priceCents =Math.round(parseFloat(String(formData.get('price_soles') ?? '')) * 100);
-  if (!Number.isFinite(priceCents) || priceCents < 0) return { ok: false, message: 'Precio inválido.' };
+  if (!Number.isFinite(priceCents) || priceCents < 0) return { ok: false, message: t('Precio inválido.', 'Invalid price.') };
   const capacity = isUnlimited ? 0 : parseInt(String(formData.get('capacity') ?? ''), 10);
-  if (!isUnlimited && (!Number.isFinite(capacity) || capacity < 1)) return { ok: false, message: 'Capacidad inválida.' };
+  if (!isUnlimited && (!Number.isFinite(capacity) || capacity < 1)) return { ok: false, message: t('Capacidad inválida.', 'Invalid capacity.') };
   const pricingErr = validateTicketTypePricing(
     [{ name, isUnlimited, pricesCents: [priceCents] }],
-    { freeConfirmed: formData.get('confirm_free') === '1' }
+    { freeConfirmed: formData.get('confirm_free') === '1' },
+    await idiomaPanel()
   );
   if (pricingErr) return { ok: false, message: pricingErr };
   const bulkMinQtyRaw = Math.max(0, Math.min(10, parseInt(String(formData.get('bulk_min_qty') ?? '0'), 10) || 0));
@@ -761,7 +773,7 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
     .insert({ event_id: eventId, name, description: description || null, price_cents: priceCents, capacity, is_unlimited: isUnlimited, is_active: !privada, sort_order: sortOrder, sold: 0, reserved: 0, max_scans: 1, bulk_min_qty: bulkMinQty, bulk_discount_pct: bulkPct, color_hex: colorHex ?? null })
     .select('id')
     .single();
-  if (error || !created) return { ok: false, message: mensajePrueba(error?.message) ?? error?.message ?? 'No se pudo crear el tipo.' };
+  if (error || !created) return { ok: false, message: mensajePrueba(error?.message, await idiomaPanel()) ?? error?.message ?? 'No se pudo crear el tipo.' };
 
   // Fase base (todo el período) para que el precio activo se resuelva como los demás.
   await admin.from('ticket_type_price_phases').insert({ ticket_type_id: created.id, name: 'Base', price_cents: priceCents, starts_at: null, ends_at: null, sort_order: 0 });
@@ -770,7 +782,7 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
     // Cuántas por persona (0068): lo que puso el organizador; por defecto 1 si es gratis.
     const lim = parseMaxPorPersona(formData.get('max_por_persona'));
     const { error: ePriv } = await admin.from('ticket_type_access').insert({ ticket_type_id: created.id, token: generarToken(), max_por_persona: lim === undefined ? (priceCents === 0 ? 1 : null) : lim });
-    if (ePriv) return { ok: false, message: 'Se creó la entrada PAUSADA pero no su link privado. Ábrela, toca "Hacerla privada" y actívala.' };
+    if (ePriv) return { ok: false, message: t('Se creó la entrada PAUSADA pero no su link privado. Ábrela, toca "Hacerla privada" y actívala.', 'The ticket was created PAUSED but its private link was not. Open it, tap "Make it private" and activate it.') };
     await admin.from('ticket_types').update({ is_active: true }).eq('id', created.id);
   }
 
@@ -780,7 +792,7 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
   await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId, accion: 'ticket_type_created', diff: { ticket_type_id: created.id } });
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
-  return { ok: true, message: `"${name}" creado.` };
+  return { ok: true, message: t(`"${name}" creado.`, `"${name}" created.`) };
 }
 
 // ===== Entradas PRIVADAS con link (0066) =====
@@ -790,26 +802,27 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
 // Mismo guard que el resto: dueño por membresía o super admin en modo edición.
 export async function setTicketTypePrivateAction(_prev: EditState, formData: FormData): Promise<EditState> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const eventId = String(formData.get('event_id') ?? '');
   const ttId = String(formData.get('ticket_type_id') ?? '');
   const accion = String(formData.get('accion') ?? '');
   const auth = await authEvent(eventId, user);
   const brandId = auth?.brandId ?? null;
-  if (!brandId) return { ok: false, message: 'No tienes permiso.' };
+  if (!brandId) return { ok: false, message: t('No tienes permiso.', 'You do not have permission.') };
 
   const admin = createAdminClient();
   const { data: tt } = await admin.from('ticket_types').select('id, event_id, name, price_cents').eq('id', ttId).maybeSingle();
-  if (!tt || tt.event_id !== eventId) return { ok: false, message: 'Esa entrada no es de este evento.' };
+  if (!tt || tt.event_id !== eventId) return { ok: false, message: t('Esa entrada no es de este evento.', 'That ticket does not belong to this event.') };
 
   let message: string;
   if (accion === 'limite') {
     // Cuántas puede reclamar cada persona con el link (0068). Lo aplica
     // reserve_order_stock bajo lock; acá solo se guarda el número.
     const lim = parseMaxPorPersona(formData.get('max_por_persona'));
-    if (lim === undefined) return { ok: false, message: 'Pon un número del 1 al 100, o déjalo vacío para no limitar.' };
+    if (lim === undefined) return { ok: false, message: t('Pon un número del 1 al 100, o déjalo vacío para no limitar.', 'Enter a number from 1 to 100, or leave it empty for no limit.') };
     const { data: upd, error } = await admin.from('ticket_type_access').update({ max_por_persona: lim }).eq('ticket_type_id', tt.id).select('ticket_type_id');
-    if (error || !upd?.length) return { ok: false, message: 'No se pudo guardar. Intenta de nuevo.' };
-    message = lim === null ? `"${tt.name}": sin límite por persona.` : `"${tt.name}": hasta ${lim} por persona.`;
+    if (error || !upd?.length) return { ok: false, message: t('No se pudo guardar. Intenta de nuevo.', 'Could not save. Try again.') };
+    message = lim === null ? t(`"${tt.name}": sin límite por persona.`, `"${tt.name}": no limit per person.`) : t(`"${tt.name}": hasta ${lim} por persona.`, `"${tt.name}": up to ${lim} per person.`);
   } else if (accion === 'privada' || accion === 'cambiar') {
     const token = generarToken();
     const { error } = await admin.from('ticket_type_access').upsert(
@@ -818,16 +831,16 @@ export async function setTicketTypePrivateAction(_prev: EditState, formData: For
         : { ticket_type_id: tt.id, token, rotated_at: null, max_por_persona: tt.price_cents === 0 ? 1 : null },
       { onConflict: 'ticket_type_id' },
     );
-    if (error) return { ok: false, message: 'No se pudo generar el link. Intenta de nuevo.' };
+    if (error) return { ok: false, message: t('No se pudo generar el link. Intenta de nuevo.', 'Could not generate the link. Try again.') };
     message = accion === 'cambiar'
-      ? `Link de "${tt.name}" cambiado. El anterior ya no sirve.`
-      : `"${tt.name}" ahora es privada: solo se ve con su link.`;
+      ? t(`Link de "${tt.name}" cambiado. El anterior ya no sirve.`, `Link for "${tt.name}" changed. The old one no longer works.`)
+      : t(`"${tt.name}" ahora es privada: solo se ve con su link.`, `"${tt.name}" is now private: it's only visible with its link.`);
   } else if (accion === 'publica') {
     const { error } = await admin.from('ticket_type_access').delete().eq('ticket_type_id', tt.id);
-    if (error) return { ok: false, message: 'No se pudo hacer pública. Intenta de nuevo.' };
-    message = `"${tt.name}" ahora es pública.`;
+    if (error) return { ok: false, message: t('No se pudo hacer pública. Intenta de nuevo.', 'Could not make it public. Try again.') };
+    message = t(`"${tt.name}" ahora es pública.`, `"${tt.name}" is now public.`);
   } else {
-    return { ok: false, message: 'Acción inválida.' };
+    return { ok: false, message: t('Acción inválida.', 'Invalid action.') };
   }
 
   await admin.from('events_log').insert({ brand_id: brandId, event_id: eventId, actor_user_id: user.id, type: 'ticket_type_access_changed', payload: { ticket_type_id: tt.id, accion, max_por_persona: String(formData.get('max_por_persona') ?? '') } });
@@ -843,24 +856,25 @@ export async function setTicketTypePrivateAction(_prev: EditState, formData: For
 // orden de presentación: nada de precio, stock ni pago.
 export async function moveTicketTypeAction(_prev: EditState, formData: FormData): Promise<EditState> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const eventId = String(formData.get('event_id') ?? '');
   const ttId = String(formData.get('ticket_type_id') ?? '');
   const dir = formData.get('dir') === 'up' ? -1 : 1;
   const auth = await authEvent(eventId, user);
-  if (!auth?.brandId) return { ok: false, message: 'No tienes permiso.' };
+  if (!auth?.brandId) return { ok: false, message: t('No tienes permiso.', 'You do not have permission.') };
 
   const admin = createAdminClient();
   const { data: tts, error } = await admin.from('ticket_types').select('id').eq('event_id', eventId).order('sort_order').order('created_at');
-  if (error || !tts) return { ok: false, message: 'No se pudo leer las entradas.' };
-  const ids = tts.map((t) => t.id as string);
+  if (error || !tts) return { ok: false, message: t('No se pudo leer las entradas.', 'Could not read the tickets.') };
+  const ids = tts.map((tt) => tt.id as string);
   const i = ids.indexOf(ttId);
   const j = i + dir;
-  if (i < 0) return { ok: false, message: 'Esa entrada no es de este evento.' };
+  if (i < 0) return { ok: false, message: t('Esa entrada no es de este evento.', 'That ticket does not belong to this event.') };
   if (j < 0 || j >= ids.length) return { ok: true, message: null };
   [ids[i], ids[j]] = [ids[j]!, ids[i]!];
 
   const res = await Promise.all(ids.map((id, n) => admin.from('ticket_types').update({ sort_order: n }).eq('id', id).eq('event_id', eventId)));
-  if (res.some((r) => r.error)) return { ok: false, message: 'No se pudo guardar el orden. Intenta de nuevo.' };
+  if (res.some((r) => r.error)) return { ok: false, message: t('No se pudo guardar el orden. Intenta de nuevo.', 'Could not save the order. Try again.') };
   await auditarEscrituraSuper(admin, { user, modo: auth.modo ?? null, brandId: auth.brandId, eventId, accion: 'ticket_type_moved', diff: { ticket_type_id: ttId, dir } });
   revalidatePath(`/admin/events/${eventId}/entradas`);
   return { ok: true, message: null };

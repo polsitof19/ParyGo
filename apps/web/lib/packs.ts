@@ -5,10 +5,10 @@
 export type Pasarela = 'mercadopago' | 'paypal';
 
 export const PACKS = [
-  { eventos: 1, pen: 15000, usd: 4500 },
-  { eventos: 3, pen: 39000, usd: 11500 },
-  { eventos: 5, pen: 60000, usd: 17500 },
-  { eventos: 10, pen: 110000, usd: 32000 },
+  { eventos: 1, pen: 15000, usd: 5900 },
+  { eventos: 3, pen: 39000, usd: 14900 },
+  { eventos: 5, pen: 60000, usd: 22900 },
+  { eventos: 10, pen: 110000, usd: 39900 },
 ] as const;
 
 export type Pack = (typeof PACKS)[number];

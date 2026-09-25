@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
+import { textosPanel } from '@/lib/idiomaServer';
 import { puedeEscribirComoSuper } from '@/lib/impersonation';
 import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -17,6 +18,7 @@ type RejectResult = { ok: boolean; message?: string };
 
 export async function approveYapeProof(proofId: string): Promise<ApproveResult> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const admin = createAdminClient();
 
   // Fetch proof + verify the user is brand_admin of its brand.
@@ -25,7 +27,7 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
     .select('id, brand_id, order_id, status')
     .eq('id', proofId)
     .single();
-  if (proofErr || !proof) return { ok: false, message: 'Comprobante no encontrado.' };
+  if (proofErr || !proof) return { ok: false, message: t('Comprobante no encontrado.', 'Receipt not found.') };
 
   // SOLO-LECTURA en impersonación: el super admin NO puede aprobar/rechazar Yape
   // (escritura de dinero) mientras "ve" la marca. Su camino es por membresía
@@ -39,7 +41,7 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
     user.brandMemberships.some(
       (m) => m.brandId === proof.brand_id && m.role === 'brand_admin'
     );
-  if (!canAct) return { ok: false, message: 'No tienes permiso.' };
+  if (!canAct) return { ok: false, message: t('No tienes permiso.', 'You do not have permission.') };
 
   // Atomic state transition: only flip if still pending. Prevents double-approve
   // if two admin tabs hit it at the same time.
@@ -57,7 +59,10 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
   if (updErr || !updated) {
     return {
       ok: false,
-      message: 'Este comprobante ya fue procesado (otra ventana lo aprobó/rechazó).',
+      message: t(
+        'Este comprobante ya fue procesado (otra ventana lo aprobó/rechazó).',
+        'This receipt was already processed (another tab approved or rejected it).'
+      ),
     };
   }
 
@@ -78,14 +83,16 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
         .eq('id', proofId);
       return {
         ok: false,
-        message:
+        message: t(
           'No hay cupo: el evento se agotó. No se emitieron entradas. Rechaza esta orden y reembolsa el Yape.',
+          'No capacity left: the event sold out. No tickets were issued. Reject this order and refund the Yape.'
+        ),
       };
     }
     // El comprobante YA quedó aprobado: esa escritura existió aunque la emisión
     // fallara, así que se firma igual.
     await auditarEscrituraSuper(admin, { user, modo: modoSuper, brandId: proof.brand_id as string, orderId: proof.order_id as string, accion: 'yape_approved_issue_failed', diff: { proof_id: proofId, error: issue.error } });
-    return { ok: false, message: `Tickets fallaron: ${issue.error}` };
+    return { ok: false, message: t(`Tickets fallaron: ${issue.error}`, `Ticket issuing failed: ${issue.error}`) };
   }
 
   await admin.from('events_log').insert({
@@ -128,6 +135,7 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
 
 export async function rejectYapeProof(proofId: string, reason: string): Promise<RejectResult> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const admin = createAdminClient();
   reason = (reason ?? '').slice(0, 300); // límite de longitud (defensa)
 
@@ -136,7 +144,7 @@ export async function rejectYapeProof(proofId: string, reason: string): Promise<
     .select('id, brand_id, order_id, status')
     .eq('id', proofId)
     .single();
-  if (!proof) return { ok: false, message: 'No encontrado.' };
+  if (!proof) return { ok: false, message: t('No encontrado.', 'Not found.') };
 
   // SOLO-LECTURA en impersonación: el super admin NO puede aprobar/rechazar Yape
   // (escritura de dinero) mientras "ve" la marca. Su camino es por membresía
@@ -150,7 +158,7 @@ export async function rejectYapeProof(proofId: string, reason: string): Promise<
     user.brandMemberships.some(
       (m) => m.brandId === proof.brand_id && m.role === 'brand_admin'
     );
-  if (!canAct) return { ok: false, message: 'Sin permiso.' };
+  if (!canAct) return { ok: false, message: t('Sin permiso.', 'No permission.') };
 
   const { data: updated } = await admin
     .from('yape_proofs')
@@ -165,7 +173,7 @@ export async function rejectYapeProof(proofId: string, reason: string): Promise<
     .select('id')
     .single();
   if (!updated) {
-    return { ok: false, message: 'Ya procesado.' };
+    return { ok: false, message: t('Ya procesado.', 'Already processed.') };
   }
 
   // Mark order failed and release the held reservation so the stock returns.

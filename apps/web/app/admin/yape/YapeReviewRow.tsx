@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Check, X, Loader2, ChevronRight, ExternalLink } from 'lucide-react';
 import { formatPEN } from '@/lib/utils';
+import { useTextos } from '@/components/IdiomaPanel';
 import { approveYapeProof, rejectYapeProof } from './actions';
 
 type Props = {
@@ -56,25 +57,26 @@ export function YapeReviewRow({
   const [rejectReason, setRejectReason] = useState('');
   const [receiptBroken, setReceiptBroken] = useState(false);
   const [done, setDone] = useState<null | 'approved' | 'rejected'>(null);
+  const { t, loc } = useTextos();
 
   if (done === 'approved') {
     return (
       <p className="s-banner s-banner--ok" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-        <Check className="h-4 w-4" /> Aprobado · QR enviado a {buyerEmail}
+        <Check className="h-4 w-4" /> {t(`Aprobado · QR enviado a ${buyerEmail}`, `Approved · QR sent to ${buyerEmail}`)}
       </p>
     );
   }
   if (done === 'rejected') {
     return (
       <p className="s-banner s-banner--err" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-        <X className="h-4 w-4" /> Rechazado · {buyerEmail} fue notificado
+        <X className="h-4 w-4" /> {t(`Rechazado · ${buyerEmail} fue notificado`, `Rejected · ${buyerEmail} was notified`)}
       </p>
     );
   }
 
   const bodyId = `yape-detalle-${proofId}`;
   const expanded = open || showReject;
-  const hora = new Date(createdAt).toLocaleString('es-PE', {
+  const hora = new Date(createdAt).toLocaleString(loc, {
     day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima',
   });
 
@@ -93,10 +95,10 @@ export function YapeReviewRow({
           <ChevronRight className="a-yrow__chev" aria-hidden="true" />
           <span className="a-yrow__payer">{payerName || buyerName || '—'}</span>
           <span className={`a-yrow__amt${amountMatches ? '' : ' a-yrow__amt--bad'}`}>{formatPEN(amountCents)}</span>
-          <span className="a-yrow__op">Op. {operationNumber}</span>
+          <span className="a-yrow__op">{t(`Op. ${operationNumber}`, `Op. ${operationNumber}`)}</span>
           <span className="a-yrow__time">{hora}</span>
-          {duplicateWarning && <span className="a-chip a-chip--deny">N° repetido</span>}
-          {!amountMatches && <span className="a-chip a-chip--warn">Esperado {formatPEN(expectedAmountCents)}</span>}
+          {duplicateWarning && <span className="a-chip a-chip--deny">{t('N° repetido', 'Repeated number')}</span>}
+          {!amountMatches && <span className="a-chip a-chip--warn">{t(`Esperado ${formatPEN(expectedAmountCents)}`, `Expected ${formatPEN(expectedAmountCents)}`)}</span>}
         </button>
 
         {!impersonating && !showReject && (
@@ -106,19 +108,19 @@ export function YapeReviewRow({
               className="s-btn s-btn--primary s-btn--sm"
               disabled={pending}
               onClick={() => {
-                if (!confirm(`Aprobar y enviar ${total} en entradas a ${buyerEmail}?`)) return;
+                if (!confirm(t(`Aprobar y enviar ${total} en entradas a ${buyerEmail}?`, `Approve and send ${total} in tickets to ${buyerEmail}?`))) return;
                 start(async () => {
                   const res = await approveYapeProof(proofId);
                   if (res.ok) {
-                    toast.success(`${res.ticketsIssued} entradas emitidas`);
+                    toast.success(t(`${res.ticketsIssued} entradas emitidas`, `${res.ticketsIssued} tickets issued`));
                     setDone('approved');
                   } else {
-                    toast.error(res.message ?? 'Error');
+                    toast.error(res.message ?? t('Error', 'Error'));
                   }
                 });
               }}
             >
-              <Check aria-hidden="true" /> Aprobar
+              <Check aria-hidden="true" /> {t('Aprobar', 'Approve')}
             </button>
             <button
               type="button"
@@ -126,7 +128,7 @@ export function YapeReviewRow({
               disabled={pending}
               onClick={() => { setShowReject(true); setOpen(true); }}
             >
-              <X aria-hidden="true" /> Rechazar
+              <X aria-hidden="true" /> {t('Rechazar', 'Reject')}
             </button>
           </div>
         )}
@@ -142,22 +144,22 @@ export function YapeReviewRow({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={receiptUrl}
-                    alt="Comprobante Yape"
+                    alt={t('Comprobante Yape', 'Yape receipt')}
                     className="a-receipt"
                     onError={() => setReceiptBroken(true)}
                   />
                 </a>
               ) : (
                 <div className="a-receipt a-receipt--empty">
-                  <span>{receiptUrl ? 'No se pudo mostrar la captura' : 'Sin captura'}</span>
+                  <span>{receiptUrl ? t('No se pudo mostrar la captura', 'Could not display the screenshot') : t('Sin captura', 'No screenshot')}</span>
                   {receiptUrl && (
                     <a href={receiptUrl} target="_blank" rel="noopener noreferrer" className="s-textlink">
-                      <ExternalLink aria-hidden="true" style={{ width: 13, height: 13, display: 'inline', verticalAlign: '-2px' }} /> Abrir el archivo
+                      <ExternalLink aria-hidden="true" style={{ width: 13, height: 13, display: 'inline', verticalAlign: '-2px' }} /> {t('Abrir el archivo', 'Open the file')}
                     </a>
                   )}
                 </div>
               )}
-              <p className="s-hint" style={{ marginTop: 6 }}>Subido {hora}</p>
+              <p className="s-hint" style={{ marginTop: 6 }}>{t(`Subido ${hora}`, `Uploaded ${hora}`)}</p>
             </div>
 
             {/* Datos a verificar contra la app de Yape */}
@@ -172,24 +174,30 @@ export function YapeReviewRow({
                 >
                   <X className="h-4 w-4" style={{ flexShrink: 0, marginTop: 2 }} />
                   <span>
-                    <strong>Ojo: N° de operación repetido.</strong>{' '}
+                    <strong>{t('Ojo: N° de operación repetido.', 'Heads up: repeated operation number.')}</strong>{' '}
                     {duplicateWarning === 'approved'
-                      ? 'Este número de operación ya se usó en un comprobante APROBADO de tu marca. Podría ser un comprobante reutilizado — verifica en tu Yape antes de aprobar.'
-                      : 'Este número de operación aparece en otro comprobante pendiente. Revisa ambos antes de aprobar para no duplicar.'}
+                      ? t(
+                          'Este número de operación ya se usó en un comprobante APROBADO de tu marca. Podría ser un comprobante reutilizado — verifica en tu Yape antes de aprobar.',
+                          'This operation number was already used in an APPROVED receipt of your brand. It could be a reused receipt — check your Yape before approving.'
+                        )
+                      : t(
+                          'Este número de operación aparece en otro comprobante pendiente. Revisa ambos antes de aprobar para no duplicar.',
+                          'This operation number appears in another pending receipt. Review both before approving to avoid a duplicate.'
+                        )}
                   </span>
                 </p>
               )}
 
               <div className="a-verify-box">
-                <Verify label="Monto" value={formatPEN(amountCents)} expected={formatPEN(expectedAmountCents)} ok={amountMatches} />
-                <Verify label="N° operación" value={operationNumber} />
-                <Verify label="Nombre pagador" value={payerName} />
-                <Verify label="Código seguridad" value={securityCode} />
+                <Verify label={t('Monto', 'Amount')} value={formatPEN(amountCents)} expected={formatPEN(expectedAmountCents)} ok={amountMatches} expectedLabel={t('esperado', 'expected')} />
+                <Verify label={t('N° operación', 'Operation number')} value={operationNumber} />
+                <Verify label={t('Nombre pagador', 'Payer name')} value={payerName} />
+                <Verify label={t('Código seguridad', 'Security code')} value={securityCode} />
               </div>
 
               {/* Resumen de lo que se está aprobando: cuántas entradas y total. */}
               {items.length > 0 && (
-                <div className="a-yape-summary" role="group" aria-label="Resumen de entradas a aprobar">
+                <div className="a-yape-summary" role="group" aria-label={t('Resumen de entradas a aprobar', 'Summary of tickets to approve')}>
                   <span className="a-yape-summary__count">
                     {items.map((it, i) => (
                       <span key={i}>
@@ -198,22 +206,22 @@ export function YapeReviewRow({
                       </span>
                     ))}
                   </span>
-                  <span className="a-yape-summary__total">{total} en total</span>
+                  <span className="a-yape-summary__total">{t(`${total} en total`, `${total} total`)}</span>
                 </div>
               )}
 
               {impersonating && (
                 <p className="s-banner" style={{ marginTop: 16, background: 'var(--paper-2)', color: 'var(--ink-2)' }} role="status">
-                  Solo lectura — no puedes aprobar ni rechazar comprobantes desde aquí.
+                  {t('Solo lectura — no puedes aprobar ni rechazar comprobantes desde aquí.', 'Read-only — you cannot approve or reject receipts from here.')}
                 </p>
               )}
 
               {showReject && (
                 <div className="s-card a-reject-box">
-                  <label className="s-label">Motivo del rechazo</label>
+                  <label className="s-label">{t('Motivo del rechazo', 'Rejection reason')}</label>
                   <input
                     className="s-input"
-                    placeholder="Ej: monto no coincide / no encuentro el comprobante / nombre distinto"
+                    placeholder={t('Ej: monto no coincide / no encuentro el comprobante / nombre distinto', 'E.g.: amount does not match / cannot find the receipt / different name')}
                     value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
                   />
@@ -226,19 +234,19 @@ export function YapeReviewRow({
                         start(async () => {
                           const res = await rejectYapeProof(proofId, rejectReason);
                           if (res.ok) {
-                            toast.success('Rechazado');
+                            toast.success(t('Rechazado', 'Rejected'));
                             setDone('rejected');
                           } else {
-                            toast.error(res.message ?? 'Error');
+                            toast.error(res.message ?? t('Error', 'Error'));
                           }
                         });
                       }}
                     >
                       {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                      Confirmar rechazo
+                      {t('Confirmar rechazo', 'Confirm rejection')}
                     </button>
                     <button type="button" className="s-btn s-btn--ghost" onClick={() => setShowReject(false)}>
-                      Cancelar
+                      {t('Cancelar', 'Cancel')}
                     </button>
                   </div>
                 </div>
@@ -256,18 +264,20 @@ function Verify({
   value,
   expected,
   ok,
+  expectedLabel,
 }: {
   label: string;
   value: string;
   expected?: string;
   ok?: boolean;
+  expectedLabel?: string;
 }) {
   return (
     <div className="a-verify">
       <span className="a-verify__k">{label}</span>
       <span className="a-verify__v">
         <span className={ok === false ? 'a-verify__v--bad' : ok === true ? 'a-verify__v--ok' : undefined}>{value}</span>
-        {ok === false && expected && <span className="a-verify__exp">(esperado {expected})</span>}
+        {ok === false && expected && <span className="a-verify__exp">({expectedLabel ?? 'esperado'} {expected})</span>}
       </span>
     </div>
   );

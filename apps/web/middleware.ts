@@ -247,8 +247,12 @@ async function refreshAuth(req: NextRequest, res: NextResponse): Promise<NextRes
       },
     }
   );
-  // Touch the session so Supabase rotates the cookie if needed.
-  await supabase.auth.getUser();
+  // Renueva la cookie si el token venció. getSession() lo hace SIN viajar a
+  // Supabase cuando el token sigue vigente; getUser() pagaba un viaje en CADA
+  // pedido del panel (2026-09-25, medido: 1–1,8 s por pantalla). Acá no se
+  // decide acceso: eso lo verifica getUser() en requireSession de cada página
+  // y acción.
+  await supabase.auth.getSession();
   return res;
 }
 

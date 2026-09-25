@@ -379,10 +379,51 @@ token vigente de esa persona; UNA persona = dueña de UNA marca (índice
 el código de correo NO lleva el nombre de marca tipeado. Tras fijar la
 contraseña hay que volver a entrar (cambiarla cierra las sesiones). Tests:
 e2e/empezar.mjs (23/23) y e2e/prueba-0069.mjs (lee el tope de la base).
-PENDIENTE: limpiar usuarios sin confirmar viejos (bloquean el alta desde la
-cabina con "ya existe un usuario"); tope de intentos de código por correo.
+PENDIENTE: tope de intentos de código por correo.
 
-Incrementales, idempotentes, numeradas (vamos por 0071). Backwards-compatible
+PRECIOS DE LOS PACKS (Paul, 2026-09-25): soles 150/390/600/1.100 (MP) y
+dólares 59/149/229/399 (PayPal, "internacional premium": afuera se cobra más
+y PayPal se lleva ~5,4%). Viven en apps/web/lib/packs.ts (lo que se cobra) y
+apps/landing/lib/packs.ts (lo que se muestra): si cambias uno, el otro.
+
+LIMPIEZA DIARIA (0072, cron parygo-limpiar-altas 09:41 UTC):
+limpiar_altas_abandonadas() borra marcas nacidas del alta SIN dueña, eventos,
+órdenes ni compra pagada (7 días; las is_test del E2E a la hora), usuarios SIN
+confirmar de >7 días sin marca ni referencias, e intentos de >2 días. Service
+role solamente (probado con JWT anon y authenticated: permission denied). Una
+marca con una compra PAGADA real nunca se borra.
+
+PANEL EN INGLÉS (0073, 2026-09-25, pedido de Paul): brands.idioma ('es' |
+'en', default 'es') decide el idioma del panel del organizador y del escáner
+de esa marca. Nace 'en' si el alta fue en inglés; se cambia en Mi marca
+(selector con etiqueta bilingüe a propósito). El super admin mirando una
+marca la ve SIEMPRE en español. Código: lib/idioma.ts (textos → t(es, en) y
+loc), lib/idiomaServer.ts (textosPanel/idiomaPanel, cacheado por pedido; el
+idioma viene embebido en las membresías de getSessionUser, cero viajes
+extra) y components/IdiomaPanel.tsx (useTextos en cliente; sin proveedor =
+español, que es lo que ve la cabina). REGLAS: todo texto nuevo del panel va
+con t('español', 'English') y el español NO se toca (el E2E lo compara
+byte a byte); las funciones de lib con mensajes toman `l: Idioma = 'es'`
+opcional. NO se traduce lo que ve el COMPRADOR (su sitio, sus correos, los
+mensajes de WhatsApp que manda el organizador): sigue en español, igual que
+los precios en S/. El correo "Yapes por aprobar" al organizador sí sale en
+su idioma. Tests: e2e/fase1.mjs (español, 181/181) y e2e/panel-en.mjs
+(cambia a inglés desde Mi marca, recorre 16 pantallas buscando español
+suelto, vuelve a español).
+
+VELOCIDAD DEL PANEL (2026-09-25, "veo que carga mucho"): cada viaje a
+Supabase cuesta ~170 ms desde Lima y una pantalla encadenaba 5–7. Reglas:
+el middleware NO llama getUser() (solo getSession(), que renueva el token
+sin viajar; la verificación es getUser() en requireSession); getSessionUser
+corre getUser + perfil + membresías EN PARALELO (lee el id del token de la
+cookie y descarta todo si getUser no confirma ese mismo id); las consultas de
+una página van en UN Promise.all; NUNCA bajar todas las órdenes/entradas de
+una marca para contar o detectar algo (la portada lo hacía dos veces: Code
+son 491 órdenes y 1.218 entradas por visita) — usar count, filtros o un
+anti-join (`tickets!left(id)` + `.is('tickets', null)`). Smart Placement
+prendido en apps/web/wrangler.toml ([placement] mode = "smart").
+
+Incrementales, idempotentes, numeradas (vamos por 0073). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
 para no romper la app vieja desplegada.
 

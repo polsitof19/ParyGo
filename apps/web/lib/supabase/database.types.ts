@@ -101,6 +101,7 @@ export type Database = {
           created_at: string
           event_balance: number
           id: string
+          idioma: string
           instagram: string | null
           is_test: boolean
           prueba_disponible: boolean
@@ -123,6 +124,7 @@ export type Database = {
           created_at?: string
           event_balance?: number
           id?: string
+          idioma?: string
           instagram?: string | null
           is_test?: boolean
           prueba_disponible?: boolean
@@ -145,6 +147,7 @@ export type Database = {
           created_at?: string
           event_balance?: number
           id?: string
+          idioma?: string
           instagram?: string | null
           is_test?: boolean
           prueba_disponible?: boolean

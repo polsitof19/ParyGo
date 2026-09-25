@@ -1,4 +1,5 @@
 // Validaciones de evento y tipos de entrada, compartidas por TODOS los caminos
+import { textos, type Idioma } from '@/lib/idioma';
 // server que crean o editan (panel del promotor y cabina). Puras: sin I/O.
 // Se corren ANTES de cualquier RPC que consuma saldo.
 
@@ -28,17 +29,18 @@ export function validateEventWindow(input: {
   endsIso: string | null;
   requireFutureStart: boolean;
   now?: number;
-}): WindowError | null {
+}, l: Idioma = 'es'): WindowError | null {
+  const { t } = textos(l);
   const now = input.now ?? Date.now();
   const start = Date.parse(input.startsIso);
-  if (!Number.isFinite(start)) return { field: 'starts_at', message: 'Fecha de inicio inválida.' };
+  if (!Number.isFinite(start)) return { field: 'starts_at', message: t('Fecha de inicio inválida.', 'Invalid start date.') };
   if (input.requireFutureStart && start < now - PAST_GRACE_MS) {
-    return { field: 'starts_at', message: 'La fecha de inicio ya pasó. Elige una fecha futura.' };
+    return { field: 'starts_at', message: t('La fecha de inicio ya pasó. Elige una fecha futura.', 'The start date has already passed. Choose a future date.') };
   }
   if (input.endsIso) {
     const end = Date.parse(input.endsIso);
-    if (!Number.isFinite(end)) return { field: 'ends_at', message: 'Fecha de fin inválida.' };
-    if (end <= start) return { field: 'ends_at', message: 'La hora de fin tiene que ser posterior al inicio.' };
+    if (!Number.isFinite(end)) return { field: 'ends_at', message: t('Fecha de fin inválida.', 'Invalid end date.') };
+    if (end <= start) return { field: 'ends_at', message: t('La hora de fin tiene que ser posterior al inicio.', 'The end time must be after the start time.') };
   }
   return null;
 }
@@ -66,17 +68,19 @@ export type TicketTypeRule = {
 // - S/0 con aforo → válido SOLO con confirmación explícita (cortesías / evento gratis).
 export function validateTicketTypePricing(
   types: TicketTypeRule[],
-  opts: { freeConfirmed: boolean }
+  opts: { freeConfirmed: boolean },
+  l: Idioma = 'es'
 ): string | null {
+  const tx = textos(l).t;
   for (const t of types) {
-    const label = t.name?.trim() || 'Un tipo de entrada';
-    if (t.pricesCents.some((p) => !Number.isFinite(p) || p < 0)) return `"${label}": precio inválido.`;
+    const label = t.name?.trim() || tx('Un tipo de entrada', 'A ticket type');
+    if (t.pricesCents.some((p) => !Number.isFinite(p) || p < 0)) return tx(`"${label}": precio inválido.`, `"${label}": invalid price.`);
     const hasFree = t.pricesCents.some((p) => p === 0);
     if (hasFree && t.isUnlimited) {
-      return `"${label}" no puede ser gratis e ilimitado a la vez. Pon un aforo (cupo) o un precio.`;
+      return tx(`"${label}" no puede ser gratis e ilimitado a la vez. Pon un aforo (cupo) o un precio.`, `"${label}" cannot be both free and unlimited. Set a capacity or a price.`);
     }
     if (hasFree && !opts.freeConfirmed) {
-      return `"${label}" tiene precio S/ 0. Confirma que es gratis: no se ofrece en tu página salvo que todo el evento sea gratis, y se emite desde "Cortesías".`;
+      return tx(`"${label}" tiene precio S/ 0. Confirma que es gratis: no se ofrece en tu página salvo que todo el evento sea gratis, y se emite desde "Cortesías".`, `"${label}" is priced at S/ 0. Confirm it is free: it is not offered on your page unless the whole event is free, and it is issued from "Complimentary tickets".`);
     }
   }
   return null;

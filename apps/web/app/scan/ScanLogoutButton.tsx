@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import { LogOut } from 'lucide-react';
 import { purgeOfflineScanData } from '@/lib/offline-scan';
+import { useTextos } from '@/components/IdiomaPanel';
 
 // Cierre de sesión del validador: PURGA el estado offline (cache de tickets con
 // DNI/datos de asistentes + cola + claves locales) ANTES de cerrar sesión, para
 // no dejar PII en el dispositivo de puerta. Luego POSTea al logout server-side.
 export function ScanLogoutButton() {
   const [busy, setBusy] = useState(false);
+  const { t } = useTextos();
 
   async function onLogout() {
     if (busy) return;
@@ -27,7 +29,7 @@ export function ScanLogoutButton() {
   }
 
   return (
-    <button type="button" onClick={onLogout} disabled={busy} aria-label="Cerrar sesión" className="k-logout">
+    <button type="button" onClick={onLogout} disabled={busy} aria-label={t('Cerrar sesión', 'Log out')} className="k-logout">
       <LogOut className="h-4 w-4" />
     </button>
   );

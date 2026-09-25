@@ -9,6 +9,7 @@
 // legítimamente muy alto), y un falso positivo que impida publicar un evento
 // sería mucho peor que un flyer feo. La decisión queda del lado del promotor.
 
+import { textos, type Idioma } from '@/lib/idioma';
 // UNA sola regla: la proporción. Más angosta que 1:2 no la usa ningún afiche.
 //
 // Antes esto también comparaba contra una lista de medidas exactas de pantalla
@@ -26,13 +27,13 @@ const MAS_ANGOSTA_QUE = 0.5; // 1:2
 
 export type Veredicto = { esCaptura: boolean; motivo: string | null };
 
-export function pareceCaptura(width: number, height: number): Veredicto {
+export function pareceCaptura(width: number, height: number, l: Idioma = 'es'): Veredicto {
   if (!width || !height) return { esCaptura: false, motivo: null };
   const ratio = width / height;
   if (ratio > 0 && ratio < MAS_ANGOSTA_QUE) {
     return {
       esCaptura: true,
-      motivo: `Es mucho más alta que ancha (${width}×${height}). Los afiches no tienen esa forma; las pantallas de teléfono sí.`,
+      motivo: textos(l).t(`Es mucho más alta que ancha (${width}×${height}). Los afiches no tienen esa forma; las pantallas de teléfono sí.`, `It is much taller than it is wide (${width}×${height}). Posters are not shaped like that; phone screenshots are.`),
     };
   }
   return { esCaptura: false, motivo: null };

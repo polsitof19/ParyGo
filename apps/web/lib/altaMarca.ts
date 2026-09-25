@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import type { Idioma } from '@/lib/idioma';
 import { serverEnv } from '@/lib/env';
 
 // Alta de una marca del autoservicio de /empezar. Con userId, para un usuario
@@ -29,6 +30,8 @@ export async function crearMarcaParaUsuario(a: {
   slug: string;
   whatsappE164: string | null;
   prueba: boolean;
+  // Idioma del panel (0073): el del alta. Sin él, español.
+  idioma?: Idioma;
 }): Promise<AltaMarca> {
   const admin = createAdminClient();
   const { data: brand, error } = await admin
@@ -41,6 +44,7 @@ export async function crearMarcaParaUsuario(a: {
       theme_json: { primary_color: '#FF6A3D', secondary_color: '#5B6CFF' },
       notify_yape_digest: true,
       prueba_disponible: a.prueba,
+      idioma: a.idioma ?? 'es',
       // Sin dueña = alta con pack sin pagar: ARCHIVADA (no se ve en
       // <slug>.parygo.com) hasta que la dueña la reclama con el pago aprobado.
       // Si no, cualquiera publicaba gratis una página con el nombre de otro.

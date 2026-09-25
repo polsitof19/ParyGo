@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { puedeEscribirComoSuper, type ModoEscrituraSuper } from '@/lib/impersonation';
 import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { sendPromoCodeEmail } from '@/lib/email/sendPromoCodeEmail';
+import { textosPanel } from '@/lib/idiomaServer';
 
 type CreateResult = { ok: true; id: string } | { ok: false; message: string };
 type RevokeResult = { ok: boolean; message?: string };
@@ -19,12 +20,13 @@ export async function sendPromoCodeByEmailAction(
   email: string
 ): Promise<SendCodeResult> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const auth = await authorizeEventBrandAdmin(eventId, user);
   const brandId = auth?.brandId ?? null;
-  if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
+  if (!brandId) return { ok: false, message: t('No tienes permiso sobre este evento.', 'You do not have permission over this event.') };
 
   const to = (email ?? '').trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { ok: false, message: 'Email inválido.' };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { ok: false, message: t('Email inválido.', 'Invalid email.') };
 
   const admin = createAdminClient();
   // El código debe pertenecer a ESTE evento (que ya verificamos es de la marca).
@@ -34,12 +36,12 @@ export async function sendPromoCodeByEmailAction(
     .eq('id', promoCodeId)
     .maybeSingle();
   if (!code || code.event_id !== eventId) {
-    return { ok: false, message: 'Ese código no es de este evento.' };
+    return { ok: false, message: t('Ese código no es de este evento.', 'That code does not belong to this event.') };
   }
 
   const res = await sendPromoCodeEmail(promoCodeId, to);
-  if (!res.ok) return { ok: false, message: 'No se pudo enviar el email. Prueba de nuevo.' };
-  if (res.status === 'skipped') return { ok: false, message: 'El email no está configurado.' };
+  if (!res.ok) return { ok: false, message: t('No se pudo enviar el email. Prueba de nuevo.', 'Could not send the email. Try again.') };
+  if (res.status === 'skipped') return { ok: false, message: t('El email no está configurado.', 'Email is not configured.') };
 
   await admin.from('events_log').insert({
     brand_id: brandId,
@@ -50,7 +52,7 @@ export async function sendPromoCodeByEmailAction(
   });
   await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId, accion: 'promo_code_emailed', diff: { code: code.code, to } });
 
-  return { ok: true, message: `Código ${code.code} enviado a ${to}.` };
+  return { ok: true, message: t(`Código ${code.code} enviado a ${to}.`, `Code ${code.code} sent to ${to}.`) };
 }
 
 export type CreatePromoInput = {
@@ -90,32 +92,33 @@ async function authorizeEventBrandAdmin(eventId: string, user: SessionUser) {
 
 export async function createPromoCode(input: CreatePromoInput): Promise<CreateResult> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const admin = createAdminClient();
 
   const auth = await authorizeEventBrandAdmin(input.eventId, user);
   const brandId = auth?.brandId ?? null;
-  if (!brandId) return { ok: false, message: 'No tienes permiso sobre este evento.' };
+  if (!brandId) return { ok: false, message: t('No tienes permiso sobre este evento.', 'You do not have permission over this event.') };
 
   // ---- Server-side validation (never trust the client) ----
   const code = (input.code ?? '').trim();
   if (code.length < 2 || code.length > 32) {
-    return { ok: false, message: 'El código debe tener entre 2 y 32 caracteres.' };
+    return { ok: false, message: t('El código debe tener entre 2 y 32 caracteres.', 'The code must be between 2 and 32 characters.') };
   }
   if (!/^[A-Za-z0-9_-]+$/.test(code)) {
-    return { ok: false, message: 'El código solo admite letras, números, guion y guion bajo.' };
+    return { ok: false, message: t('El código solo admite letras, números, guion y guion bajo.', 'The code only allows letters, numbers, hyphen and underscore.') };
   }
 
   let discountValue = 0;
   if (input.discountType === 'percent') {
     discountValue = Math.round(input.discountValue);
     if (discountValue < 1 || discountValue > 100) {
-      return { ok: false, message: 'El porcentaje debe estar entre 1 y 100.' };
+      return { ok: false, message: t('El porcentaje debe estar entre 1 y 100.', 'The percentage must be between 1 and 100.') };
     }
   } else if (input.discountType === 'fixed') {
     // UI sends soles; store cents.
     discountValue = Math.round(input.discountValue * 100);
     if (discountValue < 1) {
-      return { ok: false, message: 'El monto fijo debe ser mayor a cero.' };
+      return { ok: false, message: t('El monto fijo debe ser mayor a cero.', 'The fixed amount must be greater than zero.') };
     }
   } else {
     discountValue = 0; // free
@@ -124,7 +127,7 @@ export async function createPromoCode(input: CreatePromoInput): Promise<CreateRe
   let maxUses: number | null = null;
   if (input.maxUses !== null && input.maxUses !== undefined) {
     maxUses = Math.round(input.maxUses);
-    if (maxUses < 1) return { ok: false, message: 'El límite de usos debe ser mayor a cero.' };
+    if (maxUses < 1) return { ok: false, message: t('El límite de usos debe ser mayor a cero.', 'The usage limit must be greater than zero.') };
   }
 
   const perEmailLimit = Math.max(1, Math.round(input.perEmailLimit || 1));
@@ -133,7 +136,7 @@ export async function createPromoCode(input: CreatePromoInput): Promise<CreateRe
   if (input.expiresAt && input.expiresAt.trim()) {
     const d = new Date(input.expiresAt);
     if (Number.isNaN(d.getTime())) {
-      return { ok: false, message: 'Fecha de expiración inválida.' };
+      return { ok: false, message: t('Fecha de expiración inválida.', 'Invalid expiration date.') };
     }
     expiresAt = d.toISOString();
   }
@@ -143,7 +146,7 @@ export async function createPromoCode(input: CreatePromoInput): Promise<CreateRe
   if (!appliesToAll) {
     ticketTypeIds = (input.ticketTypeIds ?? []).filter(Boolean);
     if (ticketTypeIds.length === 0) {
-      return { ok: false, message: 'Elige al menos un tipo de entrada o aplica a todas.' };
+      return { ok: false, message: t('Elige al menos un tipo de entrada o aplica a todas.', 'Choose at least one ticket type or apply to all.') };
     }
     // Enforce that every ticket type belongs to this event.
     const { data: validTypes } = await admin
@@ -151,9 +154,9 @@ export async function createPromoCode(input: CreatePromoInput): Promise<CreateRe
       .select('id')
       .eq('event_id', input.eventId)
       .in('id', ticketTypeIds);
-    const validIds = new Set((validTypes ?? []).map((t) => t.id));
+    const validIds = new Set((validTypes ?? []).map((tt) => tt.id));
     if (ticketTypeIds.some((id) => !validIds.has(id))) {
-      return { ok: false, message: 'Algún tipo de entrada no pertenece a este evento.' };
+      return { ok: false, message: t('Algún tipo de entrada no pertenece a este evento.', 'Some ticket type does not belong to this event.') };
     }
   }
 
@@ -175,9 +178,9 @@ export async function createPromoCode(input: CreatePromoInput): Promise<CreateRe
   if (error) {
     // 23505 = unique_violation (duplicate code for this event)
     if ((error as { code?: string }).code === '23505') {
-      return { ok: false, message: 'Ya existe un código con ese nombre en este evento.' };
+      return { ok: false, message: t('Ya existe un código con ese nombre en este evento.', 'A code with that name already exists in this event.') };
     }
-    return { ok: false, message: 'No se pudo crear el código. Intenta de nuevo.' };
+    return { ok: false, message: t('No se pudo crear el código. Intenta de nuevo.', 'Could not create the code. Try again.') };
   }
   await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId: input.eventId, accion: 'promo_code_created', diff: { promo_code_id: data, code, discount_type: input.discountType, discount_value: discountValue } });
 
@@ -188,11 +191,12 @@ export async function createPromoCode(input: CreatePromoInput): Promise<CreateRe
 
 export async function revokePromoCode(promoCodeId: string, eventId: string): Promise<RevokeResult> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   const admin = createAdminClient();
 
   const auth = await authorizeEventBrandAdmin(eventId, user);
   const brandId = auth?.brandId ?? null;
-  if (!brandId) return { ok: false, message: 'No tienes permiso.' };
+  if (!brandId) return { ok: false, message: t('No tienes permiso.', 'You do not have permission.') };
 
   // Scope the update to this brand + event so a forged id can't touch another
   // brand's code. Revoking only flips is_active; existing redemptions stand.
@@ -206,7 +210,7 @@ export async function revokePromoCode(promoCodeId: string, eventId: string): Pro
     .maybeSingle();
 
   if (error || !updated) {
-    return { ok: false, message: 'No se pudo desactivar el código.' };
+    return { ok: false, message: t('No se pudo desactivar el código.', 'Could not deactivate the code.') };
   }
   await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId, accion: 'promo_code_revoked', diff: { promo_code_id: promoCodeId } });
 

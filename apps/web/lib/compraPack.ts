@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { textos, type Idioma } from '@/lib/idioma';
 import { publicEnv } from '@/lib/env';
 import { precioDe, type Pack, type Pasarela } from '@/lib/packs';
 import { mpCrearPreferencia, mpPago, paypalCrearOrden } from '@/lib/cobroParygo';
@@ -19,7 +20,10 @@ export async function iniciarCompraPack(a: {
   // Se agrega a la vuelta de PayPal (/api/paypal/volver), p. ej. "&lang=en".
   sufijoPaypal?: string;
   cancelar?: string;
+  // Idioma de los mensajes de error (el del panel o el del alta).
+  l?: Idioma;
 }): Promise<{ ok: true; destino: string; compraId: string } | { ok: false; message: string }> {
+  const { t } = textos(a.l ?? 'es');
   const { currency, cents } = precioDe(a.pack, a.pasarela);
   const admin = createAdminClient();
   const { data: compra, error } = await admin
@@ -27,7 +31,7 @@ export async function iniciarCompraPack(a: {
     .insert({ brand_id: a.brandId, pack: a.pack.eventos, provider: a.pasarela, currency, amount_cents: cents, created_by: a.userId })
     .select('id')
     .single();
-  if (error || !compra) return { ok: false, message: 'No se pudo iniciar la compra. Intenta de nuevo.' };
+  if (error || !compra) return { ok: false, message: t('No se pudo iniciar la compra. Intenta de nuevo.', 'The purchase could not be started. Please try again.') };
 
   const app = publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
   const exito = a.volver ? a.volver(compra.id) : `${app}/admin/comprar/listo?compra=${compra.id}`;
@@ -52,7 +56,7 @@ export async function iniciarCompraPack(a: {
     // Sin token ni datos de la tarjeta: solo el motivo de la pasarela.
     console.error('[compraPack] la pasarela rechazó la compra', compra.id, e instanceof Error ? e.message : JSON.stringify(e).slice(0, 300));
     await admin.from('pack_purchases').update({ status: 'failed' }).eq('id', compra.id).eq('status', 'pending');
-    return { ok: false, message: 'La pasarela no respondió. No se te cobró nada; intenta de nuevo en un rato.' };
+    return { ok: false, message: t('La pasarela no respondió. No se te cobró nada; intenta de nuevo en un rato.', 'The payment provider did not respond. You were not charged; please try again shortly.') };
   }
 }
 

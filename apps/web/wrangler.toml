@@ -17,3 +17,10 @@ compatibility_date = "2025-05-01"
 # `mercadopago` SDK 2.x to load cleanly under Workers.
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".vercel/output/static"
+
+# Smart Placement (2026-09-25): el panel encadena 3–5 consultas a Supabase por
+# pantalla y cada una costaba ~170 ms desde el borde de Lima. Con esto
+# Cloudflare corre las Functions al lado de la base (tras ~30 pedidos de
+# muestra); los archivos estáticos siguen saliendo del borde más cercano.
+[placement]
+mode = "smart"

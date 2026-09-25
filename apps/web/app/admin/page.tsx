@@ -8,17 +8,18 @@ import { optimizedImage } from '@/lib/imageUrl';
 import { TicketRecovery } from './TicketRecovery';
 import { SetupChecklist, type SetupStep } from './SetupChecklist';
 import { LowBalanceNotice } from './LowBalanceNotice';
-import { publicEnv } from '@/lib/env';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { setEventArchivedAction } from './events/[id]/edit-actions';
 import { pruebaDisponible } from '@/lib/prueba';
 import { todas } from '@/lib/todas';
+import { textosPanel } from '@/lib/idiomaServer';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminHomePage() {
   const user = await requireSession();
+  const { t, loc } = await textosPanel();
   // Marca activa: brand_admin → su marca; super admin con cookie → la marca que
   // VE en solo lectura. El layout ya gatea; esto es defensa + saber si impersona.
   const ctx = ownerBrandContext(user);
@@ -26,31 +27,35 @@ export default async function AdminHomePage() {
   const brandId = ctx.brandId;
   const impersonating = ctx.soloLectura;
 
+  // TODO en un solo viaje en paralelo (2026-09-25): antes eran cuatro tandas
+  // seguidas y se bajaban TODAS las órdenes pagadas y TODAS las entradas de la
+  // marca, dos veces (Code: 491 órdenes y 1.218 entradas en cada visita), para
+  // cifras que la portada ya no muestra. Lo único que se usaba era detectar
+  // órdenes pagadas sin entradas: ahora lo resuelve la base con un anti-join.
   const supabase = createClient();
-  const { data: brand } = await supabase
-    .from('brands')
-    .select('id, slug, name, yape_number, event_balance')
-    .eq('id', brandId)
-    .single();
-  if (!brand) return null;
-
-  // Eventos + lecturas agregadas (solo lectura) para el panorama del dueño:
-  // Yape pendientes y ventas pagadas por evento. Antes había que abrir cada
-  // evento para ver esto; acá se ve de un vistazo.
-  const [{ data: events }, { data: pendingProofs }] = await Promise.all([
+  const adminCli = createAdminClient();
+  const [{ data: brand }, { data: events }, pendingProofs, stuckRows, { count: activeTypeCount }, { data: mpStatus }, pruebaLibre] = await Promise.all([
+    supabase.from('brands').select('id, slug, name, yape_number, event_balance').eq('id', brandId).single(),
     supabase
       .from('events')
       .select('id, slug, name, starts_at, is_published, cover_url, archived_at, venue_name')
-      .eq('brand_id', brand.id)
+      .eq('brand_id', brandId)
       .order('starts_at', { ascending: false }),
     todas((a, b) => supabase
       .from('yape_proofs')
       .select('id, order:orders!yape_proofs_order_id_fkey ( event_id )')
-      .eq('brand_id', brand.id)
+      .eq('brand_id', brandId)
       .eq('status', 'pending_review')
       .order('id')
-      .range(a, b)).then((data) => ({ data })),
+      .range(a, b)),
+    // Recuperación: órdenes PAGADAS sin tickets (red de seguridad del flujo
+    // Yape no atómico). Service role acotado a la marca. Normalmente vacío.
+    todas((a, b) => adminCli.from('orders').select('id, buyer_name, total_cents, created_at, event_id, tickets!left(id)').eq('brand_id', brandId).eq('status', 'paid').is('tickets', null).order('id').range(a, b)),
+    adminCli.from('ticket_types').select('id, events!inner(brand_id)', { count: 'exact', head: true }).eq('events.brand_id', brandId).eq('is_active', true),
+    adminCli.rpc('get_brand_mp_status', { p_brand_id: brandId }),
+    impersonating ? Promise.resolve(false) : pruebaDisponible(brandId),
   ]);
+  if (!brand) return null;
 
   const pendingByEvent = new Map<string, number>();
   for (const p of (pendingProofs ?? []) as { order: { event_id: string } | null }[]) {
@@ -74,69 +79,17 @@ export default async function AdminHomePage() {
     pendingEventCount += 1;
   }
 
-  const adminCli = createAdminClient();
-
-  // Recuperación: órdenes PAGADAS sin tickets (red de seguridad del flujo Yape no
-  // atómico). Scopeado por brand.id con service-role. Normalmente vacío.
-  // Una sola lectura de órdenes pagadas de la marca sirve para DOS cosas: el cuadre
-  // de ventas por evento (exacto) y la detección de órdenes sin tickets. Antes se
-  // traían las pagadas dos veces (una para sumar, otra para recuperación).
-  const eventNameById = new Map((events ?? []).map((e) => [e.id, e.name] as const));
-  const eventIds = (events ?? []).map((e) => e.id);
-  // Órdenes y entradas van PAGINADAS (todas): PostgREST corta en 1000 filas y,
-  // con Code pasando las 1000 entradas, las órdenes más nuevas aparecían
-  // "pagadas sin tickets" aunque los tenían.
-  const [paidRows, ticketOrderRows, { count: activeTypeCount }, { data: mpStatus }, validTicketRows] = await Promise.all([
-    todas((a, b) => adminCli.from('orders').select('id, buyer_name, total_cents, created_at, event_id, payment_method').eq('brand_id', brand.id).eq('status', 'paid').order('id').range(a, b)),
-    todas((a, b) => adminCli.from('tickets').select('order_id').eq('brand_id', brand.id).order('id').range(a, b)),
-    eventIds.length
-      ? adminCli.from('ticket_types').select('id', { count: 'exact', head: true }).in('event_id', eventIds).eq('is_active', true)
-      : Promise.resolve({ count: 0 } as { count: number | null }),
-    adminCli.rpc('get_brand_mp_status', { p_brand_id: brand.id }),
-    // Solo entradas válidas (no anuladas) para "Vendidas" — misma regla que el
-    // Resumen del evento. ticketOrderRows (sin filtrar) sigue siendo para la
-    // detección de órdenes pagadas sin tickets.
-    todas((a, b) => adminCli.from('tickets').select('order_id').eq('brand_id', brand.id).is('invalidated_at', null).order('id').range(a, b)),
-  ]);
   const mpRow = Array.isArray(mpStatus) ? mpStatus[0] : null;
   const mpConfigured = Boolean(mpRow?.has_access_token && mpRow?.has_public_key);
-  const paidOrderRows = (paidRows ?? []) as { id: string; buyer_name: string | null; total_cents: number | null; created_at: string; event_id: string; payment_method: string }[];
-
-  // Ventas por evento (exacto, mismos montos que antes).
-  const salesByEvent = new Map<string, number>();
-  for (const o of paidOrderRows) {
-    salesByEvent.set(o.event_id, (salesByEvent.get(o.event_id) ?? 0) + (o.total_cents ?? 0));
-  }
-
-  const ordersWithTickets = new Set((ticketOrderRows ?? []).map((t) => t.order_id as string));
-
-  // "¿Cómo va?" a nivel marca. Vendidas = entradas de órdenes pagadas que NO son
-  // cortesía (las cortesías no son venta).
-  const saleOrderIds = new Set(paidOrderRows.filter((o) => o.payment_method !== 'courtesy').map((o) => o.id));
-  // Vendidas por evento (misma regla: válidas y no cortesía), para la lista.
-  const eventoDeOrden = new Map(paidOrderRows.map((o) => [o.id, o.event_id] as const));
-  const soldByEvent = new Map<string, number>();
-  for (const t of (validTicketRows ?? []) as { order_id: string }[]) {
-    if (!saleOrderIds.has(t.order_id)) continue;
-    const ev = eventoDeOrden.get(t.order_id);
-    if (ev) soldByEvent.set(ev, (soldByEvent.get(ev) ?? 0) + 1);
-  }
+  const eventNameById = new Map((events ?? []).map((e) => [e.id, e.name] as const));
   const nowMs = Date.now();
-  // Próximo evento = el publicado, no archivado, más cercano que todavía no pasó.
-  const nextEvent = activeEvents
-    .filter((e) => e.is_published && Date.parse(e.starts_at) > nowMs - 12 * 3600 * 1000)
-    .sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at))[0] ?? null;
-  const nextDays = nextEvent ? Math.ceil((Date.parse(nextEvent.starts_at) - nowMs) / 86400000) : null;
-  const nextWhen = nextDays === null ? null : nextDays <= 0 ? 'hoy' : nextDays === 1 ? 'mañana' : `en ${nextDays} días`;
-  const nextPublicUrl = nextEvent ? `https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${nextEvent.slug}` : null;
   const firstPendingEvent = activeEvents.find((e) => (pendingByEvent.get(e.id) ?? 0) > 0) ?? null;
-  const stuckOrders = paidOrderRows
-    .filter((o) => !ordersWithTickets.has(o.id))
-    .map((o) => ({ id: o.id, buyerName: o.buyer_name, totalCents: o.total_cents ?? 0, createdAt: o.created_at, eventName: eventNameById.get(o.event_id) ?? 'Evento' }));
+  const stuckOrders = ((stuckRows ?? []) as { id: string; buyer_name: string | null; total_cents: number | null; created_at: string; event_id: string }[])
+    .map((o) => ({ id: o.id, buyerName: o.buyer_name, totalCents: o.total_cents ?? 0, createdAt: o.created_at, eventName: eventNameById.get(o.event_id) ?? t('Evento', 'Event') }));
 
   const balance = brand.event_balance ?? 0;
   // Sin saldo, la prueba gratis (0069) también deja crear (una sola vez).
-  const canCreate = balance > 0 || (!impersonating && (await pruebaDisponible(brandId)));
+  const canCreate = balance > 0 || pruebaLibre;
 
   // Setup guiado (Grupo B): progreso DERIVADO de los datos (no hay flag en BD).
   // Pasos = configurar cobro → crear evento → cargar entradas → publicar.
@@ -145,10 +98,10 @@ export default async function AdminHomePage() {
   const hasTickets = (activeTypeCount ?? 0) > 0;
   const firstEventId = activeEvents[0]?.id ?? (events ?? [])[0]?.id ?? null;
   const setupSteps: SetupStep[] = [
-    { key: 'cobro', title: 'Configura tu cobro', desc: 'Carga tu Yape (o tus credenciales de tarjeta) para recibir los pagos.', done: cobroReady, href: '/admin/settings', cta: 'Configurar' },
-    { key: 'evento', title: 'Crea tu primer evento', desc: 'Nombre, fecha y lugar. Te toma un par de minutos.', done: hasEvent, href: '/admin/events/new', cta: 'Crear' },
-    { key: 'entradas', title: 'Carga tus entradas', desc: 'Define tipos de entrada, precios y cupos.', done: hasTickets, href: firstEventId ? `/admin/events/${firstEventId}/editar#entradas` : '/admin/events/new', cta: 'Cargar' },
-    { key: 'publicar', title: 'Publica tu evento', desc: 'Cuando esté listo, ponlo en vivo para empezar a vender.', done: publishedCount > 0, href: firstEventId ? `/admin/events/${firstEventId}` : '/admin/events/new', cta: 'Publicar' },
+    { key: 'cobro', title: t('Configura tu cobro', 'Set up your payments'), desc: t('Carga tu Yape (o tus credenciales de tarjeta) para recibir los pagos.', 'Add your Yape (or your card credentials) to start receiving payments.'), done: cobroReady, href: '/admin/settings', cta: t('Configurar', 'Set up') },
+    { key: 'evento', title: t('Crea tu primer evento', 'Create your first event'), desc: t('Nombre, fecha y lugar. Te toma un par de minutos.', 'Name, date and venue. It takes you a couple of minutes.'), done: hasEvent, href: '/admin/events/new', cta: t('Crear', 'Create') },
+    { key: 'entradas', title: t('Carga tus entradas', 'Add your tickets'), desc: t('Define tipos de entrada, precios y cupos.', 'Define ticket types, prices and capacity.'), done: hasTickets, href: firstEventId ? `/admin/events/${firstEventId}/editar#entradas` : '/admin/events/new', cta: t('Cargar', 'Add') },
+    { key: 'publicar', title: t('Publica tu evento', 'Publish your event'), desc: t('Cuando esté listo, ponlo en vivo para empezar a vender.', 'When it is ready, take it live to start selling.'), done: publishedCount > 0, href: firstEventId ? `/admin/events/${firstEventId}` : '/admin/events/new', cta: t('Publicar', 'Publish') },
   ];
 
   // ORDEN (2026-09-23, referencia aprobada): lo pendiente arriba (una fila con
@@ -158,29 +111,20 @@ export default async function AdminHomePage() {
   // si no, "Abrir escáner" del próximo evento.
   const hasDue = totalPending > 0 && !!firstPendingEvent;
 
-  // Cortesías del próximo evento (entradas válidas de órdenes de cortesía).
-  const courtesyOrderIds = new Set(paidOrderRows.filter((o) => o.payment_method === 'courtesy').map((o) => o.id));
-  const courtesyByEvent = new Map<string, number>();
-  for (const t of (validTicketRows ?? []) as { order_id: string }[]) {
-    if (!courtesyOrderIds.has(t.order_id)) continue;
-    const ev = eventoDeOrden.get(t.order_id);
-    if (ev) courtesyByEvent.set(ev, (courtesyByEvent.get(ev) ?? 0) + 1);
-  }
-
   // Tus eventos: los que vienen (y los borradores) a la vista; los que ya
   // pasaron, plegados en "Anteriores".
   const isPast = (e: { starts_at: string }) => Date.parse(e.starts_at) + 12 * 3600 * 1000 < nowMs;
   const upcoming = activeEvents.filter((e) => !isPast(e)).sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at));
   const pastEvents = activeEvents.filter(isPast);
-  const fmtWhen = (iso: string) => new Date(iso).toLocaleString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' });
+  const fmtWhen = (iso: string) => new Date(iso).toLocaleString(loc, { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' });
 
   const createBtn = impersonating ? null : canCreate ? (
     <Link href="/admin/events/new" className="s-btn s-btn--soft s-btn--sm">
-      <Plus aria-hidden="true" /> Crear evento
+      <Plus aria-hidden="true" /> {t('Crear evento', 'Create event')}
     </Link>
   ) : (
     <Link href="/admin/comprar" className="s-btn s-btn--soft s-btn--sm">
-      <Plus aria-hidden="true" /> Comprar eventos
+      <Plus aria-hidden="true" /> {t('Comprar eventos', 'Buy events')}
     </Link>
   );
 
@@ -190,11 +134,11 @@ export default async function AdminHomePage() {
   const eventCard = (e: (typeof activeEvents)[number]) => {
     const pend = pendingByEvent.get(e.id) ?? 0;
     const past = isPast(e);
-    const hoy = !past && new Date(e.starts_at).toLocaleDateString('es-PE', { timeZone: 'America/Lima' }) === new Date().toLocaleDateString('es-PE', { timeZone: 'America/Lima' });
-    const status = !e.is_published ? { cls: 's-badge--draft', label: 'Borrador' }
-      : past ? { cls: 's-badge--draft', label: 'Pasado' }
-      : hoy ? { cls: 's-badge--todo', label: 'Hoy' }
-      : { cls: 's-badge--ok', label: 'Publicado' };
+    const hoy = !past && new Date(e.starts_at).toLocaleDateString(loc, { timeZone: 'America/Lima' }) === new Date().toLocaleDateString(loc, { timeZone: 'America/Lima' });
+    const status = !e.is_published ? { cls: 's-badge--draft', label: t('Borrador', 'Draft') }
+      : past ? { cls: 's-badge--draft', label: t('Pasado', 'Past') }
+      : hoy ? { cls: 's-badge--todo', label: t('Hoy', 'Today') }
+      : { cls: 's-badge--ok', label: t('Publicado', 'Published') };
     return (
       <li key={e.id}>
         <Link href={`/admin/events/${e.id}`} className={`a-evcard${past ? ' a-evcard--past' : ''}`}>
@@ -205,7 +149,7 @@ export default async function AdminHomePage() {
             ) : (
               <span>{(e.name.trim()[0] ?? '?').toUpperCase()}</span>
             )}
-            {pend > 0 && <span className="a-nav__count a-evcard__pend" aria-label={`${pend} Yape por aprobar`}>{pend}</span>}
+            {pend > 0 && <span className="a-nav__count a-evcard__pend" aria-label={t(`${pend} Yape por aprobar`, `${pend} Yape to approve`)}>{pend}</span>}
           </span>
           <span className="a-evcard__name">{e.name}</span>
           <span className="a-evcard__when">{fmtWhen(e.starts_at)}</span>
@@ -222,13 +166,13 @@ export default async function AdminHomePage() {
       {hasDue && (
         <div className="s-due" role="status">
           <div className="s-due__txt">
-            <span className="s-due__k">Por revisar</span>
-            <span className="s-due__n">{totalPending} Yape{totalPending === 1 ? '' : 's'} por aprobar</span>
+            <span className="s-due__k">{t('Por revisar', 'To review')}</span>
+            <span className="s-due__n">{t(`${totalPending} Yape${totalPending === 1 ? '' : 's'} por aprobar`, `${totalPending} Yape${totalPending === 1 ? '' : 's'} to approve`)}</span>
             <span className="s-due__sub">
-              Hay gente esperando su QR{pendingEventCount > 1 && ` · en ${pendingEventCount} eventos`}.
+              {t('Hay gente esperando su QR', 'People are waiting for their QR')}{pendingEventCount > 1 && t(` · en ${pendingEventCount} eventos`, ` · in ${pendingEventCount} events`)}.
             </span>
           </div>
-          <Link href={`/admin/events/${firstPendingEvent!.id}/yape`} className="s-btn s-btn--primary s-btn--sm">Revisar Yapes</Link>
+          <Link href={`/admin/events/${firstPendingEvent!.id}/yape`} className="s-btn s-btn--primary s-btn--sm">{t('Revisar Yapes', 'Review Yapes')}</Link>
         </div>
       )}
 
@@ -249,17 +193,17 @@ export default async function AdminHomePage() {
           cercano primero) y los borradores; lo pasado, plegado abajo. */}
       <section className="a-mine" aria-labelledby="a-mine-title">
         <div className="a-mine__head">
-          <h1 id="a-mine-title" className="s-h1">Eventos</h1>
+          <h1 id="a-mine-title" className="s-h1">{t('Eventos', 'Events')}</h1>
           {createBtn}
         </div>
         {!events || events.length === 0 ? (
           <p className="s-empty">
             {canCreate
-              ? 'Todavía no creaste ningún evento. Usa “Crear evento” para arrancar.'
-              : 'No tienes eventos. Compra un pack con “Comprar eventos” para crear el primero.'}
+              ? t('Todavía no creaste ningún evento. Usa “Crear evento” para arrancar.', 'You haven’t created an event yet. Use “Create event” to get started.')
+              : t('No tienes eventos. Compra un pack con “Comprar eventos” para crear el primero.', 'You don’t have events. Buy a pack with “Buy events” to create your first one.')}
           </p>
         ) : upcoming.length === 0 ? (
-          <p className="s-empty">No tienes eventos por venir. Los que ya pasaron están en “Anteriores”.</p>
+          <p className="s-empty">{t('No tienes eventos por venir. Los que ya pasaron están en “Anteriores”.', 'You have no upcoming events. Past ones are under “Previous”.')}</p>
         ) : (
           <ul className="a-evgrid">{upcoming.map(eventCard)}</ul>
         )}
@@ -270,7 +214,7 @@ export default async function AdminHomePage() {
         {pastEvents.length > 0 && (
           <details className="s-fold">
             <summary>
-              <span className="s-fold__t">Anteriores · {pastEvents.length}</span>
+              <span className="s-fold__t">{t('Anteriores', 'Previous')} · {pastEvents.length}</span>
               <ChevronDown aria-hidden="true" />
             </summary>
             <div className="s-fold__body">
@@ -282,8 +226,8 @@ export default async function AdminHomePage() {
           <details className="s-fold">
             <summary>
               <span className="s-fold__t">
-                Archivados · {archivedEvents.length}
-                <span className="s-fold__hint">No se venden ni aparecen en público. Puedes desarchivarlos.</span>
+                {t('Archivados', 'Archived')} · {archivedEvents.length}
+                <span className="s-fold__hint">{t('No se venden ni aparecen en público. Puedes desarchivarlos.', 'They are not sold and do not appear publicly. You can unarchive them.')}</span>
               </span>
               <ChevronDown aria-hidden="true" />
             </summary>
@@ -294,11 +238,11 @@ export default async function AdminHomePage() {
                     <Link href={`/admin/events/${e.id}`} className="s-event-row__main">
                       <span className="s-event-row__name">{e.name}</span>
                       <span className="s-event-row__date">
-                        {new Date(e.starts_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Lima' })}
+                        {new Date(e.starts_at).toLocaleString(loc, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Lima' })}
                       </span>
                     </Link>
-                    <span className="s-badge s-badge--draft">Archivado</span>
-                    {!impersonating && <ArchiveToggle id={e.id} archived={true} action={setEventArchivedAction} noun="el evento" />}
+                    <span className="s-badge s-badge--draft">{t('Archivado', 'Archived')}</span>
+                    {!impersonating && <ArchiveToggle id={e.id} archived={true} action={setEventArchivedAction} noun={t('el evento', 'the event')} />}
                   </li>
                 ))}
               </ul>
@@ -310,14 +254,14 @@ export default async function AdminHomePage() {
       {/* Tu pack: una línea al pie, como en la referencia. */}
       <p className="a-pack">
         {balance > 0
-          ? <>Te quedan {balance} evento{balance === 1 ? '' : 's'} en tu pack.</>
-          : <>No te quedan eventos en tu pack.</>}
+          ? <>{t(`Te quedan ${balance} evento${balance === 1 ? '' : 's'} en tu pack.`, `You have ${balance} event${balance === 1 ? '' : 's'} left in your pack.`)}</>
+          : <>{t('No te quedan eventos en tu pack.', 'You have no events left in your pack.')}</>}
         {/* Siempre a la compra del panel (0070); antes iba a WhatsApp y solo
             si había número de soporte cargado. */}
         {!impersonating && (
           <>
             {' '}
-            <Link className="s-textlink" href="/admin/comprar">Comprar más</Link>
+            <Link className="s-textlink" href="/admin/comprar">{t('Comprar más', 'Buy more')}</Link>
           </>
         )}
       </p>

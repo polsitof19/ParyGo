@@ -10,6 +10,8 @@ import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { uploadEventCover, coverDims } from '@/lib/brandAssets';
 import { limaToIso, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
 import { mensajePrueba } from '@/lib/prueba';
+import { textosPanel, idiomaPanel } from '@/lib/idiomaServer';
+import type { Textos } from '@/lib/idioma';
 
 export type FormState = {
   ok: boolean;
@@ -35,63 +37,66 @@ const ticketTypeSchema = z.object({
   phases: z.array(phaseSchema).min(1),
 });
 
-const eventSchema = z.object({
-  name: z.string().min(2).max(120),
-  slug: z.string().min(2).max(42).regex(/^[a-z0-9][a-z0-9-]{0,40}[a-z0-9]$/, 'Slug inválido'),
-  description: z.string().max(2000).optional().or(z.literal('')),
-  starts_at: z.string().min(1, 'Requerido'),
-  ends_at: z.string().optional().or(z.literal('')),
-  venue_name: z.string().max(120).optional().or(z.literal('')),
-  venue_address: z.string().max(200).optional().or(z.literal('')),
-  min_age: z.string().optional().or(z.literal('')),
-  refund_policy: z.string().max(500).optional().or(z.literal('')),
-});
+function eventSchema(t: Textos['t']) {
+  return z.object({
+    name: z.string().min(2).max(120),
+    slug: z.string().min(2).max(42).regex(/^[a-z0-9][a-z0-9-]{0,40}[a-z0-9]$/, t('Slug inválido', 'Invalid slug')),
+    description: z.string().max(2000).optional().or(z.literal('')),
+    starts_at: z.string().min(1, t('Requerido', 'Required')),
+    ends_at: z.string().optional().or(z.literal('')),
+    venue_name: z.string().max(120).optional().or(z.literal('')),
+    venue_address: z.string().max(200).optional().or(z.literal('')),
+    min_age: z.string().optional().or(z.literal('')),
+    refund_policy: z.string().max(500).optional().or(z.literal('')),
+  });
+}
 
 export async function createBrandEventAction(
   _prev: FormState,
   formData: FormData
 ): Promise<FormState> {
   const user = await requireSession();
+  const { t } = await textosPanel();
   // ENFORCEMENT: brand from the session membership, NEVER the form.
   const ctxW = contextoEscritura(user);
   if (!ctxW) {
-    return { ok: false, message: 'No tienes acceso de promotor.' };
+    return { ok: false, message: t('No tienes acceso de promotor.', 'You do not have promoter access.') };
   }
   const brandId = ctxW.brandId;
 
   const raw = Object.fromEntries(formData.entries());
-  const parsedEvent = eventSchema.safeParse(raw);
+  const parsedEvent = eventSchema(t).safeParse(raw);
   if (!parsedEvent.success) {
     const fieldErrors: Record<string, string> = {};
     for (const e of parsedEvent.error.errors) {
       const p = e.path.join('.');
       if (p) fieldErrors[p] = e.message;
     }
-    return { ok: false, message: 'Revisa los campos del evento.', fieldErrors };
+    return { ok: false, message: t('Revisa los campos del evento.', 'Check the event fields.'), fieldErrors };
   }
 
   let ticketTypesRaw: unknown;
   try {
     ticketTypesRaw = JSON.parse(String(formData.get('ticket_types_json') ?? '[]'));
   } catch {
-    return { ok: false, message: 'Tipos de entrada inválidos.' };
+    return { ok: false, message: t('Tipos de entrada inválidos.', 'Invalid ticket types.') };
   }
-  const parsedTT = z.array(ticketTypeSchema).min(1, 'Agrega al menos un tipo de entrada').safeParse(ticketTypesRaw);
+  const parsedTT = z.array(ticketTypeSchema).min(1, t('Agrega al menos un tipo de entrada', 'Add at least one ticket type')).safeParse(ticketTypesRaw);
   if (!parsedTT.success) {
-    return { ok: false, message: parsedTT.error.errors[0]?.message ?? 'Revisa los tipos de entrada.' };
+    return { ok: false, message: parsedTT.error.errors[0]?.message ?? t('Revisa los tipos de entrada.', 'Check the ticket types.') };
   }
 
   // Fechas en hora de Lima (explícito: en Cloudflare el server corre en UTC).
   // Todo se valida ANTES de subir el flyer y de consumir saldo.
   const startsIso = limaToIso(parsedEvent.data.starts_at);
   if (!startsIso) {
-    return { ok: false, message: 'Fecha de inicio inválida.', fieldErrors: { starts_at: 'Inválida' } };
+    return { ok: false, message: t('Fecha de inicio inválida.', 'Invalid start date.'), fieldErrors: { starts_at: t('Inválida', 'Invalid') } };
   }
   const endsIso = parsedEvent.data.ends_at ? limaToIso(parsedEvent.data.ends_at) : null;
   if (parsedEvent.data.ends_at && !endsIso) {
-    return { ok: false, message: 'Fecha de fin inválida.', fieldErrors: { ends_at: 'Inválida' } };
+    return { ok: false, message: t('Fecha de fin inválida.', 'Invalid end date.'), fieldErrors: { ends_at: t('Inválida', 'Invalid') } };
   }
-  const windowErr = validateEventWindow({ startsIso, endsIso, requireFutureStart: true });
+  const windowErr = validateEventWindow({ startsIso, endsIso, requireFutureStart: true }, await idiomaPanel());
   if (windowErr) {
     return { ok: false, message: windowErr.message, fieldErrors: { [windowErr.field]: windowErr.message } };
   }
@@ -101,7 +106,8 @@ export async function createBrandEventAction(
       isUnlimited: t.is_unlimited,
       pricesCents: [t.price_cents, ...t.phases.map((p) => p.price_cents)],
     })),
-    { freeConfirmed: formData.get('confirm_free') === '1' }
+    { freeConfirmed: formData.get('confirm_free') === '1' },
+    await idiomaPanel()
   );
   if (pricingErr) return { ok: false, message: pricingErr };
 
@@ -114,7 +120,7 @@ export async function createBrandEventAction(
   const coverFile = formData.get('cover');
   if (coverFile instanceof File && coverFile.size > 0) {
     const { data: b } = await admin.from('brands').select('slug').eq('id', brandId).single();
-    const up = await uploadEventCover(admin, b!.slug, coverFile);
+    const up = await uploadEventCover(admin, b!.slug, coverFile, await idiomaPanel());
     if (!up.ok) return { ok: false, message: up.message, fieldErrors: { cover: up.message } };
     coverUrl = up.url;
     dims = coverDims(up);
@@ -163,24 +169,24 @@ export async function createBrandEventAction(
 
   if (error || !newEventId) {
     const msg = error?.message ?? '';
-    const tope = mensajePrueba(msg);
+    const tope = mensajePrueba(msg, await idiomaPanel());
     if (tope) return { ok: false, message: tope };
     if (msg.includes('INSUFFICIENT_BALANCE') || msg.includes('NO_TRIAL')) {
-      return { ok: false, message: 'Tu marca no tiene saldo de eventos. Contacta a ParyGo para cargar un pack.' };
+      return { ok: false, message: t('Tu marca no tiene saldo de eventos. Contacta a ParyGo para cargar un pack.', 'Your brand has no event balance. Contact ParyGo to load a pack.') };
     }
     if (msg.includes('NO_TICKET_TYPES')) {
-      return { ok: false, message: 'Agrega al menos un tipo de entrada.' };
+      return { ok: false, message: t('Agrega al menos un tipo de entrada.', 'Add at least one ticket type.') };
     }
     if (error?.code === '23505') {
       if (/ttpp_ticket_sort_uniq/.test(msg)) {
-        return { ok: false, message: 'Dos fases de un tipo de entrada tienen el mismo orden.' };
+        return { ok: false, message: t('Dos fases de un tipo de entrada tienen el mismo orden.', 'Two phases of a ticket type have the same order.') };
       }
-      return { ok: false, message: 'Ya existe un evento con ese slug.', fieldErrors: { slug: 'En uso' } };
+      return { ok: false, message: t('Ya existe un evento con ese slug.', 'An event with that slug already exists.'), fieldErrors: { slug: t('En uso', 'In use') } };
     }
     if (error?.code === '23514') {
-      return { ok: false, message: 'Una fase de precio tiene fechas o precio inválidos.' };
+      return { ok: false, message: t('Una fase de precio tiene fechas o precio inválidos.', 'A price phase has invalid dates or price.') };
     }
-    return { ok: false, message: msg || 'No se pudo crear el evento.' };
+    return { ok: false, message: msg || t('No se pudo crear el evento.', 'Could not create the event.') };
   }
   // Crear un evento gasta saldo de la marca: si fue el super admin, queda firmado.
   await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId, eventId: newEventId as string, accion: 'event_created', diff: { slug: parsedEvent.data.slug, is_free: formData.get('is_free') === 'on' } });

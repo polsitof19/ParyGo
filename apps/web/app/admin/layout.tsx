@@ -5,6 +5,9 @@ import { ownerBrandContext } from '@/lib/impersonation';
 import { createClient } from '@/lib/supabase/server';
 import { AdminTopbar } from './AdminTopbar';
 import { ImpersonationBanner } from './ImpersonationBanner';
+import { IdiomaProvider } from '@/components/IdiomaPanel';
+import { idiomaPanel } from '@/lib/idiomaServer';
+import { textos } from '@/lib/idioma';
 // Orden: tokens → base compartida de paneles → lo propio del organizador.
 import '../styles/parygo-tokens.css';
 import '../styles/parygo-panel.css';
@@ -24,6 +27,8 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const user = await requireSession();
+  const lang = await idiomaPanel();
+  const { t } = textos(lang);
   // Marca activa del panel: brand_admin → su marca; super admin con cookie de
   // impersonación → la marca que está VIENDO (solo lectura). Un super admin SIN
   // impersonar va a su cabina.
@@ -32,7 +37,7 @@ export default async function AdminLayout({
     if (user.isSuperAdmin) redirect('/cabina-7k29x');
     // Un validator puro solo accede al escáner.
     if (user.brandMemberships.some((m) => m.role === 'validator')) redirect('/scan');
-    redirect('/login?error=' + encodeURIComponent('No tienes acceso de promotor.'));
+    redirect('/login?error=' + encodeURIComponent(t('No tienes acceso de promotor.', "You don't have promoter access.")));
   }
 
   const supabase = createClient();
@@ -45,10 +50,12 @@ export default async function AdminLayout({
   const logoUrl = (brand?.theme_json as { logo_url?: string | null } | null)?.logo_url ?? null;
 
   return (
-    <div className={`pg pg-noche pg-panel admin-shell ${GeistSans.variable}`}>
-      {ctx.impersonating && <ImpersonationBanner brandName={brand?.name ?? "la marca"} modoEdicion={ctx.modoEdicion} />}
-      <AdminTopbar brandName={brand?.name ?? 'Tu marca'} email={user.email} logoUrl={logoUrl} soloLectura={ctx.impersonating} />
+    <div lang={lang} className={`pg pg-noche pg-panel admin-shell ${GeistSans.variable}`}>
+      <IdiomaProvider lang={lang}>
+      {ctx.impersonating && <ImpersonationBanner brandName={brand?.name ?? t('la marca', 'the brand')} modoEdicion={ctx.modoEdicion} />}
+      <AdminTopbar brandName={brand?.name ?? t('Tu marca', 'Your brand')} email={user.email} logoUrl={logoUrl} soloLectura={ctx.impersonating} />
       <main className="s-wrap">{children}</main>
+      </IdiomaProvider>
     </div>
   );
 }

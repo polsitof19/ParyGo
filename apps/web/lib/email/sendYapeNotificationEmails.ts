@@ -89,12 +89,12 @@ async function sendViaResend(args: {
   }
 }
 
-function shell(p: { brand: BrandForEmail; primary: string; ink: string; eyebrow: string; title: string; inner: string; footer: string }): string {
+function shell(p: { brand: BrandForEmail; primary: string; ink: string; eyebrow: string; title: string; inner: string; footer: string; lang?: 'es' | 'en' }): string {
   const brandHeader = p.brand.theme_json?.logo_url
     ? `<img src="${escapeHtml(p.brand.theme_json.logo_url)}" alt="${escapeHtml(p.brand.name)}" height="44" style="display:block;height:44px;width:auto;max-height:44px;border:0;outline:none;text-decoration:none">`
     : `<span style="font-family:${FONT};font-size:20px;font-weight:800;letter-spacing:-0.02em;color:${INK}">${escapeHtml(p.brand.name)}</span>`;
   return `<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(p.title)}</title></head>
+<html lang="${p.lang ?? 'es'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(p.title)}</title></head>
 <body style="margin:0;padding:0;background:${CREAM};-webkit-text-size-adjust:100%">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CREAM}">
   <tr><td align="center" style="padding:32px 16px">
@@ -183,6 +183,8 @@ export async function sendYapePendingDigestEmail(args: {
   brand: BrandForEmail;
   pendingCount: number;
   idempotencyKey?: string;
+  // Idioma del PANEL de la marca (0073): este correo es para el organizador.
+  lang?: 'es' | 'en';
 }): Promise<SendResult> {
   const fromEmail = serverEnv.RESEND_FROM_EMAIL ?? 'tickets@parygo.com';
   const theme = args.brand.theme_json ?? {};
@@ -198,6 +200,7 @@ export async function sendYapePendingDigestEmail(args: {
   // El panel vive en app.parygo.com: en <marca>.parygo.com/admin daba 404.
   const reviewUrl = `${publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')}/admin/events/${args.eventId}/yape`;
   const n = args.pendingCount;
+  if (args.lang === 'en') return enviarDigestEn(args, { fromEmail, primary, onBrand, ink, reviewUrl, n });
 
   const inner = `
     <p style="margin:0 0 16px;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}">Tienes <strong>${n} comprobante${n === 1 ? '' : 's'} de Yape</strong> esperando tu aprobación en <strong>${escapeHtml(args.eventName)}</strong>.</p>
@@ -217,6 +220,34 @@ export async function sendYapePendingDigestEmail(args: {
     from: `ParyGo <${fromEmail}>`,
     to: args.to,
     subject: `Tienes ${n} Yape${n === 1 ? '' : 's'} por aprobar en ${args.eventName}`,
+    html, text, kind: 'yape_pending_digest', brandSlug: args.brand.slug,
+    replyTo: null, idempotencyKey: args.idempotencyKey,
+  });
+}
+
+// El mismo aviso en inglés, para marcas con el panel en inglés.
+function enviarDigestEn(
+  args: { to: string; eventName: string; brand: BrandForEmail; idempotencyKey?: string },
+  v: { fromEmail: string; primary: string; onBrand: string; ink: string; reviewUrl: string; n: number },
+): Promise<SendResult> {
+  const { n, reviewUrl, primary } = v;
+  const s = n === 1 ? '' : 's';
+  const inner = `
+    <p style="margin:0 0 16px;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}">You have <strong>${n} Yape receipt${s}</strong> awaiting your approval for <strong>${escapeHtml(args.eventName)}</strong>.</p>
+    <p style="margin:0 0 18px;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}">Each approved receipt issues the ticket and sends the QR code to the buyer.</p>
+    <div>${ctaButton(reviewUrl, `Review Yape payments (${n})`, primary, v.onBrand)}</div>`;
+  const html = shell({ brand: args.brand, primary, ink: v.ink, eyebrow: 'Awaiting approval', title: `${n} Yape payment${s} to approve`, inner, footer: '', lang: 'en' });
+  const text = [
+    `YAPE PAYMENTS TO APPROVE — ${args.eventName}`, '',
+    `You have ${n} Yape receipt${s} awaiting your approval.`,
+    `Review them here: ${reviewUrl}`, '',
+    'Each approved receipt issues the ticket and sends the QR code to the buyer.',
+    '\nSent by ParyGo.',
+  ].join('\n');
+  return sendViaResend({
+    from: `ParyGo <${v.fromEmail}>`,
+    to: args.to,
+    subject: `You have ${n} Yape payment${s} to approve for ${args.eventName}`,
     html, text, kind: 'yape_pending_digest', brandSlug: args.brand.slug,
     replyTo: null, idempotencyKey: args.idempotencyKey,
   });

@@ -8,6 +8,7 @@ import { ticketPublicUrl } from '@/lib/qr';
 import { formatEventDate } from '@/lib/utils';
 import { CourtesyForm } from '../editar/CourtesyForm';
 import { CopyButton, FreeCodeForm } from './CortesiasClient';
+import { textosPanel } from '@/lib/idiomaServer';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -24,6 +25,7 @@ export default async function CourtesiesPage({ params }: { params: { id: string 
   const ctx = ownerBrandContext(user);
   if (!ctx) notFound();
   const soloLectura = ctx.soloLectura;
+  const { t } = await textosPanel();
 
   const admin = createAdminClient();
   const { data: event } = await admin
@@ -76,29 +78,32 @@ export default async function CourtesiesPage({ params }: { params: { id: string 
   return (
     <>
       <div style={{ marginBottom: 'var(--s-s2)' }}>
-        <h2 className="s-h2" style={{ marginTop: 'var(--s-s1)' }}>Cortesías</h2>
+        <h2 className="s-h2" style={{ marginTop: 'var(--s-s1)' }}>{t('Cortesías', 'Complimentary tickets')}</h2>
         <p className="s-card__desc">
-          Entradas gratis para invitados, prensa o RR.PP. Son entradas reales, escaneables en puerta, y <strong>descuentan del aforo</strong>.
+          {t('Entradas gratis para invitados, prensa o RR.PP. Son entradas reales, escaneables en puerta, y ', 'Free tickets for guests, press or promoters. They are real tickets, scannable at the door, and they ')}<strong>{t('descuentan del aforo', 'count against capacity')}</strong>.
         </p>
       </div>
 
       {!soloLectura && (
         <div className="s-card">
-          <h3 className="s-h3">Enviar cortesías</h3>
+          <h3 className="s-h3">{t('Enviar cortesías', 'Send complimentary tickets')}</h3>
           <p className="s-card__desc" style={{ marginBottom: 'var(--s-s2)' }}>
-            Te llegan a ti y las reenvías una por una. Cada QR entra una sola vez.
+            {t('Te llegan a ti y las reenvías una por una. Cada QR entra una sola vez.', 'They arrive to you and you forward them one by one. Each QR gets in only once.')}
           </p>
           <CourtesyForm eventId={event.id} ticketTypes={types ?? []} defaultEmail={user.email} />
         </div>
       )}
 
       <div className="s-card s-section">
-        <h3 className="s-h3">Tus cortesías</h3>
+        <h3 className="s-h3">{t('Tus cortesías', 'Your complimentary tickets')}</h3>
         <p className="s-card__desc" style={{ marginBottom: 'var(--s-s1)' }}>
-          {rows.length} emitida{rows.length === 1 ? '' : 's'} · {libres} sin usar. Manda cada link a una sola persona.
+          {t(
+            `${rows.length} emitida${rows.length === 1 ? '' : 's'} · ${libres} sin usar. Manda cada link a una sola persona.`,
+            `${rows.length} issued · ${libres} unused. Send each link to only one person.`,
+          )}
         </p>
         {rows.length === 0 ? (
-          <p className="s-empty">Todavía no emitiste cortesías para este evento.</p>
+          <p className="s-empty">{t('Todavía no emitiste cortesías para este evento.', 'You have not issued complimentary tickets for this event yet.')}</p>
         ) : (
           <ul className="s-hlist">
             {rows.map((r) => {
@@ -106,16 +111,16 @@ export default async function CourtesiesPage({ params }: { params: { id: string 
               return (
                 <li key={r.id} className="s-hlist__row">
                   <div className="s-event-row__main">
-                    <span className="s-event-row__name">Entrada {r.n}</span>
-                    <span className="s-event-row__date">{r.tipo} · enviada a {r.email}</span>
+                    <span className="s-event-row__name">{t(`Entrada ${r.n}`, `Ticket ${r.n}`)}</span>
+                    <span className="s-event-row__date">{t(`${r.tipo} · enviada a ${r.email}`, `${r.tipo} · sent to ${r.email}`)}</span>
                   </div>
                   <div className="a-cz-actions">
                     <span className={`a-cz-state a-cz-state--${r.estado}`}>
-                      {r.estado === 'anulada' ? 'Anulada' : r.estado === 'usada' ? 'Ya entró' : 'Sin usar'}
+                      {r.estado === 'anulada' ? t('Anulada', 'Voided') : r.estado === 'usada' ? t('Ya entró', 'Already entered') : t('Sin usar', 'Unused')}
                     </span>
                     {r.estado !== 'anulada' && r.url && (
                       <>
-                        <CopyButton text={r.url} label="Copiar link" />
+                        <CopyButton text={r.url} label={t('Copiar link', 'Copy link')} />
                         <a
                           className="s-btn s-btn--soft s-btn--sm"
                           href={`https://wa.me/?text=${encodeURIComponent(texto)}`}
@@ -135,9 +140,9 @@ export default async function CourtesiesPage({ params }: { params: { id: string 
       </div>
 
       <div className="s-card s-section">
-        <h3 className="s-h3">Códigos para reclamar</h3>
+        <h3 className="s-h3">{t('Códigos para reclamar', 'Claim codes')}</h3>
         <p className="s-card__desc" style={{ marginBottom: 'var(--s-s2)' }}>
-          Cada persona usa el código una vez al &ldquo;comprar&rdquo; en la página del evento y le llega su entrada por email.
+          {t('Cada persona usa el código una vez al “comprar” en la página del evento y le llega su entrada por email.', 'Each person uses the code once when "checking out" on the event page, and their ticket arrives by email.')}
         </p>
         {!soloLectura && <FreeCodeForm eventId={event.id} ticketTypes={types ?? []} />}
         {(codes ?? []).length > 0 && (
@@ -151,10 +156,13 @@ export default async function CourtesiesPage({ params }: { params: { id: string 
                   <div className="s-event-row__main">
                     <span className="a-code">{c.code}</span>
                     <span className="s-event-row__date">
-                      {c.use_count} de {c.max_uses ?? 'sin límite'} usados{c.is_active ? '' : ' · desactivado'}
+                      {t(
+                        `${c.use_count} de ${c.max_uses ?? 'sin límite'} usados${c.is_active ? '' : ' · desactivado'}`,
+                        `${c.use_count} of ${c.max_uses ?? 'unlimited'} used${c.is_active ? '' : ' · disabled'}`,
+                      )}
                     </span>
                   </div>
-                  {c.is_active && msg && <CopyButton text={msg} label="Copiar mensaje" />}
+                  {c.is_active && msg && <CopyButton text={msg} label={t('Copiar mensaje', 'Copy message')} />}
                 </li>
               );
             })}

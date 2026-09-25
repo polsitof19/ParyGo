@@ -212,7 +212,7 @@ export async function confirmarAlta(_prev: AltaState, fd: FormData): Promise<Alt
   const alta = await crearMarcaParaUsuario({
     userId, email: d.email, nombre: d.nombre, slug: d.slug,
     whatsappE164: d.whatsapp || null,
-    prueba: true,
+    prueba: true, idioma: lang,
   });
   if (!alta.ok) {
     // Dos envíos a la vez: el otro ya creó su marca (una por dueño, 0071).
@@ -271,7 +271,7 @@ export async function pagarAlta(_prev: AltaState, fd: FormData): Promise<AltaSta
     if (!(await slugLibre(d.slug))) return tomado(m);
     const alta = await crearMarcaParaUsuario({
       userId: null, email: d.email, nombre: d.nombre, slug: d.slug,
-      whatsappE164: d.whatsapp || null, prueba: false,
+      whatsappE164: d.whatsapp || null, prueba: false, idioma: lang,
     });
     if (!alta.ok) return alta.motivo === 'slug_en_uso' ? tomado(m) : { ok: false, paso: 'datos', message: m.noPago };
     brandId = alta.brandId;
@@ -280,6 +280,7 @@ export async function pagarAlta(_prev: AltaState, fd: FormData): Promise<AltaSta
   const app = publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
   const q = `lang=${lang}`;
   const compra = await iniciarCompraPack({
+    l: lang,
     brandId, userId: null, email: d.email, pack, pasarela,
     volver: (id) => `${app}/empezar/listo?compra=${id}&${q}`,
     sufijoPaypal: `&${q}`,

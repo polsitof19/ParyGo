@@ -4,6 +4,7 @@ import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { acreditarVueltaMp } from '@/lib/compraPack';
+import { textosPanel } from '@/lib/idiomaServer';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -18,6 +19,7 @@ export default async function CompraListaPage({ searchParams }: { searchParams: 
   const user = await requireSession();
   const ctx = ownerBrandContext(user);
   if (!ctx) redirect('/login');
+  const { t } = await textosPanel();
 
   const admin = createAdminClient();
   const id = /^[0-9a-f-]{36}$/i.test(searchParams.compra ?? '') ? searchParams.compra! : null;
@@ -37,17 +39,17 @@ export default async function CompraListaPage({ searchParams }: { searchParams: 
   let titulo: string;
   let texto: string;
   if (compra?.status === 'paid') {
-    titulo = 'Listo, ya tienes tus eventos';
-    texto = `Se sumaron ${compra.pack} evento${compra.pack === 1 ? '' : 's'} a tu saldo. Ahora tienes ${brand?.event_balance ?? 0}.`;
+    titulo = t('Listo, ya tienes tus eventos', 'Done, you now have your events');
+    texto = t(`Se sumaron ${compra.pack} evento${compra.pack === 1 ? '' : 's'} a tu saldo. Ahora tienes ${brand?.event_balance ?? 0}.`, `${compra.pack} event${compra.pack === 1 ? '' : 's'} were added to your balance. You now have ${brand?.event_balance ?? 0}.`);
   } else if (compra?.status === 'failed') {
-    titulo = 'El pago no se completó';
-    texto = 'No se sumó nada a tu saldo. Si se te cobró, escríbenos y lo revisamos.';
+    titulo = t('El pago no se completó', 'The payment was not completed');
+    texto = t('No se sumó nada a tu saldo. Si se te cobró, escríbenos y lo revisamos.', 'Nothing was added to your balance. If you were charged, contact us and we will check it.');
   } else if (compra) {
-    titulo = 'Estamos confirmando tu pago';
-    texto = 'Suele tardar unos segundos. Recarga esta página en un momento; si el pago se aprobó, tu saldo se suma solo.';
+    titulo = t('Estamos confirmando tu pago', 'We are confirming your payment');
+    texto = t('Suele tardar unos segundos. Recarga esta página en un momento; si el pago se aprobó, tu saldo se suma solo.', 'It usually takes a few seconds. Reload this page in a moment; if the payment was approved, your balance updates on its own.');
   } else {
-    titulo = 'No encontramos esa compra';
-    texto = 'Si pagaste y no ves tu saldo, escríbenos y lo revisamos.';
+    titulo = t('No encontramos esa compra', 'We could not find that purchase');
+    texto = t('Si pagaste y no ves tu saldo, escríbenos y lo revisamos.', "If you paid and don't see your balance, contact us and we will check it.");
   }
 
   // PayPal: si la vuelta falló (red, sesión), reintentar la vuelta es seguro:
@@ -62,10 +64,10 @@ export default async function CompraListaPage({ searchParams }: { searchParams: 
       <p className="s-card__desc" style={{ marginBottom: 'var(--s-s3)' }}>{texto}</p>
       <div className="s-form-actions" style={{ borderTop: 0, paddingTop: 0 }}>
         {compra?.status === 'paid'
-          ? <Link href="/admin/events/new" className="s-btn s-btn--primary s-btn--sm">Crear evento</Link>
-          : <Link href={`/admin/comprar/listo?compra=${compra?.id ?? ''}`} className="s-btn s-btn--soft s-btn--sm">Recargar</Link>}
-        {reintentarPaypal && <a href={reintentarPaypal} className="s-btn s-btn--ghost s-btn--sm">Confirmar con PayPal</a>}
-        <Link href="/admin" className="s-btn s-btn--ghost s-btn--sm">Volver al panel</Link>
+          ? <Link href="/admin/events/new" className="s-btn s-btn--primary s-btn--sm">{t('Crear evento', 'Create event')}</Link>
+          : <Link href={`/admin/comprar/listo?compra=${compra?.id ?? ''}`} className="s-btn s-btn--soft s-btn--sm">{t('Recargar', 'Reload')}</Link>}
+        {reintentarPaypal && <a href={reintentarPaypal} className="s-btn s-btn--ghost s-btn--sm">{t('Confirmar con PayPal', 'Confirm with PayPal')}</a>}
+        <Link href="/admin" className="s-btn s-btn--ghost s-btn--sm">{t('Volver al panel', 'Back to dashboard')}</Link>
       </div>
     </div>
   );

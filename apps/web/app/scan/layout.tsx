@@ -7,6 +7,8 @@ import { getSessionUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { ScanServiceWorker } from './ScanServiceWorker';
 import { ScanLogoutButton } from './ScanLogoutButton';
+import { IdiomaProvider } from '@/components/IdiomaPanel';
+import { textos } from '@/lib/idioma';
 import './scan.css';
 
 export const runtime = 'edge';
@@ -35,20 +37,24 @@ export default async function ScanLayout({ children }: { children: React.ReactNo
     .eq('id', membership.brandId)
     .maybeSingle();
 
+  // Idioma = el de la marca cuyo escáner se abre (0073).
+  const { t } = textos(membership.idioma);
+
   return (
-    <div className={`scan-shell`}>
+    <IdiomaProvider lang={membership.idioma}>
+    <div lang={membership.idioma} className={`scan-shell`}>
       <ScanServiceWorker />
       <header className="k-header">
         <div className="k-header__in">
           <span className="k-brand">
             <ScanLine className="h-5 w-5" />
-            {brand?.name ?? 'Puerta'}
-            <span className="k-tag">Puerta</span>
+            {brand?.name ?? t('Puerta', 'Door')}
+            <span className="k-tag">{t('Puerta', 'Door')}</span>
           </span>
           <span className="k-header__right">
             {membership.role === 'brand_admin' && (
-              <Link href="/admin" className="k-panel" aria-label="Volver a tu panel">
-                <LayoutGrid className="h-4 w-4" aria-hidden="true" /> Panel
+              <Link href="/admin" className="k-panel" aria-label={t('Volver a tu panel', 'Back to your dashboard')}>
+                <LayoutGrid className="h-4 w-4" aria-hidden="true" /> {t('Panel', 'Dashboard')}
               </Link>
             )}
             <ScanLogoutButton />
@@ -57,5 +63,6 @@ export default async function ScanLayout({ children }: { children: React.ReactNo
       </header>
       <main className="k-wrap">{children}</main>
     </div>
+    </IdiomaProvider>
   );
 }
