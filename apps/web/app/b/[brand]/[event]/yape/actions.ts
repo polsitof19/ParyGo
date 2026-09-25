@@ -130,12 +130,53 @@ export async function submitYapeProof(formData: FormData): Promise<Result> {
   // 5. Get event slug for redirect.
   const { data: event } = await admin
     .from('events')
-    .select('slug')
+    .select('slug, name')
     .eq('id', order.event_id)
     .single();
+
+  await avisarAlOrganizador(admin, { brandId: order.brand_id, eventId: order.event_id, eventName: event?.name ?? '', eventSlug: event?.slug ?? '', orderId: order.id });
 
   return {
     ok: true,
     redirectUrl: `/${event?.slug ?? ''}/confirmacion?order=${order.id}`,
   };
+}
+
+// Aviso AL TOQUE al organizador: un email por orden con comprobante (lo manda el
+// worker de la cola, que corre cada minuto). Antes solo existía el resumen cada
+// 6 h. Respeta la casilla de "Mi marca" (notify_yape_digest) y nunca frena al
+// comprador: si encolar falla, su comprobante ya quedó guardado igual.
+async function avisarAlOrganizador(
+  admin: ReturnType<typeof createAdminClient>,
+  a: { brandId: string; eventId: string; eventName: string; eventSlug: string; orderId: string }
+) {
+  try {
+    const { data: brand } = await admin
+      .from('brands')
+      .select('name, slug, contact_email, notify_yape_digest')
+      .eq('id', a.brandId)
+      .maybeSingle();
+    if (!brand?.notify_yape_digest || !brand.contact_email?.trim()) return;
+    const { count } = await admin
+      .from('yape_proofs')
+      .select('id, order:orders!yape_proofs_order_id_fkey!inner ( event_id )', { count: 'exact', head: true })
+      .eq('brand_id', a.brandId)
+      .eq('status', 'pending_review')
+      .eq('order.event_id', a.eventId);
+    await admin.from('notification_jobs').insert({
+      kind: 'yape_pending_digest',
+      brand_id: a.brandId,
+      event_id: a.eventId,
+      order_id: null,
+      recipient_email: brand.contact_email.trim().toLowerCase(),
+      recipient_name: brand.name ?? '',
+      payload: { event_name: a.eventName, event_slug: a.eventSlug, brand_slug: brand.slug, pending_count: Math.max(1, count ?? 1) },
+      // Uno por ORDEN, no por comprobante: subir el comprobante es público y una
+      // orden admite varios; por comprobante se podía llenarle la bandeja.
+      dedupe_key: `yape_pending_digest:${a.eventId}:order:${a.orderId}`,
+      status: 'pending',
+    });
+  } catch (e) {
+    console.error('[yape] no se pudo encolar el aviso al organizador', e);
+  }
 }

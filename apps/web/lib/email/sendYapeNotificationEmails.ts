@@ -195,7 +195,8 @@ export async function sendYapePendingDigestEmail(args: {
   const onBrand = par.on;
   const brandBtn = par.fill;
   const ink = brandInk(theme.primary_color);
-  const reviewUrl = `https://${args.brand.slug}.${appDomain()}/admin/events/${args.eventId}/yape`;
+  // El panel vive en app.parygo.com: en <marca>.parygo.com/admin daba 404.
+  const reviewUrl = `${publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')}/admin/events/${args.eventId}/yape`;
   const n = args.pendingCount;
 
   const inner = `

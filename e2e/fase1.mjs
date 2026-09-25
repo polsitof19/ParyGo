@@ -669,7 +669,15 @@ if (!S.eventId) {
   // =====================================================================
   await step('D', 'Yape: comprobante → pendiente → sin ticket', async () => {
     if (!S.orders.C) throw new Error('sin orden de C');
+    // Aviso al organizador (Mi marca → "Avisarme cuando tengo Yapes por
+    // aprobar"). cleanup.mjs lo vuelve a apagar en demotest.
+    await svc.from('brands').update({ notify_yape_digest: true }).eq('slug', BRAND);
     const conf = await uploadYape('D', true);
+    const { data: avisos } = await svc.from('notification_jobs').select('kind, recipient_email, payload')
+      .like('dedupe_key', `yape_pending_digest:%:order:${S.orders.C}`);
+    check('D', 'aviso al organizador encolado al subir el comprobante (1 por orden)',
+      avisos?.length === 1 && avisos[0].kind === 'yape_pending_digest' && avisos[0].payload?.pending_count >= 1 && !!avisos[0].recipient_email,
+      JSON.stringify(avisos?.map((a) => a.payload)));
     const o = await dbOrder(S.orders.C);
     check('D', 'orden queda pending_yape_review', o.status === 'pending_yape_review', o.status);
     const tk = await dbTickets(S.orders.C);

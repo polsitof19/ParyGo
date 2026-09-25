@@ -97,6 +97,7 @@ export async function createBrandAction(
       yape_number: parsed.data.yape_number || null,
       yape_holder: parsed.data.yape_holder || null,
       theme_json: themeJson,
+      notify_yape_digest: true, // el aviso de Yape por aprobar nace prendido
     })
     .select('id, slug')
     .single();
@@ -273,6 +274,7 @@ export async function createBrandWithOwnerAction(
       name: parsed.data.name,
       contact_email: email,
       theme_json: themeJson,
+      notify_yape_digest: true, // el aviso de Yape por aprobar nace prendido
       // Prueba gratis (0069): 1 evento sin saldo, hasta 50 entradas.
       prueba_disponible: formData.get('prueba_gratis') === 'on',
     })

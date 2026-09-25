@@ -127,7 +127,7 @@ export function SettingsForm(props: Props) {
 
       <section className="s-card">
         <p className="s-section-lead" style={{ marginBottom: 6 }}>Avisos por email de Yape</p>
-        <p className="s-card__desc" style={{ marginBottom: 14 }}>Recordatorios automáticos por email. No cambian cómo apruebas los Yapes — solo avisan/recuerdan. Desactivados por defecto.</p>
+        <p className="s-card__desc" style={{ marginBottom: 14 }}>Recordatorios automáticos por email. No cambian cómo apruebas los Yapes: solo avisan y recuerdan.</p>
         <label className="s-check" style={{ display: 'flex', gap: 9, alignItems: 'flex-start', marginBottom: 12 }}>
           <input type="checkbox" name="notify_yape_recovery" defaultChecked={props.notifyYapeRecovery} disabled={ro} style={{ marginTop: 3 }} />
           <span>
@@ -139,7 +139,7 @@ export function SettingsForm(props: Props) {
           <input type="checkbox" name="notify_yape_digest" defaultChecked={props.notifyYapeDigest} disabled={ro} style={{ marginTop: 3 }} />
           <span>
             <strong>Avisarme cuando tengo Yapes por aprobar</strong>
-            <span className="s-muted" style={{ display: 'block', fontSize: 13 }}>Te llega un email a tu correo de contacto cuando hay comprobantes esperando tu revisión.</span>
+            <span className="s-muted" style={{ display: 'block', fontSize: 13 }}>Te llega un email a tu correo de contacto apenas un comprador sube su comprobante, con el botón para revisarlo.</span>
           </span>
         </label>
       </section>

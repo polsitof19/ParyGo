@@ -22,6 +22,10 @@ const { data: evs } = await svc.from('events').update({ archived_at: now })
   .eq('brand_id', b.id).like('slug', 'e2e-%').is('archived_at', null).select('slug');
 console.log('eventos e2e archivados:', (evs ?? []).map((e) => e.slug).join(' ') || '(ninguno)');
 
+// El paso D prende el aviso de Yapes por aprobar; se apaga SIEMPRE para que
+// el resumen de 6 h no mande correos por los comprobantes que deja el E2E.
+await svc.from('brands').update({ notify_yape_digest: false }).eq('id', b.id);
+
 if (!process.env.E2E_KEEP_BRAND) {
   await svc.from('brands').update({ archived_at: now }).eq('id', b.id);
   await svc.from('events_log').insert({ brand_id: b.id, type: 'brand_archived', payload: { by: 'e2e-cleanup' } });
