@@ -169,17 +169,17 @@ try {
     } else {
       // Un correo que ya tiene cuenta no paga: entra y compra desde su panel.
       await llenar(p, { plan: '1', nombre: 'Otro pago', slug: `e2e-alta-otro${STAMP}`, email: `delivered+alta-a${STAMP}@resend.dev` });
-      await p.getByRole('button', { name: /Pagar S\/150 con Mercado Pago/ }).click();
+      await p.getByRole('button', { name: /^Pagar S\/150$/ }).click();
       await p.getByText(/ya tiene una cuenta/i).waitFor({ timeout: 15000 }).catch(() => {});
       check('D', 'correo con cuenta: no lo manda a pagar', /ya tiene una cuenta/i.test(await texto(p)) && p.url().startsWith(BASE));
 
       const email = `delivered+alta-d${STAMP}@resend.dev`;
       const slug = `e2e-alta-pack-${STAMP}`;
       await llenar(p, { plan: '1', nombre: `E2E Alta Pack ${STAMP}`, email });
-      check('D', 'el botón es "Pagar S/150 con Mercado Pago" (sin código)', await p.getByRole('button', { name: 'Pagar S/150 con Mercado Pago' }).count() === 1);
+      check('D', 'el botón es "Pagar S/150" (sin código)', await p.getByRole('button', { name: 'Pagar S/150' }).count() === 1);
       const posts = [];
       p.on('request', (r) => { if (r.method() === 'POST' && r.url().startsWith(BASE)) posts.push(r.postData() ?? ''); });
-      await p.getByRole('button', { name: /Pagar S\/150 con Mercado Pago/ }).click();
+      await p.getByRole('button', { name: /^Pagar S\/150$/ }).click();
       await p.waitForURL(/mercadopago\.com/, { timeout: 40000, waitUntil: 'commit' });
       check('D', 'va directo a Mercado Pago', /mercadopago\.com/.test(p.url()), p.url().slice(0, 70));
       check('D', 'la contraseña NO viajó al servidor antes del pago', posts.length > 0 && !posts.some((x) => x.includes('E2eAlta!2026')), `${posts.length} POST`);
@@ -195,7 +195,7 @@ try {
       // pendiente ajena (se crea otra aparte).
       const intruso = await ctx.newPage();
       await llenar(intruso, { plan: '1', nombre: `Intruso ${STAMP}`, slug: `e2e-alta-intruso-${STAMP}`, email });
-      await intruso.getByRole('button', { name: /Pagar S\/150 con Mercado Pago/ }).click();
+      await intruso.getByRole('button', { name: /^Pagar S\/150$/ }).click();
       await intruso.waitForURL(/mercadopago\.com/, { timeout: 40000, waitUntil: 'commit' }).catch(() => {});
       await intruso.close();
       const { data: mSigue } = await svc.from('brands').select('name, slug').eq('id', m.id).single();
@@ -249,7 +249,7 @@ try {
     if (!(await p.locator('.ez-plan.is-off').count())) {
       const email = `delivered+alta-e${STAMP}@resend.dev`;
       await llenar(p, { plan: '1', nombre: `E2E Alta Otro ${STAMP}`, email });
-      await p.getByRole('button', { name: /Pagar S\/150 con Mercado Pago/ }).click();
+      await p.getByRole('button', { name: /^Pagar S\/150$/ }).click();
       await p.waitForURL(/mercadopago\.com/, { timeout: 40000, waitUntil: 'commit' });
       const { data: m } = await svc.from('brands').select('id').eq('slug', `e2e-alta-otro-${STAMP}`).single();
       if (m) marcas.push({ id: m.id, borrar: false });

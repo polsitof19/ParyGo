@@ -221,11 +221,11 @@ export function EmpezarFlow({ planes, inicial: planInicial, pagos, tope, cancela
               <p className="ez-banner" role="status">No se completó el pago y no se te cobró nada. Cuando quieras, vuelve a intentarlo.</p>
             )}
             <div className="ez-actions">
-              <Enviar disabled={libre === false}>{esPrueba ? 'Enviarme el código' : `Pagar ${soles(elegido.precio!)} con Mercado Pago`}</Enviar>
+              <Enviar disabled={libre === false}>{esPrueba ? 'Enviarme el código' : `Pagar ${soles(elegido.precio!)}`}</Enviar>
               <p className="ez-fine">
                 {esPrueba
                   ? 'Te mandamos un código al correo para confirmar que es tuyo.'
-                  : 'Pagas en Mercado Pago con tarjeta o con tu cuenta. Al volver entras directo a tu panel con tus eventos.'}{' '}
+                  : 'Pago seguro con tarjeta. Al terminar entras directo a tu panel con tus eventos.'}{' '}
                 Al continuar aceptas los{' '}
                 <a href="/terminos" target="_blank" rel="noopener">Términos</a> y la <a href="/privacidad" target="_blank" rel="noopener">Privacidad</a>.
               </p>
