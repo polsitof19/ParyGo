@@ -340,7 +340,10 @@ notification_url en la preferencia (esa tiene prioridad y la firma
 x-signature es de la config del panel). Respaldo: /admin/comprar/listo
 re-pide el pago a MP al volver (?payment_id=). Env en Cloudflare (Secret):
 PARYGO_MP_ACCESS_TOKEN, PARYGO_MP_WEBHOOK_SECRET (y PAYPAL_CLIENT_ID/SECRET/
-ENV). Sin ellas los botones salen apagados. Tests: supabase/ensayo-0070.mjs y
+ENV). Sin ellas los botones salen apagados. PayPal LIVE cargado el
+2026-09-25 (PAYPAL_ENV=live); smoke en prod: e2e/empezar-paypal.mjs
+(E2E_BASE=https://app.parygo.com) crea la orden y NO la aprueba — con live
+aprobar sería plata real. Tests: supabase/ensayo-0070.mjs y
 e2e/packs-rpc.mjs (JWT real + concurrencia, 10/10). El cobro de ENTRADAS por
 MP de cada marca todavía pone notification_url en la preferencia: revisar
 igual antes de que una marca cobre con tarjeta.
