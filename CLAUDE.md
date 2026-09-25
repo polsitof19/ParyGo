@@ -74,7 +74,14 @@ supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se regist
 - Yape manual: COMPLETO punta a punta. Comprobante público → revisión en panel
   (autenticada, scoped por marca, transición de estado atómica) → emisión →
   email. Es el camino que cobra hoy.
-- MercadoPago: IMPLEMENTADO Y FUNCIONAL (2026-09-22). El código está completo y
+- SDK `mercadopago` PROHIBIDO en el server (2026-09-25): arma su User-Agent con
+  process.version.substring() y en el edge (Cloudflare y el sandbox edge de
+  Next) process.version no existe → NINGUNA preferencia se creaba en
+  producción (ni packs ni cobro con tarjeta de entradas; verificado en prod
+  con demotest). Todo va por lib/mpApi.ts (fetch a /checkout/preferences y
+  /v1/payments). Lo de abajo que dice "funcional" era cierto en Node local,
+  no en el edge.
+- MercadoPago: IMPLEMENTADO (2026-09-22; en el edge recién desde 2026-09-25). El código está completo y
   el checkout con tarjeta funciona: se crea la preferencia y el comprador llega
   a pagar. Lo que falta es OPERATIVO, dos cargas de datos, no código:
     1. las credenciales REALES de la marca (se cargan desde el panel), y
@@ -337,6 +344,23 @@ ENV). Sin ellas los botones salen apagados. Tests: supabase/ensayo-0070.mjs y
 e2e/packs-rpc.mjs (JWT real + concurrencia, 10/10). El cobro de ENTRADAS por
 MP de cada marca todavía pone notification_url en la preferencia: revisar
 igual antes de que una marca cobre con tarjeta.
+
+ALTA CON PACK SIN CÓDIGO (2026-09-25, pedido de Paul: "directo a Mercado
+Pago y pagar y ya"): pagarAlta crea la marca SIN dueña y ARCHIVADA (no se
+publica sin pago) y manda a MP; la contraseña queda en el navegador
+(sessionStorage), NUNCA en el server antes del pago. /empezar/listo: con la
+compra pagada (solo created_by null) y la marca archivada sin dueña, crea la
+cuenta con user_metadata.alta_sin_verificar, la hace dueña, publica la marca
+y entra; el webhook manda "termina de crear tu marca" si no volvió. Como ese
+correo NO se verificó, las invitaciones (staff en /admin, dueña en la cabina)
+y los puestos de puerta NO se cuelgan de una cuenta alta_sin_verificar ni de
+una cuenta ajena: sin eso, pagar un pack con el correo de otro daba el
+escáner de su marca (security review). /empezar rechaza correos @*.parygo.
+{local,test,com}. Un link de un alta con pack abandonada (>2 h, sin pago ni
+dueña) se libera al pedirlo. Las páginas "listo" van con fetchCache
+'force-no-store' (Next cacheaba la compra y seguía "confirmando"). Test:
+e2e/empezar.mjs 37/37 (el pago aprobado se simula con settle_pack_purchase;
+el re-fetch real a MP necesita credenciales de prueba).
 
 ALTA AUTOSERVICIO (0071, 2026-09-25): app.parygo.com/empezar reemplaza a
 "Pedir acceso" (/organizadores redirige). El organizador elige prueba gratis

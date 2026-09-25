@@ -429,6 +429,11 @@ export async function inviteBrandAdminAction(
     if (!existing) {
       return { ok: false, message: 'Usuario existe pero no se pudo localizar.' };
     }
+    // Cuenta del alta con pack (/empezar) sin correo verificado: no se la hace
+    // dueña de otra marca (security review 2026-09-25).
+    if (existing.user_metadata?.alta_sin_verificar === true) {
+      return { ok: false, message: 'Ese correo tiene una cuenta creada al pagar un pack, sin correo verificado. No se la puede hacer dueña de otra marca.' };
+    }
     return await attach(admin, parsed.data.brand_id, existing.id, parsed.data.email);
   }
   if (inviteErr || !inviteData?.user) {

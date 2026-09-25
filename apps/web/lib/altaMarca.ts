@@ -41,6 +41,10 @@ export async function crearMarcaParaUsuario(a: {
       theme_json: { primary_color: '#FF6A3D', secondary_color: '#5B6CFF' },
       notify_yape_digest: true,
       prueba_disponible: a.prueba,
+      // Sin dueña = alta con pack sin pagar: ARCHIVADA (no se ve en
+      // <slug>.parygo.com) hasta que la dueña la reclama con el pago aprobado.
+      // Si no, cualquiera publicaba gratis una página con el nombre de otro.
+      ...(a.userId ? {} : { archived_at: new Date().toISOString() }),
     })
     .select('id, slug')
     .single();

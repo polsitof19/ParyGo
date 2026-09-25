@@ -95,7 +95,12 @@ try {
     check('B', 'link reservado (soporte): no disponible', /ya lo tiene otra marca/i.test(await texto(p)));
 
     await p.fill('#ez-slug', `e2e-alta-b${STAMP}`);
-    await p.fill('#ez-email', 'brandadmin.demotest@parygo.test');
+    // Dominios internos (puestos de puerta, cuentas de prueba): rechazados.
+    await p.fill('#ez-email', 'gate-12345678-puerta@gate.parygo.local');
+    await enviar(p);
+    await p.getByText(/Usa tu propio correo/).waitFor({ timeout: 10000 }).catch(() => {});
+    check('B', 'correo de dominio interno (@gate.parygo.local): rechazado', /Usa tu propio correo/.test(await texto(p)));
+    await p.fill('#ez-email', `delivered+alta-a${STAMP}@resend.dev`);
     await p.waitForTimeout(900);
     await enviar(p);
     await p.waitForTimeout(2500);
@@ -163,7 +168,7 @@ try {
       log('D · el server no tiene PARYGO_MP_*: se saltea el pago');
     } else {
       // Un correo que ya tiene cuenta no paga: entra y compra desde su panel.
-      await llenar(p, { plan: '1', nombre: 'Otro pago', slug: `e2e-alta-otro${STAMP}`, email: 'brandadmin.demotest@parygo.test' });
+      await llenar(p, { plan: '1', nombre: 'Otro pago', slug: `e2e-alta-otro${STAMP}`, email: `delivered+alta-a${STAMP}@resend.dev` });
       await p.getByRole('button', { name: /Pagar S\/150 con Mercado Pago/ }).click();
       await p.getByText(/ya tiene una cuenta/i).waitFor({ timeout: 15000 }).catch(() => {});
       check('D', 'correo con cuenta: no lo manda a pagar', /ya tiene una cuenta/i.test(await texto(p)) && p.url().startsWith(BASE));
@@ -179,11 +184,24 @@ try {
       check('D', 'va directo a Mercado Pago', /mercadopago\.com/.test(p.url()), p.url().slice(0, 70));
       check('D', 'la contraseña NO viajó al servidor antes del pago', posts.length > 0 && !posts.some((x) => x.includes('E2eAlta!2026')), `${posts.length} POST`);
 
-      const { data: m } = await svc.from('brands').select('id, event_balance, prueba_disponible').eq('slug', slug).single();
+      const { data: m } = await svc.from('brands').select('id, name, event_balance, prueba_disponible, archived_at').eq('slug', slug).single();
       if (m) marcas.push({ id: m.id, borrar: false });
       const { count: sinDuena } = await svc.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', m.id);
       const { data: ya } = await svc.rpc('usuario_id_por_email', { p_email: email });
       check('D', 'antes de pagar: marca sin dueña y NINGUNA cuenta creada', sinDuena === 0 && !ya);
+      check('D', 'antes de pagar: la marca está oculta (archivada), no se publica gratis', !!m.archived_at);
+
+      // Alguien escribe ESE correo con otro nombre y otro link: no toca la marca
+      // pendiente ajena (se crea otra aparte).
+      const intruso = await ctx.newPage();
+      await llenar(intruso, { plan: '1', nombre: `Intruso ${STAMP}`, slug: `e2e-alta-intruso-${STAMP}`, email });
+      await intruso.getByRole('button', { name: /Pagar S\/150 con Mercado Pago/ }).click();
+      await intruso.waitForURL(/mercadopago\.com/, { timeout: 40000, waitUntil: 'commit' }).catch(() => {});
+      await intruso.close();
+      const { data: mSigue } = await svc.from('brands').select('name, slug').eq('id', m.id).single();
+      const { data: mIntr } = await svc.from('brands').select('id').eq('slug', `e2e-alta-intruso-${STAMP}`).maybeSingle();
+      if (mIntr) marcas.push({ id: mIntr.id, borrar: false });
+      check('D', 'escribir el correo de otro NO renombra ni cambia el link de su marca pendiente', mSigue?.name === m.name && mSigue?.slug === slug, JSON.stringify(mSigue));
       const { data: c } = await svc.from('pack_purchases').select('id, pack, currency, amount_cents, status, provider_ref').eq('brand_id', m.id);
       check('D', 'compra pendiente de 1 evento, S/150 PEN, con preferencia de MP', c?.length === 1 && c[0].pack === 1 && c[0].amount_cents === 15000 && c[0].currency === 'PEN' && c[0].status === 'pending' && !!c[0].provider_ref, JSON.stringify(c));
 
@@ -205,6 +223,10 @@ try {
       const { data: duena } = await svc.from('brand_members').select('user_id, role').eq('brand_id', m.id);
       if (duena?.[0]) usuarios.push(duena[0].user_id);
       check('D', 'cuenta creada recién ahora, dueña de la marca', duena?.length === 1 && duena[0].role === 'brand_admin');
+      const { data: uAlta } = await svc.auth.admin.getUserById(duena[0].user_id);
+      check('D', 'la cuenta queda marcada "correo sin verificar" (las invitaciones no le cuelgan otra marca)', uAlta?.user?.user_metadata?.alta_sin_verificar === true);
+      const { data: mPub } = await svc.from('brands').select('archived_at').eq('id', m.id).single();
+      check('D', 'al reclamarla, la marca se publica', mPub?.archived_at === null);
       const { data: m2 } = await svc.from('brands').select('event_balance').eq('id', m.id).single();
       check('D', 'saldo de 1 evento listo para crear', m2?.event_balance === 1);
       const { error: le } = await anon().auth.signInWithPassword({ email, password: 'E2eAlta!2026' });

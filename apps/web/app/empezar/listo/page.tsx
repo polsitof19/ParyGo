@@ -23,7 +23,7 @@ export default async function AltaListaPage({ searchParams }: { searchParams: { 
   const admin = createAdminClient();
   const id = UUID_RE.test(searchParams.compra ?? '') ? searchParams.compra! : null;
   const leer = async () => id
-    ? (await admin.from('pack_purchases').select('id, pack, provider, status, brand_id').eq('id', id).maybeSingle()).data
+    ? (await admin.from('pack_purchases').select('id, pack, provider, status, brand_id, created_by').eq('id', id).maybeSingle()).data
     : null;
   let compra = await leer();
   if (compra) {
@@ -31,21 +31,23 @@ export default async function AltaListaPage({ searchParams }: { searchParams: { 
     compra = await leer();
   }
   const { data: brand } = compra
-    ? await admin.from('brands').select('name, slug, contact_email, event_balance').eq('id', compra.brand_id).single()
+    ? await admin.from('brands').select('name, slug, contact_email, event_balance, archived_at').eq('id', compra.brand_id).single()
     : { data: null };
   const { count: miembros } = compra
     ? await admin.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', compra.brand_id)
     : { count: 0 };
 
   let cuerpo: React.ReactNode;
-  if (!compra || !brand) {
+  // Solo compras de /empezar (sin created_by) cierran un alta; las del panel
+  // tienen su propia vuelta (/admin/comprar/listo).
+  if (!compra || !brand || compra.created_by !== null) {
     cuerpo = (
       <>
         <h1 className="ez-h1">No encontramos ese pago.</h1>
         <p className="ez-lede">Si pagaste y no llegaste a tu panel, escríbenos a parygoasistencia@gmail.com y lo resolvemos.</p>
       </>
     );
-  } else if (compra.status === 'paid' && !miembros) {
+  } else if (compra.status === 'paid' && !miembros && brand.archived_at) {
     cuerpo = (
       <>
         <h1 className="ez-h1">Pago <span className="ez-squiggle">aprobado</span>.</h1>

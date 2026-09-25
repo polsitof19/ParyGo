@@ -31,7 +31,10 @@ import { sendCodigoAlta } from '@/lib/email/sendCodigoAlta';
 const base = {
   nombre: z.string().trim().min(2, 'Pon el nombre de tu marca.').max(60, 'Máximo 60 caracteres.'),
   slug: z.string().trim().toLowerCase().regex(SLUG_RE, 'Solo minúsculas, números y guiones (2 a 32).'),
-  email: z.string().trim().toLowerCase().email('Revisa tu correo.').max(200),
+  email: z.string().trim().toLowerCase().email('Revisa tu correo.').max(200)
+    // Dominios internos (puestos de puerta @gate.parygo.local, cuentas de
+    // prueba @parygo.test, el propio parygo.com): nadie se registra con ellos.
+    .refine((e) => !/@(?:[a-z0-9-]+\.)*parygo\.(?:local|test|com)$/.test(e), 'Usa tu propio correo.'),
   whatsapp: z
     .string()
     .transform((v) => v.replace(/[\s-]/g, '').replace(/^\+?51(?=9\d{8}$)/, ''))
@@ -78,8 +81,21 @@ async function slugLibre(slug: string): Promise<boolean> {
   // xn-- = nombre punycode: el navegador lo muestra como letras unicode que
   // imitan a otra marca.
   if (SLUGS_RESERVADOS.has(slug) || slug.startsWith('xn--')) return false;
-  const { count } = await createAdminClient().from('brands').select('id', { count: 'exact', head: true }).eq('slug', slug);
-  return (count ?? 0) === 0;
+  const admin = createAdminClient();
+  const { data: b } = await admin.from('brands').select('id, archived_at, created_at').eq('slug', slug).maybeSingle();
+  if (!b) return true;
+  // Alta con pack ABANDONADA (archivada, sin dueña, sin pago, de hace más de
+  // 2 h): el link se libera. Sin esto, cualquiera reservaba links gratis
+  // empezando altas que nunca pagaba (security review 2026-09-25). La marca
+  // no se borra (pack_purchases es on delete restrict): se le cambia el link.
+  if (!b.archived_at || Date.parse(b.created_at) > Date.now() - 2 * 3600 * 1000) return false;
+  const [{ count: miembros }, { count: pagadas }] = await Promise.all([
+    admin.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', b.id),
+    admin.from('pack_purchases').select('id', { count: 'exact', head: true }).eq('brand_id', b.id).eq('status', 'paid'),
+  ]);
+  if (miembros || pagadas) return false;
+  const { error } = await admin.from('brands').update({ slug: `abandonada-${b.id.slice(0, 13)}` }).eq('id', b.id);
+  return !error;
 }
 
 // Tope invisible: 5 intentos por correo y 20 por conexión por hora. Sin esto el
@@ -211,15 +227,22 @@ export async function pagarAlta(_prev: AltaState, fd: FormData): Promise<AltaSta
   }
 
   const admin = createAdminClient();
-  // Cualquier cuenta con ese correo (con marca o no) → que entre por /login:
-  // la cuenta nueva se crea al volver del pago y no puede pisar a otra.
+  // Una cuenta CONFIRMADA o con marca → que entre por /login. Una sin
+  // confirmar y sin marca (alguien empezó la prueba con este correo y no puso
+  // el código) no bloquea: al volver del pago se la toma (completarAlta).
   const { data: existenteId } = await admin.rpc('usuario_id_por_email', { p_email: d.email });
-  if (existenteId) return { ok: false, paso: 'datos', message: YA_TIENE_CUENTA, fieldErrors: { email: 'Ya tiene cuenta.' } };
+  if (existenteId) {
+    const { data: u } = await admin.auth.admin.getUserById(existenteId as string);
+    if (u?.user?.email_confirmed_at || (await yaTieneCuenta(existenteId as string))) {
+      return { ok: false, paso: 'datos', message: YA_TIENE_CUENTA, fieldErrors: { email: 'Ya tiene cuenta.' } };
+    }
+  }
 
-  // ¿Ya había empezado un alta con este correo y no terminó? Se reusa esa
-  // marca sin dueña (si no, un segundo intento dejaba dos marcas y la plata
-  // del segundo pago en una que nunca podría tener dueña).
-  const { data: previas } = await admin.from('brands').select('id, slug').eq('contact_email', d.email).is('archived_at', null);
+  // Altas con pack pendientes de este correo (marca ARCHIVADA y sin dueña).
+  // Con una ya pagada, a terminar esa. Se reusa SOLO la del mismo link, sin
+  // tocarle nada: el formulario no tiene sesión, y cambiar nombre o link de
+  // una marca ajena escribiendo su correo era posible (security review).
+  const { data: previas } = await admin.from('brands').select('id, slug').eq('contact_email', d.email).not('archived_at', 'is', null);
   let brandId: string | null = null;
   for (const b of previas ?? []) {
     const { count: miembros } = await admin.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', b.id);
@@ -228,13 +251,7 @@ export async function pagarAlta(_prev: AltaState, fd: FormData): Promise<AltaSta
     if (pagadas) {
       return { ok: false, paso: 'datos', message: 'Ya tienes un pago aprobado esperando. Revisa tu correo: te mandamos el link para terminar de crear tu marca.' };
     }
-    if (b.slug !== d.slug && !(await slugLibre(d.slug))) return LINK_TOMADO;
-    const { error } = await admin.from('brands').update({
-      name: d.nombre, slug: d.slug, whatsapp_e164: d.whatsapp ? `+51${d.whatsapp}` : null,
-    }).eq('id', b.id);
-    if (error) return error.code === '23505' ? LINK_TOMADO : { ok: false, paso: 'datos', message: 'No pudimos preparar tu pago. Intenta de nuevo en un momento.' };
-    brandId = b.id;
-    break;
+    if (b.slug === d.slug) brandId = b.id;
   }
   if (!brandId) {
     if (!(await slugLibre(d.slug))) return LINK_TOMADO;

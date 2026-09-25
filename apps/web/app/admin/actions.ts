@@ -233,7 +233,10 @@ export async function generateGateCodeAction(
   if (created.data?.user) userId = created.data.user.id;
   else {
     const { data: list } = await admin.auth.admin.listUsers({ perPage: 1000 });
-    userId = list?.users.find((u) => u.email?.toLowerCase() === email.toLowerCase())?.id;
+    const existente = list?.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+    // Solo se reusa un puesto creado ACÁ (metadata gate), nunca una cuenta ajena
+    // que alguien haya registrado antes con ese correo.
+    userId = existente?.user_metadata?.gate === true ? existente.id : undefined;
   }
   if (!userId) return { ok: false, message: 'No se pudo crear el puesto.' };
 
@@ -295,8 +298,15 @@ export async function inviteValidatorAction(
   let userId: string | undefined;
   if (inviteErr && inviteErr.message?.toLowerCase().includes('already')) {
     const { data: list } = await admin.auth.admin.listUsers();
-    userId = list?.users.find((u) => u.email?.toLowerCase() === email.toLowerCase())?.id;
+    const existente = list?.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+    userId = existente?.id;
     if (!userId) return { ok: false, message: 'El usuario existe pero no se pudo localizar.' };
+    // Cuenta creada pagando un pack en /empezar, sin verificar el correo: no se
+    // le cuelga acceso a otra marca (quien pagó con el correo de otro tendría
+    // el escáner de esta marca). Security review 2026-09-25.
+    if (existente?.user_metadata?.alta_sin_verificar === true) {
+      return { ok: false, message: 'Ese correo ya tiene su propia cuenta de organizador en ParyGo. Invita a otro correo o escríbenos.' };
+    }
   } else if (inviteErr || !invite?.user) {
     return { ok: false, message: inviteErr?.message ?? 'No se pudo invitar.' };
   } else {
