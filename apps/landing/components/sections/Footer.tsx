@@ -1,45 +1,49 @@
 import { CTA } from '@/lib/cta';
+import type { Dict } from '@/lib/i18n';
 import { SITE } from '@/lib/site';
+import { Idioma } from '@/components/Idioma';
 
 // 08 — Footer
-export function Footer() {
+export function Footer({ t }: { t: Dict }) {
+  const f = t.footer;
   return (
     <footer className="footer">
       <div className="container">
         <div className="footer__grid">
           <div className="footer__col footer__brand">
             <a href="#top" className="logo">parygo<span className="dot">.</span></a>
-            <p>La forma simple de vender y controlar las entradas de tus eventos, con tu marca y cobrando directo.</p>
+            <p>{f.brand}</p>
+            <Idioma lang={t.lang} label={t.idioma.label} className="idioma--footer" />
           </div>
           <div className="footer__col">
-            <h4>Producto</h4>
+            <h4>{f.producto}</h4>
             <ul>
-              <li><a href="#como">Cómo funciona</a></li>
-              <li><a href="#seguridad">Seguridad</a></li>
-              <li><a href="#incluye">Qué incluye</a></li>
-              <li><a href="#precios">Precios</a></li>
-              <li><a href={CTA.hero}>Crear mi marca</a></li>
+              <li><a href="#como">{f.links.como}</a></li>
+              <li><a href="#seguridad">{f.links.seguridad}</a></li>
+              <li><a href="#incluye">{f.links.incluye}</a></li>
+              <li><a href="#precios">{f.links.precios}</a></li>
+              <li><a href={CTA.hero}>{f.links.crear}</a></li>
             </ul>
           </div>
           <div className="footer__col">
-            <h4>Ayuda</h4>
+            <h4>{f.ayuda}</h4>
             <ul>
-              <li><a href="#preguntas">Preguntas frecuentes</a></li>
+              <li><a href="#preguntas">{f.links.preguntas}</a></li>
               <li><a href={`mailto:${SITE.email}`}>{SITE.email}</a></li>
-              <li><a href={SITE.loginUrl}>Ingresar al panel</a></li>
+              <li><a href={SITE.loginUrl}>{f.links.panel}</a></li>
             </ul>
           </div>
           <div className="footer__col">
-            <h4>Legal</h4>
+            <h4>{f.legal}</h4>
             <ul>
-              <li><a href="/terminos">Términos</a></li>
-              <li><a href="/privacidad">Privacidad</a></li>
+              <li><a href="/terminos">{f.links.terminos}</a></li>
+              <li><a href="/privacidad">{f.links.privacidad}</a></li>
             </ul>
           </div>
         </div>
         <div className="footer__bottom">
-          <span>© {new Date().getFullYear()} ParyGo</span>
-          <span className="made">Vende con tu marca, cobra directo.</span>
+          <span>{f.copy}</span>
+          <span className="made">{f.made}</span>
         </div>
       </div>
     </footer>

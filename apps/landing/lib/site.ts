@@ -2,18 +2,7 @@ export const SITE = {
   name: 'ParyGo',
   domain: 'parygo.com',
   url: 'https://parygo.com',
-  title: 'ParyGo — Vende las entradas de tu evento con tu marca, sin comisión',
-  description:
-    'Vende entradas para fiestas, conciertos y eventos con tu propia marca. Tu público paga directo a tu cuenta, sin comisión por entrada, y controlas quién entra con QR. Prueba gratis.',
-  keywords: [
-    'vender entradas online',
-    'entradas eventos discoteca',
-    'plataforma de ticketing sin comisión',
-    'ticketing latam',
-    'venta entradas online',
-    'qr eventos',
-  ],
-  locale: 'es_LA',
+  // Título, descripción, keywords y locale viven en lib/i18n.ts (uno por idioma).
   // Acceso de ORGANIZADORES al panel (login que ya existe en el app de venta).
   // Los compradores NO se loguean.
   loginUrl: 'https://app.parygo.com/login',

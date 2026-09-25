@@ -1,5 +1,6 @@
 import { Check } from 'lucide-react';
 import { CTA } from '@/lib/cta';
+import type { Dict } from '@/lib/i18n';
 import { TicketCanvas } from '@/components/decorative/TicketCanvas';
 
 // Splits a phrase into <span.word> with a sequential --w index so the CSS can
@@ -23,10 +24,11 @@ function words(text: string, start: number) {
 }
 
 // 01 — Hero
-export function Hero() {
-  const l1 = words('Tus eventos,', 0);
-  const l2 = words('tus entradas,', l1.next);
-  const l3 = words('tu dinero', l2.next);
+export function Hero({ t }: { t: Dict }) {
+  const h = t.hero;
+  const l1 = words(h.l1, 0);
+  const l2 = words(h.l2, l1.next);
+  const l3 = words(h.l3, l2.next);
 
   return (
     <section className="section hero" aria-labelledby="hero-title">
@@ -44,27 +46,28 @@ export function Hero() {
               <br />
               {l2.nodes}
               <br />
-              <span className="squiggle accent">{l3.nodes}</span>
-              <span className="word" style={{ ['--w' as string]: l3.next }}>.</span>
+              {/* El punto va pegado a la frase resaltada: suelto, en inglés ("your revenue") caía solo en otro renglón. */}
+              <span className="hero__cierre">
+                <span className="squiggle accent">{l3.nodes}</span>
+                <span className="word" style={{ ['--w' as string]: l3.next }}>.</span>
+              </span>
             </h1>
-            <p className="lede hero__sub reveal">
-              Vende las entradas de tus fiestas, conciertos y eventos con tu propia marca. Tu público paga y la plata llega directo a tu cuenta: sin comisión por entrada y con control total de quién entra.
-            </p>
+            <p className="lede hero__sub reveal">{h.sub}</p>
             <div className="hero__ctas reveal">
               <a href={CTA.hero} className="btn btn-primary btn-lg">
-                Empieza gratis <span className="arrow" aria-hidden="true">→</span>
+                {h.cta} <span className="arrow" aria-hidden="true">→</span>
               </a>
               <a href="#como" className="btn btn-ghost">
                 <span className="ico" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="6 4 20 12 6 20 6 4" fill="currentColor" stroke="none" /></svg>
                 </span>
-                Ver cómo funciona
+                {h.ver}
               </a>
             </div>
             <div className="hero__chips reveal">
-              <span className="chip"><Check className="tick" aria-hidden="true" /> La plata va a tu cuenta</span>
-              <span className="chip"><Check className="tick" aria-hidden="true" /> Cero comisión por entrada</span>
-              <span className="chip"><Check className="tick" aria-hidden="true" /> Prueba gratis, sin tarjeta</span>
+              {h.chips.map((c) => (
+                <span key={c} className="chip"><Check className="tick" aria-hidden="true" /> {c}</span>
+              ))}
             </div>
           </div>
 
@@ -83,7 +86,7 @@ export function Hero() {
                 <rect x="178" y="44" width="40" height="40" rx="8" fill="#231C17" />
               </svg>
             </div>
-            <TicketCanvas mountId="heroVisual" />
+            <TicketCanvas mountId="heroVisual" textos={h.ticket} />
           </div>
         </div>
       </div>

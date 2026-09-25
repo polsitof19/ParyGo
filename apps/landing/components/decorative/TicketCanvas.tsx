@@ -10,7 +10,9 @@ import { useEffect, useRef } from 'react';
 //  - dpr capped at 1.8, paused/destroyed when offscreen → light on mobile.
 //  - Reacts to the mouse (parallax), the scroll (gentle turn + zoom) and hover
 //    (the ticket "lifts" a touch).
-export function TicketCanvas({ mountId }: { mountId: string }) {
+export type TextosTicket = { titulo: string; noche: string; fecha: string; escanea: string; puerta: string };
+
+export function TicketCanvas({ mountId, textos }: { mountId: string; textos: TextosTicket }) {
   const cleanupRef = useRef<() => void>(() => {});
 
   useEffect(() => {
@@ -90,19 +92,19 @@ export function TicketCanvas({ mountId }: { mountId: string }) {
       g.fillText('parygo.', 40, 78);
       g.fillStyle = '#231C17';
       g.font = `800 46px ${display}, sans-serif`;
-      g.fillText('VERANO SUNSET', 40, 220);
+      g.fillText(textos.titulo, 40, 220);
       g.fillStyle = '#FF6A3D';
       g.font = `800 40px ${display}, sans-serif`;
-      g.fillText('NOCHE 04', 40, 268);
+      g.fillText(textos.noche, 40, 268);
       g.fillStyle = '#6B5F54';
       g.font = `500 20px ${bodyFont}, sans-serif`;
-      g.fillText('SÁB 24 ENE · 10:00 PM · CLUB DELMAR', 40, 312);
+      g.fillText(textos.fecha, 40, 312);
       g.fillStyle = '#231C17';
       g.font = `700 22px ${bodyFont}, sans-serif`;
       g.fillText('★ ADMIT ONE', 40, 372);
       g.fillStyle = '#A89B8C';
       g.font = `500 16px ${bodyFont}, sans-serif`;
-      g.fillText('TKT / VS04-2026', 40, 404);
+      g.fillText('TKT / VS04', 40, 404);
 
       g.strokeStyle = '#EFE6D6';
       g.lineWidth = 3;
@@ -138,8 +140,8 @@ export function TicketCanvas({ mountId }: { mountId: string }) {
       g.fillStyle = '#6B5F54';
       g.font = `700 15px ${bodyFont}, sans-serif`;
       g.textAlign = 'center';
-      g.fillText('ESCANEA', 593, 300);
-      g.fillText('EN PUERTA', 593, 320);
+      g.fillText(textos.escanea, 593, 300);
+      g.fillText(textos.puerta, 593, 320);
       g.textAlign = 'left';
 
       const tex = new THREE.CanvasTexture(c);
@@ -305,7 +307,7 @@ export function TicketCanvas({ mountId }: { mountId: string }) {
       cleanupRef.current();
       cleanupRef.current = () => {};
     };
-  }, [mountId]);
+  }, [mountId, textos]);
 
   return null;
 }

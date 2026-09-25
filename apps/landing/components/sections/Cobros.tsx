@@ -1,44 +1,47 @@
 import { Bitcoin, CreditCard, Globe, Smartphone, Wallet, Zap } from 'lucide-react';
+import type { Dict } from '@/lib/i18n';
+import { Resaltado } from '@/components/Resaltado';
 
 // Medios con los que el público le paga al organizador. Lo disponible hoy es
 // lo que el sistema cobra (CLAUDE.md): tarjeta vía Mercado Pago y Yape en
 // Perú. PayPal y cripto: pedido de Paul "lo haremos pronto, poco a poco"
-// (2026-09-25), así que van rotulados "Pronto", nunca como disponibles.
+// (2026-09-25), así que van rotulados "Próximamente", nunca como disponibles.
+// Mismo orden que t.cobros.medios.
 const MEDIOS = [
-  { I: CreditCard, t: 'Tarjetas de crédito y débito', d: 'Visa, Mastercard y más, vía Mercado Pago', ya: true },
-  { I: Wallet, t: 'Mercado Pago', d: 'Saldo y cuenta, en los países donde opera', ya: true },
-  { I: Smartphone, t: 'Yape', d: 'Transferencia al instante, en Perú', ya: true },
-  { I: Globe, t: 'PayPal', d: 'Para cobrar a público de cualquier país', ya: false },
-  { I: Bitcoin, t: 'Bitcoin y cripto', d: 'Pagos con criptomonedas', ya: false },
-  { I: Zap, t: 'Más medios locales', d: 'Los que se usan en cada país', ya: false },
+  { I: CreditCard, ya: true },
+  { I: Wallet, ya: true },
+  { I: Smartphone, ya: true },
+  { I: Globe, ya: false },
+  { I: Bitcoin, ya: false },
+  { I: Zap, ya: false },
 ];
 
-export function Cobros() {
+export function Cobros({ t }: { t: Dict }) {
+  const c = t.cobros;
   return (
     <section className="section cobros" id="cobros" aria-labelledby="cobros-title">
       <div className="container">
         <div className="section__head reveal">
-          <h2 className="h2" id="cobros-title">
-            Tu público paga <span className="accent">como prefiera</span>.
-          </h2>
-          <p className="lede">
-            Conectas tus propias cuentas de cobro y ParyGo las usa en tu página. Vamos sumando medios poco a poco.
-          </p>
+          <h2 className="h2" id="cobros-title"><Resaltado r={c.h2} /></h2>
+          <p className="lede">{c.lede}</p>
         </div>
         <ul className="medios reveal-stagger">
-          {MEDIOS.map(({ I, t, d, ya }) => (
-            <li key={t} className={`medio${ya ? '' : ' medio--pronto'}`}>
-              <I className="medio__ico" aria-hidden="true" />
-              <span className="medio__txt">
-                <span className="medio__t">{t}</span>
-                <span className="medio__d">{d}</span>
-              </span>
-              <span className="medio__estado">
-                <span className={`punto ${ya ? 'punto--ok' : 'punto--pronto'}`} aria-hidden="true" />
-                {ya ? 'Disponible' : 'Pronto'}
-              </span>
-            </li>
-          ))}
+          {c.medios.map((m, i) => {
+            const { I, ya } = MEDIOS[i] ?? { I: Zap, ya: false };
+            return (
+              <li key={m.t} className={`medio${ya ? '' : ' medio--pronto'}`}>
+                <I className="medio__ico" aria-hidden="true" />
+                <span className="medio__txt">
+                  <span className="medio__t">{m.t}</span>
+                  <span className="medio__d">{m.d}</span>
+                </span>
+                <span className="medio__estado">
+                  <span className={`punto ${ya ? 'punto--ok' : 'punto--pronto'}`} aria-hidden="true" />
+                  {ya ? c.disponible : c.pronto}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </section>

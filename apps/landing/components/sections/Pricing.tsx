@@ -2,19 +2,17 @@
 
 import { Check } from 'lucide-react';
 import { CTA } from '@/lib/cta';
+import type { Dict } from '@/lib/i18n';
+import { Resaltado } from '@/components/Resaltado';
 import { PACKS, precio, useMoneda } from '@/lib/precios';
 
 // 06 — Precios (4 packs; todos incluyen todo, solo cambia la cantidad). La
 // moneda sale del país del visitante (lib/precios.ts): soles en Perú, dólares
 // en el resto. Los montos = apps/web/lib/packs.ts.
-const EXTRAS: Record<number, { qty: string; perks: string[]; href: string; rec?: boolean }> = {
-  1: { qty: 'Para un evento puntual', perks: ['Todas las funciones', 'Entradas ilimitadas', 'Soporte por correo'], href: CTA.pack1 },
-  3: { qty: 'El más elegido', perks: ['Todas las funciones', 'Entradas ilimitadas', 'Soporte prioritario'], href: CTA.pack3, rec: true },
-  5: { qty: 'Para una temporada', perks: ['Todas las funciones', 'Entradas ilimitadas', 'Acompañamiento 1:1'], href: CTA.pack5 },
-  10: { qty: 'Para productoras', perks: ['Todas las funciones', 'Entradas ilimitadas', 'Onboarding por videollamada'], href: CTA.pack10 },
-};
+const HREF: Record<number, string> = { 1: CTA.pack1, 3: CTA.pack3, 5: CTA.pack5, 10: CTA.pack10 };
 
-export function Pricing() {
+export function Pricing({ t }: { t: Dict }) {
+  const c = t.precios;
   const m = useMoneda();
   const unit = (p: (typeof PACKS)[number]) => (m === 'PEN' ? p.pen : p.usd);
   const uno = unit(PACKS[0]);
@@ -23,40 +21,40 @@ export function Pricing() {
     <section className="section pricing" id="precios" aria-labelledby="pricing-title">
       <div className="container">
         <div className="section__head center reveal">
-          <h2 className="h2" id="pricing-title">Pagas una vez <span className="accent">por evento</span>.</h2>
-          <p className="lede">Sin mensualidades y sin comisión por entrada. Todos los packs incluyen todas las funciones: solo eliges cuántos eventos necesitas.</p>
+          <h2 className="h2" id="pricing-title"><Resaltado r={c.h2} /></h2>
+          <p className="lede">{c.lede}</p>
         </div>
 
         <a href={CTA.hero} className="prueba reveal">
-          <span className="prueba__t">Empieza con la prueba gratis</span>
-          <span className="prueba__d">1 evento de hasta 20 entradas, sin tarjeta. Solo confirmas tu correo.</span>
-          <span className="prueba__cta">Probar gratis →</span>
+          <span className="prueba__t">{c.prueba.t}</span>
+          <span className="prueba__d">{c.prueba.d}</span>
+          <span className="prueba__cta">{c.prueba.cta}</span>
         </a>
 
         <div className="plans reveal-stagger">
           {PACKS.map((p) => {
-            const x = EXTRAS[p.eventos]!;
+            const rec = p.eventos === 3;
             const total = unit(p);
             const ahorro = uno * p.eventos - total;
             return (
-              <article key={p.eventos} className={`plan${x.rec ? ' plan--rec' : ''}`}>
-                {x.rec && <span className="plan__badge">Más popular</span>}
-                <div className="plan__name">{p.eventos} evento{p.eventos === 1 ? '' : 's'}</div>
-                <div className="plan__qty">{x.qty}</div>
+              <article key={p.eventos} className={`plan${rec ? ' plan--rec' : ''}`}>
+                {rec && <span className="plan__badge">{c.badge}</span>}
+                <div className="plan__name">{p.eventos} {p.eventos === 1 ? c.evento : c.eventos}</div>
+                <div className="plan__qty">{c.qty[p.eventos]}</div>
                 <div className="plan__price">{precio(total, m)}</div>
-                {/* Dos renglones fijos: con "ahorras" en el mismo renglón unas
+                {/* Dos renglones fijos: con el ahorro en el mismo renglón unas
                     tarjetas partían en dos líneas y las listas quedaban desalineadas. */}
                 <span className="plan__percu">
-                  {precio(Math.round(total / p.eventos), m)} por evento
-                  <span className="plan__ahorro">{ahorro > 0 ? `Ahorras ${precio(ahorro, m)}` : 'Pago único'}</span>
+                  {precio(Math.round(total / p.eventos), m)} {c.porEvento}
+                  <span className="plan__ahorro">{ahorro > 0 ? `${c.ahorras} ${precio(ahorro, m)}` : c.pagoUnico}</span>
                 </span>
                 <ul className="plan__list">
-                  {x.perks.map((perk) => (
+                  {(c.perks[p.eventos] ?? []).map((perk) => (
                     <li key={perk}><Check className="plan__tick" aria-hidden="true" />{perk}</li>
                   ))}
                 </ul>
                 <div className="plan__cta">
-                  <a href={x.href} className={`btn ${x.rec ? 'btn-primary' : 'btn-soft'}`}>Elegir</a>
+                  <a href={HREF[p.eventos]} className={`btn ${rec ? 'btn-primary' : 'btn-soft'}`}>{c.elegir}</a>
                 </div>
               </article>
             );
@@ -64,8 +62,8 @@ export function Pricing() {
         </div>
 
         <p className="plans-note reveal">
-          Un evento = un evento completo, con entradas ilimitadas y todas las funciones.
-          {m === 'USD' && ' Por ahora el pago con tarjeta se procesa en soles peruanos y tu banco hace la conversión; pronto también en dólares con PayPal.'}
+          {c.note}
+          {m === 'USD' && c.noteUsd}
         </p>
       </div>
     </section>
