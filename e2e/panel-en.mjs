@@ -38,7 +38,7 @@ async function elegir(valor) {
 
 try {
   check('elegir English en Mi marca guarda idioma=en', (await elegir('en')) === 'en');
-  check('Mi marca ya se ve en inglés', /My brand/.test(await p.locator('main').innerText()));
+  check('Mi marca ya se ve en inglés', await p.getByRole('heading', { name: 'My brand' }).waitFor({ timeout: 15000 }).then(() => true, () => false));
 
   const rutas = ['/admin', '/admin/settings', '/admin/equipo', '/admin/comprar', '/admin/events/new'];
   if (e) for (const sec of ['', '/estadisticas', '/entradas', '/yape', '/cortesias', '/clientes', '/promotores', '/accesos', '/editar', '/reporte']) rutas.push(`/admin/events/${e}${sec}`);

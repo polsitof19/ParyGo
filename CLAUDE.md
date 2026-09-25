@@ -420,8 +420,12 @@ cookie y descarta todo si getUser no confirma ese mismo id); las consultas de
 una página van en UN Promise.all; NUNCA bajar todas las órdenes/entradas de
 una marca para contar o detectar algo (la portada lo hacía dos veces: Code
 son 491 órdenes y 1.218 entradas por visita) — usar count, filtros o un
-anti-join (`tickets!left(id)` + `.is('tickets', null)`). Smart Placement
-prendido en apps/web/wrangler.toml ([placement] mode = "smart").
+anti-join (`tickets!left(id)` + `.is('tickets', null)`). Smart Placement: la base está en
+us-west-1 (California) y Cloudflare atiende a Lima desde Río (GIG), así que
+cada consulta cruzaba el continente. Se prendió por la API de Cloudflare
+(deployment_configs.production.placement = smart, 2026-09-25): el
+[placement] de apps/web/wrangler.toml NO lo aplicó la integración con Git.
+Verificar con el GET del proyecto de Pages; el PATCH conserva las variables.
 
 Incrementales, idempotentes, numeradas (vamos por 0073). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
