@@ -12,11 +12,13 @@ type Plan = {
   btn: string;
 };
 
+// Precios = apps/web/lib/packs.ts (lo que cobra /admin/comprar). Son dos apps
+// separadas: si cambias uno, cambia el otro (y StructuredData + site.ts).
 const PLANS: Plan[] = [
-  { name: '1 Evento', qty: 'Para probar', price: '200', percu: 'S/200 c/u', perks: ['Todas las funciones', 'Entradas ilimitadas', 'Soporte incluido'], href: CTA.pack1, btn: 'btn-soft' },
-  { name: '3 Eventos', qty: 'Ahorras S/60', price: '540', percu: 'S/180 c/u', perks: ['Todas las funciones', 'Entradas ilimitadas', 'Soporte prioritario'], href: CTA.pack3, rec: true, btn: 'btn-primary' },
-  { name: '5 Eventos', qty: 'Ahorras S/150', price: '850', percu: 'S/170 c/u', perks: ['Todas las funciones', 'Entradas ilimitadas', 'Acompañamiento 1:1'], href: CTA.pack5, btn: 'btn-soft' },
-  { name: '10 Eventos', qty: 'Ahorras S/500', price: '1,500', percu: 'S/150 c/u', perks: ['Todas las funciones', 'Entradas ilimitadas', 'Onboarding presencial'], href: CTA.pack10, btn: 'btn-soft' },
+  { name: '1 Evento', qty: 'Para probar', price: '150', percu: 'S/150 c/u', perks: ['Todas las funciones', 'Entradas ilimitadas', 'Soporte incluido'], href: CTA.pack1, btn: 'btn-soft' },
+  { name: '3 Eventos', qty: 'Ahorras S/60', price: '390', percu: 'S/130 c/u', perks: ['Todas las funciones', 'Entradas ilimitadas', 'Soporte prioritario'], href: CTA.pack3, rec: true, btn: 'btn-primary' },
+  { name: '5 Eventos', qty: 'Ahorras S/150', price: '600', percu: 'S/120 c/u', perks: ['Todas las funciones', 'Entradas ilimitadas', 'Acompañamiento 1:1'], href: CTA.pack5, btn: 'btn-soft' },
+  { name: '10 Eventos', qty: 'Ahorras S/400', price: '1,100', percu: 'S/110 c/u', perks: ['Todas las funciones', 'Entradas ilimitadas', 'Onboarding presencial'], href: CTA.pack10, btn: 'btn-soft' },
 ];
 
 export function Pricing() {

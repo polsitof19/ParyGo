@@ -3,15 +3,13 @@
 import { useFormStatus } from 'react-dom';
 import { useFormFeedback } from '@/components/useFormFeedback';
 import { loadPackAction, type PackState } from './actions';
+import { PACKS } from '@/lib/packs';
+import { formatPEN } from '@/lib/utils';
 
 const initial: PackState = { ok: false, message: null };
 
-const PACK_OPTIONS = [
-  { pack: 1, label: 'Pack 1 — S/200' },
-  { pack: 3, label: 'Pack 3 — S/540' },
-  { pack: 5, label: 'Pack 5 — S/850' },
-  { pack: 10, label: 'Pack 10 — S/1500' },
-];
+// Precios de lib/packs.ts (la misma fuente que la compra del organizador).
+const PACK_OPTIONS = PACKS.map((p) => ({ pack: p.eventos, label: `Pack ${p.eventos} — ${formatPEN(p.pen)}` }));
 
 export function LoadPackForm({
   brandId,

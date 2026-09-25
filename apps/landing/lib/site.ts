@@ -4,7 +4,7 @@ export const SITE = {
   url: 'https://parygo.com',
   title: 'ParyGo — Vende las entradas de tu evento sin complicarte',
   description:
-    'Discotecas, conciertos, fiestas, cumpleaños. Vende entradas con tu marca, cobra directo por Yape y tarjeta (cero comisión por entrada) y controla quién entra con QR. Desde S/200 por evento.',
+    'Discotecas, conciertos, fiestas, cumpleaños. Vende entradas con tu marca, cobra directo por Yape y tarjeta (cero comisión por entrada) y controla quién entra con QR. Desde S/110 por evento.',
   keywords: [
     'ticketing peru',
     'entradas eventos discoteca',

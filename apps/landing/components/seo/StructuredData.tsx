@@ -33,7 +33,7 @@ const service = {
       {
         '@type': 'Offer',
         name: 'Party — 1 evento',
-        price: '200',
+        price: '150',
         priceCurrency: 'PEN',
         url: `${SITE.url}#precios`,
         itemOffered: { '@type': 'Service', name: 'Party · 1 evento' },
@@ -41,7 +41,7 @@ const service = {
       {
         '@type': 'Offer',
         name: 'Regular — 3 eventos',
-        price: '540',
+        price: '390',
         priceCurrency: 'PEN',
         url: `${SITE.url}#precios`,
         itemOffered: { '@type': 'Service', name: 'Regular · 3 eventos' },
@@ -49,7 +49,7 @@ const service = {
       {
         '@type': 'Offer',
         name: 'Pro — 5 eventos',
-        price: '850',
+        price: '600',
         priceCurrency: 'PEN',
         url: `${SITE.url}#precios`,
         itemOffered: { '@type': 'Service', name: 'Pro · 5 eventos' },
@@ -57,7 +57,7 @@ const service = {
       {
         '@type': 'Offer',
         name: 'Frequency — 10 eventos',
-        price: '1500',
+        price: '1100',
         priceCurrency: 'PEN',
         url: `${SITE.url}#precios`,
         itemOffered: { '@type': 'Service', name: 'Frequency · 10 eventos' },
