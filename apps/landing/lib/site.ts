@@ -2,18 +2,18 @@ export const SITE = {
   name: 'ParyGo',
   domain: 'parygo.com',
   url: 'https://parygo.com',
-  title: 'ParyGo — Vende las entradas de tu evento sin complicarte',
+  title: 'ParyGo — Vende las entradas de tu evento con tu marca, sin comisión',
   description:
-    'Discotecas, conciertos, fiestas, cumpleaños. Vende entradas con tu marca, cobra directo por Yape y tarjeta (cero comisión por entrada) y controla quién entra con QR. Desde S/110 por evento.',
+    'Vende entradas para fiestas, conciertos y eventos con tu propia marca. Tu público paga directo a tu cuenta, sin comisión por entrada, y controlas quién entra con QR. Prueba gratis.',
   keywords: [
-    'ticketing peru',
+    'vender entradas online',
     'entradas eventos discoteca',
-    'plataforma boletos lima',
+    'plataforma de ticketing sin comisión',
     'ticketing latam',
     'venta entradas online',
     'qr eventos',
   ],
-  locale: 'es_PE',
+  locale: 'es_LA',
   // Acceso de ORGANIZADORES al panel (login que ya existe en el app de venta).
   // Los compradores NO se loguean.
   loginUrl: 'https://app.parygo.com/login',

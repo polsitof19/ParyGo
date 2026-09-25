@@ -1,4 +1,6 @@
 import { SITE } from '@/lib/site';
+import { PACKS } from '@/lib/packs';
+import { FAQ } from '@/lib/faq';
 
 const organization = {
   '@context': 'https://schema.org',
@@ -13,7 +15,7 @@ const organization = {
       contactType: 'sales',
       email: SITE.email,
       availableLanguage: ['Spanish'],
-      areaServed: ['PE', 'LATAM'],
+      areaServed: ['Latin America', 'Worldwide'],
     },
   ],
 };
@@ -23,47 +25,27 @@ const service = {
   '@type': 'Service',
   serviceType: 'Ticketing platform',
   provider: { '@type': 'Organization', name: SITE.name, url: SITE.url },
-  areaServed: ['Peru', 'Latin America'],
+  areaServed: ['Latin America', 'Worldwide'],
   name: 'Plataforma de ticketing para promotores de eventos',
   description: SITE.description,
   hasOfferCatalog: {
     '@type': 'OfferCatalog',
     name: 'Packs ParyGo',
-    itemListElement: [
-      {
-        '@type': 'Offer',
-        name: 'Party — 1 evento',
-        price: '150',
-        priceCurrency: 'PEN',
-        url: `${SITE.url}#precios`,
-        itemOffered: { '@type': 'Service', name: 'Party · 1 evento' },
-      },
-      {
-        '@type': 'Offer',
-        name: 'Regular — 3 eventos',
-        price: '390',
-        priceCurrency: 'PEN',
-        url: `${SITE.url}#precios`,
-        itemOffered: { '@type': 'Service', name: 'Regular · 3 eventos' },
-      },
-      {
-        '@type': 'Offer',
-        name: 'Pro — 5 eventos',
-        price: '600',
-        priceCurrency: 'PEN',
-        url: `${SITE.url}#precios`,
-        itemOffered: { '@type': 'Service', name: 'Pro · 5 eventos' },
-      },
-      {
-        '@type': 'Offer',
-        name: 'Frequency — 10 eventos',
-        price: '1100',
-        priceCurrency: 'PEN',
-        url: `${SITE.url}#precios`,
-        itemOffered: { '@type': 'Service', name: 'Frequency · 10 eventos' },
-      },
-    ],
+    itemListElement: PACKS.map((p) => ({
+      '@type': 'Offer',
+      name: `${p.eventos} evento${p.eventos === 1 ? '' : 's'}`,
+      price: String(p.usd),
+      priceCurrency: 'USD',
+      url: `${SITE.url}#precios`,
+      itemOffered: { '@type': 'Service', name: `ParyGo · ${p.eventos} evento${p.eventos === 1 ? '' : 's'}` },
+    })),
   },
+};
+
+const faq = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
 };
 
 const website = {
@@ -71,7 +53,7 @@ const website = {
   '@type': 'WebSite',
   url: SITE.url,
   name: SITE.name,
-  inLanguage: 'es-PE',
+  inLanguage: 'es',
 };
 
 // Escapa < > & a su forma unicode para que el JSON-LD no pueda romper el <script>
@@ -87,6 +69,7 @@ export function StructuredData() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(organization) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(service) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(website) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faq) }} />
     </>
   );
 }

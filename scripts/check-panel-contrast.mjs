@@ -10,7 +10,9 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const css = readFileSync(resolve(ROOT, 'apps/web/app/styles/parygo-panel.css'), 'utf8');
+// Sin CRLF: en un checkout de Windows el archivo viene con fines de línea
+// CRLF y el indexOf de abajo (que busca LF) no encontraba el bloque.
+const css = readFileSync(resolve(ROOT, 'apps/web/app/styles/parygo-panel.css'), 'utf8').replace(/\r\n/g, '\n');
 const i = css.indexOf('@media (prefers-color-scheme: light) {\n  .pg.pg-panel {');
 if (i < 0) throw new Error('no está el bloque del tema claro de los paneles');
 const cuerpo = css.slice(i, css.indexOf('}', i));

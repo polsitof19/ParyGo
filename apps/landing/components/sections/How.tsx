@@ -5,7 +5,6 @@ export function How() {
       <div className="blob how__blob" aria-hidden="true" />
       <div className="container">
         <div className="section__head reveal">
-          <span className="eyebrow">Simple de verdad</span>
           <h2 className="h2" id="how-title">
             Tu evento online en <span className="accent">3 pasos</span>.
           </h2>
@@ -18,7 +17,7 @@ export function How() {
             </div>
             <div className="step__num">Paso 01</div>
             <h3 className="h3 step__title">Creas tu evento</h3>
-            <p className="step__body">Armas tu evento y tus entradas, de pago o gratis. Te dejamos la página lista con tu marca.</p>
+            <p className="step__body">Pones fecha, lugar y flyer, y armas tus entradas: generales, VIP, preventas o gratis. Tu página queda lista en tumarca.parygo.com.</p>
           </article>
 
           <article className="step">
@@ -27,7 +26,7 @@ export function How() {
             </div>
             <div className="step__num">Paso 02</div>
             <h3 className="h3 step__title">Compartes el link</h3>
-            <p className="step__body">Tus clientes compran y reciben su entrada con QR al instante, por email y WhatsApp.</p>
+            <p className="step__body">Lo pegas en Instagram, WhatsApp o donde vendas. Tu público compra en un minuto y recibe su entrada con QR en su correo.</p>
           </article>
 
           <article className="step">
@@ -36,7 +35,7 @@ export function How() {
             </div>
             <div className="step__num">Paso 03</div>
             <h3 className="h3 step__title">Validas en la puerta</h3>
-            <p className="step__body">Escaneas cada QR desde tu celular y ves tus ventas en tiempo real. Sin apps que descargar.</p>
+            <p className="step__body">Tu equipo escanea cada QR con el celular, sin instalar nada. Cada entrada pasa una sola vez y ves quién ya llegó en vivo.</p>
           </article>
         </div>
       </div>

@@ -22,12 +22,13 @@ export function Header() {
         </a>
         <nav className="nav" aria-label="primary">
           <a href="#como">Cómo funciona</a>
-          <a href="#incluye">Qué incluye</a>
+          <a href="#seguridad">Seguridad</a>
           <a href="#precios">Precios</a>
+          <a href="#preguntas">Preguntas</a>
         </nav>
         <div className="header__cta">
           <span className="header__login-hint" aria-hidden="true">
-            ¿Organizas eventos?
+            ¿Ya tienes cuenta?
           </span>
           <a
             href={SITE.loginUrl}
@@ -54,7 +55,7 @@ export function Header() {
             href={CTA.hero}
             className="btn btn-primary btn--sm"
           >
-            Empezar
+            Empieza gratis
           </a>
         </div>
       </div>

@@ -4,7 +4,11 @@ import { Uses } from '@/components/sections/Uses';
 import { How } from '@/components/sections/How';
 import { Includes } from '@/components/sections/Includes';
 import { Demo } from '@/components/sections/Demo';
-import { ForOrganizers } from '@/components/sections/ForOrganizers';
+import { Seguridad } from '@/components/sections/Seguridad';
+import { Cobros } from '@/components/sections/Cobros';
+import { Comprador } from '@/components/sections/Comprador';
+import { Comparacion } from '@/components/sections/Comparacion';
+import { Preguntas } from '@/components/sections/Preguntas';
 import { Pricing } from '@/components/sections/Pricing';
 import { Final } from '@/components/sections/Final';
 import { Footer } from '@/components/sections/Footer';
@@ -19,10 +23,14 @@ export default function Home() {
         <Hero />
         <Uses />
         <How />
+        <Seguridad />
         <Includes />
+        <Cobros />
         <Demo />
-        <ForOrganizers />
+        <Comprador />
+        <Comparacion />
         <Pricing />
+        <Preguntas />
         <Final />
       </main>
       <Footer />

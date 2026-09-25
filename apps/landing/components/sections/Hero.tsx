@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 import { CTA } from '@/lib/cta';
 import { TicketCanvas } from '@/components/decorative/TicketCanvas';
 
@@ -38,7 +39,6 @@ export function Hero() {
       <div className="container hero__inner">
         <div className="hero__grid">
           <div>
-            <span className="eyebrow reveal">Vende entradas en Perú</span>
             <h1 className="h1 hero__title" id="hero-title">
               <span className="ink">{l1.nodes}</span>
               <br />
@@ -48,11 +48,11 @@ export function Hero() {
               <span className="word" style={{ ['--w' as string]: l3.next }}>.</span>
             </h1>
             <p className="lede hero__sub reveal">
-              Discotecas, conciertos, fiestas, cumpleaños. Vende entradas, cobra directo y controla quién entra.
+              Vende las entradas de tus fiestas, conciertos y eventos con tu propia marca. Tu público paga y la plata llega directo a tu cuenta: sin comisión por entrada y con control total de quién entra.
             </p>
             <div className="hero__ctas reveal">
               <a href={CTA.hero} className="btn btn-primary btn-lg">
-                Empezar <span className="arrow" aria-hidden="true">→</span>
+                Empieza gratis <span className="arrow" aria-hidden="true">→</span>
               </a>
               <a href="#como" className="btn btn-ghost">
                 <span className="ico" aria-hidden="true">
@@ -62,9 +62,9 @@ export function Hero() {
               </a>
             </div>
             <div className="hero__chips reveal">
-              <span className="chip"><span className="tick" aria-hidden="true">✓</span> Pagos directo a ti</span>
-              <span className="chip"><span className="tick" aria-hidden="true">✓</span> Yape y tarjeta</span>
-              <span className="chip"><span className="tick" aria-hidden="true">✓</span> Cero comisión por entrada</span>
+              <span className="chip"><Check className="tick" aria-hidden="true" /> La plata va a tu cuenta</span>
+              <span className="chip"><Check className="tick" aria-hidden="true" /> Cero comisión por entrada</span>
+              <span className="chip"><Check className="tick" aria-hidden="true" /> Prueba gratis, sin tarjeta</span>
             </div>
           </div>
 

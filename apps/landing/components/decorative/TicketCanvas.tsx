@@ -96,7 +96,7 @@ export function TicketCanvas({ mountId }: { mountId: string }) {
       g.fillText('NOCHE 04', 40, 268);
       g.fillStyle = '#6B5F54';
       g.font = `500 20px ${bodyFont}, sans-serif`;
-      g.fillText('SÁB 24 ENE · CLUB DELMAR · LIMA', 40, 312);
+      g.fillText('SÁB 24 ENE · 10:00 PM · CLUB DELMAR', 40, 312);
       g.fillStyle = '#231C17';
       g.font = `700 22px ${bodyFont}, sans-serif`;
       g.fillText('★ ADMIT ONE', 40, 372);

@@ -1,6 +1,9 @@
 import { CTA } from '@/lib/cta';
+import { SITE } from '@/lib/site';
 
-// 07 — CTA final
+// 07 — CTA final. Tarjeta en TINTA (antes naranja con texto blanco: 2.85:1,
+// fallaba AA). El naranja queda en el botón (tinta sobre acento, 5.91:1) y en
+// los blobs, que no llevan texto.
 export function Final() {
   return (
     <section className="section final" id="contacto" aria-labelledby="final-title">
@@ -9,21 +12,17 @@ export function Final() {
           <div className="blob-a" aria-hidden="true" />
           <div className="blob-b" aria-hidden="true" />
           <div className="final__inner">
-            <h2 className="h2" id="final-title">¿Armamos tu próximo evento?</h2>
+            <h2 className="h2" id="final-title">Tu próximo evento, a la venta hoy.</h2>
             <p>
-              Escríbenos a{' '}
-              <a href="mailto:parygoasistencia@gmail.com" style={{ textDecoration: 'underline' }}>
-                parygoasistencia@gmail.com
-              </a>{' '}
-              y te dejamos vendiendo en 24 horas. Sin compromiso.
+              Crea tu marca en unos minutos y prueba gratis con tu primer evento. Si prefieres conversarlo antes, escríbenos a{' '}
+              <a href={`mailto:${SITE.email}`}>{SITE.email}</a>.
             </p>
             <div className="final__ctas">
-              <a href={CTA.final} className="btn btn-primary btn-lg">
-                Escríbenos <span className="arrow" aria-hidden="true">→</span>
+              <a href={CTA.hero} className="btn btn-primary btn-lg">
+                Empieza gratis <span className="arrow" aria-hidden="true">→</span>
               </a>
               <a href="#precios" className="btn btn-soft btn-lg">Ver precios</a>
             </div>
-            <div className="final__status"><span className="dot" aria-hidden="true" />Respondemos en menos de 1 hora</div>
           </div>
         </div>
       </div>
