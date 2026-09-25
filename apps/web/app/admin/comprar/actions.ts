@@ -43,7 +43,6 @@ export async function comprarPackAction(_prev: CompraState, formData: FormData):
         compraId: compra.id, titulo, soles: cents / 100, email: user.email ?? null,
         exito: `${app}/admin/comprar/listo?compra=${compra.id}`,
         fallo: `${app}/admin/comprar?cancelado=1`,
-        notificacion: `${app}/api/webhooks/parygo-mp`,
       });
       await admin.from('pack_purchases').update({ provider_ref: pref.id }).eq('id', compra.id);
       destino = pref.initPoint;

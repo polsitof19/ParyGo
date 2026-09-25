@@ -3,13 +3,15 @@ import { redirect } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { mpPago } from '@/lib/cobroParygo';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-// Resultado de una compra de paquete (0070). Solo MUESTRA el estado: quien
-// acredita es el webhook de MP o la vuelta de PayPal (settle_pack_purchase).
-export default async function CompraListaPage({ searchParams }: { searchParams: { compra?: string; estado?: string } }) {
+// Resultado de una compra de paquete (0070). Acreditan el webhook de MP, la
+// vuelta de PayPal y, de respaldo, ESTA página al volver de MP (ver abajo).
+// Todos por settle_pack_purchase, idempotente: acreditar dos veces no suma dos.
+export default async function CompraListaPage({ searchParams }: { searchParams: { compra?: string; estado?: string; payment_id?: string } }) {
   const user = await requireSession();
   const ctx = ownerBrandContext(user);
   if (!ctx) redirect('/login');
@@ -17,9 +19,33 @@ export default async function CompraListaPage({ searchParams }: { searchParams: 
   const admin = createAdminClient();
   const id = /^[0-9a-f-]{36}$/i.test(searchParams.compra ?? '') ? searchParams.compra! : null;
   // Acotada a la marca de la sesión: no se lee una compra ajena por su id.
-  const { data: compra } = id
-    ? await admin.from('pack_purchases').select('id, pack, provider, provider_ref, status').eq('id', id).eq('brand_id', ctx.brandId).maybeSingle()
-    : { data: null };
+  const leer = async () => id
+    ? (await admin.from('pack_purchases').select('id, pack, provider, provider_ref, status').eq('id', id).eq('brand_id', ctx.brandId).maybeSingle()).data
+    : null;
+  let compra = await leer();
+
+  // Respaldo del webhook: MP vuelve con ?payment_id=. NO se cree la URL: el
+  // pago se vuelve a pedir a MP con el token de ParyGo, tiene que ser de ESTA
+  // compra (external_reference) y estar aprobado, y la RPC contrasta monto y
+  // moneda contra lo congelado. Si el webhook ya acreditó, da 'already_paid'.
+  const paymentId = searchParams.payment_id ?? '';
+  if (compra?.provider === 'mercadopago' && compra.status === 'pending' && /^d{1,20}$/.test(paymentId)) {
+    try {
+      const pago = await mpPago(paymentId);
+      if (pago.external_reference === compra.id && pago.status === 'approved' && typeof pago.transaction_amount === 'number' && pago.currency_id) {
+        await admin.rpc('settle_pack_purchase', {
+          p_purchase_id: compra.id,
+          p_provider: 'mercadopago',
+          p_payment_id: String(pago.id ?? paymentId),
+          p_paid_cents: Math.round(pago.transaction_amount * 100),
+          p_currency: pago.currency_id,
+        });
+        compra = await leer();
+      }
+    } catch {
+      // Sin respuesta de MP: queda "confirmando" y el webhook lo resuelve.
+    }
+  }
   const { data: brand } = await admin.from('brands').select('event_balance').eq('id', ctx.brandId).single();
 
   let titulo: string;

@@ -25,8 +25,12 @@ function mpConfig(idempotencyKey?: string) {
 
 export async function mpCrearPreferencia(i: {
   compraId: string; titulo: string; soles: number; email: string | null;
-  exito: string; fallo: string; notificacion: string;
+  exito: string; fallo: string;
 }): Promise<{ id: string; initPoint: string }> {
+  // SIN notification_url: la de la preferencia tiene prioridad sobre la de "Tus
+  // integraciones", y la firma con la clave secreta (x-signature) es de esa
+  // configuración del panel. El webhook se configura allá:
+  // https://app.parygo.com/api/webhooks/parygo-mp, evento Pagos.
   const r = await new Preference(mpConfig(i.compraId)).create({
     body: {
       items: [{ id: i.compraId, title: i.titulo, quantity: 1, unit_price: i.soles, currency_id: 'PEN' }],
@@ -34,7 +38,6 @@ export async function mpCrearPreferencia(i: {
       back_urls: { success: i.exito, failure: i.fallo, pending: i.exito },
       auto_return: 'approved',
       external_reference: i.compraId,
-      notification_url: i.notificacion,
       statement_descriptor: 'PARYGO',
       metadata: { compra_id: i.compraId, tipo: 'pack_eventos' },
     },
