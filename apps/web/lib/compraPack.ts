@@ -16,6 +16,8 @@ export async function iniciarCompraPack(a: {
   pack: Pack;
   pasarela: Pasarela;
   volver?: (compraId: string) => string;
+  // Se agrega a la vuelta de PayPal (/api/paypal/volver), p. ej. "&lang=en".
+  sufijoPaypal?: string;
   cancelar?: string;
 }): Promise<{ ok: true; destino: string; compraId: string } | { ok: false; message: string }> {
   const { currency, cents } = precioDe(a.pack, a.pasarela);
@@ -39,7 +41,7 @@ export async function iniciarCompraPack(a: {
     }
     const orden = await paypalCrearOrden({
       compraId: compra.id, titulo, usd: (cents / 100).toFixed(2),
-      volver: `${app}/api/paypal/volver?compra=${compra.id}`,
+      volver: `${app}/api/paypal/volver?compra=${compra.id}${a.sufijoPaypal ?? ''}`,
       cancelar: fallo,
     });
     // provider_ref es lo que autoriza la vuelta: sin guardarlo, no se sigue.

@@ -1,4 +1,4 @@
-import { CTA } from '@/lib/cta';
+import { empezar } from '@/lib/cta';
 import type { Dict } from '@/lib/i18n';
 import { SITE } from '@/lib/site';
 import { Idioma } from '@/components/Idioma';
@@ -22,7 +22,7 @@ export function Footer({ t }: { t: Dict }) {
               <li><a href="#seguridad">{f.links.seguridad}</a></li>
               <li><a href="#incluye">{f.links.incluye}</a></li>
               <li><a href="#precios">{f.links.precios}</a></li>
-              <li><a href={CTA.hero}>{f.links.crear}</a></li>
+              <li><a href={empezar(t.lang)}>{f.links.crear}</a></li>
             </ul>
           </div>
           <div className="footer__col">

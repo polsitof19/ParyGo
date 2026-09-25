@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { completarAlta, type CompletarState } from './actions';
+import { TEXTOS, type Lang } from '../textos';
 
 // La contraseña que eligió en /empezar quedó SOLO en este navegador
 // (sessionStorage), nunca en el servidor antes del pago. Si vuelve en el mismo
@@ -11,16 +12,17 @@ import { completarAlta, type CompletarState } from './actions';
 // correo), la elige acá.
 export const CLAVE_ALTA = 'parygo-alta';
 
-function Boton({ children }: { children: React.ReactNode }) {
+function Boton({ children, espera }: { children: React.ReactNode; espera: string }) {
   const { pending } = useFormStatus();
   return (
     <button type="submit" className="ez-btn ez-btn--primary" disabled={pending} aria-busy={pending}>
-      {pending ? 'Creando tu cuenta…' : <>{children} <ArrowRight aria-hidden="true" className="ez-btn__arrow" /></>}
+      {pending ? espera : <>{children} <ArrowRight aria-hidden="true" className="ez-btn__arrow" /></>}
     </button>
   );
 }
 
-export function Completar({ compraId, email, emailVisible }: { compraId: string; email: string; emailVisible: string }) {
+export function Completar({ compraId, lang, email, emailVisible }: { compraId: string; lang: Lang; email: string; emailVisible: string }) {
+  const t = TEXTOS[lang];
   const [estado, enviar] = useFormState(completarAlta, { ok: false, message: null } as CompletarState);
   const [password, setPassword] = useState('');
   const [ver, setVer] = useState(false);
@@ -47,25 +49,26 @@ export function Completar({ compraId, email, emailVisible }: { compraId: string;
   return (
     <form ref={form} action={enviar} className="ez-form ez-form--codigo">
       <input type="hidden" name="compra" value={compraId} />
+      <input type="hidden" name="lang" value={lang} />
       {auto && !estado.message ? (
-        <p className="ez-body">Creando tu cuenta y entrando a tu panel…</p>
+        <p className="ez-body">{t.l.creando}</p>
       ) : (
         <>
-          <h2 className="ez-h2">Elige tu contraseña</h2>
-          <p className="ez-body">Con <strong>{emailVisible}</strong> y esta contraseña entras a tu panel.</p>
+          <h2 className="ez-h2">{t.l.elige}</h2>
+          <p className="ez-body">{t.l.eligeTxt} <strong>{emailVisible}</strong> {t.l.eligeTxt2}</p>
           <div className="ez-field">
-            <label htmlFor="ez-pass2" className="ez-label">Contraseña</label>
+            <label htmlFor="ez-pass2" className="ez-label">{t.pass}</label>
             <div className="ez-affix">
               <input id="ez-pass2" type={ver ? 'text' : 'password'} className="ez-input ez-input--affix" value={password}
                 onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={8} maxLength={72} required />
-              <button type="button" className="ez-eye" onClick={() => setVer((v) => !v)} aria-label={ver ? 'Ocultar contraseña' : 'Ver contraseña'}>
+              <button type="button" className="ez-eye" onClick={() => setVer((v) => !v)} aria-label={ver ? t.passOcultar : t.passVer}>
                 {ver ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
               </button>
             </div>
-            <p className="ez-hint">Mínimo 8 caracteres.</p>
+            <p className="ez-hint">{t.l.minimo}</p>
           </div>
           {estado.message && <p className="ez-banner" role="alert">{estado.message}</p>}
-          <div className="ez-actions"><Boton>Entrar a mi panel</Boton></div>
+          <div className="ez-actions"><Boton espera={t.momento}>{t.l.entrar}</Boton></div>
         </>
       )}
       <input type="hidden" name="password" value={password} />
@@ -82,11 +85,11 @@ export function Refrescar() {
     const u = new URL(window.location.href);
     const n = Number(u.searchParams.get('r') ?? '0');
     if (n >= 15) return;
-    const t = setTimeout(() => {
+    const id = setTimeout(() => {
       u.searchParams.set('r', String(n + 1));
       window.location.replace(u.toString());
     }, 4000);
-    return () => clearTimeout(t);
+    return () => clearTimeout(id);
   }, []);
   return null;
 }

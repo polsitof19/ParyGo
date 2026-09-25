@@ -32,11 +32,11 @@ export function Demo({ t }: { t: Dict }) {
                 <div className="pscr__body">
                   <div className="pscr__tk sel">
                     <span className="nm">{d.tk1[0]}<span>{d.tk1[1]}</span></span>
-                    <span className="pr"><PrecioLocal pen={40} usd={12} /></span>
+                    <span className="pr"><PrecioLocal pen={40} usd={12} lang={t.lang} /></span>
                   </div>
                   <div className="pscr__tk">
                     <span className="nm">{d.tk2[0]}<span>{d.tk2[1]}</span></span>
-                    <span className="pr"><PrecioLocal pen={80} usd={25} /></span>
+                    <span className="pr"><PrecioLocal pen={80} usd={25} lang={t.lang} /></span>
                   </div>
                   <div className="pscr__buy">{d.buy}</div>
                 </div>

@@ -418,3 +418,30 @@
     padding: var(--ez-s4);
   }
 }
+
+/* — Moneda de pago: soles (Mercado Pago) o dólares (PayPal). Control
+     segmentado: el elegido lleva fondo de tinta (el acento no porta texto). — */
+.ez-moneda {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  margin: 0 0 var(--ez-s2);
+  background: var(--paper-2);
+  border-radius: var(--r-pill);
+}
+.ez-moneda__op {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 var(--ez-s2);
+  border-radius: var(--r-pill);
+  font-size: var(--ez-meta);
+  font-weight: 700;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background-color 180ms var(--ease), color 180ms var(--ease);
+}
+.ez-moneda__op.is-on { background: var(--ink); color: var(--paper); }
+.ez-moneda__op:has(.ez-plan__radio:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }

@@ -35,15 +35,27 @@ export async function sendAltaPendiente(a: { to: string; marca: string; compraId
 
 // Bienvenida al crear la cuenta. También es el aviso para el dueño real del
 // correo: el alta con pack no pide código, así que si no fue él, se entera.
-export async function sendAltaBienvenida(a: { to: string; marca: string; slug: string }): Promise<SendResult> {
+const SOPORTE = 'parygoasistencia@gmail.com';
+
+export async function sendAltaBienvenida(a: { to: string; marca: string; slug: string; lang?: 'es' | 'en' }): Promise<SendResult> {
   const marca = limpio(a.marca);
   const panel = `${publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')}/admin`;
+  const en = a.lang === 'en';
+  const cuerpo = en
+    ? `Your brand <strong>${marca}</strong> is ready. Your page is <strong>${a.slug}.parygo.com</strong> and you can log in to your dashboard with this email and the password you chose.<br><br><span style="color:rgba(35,28,23,0.70);font-size:15px;">Did not create this account? Reply to this email and we will look into it.</span>`
+    : `Tu marca <strong>${marca}</strong> está lista. Tu página es <strong>${a.slug}.parygo.com</strong> y puedes ingresar a tu panel con este correo y la contraseña que elegiste.<br><br><span style="color:rgba(35,28,23,0.70);font-size:15px;">¿No creaste esta cuenta? Responde a este correo y lo revisaremos.</span>`;
   return sendViaResend({
     from: `ParyGo <${FROM_EMAIL()}>`,
     to: [a.to],
-    subject: `${marca} ya está en ParyGo`,
-    html: shell(`Tu marca <strong>${marca}</strong> está lista. Tu página es <strong>${a.slug}.parygo.com</strong> y entras a tu panel con este correo y la contraseña que elegiste.<br><br><span style="color:rgba(35,28,23,0.70);font-size:15px;">¿No creaste esta cuenta? Responde a este correo y lo revisamos.</span>`, { href: panel, label: 'Ir a mi panel' }),
-    text: `Tu marca ${marca} está lista: ${a.slug}.parygo.com. Tu panel: ${panel}\n¿No creaste esta cuenta? Responde a este correo y lo revisamos.`,
+    // "Responde a este correo" tiene que llegar a alguien.
+    replyTo: SOPORTE,
+    subject: en ? `${marca} is now on ParyGo` : `${marca} ya está en ParyGo`,
+    html: shell(cuerpo, { href: panel, label: en ? 'Go to my dashboard' : 'Ir a mi panel' }),
+    text: en
+      ? `Your brand ${marca} is ready: ${a.slug}.parygo.com. Your dashboard: ${panel}
+Did not create this account? Reply to this email and we will look into it.`
+      : `Tu marca ${marca} está lista: ${a.slug}.parygo.com. Tu panel: ${panel}
+¿No creaste esta cuenta? Responde a este correo y lo revisaremos.`,
     tags: [{ name: 'kind', value: 'alta_bienvenida' }],
   });
 }

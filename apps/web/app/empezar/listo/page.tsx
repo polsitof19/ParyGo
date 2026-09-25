@@ -1,12 +1,20 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { acreditarVueltaMp } from '@/lib/compraPack';
 import { Completar, Refrescar } from './Completar';
+import { TEXTOS, esLang } from '../textos';
 
 export const dynamic = 'force-dynamic';
 // Sin esto Next cacheaba la lectura de la compra: pagada en la base y la
 // página seguía diciendo 'confirmando' (medido en el E2E del alta, 2026-09-25).
 export const fetchCache = 'force-no-store';
+
+type Params = { compra?: string; payment_id?: string; lang?: string };
+
+export function generateMetadata({ searchParams }: { searchParams: Params }): Metadata {
+  return { title: esLang(searchParams.lang) === 'en' ? 'Your brand · ParyGo' : 'Tu marca · ParyGo' };
+}
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -16,14 +24,18 @@ function enmascarar(email: string): string {
   return `${u.slice(0, 1)}${'•'.repeat(Math.max(2, Math.min(4, u.length - 1)))}@${d}`;
 }
 
-// Vuelta de Mercado Pago del alta con pack (y link del correo "termina de
-// crear tu marca"). Acredita de respaldo si el webhook no llegó y, con la
-// compra pagada y la marca sin dueña, cierra el alta (Completar).
-export default async function AltaListaPage({ searchParams }: { searchParams: { compra?: string; payment_id?: string } }) {
+// Vuelta del pago del alta con pack (Mercado Pago directo; PayPal pasa antes
+// por /api/paypal/volver, que cobra) y link del correo "termina de crear tu
+// marca". Acredita de respaldo si el webhook de MP no llegó y, con la compra
+// pagada y la marca sin dueña, cierra el alta (Completar).
+export default async function AltaListaPage({ searchParams }: { searchParams: Params }) {
+  const lang = esLang(searchParams.lang);
+  const l = TEXTOS[lang].l;
+  const q = `lang=${lang}`;
   const admin = createAdminClient();
   const id = UUID_RE.test(searchParams.compra ?? '') ? searchParams.compra! : null;
   const leer = async () => id
-    ? (await admin.from('pack_purchases').select('id, pack, provider, status, brand_id, created_by').eq('id', id).maybeSingle()).data
+    ? (await admin.from('pack_purchases').select('id, pack, provider, provider_ref, currency, status, brand_id, created_by').eq('id', id).maybeSingle()).data
     : null;
   let compra = await leer();
   if (compra) {
@@ -43,49 +55,55 @@ export default async function AltaListaPage({ searchParams }: { searchParams: { 
   if (!compra || !brand || compra.created_by !== null) {
     cuerpo = (
       <>
-        <h1 className="ez-h1">No encontramos ese pago.</h1>
-        <p className="ez-lede">Si pagaste y no llegaste a tu panel, escríbenos a parygoasistencia@gmail.com y lo resolvemos.</p>
+        <h1 className="ez-h1">{l.noEncontrado}</h1>
+        <p className="ez-lede">{l.noEncontradoTxt}</p>
       </>
     );
   } else if (compra.status === 'paid' && !miembros && brand.archived_at) {
+    const [a, b, c] = l.aprobadoTxt(brand.name, compra.pack, brand.slug);
     cuerpo = (
       <>
-        <h1 className="ez-h1">Pago <span className="ez-squiggle">aprobado</span>.</h1>
-        <p className="ez-lede">
-          <strong className="ez-url">{brand.name}</strong> ya tiene {compra.pack} evento{compra.pack === 1 ? '' : 's'} cargado{compra.pack === 1 ? '' : 's'}.
-          Tu página será <strong className="ez-url">{brand.slug}.parygo.com</strong>.
-        </p>
-        <Completar compraId={compra.id} email={(brand.contact_email ?? '').toLowerCase()} emailVisible={enmascarar(brand.contact_email ?? '')} />
+        <h1 className="ez-h1">{l.aprobadoA}<span className="ez-squiggle">{l.aprobadoB}</span>{l.aprobadoC}</h1>
+        <p className="ez-lede">{a}<strong className="ez-url">{b}</strong>{c}</p>
+        <Completar compraId={compra.id} lang={lang} email={(brand.contact_email ?? '').toLowerCase()} emailVisible={enmascarar(brand.contact_email ?? '')} />
       </>
     );
   } else if (compra.status === 'paid') {
     cuerpo = (
       <>
-        <h1 className="ez-h1">Tu marca ya está lista.</h1>
-        <p className="ez-lede">Entra con tu correo y tu contraseña para crear tu primer evento.</p>
-        <div className="ez-actions ez-actions--top"><Link href="/login" className="ez-btn ez-btn--primary">Entrar a mi panel</Link></div>
+        <h1 className="ez-h1">{l.lista}</h1>
+        <p className="ez-lede">{l.listaTxt}</p>
+        <div className="ez-actions ez-actions--top"><Link href="/login" className="ez-btn ez-btn--primary">{l.entrar}</Link></div>
       </>
     );
   } else if (compra.status === 'failed') {
+    const moneda = compra.currency === 'USD' ? 'USD' : 'PEN';
     cuerpo = (
       <>
-        <h1 className="ez-h1">El pago no se completó.</h1>
-        <p className="ez-lede">No se te cobró nada. Puedes intentarlo de nuevo con otra tarjeta o con tu cuenta de Mercado Pago.</p>
-        <div className="ez-actions ez-actions--top"><Link href={`/empezar?pack=${compra.pack}`} className="ez-btn ez-btn--primary">Volver a intentar</Link></div>
+        <h1 className="ez-h1">{l.fallo}</h1>
+        <p className="ez-lede">{l.falloTxt}</p>
+        <div className="ez-actions ez-actions--top"><Link href={`/empezar?pack=${compra.pack}&moneda=${moneda}&${q}`} className="ez-btn ez-btn--primary">{l.reintentar}</Link></div>
       </>
     );
   } else {
+    // PayPal cobra en la vuelta: si esa vuelta se cortó, el comprador puede
+    // repetirla (el cobro es idempotente; nunca cobra dos veces).
+    const paypal = compra.provider === 'paypal' && compra.provider_ref
+      ? `/api/paypal/volver?compra=${compra.id}&token=${encodeURIComponent(compra.provider_ref)}&${q}`
+      : null;
     cuerpo = (
       <>
-        <h1 className="ez-h1">Estamos confirmando tu pago.</h1>
-        <p className="ez-lede">Suele tardar unos segundos. Esta página se actualiza sola; también te avisamos por correo apenas se apruebe.</p>
-        <Refrescar />
+        <h1 className="ez-h1">{l.confirmando}</h1>
+        <p className="ez-lede">{l.confirmandoTxt}</p>
+        {paypal
+          ? <div className="ez-actions ez-actions--top"><a href={paypal} className="ez-btn ez-btn--primary">{lang === 'en' ? 'Confirm with PayPal' : 'Confirmar con PayPal'}</a></div>
+          : <Refrescar />}
       </>
     );
   }
 
   return (
-    <main className="ez-main ez-main--solo">
+    <main className="ez-main ez-main--solo" lang={lang}>
       <div className="ez-col">{cuerpo}</div>
     </main>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import { Check } from 'lucide-react';
-import { CTA } from '@/lib/cta';
+import { empezar } from '@/lib/cta';
 import type { Dict } from '@/lib/i18n';
 import { Resaltado } from '@/components/Resaltado';
 import { PACKS, precio, useMoneda } from '@/lib/precios';
@@ -9,11 +9,10 @@ import { PACKS, precio, useMoneda } from '@/lib/precios';
 // 06 — Precios (4 packs; todos incluyen todo, solo cambia la cantidad). La
 // moneda sale del país del visitante (lib/precios.ts): soles en Perú, dólares
 // en el resto. Los montos = apps/web/lib/packs.ts.
-const HREF: Record<number, string> = { 1: CTA.pack1, 3: CTA.pack3, 5: CTA.pack5, 10: CTA.pack10 };
 
 export function Pricing({ t }: { t: Dict }) {
   const c = t.precios;
-  const m = useMoneda();
+  const m = useMoneda(t.lang);
   const unit = (p: (typeof PACKS)[number]) => (m === 'PEN' ? p.pen : p.usd);
   const uno = unit(PACKS[0]);
 
@@ -25,7 +24,7 @@ export function Pricing({ t }: { t: Dict }) {
           <p className="lede">{c.lede}</p>
         </div>
 
-        <a href={CTA.hero} className="prueba reveal">
+        <a href={empezar(t.lang)} className="prueba reveal">
           <span className="prueba__t">{c.prueba.t}</span>
           <span className="prueba__d">{c.prueba.d}</span>
           <span className="prueba__cta">{c.prueba.cta}</span>
@@ -54,7 +53,7 @@ export function Pricing({ t }: { t: Dict }) {
                   ))}
                 </ul>
                 <div className="plan__cta">
-                  <a href={HREF[p.eventos]} className={`btn ${rec ? 'btn-primary' : 'btn-soft'}`}>{c.elegir}</a>
+                  <a href={empezar(t.lang, { pack: p.eventos, moneda: m })} className={`btn ${rec ? 'btn-primary' : 'btn-soft'}`}>{c.elegir}</a>
                 </div>
               </article>
             );

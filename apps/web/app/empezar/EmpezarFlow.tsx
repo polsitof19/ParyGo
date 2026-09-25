@@ -5,23 +5,22 @@ import { useFormState, useFormStatus } from 'react-dom';
 import { ArrowRight, Check, Eye, EyeOff } from 'lucide-react';
 import { confirmarAlta, enviarCodigo, pagarAlta, slugDisponible, type AltaState } from './actions';
 import { CLAVE_ALTA } from './listo/Completar';
+import { TEXTOS, formatoPrecio, type Lang, type Moneda } from './textos';
 
 export type Plan = {
-  id: 'prueba' | '1' | '3' | '5' | '10';
-  nombre: string;
-  detalle: string;
-  precio: number | null; // céntimos; null = gratis
-  porEvento: number | null;
+  id: '1' | '3' | '5' | '10';
   eventos: number;
+  PEN: number; // céntimos
+  USD: number; // centavos
   destacado?: boolean;
 };
 
-const soles = (c: number) => `S/${(c / 100).toLocaleString('es-PE')}`;
+type Opcion = 'prueba' | Plan['id'];
 
 // "Tío Code" → "tio-code". Mismo formato que valida el servidor (SLUG_RE).
 function aSlug(nombre: string): string {
   return nombre
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
     .slice(0, 32).replace(/-+$/, '');
 }
@@ -34,17 +33,28 @@ function enmascarar(email: string): string {
 
 const inicial: AltaState = { ok: false, paso: 'datos', message: null };
 
-function Enviar({ children, disabled }: { children: React.ReactNode; disabled?: boolean }) {
+function Enviar({ children, disabled, espera }: { children: React.ReactNode; disabled?: boolean; espera: string }) {
   const { pending } = useFormStatus();
   return (
     <button type="submit" className="ez-btn ez-btn--primary" disabled={disabled || pending} aria-busy={pending}>
-      {pending ? 'Un momento…' : <>{children} <ArrowRight aria-hidden="true" className="ez-btn__arrow" /></>}
+      {pending ? espera : <>{children} <ArrowRight aria-hidden="true" className="ez-btn__arrow" /></>}
     </button>
   );
 }
 
-export function EmpezarFlow({ planes, inicial: planInicial, pagos, tope, cancelado }: { planes: Plan[]; inicial: Plan['id']; pagos: boolean; tope: number; cancelado?: boolean }) {
-  const [plan, setPlan] = useState<Plan['id']>(planInicial);
+export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial, disponible, tope, cancelado }: {
+  lang: Lang;
+  planes: Plan[];
+  inicial: Opcion;
+  monedaInicial: Moneda;
+  disponible: Record<Moneda, boolean>;
+  tope: number;
+  cancelado?: boolean;
+}) {
+  const t = TEXTOS[lang];
+  const [moneda, setMoneda] = useState<Moneda>(monedaInicial);
+  const pagos = disponible[moneda];
+  const [plan, setPlan] = useState<Opcion>(pagos || planInicial === 'prueba' ? planInicial : 'prueba');
   const [nombre, setNombre] = useState('');
   const [slug, setSlug] = useState('');
   const [slugTocado, setSlugTocado] = useState(false);
@@ -63,8 +73,12 @@ export function EmpezarFlow({ planes, inicial: planInicial, pagos, tope, cancela
   const [conf, confirmar] = useFormState(confirmarAlta, inicial);
   const codigoRef = useRef<HTMLInputElement>(null);
 
-  const elegido = planes.find((p) => p.id === plan) ?? planes[0]!;
-  const esPrueba = elegido.precio === null;
+  const elegido = plan === 'prueba' ? null : planes.find((p) => p.id === plan) ?? null;
+  const esPrueba = elegido === null;
+  const precio = (p: Plan) => formatoPrecio(p[moneda], moneda);
+
+  // Sin el medio de pago de esa moneda, un pack elegido vuelve a la prueba.
+  useEffect(() => { if (!pagos && plan !== 'prueba') setPlan('prueba'); }, [pagos, plan]);
 
   // El servidor decide en qué paso quedamos: el código salió → pantalla del
   // código; el alta rebotó por un dato (p. ej. el link se ocupó) → a los datos.
@@ -77,8 +91,8 @@ export function EmpezarFlow({ planes, inicial: planInicial, pagos, tope, cancela
   useEffect(() => { if (enCodigo) codigoRef.current?.focus(); }, [enCodigo]);
   useEffect(() => {
     if (espera <= 0) return;
-    const t = setTimeout(() => setEspera((s) => s - 1), 1000);
-    return () => clearTimeout(t);
+    const id = setTimeout(() => setEspera((s) => s - 1), 1000);
+    return () => clearTimeout(id);
   }, [espera]);
 
   // El link se arma solo desde el nombre hasta que lo edites a mano.
@@ -86,25 +100,26 @@ export function EmpezarFlow({ planes, inicial: planInicial, pagos, tope, cancela
   useEffect(() => {
     setLibre(null);
     if (slug.length < 2) return;
-    const t = setTimeout(async () => setLibre(await slugDisponible(slug)), 450);
-    return () => clearTimeout(t);
+    const id = setTimeout(async () => setLibre(await slugDisponible(slug)), 450);
+    return () => clearTimeout(id);
   }, [slug]);
 
   const err = { ...((esPrueba ? (conf.paso === 'datos' ? conf.fieldErrors : undefined) ?? envio.fieldErrors : pago.fieldErrors) ?? {}), ...(errPass ? { password: errPass } : {}) };
   const aviso = enCodigo ? null : esPrueba ? (conf.paso === 'datos' ? conf.message : null) ?? (envio.ok ? null : envio.message) : pago.message;
-  const cta = 'Crear mi marca';
 
   // Pack: la contraseña NO va al servidor antes del pago. Queda en este
   // navegador y /empezar/listo la usa al volver con el pago aprobado.
   function antesDePagar(e: React.FormEvent<HTMLFormElement>) {
     if (esPrueba) return;
-    if (password.length < 8) { e.preventDefault(); setErrPass('Mínimo 8 caracteres.'); return; }
+    if (password.length < 8) { e.preventDefault(); setErrPass(t.m.passCorta); return; }
     setErrPass(null);
     try { sessionStorage.setItem(CLAVE_ALTA, JSON.stringify({ email: email.toLowerCase(), password })); } catch { /* la elige al volver */ }
   }
 
   const ocultos = (
     <>
+      <input type="hidden" name="lang" value={lang} />
+      <input type="hidden" name="moneda" value={moneda} />
       <input type="hidden" name="plan" value={plan} />
       <input type="hidden" name="nombre" value={nombre} />
       <input type="hidden" name="slug" value={slug} />
@@ -114,101 +129,108 @@ export function EmpezarFlow({ planes, inicial: planInicial, pagos, tope, cancela
     </>
   );
 
+  const fila = (id: Opcion, nombreFila: string, detalle: string, precioFila: string, apagado: boolean, destacado?: boolean) => (
+    <label key={id} className={`ez-plan${plan === id ? ' is-on' : ''}${apagado ? ' is-off' : ''}`}>
+      <input type="radio" name="plan-ui" value={id} checked={plan === id} disabled={apagado} onChange={() => setPlan(id)} className="ez-plan__radio" />
+      <span className="ez-plan__dot" aria-hidden="true" />
+      <span className="ez-plan__txt">
+        <span className="ez-plan__name">
+          {nombreFila}
+          {destacado && <span className="ez-tag"><span className="ez-tag__dot" aria-hidden="true" />{t.masElegido}</span>}
+        </span>
+        <span className="ez-plan__det">{apagado ? t.noDisponible : detalle}</span>
+      </span>
+      <span className="ez-plan__price">{precioFila}</span>
+    </label>
+  );
+
   return (
-    <main className="ez-main">
+    <main className="ez-main" lang={lang}>
       <div className="ez-col">
         <h1 className="ez-h1">
-          Tu marca, lista para <span className="ez-squiggle">vender</span>.
+          {t.h1a}<span className="ez-squiggle">{t.h1b}</span>{t.h1c}
         </h1>
         <p className="ez-lede">
-          Elige cómo empezar, pon tus datos y en unos minutos tienes tu página{' '}
-          <strong className="ez-url">{slug || 'tumarca'}.parygo.com</strong> con entradas, cobro directo y escáner.
+          {t.lede1}{' '}
+          <strong className="ez-url">{slug || t.linkPh}.parygo.com</strong> {t.lede2}
         </p>
 
         {!enCodigo ? (
           <form action={esPrueba ? enviar : pagar} onSubmit={antesDePagar} className="ez-form" noValidate>
             <fieldset className="ez-planes">
-              <legend className="ez-h2">Elige cómo empezar</legend>
-              {planes.map((p) => {
-                const apagado = p.precio !== null && !pagos;
-                return (
-                  <label key={p.id} className={`ez-plan${plan === p.id ? ' is-on' : ''}${apagado ? ' is-off' : ''}`}>
-                    <input
-                      type="radio" name="plan-ui" value={p.id} checked={plan === p.id} disabled={apagado}
-                      onChange={() => setPlan(p.id)} className="ez-plan__radio"
-                    />
-                    <span className="ez-plan__dot" aria-hidden="true" />
-                    <span className="ez-plan__txt">
-                      <span className="ez-plan__name">
-                        {p.nombre}
-                        {p.destacado && <span className="ez-tag"><span className="ez-tag__dot" aria-hidden="true" />El más elegido</span>}
-                      </span>
-                      <span className="ez-plan__det">{apagado ? 'El pago en línea se activa muy pronto.' : p.detalle}</span>
-                    </span>
-                    <span className="ez-plan__price">{p.precio === null ? 'Gratis' : soles(p.precio)}</span>
+              <legend className="ez-h2">{t.elige}</legend>
+
+              <div className="ez-moneda" role="radiogroup" aria-label={t.monedaLabel}>
+                {(['PEN', 'USD'] as Moneda[]).map((mo) => (
+                  <label key={mo} className={`ez-moneda__op${moneda === mo ? ' is-on' : ''}`}>
+                    <input type="radio" name="moneda-ui" value={mo} checked={moneda === mo} onChange={() => setMoneda(mo)} className="ez-plan__radio" />
+                    {t.monedas[mo]}
                   </label>
-                );
-              })}
-              <p className="ez-incl">
-                Todo incluido en cualquier opción: tu página con tu logo, entradas con QR, cobro directo a tu Yape o
-                tarjeta, escáner para la puerta y tu panel. <strong>Sin comisión por entrada.</strong>
-              </p>
+                ))}
+              </div>
+
+              {fila('prueba', t.prueba, t.pruebaDet(tope), t.gratis, false)}
+              {planes.map((p) => fila(
+                p.id,
+                `${p.eventos} ${p.eventos === 1 ? t.evento : t.eventos}`,
+                p.eventos === 1 ? t.puntual : `${formatoPrecio(Math.round(p[moneda] / p.eventos / 100) * 100, moneda)} ${t.porEvento}.`,
+                precio(p),
+                !pagos,
+                p.destacado,
+              ))}
+              <p className="ez-incl">{t.incluido} <strong>{t.sinComision}</strong></p>
             </fieldset>
 
             <fieldset className="ez-datos">
-              <legend className="ez-h2">Tu marca</legend>
+              <legend className="ez-h2">{t.tuMarca}</legend>
 
               <div className="ez-field">
-                <label htmlFor="ez-nombre" className="ez-label">Nombre de tu marca</label>
+                <label htmlFor="ez-nombre" className="ez-label">{t.nombre}</label>
                 <input id="ez-nombre" className="ez-input" value={nombre} onChange={(e) => setNombre(e.target.value)}
-                  maxLength={60} autoComplete="organization" placeholder="Ej. Tío Code" aria-invalid={!!err.nombre} aria-describedby={err.nombre ? 'e-nombre' : undefined} />
+                  maxLength={60} autoComplete="organization" placeholder={t.nombrePh} aria-invalid={!!err.nombre} aria-describedby={err.nombre ? 'e-nombre' : undefined} />
                 {err.nombre && <p id="e-nombre" className="ez-err">{err.nombre}</p>}
               </div>
 
               <div className="ez-field">
-                <label htmlFor="ez-slug" className="ez-label">Tu link</label>
+                <label htmlFor="ez-slug" className="ez-label">{t.link}</label>
                 <div className={`ez-affix${err.slug || libre === false ? ' is-bad' : ''}`}>
                   <input id="ez-slug" className="ez-input ez-input--affix" value={slug}
                     onChange={(e) => { setSlugTocado(true); setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 32)); }}
-                    autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="url" placeholder="tumarca"
+                    autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="url" placeholder={t.linkPh}
                     aria-invalid={!!err.slug || libre === false} aria-describedby="e-slug" />
                   <span className="ez-affix__end">.parygo.com</span>
                 </div>
                 <p id="e-slug" className={err.slug || libre === false ? 'ez-err' : 'ez-hint'} aria-live="polite">
-                  {err.slug ?? (libre === false ? 'Ese link ya lo tiene otra marca. Prueba con otro.'
-                    : libre ? <><span className="ez-ok" aria-hidden="true" />Disponible</> : 'Es la dirección de tu página. Solo minúsculas, números y guiones.')}
+                  {err.slug ?? (libre === false ? t.linkTomado : libre ? <><span className="ez-ok" aria-hidden="true" />{t.linkLibre}</> : t.linkHint)}
                 </p>
               </div>
 
               <div className="ez-field">
-                <label htmlFor="ez-email" className="ez-label">Tu correo</label>
+                <label htmlFor="ez-email" className="ez-label">{t.correo}</label>
                 <input id="ez-email" type="email" className="ez-input" value={email} onChange={(e) => setEmail(e.target.value.trim())}
-                  autoComplete="email" inputMode="email" autoCapitalize="none" placeholder="tu@correo.com"
+                  autoComplete="email" inputMode="email" autoCapitalize="none" placeholder={t.correoPh}
                   aria-invalid={!!err.email} aria-describedby="e-email" />
-                <p id="e-email" className={err.email ? 'ez-err' : 'ez-hint'}>{err.email ?? 'Ahí te llega el código y los avisos de pagos.'}</p>
+                <p id="e-email" className={err.email ? 'ez-err' : 'ez-hint'}>{err.email ?? t.correoHint}</p>
               </div>
 
               <div className="ez-field">
-                <label htmlFor="ez-pass" className="ez-label">Contraseña</label>
+                <label htmlFor="ez-pass" className="ez-label">{t.pass}</label>
                 <div className="ez-affix">
                   <input id="ez-pass" type={ver ? 'text' : 'password'} className="ez-input ez-input--affix" value={password}
                     onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={8} maxLength={72}
                     aria-invalid={!!err.password} aria-describedby="e-pass" />
-                  <button type="button" className="ez-eye" onClick={() => setVer((v) => !v)} aria-label={ver ? 'Ocultar contraseña' : 'Ver contraseña'}>
+                  <button type="button" className="ez-eye" onClick={() => setVer((v) => !v)} aria-label={ver ? t.passOcultar : t.passVer}>
                     {ver ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
                   </button>
                 </div>
-                <p id="e-pass" className={err.password ? 'ez-err' : 'ez-hint'}>{err.password ?? 'Mínimo 8 caracteres. Con esto entras a tu panel.'}</p>
+                <p id="e-pass" className={err.password ? 'ez-err' : 'ez-hint'}>{err.password ?? t.passHint}</p>
               </div>
 
               <div className="ez-field">
-                <label htmlFor="ez-wa" className="ez-label">WhatsApp <span className="ez-opt">(opcional)</span></label>
-                <div className="ez-affix">
-                  <span className="ez-affix__start">+51</span>
-                  <input id="ez-wa" type="tel" className="ez-input ez-input--affix" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)}
-                    autoComplete="tel-national" inputMode="tel" placeholder="999 999 999" aria-invalid={!!err.whatsapp} aria-describedby="e-wa" />
-                </div>
-                <p id="e-wa" className={err.whatsapp ? 'ez-err' : 'ez-hint'}>{err.whatsapp ?? 'Para que tus compradores te escriban.'}</p>
+                <label htmlFor="ez-wa" className="ez-label">{t.wa} <span className="ez-opt">{t.opcional}</span></label>
+                <input id="ez-wa" type="tel" className="ez-input" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)}
+                  autoComplete="tel" inputMode="tel" placeholder={t.waPh} aria-invalid={!!err.whatsapp} aria-describedby="e-wa" />
+                <p id="e-wa" className={err.whatsapp ? 'ez-err' : 'ez-hint'}>{err.whatsapp ?? t.waHint}</p>
               </div>
             </fieldset>
 
@@ -217,78 +239,63 @@ export function EmpezarFlow({ planes, inicial: planInicial, pagos, tope, cancela
             <div className="ez-hp" aria-hidden="true"><label>Empresa<input name="empresa" tabIndex={-1} autoComplete="off" /></label></div>
 
             {aviso && <p className="ez-banner" role="alert">{aviso}</p>}
-            {!aviso && cancelado && !esPrueba && (
-              <p className="ez-banner" role="status">No se completó el pago y no se te cobró nada. Cuando quieras, vuelve a intentarlo.</p>
-            )}
+            {!aviso && cancelado && !esPrueba && <p className="ez-banner" role="status">{t.cancelado}</p>}
             <div className="ez-actions">
-              <Enviar disabled={libre === false}>{esPrueba ? 'Enviarme el código' : `Pagar ${soles(elegido.precio!)}`}</Enviar>
+              <Enviar disabled={libre === false} espera={t.momento}>{esPrueba ? t.enviarCodigo : t.pagar(precio(elegido!))}</Enviar>
               <p className="ez-fine">
-                {esPrueba
-                  ? 'Te mandamos un código al correo para confirmar que es tuyo.'
-                  : 'Pago seguro con tarjeta. Al terminar entras directo a tu panel con tus eventos.'}{' '}
-                Al continuar aceptas los{' '}
-                <a href="/terminos" target="_blank" rel="noopener">Términos</a> y la <a href="/privacidad" target="_blank" rel="noopener">Privacidad</a>.
+                {esPrueba ? t.finoPrueba : t.finoPago[moneda]}{' '}
+                {t.acepta}{' '}
+                <a href="/terminos" target="_blank" rel="noopener">{t.terminos}</a> {t.y} <a href="/privacidad" target="_blank" rel="noopener">{t.privacidad}</a>.
               </p>
             </div>
           </form>
         ) : (
           <form action={confirmar} className="ez-form ez-form--codigo">
-            <h2 className="ez-h2">Revisa tu correo</h2>
+            <h2 className="ez-h2">{t.revisa}</h2>
             <p className="ez-body">
-              Te mandamos un código de 8 dígitos a <strong>{enmascarar(email)}</strong>. Si no lo ves, mira en spam o promociones.
+              {t.enviamos} <strong>{enmascarar(email)}</strong>. {t.spam}
             </p>
             <div className="ez-field">
-              <label htmlFor="ez-codigo" className="ez-label">Código</label>
+              <label htmlFor="ez-codigo" className="ez-label">{t.codigo}</label>
               <input id="ez-codigo" ref={codigoRef} name="codigo" className="ez-input ez-input--code" value={codigo}
                 onChange={(e) => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 8))}
                 inputMode="numeric" autoComplete="one-time-code" placeholder="00000000" maxLength={8}
                 aria-invalid={!!conf.fieldErrors?.codigo} aria-describedby="e-codigo" />
-              <p id="e-codigo" className={conf.fieldErrors?.codigo ? 'ez-err' : 'ez-hint'}>
-                {conf.fieldErrors?.codigo ?? 'Vence en una hora.'}
-              </p>
+              <p id="e-codigo" className={conf.fieldErrors?.codigo ? 'ez-err' : 'ez-hint'}>{conf.fieldErrors?.codigo ?? t.vence}</p>
             </div>
             {ocultos}
             {conf.paso === 'codigo' && conf.message && <p className="ez-banner" role="alert">{conf.message}</p>}
             {!envio.ok && envio.message && <p className="ez-banner" role="alert">{envio.message}</p>}
             <div className="ez-actions">
-              <Enviar disabled={codigo.length < 8}>{cta}</Enviar>
-              <p className="ez-fine">
-                {esPrueba
-                  ? `Entras a tu panel con tu evento de prueba: hasta ${tope} entradas.`
-                  : 'Te llevamos a Mercado Pago. Al volver, tus eventos ya están en tu saldo.'}
-              </p>
+              <Enviar disabled={codigo.length < 8} espera={t.momento}>{t.crear}</Enviar>
+              <p className="ez-fine">{t.finoCodigo(tope)}</p>
             </div>
             <div className="ez-links">
-              <button type="button" className="ez-link" onClick={() => setEnCodigo(false)}>Cambiar mis datos</button>
+              <button type="button" className="ez-link" onClick={() => setEnCodigo(false)}>{t.cambiar}</button>
               <button type="submit" formAction={enviar} className="ez-link" disabled={espera > 0}>
-                {espera > 0 ? `Reenviar código en ${espera}s` : 'Reenviar código'}
+                {espera > 0 ? t.reenviarEn(espera) : t.reenviar}
               </button>
             </div>
           </form>
         )}
       </div>
 
-      <aside className="ez-resumen" aria-label="Tu plan">
-        <p className="ez-resumen__label">Tu plan</p>
-        <p className="ez-resumen__plan">{elegido.nombre}</p>
-        <p className="ez-resumen__precio">{elegido.precio === null ? 'Gratis' : soles(elegido.precio)}</p>
-        {elegido.porEvento !== null && elegido.eventos > 1 && (
-          <p className="ez-resumen__meta">{soles(elegido.porEvento)} por evento · pago único</p>
+      <aside className="ez-resumen" aria-label={t.tuPlan}>
+        <p className="ez-resumen__label">{t.tuPlan}</p>
+        <p className="ez-resumen__plan">{elegido ? `${elegido.eventos} ${elegido.eventos === 1 ? t.evento : t.eventos}` : t.prueba}</p>
+        <p className="ez-resumen__precio">{elegido ? precio(elegido) : t.gratis}</p>
+        {elegido && elegido.eventos > 1 && (
+          <p className="ez-resumen__meta">{formatoPrecio(Math.round(elegido[moneda] / elegido.eventos / 100) * 100, moneda)} {t.porEvento} · {t.pagoUnico}</p>
         )}
-        {elegido.precio === null && <p className="ez-resumen__meta">1 evento de hasta {tope} entradas</p>}
+        {!elegido && <p className="ez-resumen__meta">{t.pruebaResumen(tope)}</p>}
         <ul className="ez-resumen__list">
-          {[
-            `${elegido.eventos} evento${elegido.eventos === 1 ? '' : 's'} para crear cuando quieras`,
-            'Cobras directo a tu Yape o tarjeta',
-            'Entradas con QR y escáner en la puerta',
-            'Sin comisión por entrada',
-          ].map((t) => (
-            <li key={t}><Check aria-hidden="true" className="ez-tick" />{t}</li>
+          {t.resumen(elegido ? elegido.eventos : 1).map((x) => (
+            <li key={x}><Check aria-hidden="true" className="ez-tick" />{x}</li>
           ))}
         </ul>
         <p className="ez-resumen__url">
           <span className="ez-ok" aria-hidden="true" />
-          {slug || 'tumarca'}.parygo.com
+          {slug || t.linkPh}.parygo.com
         </p>
       </aside>
     </main>

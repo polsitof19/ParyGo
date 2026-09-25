@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { sendAltaBienvenida } from '@/lib/email/sendAltaEmails';
+import { TEXTOS, esLang } from '../textos';
 
 export type CompletarState = { ok: boolean; message: string | null };
 
@@ -22,15 +23,17 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // dueña desde la cabina) se niegan a colgarle acceso a otra marca. Así pagar
 // con el correo de otro no da el escáner ni el panel de nadie.
 export async function completarAlta(_prev: CompletarState, fd: FormData): Promise<CompletarState> {
+  const lang = esLang(fd.get('lang'));
+  const l = TEXTOS[lang].l;
   const compraId = String(fd.get('compra') ?? '');
   const password = String(fd.get('password') ?? '');
-  if (!UUID_RE.test(compraId)) return { ok: false, message: 'Ese link no es válido.' };
-  if (password.length < 8 || password.length > 72) return { ok: false, message: 'La contraseña va de 8 a 72 caracteres.' };
+  if (!UUID_RE.test(compraId)) return { ok: false, message: l.linkMal };
+  if (password.length < 8 || password.length > 72) return { ok: false, message: l.passRango };
 
   const admin = createAdminClient();
   const { data: compra } = await admin.from('pack_purchases').select('id, status, brand_id, created_by').eq('id', compraId).maybeSingle();
-  if (!compra || compra.created_by !== null) return { ok: false, message: 'Ese link no es válido.' };
-  if (compra.status !== 'paid') return { ok: false, message: 'Tu pago todavía no se confirma. Espera unos segundos y vuelve a intentar.' };
+  if (!compra || compra.created_by !== null) return { ok: false, message: l.linkMal };
+  if (compra.status !== 'paid') return { ok: false, message: l.sinConfirmar };
 
   const { data: brand } = await admin.from('brands').select('id, name, slug, contact_email, archived_at').eq('id', compra.brand_id).single();
   const { count: miembros } = await admin.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', compra.brand_id);
@@ -49,17 +52,17 @@ export async function completarAlta(_prev: CompletarState, fd: FormData): Promis
       admin.from('brand_members').select('brand_id', { count: 'exact', head: true }).eq('user_id', existe as string),
     ]);
     if (!u?.user || u.user.email_confirmed_at || suyas) {
-      return { ok: false, message: 'Ese correo ya tiene una cuenta en ParyGo. Escríbenos y dejamos tu marca a tu nombre.' };
+      return { ok: false, message: l.yaCuenta };
     }
     const { error } = await admin.auth.admin.updateUserById(u.user.id, { password, email_confirm: true, user_metadata: { alta_sin_verificar: true } });
-    if (error) return { ok: false, message: 'No pudimos crear tu cuenta. Intenta de nuevo en un momento.' };
+    if (error) return { ok: false, message: l.noAlta };
     userId = u.user.id;
   } else {
     const { data: creado, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { alta_sin_verificar: true } });
     if (error || !creado?.user) {
       // Dos pestañas a la vez: la otra ya creó la cuenta.
       console.error('[empezar/listo] createUser', error?.message);
-      return { ok: false, message: 'No pudimos crear tu cuenta. Si ya la creaste en otra pestaña, entra con tu correo y contraseña.' };
+      return { ok: false, message: l.noCuenta };
     }
     userId = creado.user.id;
   }
@@ -67,11 +70,11 @@ export async function completarAlta(_prev: CompletarState, fd: FormData): Promis
   const { error: mErr } = await admin.from('brand_members').insert({ brand_id: brand.id, user_id: userId, role: 'brand_admin', display_name: email });
   if (mErr) {
     console.error('[empezar/listo] membresía', mErr.message);
-    return { ok: false, message: 'No pudimos terminar tu alta. Intenta de nuevo en un momento.' };
+    return { ok: false, message: l.noAlta };
   }
   await admin.from('brands').update({ archived_at: null }).eq('id', brand.id);
   await admin.from('events_log').insert({ brand_id: brand.id, actor_user_id: userId, type: 'brand_self_signup_claimed', payload: { purchase_id: compra.id } });
-  await sendAltaBienvenida({ to: email, marca: brand.name, slug: brand.slug });
+  await sendAltaBienvenida({ to: email, marca: brand.name, slug: brand.slug, lang });
 
   const { error: inErr } = await createClient().auth.signInWithPassword({ email, password });
   redirect(inErr ? '/login' : '/admin');

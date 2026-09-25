@@ -7,10 +7,11 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { publicEnv } from '@/lib/env';
 import { packDe } from '@/lib/packs';
-import { mpListo } from '@/lib/cobroParygo';
+import { mpListo, paypalListo } from '@/lib/cobroParygo';
 import { iniciarCompraPack } from '@/lib/compraPack';
 import { crearMarcaParaUsuario, SLUGS_RESERVADOS, SLUG_RE } from '@/lib/altaMarca';
 import { sendCodigoAlta } from '@/lib/email/sendCodigoAlta';
+import { TEXTOS, esLang, esMoneda, type Lang, type Textos } from './textos';
 
 // =============================================================
 // Alta AUTOSERVICIO de un organizador (app.parygo.com/empezar, 2026-09-25).
@@ -19,29 +20,43 @@ import { sendCodigoAlta } from '@/lib/email/sendCodigoAlta';
 //   enviarCodigo → usuario SIN confirmar con contraseña al azar + código al
 //   correo; confirmarAlta → verifica el código, pone su contraseña, crea la
 //   marca con la prueba y entra a /admin.
-// PACK (Paul: "directo a Mercado Pago, pagar y ya"; el pago reemplaza al
-// código): pagarAlta crea la marca SIN dueña y manda a pagar. La contraseña
-// NUNCA viaja antes del pago: queda en el navegador (sessionStorage) y la
-// cuenta se crea al volver con el pago aprobado (/empezar/listo). Crear la
-// cuenta antes, sin pago ni código, reabría el agujero del security review:
-// cualquiera dejaba el correo de otro con su clave.
-// El monto del pack lo pone el servidor (lib/packs.ts), nunca el navegador.
+// PACK (Paul: "directo a pagar y ya"; el pago reemplaza al código): pagarAlta
+// crea la marca SIN dueña y manda a pagar: soles → Mercado Pago, dólares →
+// PayPal (MP Perú solo cobra en soles). La contraseña NUNCA viaja antes del
+// pago: queda en el navegador (sessionStorage) y la cuenta se crea al volver
+// con el pago aprobado (/empezar/listo). Crear la cuenta antes, sin pago ni
+// código, reabría el agujero del security review: cualquiera dejaba el correo
+// de otro con su clave.
+// El monto del pack lo pone el servidor (lib/packs.ts + la pasarela), nunca el
+// navegador: el navegador solo elige paquete y moneda, y los dos precios son
+// legítimos.
+// Idioma: el formulario manda `lang` y los mensajes salen en ese idioma.
 // =============================================================
 
-const base = {
-  nombre: z.string().trim().min(2, 'Pon el nombre de tu marca.').max(60, 'Máximo 60 caracteres.'),
-  slug: z.string().trim().toLowerCase().regex(SLUG_RE, 'Solo minúsculas, números y guiones (2 a 32).'),
-  email: z.string().trim().toLowerCase().email('Revisa tu correo.').max(200)
-    // Dominios internos (puestos de puerta @gate.parygo.local, cuentas de
-    // prueba @parygo.test, el propio parygo.com): nadie se registra con ellos.
-    .refine((e) => !/@(?:[a-z0-9-]+\.)*parygo\.(?:local|test|com)$/.test(e), 'Usa tu propio correo.'),
-  whatsapp: z
-    .string()
-    .transform((v) => v.replace(/[\s-]/g, '').replace(/^\+?51(?=9\d{8}$)/, ''))
-    .refine((v) => v === '' || /^9\d{8}$/.test(v), 'Celular de 9 dígitos que empieza con 9.'),
-};
-const pruebaSchema = z.object({ ...base, password: z.string().min(8, 'Mínimo 8 caracteres.').max(72, 'Máximo 72 caracteres.') });
-const pagoSchema = z.object({ ...base, plan: z.enum(['1', '3', '5', '10']) });
+// WhatsApp internacional en E.164. Un celular peruano de 9 dígitos (9xxxxxxxx)
+// sin código se completa con +51; cualquier otro necesita su "+código".
+function normalizarWhatsapp(v: string): string {
+  const x = v.replace(/[\s\-().]/g, '');
+  if (x === '') return '';
+  if (/^9\d{8}$/.test(x)) return `+51${x}`;
+  return x.startsWith('00') ? `+${x.slice(2)}` : x;
+}
+
+function esquemas(m: Textos['m']) {
+  const base = {
+    nombre: z.string().trim().min(2, m.nombreCorto).max(60, m.nombreLargo),
+    slug: z.string().trim().toLowerCase().regex(SLUG_RE, m.slugMal),
+    email: z.string().trim().toLowerCase().email(m.correoMal).max(200)
+      // Dominios internos (puestos de puerta @gate.parygo.local, cuentas de
+      // prueba @parygo.test, el propio parygo.com): nadie se registra con ellos.
+      .refine((e) => !/@(?:[a-z0-9-]+\.)*parygo\.(?:local|test|com)$/.test(e), m.correoPropio),
+    whatsapp: z.string().transform(normalizarWhatsapp).refine((v) => v === '' || /^\+\d{8,15}$/.test(v), m.waMal),
+  };
+  return {
+    prueba: z.object({ ...base, password: z.string().min(8, m.passCorta).max(72, m.passLarga) }),
+    pago: z.object({ ...base, plan: z.enum(['1', '3', '5', '10']) }),
+  };
+}
 
 export type AltaState = {
   ok: boolean;
@@ -109,8 +124,7 @@ async function dentroDelTope(email: string): Promise<boolean> {
   return !error && data === true;
 }
 
-const YA_TIENE_CUENTA = 'Ese correo ya tiene una cuenta en ParyGo. Entra con tu correo y contraseña; desde tu panel compras tus eventos.';
-const LINK_TOMADO: AltaState = { ok: false, paso: 'datos', message: 'Ese link ya lo tiene otra marca.', fieldErrors: { slug: 'Ya está en uso. Prueba con otro.' } };
+const tomado = (m: Textos['m'], recien = false): AltaState => ({ ok: false, paso: 'datos', message: recien ? m.tomadoRecien : m.tomado, fieldErrors: { slug: m.tomadoCampo } });
 
 // Aviso en vivo mientras escribe el link (los subdominios son públicos igual).
 export async function slugDisponible(slug: string): Promise<boolean> {
@@ -123,21 +137,21 @@ export async function slugDisponible(slug: string): Promise<boolean> {
 export async function enviarCodigo(_prev: AltaState, fd: FormData): Promise<AltaState> {
   // Honeypot: un campo que una persona nunca ve ni llena.
   if (String(fd.get('empresa') ?? '').trim() !== '') return { ok: true, paso: 'codigo', message: null };
+  const lang: Lang = esLang(fd.get('lang'));
+  const m = TEXTOS[lang].m;
 
-  const p = pruebaSchema.safeParse({ ...campos(fd), password: fd.get('password') ?? '' });
-  if (!p.success) return { ok: false, paso: 'datos', message: 'Revisa los campos marcados.', fieldErrors: errores(p.error) };
+  const p = esquemas(m).prueba.safeParse({ ...campos(fd), password: fd.get('password') ?? '' });
+  if (!p.success) return { ok: false, paso: 'datos', message: m.revisa, fieldErrors: errores(p.error) };
   const d = p.data;
-  if (!(await slugLibre(d.slug))) return LINK_TOMADO;
-  if (!(await dentroDelTope(d.email))) {
-    return { ok: false, paso: 'datos', message: 'Pediste varios códigos seguidos. Espera unos minutos y vuelve a intentar.' };
-  }
+  if (!(await slugLibre(d.slug))) return tomado(m);
+  if (!(await dentroDelTope(d.email))) return { ok: false, paso: 'datos', message: m.muchos };
 
   const admin = createAdminClient();
   // Primero se mira si el correo ya existe, SIN generar ningún link: un
   // magiclink reemplaza el token de acceso vigente de esa persona.
   const { data: existenteId } = await admin.rpc('usuario_id_por_email', { p_email: d.email });
   if (existenteId && (await yaTieneCuenta(existenteId as string))) {
-    return { ok: false, paso: 'datos', message: YA_TIENE_CUENTA, fieldErrors: { email: 'Ya tiene cuenta.' } };
+    return { ok: false, paso: 'datos', message: m.cuenta, fieldErrors: { email: m.cuentaCampo } };
   }
   // Usuario nuevo SIN confirmar y con una contraseña AL AZAR: la que eligió se
   // pone recién cuando prueba que el correo es suyo (confirmarAlta). Con la
@@ -149,16 +163,18 @@ export async function enviarCodigo(_prev: AltaState, fd: FormData): Promise<Alta
     : await admin.auth.admin.generateLink({ type: 'signup', email: d.email, password: crypto.randomUUID() + crypto.randomUUID() });
   if (link.error) console.error('[empezar] generateLink', link.error.message);
   const codigo = link.data?.properties?.email_otp;
-  if (!codigo) return { ok: false, paso: 'datos', message: 'No pudimos mandarte el código. Intenta de nuevo en un rato.' };
+  if (!codigo) return { ok: false, paso: 'datos', message: m.noCodigo };
 
-  const envio = await sendCodigoAlta({ to: d.email, codigo });
-  if (!envio.ok) return { ok: false, paso: 'datos', message: 'No pudimos mandarte el código. Revisa tu correo e intenta de nuevo.' };
+  const envio = await sendCodigoAlta({ to: d.email, codigo, lang });
+  if (!envio.ok) return { ok: false, paso: 'datos', message: m.noCodigo };
   return { ok: true, paso: 'codigo', message: null };
 }
 
 export async function confirmarAlta(_prev: AltaState, fd: FormData): Promise<AltaState> {
-  const p = pruebaSchema.safeParse({ ...campos(fd), password: fd.get('password') ?? '' });
-  if (!p.success) return { ok: false, paso: 'datos', message: 'Revisa los campos marcados.', fieldErrors: errores(p.error) };
+  const lang: Lang = esLang(fd.get('lang'));
+  const m = TEXTOS[lang].m;
+  const p = esquemas(m).prueba.safeParse({ ...campos(fd), password: fd.get('password') ?? '' });
+  if (!p.success) return { ok: false, paso: 'datos', message: m.revisa, fieldErrors: errores(p.error) };
   const d = p.data;
   const codigo = String(fd.get('codigo') ?? '').replace(/\D/g, '');
 
@@ -170,11 +186,9 @@ export async function confirmarAlta(_prev: AltaState, fd: FormData): Promise<Alt
   if (actual && actual.email?.toLowerCase() === d.email) {
     userId = actual.id;
   } else {
-    if (codigo.length < 6) return { ok: false, paso: 'codigo', message: null, fieldErrors: { codigo: 'Escribe el código que te llegó.' } };
+    if (codigo.length < 6) return { ok: false, paso: 'codigo', message: null, fieldErrors: { codigo: m.escribeCodigo } };
     const v = await supabase.auth.verifyOtp({ email: d.email, token: codigo, type: 'email' });
-    if (v.error || !v.data.user) {
-      return { ok: false, paso: 'codigo', message: null, fieldErrors: { codigo: 'El código no coincide o ya venció. Revisa el último que te llegó.' } };
-    }
+    if (v.error || !v.data.user) return { ok: false, paso: 'codigo', message: null, fieldErrors: { codigo: m.codigoMal } };
     userId = v.data.user.id;
   }
 
@@ -191,21 +205,19 @@ export async function confirmarAlta(_prev: AltaState, fd: FormData): Promise<Alt
     // Sin contraseña guardada o sin sesión NO se crea la marca: quedaría una
     // marca a la que su dueño no puede entrar.
     console.error('[empezar] contraseña/sesión', inErr.message);
-    return { ok: false, paso: 'codigo', message: 'No pudimos terminar de crear tu cuenta. Pide un código nuevo e intenta otra vez.' };
+    return { ok: false, paso: 'codigo', message: m.noCuenta };
   }
 
-  if (!(await slugLibre(d.slug))) return { ...LINK_TOMADO, message: 'Ese link lo tomó otra marca hace un momento. Elige otro y listo.' };
+  if (!(await slugLibre(d.slug))) return tomado(m, true);
   const alta = await crearMarcaParaUsuario({
     userId, email: d.email, nombre: d.nombre, slug: d.slug,
-    whatsappE164: d.whatsapp ? `+51${d.whatsapp}` : null,
+    whatsappE164: d.whatsapp || null,
     prueba: true,
   });
   if (!alta.ok) {
     // Dos envíos a la vez: el otro ya creó su marca (una por dueño, 0071).
     if (await yaTieneCuenta(userId)) redirect('/admin');
-    return alta.motivo === 'slug_en_uso'
-      ? { ...LINK_TOMADO, message: 'Ese link lo tomó otra marca hace un momento. Elige otro y listo.' }
-      : { ok: false, paso: 'datos', message: 'No pudimos crear tu marca. Intenta de nuevo en un momento.' };
+    return alta.motivo === 'slug_en_uso' ? tomado(m, true) : { ok: false, paso: 'datos', message: m.noMarca };
   }
   redirect('/admin');
 }
@@ -214,17 +226,21 @@ export async function confirmarAlta(_prev: AltaState, fd: FormData): Promise<Alt
 
 export async function pagarAlta(_prev: AltaState, fd: FormData): Promise<AltaState> {
   if (String(fd.get('empresa') ?? '').trim() !== '') return { ok: false, paso: 'datos', message: null };
+  const lang: Lang = esLang(fd.get('lang'));
+  const m = TEXTOS[lang].m;
 
-  const p = pagoSchema.safeParse({ ...campos(fd), plan: fd.get('plan') });
-  if (!p.success) return { ok: false, paso: 'datos', message: 'Revisa los campos marcados.', fieldErrors: errores(p.error) };
+  const p = esquemas(m).pago.safeParse({ ...campos(fd), plan: fd.get('plan') });
+  if (!p.success) return { ok: false, paso: 'datos', message: m.revisa, fieldErrors: errores(p.error) };
   const d = p.data;
   const pack = packDe(Number(d.plan));
-  if (!pack || !mpListo()) {
-    return { ok: false, paso: 'datos', message: 'El pago en línea se activa muy pronto. Mientras tanto, empieza con la prueba gratis.' };
+  // Soles → Mercado Pago; dólares → PayPal. La moneda la elige el navegador
+  // entre dos precios legítimos; el monto lo pone el server (precioDe).
+  const moneda = esMoneda(fd.get('moneda')) ?? 'PEN';
+  const pasarela = moneda === 'USD' ? 'paypal' : 'mercadopago';
+  if (!pack || !(pasarela === 'paypal' ? paypalListo() : mpListo())) {
+    return { ok: false, paso: 'datos', message: m.pronto };
   }
-  if (!(await dentroDelTope(d.email))) {
-    return { ok: false, paso: 'datos', message: 'Hiciste varios intentos seguidos. Espera unos minutos y vuelve a intentar.' };
-  }
+  if (!(await dentroDelTope(d.email))) return { ok: false, paso: 'datos', message: m.muchos };
 
   const admin = createAdminClient();
   // Una cuenta CONFIRMADA o con marca → que entre por /login. Una sin
@@ -234,7 +250,7 @@ export async function pagarAlta(_prev: AltaState, fd: FormData): Promise<AltaSta
   if (existenteId) {
     const { data: u } = await admin.auth.admin.getUserById(existenteId as string);
     if (u?.user?.email_confirmed_at || (await yaTieneCuenta(existenteId as string))) {
-      return { ok: false, paso: 'datos', message: YA_TIENE_CUENTA, fieldErrors: { email: 'Ya tiene cuenta.' } };
+      return { ok: false, paso: 'datos', message: m.cuenta, fieldErrors: { email: m.cuentaCampo } };
     }
   }
 
@@ -248,27 +264,27 @@ export async function pagarAlta(_prev: AltaState, fd: FormData): Promise<AltaSta
     const { count: miembros } = await admin.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', b.id);
     if (miembros) continue;
     const { count: pagadas } = await admin.from('pack_purchases').select('id', { count: 'exact', head: true }).eq('brand_id', b.id).eq('status', 'paid');
-    if (pagadas) {
-      return { ok: false, paso: 'datos', message: 'Ya tienes un pago aprobado esperando. Revisa tu correo: te mandamos el link para terminar de crear tu marca.' };
-    }
+    if (pagadas) return { ok: false, paso: 'datos', message: m.pagoEsperando };
     if (b.slug === d.slug) brandId = b.id;
   }
   if (!brandId) {
-    if (!(await slugLibre(d.slug))) return LINK_TOMADO;
+    if (!(await slugLibre(d.slug))) return tomado(m);
     const alta = await crearMarcaParaUsuario({
       userId: null, email: d.email, nombre: d.nombre, slug: d.slug,
-      whatsappE164: d.whatsapp ? `+51${d.whatsapp}` : null, prueba: false,
+      whatsappE164: d.whatsapp || null, prueba: false,
     });
-    if (!alta.ok) return alta.motivo === 'slug_en_uso' ? LINK_TOMADO : { ok: false, paso: 'datos', message: 'No pudimos preparar tu pago. Intenta de nuevo en un momento.' };
+    if (!alta.ok) return alta.motivo === 'slug_en_uso' ? tomado(m) : { ok: false, paso: 'datos', message: m.noPago };
     brandId = alta.brandId;
   }
 
   const app = publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
+  const q = `lang=${lang}`;
   const compra = await iniciarCompraPack({
-    brandId, userId: null, email: d.email, pack, pasarela: 'mercadopago',
-    volver: (id) => `${app}/empezar/listo?compra=${id}`,
-    cancelar: `${app}/empezar?pack=${d.plan}&cancelado=1`,
+    brandId, userId: null, email: d.email, pack, pasarela,
+    volver: (id) => `${app}/empezar/listo?compra=${id}&${q}`,
+    sufijoPaypal: `&${q}`,
+    cancelar: `${app}/empezar?pack=${d.plan}&moneda=${moneda}&${q}&cancelado=1`,
   });
-  if (!compra.ok) return { ok: false, paso: 'datos', message: compra.message };
+  if (!compra.ok) return { ok: false, paso: 'datos', message: m.noPago };
   redirect(compra.destino);
 }

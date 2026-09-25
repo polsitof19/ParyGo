@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CTA } from '@/lib/cta';
+import { empezar } from '@/lib/cta';
 import type { Dict } from '@/lib/i18n';
 import { SITE } from '@/lib/site';
 import { Idioma } from '@/components/Idioma';
@@ -39,7 +39,7 @@ export function Header({ t }: { t: Dict }) {
             </svg>
             {h.login}
           </a>
-          <a href={CTA.hero} className="btn btn-primary btn--sm">{h.cta}</a>
+          <a href={empezar(t.lang)} className="btn btn-primary btn--sm">{h.cta}</a>
         </div>
       </div>
     </header>

@@ -152,7 +152,7 @@ const es: Dict = {
     },
     badge: 'Más elegido', porEvento: 'por evento', ahorras: 'Ahorras', pagoUnico: 'Pago único', elegir: 'Elegir',
     note: 'Cada evento incluye entradas ilimitadas y todas las funciones.',
-    noteUsd: ' Por el momento, los pagos con tarjeta se procesan en soles peruanos y tu banco realiza la conversión; muy pronto también en dólares mediante PayPal.',
+    noteUsd: ' Los pagos en dólares se procesan de forma segura con PayPal, con tu cuenta o con tarjeta.',
   },
   faq: {
     h2: ['Preguntas ', 'frecuentes', '.'],
@@ -162,6 +162,7 @@ const es: Dict = {
       { q: '¿Cuándo y cómo recibo los ingresos de mis entradas?', a: 'Tus compradores pagan directamente a tu cuenta de cobro (por ejemplo, Mercado Pago o Yape). ParyGo nunca recibe ese dinero, por lo que no hay liquidaciones ni esperas de nuestra parte: los plazos son los de tu medio de pago.' },
       { q: '¿Puedo probar ParyGo antes de pagar?', a: 'Sí. La prueba gratuita incluye un evento de hasta 20 entradas, sin tarjeta; solo confirmas tu correo con un código.' },
       { q: '¿Qué medios de pago pueden usar mis compradores?', a: 'Actualmente, tarjetas de crédito y débito y saldo de Mercado Pago, además de Yape en Perú. Estamos incorporando PayPal, criptomonedas y más medios locales de forma progresiva.' },
+      { q: '¿En qué moneda pago los paquetes de ParyGo?', a: 'Puedes pagarlos en dólares con PayPal, con tu cuenta o con tarjeta, o en soles peruanos con Mercado Pago. El precio es fijo y lo ves antes de pagar.' },
       { q: '¿Mis compradores necesitan crear una cuenta o instalar una aplicación?', a: 'No. Eligen sus entradas, ingresan su nombre y correo, pagan y reciben su código QR al instante, todo desde el navegador.' },
       { q: '¿Qué ocurre si falla la conexión a internet en el acceso?', a: 'El escáner descarga las entradas antes de la apertura y continúa validando sin conexión. Al recuperar la señal, se sincroniza automáticamente.' },
       { q: '¿Una entrada puede usarse dos veces?', a: 'No. Cada código QR es válido una sola vez: si una entrada se reenvía o se copia, el segundo escaneo se rechaza.' },
@@ -306,7 +307,7 @@ const en: Dict = {
     },
     badge: 'Most popular', porEvento: 'per event', ahorras: 'You save', pagoUnico: 'One-time payment', elegir: 'Choose',
     note: 'Every event includes unlimited tickets and every feature.',
-    noteUsd: ' For now, card payments are processed in Peruvian soles and your bank handles the conversion; payments in US dollars through PayPal are coming soon.',
+    noteUsd: ' Payments in US dollars are processed securely through PayPal, with your account or a card.',
   },
   faq: {
     h2: ['Frequently asked ', 'questions', '.'],
@@ -316,6 +317,7 @@ const en: Dict = {
       { q: 'When and how do I receive my ticket revenue?', a: 'Your buyers pay directly into your payment account (for example, Mercado Pago or Yape). ParyGo never receives that money, so there are no payouts or waiting periods on our side: timing depends on your payment provider.' },
       { q: 'Can I try ParyGo before paying?', a: 'Yes. The free trial includes one event with up to 20 tickets, no card required; you only confirm your email with a code.' },
       { q: 'Which payment methods can my buyers use?', a: 'Currently, credit and debit cards and Mercado Pago balance, plus Yape in Peru. We are progressively adding PayPal, cryptocurrencies and more local methods.' },
+      { q: 'In which currency do I pay for ParyGo packages?', a: 'You can pay in US dollars with PayPal, using your account or a card, or in Peruvian soles with Mercado Pago. The price is fixed and shown before you pay.' },
       { q: 'Do my buyers need to create an account or install an app?', a: 'No. They choose their tickets, enter their name and email, pay and receive their QR code instantly, all from the browser.' },
       { q: 'What happens if the internet connection fails at the door?', a: 'The scanner downloads tickets before doors open and keeps validating offline. Once the connection returns, it syncs automatically.' },
       { q: 'Can a ticket be used twice?', a: 'No. Every QR code is valid once: if a ticket is forwarded or copied, the second scan is rejected.' },

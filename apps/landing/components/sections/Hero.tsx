@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react';
-import { CTA } from '@/lib/cta';
+import { empezar } from '@/lib/cta';
 import type { Dict } from '@/lib/i18n';
 import { TicketCanvas } from '@/components/decorative/TicketCanvas';
 
@@ -54,7 +54,7 @@ export function Hero({ t }: { t: Dict }) {
             </h1>
             <p className="lede hero__sub reveal">{h.sub}</p>
             <div className="hero__ctas reveal">
-              <a href={CTA.hero} className="btn btn-primary btn-lg">
+              <a href={empezar(t.lang)} className="btn btn-primary btn-lg">
                 {h.cta} <span className="arrow" aria-hidden="true">→</span>
               </a>
               <a href="#como" className="btn btn-ghost">

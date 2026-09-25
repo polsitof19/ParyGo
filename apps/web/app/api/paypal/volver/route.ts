@@ -11,23 +11,35 @@ export const dynamic = 'force-dynamic';
 // =============================================================
 // PayPal redirige acá con ?token=<orden>. Con intent CAPTURE la plata recién
 // se mueve cuando ESTE server cobra la orden: si el comprador no vuelve, no
-// se le cobra nada. No exige sesión (puede haber vencido mientras pagaba): lo
-// que autoriza es que la orden sea la que el server creó para ESTA compra
-// (provider_ref) y que PayPal confirme la captura COMPLETED; el monto y la
-// moneda los contrasta settle_pack_purchase contra lo congelado.
+// se le cobra nada. No exige sesión (puede haber vencido mientras pagaba, y en
+// el alta de /empezar todavía no hay cuenta): lo que autoriza es que la orden
+// sea la que el server creó para ESTA compra (provider_ref) y que PayPal
+// confirme la captura COMPLETED; el monto y la moneda los contrasta
+// settle_pack_purchase contra lo congelado.
+//
+// A dónde vuelve: una compra del panel (created_by con usuario) a
+// /admin/comprar/listo; una del alta de /empezar (created_by null) a
+// /empezar/listo, que crea la cuenta con el pago ya cobrado.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const compraId = url.searchParams.get('compra') ?? '';
   const orden = url.searchParams.get('token') ?? '';
-  const listo = (estado?: string) =>
-    NextResponse.redirect(new URL(`/admin/comprar/listo?compra=${encodeURIComponent(compraId)}${estado ? `&estado=${estado}` : ''}`, publicEnv.NEXT_PUBLIC_APP_URL));
-  if (!UUID_RE.test(compraId) || !orden) return listo('error');
+  const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'es';
 
   const admin = createAdminClient();
-  const { data: compra } = await admin.from('pack_purchases').select('id, provider, provider_ref, status').eq('id', compraId).maybeSingle();
-  if (!compra || compra.provider !== 'paypal' || compra.provider_ref !== orden) return listo('error');
+  const { data: compra } = UUID_RE.test(compraId)
+    ? await admin.from('pack_purchases').select('id, provider, provider_ref, status, created_by').eq('id', compraId).maybeSingle()
+    : { data: null };
+  const deAlta = compra?.created_by === null;
+  const listo = (estado?: string) => {
+    const destino = deAlta
+      ? `/empezar/listo?compra=${encodeURIComponent(compraId)}&lang=${lang}`
+      : `/admin/comprar/listo?compra=${encodeURIComponent(compraId)}${estado ? `&estado=${estado}` : ''}`;
+    return NextResponse.redirect(new URL(destino, publicEnv.NEXT_PUBLIC_APP_URL));
+  };
+  if (!compra || !orden || compra.provider !== 'paypal' || compra.provider_ref !== orden) return listo('error');
   if (compra.status === 'paid') return listo();
 
   let cap;

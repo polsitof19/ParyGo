@@ -14,9 +14,11 @@ const CLAVE = 'pg-pais';
 // Cloudflare en cualquier dominio suyo ("loc=PE"). La página sale prerenderada
 // en dólares y cambia a soles si el visitante está en Perú. Sin respuesta
 // (bloqueador, local), queda en dólares.
-export function useMoneda(): Moneda {
+export function useMoneda(lang: 'es' | 'en' = 'es'): Moneda {
   const [moneda, setMoneda] = useState<Moneda>('USD');
   useEffect(() => {
+    // La versión en inglés es la internacional: siempre dólares.
+    if (lang === 'en') return;
     let vivo = true;
     try {
       const guardado = sessionStorage.getItem(CLAVE);
@@ -31,7 +33,7 @@ export function useMoneda(): Moneda {
       })
       .catch(() => {});
     return () => { vivo = false; };
-  }, []);
+  }, [lang]);
   return moneda;
 }
 

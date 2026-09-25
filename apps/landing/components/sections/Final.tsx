@@ -1,4 +1,4 @@
-import { CTA } from '@/lib/cta';
+import { empezar } from '@/lib/cta';
 import type { Dict } from '@/lib/i18n';
 import { SITE } from '@/lib/site';
 
@@ -19,7 +19,7 @@ export function Final({ t }: { t: Dict }) {
               {f.p} <a href={`mailto:${SITE.email}`}>{SITE.email}</a>.
             </p>
             <div className="final__ctas">
-              <a href={CTA.hero} className="btn btn-primary btn-lg">
+              <a href={empezar(t.lang)} className="btn btn-primary btn-lg">
                 {f.cta} <span className="arrow" aria-hidden="true">→</span>
               </a>
               <a href="#precios" className="btn btn-soft btn-lg">{f.precios}</a>

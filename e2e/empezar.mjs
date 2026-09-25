@@ -86,13 +86,13 @@ try {
   {
     const p = await b.newPage({ viewport: { width: 390, height: 844 } });
     await llenar(p, { plan: 'prueba', nombre: 'Otro Code', slug: 'code', email: `delivered+alta-b${STAMP}@resend.dev` });
-    await p.getByText(/ya lo tiene otra marca/i).waitFor({ timeout: 8000 }).catch(() => {});
+    await p.getByText(/ya pertenece a otra marca/i).waitFor({ timeout: 8000 }).catch(() => {});
     const t1 = await texto(p);
-    check('B', 'link de una marca existente: avisa y no deja seguir', /ya lo tiene otra marca/i.test(t1) && await p.getByRole('button', { name: /Enviarme el código/ }).isDisabled());
+    check('B', 'link de una marca existente: avisa y no deja seguir', /ya pertenece a otra marca/i.test(t1) && await p.getByRole('button', { name: /Enviarme el código/ }).isDisabled());
 
     await p.fill('#ez-slug', 'soporte');
-    await p.getByText(/ya lo tiene otra marca/i).waitFor({ timeout: 8000 }).catch(() => {});
-    check('B', 'link reservado (soporte): no disponible', /ya lo tiene otra marca/i.test(await texto(p)));
+    await p.getByText(/ya pertenece a otra marca/i).waitFor({ timeout: 8000 }).catch(() => {});
+    check('B', 'link reservado (soporte): no disponible', /ya pertenece a otra marca/i.test(await texto(p)));
 
     await p.fill('#ez-slug', `e2e-alta-b${STAMP}`);
     // Dominios internos (puestos de puerta, cuentas de prueba): rechazados.
@@ -262,7 +262,7 @@ try {
       check('E', 'otro navegador: pide elegir la contraseña', /Elige tu contraseña/.test(await q.locator('main').innerText()));
       await q.screenshot({ path: 'tmp/empezar/listo-elegir.png' });
       await q.fill('#ez-pass2', 'OtraClave!2026');
-      await q.getByRole('button', { name: /Entrar a mi panel/ }).click();
+      await q.getByRole('button', { name: /Ingresar a mi panel/ }).click();
       await q.waitForURL(/\/admin/, { timeout: 40000 });
       await q.getByText(/Primeros pasos|Inicia sesión/).first().waitFor({ timeout: 30000 }).catch(() => {});
       check('E', 'entra a su panel con la contraseña nueva', /Primeros pasos/.test(await q.locator('body').innerText()));
