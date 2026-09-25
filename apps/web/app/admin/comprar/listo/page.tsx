@@ -29,7 +29,9 @@ export default async function CompraListaPage({ searchParams }: { searchParams: 
   // compra (external_reference) y estar aprobado, y la RPC contrasta monto y
   // moneda contra lo congelado. Si el webhook ya acreditó, da 'already_paid'.
   const paymentId = searchParams.payment_id ?? '';
-  if (compra?.provider === 'mercadopago' && compra.status === 'pending' && /^d{1,20}$/.test(paymentId)) {
+  // También desde 'failed': un primer intento rechazado marca la compra así y
+  // el reintento aprobado sobre la misma preferencia tiene que poder acreditar.
+  if (compra?.provider === 'mercadopago' && compra.status !== 'paid' && /^\d{1,20}$/.test(paymentId)) {
     try {
       const pago = await mpPago(paymentId);
       if (pago.external_reference === compra.id && pago.status === 'approved' && typeof pago.transaction_amount === 'number' && pago.currency_id) {

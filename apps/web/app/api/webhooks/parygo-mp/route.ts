@@ -32,7 +32,10 @@ export async function POST(req: NextRequest) {
   let body: { type?: string; data?: { id?: string } } = {};
   try { body = (await req.json()) as typeof body; } catch { /* MP a veces manda solo query */ }
   if (body.type && body.type !== 'payment') return NextResponse.json({ ok: true, ignored: body.type });
-  const paymentId = String(body.data?.id ?? dataId);
+  // Solo el data.id FIRMADO (el de la query), nunca el del cuerpo, y numérico:
+  // va a la ruta de la API de MP con el token de ParyGo.
+  const paymentId = dataId;
+  if (!/^\d{1,20}$/.test(paymentId)) return NextResponse.json({ ok: true, ignored: 'bad_id' });
 
   let pago;
   try {
@@ -46,6 +49,18 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient();
   if (pago.status === 'rejected' || pago.status === 'cancelled') {
     await admin.from('pack_purchases').update({ status: 'failed' }).eq('id', compraId).eq('status', 'pending');
+    return NextResponse.json({ ok: true, status: pago.status });
+  }
+  // Devolución o contracargo de un paquete ya acreditado: no se descuenta solo
+  // (el saldo pudo gastarse en eventos), queda en el log para que Paul decida.
+  if (pago.status === 'refunded' || pago.status === 'charged_back' || pago.status === 'in_mediation') {
+    const { data: c } = await admin.from('pack_purchases').select('brand_id, pack, status').eq('id', compraId).maybeSingle();
+    if (c) {
+      await admin.from('events_log').insert({
+        brand_id: c.brand_id, type: 'pack_purchase_reversal',
+        payload: { purchase_id: compraId, payment_id: String(pago.id ?? paymentId), mp_status: pago.status, pack: c.pack, purchase_status: c.status },
+      });
+    }
     return NextResponse.json({ ok: true, status: pago.status });
   }
   if (pago.status !== 'approved') return NextResponse.json({ ok: true, status: pago.status });
