@@ -256,7 +256,7 @@ export default async function AdminHomePage() {
           <p className="s-empty">
             {canCreate
               ? 'Todavía no creaste ningún evento. Usa “Crear evento” para arrancar.'
-              : 'No tienes eventos. Cuando ParyGo te cargue saldo vas a poder crear el primero.'}
+              : 'No tienes eventos. Compra un pack con “Comprar eventos” para crear el primero.'}
           </p>
         ) : upcoming.length === 0 ? (
           <p className="s-empty">No tienes eventos por venir. Los que ya pasaron están en “Anteriores”.</p>
@@ -312,12 +312,12 @@ export default async function AdminHomePage() {
         {balance > 0
           ? <>Te quedan {balance} evento{balance === 1 ? '' : 's'} en tu pack.</>
           : <>No te quedan eventos en tu pack.</>}
-        {!impersonating && publicEnv.NEXT_PUBLIC_SUPPORT_WHATSAPP && (
+        {/* Siempre a la compra del panel (0070); antes iba a WhatsApp y solo
+            si había número de soporte cargado. */}
+        {!impersonating && (
           <>
             {' '}
-            <a className="s-textlink" href={`https://wa.me/${publicEnv.NEXT_PUBLIC_SUPPORT_WHATSAPP.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola, quiero comprar más eventos para ${brand.name}.`)}`} target="_blank" rel="noopener noreferrer">
-              Comprar más
-            </a>
+            <Link className="s-textlink" href="/admin/comprar">Comprar más</Link>
           </>
         )}
       </p>
