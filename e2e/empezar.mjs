@@ -14,7 +14,8 @@
 // D. Pack de 1 evento (si el server tiene PARYGO_MP_*): datos → código → sale
 //    a Mercado Pago con una compra pendiente de S/150 congelada.
 import { chromium } from 'playwright';
-import { svc, anon, BASE, log } from './lib.mjs';
+import { createClient } from '@supabase/supabase-js';
+import { svc, anon, env, BASE, log, otpSession } from './lib.mjs';
 
 const STAMP = Date.now().toString().slice(-7);
 const R = [];
@@ -52,6 +53,29 @@ try {
     usuarios.push(data.user.id);
     const v = await anon().auth.verifyOtp({ email, token: data.properties.email_otp, type: 'email' });
     check('A', 'un código de alta (signup) se valida con type "email"', !!v.data?.session && !v.error, v.error?.message ?? 'sesión ok');
+
+    // usuario_id_por_email (0071): solo service role. Con JWT real, no.
+    const a1 = await anon().rpc('usuario_id_por_email', { p_email: 'brandadmin.demotest@parygo.test' });
+    check('A', 'anon NO puede buscar usuarios por correo', !!a1.error && !a1.data, a1.error?.code);
+    const sesion = await otpSession('brandadmin.demotest@parygo.test');
+    const auth = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+      auth: { persistSession: false }, global: { headers: { Authorization: `Bearer ${sesion.access_token}` } },
+    });
+    const a2 = await auth.rpc('usuario_id_por_email', { p_email: 'brandadmin.demotest@parygo.test' });
+    check('A', 'un organizador (JWT real) NO puede buscar usuarios por correo', !!a2.error && !a2.data, a2.error?.code);
+
+    // Una persona = dueña de UNA marca (0071), con dos altas a la vez.
+    const u = data.user.id;
+    const bs = [];
+    for (const x of ['x', 'y']) {
+      const { data: br, error: e } = await svc.from('brands').insert({ slug: `e2e-alta-dos-${x}${STAMP}`, name: 'E2E dos', contact_email: email, is_test: true }).select('id').single();
+      if (e) throw new Error(e.message);
+      bs.push(br.id);
+      marcas.push({ id: br.id, borrar: true });
+    }
+    const r = await Promise.all(bs.map((b) => svc.from('brand_members').insert({ brand_id: b, user_id: u, role: 'brand_admin', display_name: email })));
+    const oks = r.filter((x) => !x.error).length;
+    check('A', 'dos altas a la vez para la misma persona: una sola queda dueña', oks === 1 && r.some((x) => x.error?.code === '23505'), r.map((x) => x.error?.code ?? 'ok').join(' / '));
   }
 
   // ---------- B ----------

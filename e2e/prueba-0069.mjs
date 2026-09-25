@@ -1,7 +1,8 @@
 // Prueba gratis (0069) contra producción, SOLO en demotest. Decenas de filas,
 // nada de volumen. Deja demotest como estaba (sin prueba, eventos archivados).
 //  1. Concurrencia: 2 create_brand_trial_event simultáneos → 1 evento, 1 NO_TRIAL.
-//  2. Concurrencia: 2 subas de capacidad simultáneas que juntas pasan 50 → 1 ok.
+//  2. Concurrencia: 2 subas de capacidad simultáneas que juntas pasan el tope → 1 ok.
+//     El tope se lee de la base (prueba_tope_entradas(): 50 en 0069, 20 desde 0071).
 //  3. Capa de auth REAL (JWT del dueño de demotest, no service role):
 //     no puede quitar es_prueba, ni pasar el tope, ni llamar al RPC.
 // Uso: node e2e/prueba-0069.mjs
@@ -16,6 +17,8 @@ const tt = (caps) => caps.map((c, i) => ({ name: `T${i}`, price_cents: 1000, cap
 const sufijo = Date.now().toString(36);
 const creados = [];
 
+const { data: TOPE, error: topeErr } = await svc.rpc('prueba_tope_entradas');
+if (topeErr || typeof TOPE !== 'number') throw new Error('no se pudo leer el tope: ' + topeErr?.message);
 const { data: antes } = await svc.from('brands').select('event_balance, prueba_disponible').eq('id', DEMO).single();
 try {
   await svc.from('brands').update({ prueba_disponible: true }).eq('id', DEMO);
@@ -24,7 +27,7 @@ try {
   const r = await Promise.all(['a', 'b'].map((x) => svc.rpc('create_brand_trial_event', {
     p_brand_id: DEMO, p_actor_user_id: null,
     p_event: { slug: `prueba-0069-${sufijo}-${x}`, name: 'Prueba 0069', starts_at: '2027-01-10T02:00:00Z' },
-    p_ticket_types: tt([25, 20]),
+    p_ticket_types: tt([TOPE - 11, 9]), // suma TOPE-2
   })));
   const oks = r.filter((x) => !x.error);
   oks.forEach((x) => creados.push(x.data));
@@ -33,13 +36,13 @@ try {
   const { data: b1 } = await svc.from('brands').select('event_balance, prueba_disponible').eq('id', DEMO).single();
   check(b1.event_balance === antes.event_balance && !b1.prueba_disponible, `saldo intacto (${b1.event_balance}) y prueba gastada`);
 
-  // 2. Dos subas simultáneas: 25+20=45; +4 y +4 = 53 > 50 → una sola pasa.
+  // 2. Dos subas simultáneas: TOPE-2, +2 y +2 = TOPE+2 > TOPE → una sola pasa.
   const { data: tts } = await svc.from('ticket_types').select('id, name, capacity').eq('event_id', ev).order('name');
-  const u = await Promise.all(tts.map((t) => svc.from('ticket_types').update({ capacity: t.capacity + 4 }).eq('id', t.id)));
+  const u = await Promise.all(tts.map((t) => svc.from('ticket_types').update({ capacity: t.capacity + 2 }).eq('id', t.id)));
   const uOk = u.filter((x) => !x.error).length;
   const { data: tts2 } = await svc.from('ticket_types').select('capacity').eq('event_id', ev);
   const total = tts2.reduce((s, t) => s + t.capacity, 0);
-  check(uOk === 1 && total === 49, `2 subas simultáneas → ${uOk} ok, total ${total} (≤ 50)`);
+  check(uOk === 1 && total === TOPE, `2 subas simultáneas → ${uOk} ok, total ${total} (tope ${TOPE})`);
 
   // 3. Como el ORGANIZADOR, con su JWT.
   const s = await otpSession(DUENO_EMAIL);

@@ -324,8 +324,8 @@ organizador daba "permission denied" y "Mi marca" salía EN BLANCO. El panel
 ya la lee con service role acotada a la marca; la migración del grant queda
 para cuando Paul la apruebe (no hace falta para que ande).
 
-PACKS DE EVENTOS (0070, APLICADA en prod 2026-09-25; código aún SIN SUBIR a
-pedido de Paul). El organizador compra 1/3/5/10 eventos en /admin/comprar con
+PACKS DE EVENTOS (0070, en PRODUCCIÓN desde 2026-09-25, con las claves de MP
+de Paul cargadas en Cloudflare). El organizador compra 1/3/5/10 eventos en /admin/comprar con
 MP (cuenta de Paul, PEN) o PayPal (USD); settle_pack_purchase es el único
 camino que suma saldo. Webhook /api/webhooks/parygo-mp: se configura en el
 PANEL de MP ("Tus integraciones" → Webhooks, evento Pagos), NO con
@@ -338,7 +338,24 @@ e2e/packs-rpc.mjs (JWT real + concurrencia, 10/10). El cobro de ENTRADAS por
 MP de cada marca todavía pone notification_url en la preferencia: revisar
 igual antes de que una marca cobre con tarjeta.
 
-Incrementales, idempotentes, numeradas (vamos por 0070). Backwards-compatible
+ALTA AUTOSERVICIO (0071, 2026-09-25): app.parygo.com/empezar reemplaza a
+"Pedir acceso" (/organizadores redirige). El organizador elige prueba gratis
+(1 evento, hasta 20 entradas: prueba_tope_entradas() bajó de 50 a 20) o pack,
+pone su marca y confirma con un código de 8 dígitos al correo (ÚNICA
+verificación, decisión de Paul); pack → MP → saldo solo. Reglas que NO se
+aflojan (security review): el usuario se crea SIN confirmar y con contraseña
+AL AZAR; la suya se pone recién tras el código (con la suya, cualquiera
+pre-registraba el correo de otro); antes de generar un link se busca el
+correo con usuario_id_por_email (service role) porque un magiclink pisa el
+token vigente de esa persona; UNA persona = dueña de UNA marca (índice
+único brand_members_un_dueno) — frena N altas en paralelo con N pruebas;
+el código de correo NO lleva el nombre de marca tipeado. Tras fijar la
+contraseña hay que volver a entrar (cambiarla cierra las sesiones). Tests:
+e2e/empezar.mjs (23/23) y e2e/prueba-0069.mjs (lee el tope de la base).
+PENDIENTE: limpiar usuarios sin confirmar viejos (bloquean el alta desde la
+cabina con "ya existe un usuario"); tope de intentos de código por correo.
+
+Incrementales, idempotentes, numeradas (vamos por 0071). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
 para no romper la app vieja desplegada.
 

@@ -75,7 +75,9 @@ async function yaTieneCuenta(userId: string): Promise<boolean> {
 }
 
 async function slugLibre(slug: string): Promise<boolean> {
-  if (SLUGS_RESERVADOS.has(slug)) return false;
+  // xn-- = nombre punycode: el navegador lo muestra como letras unicode que
+  // imitan a otra marca.
+  if (SLUGS_RESERVADOS.has(slug) || slug.startsWith('xn--')) return false;
   const { count } = await createAdminClient().from('brands').select('id', { count: 'exact', head: true }).eq('slug', slug);
   return (count ?? 0) === 0;
 }
@@ -112,27 +114,25 @@ export async function enviarCodigo(_prev: AltaState, fd: FormData): Promise<Alta
     return { ok: false, paso: 'datos', message: 'Pediste varios códigos seguidos. Espera unos minutos y vuelve a intentar.' };
   }
 
-  // Usuario nuevo SIN confirmar, con su contraseña. Si el correo ya existe,
-  // se le manda un código de acceso, pero solo si no es de alguien que ya
-  // tiene marca (ese entra por /login).
-  let codigo: string | undefined;
-  const nuevo = await admin.auth.admin.generateLink({ type: 'signup', email: d.email, password: d.password });
-  if (!nuevo.error) {
-    codigo = nuevo.data.properties?.email_otp;
-  } else {
-    const existente = await admin.auth.admin.generateLink({ type: 'magiclink', email: d.email });
-    if (existente.error || !existente.data.user) {
-      console.error('[empezar] generateLink', nuevo.error.message, existente.error?.message);
-      return { ok: false, paso: 'datos', message: 'No pudimos mandarte el código. Intenta de nuevo en un rato.' };
-    }
-    if (await yaTieneCuenta(existente.data.user.id)) {
-      return { ok: false, paso: 'datos', message: 'Ese correo ya tiene una cuenta en ParyGo. Entra con tu correo y contraseña.', fieldErrors: { email: 'Ya tiene cuenta.' } };
-    }
-    codigo = existente.data.properties?.email_otp;
+  // Primero se mira si el correo ya existe, SIN generar ningún link: un
+  // magiclink reemplaza el token de acceso vigente de esa persona.
+  const { data: existenteId } = await admin.rpc('usuario_id_por_email', { p_email: d.email });
+  if (existenteId && (await yaTieneCuenta(existenteId as string))) {
+    return { ok: false, paso: 'datos', message: 'Ese correo ya tiene una cuenta en ParyGo. Entra con tu correo y contraseña.', fieldErrors: { email: 'Ya tiene cuenta.' } };
   }
+  // Usuario nuevo SIN confirmar y con una contraseña AL AZAR: la que eligió se
+  // pone recién cuando prueba que el correo es suyo (confirmarAlta). Con la
+  // suya acá, cualquiera pre-registraba el correo de otro con su clave y la
+  // cuenta quedaba tomada el día que esa persona aceptara una invitación
+  // (security review 2026-09-25). Si ya existe sin marca, código de acceso.
+  const link = existenteId
+    ? await admin.auth.admin.generateLink({ type: 'magiclink', email: d.email })
+    : await admin.auth.admin.generateLink({ type: 'signup', email: d.email, password: crypto.randomUUID() + crypto.randomUUID() });
+  if (link.error) console.error('[empezar] generateLink', link.error.message);
+  const codigo = link.data?.properties?.email_otp;
   if (!codigo) return { ok: false, paso: 'datos', message: 'No pudimos mandarte el código. Intenta de nuevo en un rato.' };
 
-  const envio = await sendCodigoAlta({ to: d.email, codigo, marca: d.nombre });
+  const envio = await sendCodigoAlta({ to: d.email, codigo });
   if (!envio.ok) return { ok: false, paso: 'datos', message: 'No pudimos mandarte el código. Revisa tu correo e intenta de nuevo.' };
   return { ok: true, paso: 'codigo', message: null };
 }
@@ -170,11 +170,15 @@ export async function confirmarAlta(_prev: AltaState, fd: FormData): Promise<Alt
   // Quien reusó un usuario sin marca (magiclink) todavía no tiene la contraseña
   // que eligió; al nuevo se la deja igual. Probó que el correo es suyo.
   const { error: pwErr } = await admin.auth.admin.updateUserById(userId, { password: d.password });
-  if (pwErr) console.error('[empezar] updateUserById', pwErr.message);
   // Cambiar la contraseña cierra las sesiones del usuario (la del código
   // incluida): sin volver a entrar, /admin lo mandaba al login.
-  const { error: inErr } = await supabase.auth.signInWithPassword({ email: d.email, password: d.password });
-  if (inErr) console.error('[empezar] signInWithPassword', inErr.message);
+  const { error: inErr } = pwErr ? { error: pwErr } : await supabase.auth.signInWithPassword({ email: d.email, password: d.password });
+  if (inErr) {
+    // Sin contraseña guardada o sin sesión NO se crea la marca: quedaría una
+    // marca a la que su dueño no puede entrar.
+    console.error('[empezar] contraseña/sesión', inErr.message);
+    return { ok: false, paso: 'codigo', message: 'No pudimos terminar de crear tu cuenta. Pide un código nuevo e intenta otra vez.' };
+  }
 
   if (!(await slugLibre(d.slug))) {
     return { ok: false, paso: 'datos', message: 'Ese link lo tomó otra marca hace un momento. Elige otro y listo.', fieldErrors: { slug: 'Ya está en uso. Prueba con otro.' } };
@@ -185,6 +189,8 @@ export async function confirmarAlta(_prev: AltaState, fd: FormData): Promise<Alt
     prueba: d.plan === 'prueba',
   });
   if (!alta.ok) {
+    // Dos envíos a la vez: el otro ya creó su marca (una por dueño, 0071).
+    if (await yaTieneCuenta(userId)) redirect(pack ? '/admin/comprar' : '/admin');
     return alta.motivo === 'slug_en_uso'
       ? { ok: false, paso: 'datos', message: 'Ese link lo tomó otra marca hace un momento. Elige otro y listo.', fieldErrors: { slug: 'Ya está en uso. Prueba con otro.' } }
       : { ok: false, paso: 'datos', message: 'No pudimos crear tu marca. Intenta de nuevo en un momento.' };

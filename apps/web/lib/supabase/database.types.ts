@@ -1522,6 +1522,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      usuario_id_por_email: {
+        Args: { p_email: string }
+        Returns: string | null
+      }
     }
     Enums: {
       order_status:
