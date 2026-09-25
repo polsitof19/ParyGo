@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { ArrowRight, Check, Eye, EyeOff } from 'lucide-react';
-import { confirmarAlta, enviarCodigo, slugDisponible, type AltaState } from './actions';
+import { confirmarAlta, enviarCodigo, pagarAlta, slugDisponible, type AltaState } from './actions';
+import { CLAVE_ALTA } from './listo/Completar';
 
 export type Plan = {
   id: 'prueba' | '1' | '3' | '5' | '10';
@@ -42,7 +43,7 @@ function Enviar({ children, disabled }: { children: React.ReactNode; disabled?: 
   );
 }
 
-export function EmpezarFlow({ planes, inicial: planInicial, pagos, tope }: { planes: Plan[]; inicial: Plan['id']; pagos: boolean; tope: number }) {
+export function EmpezarFlow({ planes, inicial: planInicial, pagos, tope, cancelado }: { planes: Plan[]; inicial: Plan['id']; pagos: boolean; tope: number; cancelado?: boolean }) {
   const [plan, setPlan] = useState<Plan['id']>(planInicial);
   const [nombre, setNombre] = useState('');
   const [slug, setSlug] = useState('');
@@ -57,6 +58,8 @@ export function EmpezarFlow({ planes, inicial: planInicial, pagos, tope }: { pla
   const [espera, setEspera] = useState(0);
 
   const [envio, enviar] = useFormState(enviarCodigo, inicial);
+  const [pago, pagar] = useFormState(pagarAlta, inicial);
+  const [errPass, setErrPass] = useState<string | null>(null);
   const [conf, confirmar] = useFormState(confirmarAlta, inicial);
   const codigoRef = useRef<HTMLInputElement>(null);
 
@@ -87,9 +90,18 @@ export function EmpezarFlow({ planes, inicial: planInicial, pagos, tope }: { pla
     return () => clearTimeout(t);
   }, [slug]);
 
-  const err = (conf.paso === 'datos' ? conf.fieldErrors : undefined) ?? envio.fieldErrors ?? {};
-  const aviso = enCodigo ? null : (conf.paso === 'datos' ? conf.message : null) ?? (envio.ok ? null : envio.message);
-  const cta = esPrueba ? 'Crear mi marca' : `Crear mi marca y pagar ${soles(elegido.precio!)}`;
+  const err = { ...((esPrueba ? (conf.paso === 'datos' ? conf.fieldErrors : undefined) ?? envio.fieldErrors : pago.fieldErrors) ?? {}), ...(errPass ? { password: errPass } : {}) };
+  const aviso = enCodigo ? null : esPrueba ? (conf.paso === 'datos' ? conf.message : null) ?? (envio.ok ? null : envio.message) : pago.message;
+  const cta = 'Crear mi marca';
+
+  // Pack: la contraseña NO va al servidor antes del pago. Queda en este
+  // navegador y /empezar/listo la usa al volver con el pago aprobado.
+  function antesDePagar(e: React.FormEvent<HTMLFormElement>) {
+    if (esPrueba) return;
+    if (password.length < 8) { e.preventDefault(); setErrPass('Mínimo 8 caracteres.'); return; }
+    setErrPass(null);
+    try { sessionStorage.setItem(CLAVE_ALTA, JSON.stringify({ email: email.toLowerCase(), password })); } catch { /* la elige al volver */ }
+  }
 
   const ocultos = (
     <>
@@ -97,7 +109,7 @@ export function EmpezarFlow({ planes, inicial: planInicial, pagos, tope }: { pla
       <input type="hidden" name="nombre" value={nombre} />
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="email" value={email} />
-      <input type="hidden" name="password" value={password} />
+      {esPrueba && <input type="hidden" name="password" value={password} />}
       <input type="hidden" name="whatsapp" value={whatsapp} />
     </>
   );
@@ -114,7 +126,7 @@ export function EmpezarFlow({ planes, inicial: planInicial, pagos, tope }: { pla
         </p>
 
         {!enCodigo ? (
-          <form action={enviar} className="ez-form" noValidate>
+          <form action={esPrueba ? enviar : pagar} onSubmit={antesDePagar} className="ez-form" noValidate>
             <fieldset className="ez-planes">
               <legend className="ez-h2">Elige cómo empezar</legend>
               {planes.map((p) => {
@@ -205,10 +217,16 @@ export function EmpezarFlow({ planes, inicial: planInicial, pagos, tope }: { pla
             <div className="ez-hp" aria-hidden="true"><label>Empresa<input name="empresa" tabIndex={-1} autoComplete="off" /></label></div>
 
             {aviso && <p className="ez-banner" role="alert">{aviso}</p>}
+            {!aviso && cancelado && !esPrueba && (
+              <p className="ez-banner" role="status">No se completó el pago y no se te cobró nada. Cuando quieras, vuelve a intentarlo.</p>
+            )}
             <div className="ez-actions">
-              <Enviar disabled={libre === false}>Enviarme el código</Enviar>
+              <Enviar disabled={libre === false}>{esPrueba ? 'Enviarme el código' : `Pagar ${soles(elegido.precio!)} con Mercado Pago`}</Enviar>
               <p className="ez-fine">
-                Te mandamos un código al correo para confirmar que es tuyo. Al continuar aceptas los{' '}
+                {esPrueba
+                  ? 'Te mandamos un código al correo para confirmar que es tuyo.'
+                  : 'Pagas en Mercado Pago con tarjeta o con tu cuenta. Al volver entras directo a tu panel con tus eventos.'}{' '}
+                Al continuar aceptas los{' '}
                 <a href="/terminos" target="_blank" rel="noopener">Términos</a> y la <a href="/privacidad" target="_blank" rel="noopener">Privacidad</a>.
               </p>
             </div>

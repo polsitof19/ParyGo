@@ -7,12 +7,12 @@ export const dynamic = 'force-dynamic';
 
 const PLANES = ['prueba', '1', '3', '5', '10'] as const;
 
-export default function EmpezarPage({ searchParams }: { searchParams: { pack?: string } }) {
+export default function EmpezarPage({ searchParams }: { searchParams: { pack?: string; cancelado?: string } }) {
   const pedido = PLANES.find((p) => p === searchParams.pack) ?? 'prueba';
   const pagos = mpListo();
 
   // Los precios salen de lib/packs.ts, la misma fuente que cobra el servidor:
-  // la pantalla solo los muestra, el monto lo fija confirmarAlta.
+  // la pantalla solo los muestra, el monto lo fija pagarAlta (lib/packs.ts).
   const planes: Plan[] = [
     { id: 'prueba', nombre: 'Prueba gratis', detalle: `1 evento, hasta ${PRUEBA_TOPE_ENTRADAS} entradas. Sin tarjeta.`, precio: null, porEvento: null, eventos: 1 },
     ...PACKS.map((p) => ({
@@ -26,5 +26,5 @@ export default function EmpezarPage({ searchParams }: { searchParams: { pack?: s
     })),
   ];
 
-  return <EmpezarFlow planes={planes} inicial={pagos || pedido === 'prueba' ? pedido : 'prueba'} pagos={pagos} tope={PRUEBA_TOPE_ENTRADAS} />;
+  return <EmpezarFlow planes={planes} inicial={pagos || pedido === 'prueba' ? pedido : 'prueba'} pagos={pagos} tope={PRUEBA_TOPE_ENTRADAS} cancelado={searchParams.cancelado === '1'} />;
 }

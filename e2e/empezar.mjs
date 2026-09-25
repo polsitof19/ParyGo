@@ -11,8 +11,12 @@
 //    código incorrecto. Ninguno crea marca.
 // C. Prueba gratis por pantalla: datos → código → /admin, marca con
 //    prueba_disponible, saldo 0, dueña, aviso de Yape prendido.
-// D. Pack de 1 evento (si el server tiene PARYGO_MP_*): datos → código → sale
-//    a Mercado Pago con una compra pendiente de S/150 congelada.
+// D. Pack (si el server tiene PARYGO_MP_*): datos → Pagar → Mercado Pago, sin
+//    código ni cuenta; pago aprobado (simulado con la RPC del webhook) → vuelve
+//    en el mismo navegador y entra directo a su panel con 1 evento de saldo.
+// E. Pagó y vuelve desde otro navegador: elige la contraseña y entra.
+// Para D y E el server se compila con NEXT_PUBLIC_APP_URL=https://app.parygo.com
+// (MP rechaza back_urls http://localhost).
 import { chromium } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
 import { svc, anon, env, BASE, log, otpSession } from './lib.mjs';
@@ -146,43 +150,105 @@ try {
   }
 
   // ---------- D ----------
+  // Pack: datos → "Pagar" → Mercado Pago, SIN código. La contraseña no viaja
+  // al servidor: queda en el navegador. El pago aprobado se SIMULA con la misma
+  // RPC que llama el webhook tras re-pedir el pago a MP (settle_pack_purchase);
+  // la llamada real a MP necesita credenciales de prueba.
   {
-    const p = await b.newPage({ viewport: { width: 390, height: 844 } });
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+    const p = await ctx.newPage();
     await p.goto(`${BASE}/empezar?pack=1`, { waitUntil: 'networkidle' });
     const conPagos = !(await p.locator('.ez-plan.is-off').count());
     if (!conPagos) {
       log('D · el server no tiene PARYGO_MP_*: se saltea el pago');
     } else {
+      // Un correo que ya tiene cuenta no paga: entra y compra desde su panel.
+      await llenar(p, { plan: '1', nombre: 'Otro pago', slug: `e2e-alta-otro${STAMP}`, email: 'brandadmin.demotest@parygo.test' });
+      await p.getByRole('button', { name: /Pagar S\/150 con Mercado Pago/ }).click();
+      await p.getByText(/ya tiene una cuenta/i).waitFor({ timeout: 15000 }).catch(() => {});
+      check('D', 'correo con cuenta: no lo manda a pagar', /ya tiene una cuenta/i.test(await texto(p)) && p.url().startsWith(BASE));
+
       const email = `delivered+alta-d${STAMP}@resend.dev`;
+      const slug = `e2e-alta-pack-${STAMP}`;
       await llenar(p, { plan: '1', nombre: `E2E Alta Pack ${STAMP}`, email });
-      await p.waitForTimeout(900);
-      await enviar(p);
-      await p.locator('#ez-codigo').waitFor({ timeout: 15000 });
-      check('D', 'el botón dice cuánto va a pagar', /Crear mi marca y pagar S\/150/.test(await texto(p)));
-      await p.fill('#ez-codigo', await codigoPara(email));
-      await p.getByRole('button', { name: /Crear mi marca y pagar/ }).click();
-      await p.waitForURL((u) => !u.href.startsWith(BASE + '/empezar'), { timeout: 40000 });
-      const url = p.url();
-      // MP rechaza back_urls http://localhost ("auto_return invalid"): en local
-      // lo correcto es caer a su panel, con sesión, para pagar desde ahí.
-      const local = /localhost|127\.0\.0\.1/.test(BASE);
-      check('D', local ? 'en local MP rechaza localhost: cae a su panel para pagar ahí' : 'sale a Mercado Pago',
-        local ? /\/admin\/comprar\?cancelado=1/.test(url) : /mercadopago\.com/.test(url), url.slice(0, 80));
-      const { data: m } = await svc.from('brands').select('id, event_balance, prueba_disponible').eq('slug', `e2e-alta-pack-${STAMP}`).single();
+      check('D', 'el botón es "Pagar S/150 con Mercado Pago" (sin código)', await p.getByRole('button', { name: 'Pagar S/150 con Mercado Pago' }).count() === 1);
+      const posts = [];
+      p.on('request', (r) => { if (r.method() === 'POST' && r.url().startsWith(BASE)) posts.push(r.postData() ?? ''); });
+      await p.getByRole('button', { name: /Pagar S\/150 con Mercado Pago/ }).click();
+      await p.waitForURL(/mercadopago\.com/, { timeout: 40000, waitUntil: 'commit' });
+      check('D', 'va directo a Mercado Pago', /mercadopago\.com/.test(p.url()), p.url().slice(0, 70));
+      check('D', 'la contraseña NO viajó al servidor antes del pago', posts.length > 0 && !posts.some((x) => x.includes('E2eAlta!2026')), `${posts.length} POST`);
+
+      const { data: m } = await svc.from('brands').select('id, event_balance, prueba_disponible').eq('slug', slug).single();
       if (m) marcas.push({ id: m.id, borrar: false });
-      const { data: c } = await svc.from('pack_purchases').select('id, pack, provider, currency, amount_cents, status, provider_ref').eq('brand_id', m.id);
-      check('D', 'compra de 1 evento congelada en S/150 PEN', c?.length === 1 && c[0].pack === 1 && c[0].amount_cents === 15000 && c[0].currency === 'PEN', JSON.stringify(c));
-      if (local) {
-        check('D', 'sin preferencia, la compra queda failed (no se puede cobrar)', c?.[0]?.status === 'failed');
-        const body = await p.locator('body').innerText();
-        check('D', 'la compra del panel abre con su sesión', !/Inicia sesión/.test(body), body.slice(0, 80));
-      } else {
-        check('D', 'pendiente y con preferencia de MP', c?.[0]?.status === 'pending' && !!c?.[0]?.provider_ref);
-      }
-      check('D', 'sin pagar todavía: saldo 0 y sin prueba', m?.event_balance === 0 && m?.prueba_disponible === false);
-      for (const x of c ?? []) await svc.from('pack_purchases').update({ status: 'failed' }).eq('id', x.id).eq('status', 'pending');
+      const { count: sinDuena } = await svc.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', m.id);
+      const { data: ya } = await svc.rpc('usuario_id_por_email', { p_email: email });
+      check('D', 'antes de pagar: marca sin dueña y NINGUNA cuenta creada', sinDuena === 0 && !ya);
+      const { data: c } = await svc.from('pack_purchases').select('id, pack, currency, amount_cents, status, provider_ref').eq('brand_id', m.id);
+      check('D', 'compra pendiente de 1 evento, S/150 PEN, con preferencia de MP', c?.length === 1 && c[0].pack === 1 && c[0].amount_cents === 15000 && c[0].currency === 'PEN' && c[0].status === 'pending' && !!c[0].provider_ref, JSON.stringify(c));
+
+      // Volver SIN pagar: la página dice "confirmando" y no deja crear nada.
+      await p.goto(`${BASE}/empezar/listo?compra=${c[0].id}`, { waitUntil: 'networkidle' });
+      const sinCuenta = !(await svc.rpc('usuario_id_por_email', { p_email: email })).data;
+      check('D', 'sin pago aprobado: "Estamos confirmando" y ninguna cuenta', /confirmando tu pago/i.test(await texto(p)) && sinCuenta);
+
+      // Pago aprobado (simulado, mismo camino que el webhook).
+      const { data: s } = await svc.rpc('settle_pack_purchase', { p_purchase_id: c[0].id, p_provider: 'mercadopago', p_payment_id: `e2e-sim-${STAMP}`, p_paid_cents: 15000, p_currency: 'PEN' });
+      check('D', 'pago aprobado acreditado (+1 evento)', s?.action === 'credited' && s?.new_balance === 1, JSON.stringify(s));
+
+      // Se quedó en "confirmando" (la página se recarga sola): cuando llega la
+      // aprobación, entra SOLO a su panel con la contraseña que dejó guardada.
+      await p.waitForURL(/\/admin/, { timeout: 40000 });
+      await p.getByText(/Primeros pasos|Inicia sesión/).first().waitFor({ timeout: 30000 }).catch(() => {});
+      const panel = await p.locator('body').innerText();
+      check('D', 'vuelve del pago y entra DIRECTO a su panel', /Primeros pasos/.test(panel) && !/Inicia sesión/.test(panel), p.url());
+      const { data: duena } = await svc.from('brand_members').select('user_id, role').eq('brand_id', m.id);
+      if (duena?.[0]) usuarios.push(duena[0].user_id);
+      check('D', 'cuenta creada recién ahora, dueña de la marca', duena?.length === 1 && duena[0].role === 'brand_admin');
+      const { data: m2 } = await svc.from('brands').select('event_balance').eq('id', m.id).single();
+      check('D', 'saldo de 1 evento listo para crear', m2?.event_balance === 1);
+      const { error: le } = await anon().auth.signInWithPassword({ email, password: 'E2eAlta!2026' });
+      check('D', 'entra con la contraseña que eligió antes de pagar', !le, le?.message);
+
+      // Otra vez el link: ya tiene dueña → no se crea otra cuenta.
+      await p.goto(`${BASE}/empezar/listo?compra=${c[0].id}`, { waitUntil: 'networkidle' });
+      check('D', 'el link usado otra vez: "ya está lista"', /ya está lista/i.test(await texto(p)));
     }
-    await p.close();
+    await ctx.close();
+  }
+
+  // ---------- E ----------
+  // Pagó y volvió desde OTRO navegador (o el link del correo): elige la
+  // contraseña en /empezar/listo.
+  {
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+    const p = await ctx.newPage();
+    await p.goto(`${BASE}/empezar?pack=1`, { waitUntil: 'networkidle' });
+    if (!(await p.locator('.ez-plan.is-off').count())) {
+      const email = `delivered+alta-e${STAMP}@resend.dev`;
+      await llenar(p, { plan: '1', nombre: `E2E Alta Otro ${STAMP}`, email });
+      await p.getByRole('button', { name: /Pagar S\/150 con Mercado Pago/ }).click();
+      await p.waitForURL(/mercadopago\.com/, { timeout: 40000, waitUntil: 'commit' });
+      const { data: m } = await svc.from('brands').select('id').eq('slug', `e2e-alta-otro-${STAMP}`).single();
+      if (m) marcas.push({ id: m.id, borrar: false });
+      const { data: c } = await svc.from('pack_purchases').select('id').eq('brand_id', m.id).single();
+      await svc.rpc('settle_pack_purchase', { p_purchase_id: c.id, p_provider: 'mercadopago', p_payment_id: `e2e-sim-e${STAMP}`, p_paid_cents: 15000, p_currency: 'PEN' });
+
+      const otro = await b.newContext({ viewport: { width: 390, height: 844 } });
+      const q = await otro.newPage();
+      await q.goto(`${BASE}/empezar/listo?compra=${c.id}`, { waitUntil: 'networkidle' });
+      check('E', 'otro navegador: pide elegir la contraseña', /Elige tu contraseña/.test(await q.locator('main').innerText()));
+      await q.screenshot({ path: 'tmp/empezar/listo-elegir.png' });
+      await q.fill('#ez-pass2', 'OtraClave!2026');
+      await q.getByRole('button', { name: /Entrar a mi panel/ }).click();
+      await q.waitForURL(/\/admin/, { timeout: 40000 });
+      await q.getByText(/Primeros pasos|Inicia sesión/).first().waitFor({ timeout: 30000 }).catch(() => {});
+      check('E', 'entra a su panel con la contraseña nueva', /Primeros pasos/.test(await q.locator('body').innerText()));
+      const { data: duena } = await svc.from('brand_members').select('user_id').eq('brand_id', m.id);
+      if (duena?.[0]) usuarios.push(duena[0].user_id);
+      await otro.close();
+    }
+    await ctx.close();
   }
 } catch (e) {
   check('!', 'excepción', false, e.message);
@@ -194,6 +260,10 @@ try {
       const { error } = await svc.from('brands').delete().eq('id', m.id);
       if (error) { await svc.from('brands').update({ is_test: true, archived_at: new Date().toISOString() }).eq('id', m.id); log(`marca ${m.id} archivada (no se pudo borrar: ${error.message})`); }
     } else {
+      // Con compra no se puede borrar (on delete restrict): archivada, is_test
+      // y sin dueña (la cuenta de prueba se borra abajo).
+      await svc.from('brand_members').delete().eq('brand_id', m.id);
+      await svc.from('pack_purchases').update({ status: 'failed' }).eq('brand_id', m.id).eq('status', 'pending');
       await svc.from('brands').update({ is_test: true, archived_at: new Date().toISOString() }).eq('id', m.id);
     }
   }

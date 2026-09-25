@@ -5,6 +5,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
+import { publicEnv } from '@/lib/env';
 import { packDe } from '@/lib/packs';
 import { mpListo } from '@/lib/cobroParygo';
 import { iniciarCompraPack } from '@/lib/compraPack';
@@ -14,45 +15,44 @@ import { sendCodigoAlta } from '@/lib/email/sendCodigoAlta';
 // =============================================================
 // Alta AUTOSERVICIO de un organizador (app.parygo.com/empezar, 2026-09-25).
 // =============================================================
-//   1. enviarCodigo: valida, frena abuso, crea el usuario SIN confirmar (o
-//      reusa uno sin marca) y manda un código al correo. No crea marca.
-//   2. confirmarAlta: verifica el código (abre la sesión), crea la marca y:
-//        prueba → /admin con 1 evento de prueba (hasta 20 entradas, 0071);
-//        pack   → Mercado Pago; al volver, el saldo se suma solo (0070).
-// Sin el código no se crea ninguna marca: el correo es la única verificación
-// (decisión de Paul). El monto del pack lo pone el servidor (lib/packs.ts).
+// PRUEBA GRATIS (el correo es la única verificación, decisión de Paul):
+//   enviarCodigo → usuario SIN confirmar con contraseña al azar + código al
+//   correo; confirmarAlta → verifica el código, pone su contraseña, crea la
+//   marca con la prueba y entra a /admin.
+// PACK (Paul: "directo a Mercado Pago, pagar y ya"; el pago reemplaza al
+// código): pagarAlta crea la marca SIN dueña y manda a pagar. La contraseña
+// NUNCA viaja antes del pago: queda en el navegador (sessionStorage) y la
+// cuenta se crea al volver con el pago aprobado (/empezar/listo). Crear la
+// cuenta antes, sin pago ni código, reabría el agujero del security review:
+// cualquiera dejaba el correo de otro con su clave.
+// El monto del pack lo pone el servidor (lib/packs.ts), nunca el navegador.
 // =============================================================
 
-const datosSchema = z.object({
-  plan: z.enum(['prueba', '1', '3', '5', '10']),
+const base = {
   nombre: z.string().trim().min(2, 'Pon el nombre de tu marca.').max(60, 'Máximo 60 caracteres.'),
   slug: z.string().trim().toLowerCase().regex(SLUG_RE, 'Solo minúsculas, números y guiones (2 a 32).'),
   email: z.string().trim().toLowerCase().email('Revisa tu correo.').max(200),
-  password: z.string().min(8, 'Mínimo 8 caracteres.').max(72, 'Máximo 72 caracteres.'),
   whatsapp: z
     .string()
     .transform((v) => v.replace(/[\s-]/g, '').replace(/^\+?51(?=9\d{8}$)/, ''))
     .refine((v) => v === '' || /^9\d{8}$/.test(v), 'Celular de 9 dígitos que empieza con 9.'),
-});
-type Datos = z.infer<typeof datosSchema>;
+};
+const pruebaSchema = z.object({ ...base, password: z.string().min(8, 'Mínimo 8 caracteres.').max(72, 'Máximo 72 caracteres.') });
+const pagoSchema = z.object({ ...base, plan: z.enum(['1', '3', '5', '10']) });
 
 export type AltaState = {
   ok: boolean;
   paso: 'datos' | 'codigo';
   message: string | null;
-  fieldErrors?: Partial<Record<keyof Datos | 'codigo', string>>;
+  fieldErrors?: Partial<Record<'nombre' | 'slug' | 'email' | 'password' | 'whatsapp' | 'codigo', string>>;
 };
 
-function leer(fd: FormData) {
-  return datosSchema.safeParse({
-    plan: fd.get('plan'),
-    nombre: fd.get('nombre') ?? '',
-    slug: fd.get('slug') ?? '',
-    email: fd.get('email') ?? '',
-    password: fd.get('password') ?? '',
-    whatsapp: fd.get('whatsapp') ?? '',
-  });
-}
+const campos = (fd: FormData) => ({
+  nombre: fd.get('nombre') ?? '',
+  slug: fd.get('slug') ?? '',
+  email: fd.get('email') ?? '',
+  whatsapp: fd.get('whatsapp') ?? '',
+});
 
 function errores(e: z.ZodError): AltaState['fieldErrors'] {
   const out: Record<string, string> = {};
@@ -82,43 +82,46 @@ async function slugLibre(slug: string): Promise<boolean> {
   return (count ?? 0) === 0;
 }
 
+// Tope invisible: 5 intentos por correo y 20 por conexión por hora. Sin esto el
+// formulario sirve para bombardear de correos la casilla de un tercero.
+async function dentroDelTope(email: string): Promise<boolean> {
+  const ip = headers().get('cf-connecting-ip')?.trim() || headers().get('x-forwarded-for')?.split(',')[0]?.trim() || null;
+  const { data, error } = await createAdminClient().rpc('register_ticket_resend_attempt', {
+    p_email: `alta:${email}`, p_ip: ip ? `alta:${ip}` : null, p_brand_id: null,
+    p_max_email: 5, p_max_ip: 20, p_window_secs: 3600,
+  });
+  return !error && data === true;
+}
+
+const YA_TIENE_CUENTA = 'Ese correo ya tiene una cuenta en ParyGo. Entra con tu correo y contraseña; desde tu panel compras tus eventos.';
+const LINK_TOMADO: AltaState = { ok: false, paso: 'datos', message: 'Ese link ya lo tiene otra marca.', fieldErrors: { slug: 'Ya está en uso. Prueba con otro.' } };
+
 // Aviso en vivo mientras escribe el link (los subdominios son públicos igual).
 export async function slugDisponible(slug: string): Promise<boolean> {
   const s = String(slug ?? '').trim().toLowerCase();
   return SLUG_RE.test(s) && (await slugLibre(s));
 }
 
+// ------------------------------ PRUEBA GRATIS ------------------------------
+
 export async function enviarCodigo(_prev: AltaState, fd: FormData): Promise<AltaState> {
   // Honeypot: un campo que una persona nunca ve ni llena.
   if (String(fd.get('empresa') ?? '').trim() !== '') return { ok: true, paso: 'codigo', message: null };
 
-  const p = leer(fd);
+  const p = pruebaSchema.safeParse({ ...campos(fd), password: fd.get('password') ?? '' });
   if (!p.success) return { ok: false, paso: 'datos', message: 'Revisa los campos marcados.', fieldErrors: errores(p.error) };
   const d = p.data;
-  if (d.plan !== 'prueba' && !mpListo()) {
-    return { ok: false, paso: 'datos', message: 'El pago en línea se activa muy pronto. Mientras tanto, empieza con la prueba gratis.' };
-  }
-  if (!(await slugLibre(d.slug))) {
-    return { ok: false, paso: 'datos', message: 'Ese link ya lo tiene otra marca.', fieldErrors: { slug: 'Ya está en uso. Prueba con otro.' } };
-  }
-
-  const admin = createAdminClient();
-  // Tope invisible: 5 códigos por correo y 20 por conexión por hora. Sin esto,
-  // el formulario sirve para bombardear de correos la casilla de un tercero.
-  const ip = headers().get('cf-connecting-ip')?.trim() || headers().get('x-forwarded-for')?.split(',')[0]?.trim() || null;
-  const { data: permitido, error: rlErr } = await admin.rpc('register_ticket_resend_attempt', {
-    p_email: `alta:${d.email}`, p_ip: ip ? `alta:${ip}` : null, p_brand_id: null,
-    p_max_email: 5, p_max_ip: 20, p_window_secs: 3600,
-  });
-  if (rlErr || permitido !== true) {
+  if (!(await slugLibre(d.slug))) return LINK_TOMADO;
+  if (!(await dentroDelTope(d.email))) {
     return { ok: false, paso: 'datos', message: 'Pediste varios códigos seguidos. Espera unos minutos y vuelve a intentar.' };
   }
 
+  const admin = createAdminClient();
   // Primero se mira si el correo ya existe, SIN generar ningún link: un
   // magiclink reemplaza el token de acceso vigente de esa persona.
   const { data: existenteId } = await admin.rpc('usuario_id_por_email', { p_email: d.email });
   if (existenteId && (await yaTieneCuenta(existenteId as string))) {
-    return { ok: false, paso: 'datos', message: 'Ese correo ya tiene una cuenta en ParyGo. Entra con tu correo y contraseña.', fieldErrors: { email: 'Ya tiene cuenta.' } };
+    return { ok: false, paso: 'datos', message: YA_TIENE_CUENTA, fieldErrors: { email: 'Ya tiene cuenta.' } };
   }
   // Usuario nuevo SIN confirmar y con una contraseña AL AZAR: la que eligió se
   // pone recién cuando prueba que el correo es suyo (confirmarAlta). Con la
@@ -138,14 +141,10 @@ export async function enviarCodigo(_prev: AltaState, fd: FormData): Promise<Alta
 }
 
 export async function confirmarAlta(_prev: AltaState, fd: FormData): Promise<AltaState> {
-  const p = leer(fd);
+  const p = pruebaSchema.safeParse({ ...campos(fd), password: fd.get('password') ?? '' });
   if (!p.success) return { ok: false, paso: 'datos', message: 'Revisa los campos marcados.', fieldErrors: errores(p.error) };
   const d = p.data;
   const codigo = String(fd.get('codigo') ?? '').replace(/\D/g, '');
-  const pack = d.plan === 'prueba' ? null : packDe(Number(d.plan));
-  if (d.plan !== 'prueba' && (!pack || !mpListo())) {
-    return { ok: false, paso: 'datos', message: 'El pago en línea se activa muy pronto. Mientras tanto, empieza con la prueba gratis.' };
-  }
 
   // Si ya verificó antes (p. ej. el link estaba tomado y lo cambió), la sesión
   // sigue abierta: no se vuelve a pedir un código que ya se usó.
@@ -164,11 +163,10 @@ export async function confirmarAlta(_prev: AltaState, fd: FormData): Promise<Alt
   }
 
   // Doble envío o alguien que ya tiene marca: al panel, sin tocar nada suyo.
-  if (await yaTieneCuenta(userId)) redirect(pack ? '/admin/comprar' : '/admin');
+  if (await yaTieneCuenta(userId)) redirect('/admin');
 
   const admin = createAdminClient();
-  // Quien reusó un usuario sin marca (magiclink) todavía no tiene la contraseña
-  // que eligió; al nuevo se la deja igual. Probó que el correo es suyo.
+  // Probó que el correo es suyo: recién ahora su contraseña.
   const { error: pwErr } = await admin.auth.admin.updateUserById(userId, { password: d.password });
   // Cambiar la contraseña cierra las sesiones del usuario (la del código
   // incluida): sin volver a entrar, /admin lo mandaba al login.
@@ -180,25 +178,80 @@ export async function confirmarAlta(_prev: AltaState, fd: FormData): Promise<Alt
     return { ok: false, paso: 'codigo', message: 'No pudimos terminar de crear tu cuenta. Pide un código nuevo e intenta otra vez.' };
   }
 
-  if (!(await slugLibre(d.slug))) {
-    return { ok: false, paso: 'datos', message: 'Ese link lo tomó otra marca hace un momento. Elige otro y listo.', fieldErrors: { slug: 'Ya está en uso. Prueba con otro.' } };
-  }
+  if (!(await slugLibre(d.slug))) return { ...LINK_TOMADO, message: 'Ese link lo tomó otra marca hace un momento. Elige otro y listo.' };
   const alta = await crearMarcaParaUsuario({
     userId, email: d.email, nombre: d.nombre, slug: d.slug,
     whatsappE164: d.whatsapp ? `+51${d.whatsapp}` : null,
-    prueba: d.plan === 'prueba',
+    prueba: true,
   });
   if (!alta.ok) {
     // Dos envíos a la vez: el otro ya creó su marca (una por dueño, 0071).
-    if (await yaTieneCuenta(userId)) redirect(pack ? '/admin/comprar' : '/admin');
+    if (await yaTieneCuenta(userId)) redirect('/admin');
     return alta.motivo === 'slug_en_uso'
-      ? { ok: false, paso: 'datos', message: 'Ese link lo tomó otra marca hace un momento. Elige otro y listo.', fieldErrors: { slug: 'Ya está en uso. Prueba con otro.' } }
+      ? { ...LINK_TOMADO, message: 'Ese link lo tomó otra marca hace un momento. Elige otro y listo.' }
       : { ok: false, paso: 'datos', message: 'No pudimos crear tu marca. Intenta de nuevo en un momento.' };
   }
+  redirect('/admin');
+}
 
-  if (!pack) redirect('/admin');
-  const compra = await iniciarCompraPack({ brandId: alta.brandId, userId, email: d.email, pack, pasarela: 'mercadopago' });
-  // Si Mercado Pago no respondió, la marca ya existe y la sesión está abierta:
-  // puede pagar desde su panel.
-  redirect(compra.ok ? compra.destino : '/admin/comprar?cancelado=1');
+// ---------------------------------- PACK ----------------------------------
+
+export async function pagarAlta(_prev: AltaState, fd: FormData): Promise<AltaState> {
+  if (String(fd.get('empresa') ?? '').trim() !== '') return { ok: false, paso: 'datos', message: null };
+
+  const p = pagoSchema.safeParse({ ...campos(fd), plan: fd.get('plan') });
+  if (!p.success) return { ok: false, paso: 'datos', message: 'Revisa los campos marcados.', fieldErrors: errores(p.error) };
+  const d = p.data;
+  const pack = packDe(Number(d.plan));
+  if (!pack || !mpListo()) {
+    return { ok: false, paso: 'datos', message: 'El pago en línea se activa muy pronto. Mientras tanto, empieza con la prueba gratis.' };
+  }
+  if (!(await dentroDelTope(d.email))) {
+    return { ok: false, paso: 'datos', message: 'Hiciste varios intentos seguidos. Espera unos minutos y vuelve a intentar.' };
+  }
+
+  const admin = createAdminClient();
+  // Cualquier cuenta con ese correo (con marca o no) → que entre por /login:
+  // la cuenta nueva se crea al volver del pago y no puede pisar a otra.
+  const { data: existenteId } = await admin.rpc('usuario_id_por_email', { p_email: d.email });
+  if (existenteId) return { ok: false, paso: 'datos', message: YA_TIENE_CUENTA, fieldErrors: { email: 'Ya tiene cuenta.' } };
+
+  // ¿Ya había empezado un alta con este correo y no terminó? Se reusa esa
+  // marca sin dueña (si no, un segundo intento dejaba dos marcas y la plata
+  // del segundo pago en una que nunca podría tener dueña).
+  const { data: previas } = await admin.from('brands').select('id, slug').eq('contact_email', d.email).is('archived_at', null);
+  let brandId: string | null = null;
+  for (const b of previas ?? []) {
+    const { count: miembros } = await admin.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', b.id);
+    if (miembros) continue;
+    const { count: pagadas } = await admin.from('pack_purchases').select('id', { count: 'exact', head: true }).eq('brand_id', b.id).eq('status', 'paid');
+    if (pagadas) {
+      return { ok: false, paso: 'datos', message: 'Ya tienes un pago aprobado esperando. Revisa tu correo: te mandamos el link para terminar de crear tu marca.' };
+    }
+    if (b.slug !== d.slug && !(await slugLibre(d.slug))) return LINK_TOMADO;
+    const { error } = await admin.from('brands').update({
+      name: d.nombre, slug: d.slug, whatsapp_e164: d.whatsapp ? `+51${d.whatsapp}` : null,
+    }).eq('id', b.id);
+    if (error) return error.code === '23505' ? LINK_TOMADO : { ok: false, paso: 'datos', message: 'No pudimos preparar tu pago. Intenta de nuevo en un momento.' };
+    brandId = b.id;
+    break;
+  }
+  if (!brandId) {
+    if (!(await slugLibre(d.slug))) return LINK_TOMADO;
+    const alta = await crearMarcaParaUsuario({
+      userId: null, email: d.email, nombre: d.nombre, slug: d.slug,
+      whatsappE164: d.whatsapp ? `+51${d.whatsapp}` : null, prueba: false,
+    });
+    if (!alta.ok) return alta.motivo === 'slug_en_uso' ? LINK_TOMADO : { ok: false, paso: 'datos', message: 'No pudimos preparar tu pago. Intenta de nuevo en un momento.' };
+    brandId = alta.brandId;
+  }
+
+  const app = publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
+  const compra = await iniciarCompraPack({
+    brandId, userId: null, email: d.email, pack, pasarela: 'mercadopago',
+    volver: (id) => `${app}/empezar/listo?compra=${id}`,
+    cancelar: `${app}/empezar?pack=${d.plan}&cancelado=1`,
+  });
+  if (!compra.ok) return { ok: false, paso: 'datos', message: compra.message };
+  redirect(compra.destino);
 }

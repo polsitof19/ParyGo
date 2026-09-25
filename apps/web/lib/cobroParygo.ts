@@ -1,4 +1,4 @@
-import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
+import { mpCrearPreferenciaApi, mpLeerPago } from '@/lib/mpApi';
 
 // =============================================================
 // Cobro de ParyGo (paquetes de eventos) — NO el de las entradas.
@@ -17,10 +17,10 @@ export const mpListo = () => Boolean(env('PARYGO_MP_ACCESS_TOKEN') && env('PARYG
 export const paypalListo = () => Boolean(env('PAYPAL_CLIENT_ID') && env('PAYPAL_CLIENT_SECRET'));
 export const mpWebhookSecret = () => env('PARYGO_MP_WEBHOOK_SECRET');
 
-function mpConfig(idempotencyKey?: string) {
+function mpToken(): string {
   const accessToken = env('PARYGO_MP_ACCESS_TOKEN');
   if (!accessToken) throw new Error('mp_no_configurado');
-  return new MercadoPagoConfig({ accessToken, options: { timeout: 15_000, ...(idempotencyKey ? { idempotencyKey } : {}) } });
+  return accessToken;
 }
 
 export async function mpCrearPreferencia(i: {
@@ -31,23 +31,19 @@ export async function mpCrearPreferencia(i: {
   // integraciones", y la firma con la clave secreta (x-signature) es de esa
   // configuración del panel. El webhook se configura allá:
   // https://app.parygo.com/api/webhooks/parygo-mp, evento Pagos.
-  const r = await new Preference(mpConfig(i.compraId)).create({
-    body: {
-      items: [{ id: i.compraId, title: i.titulo, quantity: 1, unit_price: i.soles, currency_id: 'PEN' }],
-      ...(i.email ? { payer: { email: i.email } } : {}),
-      back_urls: { success: i.exito, failure: i.fallo, pending: i.exito },
-      auto_return: 'approved',
-      external_reference: i.compraId,
-      statement_descriptor: 'PARYGO',
-      metadata: { compra_id: i.compraId, tipo: 'pack_eventos' },
-    },
-  });
-  if (!r.id || !r.init_point) throw new Error('MercadoPago no devolvió la preferencia');
-  return { id: r.id, initPoint: r.init_point };
+  return mpCrearPreferenciaApi(mpToken(), {
+    items: [{ id: i.compraId, title: i.titulo, quantity: 1, unit_price: i.soles, currency_id: 'PEN' }],
+    ...(i.email ? { payer: { email: i.email } } : {}),
+    back_urls: { success: i.exito, failure: i.fallo, pending: i.exito },
+    auto_return: 'approved',
+    external_reference: i.compraId,
+    statement_descriptor: 'PARYGO',
+    metadata: { compra_id: i.compraId, tipo: 'pack_eventos' },
+  }, i.compraId);
 }
 
 export async function mpPago(paymentId: string) {
-  return new Payment(mpConfig()).get({ id: paymentId });
+  return mpLeerPago(mpToken(), paymentId);
 }
 
 // ---------------- PayPal (REST Orders v2, con fetch: corre en edge) ----------

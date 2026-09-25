@@ -1,7 +1,10 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv } from '@/lib/env';
 
-// Alta de una marca para un usuario que YA existe (autoservicio de /empezar).
+// Alta de una marca del autoservicio de /empezar. Con userId, para un usuario
+// que YA existe (prueba gratis, tras el código). Con userId null, SIN dueña:
+// el alta con pack crea la marca al ir a pagar y la dueña recién al volver
+// con el pago aprobado (asignarDuena), para no crear cuentas sin verificar.
 // Mismos pasos que el alta del super admin (cabina/brands/new): fila de la
 // marca, secreto del webhook de MP ENCRIPTADO (0034) y membresía brand_admin.
 // Todo o nada: si falla un paso se borra la marca (el usuario queda, es suyo).
@@ -20,7 +23,7 @@ export type AltaMarca =
   | { ok: false; motivo: 'slug_en_uso' | 'error' };
 
 export async function crearMarcaParaUsuario(a: {
-  userId: string;
+  userId: string | null;
   email: string;
   nombre: string;
   slug: string;
@@ -64,13 +67,15 @@ export async function crearMarcaParaUsuario(a: {
     return { ok: false, motivo: 'error' };
   }
 
-  const { error: mErr } = await admin.from('brand_members').insert({
-    brand_id: brand.id, user_id: a.userId, role: 'brand_admin', display_name: a.email,
-  });
-  if (mErr) {
-    console.error('[altaMarca] membresía', mErr.message);
-    await borrar();
-    return { ok: false, motivo: 'error' };
+  if (a.userId) {
+    const { error: mErr } = await admin.from('brand_members').insert({
+      brand_id: brand.id, user_id: a.userId, role: 'brand_admin', display_name: a.email,
+    });
+    if (mErr) {
+      console.error('[altaMarca] membresía', mErr.message);
+      await borrar();
+      return { ok: false, motivo: 'error' };
+    }
   }
 
   await admin.from('events_log').insert({

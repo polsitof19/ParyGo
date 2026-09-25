@@ -350,6 +350,9 @@
 }
 .ez-link:disabled { color: var(--ink-2); text-decoration: none; cursor: default; }
 
+.ez a.ez-btn { text-decoration: none; }
+.ez-actions--top { margin-top: var(--ez-s4); }
+
 .ez-hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 
 /* — Resumen del plan (solo con espacio al costado; en el teléfono lo dice
@@ -404,6 +407,7 @@
     gap: var(--ez-s6);
     padding-top: var(--ez-s4);
   }
+  .ez-main--solo { grid-template-columns: minmax(0, 1fr); padding-top: var(--ez-s5); }
   .ez-resumen {
     display: block;
     position: sticky;

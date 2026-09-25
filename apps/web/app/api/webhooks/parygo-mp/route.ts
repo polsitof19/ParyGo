@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyMpSignature } from '@/lib/mpSignature';
 import { mpPago, mpWebhookSecret } from '@/lib/cobroParygo';
+import { sendAltaPendiente } from '@/lib/email/sendAltaEmails';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -77,6 +78,18 @@ export async function POST(req: NextRequest) {
   });
   // Error de base → 500 para que MP reintente (la RPC es transaccional).
   if (error) return NextResponse.json({ ok: false, error: 'settle_failed' }, { status: 500 });
+
+  // Alta con pack (/empezar) que pagó y todavía no volvió a la página: la marca
+  // no tiene dueña. Se le manda el link para terminar (solo en la acreditación,
+  // no en cada reintento de MP).
+  const r = data as { action?: string; brand_id?: string };
+  if (r?.action === 'credited' && r.brand_id) {
+    const { count: miembros } = await admin.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', r.brand_id);
+    if (!miembros) {
+      const { data: b } = await admin.from('brands').select('name, contact_email').eq('id', r.brand_id).single();
+      if (b?.contact_email) await sendAltaPendiente({ to: b.contact_email, marca: b.name, compraId });
+    }
+  }
   return NextResponse.json({ ok: true, ...(data as object) });
 }
 

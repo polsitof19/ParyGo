@@ -3,10 +3,13 @@ import { redirect } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { mpPago } from '@/lib/cobroParygo';
+import { acreditarVueltaMp } from '@/lib/compraPack';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
+// Sin esto Next cacheaba la lectura de la compra: pagada en la base y la
+// página seguía diciendo 'confirmando' (medido en el E2E del alta, 2026-09-25).
+export const fetchCache = 'force-no-store';
 
 // Resultado de una compra de paquete (0070). Acreditan el webhook de MP, la
 // vuelta de PayPal y, de respaldo, ESTA página al volver de MP (ver abajo).
@@ -24,29 +27,10 @@ export default async function CompraListaPage({ searchParams }: { searchParams: 
     : null;
   let compra = await leer();
 
-  // Respaldo del webhook: MP vuelve con ?payment_id=. NO se cree la URL: el
-  // pago se vuelve a pedir a MP con el token de ParyGo, tiene que ser de ESTA
-  // compra (external_reference) y estar aprobado, y la RPC contrasta monto y
-  // moneda contra lo congelado. Si el webhook ya acreditó, da 'already_paid'.
-  const paymentId = searchParams.payment_id ?? '';
-  // También desde 'failed': un primer intento rechazado marca la compra así y
-  // el reintento aprobado sobre la misma preferencia tiene que poder acreditar.
-  if (compra?.provider === 'mercadopago' && compra.status !== 'paid' && /^\d{1,20}$/.test(paymentId)) {
-    try {
-      const pago = await mpPago(paymentId);
-      if (pago.external_reference === compra.id && pago.status === 'approved' && typeof pago.transaction_amount === 'number' && pago.currency_id) {
-        await admin.rpc('settle_pack_purchase', {
-          p_purchase_id: compra.id,
-          p_provider: 'mercadopago',
-          p_payment_id: String(pago.id ?? paymentId),
-          p_paid_cents: Math.round(pago.transaction_amount * 100),
-          p_currency: pago.currency_id,
-        });
-        compra = await leer();
-      }
-    } catch {
-      // Sin respuesta de MP: queda "confirmando" y el webhook lo resuelve.
-    }
+  // Respaldo del webhook al volver de MP (ver lib/compraPack.ts).
+  if (compra) {
+    await acreditarVueltaMp(compra, searchParams.payment_id ?? '');
+    compra = await leer();
   }
   const { data: brand } = await admin.from('brands').select('event_balance').eq('id', ctx.brandId).single();
 
