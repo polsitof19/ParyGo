@@ -275,7 +275,7 @@ export async function createBrandWithOwnerAction(
       contact_email: email,
       theme_json: themeJson,
       notify_yape_digest: true, // el aviso de Yape por aprobar nace prendido
-      // Prueba gratis (0069): 1 evento sin saldo, hasta 50 entradas.
+      // Prueba gratis (0069/0071): 1 evento sin saldo, hasta 20 entradas.
       prueba_disponible: formData.get('prueba_gratis') === 'on',
     })
     .select('id, slug')

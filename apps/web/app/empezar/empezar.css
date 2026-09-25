@@ -1,0 +1,416 @@
+/* ============================================================
+   /empezar — alta autoservicio del organizador (2026-09-25)
+   ============================================================
+   Mundo de PAPEL, el de la landing: es la continuación de "Empezar" en
+   parygo.com. Tokens de parygo-tokens.css (.pg); tamaños de la rampa de
+   abajo (--ez-*), nada suelto. Reglas de CLAUDE.md que mandan acá:
+   - el acento es DECORATIVO: puntos, subrayado, anillo de foco, el punto
+     del radio. Nunca texto, nunca texto blanco encima;
+   - botón primario = TINTA sobre acento (5.91:1 medido);
+   - el texto de un estado va en tinta y el color lo lleva el punto;
+   - campos con letra de 16px (Safari de iPhone hace zoom con menos).
+   ============================================================ */
+
+.ez {
+  /* Rampa de esta superficie. */
+  --ez-h1: 40px;
+  --ez-h2: 24px;
+  --ez-body: 17px;
+  --ez-meta: 14px;
+  --ez-small: 13px;
+  --ez-field: 16px;
+  --ez-price: 20px;
+  --ez-total: 48px;
+  --ez-code: 30px;
+  --ez-ctl-h: 52px;
+  --ez-btn-h: 56px;
+  --ez-s1: 8px;
+  --ez-s2: 16px;
+  --ez-s3: 24px;
+  --ez-s4: 32px;
+  --ez-s5: 48px;
+  --ez-s6: 64px;
+  /* Borde de un campo: 3:1 contra el papel (WCAG 1.4.11). La hairline
+     --line (.13) es para separar filas, no para dibujar un control. */
+  --ez-ctl-line: rgba(35, 28, 23, 0.5);
+
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: var(--ez-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  caret-color: var(--accent-deep);
+  accent-color: var(--accent);
+}
+.ez ::selection { background: rgba(255, 106, 61, 0.32); color: var(--ink); }
+.ez a { color: inherit; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+.ez *:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: var(--r-ctl); }
+
+/* — Cabecera — */
+.ez-top {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--ez-s3) var(--ez-s2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ez-s2);
+}
+.ez-brand {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: var(--ez-h2);
+  letter-spacing: -0.03em;
+  text-decoration: none;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+/* El punto del wordmark: la única excepción documentada de acento en texto. */
+.ez-dot { color: var(--accent); }
+.ez-top__login { margin: 0; font-size: var(--ez-meta); color: var(--ink-2); }
+.ez-top__login a { color: var(--ink); font-weight: 700; text-decoration: underline; padding: 12px 0; }
+
+/* — Estructura — */
+.ez-main {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--ez-s2) var(--ez-s2) var(--ez-s6);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ez-s6);
+  align-items: start;
+}
+.ez-col { max-width: 600px; }
+
+.ez-h1 {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: var(--ez-h1);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+  margin: 0 0 var(--ez-s2);
+}
+/* El subrayado ondulado de la landing: trazo decorativo, la palabra sigue
+   en tinta. */
+.ez-squiggle { position: relative; white-space: nowrap; }
+.ez-squiggle::after {
+  content: "";
+  position: absolute;
+  left: -2%;
+  right: -2%;
+  bottom: -0.12em;
+  height: 0.3em;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='14' viewBox='0 0 120 14' fill='none'><path d='M2 8C20 2 30 12 48 8C66 4 76 12 94 7C106 4 114 8 118 8' stroke='%23FF6A3D' stroke-width='4' stroke-linecap='round'/></svg>") no-repeat center / 100% 100%;
+  pointer-events: none;
+}
+.ez-lede { margin: 0; color: var(--ink-2); max-width: 46ch; }
+.ez-url { color: var(--ink); font-weight: 700; overflow-wrap: anywhere; }
+.ez-body { margin: 0 0 var(--ez-s3); color: var(--ink-2); }
+.ez-body strong { color: var(--ink); }
+
+.ez-form { margin-top: var(--ez-s5); }
+.ez-form fieldset { border: 0; padding: 0; margin: 0 0 var(--ez-s5); min-width: 0; }
+.ez-h2 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: var(--ez-h2);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  padding: 0;
+  margin: 0 0 var(--ez-s2);
+}
+
+/* — Planes: filas con hairline, como un menú de opciones. Lo elegido lleva
+     fondo porque es lo que está pidiendo algo. — */
+.ez-plan {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: var(--ez-s2) 14px;
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+  transition: background-color 180ms var(--ease);
+}
+.ez-plan:last-of-type { border-bottom: 1px solid var(--line); }
+.ez-plan.is-on { background: var(--paper-2); border-radius: var(--r-ctl); border-color: transparent; }
+.ez-plan.is-on + .ez-plan { border-top-color: transparent; }
+.ez-plan.is-off { cursor: not-allowed; }
+.ez-plan.is-off .ez-plan__name,
+.ez-plan.is-off .ez-plan__price { color: var(--ink-3); }
+@media (hover: hover) and (pointer: fine) {
+  .ez-plan:not(.is-on):not(.is-off):hover { background: var(--sel); border-radius: var(--r-ctl); }
+}
+.ez-plan__radio { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.ez-plan:has(.ez-plan__radio:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: var(--r-ctl); }
+.ez-plan__dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--ez-ctl-line);
+  display: grid;
+  place-items: center;
+  transition: border-color 180ms var(--ease);
+}
+.ez-plan__dot::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: scale(0);
+  transition: transform 220ms var(--ease);
+}
+.ez-plan.is-on .ez-plan__dot { border-color: var(--ink); }
+.ez-plan.is-on .ez-plan__dot::after { transform: scale(1); }
+.ez-plan__txt { display: grid; gap: 2px; min-width: 0; }
+.ez-plan__name {
+  font-weight: 700;
+  font-size: var(--ez-body);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ez-s1);
+}
+.ez-plan__det { font-size: var(--ez-meta); color: var(--ink-2); }
+.ez-plan__price {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: var(--ez-price);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ez-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--ez-small);
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--paper-3);
+  border-radius: var(--r-pill);
+  padding: 2px 10px;
+}
+.ez-tag__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.ez-incl { margin: var(--ez-s2) 0 0; font-size: var(--ez-meta); color: var(--ink-2); max-width: 60ch; }
+.ez-incl strong { color: var(--ink); }
+
+/* — Campos — */
+.ez-field { margin-bottom: var(--ez-s3); }
+.ez-label { display: block; font-size: var(--ez-meta); font-weight: 700; margin-bottom: var(--ez-s1); }
+.ez-opt { font-weight: 400; color: var(--ink-2); }
+.ez-input,
+.ez-affix {
+  width: 100%;
+  min-height: var(--ez-ctl-h);
+  background: var(--surface);
+  border: 1.5px solid var(--ez-ctl-line);
+  border-radius: var(--r-ctl);
+  transition: border-color 160ms var(--ease), box-shadow 160ms var(--ease);
+}
+.ez-input {
+  font: inherit;
+  font-size: var(--ez-field);
+  color: var(--ink);
+  padding: 0 14px;
+}
+.ez-input::placeholder { color: var(--ink-3); }
+.ez-input:focus,
+.ez-affix:focus-within {
+  outline: none;
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(255, 106, 61, 0.35);
+}
+.ez-input[aria-invalid="true"],
+.ez-affix.is-bad { border-color: var(--alert); }
+.ez-affix { display: flex; align-items: center; overflow: hidden; }
+.ez-affix .ez-input--affix {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.ez-affix__end,
+.ez-affix__start { font-size: var(--ez-field); color: var(--ink-2); white-space: nowrap; }
+.ez-affix__end { padding-right: 14px; }
+.ez-affix__start { padding-left: 14px; }
+.ez-affix__start + .ez-input--affix { padding-left: var(--ez-s1); }
+.ez-eye {
+  width: 48px;
+  height: var(--ez-ctl-h);
+  display: grid;
+  place-items: center;
+  background: none;
+  border: 0;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.ez-eye svg { width: 20px; height: 20px; }
+.ez-input--code {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: var(--ez-code);
+  letter-spacing: 0.24em;
+  font-variant-numeric: tabular-nums;
+  min-height: 68px;
+  max-width: 320px;
+}
+.ez-input--code::placeholder { color: rgba(35, 28, 23, 0.22); }
+
+.ez-hint,
+.ez-err { margin: 6px 0 0; font-size: var(--ez-small); line-height: 1.4; }
+.ez-hint { color: var(--ink-2); }
+.ez-err { color: var(--ink); display: flex; gap: var(--ez-s1); align-items: baseline; }
+.ez-err::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--alert);
+  transform: translateY(-1px);
+}
+.ez-ok {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  margin-right: var(--ez-s1);
+}
+
+.ez-banner {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  margin: 0 0 var(--ez-s3);
+  padding: 14px var(--ez-s2);
+  background: var(--paper-2);
+  border-radius: var(--r-ctl);
+  font-size: var(--ez-meta);
+}
+.ez-banner::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--alert);
+}
+
+/* — Acciones — */
+.ez-actions { display: grid; gap: 14px; }
+.ez-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: var(--ez-btn-h);
+  padding: 0 28px;
+  border: 0;
+  border-radius: var(--r-pill);
+  font: inherit;
+  font-size: var(--ez-body);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 180ms var(--ease), transform 160ms var(--ease);
+}
+.ez-btn--primary { background: var(--accent); color: var(--ink); }
+.ez-btn:active:not(:disabled) { transform: scale(0.97); }
+.ez-btn:disabled { background: var(--paper-3); color: var(--ink-2); cursor: not-allowed; }
+.ez-btn__arrow { width: 18px; height: 18px; transition: transform 200ms var(--ease); }
+@media (hover: hover) and (pointer: fine) {
+  .ez-btn--primary:hover:not(:disabled) { background: var(--accent-deep); }
+  .ez-btn--primary:hover:not(:disabled) .ez-btn__arrow { transform: translateX(3px); }
+}
+.ez-fine { margin: 0; font-size: var(--ez-small); color: var(--ink-2); max-width: 56ch; }
+.ez-fine a { color: var(--ink); text-decoration: underline; }
+.ez-links { display: flex; flex-wrap: wrap; gap: 4px var(--ez-s3); margin-top: var(--ez-s3); }
+.ez-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  min-height: 44px;
+  font: inherit;
+  font-size: var(--ez-meta);
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.ez-link:disabled { color: var(--ink-2); text-decoration: none; cursor: default; }
+
+.ez-hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+/* — Resumen del plan (solo con espacio al costado; en el teléfono lo dice
+     la fila elegida y el botón). — */
+.ez-resumen { display: none; }
+.ez-resumen p { margin: 0; }
+.ez-resumen__label { font-size: var(--ez-meta); font-weight: 700; color: var(--ink-2); }
+.ez-resumen__plan { font-size: var(--ez-price); font-weight: 700; margin-top: var(--ez-s1) !important; }
+.ez-resumen__precio {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: var(--ez-total);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+  margin-top: var(--ez-s1) !important;
+}
+.ez-resumen__meta { font-size: var(--ez-meta); color: var(--ink-2); margin-top: var(--ez-s1) !important; }
+.ez-resumen__list { list-style: none; padding: 0; margin: var(--ez-s3) 0 0; display: grid; gap: 10px; font-size: var(--ez-meta); }
+.ez-resumen__list li { display: grid; grid-template-columns: 18px 1fr; gap: 10px; align-items: start; }
+.ez-tick { width: 18px; height: 18px; color: var(--ink); margin-top: 1px; }
+.ez-resumen__url {
+  margin-top: var(--ez-s3) !important;
+  padding-top: var(--ez-s2);
+  border-top: 1px solid var(--line);
+  font-size: var(--ez-meta);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+/* — Un solo momento de movimiento: el paso del código entra. — */
+.ez-form--codigo { animation: ez-in 320ms var(--ease) both; }
+@keyframes ez-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ez-form--codigo { animation: ez-fade 200ms linear both; }
+  .ez-plan__dot::after,
+  .ez-btn,
+  .ez-btn__arrow { transition: none; }
+}
+@keyframes ez-fade { from { opacity: 0; } to { opacity: 1; } }
+
+@media (min-width: 640px) {
+  .ez-btn { width: auto; justify-self: start; }
+}
+@media (min-width: 960px) {
+  .ez { --ez-h1: 64px; }
+  .ez-main {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: var(--ez-s6);
+    padding-top: var(--ez-s4);
+  }
+  .ez-resumen {
+    display: block;
+    position: sticky;
+    top: var(--ez-s4);
+    margin-top: 168px;
+    background: var(--paper-2);
+    border-radius: var(--r-card);
+    padding: var(--ez-s4);
+  }
+}

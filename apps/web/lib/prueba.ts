@@ -1,7 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 
-// Prueba gratis (0069): 1 evento sin saldo, hasta 50 entradas en total.
-export const PRUEBA_TOPE_ENTRADAS = 50;
+// Prueba gratis (0069; tope 20 desde 0071): 1 evento sin saldo, hasta 20 entradas.
+// Tiene que coincidir con prueba_tope_entradas() en la base.
+export const PRUEBA_TOPE_ENTRADAS = 20;
 
 // Se lee con service role ACOTADO a la marca de la sesión: las columnas de
 // brands se exponen a `authenticated` una por una (0023/0043/0052) y esta no

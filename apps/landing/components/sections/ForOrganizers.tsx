@@ -1,6 +1,6 @@
 import { CTA } from '@/lib/cta';
 
-// 06b — ParyGo para organizadores (qué es / cómo funciona / pedir acceso).
+// 06b — ParyGo para organizadores (qué es / cómo funciona / empezar).
 // Prueba social HONESTA: sin inventar volumen. El modelo es el argumento.
 type Point = { title: string; desc: string; icon: React.ReactNode };
 
@@ -52,11 +52,11 @@ export function ForOrganizers() {
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 32 }} className="reveal">
-          <a href={CTA.requestAccess} className="btn btn-primary btn-lg" target="_blank" rel="noopener noreferrer">
-            Pide acceso
+          <a href={CTA.requestAccess} className="btn btn-primary btn-lg">
+            Crea tu marca
           </a>
           <p style={{ color: 'var(--ink-3)', marginTop: 12, fontSize: 14 }}>
-            Sumamos organizadores de a pocos para acompañar bien a cada uno. Cuéntanos de tu evento y te damos acceso.
+            Empieza con la prueba gratis o elige tu pack. En unos minutos tienes tu página lista.
           </p>
         </div>
       </div>
