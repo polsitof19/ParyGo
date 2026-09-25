@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ChevronDown, Printer } from 'lucide-react';
-import { todas } from '@/lib/todas';
+import { enLotes, todas } from '@/lib/todas';
 import { notFound } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
@@ -49,18 +49,20 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
     todas((a, b) => admin.from('orders').select('id, total_cents, payment_method, created_at').eq('event_id', event.id).eq('status', 'paid').order('id').range(a, b)).then((data) => ({ data })),
     admin.from('ticket_types').select('id, name, price_cents, capacity, sold, is_unlimited, is_active, sort_order').eq('event_id', event.id).order('sort_order'),
     admin.rpc('event_ticket_stats', { p_event_id: event.id }),
-    admin
+    todas((a, b) => admin
       .from('yape_proofs')
       .select(`id, amount_cents, operation_number, payer_name, security_code, receipt_url, created_at,
         order:orders!yape_proofs_order_id_fkey ( id, buyer_name, buyer_email, buyer_phone, total_cents, event_id )`)
       .eq('brand_id', event.brand_id)
       .eq('status', 'pending_review')
-      .order('created_at', { ascending: true }),
+      .order('created_at', { ascending: true })
+      .order('id')
+      .range(a, b)).then((data) => ({ data })),
     admin.rpc('get_event_active_prices', { p_event_id: event.id }),
-    admin
+    todas((a, b) => admin
       .from('yape_proofs')
       .select('id, amount_cents, reject_reason, reviewed_at, order:orders!yape_proofs_order_id_fkey ( buyer_name, buyer_email, event_id )')
-      .eq('brand_id', event.brand_id).eq('status', 'rejected').order('reviewed_at', { ascending: false }).limit(50),
+      .eq('brand_id', event.brand_id).eq('status', 'rejected').order('reviewed_at', { ascending: false }).order('id').range(a, b)).then((data) => ({ data })),
     // Tickets válidos del evento: para separar entradas VENDIDAS de cortesías
     // (ticket_types.sold cuenta las dos cosas juntas).
     todas((a, b) => admin.from('tickets').select('order_id').eq('event_id', event.id).is('invalidated_at', null).order('id').range(a, b)).then((data) => ({ data })),
@@ -139,7 +141,7 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
           .then((r) => r.data)
       : Promise.resolve(null),
     pendOrderIds.length > 0
-      ? admin.from('order_items').select('order_id, ticket_type_name, quantity').in('order_id', pendOrderIds).then((r) => r.data)
+      ? enLotes(pendOrderIds, (lote) => admin.from('order_items').select('order_id, ticket_type_name, quantity').in('order_id', lote))
       : Promise.resolve(null),
     Promise.resolve([] as { items: { name: string; quantity: number }[]; order: ProofRow['order'] }[]),
   ]);

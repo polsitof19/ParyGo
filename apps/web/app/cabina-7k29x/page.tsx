@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Plus, Wallet, CalendarDays, ChevronDown } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { todas } from '@/lib/todas';
 import { idsMarcasDePrueba, sinMarcasDePrueba, soloConComprobante } from '@/lib/marcasDePrueba';
 import { BrandLogo } from '@/components/BrandLogo';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
@@ -68,16 +69,10 @@ export default async function SuperHome() {
     // starts_at y name vienen en la MISMA consulta que ya existía: el "próximo
     // evento" de cada marca no cuesta un viaje extra.
     supabase.from('events').select('brand_id, name, starts_at, is_published, archived_at'),
-    // Última venta por marca. Es la única consulta nueva del dashboard.
-    // Ordenada por paid_at DESC y acotada: la primera aparición de cada marca
-    // es su última venta. Límite explícito de 1000 porque PostgREST corta por
-    // su cuenta y un corte sin orden daría fechas al azar. Con el orden, el
-    // único caso degradado es una marca cuya última venta sea más vieja que la
-    // venta nº1000 de TODA la plataforma: se vería como "Sin ventas". Hoy hay
-    // 10 órdenes pagadas en total (medido en prod), así que no aplica; cuando
-    // se acerque, esto pide un RPC que agregue en SQL.
-    admin.from('orders').select('brand_id, paid_at').eq('status', 'paid').not('paid_at', 'is', null)
-      .order('paid_at', { ascending: false }).limit(1000),
+    // Última venta por marca: ordenadas por paid_at DESC, la primera aparición
+    // de cada marca es su última venta. Todas, paginadas (PostgREST corta en 1000).
+    todas((a, b) => admin.from('orders').select('brand_id, paid_at').eq('status', 'paid').not('paid_at', 'is', null)
+      .order('paid_at', { ascending: false }).order('id').range(a, b)).then((data) => ({ data })),
     // Yape por revisar + solicitudes pendientes — agregados cross-tenant (admin client), igual que /salud y /solicitudes.
     soloConComprobante(sinMarcasDePrueba(admin.from('orders').select('id', HEAD).eq('status', 'pending_yape_review'), prueba)),
     admin.from('access_requests').select('id', HEAD).eq('status', 'pending'),

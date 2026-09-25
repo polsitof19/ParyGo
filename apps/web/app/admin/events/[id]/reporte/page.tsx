@@ -41,7 +41,7 @@ export default async function ReportePage({ params }: { params: { id: string } }
     todas((a, b) => admin.from('orders').select('id, total_cents, payment_method').eq('event_id', event.id).eq('status', 'paid').order('id').range(a, b)).then((data) => ({ data })),
     todas((a, b) => admin.from('order_items').select('id, ticket_type_id, subtotal_cents, orders!inner(event_id, status)').eq('orders.event_id', event.id).eq('orders.status', 'paid').order('id').range(a, b)).then((data) => ({ data })),
     admin.from('promo_codes').select('id, code, label').eq('event_id', event.id),
-    admin.from('promo_redemptions').select(`promo_code_id, orders!inner(total_cents, status, event_id, order_items(quantity))`).eq('event_id', event.id).eq('status', 'consumed'),
+    todas((a, b) => admin.from('promo_redemptions').select(`promo_code_id, orders!inner(total_cents, status, event_id, order_items(quantity))`).eq('event_id', event.id).eq('status', 'consumed').order('id').range(a, b)).then((data) => ({ data })),
   ]);
 
   const types = ttRes.data ?? [];

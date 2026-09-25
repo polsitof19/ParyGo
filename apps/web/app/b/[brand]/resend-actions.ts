@@ -86,7 +86,9 @@ export async function reenviarMiEntrada(qrCode: string): Promise<ReenvioResult> 
   // Forzar el reenvío: sendTicketEmail no vuelve a mandar si ya hay
   // email_sent_at, así que se limpia (scopeado a la marca).
   await admin.from('orders').update({ email_sent_at: null }).eq('id', order.id).eq('brand_id', brand.id);
-  const encolado = await enqueueTicketEmail(admin, order.id);
+  // Clave por minuto: un doble toque no manda dos correos, pero cada reenvío
+  // real sale (el tope por email/IP de arriba frena el abuso).
+  const encolado = await enqueueTicketEmail(admin, order.id, `ticket_email:${order.id}:reenvio:${Math.floor(Date.now() / 60000)}`);
   if (!encolado.ok && encolado.reason !== 'duplicate') {
     // Si ni siquiera se pudo encolar, decirlo: la persona tiene su QR en
     // pantalla igual, pero no hay que prometerle un correo que no va a salir.

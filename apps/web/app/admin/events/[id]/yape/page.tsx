@@ -3,6 +3,7 @@ import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatPEN } from '@/lib/utils';
+import { enLotes, todas } from '@/lib/todas';
 import { YapeReviewRow } from '../../../yape/YapeReviewRow';
 import { LiveRefresh } from '../LiveRefresh';
 
@@ -25,13 +26,15 @@ export default async function EventYapePage({ params }: { params: { id: string }
   const { data: event } = await admin.from('events').select('id, brand_id').eq('id', params.id).maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
 
-  const { data } = await admin
+  const data = await todas((a, b) => admin
     .from('yape_proofs')
     .select(`id, amount_cents, operation_number, payer_name, security_code, receipt_url, created_at,
       order:orders!yape_proofs_order_id_fkey ( id, buyer_name, buyer_email, buyer_phone, total_cents, event_id )`)
     .eq('brand_id', event.brand_id)
     .eq('status', 'pending_review')
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: true })
+    .order('id')
+    .range(a, b));
 
   const proofs = ((data as unknown as ProofRow[] | null) ?? []).filter((p) => p.order?.event_id === event.id);
 
@@ -41,11 +44,11 @@ export default async function EventYapePage({ params }: { params: { id: string }
   const dupWarningByProof = new Map<string, 'approved' | 'pending'>();
   const opNumbers = [...new Set(proofs.map((p) => p.operation_number?.trim()).filter((x): x is string => !!x))];
   if (opNumbers.length > 0) {
-    const { data: sameOps } = await admin
+    const sameOps = await enLotes(opNumbers, (lote) => admin
       .from('yape_proofs')
       .select('id, operation_number, status')
       .eq('brand_id', event.brand_id)
-      .in('operation_number', opNumbers);
+      .in('operation_number', lote));
     const byOp = new Map<string, { id: string; status: string }[]>();
     for (const r of (sameOps ?? []) as { id: string; operation_number: string; status: string }[]) {
       const k = r.operation_number.trim();
@@ -64,10 +67,10 @@ export default async function EventYapePage({ params }: { params: { id: string }
   const orderIds = proofs.map((p) => p.order?.id).filter((x): x is string => !!x);
   const itemsByOrder = new Map<string, { name: string; quantity: number }[]>();
   if (orderIds.length > 0) {
-    const { data: oi } = await admin
+    const oi = await enLotes(orderIds, (lote) => admin
       .from('order_items')
       .select('order_id, ticket_type_name, quantity')
-      .in('order_id', orderIds);
+      .in('order_id', lote));
     for (const it of (oi ?? []) as { order_id: string; ticket_type_name: string | null; quantity: number | null }[]) {
       const arr = itemsByOrder.get(it.order_id) ?? [];
       arr.push({ name: it.ticket_type_name ?? 'Entrada', quantity: it.quantity ?? 0 });

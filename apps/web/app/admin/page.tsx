@@ -43,11 +43,13 @@ export default async function AdminHomePage() {
       .select('id, slug, name, starts_at, is_published, cover_url, archived_at, venue_name')
       .eq('brand_id', brand.id)
       .order('starts_at', { ascending: false }),
-    supabase
+    todas((a, b) => supabase
       .from('yape_proofs')
       .select('id, order:orders!yape_proofs_order_id_fkey ( event_id )')
       .eq('brand_id', brand.id)
-      .eq('status', 'pending_review'),
+      .eq('status', 'pending_review')
+      .order('id')
+      .range(a, b)).then((data) => ({ data })),
   ]);
 
   const pendingByEvent = new Map<string, number>();

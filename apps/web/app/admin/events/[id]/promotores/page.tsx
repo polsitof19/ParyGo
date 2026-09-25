@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { todas } from '@/lib/todas';
 import { formatPEN } from '@/lib/utils';
 import { PromoCodeManager, type PromoCodeRow, type PromoSales } from '../PromoCodeManager';
 
@@ -47,14 +48,16 @@ export default async function PromotersPage({ params }: { params: { id: string }
 
   // Canjes CONSUMIDOS (= órdenes pagadas que usaron un código). Traemos el monto
   // de la orden (recaudado) y las cantidades de order_items (entradas colocadas).
-  const { data: reds } = await admin
+  const reds = await todas((a, b) => admin
     .from('promo_redemptions')
     .select(`
       promo_code_id, amount_discount_cents,
       orders!inner ( total_cents, status, order_items ( quantity ) )
     `)
     .eq('event_id', event.id)
-    .eq('status', 'consumed');
+    .eq('status', 'consumed')
+    .order('id')
+    .range(a, b));
 
   // Clics del link de promotor (?ref) por código — agregado en Postgres.
   const { data: clickRows } = await admin.rpc('ref_click_counts', { p_event_id: event.id });

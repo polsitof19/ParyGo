@@ -3,6 +3,7 @@ import { DoorOpen, XCircle } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { todas } from '@/lib/todas';
 import { LiveRefresh } from '../LiveRefresh';
 
 export const runtime = 'edge';
@@ -32,10 +33,9 @@ export default async function EventAccessPage({ params }: { params: { id: string
 
   // ticket_scans no está en los tipos generados (creada en migr 0015) → cast.
   type RejectScan = { id: string; result: string; scanned_at: string; validator_user_id: string | null; ticket: { ticket_number: string; ticket_type_name: string } | { ticket_number: string; ticket_type_name: string }[] | null };
-  const LIST_LIMIT = 100;
 
   // Conteos por SQL (head:true, sin traer filas) + tipos del evento + miembros
-  // (etiquetar validadores) + listas LIMITADAS + intentos rechazados.
+  // (etiquetar validadores) + listas COMPLETAS (paginadas) + intentos rechazados.
   // AFORO: total válidos (invalidated_at null) y entraron (validated_at not null).
   const [
     { count: totalCount },
@@ -50,29 +50,32 @@ export default async function EventAccessPage({ params }: { params: { id: string
     admin.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', event.id).is('invalidated_at', null).not('validated_at', 'is', null),
     admin.from('ticket_types').select('id, name').eq('event_id', event.id),
     admin.from('brand_members').select('user_id, display_name').eq('brand_id', event.brand_id),
-    admin
+    todas((a, b) => admin
       .from('tickets')
       .select('id, ticket_number, ticket_type_name, attendee_name, validated_at, validated_by')
       .eq('event_id', event.id)
       .is('invalidated_at', null)
       .not('validated_at', 'is', null)
       .order('validated_at', { ascending: false })
-      .limit(LIST_LIMIT),
-    admin
+      .order('id')
+      .range(a, b)).then((data) => ({ data })),
+    todas((a, b) => admin
       .from('tickets')
       .select('id, ticket_number, ticket_type_name, attendee_name, validated_at, validated_by')
       .eq('event_id', event.id)
       .is('invalidated_at', null)
       .is('validated_at', null)
       .order('ticket_number', { ascending: true })
-      .limit(LIST_LIMIT),
-    (admin as unknown as { from: (t: string) => any })
+      .order('id')
+      .range(a, b)).then((data) => ({ data })),
+    todas<RejectScan>((a, b) => (admin as unknown as { from: (t: string) => any })
       .from('ticket_scans')
       .select('id, result, scanned_at, validator_user_id, ticket:tickets ( ticket_number, ticket_type_name )')
       .eq('event_id', event.id)
       .in('result', ['ALREADY_USED', 'INVALIDATED', 'NOT_AUTHORIZED'])
       .order('scanned_at', { ascending: false })
-      .limit(50) as Promise<{ data: RejectScan[] | null }>,
+      .order('id')
+      .range(a, b)).then((data) => ({ data })),
   ]);
 
   const nameByUser = new Map((members ?? []).map((m) => [m.user_id, m.display_name as string | null]));

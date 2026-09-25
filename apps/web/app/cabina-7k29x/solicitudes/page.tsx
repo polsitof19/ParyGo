@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { todas } from '@/lib/todas';
 import { RejectButton } from './RejectButton';
 
 export const runtime = 'edge';
@@ -24,11 +25,12 @@ export default async function SolicitudesPage() {
   await requireSession({ superAdmin: true });
   const admin = createAdminClient();
   // Service role: la cola es solo para el super admin (RLS deny-by-default).
-  const { data } = await admin
+  const data = await todas((a, b) => admin
     .from('access_requests')
     .select('id, brand_name, contact_name, contact_email, contact_phone, event_info, status, created_at, brand_id')
     .order('created_at', { ascending: false })
-    .limit(200);
+    .order('id')
+    .range(a, b));
   const rows = (data ?? []) as Req[];
   const pending = rows.filter((r) => r.status === 'pending');
   const resolved = rows.filter((r) => r.status !== 'pending');

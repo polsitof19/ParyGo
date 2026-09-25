@@ -1,5 +1,6 @@
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { todas } from '@/lib/todas';
 import { idsMarcasDePrueba, sinMarcasDePrueba, soloConComprobante } from '@/lib/marcasDePrueba';
 
 export const runtime = 'edge';
@@ -47,7 +48,7 @@ export default async function SaludPage() {
     njRes, yapeRes, ordersTodayRes, ticketsTodayRes, oversellRes, brandsRes, eventsRes, superRes,
   ] = await Promise.all([
     // Cola de emails de los últimos 14 días (volumen chico → se agrega en JS).
-    admin.from('notification_jobs').select('status, kind, attempts, last_error, created_at, sent_at').gte('created_at', since14d).order('created_at', { ascending: false }).limit(500),
+    todas((a, b) => admin.from('notification_jobs').select('status, kind, attempts, last_error, created_at, sent_at').gte('created_at', since14d).order('created_at', { ascending: false }).order('id').range(a, b)).then((data) => ({ data })),
     // Pendientes de VERDAD: de marca real y con comprobante subido.
     soloConComprobante(sinMarcasDePrueba(admin.from('orders').select('id', HEAD).eq('status', 'pending_yape_review'), prueba)),
     sinMarcasDePrueba(admin.from('orders').select('id', HEAD).eq('status', 'paid').gte('created_at', todayStart), prueba),
@@ -62,7 +63,8 @@ export default async function SaludPage() {
       .in('type', ['super_admin_write', 'super_edit_mode_on', 'super_edit_mode_off', 'impersonation_started', 'impersonation_ended'])
       .gte('created_at', since14d)
       .order('created_at', { ascending: false })
-      .limit(80),
+      .order('id')
+      .range(0, 999),
     // Igual que el resto: sin marcas de prueba. demotest sola tiene 50+
     // eventos publicados de corridas del E2E.
     sinMarcasDePrueba(admin.from('events').select('id', HEAD).eq('is_published', true).is('archived_at', null), prueba),

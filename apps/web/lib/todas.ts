@@ -19,3 +19,19 @@ export async function todas<T>(
     if (!data || data.length < tam) return out;
   }
 }
+
+// .in('col', ids) va en la URL: con unos cientos de uuids pasa los ~8 KB y la
+// consulta falla ("fetch failed"). enLotes parte la lista de a 100 y junta.
+export async function enLotes<T, K>(
+  ids: K[],
+  pagina: (lote: K[]) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+  tam = 100
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let i = 0; i < ids.length; i += tam) {
+    const { data, error } = await pagina(ids.slice(i, i + tam));
+    if (error) throw new Error(error.message);
+    out.push(...(data ?? []));
+  }
+  return out;
+}

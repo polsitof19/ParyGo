@@ -4,6 +4,7 @@ import { BarChart3, ChevronRight, DoorOpen, ExternalLink, Gift, PencilLine, Rece
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { todas } from '@/lib/todas';
 import { publicEnv } from '@/lib/env';
 import { optimizedImage } from '@/lib/imageUrl';
 import { EventButtons } from './QuickActions';
@@ -32,11 +33,13 @@ export default async function AdminEventPage({ params }: { params: { id: string 
   if (!event || event.brand_id !== ctx.brandId) notFound();
 
   const [{ data: pend }, { data: types }] = await Promise.all([
-    admin
+    todas((a, b) => admin
       .from('yape_proofs')
       .select('id, order:orders!yape_proofs_order_id_fkey ( event_id )')
       .eq('brand_id', event.brand_id)
-      .eq('status', 'pending_review'),
+      .eq('status', 'pending_review')
+      .order('id')
+      .range(a, b)).then((data) => ({ data })),
     admin.from('ticket_types').select('id, name, color_hex, is_active').eq('event_id', event.id).order('sort_order'),
   ]);
   const yapes = ((pend ?? []) as { order: { event_id: string } | null }[]).filter((p) => p.order?.event_id === event.id).length;

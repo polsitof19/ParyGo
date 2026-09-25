@@ -15,7 +15,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 // tiene su QR igual y puede pedir el reenvío desde su entrada.
 export async function enqueueTicketEmail(
   admin: SupabaseClient<any, 'public', any>,
-  orderId: string
+  orderId: string,
+  // Un REENVÍO necesita su propia clave: con la de la compra chocaba contra el
+  // job ya 'sent', el 23505 se tomaba como éxito y no salía ningún correo.
+  dedupeKey = `ticket_email:${orderId}`
 ): Promise<{ ok: boolean; reason?: string }> {
   try {
     const { data: order, error } = await admin
@@ -35,7 +38,7 @@ export async function enqueueTicketEmail(
       order_id: order.id,
       recipient_email: order.buyer_email,
       recipient_name: order.buyer_name ?? '',
-      dedupe_key: `ticket_email:${order.id}`,
+      dedupe_key: dedupeKey,
       payload: {},
       status: 'pending',
     });

@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { todas } from '@/lib/todas';
 import { publicEnv } from '@/lib/env';
 import { ticketPublicUrl } from '@/lib/qr';
 import { formatEventDate } from '@/lib/utils';
@@ -36,7 +37,7 @@ export default async function CourtesiesPage({ params }: { params: { id: string 
     admin.from('brands').select('slug').eq('id', ctx.brandId).maybeSingle(),
     admin.from('ticket_types').select('id, name').eq('event_id', event.id).eq('is_active', true).order('sort_order'),
     // Cada entrada de cortesía de ESTE evento y ESTA marca (doble filtro).
-    admin
+    todas((a, b) => admin
       .from('tickets')
       .select('id, qr_code, ticket_type_name, scan_count, validated_at, invalidated_at, created_at, order:orders!inner ( buyer_email, payment_method, status )')
       .eq('event_id', event.id)
@@ -45,7 +46,8 @@ export default async function CourtesiesPage({ params }: { params: { id: string 
       .eq('order.status', 'paid')
       .order('created_at', { ascending: true })
       .order('ticket_number', { ascending: true })
-      .limit(1000),
+      .order('id')
+      .range(a, b)).then((data) => ({ data })),
     admin
       .from('promo_codes')
       .select('id, code, max_uses, use_count, is_active')
