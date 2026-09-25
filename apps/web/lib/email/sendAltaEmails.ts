@@ -20,15 +20,23 @@ ${boton ? `<tr><td style="padding-top:24px;"><a href="${boton.href}" style="disp
 
 // Pagó pero no volvió a la página (cerró la pestaña, otro dispositivo): el
 // link lleva a terminar el alta. El id de la compra es el secreto del link.
-export async function sendAltaPendiente(a: { to: string; marca: string; compraId: string }): Promise<SendResult> {
-  const url = `${publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')}/empezar/listo?compra=${a.compraId}`;
+export async function sendAltaPendiente(a: { to: string; marca: string; compraId: string; lang?: 'es' | 'en' }): Promise<SendResult> {
+  const en = a.lang === 'en';
+  const url = `${publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')}/empezar/listo?compra=${a.compraId}&lang=${en ? 'en' : 'es'}`;
   const marca = limpio(a.marca);
   return sendViaResend({
     from: `ParyGo <${FROM_EMAIL()}>`,
     to: [a.to],
-    subject: `Tu pago se aprobó: termina de crear ${marca}`,
-    html: shell(`Recibimos tu pago. Solo falta un paso: elige tu contraseña y entras a tu panel con tus eventos cargados.`, { href: url, label: 'Terminar de crear mi marca' }),
-    text: `Recibimos tu pago para ${marca}. Solo falta elegir tu contraseña: ${url}`,
+    subject: en ? `Your payment was approved: finish creating ${marca}` : `Tu pago fue aprobado: termina de crear ${marca}`,
+    html: shell(
+      en
+        ? 'We received your payment. Only one step remains: choose your password and you will enter your dashboard with your events already available.'
+        : 'Recibimos tu pago. Solo falta un paso: elige tu contraseña e ingresarás a tu panel con tus eventos ya disponibles.',
+      { href: url, label: en ? 'Finish creating my brand' : 'Terminar de crear mi marca' },
+    ),
+    text: en
+      ? `We received your payment for ${marca}. Choose your password to finish: ${url}`
+      : `Recibimos tu pago para ${marca}. Elige tu contraseña para terminar: ${url}`,
     tags: [{ name: 'kind', value: 'alta_pendiente' }],
   });
 }

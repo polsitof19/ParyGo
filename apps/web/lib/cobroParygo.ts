@@ -90,24 +90,35 @@ export async function paypalCrearOrden(i: { compraId: string; titulo: string; us
 // Cobra la orden aprobada (la plata se mueve ACÁ, no antes). Idempotente: si
 // ya estaba cobrada, se lee la captura existente. Devuelve la captura
 // COMPLETED o null.
-export async function paypalCobrar(ordenId: string, compraId: string): Promise<PaypalCaptura | null> {
+// `rechazado`: PayPal dijo que NO (tarjeta rechazada, orden no aprobada o
+// vencida). Reintentar la misma orden no sirve: el que llama marca la compra
+// como fallida para que el comprador vuelva a empezar (security review).
+const RECHAZOS = new Set(['INSTRUMENT_DECLINED', 'ORDER_NOT_APPROVED', 'ORDER_EXPIRED', 'PAYER_ACTION_REQUIRED', 'TRANSACTION_REFUSED', 'PAYER_CANNOT_PAY']);
+
+export async function paypalCobrar(ordenId: string, compraId: string): Promise<{ captura: PaypalCaptura | null; rechazado: boolean }> {
   const token = await paypalToken();
   const r = await fetch(`${paypalBase()}/v2/checkout/orders/${encodeURIComponent(ordenId)}/capture`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'PayPal-Request-Id': `cobrar-${compraId}` },
+    // Idempotencia por ORDEN: con el id de la compra, un reintento tras un
+    // rechazo podía recibir de PayPal la misma respuesta guardada.
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'PayPal-Request-Id': `cobrar-${ordenId}` },
   });
   let j = (await r.json()) as PaypalOrden;
   if (!r.ok && j.details?.some((d) => d.issue === 'ORDER_ALREADY_CAPTURED')) {
     const g = await fetch(`${paypalBase()}/v2/checkout/orders/${encodeURIComponent(ordenId)}`, { headers: { Authorization: `Bearer ${token}` } });
     j = (await g.json()) as PaypalOrden;
   } else if (!r.ok) {
-    return null;
+    return { captura: null, rechazado: !!j.details?.some((d) => d.issue && RECHAZOS.has(d.issue)) };
   }
   const unidad = j.purchase_units?.[0];
   const cap = unidad?.payments?.captures?.find((c) => c.status === 'COMPLETED');
-  if (!cap) return null;
+  if (!cap) {
+    // Captura DECLINED/FAILED dentro de una respuesta 2xx: también es un no.
+    const mala = unidad?.payments?.captures?.some((c) => c.status === 'DECLINED' || c.status === 'FAILED');
+    return { captura: null, rechazado: !!mala };
+  }
   // La orden tiene que ser de ESTA compra (custom_id lo puso el server al crearla).
   const custom = cap.custom_id ?? unidad?.custom_id;
-  if (custom && custom !== compraId) return null;
-  return cap;
+  if (custom && custom !== compraId) return { captura: null, rechazado: false };
+  return { captura: cap, rechazado: false };
 }

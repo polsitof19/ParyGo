@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { publicEnv } from '@/lib/env';
 import { paypalCobrar } from '@/lib/cobroParygo';
+import { sendAltaPendiente } from '@/lib/email/sendAltaEmails';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -42,15 +43,23 @@ export async function GET(req: NextRequest) {
   if (!compra || !orden || compra.provider !== 'paypal' || compra.provider_ref !== orden) return listo('error');
   if (compra.status === 'paid') return listo();
 
-  let cap;
+  let res;
   try {
-    cap = await paypalCobrar(orden, compraId);
+    res = await paypalCobrar(orden, compraId);
   } catch {
     return listo('error');
   }
+  // PayPal dijo que no (tarjeta rechazada, orden no aprobada): la compra pasa
+  // a fallida y "listo" ofrece volver a intentar. Antes quedaba "confirmando"
+  // para siempre (security review 2026-09-25).
+  if (res.rechazado) {
+    await admin.from('pack_purchases').update({ status: 'failed' }).eq('id', compraId).eq('status', 'pending');
+    return listo('error');
+  }
+  const cap = res.captura;
   if (!cap?.id || !cap.amount?.value || !cap.amount.currency_code) return listo('error');
 
-  const { error } = await admin.rpc('settle_pack_purchase', {
+  const { data: s, error } = await admin.rpc('settle_pack_purchase', {
     p_purchase_id: compraId,
     p_provider: 'paypal',
     p_payment_id: cap.id,
@@ -58,5 +67,13 @@ export async function GET(req: NextRequest) {
     p_currency: cap.amount.currency_code,
   });
   if (error) return listo('error');
+
+  // Alta de /empezar ya cobrada: por si cierra la pestaña antes de que cargue
+  // "listo", le llega el link para terminar (con MP lo manda el webhook).
+  const r = s as { action?: string; brand_id?: string } | null;
+  if (deAlta && r?.action === 'credited' && r.brand_id) {
+    const { data: b } = await admin.from('brands').select('name, contact_email').eq('id', r.brand_id).single();
+    if (b?.contact_email) await sendAltaPendiente({ to: b.contact_email, marca: b.name, compraId, lang });
+  }
   return listo();
 }
