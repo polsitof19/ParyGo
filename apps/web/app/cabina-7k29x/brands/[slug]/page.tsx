@@ -67,7 +67,7 @@ export default async function BrandDetailPage({
 
   return (
     <>
-      <Link href="/cabina-7k29x/brands" className="s-back">
+      <Link href="/cabina-7k29x" className="s-back">
         <ChevronLeft className="h-3.5 w-3.5" /> Marcas
       </Link>
 

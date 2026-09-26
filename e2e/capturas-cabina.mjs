@@ -22,7 +22,8 @@ const { data: sup } = await svc.from('user_profiles').select('user_id').eq('is_s
 const { data: u } = await svc.auth.admin.getUserById(sup.user_id);
 const s = await otpSession(u.user.email);
 
-const RUTAS = [['inicio', '/cabina-7k29x'], ['marcas', '/cabina-7k29x/brands'], ['eventos', '/cabina-7k29x/events'], ['salud', '/cabina-7k29x/salud']];
+// Orden de las pestañas (Paul, 2026-09-26): Marcas (principal) · Eventos · Ventas · Salud.
+const RUTAS = [['marcas', '/cabina-7k29x'], ['eventos', '/cabina-7k29x/events'], ['ventas', '/cabina-7k29x/ventas'], ['salud', '/cabina-7k29x/salud']];
 for (const [ancho, motor, w, h, tema] of [['390', webkit, 390, 844, 'light'], ['1440', chromium, 1440, 900, 'dark']]) {
   const b = await motor.launch();
   const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, colorScheme: tema });
@@ -37,11 +38,13 @@ for (const [ancho, motor, w, h, tema] of [['390', webkit, 390, 844, 'light'], ['
     check(`${nombre} ${ancho}: responde y sin scroll horizontal`, r?.status() === 200 && !scrollX, `${r?.status()}`);
     check(`${nombre} ${ancho}: sin nombres técnicos`, !/notification_jobs|pending_yape_review|sold\s*>|oversell/i.test(txt));
     if (nombre === 'eventos') {
-      const fuera = await p.locator('main > section .s-event-row__date').allInnerTexts();
-      check(`eventos ${ancho}: ninguna marca de prueba fuera del plegable`, !fuera.some((t) => /Demo Test/i.test(t)), `${fuera.length} filas visibles`);
+      const fuera = await p.locator('main > section :is(.c-next__when, .c-evcard__when, .s-event-row__date)').allInnerTexts();
+      check(`eventos ${ancho}: ninguna marca de prueba fuera del plegable`, !fuera.some((t) => /Demo Test/i.test(t)), `${fuera.length} líneas visibles`);
+      check(`eventos ${ancho}: el que se vende va en grande con sus cifras`, (await p.locator('.c-next .c-cifras__item').count()) === 3 || /Ningún evento se está vendiendo/.test(txt));
     }
-    if (nombre === 'salud') check(`salud ${ancho}: ya no repite "Eventos publicados" (y el registro se lee)`, !/Eventos publicados/.test(txt) && /Lo que hiciste dentro de marcas/.test(txt));
-    if (nombre === 'inicio') check(`inicio ${ancho}: dice qué te toca y cómo va`, /Por resolver|Todo en orden/.test(await p.locator('main').innerHTML()) && /Tus ventas de paquetes/.test(txt) && /Entradas por día/.test(txt) && /A la venta/.test(txt));
+    if (nombre === 'marcas') check(`marcas ${ancho}: la principal muestra solo las marcas`, /Marcas/.test(txt) && (await p.locator('.c-brandgrid .c-brandcard').count()) > 0 && !/Tus ventas de paquetes|Entradas por día/.test(txt));
+    if (nombre === 'ventas') check(`ventas ${ancho}: paquetes y entradas por día`, /Tus ventas de paquetes/.test(txt) && /Entradas en todas las marcas/.test(txt) && (await p.locator('.c-barras__col').count()) === 14);
+    if (nombre === 'salud') check(`salud ${ancho}: primero lo que te toca, y el registro se lee`, /Por resolver|Todo funciona bien/.test(await p.locator('main').innerHTML()) && !/Eventos publicados/.test(txt) && /Lo que hiciste dentro de marcas/.test(txt));
   }
   await b.close();
 }

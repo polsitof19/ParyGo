@@ -94,6 +94,10 @@
 .super-shell .c-next__title a { color: inherit; }
 .super-shell .c-next__when { font-size: var(--s-ui); color: var(--ink-2); line-height: 1.45; }
 .super-shell .c-next__mas { margin-top: var(--s-s4); }
+/* Dentro de una sección que ya tiene su título: sin aire extra arriba. */
+.super-shell .c-next--flush { margin-top: 0; }
+.super-shell .c-next--flush + .c-evgrid { margin-top: var(--s-s4); }
+.super-shell .c-barras__lead { margin-top: var(--s-s3); }
 
 /* Cifras grandes en fila, entre dos hairlines. */
 .super-shell .c-cifras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-s1) var(--s-s2); margin-top: var(--s-s3); padding: var(--s-s2) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }

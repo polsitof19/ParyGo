@@ -184,8 +184,9 @@ await step('A', 'Super admin: login, desarchivar demotest, cargar saldo, stats',
   note('A', 'Login del super admin por sesión JWT real (magic link generado por service-role, sin email ni cambio de password): la contraseña de Paul no está disponible para el E2E.');
   await go(p, '/cabina-7k29x');
   check('A', 'entra a la cabina (guard superAdmin)', /cabina-7k29x/.test(p.url()), p.url());
-  // Inicio (rediseño 2026-09-26): el resumen de marcas es la fila "N marcas activas".
-  const statTxt = async () => (await p.locator('a.s-linkrow[href="/cabina-7k29x/brands"]').innerText().catch(() => '')).replace(/\s+/g, ' ');
+  // Marcas es la principal de la cabina (2026-09-26): el conteo es la línea de
+  // debajo del título, "N activa(s) · …".
+  const statTxt = async () => (await p.locator('.s-pagehead .s-card__desc').first().innerText().catch(() => '')).replace(/\s+/g, ' ');
   const statsBefore = await statTxt();
   await shot(p, 'A', 'cabina-antes');
 
@@ -231,7 +232,7 @@ await step('A', 'Super admin: login, desarchivar demotest, cargar saldo, stats',
   await go(p, '/cabina-7k29x');
   const statsAfter = await statTxt();
   await shot(p, 'A', 'cabina-despues');
-  const num = (s) => { const m = s.match(/(\d+)\s+marcas?\s+activas?/i); return m ? +m[1] : null; };
+  const num = (s) => { const m = s.match(/(\d+)\s+(?:marcas?\s+)?activas?/i); return m ? +m[1] : null; };
   const mb = num(statsBefore), ma = num(statsAfter);
   note('A', `stats antes: "${statsBefore.slice(0, 160)}" | después: "${statsAfter.slice(0, 160)}"`);
   // demotest está marcada is_test (0057), así que NO cuenta en los KPIs del
@@ -245,7 +246,7 @@ await step('A', 'Super admin: login, desarchivar demotest, cargar saldo, stats',
   // números, no se esconde.
   // Marcas (pestaña propia): la de prueba va en su plegable "De prueba", no
   // mezclada con las reales, pero sigue a mano.
-  await go(p, '/cabina-7k29x/brands');
+  await go(p, '/cabina-7k29x');
   const plegable = p.locator('details.s-fold', { hasText: 'De prueba' });
   const listada = await plegable.locator('.s-event-row', { hasText: 'Demo Test' }).count();
   check('A', 'la marca de prueba SIGUE en Marcas, en su plegable "De prueba" (se excluye de los números, no se oculta)', listada > 0, `filas=${listada}`);

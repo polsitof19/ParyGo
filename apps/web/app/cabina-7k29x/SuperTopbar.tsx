@@ -2,24 +2,25 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Activity, CalendarDays, House, LogOut, Store } from 'lucide-react';
+import { Activity, BarChart3, CalendarDays, LogOut, Store } from 'lucide-react';
 
-// Las cuatro secciones del super admin (rediseño 2026-09-26): Inicio (lo que
-// te toca y cómo va el negocio) · Marcas · Eventos · Salud. Solicitudes salió
-// de la barra: el alta es autoservicio y queda un link al pie de Marcas.
+// Las cuatro secciones del super admin, en el orden que pidió Paul
+// (2026-09-26): Marcas (la principal) · Eventos · Ventas · Salud (arriba, lo
+// que te toca resolver). Solicitudes salió de la barra: el alta es
+// autoservicio y queda un link al pie de Marcas.
 // Mismo markup que el panel del organizador: barra LATERAL en la compu, barra
 // de abajo en el celular (parygo-panel.css, "Navegación de los paneles").
 const NAV = [
-  { href: '/cabina-7k29x', label: 'Inicio', Icono: House },
-  { href: '/cabina-7k29x/brands', label: 'Marcas', Icono: Store },
+  { href: '/cabina-7k29x', label: 'Marcas', Icono: Store },
   { href: '/cabina-7k29x/events', label: 'Eventos', Icono: CalendarDays },
+  { href: '/cabina-7k29x/ventas', label: 'Ventas', Icono: BarChart3 },
   { href: '/cabina-7k29x/salud', label: 'Salud', Icono: Activity },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
-  if (href === '/cabina-7k29x') return pathname === '/cabina-7k29x';
-  // Solicitudes (sin pestaña) se lee como parte de Marcas.
-  if (href === '/cabina-7k29x/brands') return pathname.startsWith(href) || pathname.startsWith('/cabina-7k29x/solicitudes');
+  // Marcas es la principal: incluye la ficha de cada marca y las solicitudes
+  // viejas (que no tienen pestaña).
+  if (href === '/cabina-7k29x') return pathname === '/cabina-7k29x' || pathname.startsWith('/cabina-7k29x/brands') || pathname.startsWith('/cabina-7k29x/solicitudes');
   return pathname.startsWith(href);
 }
 

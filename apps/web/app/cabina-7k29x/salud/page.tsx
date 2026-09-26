@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { todas } from '@/lib/todas';
@@ -70,7 +71,7 @@ export default async function SaludPage() {
   const HEAD = { count: 'exact' as const, head: true };
   const prueba = await idsMarcasDePrueba(admin);
 
-  const [correos, yapes, comprasHoy, entradasHoy, cupos, acciones] = await Promise.all([
+  const [correos, yapes, comprasHoy, entradasHoy, cupos, acciones, marcasRes, duenosRes, pagadasRes] = await Promise.all([
     todas((a, b) => admin.from('notification_jobs').select('status, kind, attempts, last_error, created_at').gte('created_at', since14d).order('created_at', { ascending: false }).order('id').range(a, b))
       .then((data) => ({ data: data as NjRow[], error: null as null | Error }), (error: Error) => ({ data: [] as NjRow[], error })),
     soloConComprobante(sinMarcasDePrueba(admin.from('orders').select('id', HEAD).eq('status', 'pending_yape_review'), prueba)),
@@ -86,6 +87,10 @@ export default async function SaludPage() {
       .order('created_at', { ascending: false })
       .order('id')
       .range(0, 199),
+    admin.from('brands').select('id, name, slug, event_balance, archived_at'),
+    admin.from('brand_members').select('brand_id').eq('role', 'brand_admin'),
+    // Altas que pagaron su paquete: si la marca sigue sin dueño, pagó y no terminó.
+    admin.from('pack_purchases').select('brand_id').eq('status', 'paid').is('created_by', null),
   ]);
 
   // Un número que no se pudo leer es "—", no 0: un cero falso dice "todo bien".
@@ -99,12 +104,27 @@ export default async function SaludPage() {
   const lista = (acciones.data ?? []) as unknown as { created_at: string; type: string; payload: unknown; brand: { name: string } | { name: string }[] | null }[];
 
   const pl = (x: number, uno: string, varios: string) => `${x} ${x === 1 ? uno : varios}`;
-  const alertas: { tono: 'alert' | 'warn'; texto: string }[] = [];
-  if (vendidasDeMas) alertas.push({ tono: 'alert', texto: `${pl(vendidasDeMas, 'tipo de entrada vendió', 'tipos de entrada vendieron')} más de su cupo. No debería pasar nunca: avisa para revisarlo.` });
-  if (fallidos.length > 0) alertas.push({ tono: 'warn', texto: `${pl(fallidos.length, 'correo no salió', 'correos no salieron')} en los últimos 14 días. Mira cuáles abajo.` });
-  if (yapesSinRevisar) alertas.push({ tono: 'warn', texto: `${pl(yapesSinRevisar, 'Yape espera', 'Yapes esperan')} que su marca lo revise.` });
-  const sinLeer = [correos.error, yapes.error, comprasHoy.error, entradasHoy.error, cupos.error].some(Boolean);
-  if (sinLeer) alertas.push({ tono: 'warn', texto: 'Una parte de esta página no se pudo leer (sale como "—"). Recarga en un momento.' });
+  const esPrueba = new Set(prueba);
+  const marcas = (marcasRes.data ?? []).filter((b) => !esPrueba.has(b.id));
+  const conDueno = new Set((duenosRes.data ?? []).map((m) => m.brand_id));
+  const activas = marcas.filter((b) => !b.archived_at);
+  const sinDueno = activas.filter((b) => !conDueno.has(b.id));
+  const sinSaldo = activas.filter((b) => (b.event_balance ?? 0) === 0 && conDueno.has(b.id));
+  const pagoSinTerminar = [...new Set((pagadasRes.data ?? []).map((p) => p.brand_id))]
+    .map((id) => marcas.find((b) => b.id === id))
+    .filter((b): b is NonNullable<typeof b> => !!b && !conDueno.has(b.id));
+  const nombres = (l: { name: string }[]) => l.slice(0, 3).map((b) => b.name).join(', ') + (l.length > 3 ? ` y ${l.length - 3} más` : '');
+
+  type Tarea = { titulo: string; sub: string; href: string; cta: string; grave?: boolean };
+  const tareas: Tarea[] = [];
+  if (vendidasDeMas) tareas.push({ grave: true, titulo: `${pl(vendidasDeMas, 'tipo de entrada vendió', 'tipos de entrada vendieron')} más de su cupo`, sub: 'No debería pasar nunca. Avisa para revisarlo.', href: '#sal-ctrl-sec', cta: 'Ver controles' });
+  if (pagoSinTerminar.length > 0) tareas.push({ titulo: `${pl(pagoSinTerminar.length, 'marca pagó', 'marcas pagaron')} y no terminó su registro`, sub: `${nombres(pagoSinTerminar)} · ya se le envió el link para terminar; si no entra, escríbele.`, href: `/cabina-7k29x/brands/${pagoSinTerminar[0]!.slug}`, cta: 'Ver marca' });
+  if (fallidos.length > 0) tareas.push({ titulo: pl(fallidos.length, 'correo no salió', 'correos no salieron'), sub: 'En los últimos 14 días. Puede ser una entrada que no le llegó a alguien.', href: '#sal-correos-sec', cta: 'Ver cuáles' });
+  if (sinDueno.length > 0) tareas.push({ titulo: pl(sinDueno.length, 'marca sin dueño', 'marcas sin dueño'), sub: `${nombres(sinDueno)} · nadie puede entrar a su panel.`, href: `/cabina-7k29x/brands/${sinDueno[0]!.slug}`, cta: 'Asignar dueño' });
+  if (yapesSinRevisar) tareas.push({ titulo: `${pl(yapesSinRevisar, 'Yape espera', 'Yapes esperan')} que su marca lo revise`, sub: 'Comprobantes subidos que el organizador todavía no aprobó.', href: '#sal-ctrl-sec', cta: 'Ver controles' });
+  if (sinSaldo.length > 0) tareas.push({ titulo: `${pl(sinSaldo.length, 'marca se quedó', 'marcas se quedaron')} sin eventos en su pack`, sub: `${nombres(sinSaldo)} · no pueden crear otro evento hasta comprar.`, href: `/cabina-7k29x/brands/${sinSaldo[0]!.slug}#saldo`, cta: 'Ver marca' });
+  const [primera, ...resto] = tareas;
+  const sinLeer = [correos.error, yapes.error, comprasHoy.error, entradasHoy.error, cupos.error, marcasRes.error, duenosRes.error].some(Boolean);
 
   const hora = (iso: string) => new Date(iso).toLocaleString('es-PE', { timeZone: 'America/Lima', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
@@ -113,15 +133,37 @@ export default async function SaludPage() {
       <header className="s-pagehead">
         <div>
           <h1 className="s-h1">Salud</h1>
-          <p className="s-card__desc">Si algo falla en la plataforma, aparece arriba.</p>
+          <p className="s-card__desc">Arriba lo que te toca resolver; abajo, cómo está funcionando todo.</p>
         </div>
       </header>
 
-      <div className="s-notices" role="status">
-        {alertas.length > 0
-          ? alertas.map((a, i) => <p key={i} className={`s-notice s-notice--${a.tono}`}>{a.texto}</p>)
-          : <p className="s-notice s-notice--ok">Todo funciona bien.</p>}
-      </div>
+      {/* 1) LO QUE TE TOCA: una fila con fondo (la más urgente) y el resto en
+          líneas. Sin nada pendiente, una línea en verde. */}
+      {sinLeer && <p className="s-notice s-notice--warn" role="status">Una parte de esta página no se pudo leer (sale como "—"). Recarga en un momento.</p>}
+      {primera ? (
+        <>
+          <div className={`s-due${primera.grave ? ' s-due--grave' : ''}`} role="status">
+            <div className="s-due__txt">
+              <span className="s-due__k">Por resolver</span>
+              <span className="s-due__n">{primera.titulo}</span>
+              <span className="s-due__sub">{primera.sub}</span>
+            </div>
+            <Link href={primera.href} className="s-btn s-btn--primary">{primera.cta}</Link>
+          </div>
+          {resto.length > 0 && (
+            <div className="s-todos">
+              {resto.map((t) => (
+                <div key={t.titulo} className={`s-todo${t.grave ? ' s-todo--alert' : ''}`}>
+                  <span className="s-todo__txt"><span><strong>{t.titulo}</strong><span className="s-todo__sub">{t.sub}</span></span></span>
+                  <Link href={t.href} className="s-btn s-btn--soft s-btn--sm">{t.cta}</Link>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="s-calm s-calm--ok">Todo funciona bien: nada que te toque resolver.</p>
+      )}
 
       <section className="s-section" aria-labelledby="sal-hoy">
         <h2 className="s-h2 s-h2--sec" id="sal-hoy">Hoy</h2>
@@ -131,7 +173,15 @@ export default async function SaludPage() {
         </div>
       </section>
 
-      <section className="s-section" aria-labelledby="sal-correos">
+      <section className="s-section" id="sal-ctrl-sec" aria-labelledby="sal-ctrl">
+        <h2 className="s-h2 s-h2--sec" id="sal-ctrl">Controles</h2>
+        <div className="s-stats">
+          <Cifra label="Yapes sin revisar" valor={yapesSinRevisar} sub="comprobantes que la marca no aprobó" alerta={!!yapesSinRevisar} />
+          <Cifra label="Entradas vendidas de más" valor={vendidasDeMas} sub="siempre tiene que ser 0" alerta={!!vendidasDeMas} grave />
+        </div>
+      </section>
+
+      <section className="s-section" id="sal-correos-sec" aria-labelledby="sal-correos">
         <h2 className="s-h2 s-h2--sec" id="sal-correos">Correos · últimos 14 días</h2>
         <div className="s-stats">
           <Cifra label="Enviados" valor={correos.error ? null : enviados} />
@@ -154,14 +204,6 @@ export default async function SaludPage() {
             </ul>
           </>
         )}
-      </section>
-
-      <section className="s-section" aria-labelledby="sal-ctrl">
-        <h2 className="s-h2 s-h2--sec" id="sal-ctrl">Controles</h2>
-        <div className="s-stats">
-          <Cifra label="Yapes sin revisar" valor={yapesSinRevisar} sub="comprobantes que la marca no aprobó" alerta={!!yapesSinRevisar} />
-          <Cifra label="Entradas vendidas de más" valor={vendidasDeMas} sub="siempre tiene que ser 0" alerta={!!vendidasDeMas} grave />
-        </div>
       </section>
 
       {/* Lo que Paul tocó dentro de marcas ajenas: el contrapeso del modo

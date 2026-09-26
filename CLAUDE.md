@@ -333,6 +333,12 @@ para OK de Paul.
   grandes de paquetes (hoy · 7 días · mes, siempre visibles) y MARCAS y
   EVENTOS como tarjetas con logo/flyer en rejilla (2 columnas en el teléfono).
   El logo de marca va sobre --surface-2, nunca sobre el color de la marca.
+  ORDEN DE PESTAÑAS (Paul, mismo día): MARCAS es la principal (/cabina-7k29x,
+  solo las marcas; /brands redirige ahí) · EVENTOS (el que se vende en grande
+  con sus tres cifras + tarjetas) · VENTAS (/ventas: paquetes hoy/7 días/mes y
+  entradas de todas las marcas con las barras de 14 días) · SALUD (ARRIBA lo
+  que te toca resolver —la fila .s-due y las .s-todo—; después Hoy, Controles,
+  Correos y el registro de lo que hiciste). Ya no hay pantalla "Inicio".
 - ESCÁNER: /scan sin sesión va a /login?next=/scan y el login VUELVE al
   escáner (lib/loginNext.ts, con test de open redirect en
   e2e/login-next.test.mts); antes terminaba en el panel y "parecía que se

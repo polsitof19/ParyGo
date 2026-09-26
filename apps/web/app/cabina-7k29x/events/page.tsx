@@ -3,7 +3,7 @@ import { Plus, ChevronRight, ChevronDown } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { idsMarcasDePrueba } from '@/lib/marcasDePrueba';
-import { EventoCard } from '../visual';
+import { Cifras, EventoCard, Flyer } from '../visual';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -53,6 +53,16 @@ export default async function EventsListPage({ searchParams }: { searchParams?: 
   const archivados = reales.filter((e) => e.archived_at).reverse();
 
   // Entradas emitidas (no anuladas) de lo que está a la venta: un conteo por evento.
+  const HEAD = { count: 'exact' as const, head: true };
+  const lh = new Date(ahora - 5 * 3_600_000);
+  const hoyLima = Date.UTC(lh.getUTCFullYear(), lh.getUTCMonth(), lh.getUTCDate()) + 5 * 3_600_000;
+  const cuenta = (q: PromiseLike<{ count: number | null; error: unknown }>) => Promise.resolve(q).then((r) => (r.error ? null : r.count ?? 0));
+  const [hoyDestacado, entraronDestacado] = aLaVenta[0]
+    ? await Promise.all([
+      cuenta(admin.from('tickets').select('id', HEAD).eq('event_id', aLaVenta[0].id).is('invalidated_at', null).gte('created_at', new Date(hoyLima).toISOString())),
+      cuenta(admin.from('tickets').select('id', HEAD).eq('event_id', aLaVenta[0].id).is('invalidated_at', null).gt('scan_count', 0)),
+    ])
+    : [null, null];
   const entradas = await Promise.all(
     aLaVenta.map((e) => admin.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', e.id).is('invalidated_at', null).then((r) => (r.error ? null : r.count ?? 0))),
   );
@@ -107,15 +117,38 @@ export default async function EventsListPage({ searchParams }: { searchParams?: 
         {aLaVenta.length === 0 ? (
           <p className="s-calm">Ningún evento se está vendiendo en este momento.</p>
         ) : (
-          // Tarjetas con el flyer, como en el panel del organizador; las
-          // entradas van en una pastilla sobre la imagen.
-          <ul className="c-evgrid">
-            {aLaVenta.map((e, i) => (
-              <EventoCard key={e.id} href={`/cabina-7k29x/events/${e.id}`} nombre={e.name} cover={e.cover_url}
-                lineas={[marca(e)?.name ?? '—', cuando(e.starts_at)]}
-                cifra={{ n: entradas[i] ?? null, label: entradas[i] === 1 ? 'entrada' : 'entradas' }} />
-            ))}
-          </ul>
+          <>
+            {/* El primero, en grande: flyer, nombre y tres cifras (como "el
+                evento que viene" del panel del organizador). */}
+            <div className="c-next c-next--flush">
+              <div className="c-next__head">
+                <Link href={`/cabina-7k29x/events/${aLaVenta[0]!.id}`} className="c-next__flyer" aria-hidden="true" tabIndex={-1}>
+                  <Flyer url={aLaVenta[0]!.cover_url} nombre={aLaVenta[0]!.name} ancho={440} />
+                </Link>
+                <div className="c-next__id">
+                  <span className="c-next__live"><span className="c-next__dot" aria-hidden="true" />Se está vendiendo ahora</span>
+                  <h3 className="c-next__title"><Link href={`/cabina-7k29x/events/${aLaVenta[0]!.id}`}>{aLaVenta[0]!.name}</Link></h3>
+                  <span className="c-next__when">{marca(aLaVenta[0]!)?.name ?? '—'} · {cuando(aLaVenta[0]!.starts_at)}</span>
+                </div>
+              </div>
+              <Cifras items={[
+                { n: entradas[0] == null ? '—' : entradas[0].toLocaleString('es-PE'), label: 'entradas' },
+                { n: hoyDestacado == null ? '—' : hoyDestacado.toLocaleString('es-PE'), label: 'vendidas hoy' },
+                { n: entraronDestacado == null ? '—' : entraronDestacado.toLocaleString('es-PE'), label: 'ya entraron' },
+              ]} />
+            </div>
+            {/* Los demás, en tarjetas con el flyer; las entradas en una
+                pastilla sobre la imagen. */}
+            {aLaVenta.length > 1 && (
+              <ul className="c-evgrid">
+                {aLaVenta.slice(1).map((e, i) => (
+                  <EventoCard key={e.id} href={`/cabina-7k29x/events/${e.id}`} nombre={e.name} cover={e.cover_url}
+                    lineas={[marca(e)?.name ?? '—', cuando(e.starts_at)]}
+                    cifra={{ n: entradas[i + 1] ?? null, label: entradas[i + 1] === 1 ? 'entrada' : 'entradas' }} />
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </section>
 
