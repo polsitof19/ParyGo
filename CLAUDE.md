@@ -74,6 +74,16 @@ supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se regist
 - Yape manual: COMPLETO punta a punta. Comprobante público → revisión en panel
   (autenticada, scoped por marca, transición de estado atómica) → emisión →
   email. Es el camino que cobra hoy.
+- CORREOS AL ORGANIZADOR (2026-09-25, Paul: "máximo uno o dos"): el aviso
+  "Yapes por aprobar" es UNO por evento por ventana de 12 h (dedupe_key
+  yape_pending_digest:<event>:<floor(epoch/43200)>, la misma en
+  yape/actions.ts y en enqueue_yape_notifications, que el cron llama con
+  p_digest_bucket_seconds = 43200): el primero al instante, después nada
+  hasta la próxima ventana → máximo 2 por día. Antes era uno por orden.
+  Y las marcas is_test NO reciben avisos de organizador: el worker los marca
+  'sent' con last_error 'omitido_marca_de_prueba' (demotest tiene el correo
+  de Paul y cada corrida del E2E le mandaba 4–8; los correos al COMPRADOR de
+  demotest sí salen porque los smokes de prod los revisan).
 - SDK `mercadopago` PROHIBIDO en el server (2026-09-25): arma su User-Agent con
   process.version.substring() y en el edge (Cloudflare y el sandbox edge de
   Next) process.version no existe → NINGUNA preferencia se creaba en
