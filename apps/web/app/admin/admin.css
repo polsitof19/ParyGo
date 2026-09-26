@@ -621,3 +621,6 @@
 .admin-shell .a-priv__acts svg { width: 16px; height: 16px; }
 .admin-shell .a-priv__lim { margin-top: var(--s-s3); }
 .admin-shell .a-priv__num { max-width: 160px; }
+
+/* Marcar un tipo como agotado (2026-09-26): al pie del tipo, separado por hairline. */
+.admin-shell .a-agotada { margin-top: var(--s-s2); padding-top: var(--s-s2); border-top: 1px solid var(--line); }

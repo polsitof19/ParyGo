@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import { ChevronDown, ChevronUp, Plus, Link2, Lock, MessageCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFormFeedback } from '@/components/useFormFeedback';
 import { formatPEN } from '@/lib/utils';
-import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, setTicketTypePrivateAction, moveTicketTypeAction, type EditState } from '../edit-actions';
+import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, setTicketTypePrivateAction, moveTicketTypeAction, marcarAgotadaAction, type EditState } from '../edit-actions';
 import { useTextos } from '@/components/IdiomaPanel';
 import type { Textos } from '@/lib/idioma';
 
@@ -238,7 +238,7 @@ export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false, l
         <span className="a-tt-sum">
           <span className={tt.colorHex ? 'a-tt-dot a-tt-dot--on' : 'a-tt-dot'} style={tt.colorHex ? ({ '--sw': tt.colorHex } as React.CSSProperties) : undefined} aria-hidden="true" />
           <span className="a-tt-name">{tt.name}</span>
-          <span className="a-tt-meta">{price} · {stock}{!tt.isActive && ` · ${t('pausada', 'paused')}`}{linkPrivado && ` · ${t('privada (solo con link)', 'private (link-only)')}${limitePrivado ? ` · ${t(`${limitePrivado} por persona`, `${limitePrivado} per person`)}` : ''}`}</span>
+          <span className="a-tt-meta">{price} · {stock}{!tt.isUnlimited && tt.capacity - tt.sold <= 0 && ` · ${t('agotada', 'sold out')}`}{!tt.isActive && ` · ${t('pausada', 'paused')}`}{linkPrivado && ` · ${t('privada (solo con link)', 'private (link-only)')}${limitePrivado ? ` · ${t(`${limitePrivado} por persona`, `${limitePrivado} per person`)}` : ''}`}</span>
         </span>
         <ChevronDown aria-hidden="true" />
       </summary>
@@ -278,6 +278,7 @@ export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false, l
         </form>
         {!ro && !(isFirst && isLast) && <MoveTicketType eventId={eventId} ttId={tt.id} isFirst={isFirst} isLast={isLast} />}
         {!ro && <PrivateLink eventId={eventId} tt={tt} link={linkPrivado} limite={limitePrivado} eventName={eventName} />}
+        {!ro && <MarcarAgotada eventId={eventId} tt={tt} />}
       </div>
     </details>
   );
@@ -430,6 +431,40 @@ function PrivateLink({ eventId, tt, link, limite, eventName }: { eventId: string
           <p className="s-hint">{t('Se cuenta por correo y por documento. Vacío = sin límite.', 'It is counted by email and by document. Empty = no limit.')}</p>
         </form>
       )}
+    </div>
+  );
+}
+
+// Cortar la venta de un tipo con un toque (2026-09-26, Paul: "que haya botón
+// para poner agotado"). El server fija la capacidad en lo vendido + lo que se
+// está comprando ahora; para reabrir, se sube la Capacidad arriba y se guarda.
+function MarcarAgotada({ eventId, tt }: { eventId: string; tt: TtRow }) {
+  const { t } = useTextos();
+  const [pendiente, start] = useTransition();
+  const agotada = !tt.isUnlimited && tt.capacity - tt.sold <= 0;
+  if (agotada) {
+    return (
+      <p className="s-hint a-agotada">
+        {t('Agotada: ya no se vende. Para volver a vender, sube la Capacidad y guarda los cambios.', 'Sold out: it is no longer on sale. To sell again, raise the Capacity and save the changes.')}
+      </p>
+    );
+  }
+  return (
+    <div className="a-agotada">
+      <button
+        type="button"
+        className="s-btn s-btn--soft s-btn--sm"
+        disabled={pendiente}
+        onClick={() => {
+          if (!window.confirm(t(`¿Marcar ${tt.name} como agotada? Nadie más podrá comprarla; quien ya está pagando termina su compra. Puedes reabrirla subiendo la Capacidad.`, `Mark ${tt.name} as sold out? Nobody else will be able to buy it; anyone already paying finishes their purchase. You can reopen it by raising the Capacity.`))) return;
+          start(async () => {
+            const r = await marcarAgotadaAction(eventId, tt.id);
+            if (r.ok) toast.success(r.message); else toast.error(r.message);
+          });
+        }}
+      >
+        {pendiente ? t('Marcando…', 'Marking…') : t('Marcar como agotada', 'Mark as sold out')}
+      </button>
     </div>
   );
 }

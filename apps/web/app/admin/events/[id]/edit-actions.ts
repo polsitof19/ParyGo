@@ -888,3 +888,53 @@ export async function moveTicketTypeAction(_prev: EditState, formData: FormData)
   revalidatePath(`/admin/events/${eventId}/entradas`);
   return { ok: true, message: null };
 }
+
+// ===== Marcar un tipo de entrada como AGOTADO (Paul, 2026-09-26) =====
+// El organizador corta la venta de un tipo sin tener que calcular números: la
+// capacidad pasa a ser lo ya vendido + lo reservado en este momento (compras en
+// curso y Yapes esperando aprobación, stock_reservations sin vencer). Así nadie
+// nuevo puede tomar una, quien ya está pagando conserva su lugar, y la página
+// muestra "Agotada" (capacity - sold <= 0 en cuanto esas reservas se cierran).
+// Para volver a vender: subir "Capacidad" en el mismo tipo y guardar.
+// Concurrencia: se escribe SOLO si `sold` no cambió desde que se leyó (una
+// venta en el medio hace reintentar), así la capacidad nunca queda por debajo
+// de lo vendido.
+export async function marcarAgotadaAction(eventId: string, ttId: string): Promise<EditState> {
+  const user = await requireSession();
+  const { t } = await textosPanel();
+  const auth = await authEvent(eventId, user);
+  const brandId = auth?.brandId ?? null;
+  if (!brandId) return { ok: false, message: t('No tienes permiso.', 'You do not have permission.') };
+
+  const admin = createAdminClient();
+  for (let intento = 0; intento < 4; intento++) {
+    const { data: tt } = await admin.from('ticket_types').select('id, event_id, name, sold, capacity, is_unlimited').eq('id', ttId).maybeSingle();
+    if (!tt || tt.event_id !== eventId) return { ok: false, message: t('Ese tipo no es de este evento.', 'That type does not belong to this event.') };
+    const { data: res } = await admin.from('stock_reservations').select('quantity').eq('ticket_type_id', ttId).gt('expires_at', new Date().toISOString());
+    const reservadas = (res ?? []).reduce((s, r) => s + (r.quantity ?? 0), 0);
+    const sold = tt.sold ?? 0;
+    const nueva = sold + reservadas;
+    const { data: hecho, error } = await admin
+      .from('ticket_types')
+      .update({ capacity: nueva, is_unlimited: false })
+      .eq('id', ttId)
+      .eq('event_id', eventId)
+      .eq('sold', sold)
+      .select('id');
+    if (error) return { ok: false, message: t('No se pudo marcar como agotada. Inténtalo otra vez.', 'Could not mark it as sold out. Please try again.') };
+    if (hecho && hecho.length > 0) {
+      await admin.from('events_log').insert({ brand_id: brandId, event_id: eventId, actor_user_id: user.id, type: 'ticket_type_edited', payload: { ticket_type_id: ttId, agotada: true, capacity: nueva } });
+      await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId, accion: 'ticket_type_edited', diff: { ticket_type_id: ttId, agotada: true, capacity: nueva } });
+      revalidatePath(`/admin/events/${eventId}/entradas`);
+      revalidatePath(`/admin/events/${eventId}`);
+      return {
+        ok: true,
+        message: reservadas > 0
+          ? t(`${tt.name} quedó agotada. ${reservadas} en compra todavía pueden terminar.`, `${tt.name} is now sold out. ${reservadas} in checkout can still finish.`)
+          : t(`${tt.name} quedó agotada.`, `${tt.name} is now sold out.`),
+      };
+    }
+    // Se vendió una en el medio: se vuelve a leer y se reintenta.
+  }
+  return { ok: false, message: t('Se está vendiendo en este momento. Inténtalo otra vez en unos segundos.', 'It is selling right now. Try again in a few seconds.') };
+}
