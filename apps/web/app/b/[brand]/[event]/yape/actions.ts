@@ -142,10 +142,14 @@ export async function submitYapeProof(formData: FormData): Promise<Result> {
   };
 }
 
-// Aviso AL TOQUE al organizador: un email por orden con comprobante (lo manda el
-// worker de la cola, que corre cada minuto). Antes solo existía el resumen cada
-// 6 h. Respeta la casilla de "Mi marca" (notify_yape_digest) y nunca frena al
-// comprador: si encolar falla, su comprobante ya quedó guardado igual.
+// Aviso AL TOQUE al organizador, con TOPE (Paul, 2026-09-25: "máximo uno o
+// dos"): el PRIMER comprobante de una ventana de 12 h manda el correo al
+// instante; los siguientes de esa ventana no suman otro (misma dedupe_key que
+// el resumen del cron: 1 por evento por ventana → máximo 2 por día). Antes era
+// uno por orden y una noche de 100 Yapes eran 100 correos. Respeta la casilla
+// de "Mi marca" (notify_yape_digest) y nunca frena al comprador: si encolar
+// falla, su comprobante ya quedó guardado igual.
+const DIGEST_VENTANA_S = 12 * 3600;
 async function avisarAlOrganizador(
   admin: ReturnType<typeof createAdminClient>,
   a: { brandId: string; eventId: string; eventName: string; eventSlug: string; orderId: string }
@@ -171,9 +175,9 @@ async function avisarAlOrganizador(
       recipient_email: brand.contact_email.trim().toLowerCase(),
       recipient_name: brand.name ?? '',
       payload: { event_name: a.eventName, event_slug: a.eventSlug, brand_slug: brand.slug, pending_count: Math.max(1, count ?? 1) },
-      // Uno por ORDEN, no por comprobante: subir el comprobante es público y una
-      // orden admite varios; por comprobante se podía llenarle la bandeja.
-      dedupe_key: `yape_pending_digest:${a.eventId}:order:${a.orderId}`,
+      // Uno por EVENTO por ventana de 12 h (la misma llave que arma
+      // enqueue_yape_notifications): ni por orden ni por comprobante.
+      dedupe_key: `yape_pending_digest:${a.eventId}:${Math.floor(Date.now() / 1000 / DIGEST_VENTANA_S)}`,
       status: 'pending',
     });
   } catch (e) {

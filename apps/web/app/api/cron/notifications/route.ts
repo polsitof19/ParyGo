@@ -50,7 +50,9 @@ export async function POST(req: NextRequest) {
 
   // 1. Encolar lo nuevo (idempotente). Si falla, igual seguimos a procesar lo ya
   //    encolado (no abortamos la tanda por un error de enqueue).
-  const { error: enqErr, data: enqCount } = await admin.rpc('enqueue_yape_notifications', {});
+  const { error: enqErr, data: enqCount } = await // Ventana del resumen = 12 h, la misma del aviso al toque (yape/actions.ts):
+  // entre los dos, máximo 2 correos por evento por día.
+  admin.rpc('enqueue_yape_notifications', { p_digest_bucket_seconds: 12 * 3600 });
   const enqueued = typeof enqCount === 'number' ? enqCount : 0;
   // Recordatorios pre-evento (eventos que arrancan dentro de 24h, idempotente).
   const { error: remErr, data: remCount } = await admin.rpc('enqueue_event_reminders', {});
