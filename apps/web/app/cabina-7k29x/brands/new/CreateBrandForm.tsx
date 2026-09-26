@@ -118,8 +118,8 @@ export function CreateBrandForm({ requestId, initialName = '', initialEmail = ''
       </div>
 
       <div className="s-field">
-        <label className="s-check"><input type="checkbox" name="prueba_gratis" defaultChecked /> Dar prueba gratis</label>
-        <p className="s-hint">1 evento sin saldo, hasta 20 entradas en total. Se usa una sola vez.</p>
+        <label className="s-check"><input type="checkbox" name="prueba_gratis" /> Dar prueba gratis</label>
+        <p className="s-hint">Solo si quieres regalarla: 1 evento sin saldo, hasta 20 entradas. El alta pública ya no la ofrece.</p>
       </div>
 
       <div className="s-divider" />

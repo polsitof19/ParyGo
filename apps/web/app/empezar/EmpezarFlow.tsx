@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { ArrowRight, Check, Eye, EyeOff } from 'lucide-react';
-import { confirmarAlta, enviarCodigo, pagarAlta, slugDisponible, type AltaState } from './actions';
+import { pagarAlta, slugDisponible, type AltaState } from './actions';
 import { CLAVE_ALTA } from './listo/Completar';
 import { TEXTOS, formatoPrecio, type Lang, type Moneda } from './textos';
 
@@ -15,7 +15,7 @@ export type Plan = {
   destacado?: boolean;
 };
 
-type Opcion = 'prueba' | Plan['id'];
+type Opcion = Plan['id'];
 
 // "Tío Code" → "tio-code". Mismo formato que valida el servidor (SLUG_RE).
 function aSlug(nombre: string): string {
@@ -23,12 +23,6 @@ function aSlug(nombre: string): string {
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
     .slice(0, 32).replace(/-+$/, '');
-}
-
-function enmascarar(email: string): string {
-  const [u, d] = email.split('@');
-  if (!u || !d) return email;
-  return `${u.slice(0, 1)}${'•'.repeat(Math.max(2, Math.min(4, u.length - 1)))}@${d}`;
 }
 
 const inicial: AltaState = { ok: false, paso: 'datos', message: null };
@@ -42,19 +36,18 @@ function Enviar({ children, disabled, espera }: { children: React.ReactNode; dis
   );
 }
 
-export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial, disponible, tope, cancelado }: {
+export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial, disponible, cancelado }: {
   lang: Lang;
   planes: Plan[];
   inicial: Opcion;
   monedaInicial: Moneda;
   disponible: Record<Moneda, boolean>;
-  tope: number;
   cancelado?: boolean;
 }) {
   const t = TEXTOS[lang];
   const [moneda, setMoneda] = useState<Moneda>(monedaInicial);
   const pagos = disponible[moneda];
-  const [plan, setPlan] = useState<Opcion>(pagos || planInicial === 'prueba' ? planInicial : 'prueba');
+  const [plan, setPlan] = useState<Opcion>(planInicial);
   const [nombre, setNombre] = useState('');
   const [slug, setSlug] = useState('');
   const [slugTocado, setSlugTocado] = useState(false);
@@ -63,37 +56,13 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
   const [password, setPassword] = useState('');
   const [ver, setVer] = useState(false);
   const [whatsapp, setWhatsapp] = useState('');
-  const [codigo, setCodigo] = useState('');
-  const [enCodigo, setEnCodigo] = useState(false);
-  const [espera, setEspera] = useState(0);
 
-  const [envio, enviar] = useFormState(enviarCodigo, inicial);
   const [pago, pagar] = useFormState(pagarAlta, inicial);
   const [errPass, setErrPass] = useState<string | null>(null);
-  const [conf, confirmar] = useFormState(confirmarAlta, inicial);
-  const codigoRef = useRef<HTMLInputElement>(null);
 
-  const elegido = plan === 'prueba' ? null : planes.find((p) => p.id === plan) ?? null;
-  const esPrueba = elegido === null;
+  // Sin prueba gratis: siempre hay un paquete elegido.
+  const elegido: Plan = planes.find((p) => p.id === plan) ?? planes[0]!;
   const precio = (p: Plan) => formatoPrecio(p[moneda], moneda);
-
-  // Sin el medio de pago de esa moneda, un pack elegido vuelve a la prueba.
-  useEffect(() => { if (!pagos && plan !== 'prueba') setPlan('prueba'); }, [pagos, plan]);
-
-  // El servidor decide en qué paso quedamos: el código salió → pantalla del
-  // código; el alta rebotó por un dato (p. ej. el link se ocupó) → a los datos.
-  useEffect(() => {
-    if (envio.ok && envio.paso === 'codigo') { setEnCodigo(true); setCodigo(''); setEspera(30); }
-  }, [envio]);
-  useEffect(() => {
-    if (!conf.ok && conf.paso === 'datos' && conf.message) setEnCodigo(false);
-  }, [conf]);
-  useEffect(() => { if (enCodigo) codigoRef.current?.focus(); }, [enCodigo]);
-  useEffect(() => {
-    if (espera <= 0) return;
-    const id = setTimeout(() => setEspera((s) => s - 1), 1000);
-    return () => clearTimeout(id);
-  }, [espera]);
 
   // El link se arma solo desde el nombre hasta que lo edites a mano.
   useEffect(() => { if (!slugTocado) setSlug(aSlug(nombre)); }, [nombre, slugTocado]);
@@ -104,13 +73,12 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
     return () => clearTimeout(id);
   }, [slug]);
 
-  const err = { ...((esPrueba ? (conf.paso === 'datos' ? conf.fieldErrors : undefined) ?? envio.fieldErrors : pago.fieldErrors) ?? {}), ...(errPass ? { password: errPass } : {}) };
-  const aviso = enCodigo ? null : esPrueba ? (conf.paso === 'datos' ? conf.message : null) ?? (envio.ok ? null : envio.message) : pago.message;
+  const err = { ...(pago.fieldErrors ?? {}), ...(errPass ? { password: errPass } : {}) };
+  const aviso = pago.message;
 
   // Pack: la contraseña NO va al servidor antes del pago. Queda en este
   // navegador y /empezar/listo la usa al volver con el pago aprobado.
   function antesDePagar(e: React.FormEvent<HTMLFormElement>) {
-    if (esPrueba) return;
     if (password.length < 8) { e.preventDefault(); setErrPass(t.m.passCorta); return; }
     setErrPass(null);
     try { sessionStorage.setItem(CLAVE_ALTA, JSON.stringify({ email: email.toLowerCase(), password })); } catch { /* la elige al volver */ }
@@ -124,7 +92,6 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
       <input type="hidden" name="nombre" value={nombre} />
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="email" value={email} />
-      {esPrueba && <input type="hidden" name="password" value={password} />}
       <input type="hidden" name="whatsapp" value={whatsapp} />
     </>
   );
@@ -155,8 +122,7 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
           <strong className="ez-url">{slug || t.linkPh}.parygo.com</strong> {t.lede2}
         </p>
 
-        {!enCodigo ? (
-          <form action={esPrueba ? enviar : pagar} onSubmit={antesDePagar} className="ez-form" noValidate>
+        <form action={pagar} onSubmit={antesDePagar} className="ez-form" noValidate>
             <fieldset className="ez-planes">
               <legend className="ez-h2">{t.elige}</legend>
 
@@ -169,7 +135,6 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
                 ))}
               </div>
 
-              {fila('prueba', t.prueba, t.pruebaDet(tope), t.gratis, false)}
               {planes.map((p) => fila(
                 p.id,
                 `${p.eventos} ${p.eventos === 1 ? t.evento : t.eventos}`,
@@ -239,57 +204,27 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
             <div className="ez-hp" aria-hidden="true"><label>Empresa<input name="empresa" tabIndex={-1} autoComplete="off" /></label></div>
 
             {aviso && <p className="ez-banner" role="alert">{aviso}</p>}
-            {!aviso && cancelado && !esPrueba && <p className="ez-banner" role="status">{t.cancelado}</p>}
+            {!aviso && cancelado && <p className="ez-banner" role="status">{t.cancelado}</p>}
             <div className="ez-actions">
-              <Enviar disabled={libre === false} espera={t.momento}>{esPrueba ? t.enviarCodigo : t.pagar(precio(elegido!))}</Enviar>
+              <Enviar disabled={libre === false || !pagos} espera={t.momento}>{t.pagar(precio(elegido))}</Enviar>
               <p className="ez-fine">
-                {esPrueba ? t.finoPrueba : t.finoPago[moneda]}{' '}
+                {t.finoPago[moneda]}{' '}
                 {t.acepta}{' '}
                 <a href="/terminos" target="_blank" rel="noopener">{t.terminos}</a> {t.y} <a href="/privacidad" target="_blank" rel="noopener">{t.privacidad}</a>.
               </p>
             </div>
           </form>
-        ) : (
-          <form action={confirmar} className="ez-form ez-form--codigo">
-            <h2 className="ez-h2">{t.revisa}</h2>
-            <p className="ez-body">
-              {t.enviamos} <strong>{enmascarar(email)}</strong>. {t.spam}
-            </p>
-            <div className="ez-field">
-              <label htmlFor="ez-codigo" className="ez-label">{t.codigo}</label>
-              <input id="ez-codigo" ref={codigoRef} name="codigo" className="ez-input ez-input--code" value={codigo}
-                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                inputMode="numeric" autoComplete="one-time-code" placeholder="00000000" maxLength={8}
-                aria-invalid={!!conf.fieldErrors?.codigo} aria-describedby="e-codigo" />
-              <p id="e-codigo" className={conf.fieldErrors?.codigo ? 'ez-err' : 'ez-hint'}>{conf.fieldErrors?.codigo ?? t.vence}</p>
-            </div>
-            {ocultos}
-            {conf.paso === 'codigo' && conf.message && <p className="ez-banner" role="alert">{conf.message}</p>}
-            {!envio.ok && envio.message && <p className="ez-banner" role="alert">{envio.message}</p>}
-            <div className="ez-actions">
-              <Enviar disabled={codigo.length < 8} espera={t.momento}>{t.crear}</Enviar>
-              <p className="ez-fine">{t.finoCodigo(tope)}</p>
-            </div>
-            <div className="ez-links">
-              <button type="button" className="ez-link" onClick={() => setEnCodigo(false)}>{t.cambiar}</button>
-              <button type="submit" formAction={enviar} className="ez-link" disabled={espera > 0}>
-                {espera > 0 ? t.reenviarEn(espera) : t.reenviar}
-              </button>
-            </div>
-          </form>
-        )}
       </div>
 
       <aside className="ez-resumen" aria-label={t.tuPlan}>
         <p className="ez-resumen__label">{t.tuPlan}</p>
-        <p className="ez-resumen__plan">{elegido ? `${elegido.eventos} ${elegido.eventos === 1 ? t.evento : t.eventos}` : t.prueba}</p>
-        <p className="ez-resumen__precio">{elegido ? precio(elegido) : t.gratis}</p>
-        {elegido && elegido.eventos > 1 && (
+        <p className="ez-resumen__plan">{`${elegido.eventos} ${elegido.eventos === 1 ? t.evento : t.eventos}`}</p>
+        <p className="ez-resumen__precio">{precio(elegido)}</p>
+        {elegido.eventos > 1 && (
           <p className="ez-resumen__meta">{formatoPrecio(Math.round(elegido[moneda] / elegido.eventos / 100) * 100, moneda)} {t.porEvento} · {t.pagoUnico}</p>
         )}
-        {!elegido && <p className="ez-resumen__meta">{t.pruebaResumen(tope)}</p>}
         <ul className="ez-resumen__list">
-          {t.resumen(elegido ? elegido.eventos : 1).map((x) => (
+          {t.resumen(elegido.eventos).map((x) => (
             <li key={x}><Check aria-hidden="true" className="ez-tick" />{x}</li>
           ))}
         </ul>

@@ -1270,25 +1270,6 @@ h1, h2, h3, h4, p { margin: 0; }
 .tabla__p .tabla__ico { color: var(--ink); }
 .tabla__o .tabla__ico { color: var(--ink-3); }
 
-/* Precios: prueba gratis */
-.prueba {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  column-gap: 24px;
-  row-gap: 4px;
-  max-width: 980px;
-  margin: 0 auto clamp(28px, 4vw, 40px);
-  padding: 20px 26px;
-  border: 2px dashed var(--tangerine);
-  border-radius: var(--r-sm);
-  background: var(--white);
-  transition: background-color 220ms ease;
-}
-.prueba:hover { background: #FFF6F1; }
-.prueba__t { font-family: var(--display); font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
-.prueba__d { grid-column: 1; color: var(--ink-2); font-size: 15px; }
-.prueba__cta { grid-row: 1 / span 2; grid-column: 2; font-weight: 700; text-decoration: underline; text-decoration-color: var(--tangerine); text-decoration-thickness: 2px; text-underline-offset: 4px; }
 .plan__percu { font-family: var(--body); font-weight: 600; font-size: 13px; color: var(--ink-2); }
 
 /* Preguntas frecuentes */
@@ -1345,8 +1326,6 @@ h1, h2, h3, h4, p { margin: 0; }
   .tabla__fila > span { padding: 12px 18px; }
   .tabla__t { padding-top: 18px !important; font-family: var(--display); font-size: 17px; }
   .tabla__o { padding-bottom: 18px !important; }
-  .prueba { grid-template-columns: 1fr; }
-  .prueba__cta { grid-row: auto; grid-column: 1; margin-top: 8px; }
 }
 .plan__ahorro { display: block; margin-top: 2px; font-weight: 700; color: var(--ink); }
 .tabla__mini { display: none; }

@@ -24,7 +24,7 @@ export type Dict = {
   demo: { h2: Resaltado; items: { t: string; d: string }[]; tag: string; evt1: string; evt2: string; meta: string; tk1: [string, string]; tk2: [string, string]; buy: string };
   comp: { h2: Resaltado; lede: string; items: { t: string; d: string }[] };
   cmp: { h2: Resaltado; aria: string; p: string; o: string; filas: { t: string; p: string; o: string }[] };
-  precios: { h2: Resaltado; lede: string; prueba: { t: string; d: string; cta: string }; evento: string; eventos: string; qty: Record<number, string>; perks: Record<number, string[]>; badge: string; porEvento: string; ahorras: string; pagoUnico: string; elegir: string; note: string; noteUsd: string };
+  precios: { h2: Resaltado; lede: string; evento: string; eventos: string; qty: Record<number, string>; perks: Record<number, string[]>; badge: string; porEvento: string; ahorras: string; pagoUnico: string; elegir: string; note: string; noteUsd: string };
   faq: { h2: Resaltado; lede: string; items: { q: string; a: string }[] };
   final: { h2: string; p: string; cta: string; precios: string };
   footer: { brand: string; producto: string; ayuda: string; legal: string; links: { como: string; seguridad: string; incluye: string; precios: string; crear: string; preguntas: string; panel: string; terminos: string; privacidad: string }; copy: string; made: string };
@@ -36,16 +36,16 @@ const es: Dict = {
   ogLocale: 'es_LA',
   meta: {
     title: 'ParyGo — Plataforma de venta de entradas con tu propia marca',
-    description: 'Vende entradas para tus eventos con tu propia marca. Tu público paga directamente a tu cuenta, sin comisión por entrada, y controlas el acceso con códigos QR. Prueba gratuita disponible.',
+    description: 'Vende entradas para tus eventos con tu propia marca. Tu público paga directamente a tu cuenta, sin comisión por entrada, y controlas el acceso con códigos QR.',
     keywords: ['venta de entradas online', 'plataforma de ticketing', 'entradas con QR', 'ticketing sin comisión', 'control de acceso a eventos'],
   },
   idioma: { label: 'Idioma' },
-  header: { nav: ['Cómo funciona', 'Seguridad', 'Precios', 'Preguntas'], login: 'Ingresar', loginAria: 'Ingresar al panel de organizadores', cta: 'Comenzar gratis' },
+  header: { nav: ['Cómo funciona', 'Seguridad', 'Precios', 'Preguntas'], login: 'Ingresar', loginAria: 'Ingresar al panel de organizadores', cta: 'Comenzar' },
   hero: {
     l1: 'Tus eventos,', l2: 'tus entradas,', l3: 'tus ingresos',
     sub: 'Vende las entradas de tus eventos con tu propia marca. Tu público paga directamente a tu cuenta, sin comisiones por entrada, y tú controlas cada acceso.',
-    cta: 'Comenzar gratis', ver: 'Ver cómo funciona',
-    chips: ['Pagos directos a tu cuenta', 'Sin comisión por entrada', 'Prueba gratuita, sin tarjeta'],
+    cta: 'Comenzar', ver: 'Ver cómo funciona',
+    chips: ['Pagos directos a tu cuenta', 'Sin comisión por entrada', 'Tu página lista en minutos'],
     ticket: { titulo: 'VERANO SUNSET', noche: 'NOCHE 04', fecha: 'SÁB 24 ENE · 10:00 PM · CLUB DELMAR', escanea: 'ESCANEA', puerta: 'EN PUERTA' },
   },
   uses: {
@@ -141,7 +141,6 @@ const es: Dict = {
   precios: {
     h2: ['Pagas una vez ', 'por evento', '.'],
     lede: 'Sin mensualidades ni comisiones por entrada. Todos los paquetes incluyen todas las funciones; solo eliges cuántos eventos necesitas.',
-    prueba: { t: 'Comienza con la prueba gratuita', d: '1 evento de hasta 20 entradas, sin tarjeta. Solo necesitas confirmar tu correo.', cta: 'Probar gratis →' },
     evento: 'evento', eventos: 'eventos',
     qty: { 1: 'Para un evento puntual', 3: 'Para eventos recurrentes', 5: 'Para una temporada', 10: 'Para productoras' },
     perks: {
@@ -160,21 +159,20 @@ const es: Dict = {
     items: [
       { q: '¿ParyGo cobra una comisión por entrada?', a: 'No. Pagas una tarifa fija por evento, independientemente de cuántas entradas vendas. Todo lo que paga tu público es para ti.' },
       { q: '¿Cuándo y cómo recibo los ingresos de mis entradas?', a: 'Tus compradores pagan directamente a tu cuenta de cobro (por ejemplo, Mercado Pago o Yape). ParyGo nunca recibe ese dinero, por lo que no hay liquidaciones ni esperas de nuestra parte: los plazos son los de tu medio de pago.' },
-      { q: '¿Puedo probar ParyGo antes de pagar?', a: 'Sí. La prueba gratuita incluye un evento de hasta 20 entradas, sin tarjeta; solo confirmas tu correo con un código.' },
       { q: '¿Qué medios de pago pueden usar mis compradores?', a: 'Actualmente, tarjetas de crédito y débito y saldo de Mercado Pago, además de Yape en Perú. Estamos incorporando PayPal, criptomonedas y más medios locales de forma progresiva.' },
       { q: '¿En qué moneda pago los paquetes de ParyGo?', a: 'Puedes pagarlos en dólares con PayPal, con tu cuenta o con tarjeta, o en soles peruanos con Mercado Pago. El precio es fijo y lo ves antes de pagar.' },
       { q: '¿Mis compradores necesitan crear una cuenta o instalar una aplicación?', a: 'No. Eligen sus entradas, ingresan su nombre y correo, pagan y reciben su código QR al instante, todo desde el navegador.' },
       { q: '¿Qué ocurre si falla la conexión a internet en el acceso?', a: 'El escáner descarga las entradas antes de la apertura y continúa validando sin conexión. Al recuperar la señal, se sincroniza automáticamente.' },
       { q: '¿Una entrada puede usarse dos veces?', a: 'No. Cada código QR es válido una sola vez: si una entrada se reenvía o se copia, el segundo escaneo se rechaza.' },
       { q: '¿Puedo organizar eventos gratuitos o por invitación?', a: 'Sí. Puedes crear eventos de acceso libre con registro, emitir cortesías para tus invitados y ofrecer entradas privadas visibles solo mediante un enlace.' },
-      { q: '¿Qué incluye cada evento de un paquete?', a: 'Un evento completo, con entradas ilimitadas y todas las funciones: página con tu marca, escáner, estadísticas, códigos de descuento y cortesías. La prueba gratuita admite hasta 20 entradas.' },
+      { q: '¿Qué incluye cada evento de un paquete?', a: 'Un evento completo, con entradas ilimitadas y todas las funciones: página con tu marca, escáner, estadísticas, códigos de descuento y cortesías.' },
       { q: '¿Necesito conocimientos técnicos?', a: 'No. Puedes crear tu evento en pocos minutos desde el celular y compartir el enlace. Si necesitas ayuda, nuestro equipo te acompaña por correo.' },
     ],
   },
   final: {
     h2: 'Tu próximo evento, a la venta hoy.',
-    p: 'Crea tu marca en pocos minutos y prueba ParyGo gratis con tu primer evento. Si prefieres conversarlo antes, escríbenos a',
-    cta: 'Comenzar gratis', precios: 'Ver precios',
+    p: 'Crea tu marca en pocos minutos y pon a la venta tu primer evento hoy mismo. Si prefieres conversarlo antes, escríbenos a',
+    cta: 'Comenzar', precios: 'Ver precios',
   },
   footer: {
     brand: 'La plataforma para vender y controlar las entradas de tus eventos, con tu propia marca y cobrando directamente.',
@@ -191,16 +189,16 @@ const en: Dict = {
   ogLocale: 'en_US',
   meta: {
     title: 'ParyGo — Ticketing platform under your own brand',
-    description: 'Sell tickets for your events under your own brand. Your audience pays directly into your account, with no per-ticket fees, and you control entry with QR codes. Free trial available.',
+    description: 'Sell tickets for your events under your own brand. Your audience pays directly into your account, with no per-ticket fees, and you control entry with QR codes.',
     keywords: ['online ticket sales', 'ticketing platform', 'QR tickets', 'no-fee ticketing', 'event access control'],
   },
   idioma: { label: 'Language' },
-  header: { nav: ['How it works', 'Security', 'Pricing', 'FAQ'], login: 'Log in', loginAria: 'Log in to the organizer dashboard', cta: 'Start for free' },
+  header: { nav: ['How it works', 'Security', 'Pricing', 'FAQ'], login: 'Log in', loginAria: 'Log in to the organizer dashboard', cta: 'Get started' },
   hero: {
     l1: 'Your events,', l2: 'your tickets,', l3: 'your revenue',
     sub: 'Sell tickets for your events under your own brand. Your audience pays directly into your account, with no per-ticket fees, and you control every entry.',
-    cta: 'Start for free', ver: 'See how it works',
-    chips: ['Payments straight to your account', 'No per-ticket fees', 'Free trial, no card required'],
+    cta: 'Get started', ver: 'See how it works',
+    chips: ['Payments straight to your account', 'No per-ticket fees', 'Your page ready in minutes'],
     ticket: { titulo: 'SUMMER SUNSET', noche: 'NIGHT 04', fecha: 'SAT JAN 24 · 10:00 PM · CLUB DELMAR', escanea: 'SCAN', puerta: 'AT THE DOOR' },
   },
   uses: {
@@ -296,7 +294,6 @@ const en: Dict = {
   precios: {
     h2: ['Pay once ', 'per event', '.'],
     lede: 'No monthly fees and no per-ticket commissions. Every package includes every feature; you simply choose how many events you need.',
-    prueba: { t: 'Start with the free trial', d: 'One event with up to 20 tickets, no card required. You only need to confirm your email.', cta: 'Try it free →' },
     evento: 'event', eventos: 'events',
     qty: { 1: 'For a one-off event', 3: 'For recurring events', 5: 'For a full season', 10: 'For production companies' },
     perks: {
@@ -315,21 +312,20 @@ const en: Dict = {
     items: [
       { q: 'Does ParyGo charge a fee per ticket?', a: 'No. You pay a flat fee per event, regardless of how many tickets you sell. Everything your audience pays is yours.' },
       { q: 'When and how do I receive my ticket revenue?', a: 'Your buyers pay directly into your payment account (for example, Mercado Pago or Yape). ParyGo never receives that money, so there are no payouts or waiting periods on our side: timing depends on your payment provider.' },
-      { q: 'Can I try ParyGo before paying?', a: 'Yes. The free trial includes one event with up to 20 tickets, no card required; you only confirm your email with a code.' },
       { q: 'Which payment methods can my buyers use?', a: 'Currently, credit and debit cards and Mercado Pago balance, plus Yape in Peru. We are progressively adding PayPal, cryptocurrencies and more local methods.' },
       { q: 'In which currency do I pay for ParyGo packages?', a: 'You can pay in US dollars with PayPal, using your account or a card, or in Peruvian soles with Mercado Pago. The price is fixed and shown before you pay.' },
       { q: 'Do my buyers need to create an account or install an app?', a: 'No. They choose their tickets, enter their name and email, pay and receive their QR code instantly, all from the browser.' },
       { q: 'What happens if the internet connection fails at the door?', a: 'The scanner downloads tickets before doors open and keeps validating offline. Once the connection returns, it syncs automatically.' },
       { q: 'Can a ticket be used twice?', a: 'No. Every QR code is valid once: if a ticket is forwarded or copied, the second scan is rejected.' },
       { q: 'Can I run free or invitation-only events?', a: 'Yes. You can create free events with registration, issue complimentary tickets to your guests and offer private tickets that are only visible through a link.' },
-      { q: 'What does each event in a package include?', a: 'A complete event with unlimited tickets and every feature: a page with your brand, the scanner, analytics, discount codes and complimentary tickets. The free trial allows up to 20 tickets.' },
+      { q: 'What does each event in a package include?', a: 'A complete event with unlimited tickets and every feature: a page with your brand, the scanner, analytics, discount codes and complimentary tickets.' },
       { q: 'Do I need technical knowledge?', a: 'No. You can create your event in a few minutes from your phone and share the link. If you need help, our team supports you by email.' },
     ],
   },
   final: {
     h2: 'Your next event, on sale today.',
-    p: 'Create your brand in a few minutes and try ParyGo free with your first event. If you would rather talk first, write to us at',
-    cta: 'Start for free', precios: 'See pricing',
+    p: 'Create your brand in a few minutes and put your first event on sale today. If you would rather talk first, write to us at',
+    cta: 'Get started', precios: 'See pricing',
   },
   footer: {
     brand: 'The platform to sell and control tickets for your events, under your own brand and with direct payments.',

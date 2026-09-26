@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { mpListo, paypalListo } from '@/lib/cobroParygo';
 import { PACKS } from '@/lib/packs';
-import { PRUEBA_TOPE_ENTRADAS } from '@/lib/prueba';
 import { EmpezarFlow, type Plan } from './EmpezarFlow';
 import { esLang, esMoneda, type Moneda } from './textos';
 
@@ -12,11 +11,12 @@ type Params = { pack?: string; cancelado?: string; lang?: string; moneda?: strin
 
 export function generateMetadata({ searchParams }: { searchParams: Params }): Metadata {
   return esLang(searchParams.lang) === 'en'
-    ? { title: 'Create your brand · ParyGo', description: 'Choose a package or start with the free trial and get your yourbrand.parygo.com page ready to sell tickets.' }
-    : { title: 'Crea tu marca · ParyGo', description: 'Elige tu paquete o comienza con la prueba gratuita y ten tu página tumarca.parygo.com lista para vender entradas.' };
+    ? { title: 'Create your brand · ParyGo', description: 'Choose your package and get your yourbrand.parygo.com page ready to sell tickets.' }
+    : { title: 'Crea tu marca · ParyGo', description: 'Elige tu paquete y ten tu página tumarca.parygo.com lista para vender entradas.' };
 }
 
-const PLANES = ['prueba', '1', '3', '5', '10'] as const;
+// Sin prueba gratis (Paul, 2026-09-26: "mejor que compren directo").
+const PLANES = ['1', '3', '5', '10'] as const;
 
 export default function EmpezarPage({ searchParams }: { searchParams: Params }) {
   const lang = esLang(searchParams.lang);
@@ -24,7 +24,7 @@ export default function EmpezarPage({ searchParams }: { searchParams: Params }) 
   // inglés dólares y en español según el país (Cloudflare manda cf-ipcountry).
   const pais = headers().get('cf-ipcountry')?.toUpperCase() ?? '';
   const moneda: Moneda = esMoneda(searchParams.moneda) ?? (lang === 'en' ? 'USD' : pais && pais !== 'PE' ? 'USD' : 'PEN');
-  const pedido = PLANES.find((p) => p === searchParams.pack) ?? 'prueba';
+  const pedido = PLANES.find((p) => p === searchParams.pack) ?? '1';
 
   // Los precios salen de lib/packs.ts, la misma fuente que cobra el servidor:
   // la pantalla solo los muestra, el monto lo fija pagarAlta.
@@ -43,7 +43,6 @@ export default function EmpezarPage({ searchParams }: { searchParams: Params }) 
       inicial={pedido}
       monedaInicial={moneda}
       disponible={{ PEN: mpListo(), USD: paypalListo() }}
-      tope={PRUEBA_TOPE_ENTRADAS}
       cancelado={searchParams.cancelado === '1'}
     />
   );

@@ -375,6 +375,15 @@ dueña) se libera al pedirlo. Las páginas "listo" van con fetchCache
 e2e/empezar.mjs 37/37 (el pago aprobado se simula con settle_pack_purchase;
 el re-fetch real a MP necesita credenciales de prueba).
 
+SIN PRUEBA GRATIS (2026-09-26, Paul: "mejor que compren directo"): /empezar
+ofrece SOLO los paquetes 1/3/5/10 (un link viejo ?pack=prueba cae en 1); se
+sacaron enviarCodigo/confirmarAlta, el código por correo (sendCodigoAlta) y
+la prueba de la landing (tarjeta en Precios, FAQ, chips, "Comenzar gratis"
+→ "Comenzar"). Lo de abajo sobre la prueba y el código queda como historia.
+La base NO cambió: prueba_disponible/0069 siguen y las marcas que ya la
+tenían la conservan; la cabina la puede REGALAR a mano (casilla apagada por
+defecto). e2e/empezar.mjs 31/31 (paso C verifica que no se ofrece).
+
 ALTA AUTOSERVICIO (0071, 2026-09-25): app.parygo.com/empezar reemplaza a
 "Pedir acceso" (/organizadores redirige). El organizador elige prueba gratis
 (1 evento, hasta 20 entradas: prueba_tope_entradas() bajó de 50 a 20) o pack,

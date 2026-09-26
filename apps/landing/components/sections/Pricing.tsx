@@ -24,12 +24,6 @@ export function Pricing({ t }: { t: Dict }) {
           <p className="lede">{c.lede}</p>
         </div>
 
-        <a href={empezar(t.lang)} className="prueba reveal">
-          <span className="prueba__t">{c.prueba.t}</span>
-          <span className="prueba__d">{c.prueba.d}</span>
-          <span className="prueba__cta">{c.prueba.cta}</span>
-        </a>
-
         <div className="plans reveal-stagger">
           {PACKS.map((p) => {
             const rec = p.eventos === 3;

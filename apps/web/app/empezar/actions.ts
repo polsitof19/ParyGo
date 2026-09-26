@@ -4,22 +4,19 @@ import { z } from 'zod';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient } from '@/lib/supabase/server';
 import { publicEnv } from '@/lib/env';
 import { packDe } from '@/lib/packs';
 import { mpListo, paypalListo } from '@/lib/cobroParygo';
 import { iniciarCompraPack } from '@/lib/compraPack';
 import { crearMarcaParaUsuario, SLUGS_RESERVADOS, SLUG_RE } from '@/lib/altaMarca';
-import { sendCodigoAlta } from '@/lib/email/sendCodigoAlta';
 import { TEXTOS, esLang, esMoneda, type Lang, type Textos } from './textos';
 
 // =============================================================
 // Alta AUTOSERVICIO de un organizador (app.parygo.com/empezar, 2026-09-25).
 // =============================================================
-// PRUEBA GRATIS (el correo es la única verificación, decisión de Paul):
-//   enviarCodigo → usuario SIN confirmar con contraseña al azar + código al
-//   correo; confirmarAlta → verifica el código, pone su contraseña, crea la
-//   marca con la prueba y entra a /admin.
+// SIN PRUEBA GRATIS desde 2026-09-26 (Paul: "mejor que compren directo"):
+// se sacaron enviarCodigo/confirmarAlta y el código por correo. Las marcas que
+// ya tenían prueba la conservan (brands.prueba_disponible, 0069).
 // PACK (Paul: "directo a pagar y ya"; el pago reemplaza al código): pagarAlta
 // crea la marca SIN dueña y manda a pagar: soles → Mercado Pago, dólares →
 // PayPal (MP Perú solo cobra en soles). La contraseña NUNCA viaja antes del
@@ -53,16 +50,15 @@ function esquemas(m: Textos['m']) {
     whatsapp: z.string().transform(normalizarWhatsapp).refine((v) => v === '' || /^\+\d{8,15}$/.test(v), m.waMal),
   };
   return {
-    prueba: z.object({ ...base, password: z.string().min(8, m.passCorta).max(72, m.passLarga) }),
     pago: z.object({ ...base, plan: z.enum(['1', '3', '5', '10']) }),
   };
 }
 
 export type AltaState = {
   ok: boolean;
-  paso: 'datos' | 'codigo';
+  paso: 'datos';
   message: string | null;
-  fieldErrors?: Partial<Record<'nombre' | 'slug' | 'email' | 'password' | 'whatsapp' | 'codigo', string>>;
+  fieldErrors?: Partial<Record<'nombre' | 'slug' | 'email' | 'password' | 'whatsapp', string>>;
 };
 
 const campos = (fd: FormData) => ({
@@ -124,102 +120,12 @@ async function dentroDelTope(email: string): Promise<boolean> {
   return !error && data === true;
 }
 
-const tomado = (m: Textos['m'], recien = false): AltaState => ({ ok: false, paso: 'datos', message: recien ? m.tomadoRecien : m.tomado, fieldErrors: { slug: m.tomadoCampo } });
+const tomado = (m: Textos['m']): AltaState => ({ ok: false, paso: 'datos', message: m.tomado, fieldErrors: { slug: m.tomadoCampo } });
 
 // Aviso en vivo mientras escribe el link (los subdominios son públicos igual).
 export async function slugDisponible(slug: string): Promise<boolean> {
   const s = String(slug ?? '').trim().toLowerCase();
   return SLUG_RE.test(s) && (await slugLibre(s));
-}
-
-// ------------------------------ PRUEBA GRATIS ------------------------------
-
-export async function enviarCodigo(_prev: AltaState, fd: FormData): Promise<AltaState> {
-  // Honeypot: un campo que una persona nunca ve ni llena.
-  if (String(fd.get('empresa') ?? '').trim() !== '') return { ok: true, paso: 'codigo', message: null };
-  const lang: Lang = esLang(fd.get('lang'));
-  const m = TEXTOS[lang].m;
-
-  const p = esquemas(m).prueba.safeParse({ ...campos(fd), password: fd.get('password') ?? '' });
-  if (!p.success) return { ok: false, paso: 'datos', message: m.revisa, fieldErrors: errores(p.error) };
-  const d = p.data;
-  if (!(await slugLibre(d.slug))) return tomado(m);
-  if (!(await dentroDelTope(d.email))) return { ok: false, paso: 'datos', message: m.muchos };
-
-  const admin = createAdminClient();
-  // Primero se mira si el correo ya existe, SIN generar ningún link: un
-  // magiclink reemplaza el token de acceso vigente de esa persona.
-  const { data: existenteId } = await admin.rpc('usuario_id_por_email', { p_email: d.email });
-  if (existenteId && (await yaTieneCuenta(existenteId as string))) {
-    return { ok: false, paso: 'datos', message: m.cuenta, fieldErrors: { email: m.cuentaCampo } };
-  }
-  // Usuario nuevo SIN confirmar y con una contraseña AL AZAR: la que eligió se
-  // pone recién cuando prueba que el correo es suyo (confirmarAlta). Con la
-  // suya acá, cualquiera pre-registraba el correo de otro con su clave y la
-  // cuenta quedaba tomada el día que esa persona aceptara una invitación
-  // (security review 2026-09-25). Si ya existe sin marca, código de acceso.
-  const link = existenteId
-    ? await admin.auth.admin.generateLink({ type: 'magiclink', email: d.email })
-    : await admin.auth.admin.generateLink({ type: 'signup', email: d.email, password: crypto.randomUUID() + crypto.randomUUID() });
-  if (link.error) console.error('[empezar] generateLink', link.error.message);
-  const codigo = link.data?.properties?.email_otp;
-  if (!codigo) return { ok: false, paso: 'datos', message: m.noCodigo };
-
-  const envio = await sendCodigoAlta({ to: d.email, codigo, lang });
-  if (!envio.ok) return { ok: false, paso: 'datos', message: m.noCodigo };
-  return { ok: true, paso: 'codigo', message: null };
-}
-
-export async function confirmarAlta(_prev: AltaState, fd: FormData): Promise<AltaState> {
-  const lang: Lang = esLang(fd.get('lang'));
-  const m = TEXTOS[lang].m;
-  const p = esquemas(m).prueba.safeParse({ ...campos(fd), password: fd.get('password') ?? '' });
-  if (!p.success) return { ok: false, paso: 'datos', message: m.revisa, fieldErrors: errores(p.error) };
-  const d = p.data;
-  const codigo = String(fd.get('codigo') ?? '').replace(/\D/g, '');
-
-  // Si ya verificó antes (p. ej. el link estaba tomado y lo cambió), la sesión
-  // sigue abierta: no se vuelve a pedir un código que ya se usó.
-  const supabase = createClient();
-  const { data: { user: actual } } = await supabase.auth.getUser();
-  let userId: string;
-  if (actual && actual.email?.toLowerCase() === d.email) {
-    userId = actual.id;
-  } else {
-    if (codigo.length < 6) return { ok: false, paso: 'codigo', message: null, fieldErrors: { codigo: m.escribeCodigo } };
-    const v = await supabase.auth.verifyOtp({ email: d.email, token: codigo, type: 'email' });
-    if (v.error || !v.data.user) return { ok: false, paso: 'codigo', message: null, fieldErrors: { codigo: m.codigoMal } };
-    userId = v.data.user.id;
-  }
-
-  // Doble envío o alguien que ya tiene marca: al panel, sin tocar nada suyo.
-  if (await yaTieneCuenta(userId)) redirect('/admin');
-
-  const admin = createAdminClient();
-  // Probó que el correo es suyo: recién ahora su contraseña.
-  const { error: pwErr } = await admin.auth.admin.updateUserById(userId, { password: d.password });
-  // Cambiar la contraseña cierra las sesiones del usuario (la del código
-  // incluida): sin volver a entrar, /admin lo mandaba al login.
-  const { error: inErr } = pwErr ? { error: pwErr } : await supabase.auth.signInWithPassword({ email: d.email, password: d.password });
-  if (inErr) {
-    // Sin contraseña guardada o sin sesión NO se crea la marca: quedaría una
-    // marca a la que su dueño no puede entrar.
-    console.error('[empezar] contraseña/sesión', inErr.message);
-    return { ok: false, paso: 'codigo', message: m.noCuenta };
-  }
-
-  if (!(await slugLibre(d.slug))) return tomado(m, true);
-  const alta = await crearMarcaParaUsuario({
-    userId, email: d.email, nombre: d.nombre, slug: d.slug,
-    whatsappE164: d.whatsapp || null,
-    prueba: true, idioma: lang,
-  });
-  if (!alta.ok) {
-    // Dos envíos a la vez: el otro ya creó su marca (una por dueño, 0071).
-    if (await yaTieneCuenta(userId)) redirect('/admin');
-    return alta.motivo === 'slug_en_uso' ? tomado(m, true) : { ok: false, paso: 'datos', message: m.noMarca };
-  }
-  redirect('/admin');
 }
 
 // ---------------------------------- PACK ----------------------------------
@@ -244,8 +150,8 @@ export async function pagarAlta(_prev: AltaState, fd: FormData): Promise<AltaSta
 
   const admin = createAdminClient();
   // Una cuenta CONFIRMADA o con marca → que entre por /login. Una sin
-  // confirmar y sin marca (alguien empezó la prueba con este correo y no puso
-  // el código) no bloquea: al volver del pago se la toma (completarAlta).
+  // confirmar y sin marca (una prueba vieja que nunca puso el código) no
+  // bloquea: al volver del pago se la toma (completarAlta).
   const { data: existenteId } = await admin.rpc('usuario_id_por_email', { p_email: d.email });
   if (existenteId) {
     const { data: u } = await admin.auth.admin.getUserById(existenteId as string);
