@@ -1,11 +1,13 @@
 import type { MetadataRoute } from 'next';
 
-// Installable PWA for door staff: the scanner runs full-screen on the phone.
+// PWA instalable (pantalla de inicio). Abre /scan: el staff de puerta cae en
+// el escáner, el organizador en el de su marca y el super admin (sin marcas)
+// lo redirige a su cabina. Nombre genérico porque la usan los tres.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'ParyGo · Puerta',
-    short_name: 'ParyGo Puerta',
-    description: 'Validador de entradas en la puerta del evento.',
+    name: 'ParyGo',
+    short_name: 'ParyGo',
+    description: 'Panel, escáner y cabina de ParyGo.',
     start_url: '/scan',
     scope: '/',
     display: 'standalone',

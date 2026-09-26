@@ -3,6 +3,7 @@ import { textos, type Idioma } from '@/lib/idioma';
 import { publicEnv } from '@/lib/env';
 import { precioDe, type Pack, type Pasarela } from '@/lib/packs';
 import { mpCrearPreferencia, mpPago, paypalCrearOrden } from '@/lib/cobroParygo';
+import { avisarVentaPack } from '@/lib/email/sendAvisoVentaPack';
 
 // Crea la compra de un paquete (0070) y devuelve a dónde mandar al organizador
 // para pagar. La usan /admin/comprar y el alta de /empezar. El monto sale de
@@ -71,13 +72,15 @@ export async function acreditarVueltaMp(compra: { id: string; provider: string; 
   try {
     const pago = await mpPago(paymentId);
     if (pago.external_reference !== compra.id || pago.status !== 'approved' || typeof pago.transaction_amount !== 'number' || !pago.currency_id) return;
-    await createAdminClient().rpc('settle_pack_purchase', {
+    const { data: s } = await createAdminClient().rpc('settle_pack_purchase', {
       p_purchase_id: compra.id,
       p_provider: 'mercadopago',
       p_payment_id: String(pago.id ?? paymentId),
       p_paid_cents: Math.round(pago.transaction_amount * 100),
       p_currency: pago.currency_id,
     });
+    // Aviso a Paul: solo si ESTA llamada acreditó (una vez por compra).
+    if ((s as { action?: string } | null)?.action === 'credited') await avisarVentaPack(compra.id);
   } catch {
     // Sin respuesta de MP: queda "confirmando" y el webhook lo resuelve.
   }

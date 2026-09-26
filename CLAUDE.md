@@ -74,6 +74,14 @@ supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se regist
 - Yape manual: COMPLETO punta a punta. Comprobante público → revisión en panel
   (autenticada, scoped por marca, transición de estado atómica) → emisión →
   email. Es el camino que cobra hoy.
+- AVISO DE VENTA A PAUL (2026-09-26): cada compra de pack acreditada manda un
+  correo a SUPER_ADMIN_EMAIL ("💰 Nueva venta: <marca> · N eventos · monto"),
+  desde lib/email/sendAvisoVentaPack.ts. Lo llaman los TRES caminos que
+  acreditan (webhook parygo-mp, acreditarVueltaMp, /api/paypal/volver) solo
+  si settle_pack_purchase devolvió 'credited' → uno por compra. Marcas is_test
+  no avisan. Prueba sin enviar: `cd apps/web && npx tsx ../../e2e/aviso-venta-pack.mts`
+  (intercepta Resend). La PWA (manifest.ts) se llama "ParyGo" y abre /scan,
+  que al super admin sin marcas lo manda a la cabina.
 - CORREOS AL ORGANIZADOR (2026-09-25, Paul: "máximo uno o dos"): el aviso
   "Yapes por aprobar" es UNO por evento por ventana de 12 h (dedupe_key
   yape_pending_digest:<event>:<floor(epoch/43200)>, la misma en

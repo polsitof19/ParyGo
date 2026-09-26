@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyMpSignature } from '@/lib/mpSignature';
 import { mpPago, mpWebhookSecret } from '@/lib/cobroParygo';
 import { sendAltaPendiente } from '@/lib/email/sendAltaEmails';
+import { avisarVentaPack } from '@/lib/email/sendAvisoVentaPack';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -83,6 +84,8 @@ export async function POST(req: NextRequest) {
   // no tiene dueña. Se le manda el link para terminar (solo en la acreditación,
   // no en cada reintento de MP).
   const r = data as { action?: string; brand_id?: string };
+  // Aviso a Paul de la venta (una vez: solo en la acreditación).
+  if (r?.action === 'credited') await avisarVentaPack(compraId);
   if (r?.action === 'credited' && r.brand_id) {
     const { count: miembros } = await admin.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', r.brand_id);
     if (!miembros) {

@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { publicEnv } from '@/lib/env';
 import { paypalCobrar } from '@/lib/cobroParygo';
 import { sendAltaPendiente } from '@/lib/email/sendAltaEmails';
+import { avisarVentaPack } from '@/lib/email/sendAvisoVentaPack';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -71,6 +72,8 @@ export async function GET(req: NextRequest) {
   // Alta de /empezar ya cobrada: por si cierra la pestaña antes de que cargue
   // "listo", le llega el link para terminar (con MP lo manda el webhook).
   const r = s as { action?: string; brand_id?: string } | null;
+  // Aviso a Paul de la venta (una vez: solo en la acreditación).
+  if (r?.action === 'credited') await avisarVentaPack(compraId);
   if (deAlta && r?.action === 'credited' && r.brand_id) {
     const { data: b } = await admin.from('brands').select('name, contact_email').eq('id', r.brand_id).single();
     if (b?.contact_email) await sendAltaPendiente({ to: b.contact_email, marca: b.name, compraId, lang });
