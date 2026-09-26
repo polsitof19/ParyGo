@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
   const brandIds = [...new Set(rows.map((r) => r.brand_id).filter((x): x is string => !!x))];
   const { data: brandsData } = await admin
     .from('brands')
-    .select('id, name, slug, whatsapp_e164, contact_email, theme_json, idioma')
+    .select('id, name, slug, whatsapp_e164, contact_email, theme_json, idioma, is_test')
     .in('id', brandIds);
   const brandById = new Map((brandsData ?? []).map((b) => [b.id, b]));
 
@@ -86,6 +86,15 @@ export async function POST(req: NextRequest) {
     await Promise.all(chunk.map(async (r) => {
       const brand = r.brand_id ? brandById.get(r.brand_id) : null;
       if (!brand) { await markFailed(r.id, 'brand_not_found'); failed++; return; }
+      // Marca de PRUEBA (demotest): los avisos al ORGANIZADOR no se mandan.
+      // Su contacto es el correo de Paul y cada corrida del E2E le dejaba
+      // 4–8 "Yapes por aprobar" en la bandeja (31 en tres días, 2026-09-25).
+      // Los correos al comprador (entrada, recordatorio) sí salen: los
+      // smokes de producción los revisan.
+      if (brand.is_test && r.kind === 'yape_pending_digest') {
+        await admin.from('notification_jobs').update({ status: 'sent', sent_at: nowIso(), resend_id: null, last_error: 'omitido_marca_de_prueba' }).eq('id', r.id);
+        return;
+      }
       const p = r.payload ?? {};
       const brandForEmail = {
         name: brand.name, slug: brand.slug, whatsapp_e164: brand.whatsapp_e164,
