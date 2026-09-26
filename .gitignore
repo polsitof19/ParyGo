@@ -64,3 +64,6 @@ graphify-out/
 # impeccable: logs de las rondas de preguntas (locales)
 apps/web/.impeccable/questions/
 apps/web/.impeccable/review/
+
+# Almacén del CLI de skills (npx skills); las skills reales viven copiadas en .claude/skills
+.agents/

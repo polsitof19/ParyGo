@@ -551,3 +551,24 @@ Opus para diseño (Plan) y lo de riesgo. Sonnet/Haiku para subagents mecánicos
 - **UI UX Pro Max / SkillUI / impeccable**: solo referencia. Manda el sistema
   de ParyGo: fondos blanco/negro neutro, Geist, sin tarjetas flotantes. La salida
   de SkillUI vive en tmp/skillui/ y no se aplica a nada.
+- **Skills del stack (curadas 2026-09-26, 34 en .claude/skills)**: por
+  plataforma → `cloudflare`, `wrangler`, `workers-best-practices` (Pages +
+  Worker router), `supabase`, `supabase-postgres-best-practices`, `resend`,
+  `mp-integrate`, `mp-webhooks` (oficiales de Mercado Pago),
+  `next-best-practices`, `vercel-react-best-practices`. Calidad →
+  `code-review` (mattpocock), `web-design-guidelines` (accesibilidad/UX),
+  `tdd`, `systematic-debugging`, `diagnose`, `verification-before-completion`,
+  `resolving-merge-conflicts` (para el flujo PC + laptop). Diseño → impeccable,
+  emil-design-eng, taste, ui-ux-pro-max, animate, review-animations.
+  Se sacaron las genéricas o ajenas al stack (Vercel deploy, Sentry,
+  marketing, senior-*, 4 skills de diseño duplicadas). Gestión con
+  `npx skills add <owner/repo> -s <skill> -y -a claude-code --copy`
+  (UNA skill por comando; la lista con comas no instala nada) y
+  `npx skills update -y -p`; después del update, volver a copiar
+  (`update` deja enlaces simbólicos a .agents/, que está gitignored, y un
+  enlace no viaja bien entre PC y laptop). Agentes en .claude/agents, todos
+  de ParyGo: `security-reviewer` (dinero/auth/acceso, obligatorio),
+  `ui-ux-designer`, `e2e-parygo` (corre la prueba correcta con el build y
+  el server correctos, limpia demotest) y `deploy-parygo` (check-runs +
+  smokes de solo lectura tras cada push). Los genéricos (code review,
+  tests, seguridad, performance web) los da el plugin agent-skills.
