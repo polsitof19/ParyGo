@@ -361,8 +361,10 @@ export function EventCheckoutPanel({
   const ctaMetodo = method === 'mercadopago' ? 'Pagar con tarjeta' : brand.yape_number ? 'Pagar con Yape' : 'Pagar';
   // Un solo texto para el botón del paso 1, en la barra (teléfono) y en el
   // rail (escritorio): antes el rail decía "Continuar" y la barra otra cosa.
+  // En cero el botón está apagado; dice QUÉ hacer, no el nombre del paso
+  // (con "Elige tus entradas" en gris la gente no sabía que había que tocar +).
   const etiquetaPaso1 = totalItems === 0
-    ? (soloGratis ? 'Elige tu entrada' : 'Elige tus entradas')
+    ? 'Toca + para elegir'
     : eventoGratis
       ? <>Reclamar entrada gratis <ArrowRight aria-hidden="true" /></>
       : <>{esGratis ? 'Continuar' : ctaMetodo} <ArrowRight aria-hidden="true" /></>;
@@ -402,7 +404,13 @@ function fraseConfianza(pago: string): string {
             {/* En CANVAS el título de la sección no se ve —la lista es la continuación
                 del flyer—, pero existe para lectores de pantalla: sin él el
                 esquema saltaba de h1 a h3. */}
-            <h2 className={direccion === 'editorial' ? 'b1-h2' : 'sr-only'} id="elegi">Elige tu entrada</h2>
+            {/* Visible en las dos direcciones (2026-09-26): en CANVAS era solo
+                para lectores de pantalla y la gente no entendía que tenía que
+                elegir acá. Título + la instrucción en una línea. */}
+            <div className="b-tks__head">
+              <h2 className="b-tks__t" id="elegi">{soloGratis ? 'Elige tu entrada' : 'Elige tus entradas'}</h2>
+              <p className="b-tks__hint">Toca <span className="b-tks__plus" aria-hidden="true">+</span><span className="sr-only">el botón más</span> en la que quieras.</p>
+            </div>
             <section className="b-tks">
               {sorted.map((t) => {
                 const props = {
@@ -428,7 +436,7 @@ function fraseConfianza(pago: string): string {
           <aside className="b-sum">
             <p className="b-sum__lb">Tu compra</p>
             {lineItems.length === 0 ? (
-              <p className="b-sum__vacio">Elige tus entradas</p>
+              <p className="b-sum__vacio">Toca + en la entrada que quieras.</p>
             ) : (
               <>
                 <ul className="b-sum__list">

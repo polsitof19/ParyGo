@@ -187,8 +187,12 @@ type FilaProps = {
 // estamos y hacia dónde va—. Lo que cambia entre canvas y editorial es el
 // CSS, no el markup: dos árboles distintos para la misma información serían
 // dos cosas que mantener y dos formas de que se desincronicen.
-export function FilaEntrada({ t, escalera, cur, incluye, onInc, onDec }: FilaProps) {
-  const vigente = escalera.find((f) => f.estado === 'vigente') ?? escalera[0]!;
+export function FilaEntrada({ t, escalera: todas, cur, incluye, onInc, onDec }: FilaProps) {
+  // Las preventas que YA PASARON no se muestran (2026-09-26): dos "Agotada"
+  // tachadas por tipo hacían creer que no quedaban entradas. Queda la fase de
+  // hoy y, si hay, las que vienen (cuánto va a costar después).
+  const escalera = todas.filter((f) => f.estado !== 'pasada');
+  const vigente = escalera.find((f) => f.estado === 'vigente') ?? todas.find((f) => f.estado === 'vigente') ?? todas[0]!;
   const iVig = escalera.indexOf(vigente);
   return (
     <div className={`b-ty b1-ty${t.soldOut ? ' b-ty--out' : ''}${cur > 0 ? ' b-ty--on' : ''}`}>

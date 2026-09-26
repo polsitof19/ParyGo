@@ -79,6 +79,13 @@
   scroll-margin-top: 72px;
 }
 
+/* Título de la lista de entradas + la instrucción (visible en las dos
+   direcciones desde 2026-09-26). */
+.client-shell .b-tks__head { margin: var(--b-s3) 0 var(--b-s2); }
+.client-shell .b-tks__t { margin: 0; font-size: var(--b-total); font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; color: var(--ink); scroll-margin-top: 72px; }
+.client-shell .b-tks__hint { margin-top: var(--b-sx); font-size: var(--b-ctl); color: var(--ink-2); display: flex; align-items: center; gap: var(--b-sx); flex-wrap: wrap; }
+.client-shell .b-tks__plus { display: inline-grid; place-items: center; width: var(--b-s3); height: var(--b-s3); border-radius: 50%; background: var(--brand-fill); color: var(--on-fill); box-shadow: 0 0 0 2px var(--brand-mark); font-weight: 700; line-height: 1; }
+
 /* ---------- Entradas: tarjeta --surface, radio 14 ---------- */
 .client-shell .b-tks { display: flex; flex-direction: column; gap: var(--b-s1); }
 .client-shell .b-ty {
@@ -129,7 +136,11 @@
 .client-shell .b-qbtn::after { content: ""; position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; transform: translate(-50%, -50%); }
 .client-shell .b-qbtn--dec { background: none; border: 1px solid rgba(255, 255, 255, 0.22); color: var(--ink); }
 .client-shell .b-qbtn--dec:disabled { opacity: .35; cursor: default; }
-.client-shell .b-qbtn--add { background: #FFFFFF; border: 0; color: var(--on-white); }
+/* El "+" lleva el COLOR DE LA MARCA (2026-09-26, Paul: "es negro y no llama
+   la atención"): relleno y signo son el par brandFillPair (4.5:1 medido) y el
+   anillo es --brand-mark (≥3:1 contra #0A0A0A), así el control se ve aunque la
+   marca sea oscura. */
+.client-shell .b-qbtn--add { background: var(--brand-fill); border: 0; color: var(--on-fill); box-shadow: 0 0 0 2px var(--brand-mark); }
 .client-shell .b-qval { min-width: 24px; text-align: center; font-size: var(--b-qty); font-weight: 700; font-variant-numeric: tabular-nums; }
 .client-shell .b-qval__n { display: inline-block; animation: c-num var(--t-ctl) var(--ease) both; }
 
@@ -371,7 +382,7 @@
 @media (hover: hover) and (pointer: fine) {
   .client-shell .b-btn--go:hover:not(:disabled) { background: var(--brand-fill-hover); }
   .client-shell .b-btn--soft:hover:not(:disabled) { border-color: rgba(255, 255, 255, 0.45); }
-  .client-shell .b-qbtn--add:hover { background: var(--white-hover); }
+  .client-shell .b-qbtn--add:hover { background: var(--brand-fill-hover); }
   .client-shell .b-qbtn--dec:hover:not(:disabled) { border-color: rgba(255, 255, 255, 0.45); }
   .client-shell .b-pay:hover { border-color: rgba(255, 255, 255, 0.30); }
   /* Los links bajan a .7; nunca cambian al color de la marca. */

@@ -240,6 +240,15 @@ para OK de Paul.
   "Mi entrada para <evento> · <fecha>"; ya no va al organizador. El E2E
   (paso E) falla si aparece un código o un http en pantalla, PNG, WhatsApp,
   HTML visible o texto plano del email.
+- COMPRA MÁS CLARA (2026-09-26, Paul: "la gente se pierde, es negro y no llama
+  la atención"): (1) las preventas que YA PASARON no se muestran —dos
+  "Agotada" tachadas por tipo hacían creer que no quedaban entradas—: queda
+  la fase de hoy y las que vienen; (2) título VISIBLE "Elige tus entradas" +
+  "Toca + en la que quieras" en las dos direcciones (en canvas era sr-only);
+  (3) el "+" lleva el color de la marca: relleno y signo = brandFillPair
+  (4.5:1) y anillo de 2px en --brand-mark (≥3:1 contra el negro, así una marca
+  oscura no deja el botón invisible); (4) el botón en cero dice "Toca + para
+  elegir". El stepper y su lógica no cambiaron. fase1 182/182.
 - El HOVER de un relleno de marca es OTRO COLOR MEDIDO, nunca `filter:
   brightness()`. Un filtro mueve el relleno DESPUÉS de que el test midió el
   par: con #E91E63 el botón de pagar caía de 4.58:1 a 4.20:1 justo cuando el
