@@ -299,6 +299,25 @@ para OK de Paul.
   ningún campo con letra < 16px (Safari hace zoom; audit-iphone lo mide como
   "zoom") y html con touch-action: manipulation. El E2E (paso J) verifica el
   menú, las secciones y que el evento abra sin cifras.
+- CABINA DEL SUPER ADMIN (rediseño 2026-09-26, "para entenderlo yo"; crítica
+  impeccable con dos evaluaciones: 16/40 en heurísticas). Pestañas: Inicio ·
+  Marcas · Eventos · Salud (Solicitudes salió de la barra: link al pie de
+  Marcas). INICIO responde "¿qué me toca?" (una .s-due con el único primario;
+  el resto en .s-todo; si no hay nada, .s-calm--ok "Todo en orden") y "¿cómo va
+  el negocio?": Paquetes vendidos (VentasPacks; en cero, UNA línea, no doce
+  ceros), Eventos a la venta ahora con ENTRADAS (no soles: esa plata es de la
+  marca) y una fila de resumen de marcas. MARCAS (/brands) = el inventario; en
+  el teléfono la fila entera abre la ficha (sin los 3 íconos mudos), "Le
+  quedan N eventos" en vez de "Saldo N", y plegados Archivadas y De prueba
+  aparte. EVENTOS: sin marcas de prueba, agrupado A la venta (con entradas) /
+  Sin publicar / plegados Terminados, Archivados, De prueba. SALUD: en
+  palabras de dueño (nada de notification_jobs ni pending_yape_review), un
+  número que no se pudo leer es "—" y nunca 0, y "Lo que hiciste dentro de
+  marcas" (auditoría del modo edición: 6 a la vista, el resto plegado). BUG
+  cerrado: el Promise.all de Salud tenía cruzados eventos publicados y la
+  auditoría (siempre "0" y siempre vacía). .s-calm ya no parte el punto del
+  texto. Verificación: e2e/capturas-cabina.mjs (22 checks, 390 claro y 1440
+  oscuro).
 - ESCÁNER: /scan sin sesión va a /login?next=/scan y el login VUELVE al
   escáner (lib/loginNext.ts, con test de open redirect en
   e2e/login-next.test.mts); antes terminaba en el panel y "parecía que se

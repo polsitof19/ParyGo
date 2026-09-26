@@ -780,6 +780,13 @@ html:has(.pg-panel), body:has(.pg-panel) { background: #0A0A0A; }
 /* Nada pendiente: se dice, en voz baja. Punto hueco = no pasa nada. */
 .pg-panel .s-calm { display: flex; align-items: center; flex-wrap: wrap; gap: 0 10px; font-size: var(--s-meta); color: var(--ink-2); margin: 0 0 var(--s-s3); }
 .pg-panel .s-calm::before { content: ""; width: 8px; height: 8px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ink-3); flex: none; }
+/* El punto va en el primer renglón y el texto largo NO baja debajo de él: con
+   flex-wrap el texto entero pasaba al renglón siguiente y el punto quedaba
+   solo arriba (se leía como un radio button suelto, cabina 2026-09-26). */
+.pg-panel .s-calm { flex-wrap: nowrap; align-items: flex-start; line-height: 1.45; }
+.pg-panel .s-calm::before { margin-top: calc((1.45em - 8px) / 2); }
+/* "Todo en orden": punto LLENO en --ok. El hueco queda para "todavía no hay datos". */
+.pg-panel .s-calm--ok::before { box-shadow: none; background: var(--ok); }
 
 /* 3. Acciones rápidas visibles: rejilla de filas de 48 con hairline, como un
    menú (no botones sueltos que se parten en renglones). Dos columnas en el

@@ -1,6 +1,5 @@
 import { GeistSans } from 'geist/font/sans';
 import { requireSession } from '@/lib/auth';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { SuperTopbar } from './SuperTopbar';
 // Tokens compartidos de parygo PRIMERO: super.css se apoya en ellos y los
 // especializa. El orden importa — si se invierte, super.css define variables
@@ -20,18 +19,12 @@ export const dynamic = 'force-dynamic';
 export default async function SuperLayout({ children }: { children: React.ReactNode }) {
   const user = await requireSession({ superAdmin: true });
 
-  // Badge de pendientes en el topbar — mismo filtro que /solicitudes
-  // (access_requests, status='pending'). Service role: la cola es solo del super admin.
-  const { count: pendingRequests } = await createAdminClient()
-    .from('access_requests')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'pending');
 
   return (
     // `pg` = tokens · `pg-panel` = componentes compartidos con el panel del
     // organizador · `super-shell` = lo propio del super admin.
     <div className={`pg pg-noche pg-panel super-shell ${GeistSans.variable}`}>
-      <SuperTopbar email={user.email} pendingRequests={pendingRequests ?? 0} />
+      <SuperTopbar email={user.email} />
       <main className="s-wrap">{children}</main>
     </div>
   );

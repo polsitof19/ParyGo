@@ -48,6 +48,33 @@
 .super-shell .s-bignum { font-family: var(--display); font-weight: 600; font-size: var(--s-num); line-height: 1.05; font-variant-numeric: tabular-nums; margin-top: 6px; }
 
 
+/* ---------- Inicio, Marcas, Eventos, Salud (rediseño 2026-09-26) ----------
+   Secciones separadas por aire, no por cajas: más espacio arriba del título que
+   abajo. La única fila con fondo sigue siendo .s-due (lo que te toca). */
+.super-shell .s-section { margin-top: var(--s-s5); }
+.super-shell .s-h2--sec { margin: 0 0 var(--s-s2); }
+.super-shell .s-section .s-stats { margin-bottom: var(--s-s3); }
+.super-shell .s-due--grave .s-due__n::before { background: var(--alert); }
+/* Cifra a la derecha de una fila (entradas de un evento, monto de una venta). */
+.super-shell .s-evcount { display: flex; flex-direction: column; align-items: flex-end; flex: none; font-family: var(--display); font-weight: 600; font-size: var(--s-t3); line-height: 1.15; font-variant-numeric: tabular-nums; color: var(--ink); }
+.super-shell .s-evcount > span { font-family: var(--body); font-weight: 400; font-size: var(--s-micro); color: var(--ink-2); }
+.super-shell .s-event-row__chev { width: 16px; height: 16px; flex: none; color: var(--ink-3); }
+/* Fila-link de resumen (Marcas en Inicio): una línea con chevron, entre hairlines. */
+.super-shell .s-linkrow { display: flex; align-items: center; justify-content: space-between; gap: var(--s-s2); min-height: 56px; padding: var(--s-s1) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--ink); transition: transform .14s ease-out; }
+.super-shell .s-linkrow:active { transform: scale(.97); }
+.super-shell .s-linkrow > svg { width: 16px; height: 16px; flex: none; color: var(--ink-3); }
+/* Marca en el teléfono: la fila entera abre la ficha; sin íconos mudos. */
+.super-shell .s-brandcard--link { grid-template-columns: 1fr auto; align-items: center; color: inherit; transition: transform .14s ease-out; }
+.super-shell .s-brandcard--link:active { transform: scale(.97); }
+.super-shell .s-brandcard__estado { display: block; margin-top: var(--s-s1); }
+.super-shell .s-brandcard__chev { width: 16px; height: 16px; color: var(--ink-3); }
+.super-shell .s-foot-link { margin-top: var(--s-s4); font-size: var(--s-meta); }
+.super-shell .s-break { word-break: break-word; }
+.super-shell .s-nowrap { flex-shrink: 0; white-space: nowrap; }
+@media (hover: hover) and (pointer: fine) {
+  .super-shell .s-linkrow:hover strong { text-decoration: underline; text-underline-offset: 4px; }
+}
+
 /* Lista de marcas: en móvil la tabla se reemplaza por cards (solo acá). */
 @media (max-width: 760px) {
   .super-shell .s-table-wrap--brands { display: none; }

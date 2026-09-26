@@ -39,7 +39,9 @@ if (listo) {
   await p.waitForURL(/cabina-7k29x/, { timeout: 30000 }).catch(() => {});
   const r = await p.goto(`${BASE}/cabina-7k29x/salud`, { waitUntil: 'domcontentloaded' });
   const txt = (await p.innerText('body')).replace(/\s+/g, ' ');
-  check('cabina /salud carga con "Acciones de super admin"', r.status() === 200 && /Acciones de super admin/i.test(txt), r.status());
+  // Rediseño 2026-09-26: el registro se llama "Lo que hiciste dentro de marcas"
+  // y, con el bug del Promise.all cerrado, muestra lo recién hecho.
+  check('cabina /salud carga con su registro y muestra el modo edición recién usado', r.status() === 200 && /Lo que hiciste dentro de marcas/i.test(txt) && /modo edición/i.test(txt), r.status());
 }
 for (const u of ['https://parygo.com/', 'https://code.parygo.com/standly-en-cocos', 'https://hoesky.parygo.com/']) {
   const r = await fetch(u); check(`público ${u} → 200`, r.status === 200, r.status);

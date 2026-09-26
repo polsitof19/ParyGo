@@ -298,6 +298,7 @@ export async function setBrandArchivedAction(
   });
   revalidatePath('/cabina-7k29x');
   revalidatePath('/cabina-7k29x/brands');
+  revalidatePath('/cabina-7k29x/brands');
   revalidatePath(`/cabina-7k29x/brands/${brand.slug}`);
   return { ok: true };
 }
@@ -346,6 +347,7 @@ export async function deleteBrandAction(
   }
 
   revalidatePath('/cabina-7k29x');
+  revalidatePath('/cabina-7k29x/brands');
   revalidatePath('/cabina-7k29x/brands');
   return { ok: true };
 }

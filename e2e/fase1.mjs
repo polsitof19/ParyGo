@@ -184,7 +184,8 @@ await step('A', 'Super admin: login, desarchivar demotest, cargar saldo, stats',
   note('A', 'Login del super admin por sesión JWT real (magic link generado por service-role, sin email ni cambio de password): la contraseña de Paul no está disponible para el E2E.');
   await go(p, '/cabina-7k29x');
   check('A', 'entra a la cabina (guard superAdmin)', /cabina-7k29x/.test(p.url()), p.url());
-  const statTxt = async () => (await p.locator('.s-stats, .s-stat').first().locator('..').innerText().catch(() => '')).replace(/\s+/g, ' ');
+  // Inicio (rediseño 2026-09-26): el resumen de marcas es la fila "N marcas activas".
+  const statTxt = async () => (await p.locator('a.s-linkrow[href="/cabina-7k29x/brands"]').innerText().catch(() => '')).replace(/\s+/g, ' ');
   const statsBefore = await statTxt();
   await shot(p, 'A', 'cabina-antes');
 
@@ -230,21 +231,25 @@ await step('A', 'Super admin: login, desarchivar demotest, cargar saldo, stats',
   await go(p, '/cabina-7k29x');
   const statsAfter = await statTxt();
   await shot(p, 'A', 'cabina-despues');
-  const num = (s, label) => { const m = s.match(new RegExp(label + '\\s*(\\d+)', 'i')); return m ? +m[1] : null; };
-  const mb = num(statsBefore, 'Marcas activas'), ma = num(statsAfter, 'Marcas activas');
+  const num = (s) => { const m = s.match(/(\d+)\s+marcas?\s+activas?/i); return m ? +m[1] : null; };
+  const mb = num(statsBefore), ma = num(statsAfter);
   note('A', `stats antes: "${statsBefore.slice(0, 160)}" | después: "${statsAfter.slice(0, 160)}"`);
   // demotest está marcada is_test (0057), así que NO cuenta en los KPIs del
   // super admin: desarchivarla no mueve "Marcas activas". Eso es justamente lo
   // que se verifica acá — antes este check esperaba +1 y se puso rojo con la
   // migración, que es la señal correcta: el filtro de marcas de prueba funciona.
-  check('A', 'desarchivar una marca de PRUEBA no mueve "Marcas activas" (filtro is_test)', ma === mb, `${mb} → ${ma}`);
+  check('A', 'desarchivar una marca de PRUEBA no mueve "Marcas activas" (filtro is_test)', mb !== null && ma === mb, `${mb} → ${ma}`);
   const { data: brandTest } = await svc.from('brands').select('is_test').eq('id', BRAND_ID).single();
   check('A', 'demotest está marcada como marca de prueba', brandTest?.is_test === true, JSON.stringify(brandTest));
   // Y la fila sigue estando en la lista, con su badge: se excluye de los
   // números, no se esconde.
-  const listada = await p.locator('tr', { hasText: 'Demo Test' }).count();
-  check('A', 'la marca de prueba SIGUE en la lista (se excluye de los números, no se oculta)', listada > 0, `filas=${listada}`);
-  const rowTxt = (await p.locator('tr', { hasText: 'Demo Test' }).first().innerText().catch(() => '')).replace(/\s+/g, ' ');
+  // Marcas (pestaña propia): la de prueba va en su plegable "De prueba", no
+  // mezclada con las reales, pero sigue a mano.
+  await go(p, '/cabina-7k29x/brands');
+  const plegable = p.locator('details.s-fold', { hasText: 'De prueba' });
+  const listada = await plegable.locator('.s-event-row', { hasText: 'Demo Test' }).count();
+  check('A', 'la marca de prueba SIGUE en Marcas, en su plegable "De prueba" (se excluye de los números, no se oculta)', listada > 0, `filas=${listada}`);
+  const rowTxt = (await plegable.locator('.s-event-row', { hasText: 'Demo Test' }).first().innerText().catch(() => '')).replace(/\s+/g, ' ');
   note('A', `fila demotest en cabina: "${rowTxt}"`);
 });
 

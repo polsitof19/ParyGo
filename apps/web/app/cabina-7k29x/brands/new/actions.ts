@@ -357,5 +357,6 @@ export async function createBrandWithOwnerAction(
 
   revalidatePath('/cabina-7k29x');
   revalidatePath('/cabina-7k29x/brands');
+  revalidatePath('/cabina-7k29x/brands');
   redirect(`/cabina-7k29x/brands/${brand.slug}`);
 }

@@ -56,16 +56,24 @@ export async function VentasPacks() {
   };
   const fin = Date.now() + 1;
   const nombreMes = new Date().toLocaleDateString('es-PE', { month: 'long', timeZone: 'America/Lima' });
+  // El mes primero: es la cifra que dice cómo va el negocio; hoy y la
+  // semana la matizan.
   const periodos = [
+    { label: `Este mes (${nombreMes})`, s: sumar(mes, fin), antes: sumar(mesPasado, mes), vs: 'mes pasado' },
     { label: 'Hoy', s: sumar(hoy, fin), antes: sumar(hoy - DIA, hoy), vs: 'ayer' },
     { label: 'Últimos 7 días', s: sumar(semana, fin), antes: sumar(semana - 7 * DIA, semana), vs: '7 días anteriores' },
-    { label: nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1), s: sumar(mes, fin), antes: sumar(mesPasado, mes), vs: 'mes pasado' },
   ];
+  // Sin ninguna venta en todo lo que se mira: una línea, no doce ceros.
+  const nada = ventas.length === 0;
   const ultimas = ventas.slice(0, 5);
 
   return (
     <section className="s-section" aria-labelledby="ventas-packs">
-      <h2 className="s-h2" id="ventas-packs" style={{ marginBottom: 'var(--s-s2)' }}>Ventas de paquetes</h2>
+      <h2 className="s-h2 s-h2--sec" id="ventas-packs">Paquetes vendidos</h2>
+      {nada ? (
+        <p className="s-calm">Todavía no vendiste ningún paquete. Cuando una marca compre, aparece acá y te llega un correo.</p>
+      ) : (
+      <>
       <div className="s-stats">
         {periodos.map((p) => (
           <div key={p.label} className="s-stat">
@@ -78,24 +86,19 @@ export async function VentasPacks() {
           </div>
         ))}
       </div>
-      {ultimas.length === 0 ? (
-        <p className="s-calm">Todavía no hay ventas de paquetes en este período.</p>
-      ) : (
-        <div className="s-todos">
-          {ultimas.map((v) => (
-            <div key={v.paid_at + v.brand!.slug} className="s-todo">
-              <span className="s-todo__txt">
-                <span>
-                  <strong>{v.brand!.name} · {v.pack} evento{v.pack === 1 ? '' : 's'} · {v.currency === 'USD' ? usd(v.amount_cents) : formatPEN(v.amount_cents)}</strong>
-                  <span className="s-todo__sub">
-                    {hace(v.paid_at)} · {v.provider === 'paypal' ? 'PayPal' : 'Mercado Pago'} · {v.created_by ? 'recompra' : 'marca nueva'}
-                  </span>
-                </span>
-              </span>
-              <Link href={`/cabina-7k29x/brands/${v.brand!.slug}`} className="s-btn s-btn--soft s-btn--sm">Ver marca</Link>
-            </div>
-          ))}
-        </div>
+      <p className="s-section-lead">Últimas ventas</p>
+      <ul className="s-event-list">
+        {ultimas.map((v) => (
+          <li key={v.paid_at + v.brand!.slug} className="s-event-row">
+            <Link href={`/cabina-7k29x/brands/${v.brand!.slug}`} className="s-event-row__main">
+              <span className="s-event-row__name">{v.brand!.name} · {v.pack} evento{v.pack === 1 ? '' : 's'}</span>
+              <span className="s-event-row__date">{hace(v.paid_at)} · {v.provider === 'paypal' ? 'PayPal' : 'Mercado Pago'} · {v.created_by ? 'volvió a comprar' : 'marca nueva'}</span>
+            </Link>
+            <span className="s-evcount">{v.currency === 'USD' ? usd(v.amount_cents) : formatPEN(v.amount_cents)}</span>
+          </li>
+        ))}
+      </ul>
+      </>
       )}
     </section>
   );
