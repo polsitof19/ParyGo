@@ -56,36 +56,31 @@ export async function VentasPacks() {
   };
   const fin = Date.now() + 1;
   const nombreMes = new Date().toLocaleDateString('es-PE', { month: 'long', timeZone: 'America/Lima' });
-  // El mes primero: es la cifra que dice cómo va el negocio; hoy y la
-  // semana la matizan.
+  // Tres cifras grandes, siempre (Paul pidió ver día, semana y mes); la
+  // comparación con el período anterior va debajo de cada una.
   const periodos = [
-    { label: `Este mes (${nombreMes})`, s: sumar(mes, fin), antes: sumar(mesPasado, mes), vs: 'mes pasado' },
-    { label: 'Hoy', s: sumar(hoy, fin), antes: sumar(hoy - DIA, hoy), vs: 'ayer' },
-    { label: 'Últimos 7 días', s: sumar(semana, fin), antes: sumar(semana - 7 * DIA, semana), vs: '7 días anteriores' },
+    { label: 'hoy', s: sumar(hoy, fin), antes: sumar(hoy - DIA, hoy), vs: 'ayer' },
+    { label: 'últimos 7 días', s: sumar(semana, fin), antes: sumar(semana - 7 * DIA, semana), vs: '7 días antes' },
+    { label: `en ${nombreMes}`, s: sumar(mes, fin), antes: sumar(mesPasado, mes), vs: 'mes pasado' },
   ];
-  // Sin ninguna venta en todo lo que se mira: una línea, no doce ceros.
-  const nada = ventas.length === 0;
   const ultimas = ventas.slice(0, 5);
 
   return (
     <section className="s-section" aria-labelledby="ventas-packs">
-      <h2 className="s-h2 s-h2--sec" id="ventas-packs">Paquetes vendidos</h2>
-      {nada ? (
-        <p className="s-calm">Todavía no vendiste ningún paquete. Cuando una marca compre, aparece acá y te llega un correo.</p>
-      ) : (
-      <>
-      <div className="s-stats">
+      <h2 className="s-h2 s-h2--sec" id="ventas-packs">Tus ventas de paquetes</h2>
+      <div className="c-cifras c-cifras--dinero">
         {periodos.map((p) => (
-          <div key={p.label} className="s-stat">
-            <span className="s-stat__label">{p.label}</span>
-            <span className="s-stat__value s-stat__value--money">{monto(p.s)}{extra(p.s)}</span>
-            <span className="s-stat__sub">
-              {p.s.n} venta{p.s.n === 1 ? '' : 's'} · {p.s.eventos} evento{p.s.eventos === 1 ? '' : 's'}
-            </span>
-            <span className="s-stat__hint">{p.vs}: {monto(p.antes)}{extra(p.antes)}</span>
+          <div key={p.label} className="c-cifras__item">
+            <b>{monto(p.s)}{extra(p.s)}</b>
+            <span>{p.label}{p.s.n > 0 ? ` · ${p.s.n} venta${p.s.n === 1 ? '' : 's'}` : ''}</span>
+            <span className="c-cifras__vs">{p.vs}: {monto(p.antes)}{extra(p.antes)}</span>
           </div>
         ))}
       </div>
+      {ultimas.length === 0 ? (
+        <p className="s-calm">Todavía no vendiste ningún paquete. Cuando una marca compre, aparece acá y te llega un correo.</p>
+      ) : (
+      <>
       <p className="s-section-lead">Últimas ventas</p>
       <ul className="s-event-list">
         {ultimas.map((v) => (

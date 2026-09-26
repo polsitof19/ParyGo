@@ -75,6 +75,78 @@
   .super-shell .s-linkrow:hover strong { text-decoration: underline; text-underline-offset: 4px; }
 }
 
+/* ---------- Cabina visual (segundo rediseño 2026-09-26: "como el panel del
+   organizador"). Mismo lenguaje que /admin: el flyer y el logo son la
+   tarjeta (sin caja ni sombra), cifras grandes entre hairlines, barras. ---- */
+.super-shell .c-sub { font-size: var(--s-meta); color: var(--ink-2); margin: calc(var(--s-s1) * -1) 0 var(--s-s2); }
+.super-shell .c-sechead { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-s2); margin-bottom: var(--s-s2); }
+
+/* El evento que se está vendiendo, en grande (= "el evento que viene" de /admin). */
+.super-shell .c-next { margin: var(--s-s4) 0 0; }
+.super-shell .c-next__head { display: flex; align-items: flex-start; gap: var(--s-s2); }
+.super-shell .c-next__flyer { flex: none; width: calc(var(--s-s6) + var(--s-s5)); aspect-ratio: 4 / 5; border-radius: var(--r-card); overflow: hidden; background: var(--surface-2); display: grid; place-items: center; font-weight: 600; font-size: var(--s-t2); color: var(--ink-3); transition: transform .14s ease-out; }
+.super-shell .c-next__flyer img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.super-shell .c-next__flyer:active { transform: scale(.97); }
+.super-shell .c-next__id { min-width: 0; display: flex; flex-direction: column; gap: calc(var(--s-s1) * .75); }
+.super-shell .c-next__live { display: inline-flex; align-items: center; gap: var(--s-s1); font-size: var(--s-meta); color: var(--ink-2); }
+.super-shell .c-next__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+.super-shell .c-next__title { margin: 0; font-family: var(--display); font-weight: 600; font-size: var(--s-hero); line-height: 1.12; letter-spacing: -0.025em; overflow-wrap: anywhere; }
+.super-shell .c-next__title a { color: inherit; }
+.super-shell .c-next__when { font-size: var(--s-ui); color: var(--ink-2); line-height: 1.45; }
+.super-shell .c-next__mas { margin-top: var(--s-s4); }
+
+/* Cifras grandes en fila, entre dos hairlines. */
+.super-shell .c-cifras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-s1) var(--s-s2); margin-top: var(--s-s3); padding: var(--s-s2) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.super-shell .c-cifras__item { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--s-micro); color: var(--ink-2); }
+.super-shell .c-cifras__item b { font-family: var(--display); font-weight: 600; font-size: var(--s-num); line-height: 1.15; letter-spacing: -0.02em; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.super-shell .c-cifras__vs { color: var(--ink-3); }
+.super-shell .c-cifras--dinero { margin-top: 0; }
+
+/* Barras de entradas por día: el día de hoy en el acento (decorativo, sin
+   texto encima); los demás en tinta tenue. */
+.super-shell .c-barras { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: calc(var(--s-s1) / 2); height: calc(var(--s-s6) * 2 + var(--s-s4)); border-bottom: 1px solid var(--line); }
+.super-shell .c-barras__col { display: flex; flex-direction: column; align-items: center; min-width: 0; gap: calc(var(--s-s1) / 2); }
+.super-shell .c-barras__n { min-height: 1.3em; font-size: var(--s-micro); font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.super-shell .c-barras__area { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.super-shell .c-barras__bar { width: 100%; max-width: var(--s-s4); border-radius: var(--r-ctl) var(--r-ctl) 0 0; background: var(--ink-3); opacity: .4; }
+.super-shell .c-barras__col.is-hoy .c-barras__bar { background: var(--accent); opacity: 1; }
+.super-shell .c-barras__d { font-size: var(--s-micro); color: var(--ink-3); padding-bottom: calc(var(--s-s1) / 2); }
+.super-shell .c-barras__col.is-hoy .c-barras__d { color: var(--ink); font-weight: 600; }
+
+/* Rejilla de tarjetas (eventos y marcas): 2 columnas en el teléfono, las que
+   entren desde 900. */
+.super-shell .c-evgrid,
+.super-shell .c-brandgrid { list-style: none; margin: var(--s-s2) 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-s3) var(--s-s2); }
+@media (min-width: 900px) {
+  .super-shell .c-evgrid,
+  .super-shell .c-brandgrid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--s-s4) var(--s-s3); }
+  .super-shell .c-next__flyer { width: calc(var(--s-s6) * 2 + var(--s-s5)); }
+  .super-shell .c-next__head { gap: var(--s-s3); }
+  .super-shell .c-cifras { max-width: 640px; }
+}
+.super-shell .c-evcard,
+.super-shell .c-brandcard { display: flex; flex-direction: column; align-items: flex-start; gap: calc(var(--s-s1) / 2); min-width: 0; color: inherit; transition: transform .14s ease-out; }
+.super-shell .c-evcard:active,
+.super-shell .c-brandcard:active { transform: scale(.97); }
+.super-shell .c-evcard__flyer { position: relative; width: 100%; display: grid; place-items: center; aspect-ratio: 4 / 5; border-radius: var(--r-card); overflow: hidden; background: var(--surface-2); color: var(--ink-3); font-weight: 600; font-size: var(--s-hero); margin-bottom: calc(var(--s-s1) * .75); }
+.super-shell .c-evcard__flyer img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity .18s; }
+/* Sobre la FOTO: pastilla sólida del fondo, así el número se lee sobre cualquier flyer. */
+.super-shell .c-evcard__pill { position: absolute; left: var(--s-s1); bottom: var(--s-s1); padding: calc(var(--s-s1) / 2) var(--s-s1); border-radius: var(--r-pill); background: var(--bg); color: var(--ink); font-size: var(--s-micro); font-weight: 600; font-variant-numeric: tabular-nums; }
+.super-shell .c-evcard__name,
+.super-shell .c-brandcard__name { font-weight: 600; font-size: var(--s-ctl); line-height: 1.3; overflow-wrap: anywhere; }
+.super-shell .c-evcard__when,
+.super-shell .c-brandcard__meta { font-size: var(--s-meta); color: var(--ink-2); line-height: 1.4; }
+.super-shell .c-brandcard__logo { width: 100%; aspect-ratio: 1; display: grid; place-items: center; border-radius: var(--r-card); overflow: hidden; background: var(--surface-2); margin-bottom: calc(var(--s-s1) * .75); }
+.super-shell .c-brandcard__logo img { width: 72%; height: 72%; object-fit: contain; }
+.super-shell .c-brandcard__logo--ini span { font-family: var(--display); font-weight: 600; font-size: var(--s-d1); color: var(--ink-3); }
+.super-shell .c-brandcard .s-badge { margin-top: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .super-shell .c-evcard:hover .c-evcard__flyer img { opacity: .88; }
+  .super-shell .c-evcard:hover .c-evcard__name,
+  .super-shell .c-brandcard:hover .c-brandcard__name { text-decoration: underline; text-underline-offset: 3px; }
+  .super-shell .c-next__title a:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; }
+}
+
 /* Lista de marcas: en móvil la tabla se reemplaza por cards (solo acá). */
 @media (max-width: 760px) {
   .super-shell .s-table-wrap--brands { display: none; }

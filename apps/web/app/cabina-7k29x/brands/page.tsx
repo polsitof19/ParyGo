@@ -1,14 +1,12 @@
 import Link from 'next/link';
-import { Plus, Wallet, CalendarDays, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, ChevronDown } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { todas } from '@/lib/todas';
 import { idsMarcasDePrueba } from '@/lib/marcasDePrueba';
-import { BrandLogo } from '@/components/BrandLogo';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { setBrandArchivedAction } from './[slug]/actions';
-import { EnterBrandButton } from './[slug]/EnterBrandButton';
-import { onColor, bgFor, initialOf } from '../on-color';
+import { MarcaCard } from '../visual';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -21,15 +19,6 @@ export const dynamic = 'force-dynamic';
 // y plegadas las archivadas y las DE PRUEBA, separadas: mezclar las corridas
 // del E2E con las marcas reales era lo que hacía ilegible la lista.
 
-function BrandAvatar({ name, slug, logoUrl, color }: { name: string; slug: string; logoUrl: string | null; color: string | null }) {
-  if (logoUrl) return <BrandLogo src={logoUrl} alt="" size={40} ring={false} />;
-  return (
-    <span className="s-avatar" style={{ background: color || bgFor(slug), color: onColor(color || bgFor(slug)) }}>
-      {initialOf(name)}
-    </span>
-  );
-}
-
 // "hoy" / "ayer" / "hace 3 d" / "hace 2 meses". Corto: va en una celda.
 function agoEs(iso: string): string {
   const days = Math.floor((Date.now() - Date.parse(iso)) / 86400000);
@@ -41,9 +30,6 @@ function agoEs(iso: string): string {
   if (months < 12) return `hace ${months} mes${months === 1 ? '' : 'es'}`;
   return `hace ${Math.floor(months / 12)} a`;
 }
-
-const shortDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'America/Lima' });
 
 const quedan = (n: number) => (n === 0 ? 'Sin eventos en su pack' : `Le ${n === 1 ? 'queda 1 evento' : `quedan ${n} eventos`}`);
 
@@ -135,11 +121,6 @@ export default async function MarcasPage() {
   const testRows = allRows.filter((r) => r.test);
   const selling = rows.filter((r) => r.eventsSelling > 0).length;
 
-  const estado = (r: BrandRow) =>
-    r.eventsSelling > 0
-      ? <span className="s-badge s-badge--ok">Vendiendo</span>
-      : <span className="s-badge s-badge--draft">Sin evento a la venta</span>;
-
   return (
     <>
       <div className="s-pagehead">
@@ -160,96 +141,24 @@ export default async function MarcasPage() {
       {rows.length === 0 ? (
         <p className="s-calm">Todavía no hay marcas activas. Cuando alguien se registre en parygo.com, aparece acá.</p>
       ) : (
-        <>
-          {/* Compu: tabla densa, con las acciones rápidas (con puntero, el
-              title explica cada ícono). */}
-          <div className="s-table-wrap s-table-wrap--brands">
-            <div className="s-card s-card--flush">
-              <table className="s-table">
-                <thead>
-                  <tr>
-                    <th>Marca</th>
-                    <th className="num">Eventos en su pack</th>
-                    <th>Próximo evento</th>
-                    <th>Última venta</th>
-                    <th>Dueño</th>
-                    <th>Estado</th>
-                    <th aria-label="Acciones" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.id}>
-                      <td>
-                        <Link href={`/cabina-7k29x/brands/${r.slug}`} className="s-cell-brand s-rowlink" aria-label={`Abrir ${r.name}`}>
-                          <BrandAvatar name={r.name} slug={r.slug} logoUrl={r.logoUrl} color={r.color} />
-                          <span>
-                            <span className="nm" style={{ display: 'block' }}>{r.name}</span>
-                            <span className="sl">{r.slug}.parygo.com · {r.eventsTotal} evento{r.eventsTotal === 1 ? '' : 's'} creados</span>
-                          </span>
-                        </Link>
-                      </td>
-                      <td className="num">
-                        {r.event_balance === 0 ? <span className="s-flag">0</span> : <span className="s-saldo-num">{r.event_balance}</span>}
-                      </td>
-                      <td>
-                        {r.nextEvent
-                          ? <span className="s-cellmeta"><span className="nm">{r.nextEvent.name}</span>{shortDate(r.nextEvent.starts_at)}</span>
-                          : <span className="s-cellmeta s-cellmeta--none">—</span>}
-                      </td>
-                      <td>
-                        {r.lastSale ? <span className="s-cellmeta">{agoEs(r.lastSale)}</span> : <span className="s-cellmeta s-cellmeta--none">Sin ventas</span>}
-                      </td>
-                      <td>
-                        {r.owner ? <span className="s-muted s-cell-ellipsis" title={r.owner}>{r.owner}</span> : <span className="s-flag">Sin dueño</span>}
-                      </td>
-                      <td>{estado(r)}</td>
-                      <td>
-                        <span className="s-rowacts">
-                          <Link href={`/cabina-7k29x/brands/${r.slug}#saldo`} className="s-rowbtn" title="Cargar eventos a su pack" aria-label={`Cargar eventos a ${r.name}`}>
-                            <Wallet />
-                          </Link>
-                          <Link href={`/cabina-7k29x/events?brand=${r.slug}`} className="s-rowbtn" title="Ver sus eventos" aria-label={`Ver eventos de ${r.name}`}>
-                            <CalendarDays />
-                          </Link>
-                          <EnterBrandButton brandId={r.id} brandName={r.name} variant="icon" />
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Teléfono: una fila por marca que abre su ficha. Sin íconos sueltos:
-              en el iPhone el title no existe y tres dibujos mudos no se
-              distinguen; cargar eventos, ver sus eventos y entrar como la marca
-              están con su nombre dentro de la ficha. */}
-          <div className="s-brandcards">
-            {rows.map((r) => (
-              <Link key={r.id} href={`/cabina-7k29x/brands/${r.slug}`} className="s-brandcard s-brandcard--link" aria-label={`Abrir ${r.name}`}>
-                <span className="s-brandcard__main">
-                  <BrandAvatar name={r.name} slug={r.slug} logoUrl={r.logoUrl} color={r.color} />
-                  <span style={{ minWidth: 0 }}>
-                    <span className="nm" style={{ display: 'block' }}>{r.name}</span>
-                    <span className="meta">{r.slug}.parygo.com</span>
-                    <span className="meta">
-                      {quedan(r.event_balance)}
-                      {' · '}
-                      {r.nextEvent ? `próximo: ${r.nextEvent.name}, ${shortDate(r.nextEvent.starts_at)}` : 'sin próximo evento'}
-                      {' · '}
-                      {r.lastSale ? `vendió ${agoEs(r.lastSale)}` : 'sin ventas'}
-                    </span>
-                    {!r.owner && <span className="s-cardflags"><span className="s-flag">Sin dueño</span></span>}
-                    <span className="s-brandcard__estado">{estado(r)}</span>
-                  </span>
-                </span>
-                <ChevronRight className="s-brandcard__chev" aria-hidden="true" />
-              </Link>
-            ))}
-          </div>
-        </>
+        // Tarjetas con el logo, como los eventos del panel del organizador
+        // (Paul, 2026-09-26: "no me gusta que sea todo letras"). La tarjeta
+        // entera abre la ficha, donde están cargar eventos, ver sus eventos y
+        // entrar como la marca, cada uno con su nombre.
+        <ul className="c-brandgrid">
+          {rows.map((r) => (
+            <MarcaCard
+              key={r.id}
+              href={`/cabina-7k29x/brands/${r.slug}`}
+              nombre={r.name}
+              logo={r.logoUrl}
+              color={r.color}
+              estado={r.eventsSelling > 0 ? 'vendiendo' : 'quieta'}
+              detalle={[quedan(r.event_balance), r.lastSale ? `vendió ${agoEs(r.lastSale)}` : 'sin ventas'].join(' · ')}
+              alerta={!r.owner ? 'Sin dueño' : null}
+            />
+          ))}
+        </ul>
       )}
 
       {/* LO RARO, PLEGADO. */}

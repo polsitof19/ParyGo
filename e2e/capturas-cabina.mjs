@@ -41,7 +41,7 @@ for (const [ancho, motor, w, h, tema] of [['390', webkit, 390, 844, 'light'], ['
       check(`eventos ${ancho}: ninguna marca de prueba fuera del plegable`, !fuera.some((t) => /Demo Test/i.test(t)), `${fuera.length} filas visibles`);
     }
     if (nombre === 'salud') check(`salud ${ancho}: ya no repite "Eventos publicados" (y el registro se lee)`, !/Eventos publicados/.test(txt) && /Lo que hiciste dentro de marcas/.test(txt));
-    if (nombre === 'inicio') check(`inicio ${ancho}: dice qué te toca y cómo va`, /Por resolver|Todo en orden/.test(await p.locator('main').innerHTML()) && /Paquetes vendidos/.test(txt) && /Eventos a la venta ahora/.test(txt));
+    if (nombre === 'inicio') check(`inicio ${ancho}: dice qué te toca y cómo va`, /Por resolver|Todo en orden/.test(await p.locator('main').innerHTML()) && /Tus ventas de paquetes/.test(txt) && /Entradas por día/.test(txt) && /A la venta/.test(txt));
   }
   await b.close();
 }

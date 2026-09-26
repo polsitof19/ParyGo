@@ -3,6 +3,7 @@ import { Plus, ChevronRight, ChevronDown } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { idsMarcasDePrueba } from '@/lib/marcasDePrueba';
+import { EventoCard } from '../visual';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -17,7 +18,7 @@ export const dynamic = 'force-dynamic';
 // filtro no se esconde nada, ni las de prueba.
 // =============================================================
 
-type Ev = { id: string; name: string; starts_at: string; ends_at: string | null; is_published: boolean; archived_at: string | null; brand_id: string; brand: { slug: string; name: string } | { slug: string; name: string }[] | null };
+type Ev = { id: string; name: string; cover_url: string | null; starts_at: string; ends_at: string | null; is_published: boolean; archived_at: string | null; brand_id: string; brand: { slug: string; name: string } | { slug: string; name: string }[] | null };
 
 const cuando = (iso: string) =>
   new Date(iso).toLocaleString('es-PE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Lima' });
@@ -30,7 +31,7 @@ export default async function EventsListPage({ searchParams }: { searchParams?: 
 
   let query = supabase
     .from('events')
-    .select('id, name, starts_at, ends_at, is_published, archived_at, brand_id, brand:brands!inner(slug, name)')
+    .select('id, name, cover_url, starts_at, ends_at, is_published, archived_at, brand_id, brand:brands!inner(slug, name)')
     .order('starts_at', { ascending: true });
   if (brandSlug) query = query.eq('brand.slug', brandSlug);
   const [{ data, error }, prueba] = await Promise.all([query, idsMarcasDePrueba(admin)]);
@@ -106,15 +107,14 @@ export default async function EventsListPage({ searchParams }: { searchParams?: 
         {aLaVenta.length === 0 ? (
           <p className="s-calm">Ningún evento se está vendiendo en este momento.</p>
         ) : (
-          <ul className="s-event-list">
-            {aLaVenta.map((e, i) =>
-              fila(e, (
-                <span className="s-evcount">
-                  {entradas[i] === null ? '—' : entradas[i]!.toLocaleString('es-PE')}
-                  <span>{entradas[i] === 1 ? 'entrada' : 'entradas'}</span>
-                </span>
-              )),
-            )}
+          // Tarjetas con el flyer, como en el panel del organizador; las
+          // entradas van en una pastilla sobre la imagen.
+          <ul className="c-evgrid">
+            {aLaVenta.map((e, i) => (
+              <EventoCard key={e.id} href={`/cabina-7k29x/events/${e.id}`} nombre={e.name} cover={e.cover_url}
+                lineas={[marca(e)?.name ?? '—', cuando(e.starts_at)]}
+                cifra={{ n: entradas[i] ?? null, label: entradas[i] === 1 ? 'entrada' : 'entradas' }} />
+            ))}
           </ul>
         )}
       </section>
@@ -122,7 +122,11 @@ export default async function EventsListPage({ searchParams }: { searchParams?: 
       {borradores.length > 0 && (
         <section className="s-section" aria-labelledby="ev-borr">
           <h2 className="s-h2 s-h2--sec" id="ev-borr">Sin publicar</h2>
-          <ul className="s-event-list">{borradores.map((e) => fila(e))}</ul>
+          <ul className="c-evgrid">
+            {borradores.map((e) => (
+              <EventoCard key={e.id} href={`/cabina-7k29x/events/${e.id}`} nombre={e.name} cover={e.cover_url} lineas={[marca(e)?.name ?? '—', cuando(e.starts_at)]} />
+            ))}
+          </ul>
         </section>
       )}
 

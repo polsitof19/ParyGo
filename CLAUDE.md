@@ -325,6 +325,14 @@ para OK de Paul.
   auditoría (siempre "0" y siempre vacía). .s-calm ya no parte el punto del
   texto. Verificación: e2e/capturas-cabina.mjs (22 checks, 390 claro y 1440
   oscuro).
+- CABINA VISUAL (mismo día, Paul: "no me gusta que sea todo letras, tiene
+  que ser como el panel del organizador"): app/cabina-7k29x/visual.tsx con las
+  piezas de /admin — el evento a la venta en GRANDE (flyer + nombre + tres
+  cifras: entradas, vendidas hoy, ya entraron), barras de entradas por día
+  (14 días, hoy en el acento, número solo en hoy y en el máximo), cifras
+  grandes de paquetes (hoy · 7 días · mes, siempre visibles) y MARCAS y
+  EVENTOS como tarjetas con logo/flyer en rejilla (2 columnas en el teléfono).
+  El logo de marca va sobre --surface-2, nunca sobre el color de la marca.
 - ESCÁNER: /scan sin sesión va a /login?next=/scan y el login VUELVE al
   escáner (lib/loginNext.ts, con test de open redirect en
   e2e/login-next.test.mts); antes terminaba en el panel y "parecía que se
