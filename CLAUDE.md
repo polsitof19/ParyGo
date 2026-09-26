@@ -560,6 +560,12 @@ para no romper la app vieja desplegada.
   código 100% lo esquivaba). El documento se compara en MAYÚSCULAS en los dos
   topes (0060 y 0067). En
   solo lectura (super mirando) el token NO se manda al navegador. Paso O del E2E.
+- MARCAR COMO AGOTADA (2026-09-26, Paul, para la cortesía de Tío Code):
+  Entradas → el tipo → "Marcar como agotada" (marcarAgotadaAction). La
+  capacidad queda en vendidas + reservas vigentes (quien está pagando
+  termina), escritura optimista contra sold, events_log. Se reabre subiendo
+  la Capacidad. La fila plegada dice "agotada" (el revalidate remonta la
+  página y cierra el plegable). Test: e2e/marcar-agotada.mjs 6/6 (demotest).
 - CORTESÍAS: se emiten al email del organizador (precargado) y la página
   Cortesías lista CADA entrada con "Copiar link" y "WhatsApp" (la URL solo
   en el href/portapapeles, nunca escrita). Cada QR entra una vez.
