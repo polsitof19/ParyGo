@@ -9,6 +9,7 @@ import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { setBrandArchivedAction } from './brands/[slug]/actions';
 import { EnterBrandButton } from './brands/[slug]/EnterBrandButton';
 import { onColor, bgFor, initialOf } from './on-color';
+import { VentasPacks } from './VentasPacks';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -224,6 +225,9 @@ export default async function SuperHome() {
       ) : !due ? (
         <p className="s-calm">Nada por resolver: sin solicitudes, sin Yapes trabados, todas las marcas con saldo y dueño.</p>
       ) : null}
+
+      {/* 2) VENTAS DE PAQUETES: hoy · 7 días · mes, contra el período anterior. */}
+      <VentasPacks />
 
       {allRows.length === 0 ? (
         <div className="s-card"><p className="s-empty">Todavía no hay marcas. Crea la primera.</p></div>

@@ -82,6 +82,11 @@ supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se regist
   no avisan. Prueba sin enviar: `cd apps/web && npx tsx ../../e2e/aviso-venta-pack.mts`
   (intercepta Resend). La PWA (manifest.ts) se llama "ParyGo" y abre /scan,
   que al super admin sin marcas lo manda a la cabina.
+- VENTAS DE PAQUETES EN LA CABINA (2026-09-26): la portada de la cabina
+  muestra Hoy · Últimos 7 días · el mes (hora de Lima), cada uno contra el
+  período anterior, y las últimas 5 ventas (app/cabina-7k29x/VentasPacks.tsx,
+  una consulta a pack_purchases pagadas). Marcas is_test no suman; soles y
+  dólares se suman aparte, sin convertir.
 - CORREOS AL ORGANIZADOR (2026-09-25, Paul: "máximo uno o dos"): el aviso
   "Yapes por aprobar" es UNO por evento por ventana de 12 h (dedupe_key
   yape_pending_digest:<event>:<floor(epoch/43200)>, la misma en
