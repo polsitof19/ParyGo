@@ -17,39 +17,49 @@ export const dynamic = 'force-dynamic';
 // Home de marca (<slug>.parygo.com) — tema noche (2026-09-23)
 // =============================================================
 // Una sola cosa que hacer: elegir el evento y entrar. Arriba la marca con su
-// logo a 56 (sin el nombre en texto si hay logo), "VENTA OFICIAL · LIMA" y
-// una línea. Después, cada evento publicado como una tarjeta con la MISMA
-// banda de la compra (el flyer entero sobre su copia difuminada), cuándo y
-// dónde, el nombre y la acción. El primero lleva el único botón primario; los
-// siguientes, la acción en texto.
+// logo (sin el nombre en texto si hay logo), "Venta oficial · Lima" y una
+// línea. Después, cada evento publicado: el FLYER ENTERO como afiche (en el
+// teléfono a todo el ancho, con su proporción real; en la compu a 360×450 al
+// lado del texto), cuándo y dónde, el nombre y la acción. Sin caja ni banda
+// difuminada (2026-09-25, Paul: "se ve grande"): la banda metía un afiche
+// vertical en un rectángulo ancho con los costados borrosos. El primero lleva
+// el único botón primario; los siguientes, la acción en texto.
 
 type EvRow = {
   id: string; slug: string; name: string; starts_at: string;
   venue_name: string | null; venue_address: string | null;
   cover_url: string | null;
+  cover_w: number | null; cover_h: number | null;
   is_free: boolean;
 };
+
+// Proporción del afiche. Un flyer vertical se muestra entero; una captura de
+// pantalla (más alta que 4:5) se recorta a 4:5 con object-fit: cover; sin
+// medidas, 4:5 y contain (no se recorta nada a ciegas).
+function formaFlyer(e: EvRow): { ratio: string; cls: string } {
+  if (!e.cover_w || !e.cover_h) return { ratio: '4 / 5', cls: ' bh-ev__art--sin' };
+  const r = e.cover_w / e.cover_h;
+  if (r < 0.8) return { ratio: '4 / 5', cls: '' };
+  return { ratio: `${e.cover_w} / ${e.cover_h}`, cls: r > 1 ? ' bh-ev__art--apaisado' : '' };
+}
 
 function Evento({ e, desde, primero }: { e: EvRow; desde: number | null; primero: boolean }) {
   const donde = [e.venue_name, distrito(e.venue_address)].filter(Boolean).join(', ');
   // `desde` es el mínimo PAGO: un evento gratis que además vende entradas
   // pagas (Standly: cortesía libre + VIP/GENERAL) se compra, no se "reclama".
   const gratis = e.is_free && desde == null;
+  const forma = formaFlyer(e);
   return (
     <li className="bh-ev">
       <Link href={`/${e.slug}`} className="bh-ev__a">
         {e.cover_url ? (
-          <span className="bh-ev__art">
-            <span
-              className="bh-ev__blur" aria-hidden="true"
-              style={{ backgroundImage: `url(${JSON.stringify(optimizedImage(e.cover_url, { width: 96, quality: 40 }))})` }}
-            />
+          <span className={`bh-ev__art${forma.cls}`} style={{ aspectRatio: forma.ratio }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={optimizedImage(e.cover_url, { width: 720, quality: 80 })} alt={`Flyer de ${e.name}`} decoding="async" />
           </span>
         ) : null}
         <span className="bh-ev__txt">
-          <span className="bh-ev__cuando">{[fmtCuando(e.starts_at), donde].filter(Boolean).join(' · ')}</span>
+          <span className="bh-ev__cuando"><span className="b-dot" aria-hidden="true" />{[fmtCuando(e.starts_at), donde].filter(Boolean).join(' · ')}</span>
           <span className="bh-ev__nm">{e.name}</span>
           {!gratis && desde != null && <span className="bh-ev__desde">Desde {formatPEN(desde)}</span>}
           <span className={`bh-ev__go${primero ? ' bh-ev__go--pri' : ''}`}>
@@ -75,7 +85,7 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
   const now = new Date().toISOString();
   const { data: upcoming } = await supabase
     .from('events')
-    .select('id, slug, name, starts_at, venue_name, venue_address, cover_url, is_free')
+    .select('id, slug, name, starts_at, venue_name, venue_address, cover_url, cover_w, cover_h, is_free')
     .eq('brand_id', brand.id)
     .eq('is_published', true)
     .is('archived_at', null)
