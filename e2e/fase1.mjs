@@ -1032,6 +1032,25 @@ if (!S.eventId) {
     check('J', 'Entradas: sección propia con los tipos del evento', /\/entradas$/.test(p.url()) && nTipos >= 3, `${p.url()} · filas=${nTipos}`);
     await go(p, `/admin/events/${S.eventId}/editar`);
     check('J', 'Datos del evento: sección propia (sin las entradas)', (await p.locator('#datos').count()) === 1 && (await p.locator('#entradas').count()) === 0, p.url());
+    // Regresión (2026-09-25, Code): un evento GRATIS con ventas pagas (cortesía
+    // libre + tipos pagos) no dejaba guardar NADA en Datos del evento: la
+    // casilla "gratis" viaja deshabilitada, no va en el FormData y el server
+    // lo leía como "quiere desmarcar gratis". Cambiar el nombre tiene que andar.
+    {
+      const { count: pagas } = await svc.from('orders').select('id', { count: 'exact', head: true }).eq('event_id', S.eventId).eq('status', 'paid');
+      const ev0 = (await svc.from('events').select('name, is_free').eq('id', S.eventId).single()).data;
+      await svc.from('events').update({ is_free: true }).eq('id', S.eventId);
+      await go(p, `/admin/events/${S.eventId}/editar`);
+      const casilla = p.locator('input[name="is_free"]');
+      const deshabilitada = await casilla.isDisabled().catch(() => false);
+      await p.fill('#ev-name', `${ev0.name} · renombrado`);
+      await p.getByRole('button', { name: 'Guardar datos del evento' }).click();
+      await sleep(3500);
+      const ev1 = (await svc.from('events').select('name, is_free').eq('id', S.eventId).single()).data;
+      const msg = (await p.locator('.s-banner--err, .s-banner--ok').allInnerTexts()).join(' | ');
+      check('J', 'evento gratis CON ventas pagas: se puede renombrar desde Datos del evento (la casilla gratis, deshabilitada, no bloquea el guardado)', (pagas ?? 0) > 0 && deshabilitada && ev1.name === `${ev0.name} · renombrado` && ev1.is_free === true, `pagas=${pagas} casilla_deshabilitada=${deshabilitada} · "${ev1.name}" gratis=${ev1.is_free} · ${msg.slice(0, 120)}`);
+      await svc.from('events').update({ name: ev0.name, is_free: ev0.is_free }).eq('id', S.eventId);
+    }
     // (panel/lanzamiento) El inicio del evento NO muestra cifras (Paul: "S/ 0
     // cobrado · 3 vendidas" no debe verse); los números viven en Estadísticas.
     await go(p, `/admin/events/${S.eventId}`);

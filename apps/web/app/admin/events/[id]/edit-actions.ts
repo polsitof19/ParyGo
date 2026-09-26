@@ -69,7 +69,6 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   if (!parsed.success) return { ok: false, message: t('Revisa los campos (el enlace de Maps debe empezar con https://).', 'Check the fields (the Maps link must start with https://).') };
   const requireAge = formData.get('require_age_confirmation') === 'on';
   const requireDni = formData.get('require_dni') === 'on';
-  const isFree = formData.get('is_free') === 'on';
   const sendReminder = formData.get('send_reminder') === 'on';
   const collectAttendeeNames = formData.get('collect_attendee_names') === 'on';
   const allowTransfer = formData.get('allow_transfer') === 'on';
@@ -115,6 +114,13 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   // viene deshabilitado en ese caso, pero eso es del cliente: la decisión la
   // toma el server. Solo se bloquea el CAMBIO — si ya estaba marcado, guardar
   // el resto del formulario no falla.
+  //
+  // OJO (2026-09-25, Code no podía guardar "Datos del evento"): con ventas la
+  // casilla viaja DESHABILITADA y un checkbox deshabilitado NO se manda en el
+  // FormData, así que acá llegaba "no marcado" para un evento gratis y se
+  // rechazaba TODO el guardado (nombre incluido). Con ventas pagas la casilla
+  // no se puede cambiar: se conserva lo que hay y no se mira el formulario.
+  let isFree = formData.get('is_free') === 'on';
   if (isFree !== (current?.is_free ?? false)) {
     const { count: pagas } = await admin
       .from('orders')
@@ -122,7 +128,10 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
       .eq('event_id', eventId)
       .eq('status', 'paid');
     if ((pagas ?? 0) > 0) {
-      return { ok: false, message: t('No puedes cambiar si el evento es gratis: ya tiene ventas pagas.', 'You cannot change whether the event is free: it already has paid sales.') };
+      if (formData.has('is_free') || !current?.is_free) {
+        return { ok: false, message: t('No puedes cambiar si el evento es gratis: ya tiene ventas pagas.', 'You cannot change whether the event is free: it already has paid sales.') };
+      }
+      isFree = current.is_free;
     }
   }
 

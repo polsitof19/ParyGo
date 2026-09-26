@@ -202,7 +202,9 @@ export async function verificarHome({ browser, base = PROD ? BASE_PROD : BASE } 
     const tag = `home ${ancho}`;
     check(`${tag} · responde 200`, r?.status() === 200, r?.status());
     check(`${tag} · home .bh en tema noche`, h.bh && h.noche, JSON.stringify(h));
-    check(`${tag} · logo a 56 (o el nombre si no hay logo)`, h.logo === null ? !!h.h1 : Math.round(h.logo) === 56, JSON.stringify({ logo: h.logo, h1: h.h1 }));
+    // 56 en el teléfono, 64 desde 1024 (home como afiche, 2026-09-25).
+    const logoEsperado = ancho >= 1024 ? 64 : 56;
+    check(`${tag} · logo a ${logoEsperado} (o el nombre si no hay logo)`, h.logo === null ? !!h.h1 : Math.round(h.logo) === logoEsperado, JSON.stringify({ logo: h.logo, h1: h.h1 }));
     check(`${tag} · "Venta oficial · Lima"`, /venta oficial · lima/i.test(h.ofi ?? ''), h.ofi);
     check(`${tag} · el evento publicado lleva a su compra`, h.linkEvento, JSON.stringify(h));
     check(`${tag} · la acción dice reclamar o comprar`, /^(Reclama tu entrada gratis|Comprar entradas)/.test(h.accion ?? ''), h.accion);
