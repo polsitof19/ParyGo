@@ -1,0 +1,412 @@
+/* ============================================================
+   LA COMPRA — tema noche (2026-09-23)
+   ============================================================
+   Evento → Tus datos → Yape. Reemplaza a direcciones.css, que eran capas
+   de overrides sobre la base cálida de client.css.
+
+   DOS DIRECCIONES, y las sigue eligiendo el flyer (lib/concepto.ts):
+     .b-canvas     el flyer sirve: banda de 216 arriba, el título debajo.
+     .b-editorial  el flyer NO sirve (captura de pantalla, o no hay): el
+                   título va primero y la banda baja a 160. Es el respaldo.
+   Mismo markup, mismos tokens; cambian orden y alto.
+
+   OJO CON LA ESTRUCTURA: dentro de .b-stage son HERMANOS, en este orden:
+   .b-hero (banda + ficha), .b-hero__over (título), .b-list, .b-sum.
+
+   Teléfono (390): una columna, gutter 20, barra de pagar fija de 86.
+   Escritorio (≥1024): grilla 360 / fluido / 320 en 1120 — el flyer a
+   360×450 con su ficha a la izquierda, título + entradas + pasos + legal
+   al centro, "Tu compra" en tarjeta de 320 a la derecha.
+   ============================================================ */
+
+.client-shell .b-buy {
+  position: relative; max-width: 560px; margin: 0 auto;
+  padding: 0 var(--pad) var(--b-s5);
+}
+
+/* ---------- Hero: la banda ---------- */
+.client-shell .b-stage { display: flex; flex-direction: column; }
+.client-shell .b-hero { order: 1; padding-top: var(--b-s2); }
+.client-shell .b-hero__over { order: 2; }
+.client-shell .b-list { order: 3; }
+.client-shell .b-sum { order: 4; }
+
+/* La banda reserva su alto SIEMPRE (216), cargue o no la imagen: nada se
+   corre cuando llega el flyer. */
+.client-shell .b-hero__shot {
+  position: relative; display: block; width: 100%; height: var(--b-band);
+  padding: 0; border: 0; border-radius: var(--r-band); overflow: hidden;
+  background: var(--surface); cursor: zoom-in;
+  /* Aísla el blur: sin esto, el filtro se pinta sobre toda la página en
+     algunos WebKit. */
+  isolation: isolate;
+}
+/* Máscara de legibilidad sobre una FOTO ajena, no una sombra: el flyer
+   difuminado y oscurecido rellena la banda (excepción escrita en DESIGN.md). */
+.client-shell .b-hero__blur {
+  position: absolute; inset: -12%; z-index: 0;
+  background-size: cover; background-position: center;
+  filter: blur(28px) brightness(.55);
+  transform: translateZ(0);
+}
+.client-shell .b-hero__shot img {
+  position: relative; z-index: 1; display: block;
+  height: 100%; width: auto; max-width: 100%; margin: 0 auto;
+  object-fit: contain;
+}
+.client-shell .b-aside { display: none; }
+
+/* ---------- Título ---------- */
+.client-shell .b-hero__over { padding: var(--b-s3) 0 var(--b-s3); }
+.client-shell .b-kicker {
+  font-size: var(--b-lb); font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink-3); line-height: 1.4;
+}
+.client-shell .b-hero__name {
+  margin: var(--b-sm) 0 0; font-family: var(--display); font-weight: 800;
+  font-size: var(--b-h1); line-height: var(--b-h1-lh); letter-spacing: var(--b-h1-tr);
+  color: var(--ink); text-wrap: balance;
+  /* Un nombre largo corta con guion (lang=es), no en cualquier letra. */
+  overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto;
+}
+.client-shell .b-hero__linea { display: flex; align-items: center; gap: var(--b-s1); margin-top: var(--b-s2); font-size: var(--b-ctl); color: var(--ink-2); }
+.client-shell .b-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand-mark); flex: none; }
+
+/* ---------- Secciones ---------- */
+.client-shell .b1-h2 {
+  margin: 0 0 var(--b-sm); font-size: var(--b-lb); font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
+  scroll-margin-top: 72px;
+}
+
+/* Título de la lista de entradas + la instrucción (visible en las dos
+   direcciones desde 2026-09-26). */
+.client-shell .b-tks__head { margin: var(--b-s3) 0 var(--b-s2); }
+.client-shell .b-tks__t { margin: 0; font-size: var(--b-total); font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; color: var(--ink); scroll-margin-top: 72px; }
+.client-shell .b-tks__hint { margin-top: var(--b-sx); font-size: var(--b-ctl); color: var(--ink-2); display: flex; align-items: center; gap: var(--b-sx); flex-wrap: wrap; }
+.client-shell .b-tks__plus { display: inline-grid; place-items: center; width: var(--b-s3); height: var(--b-s3); border-radius: 50%; background: var(--brand-fill); color: var(--on-fill); box-shadow: 0 0 0 2px var(--brand-mark); font-weight: 700; line-height: 1; }
+
+/* ---------- Entradas: tarjeta --surface, radio 14 ---------- */
+.client-shell .b-tks { display: flex; flex-direction: column; gap: var(--b-s1); }
+.client-shell .b-ty {
+  position: relative; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card);
+  padding: var(--b-s2);
+  transition: background-color var(--t-ctl) var(--ease);
+}
+.client-shell .b-ty--on { background: var(--selected); }
+/* Agotada: lo dice la etiqueta y el precio tachado, no un opacity (que sacaba
+   el texto secundario de AA; lo guarda check-variant-contrast). */
+.client-shell .b-ty--out { background: var(--bg); }
+.client-shell .b-ty--out .b-ph__pr { text-decoration: line-through; color: var(--ink-2); }
+/* La barra de 3px de la fila elegida. Existe siempre; al elegir se escala de
+   .4 a 1 (160ms). Solo transform y opacity. */
+.client-shell .b-ty__bar {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--brand-mark);
+  transform: scaleY(.4); opacity: 0;
+  transition: transform var(--t-ctl) var(--ease), opacity var(--t-ctl) var(--ease);
+}
+.client-shell .b-ty--on .b-ty__bar { transform: none; opacity: 1; }
+
+.client-shell .b1-ty__head {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "id act" "pr act";
+  align-items: center; column-gap: var(--b-s2);
+}
+.client-shell .b1-ty__id { grid-area: id; min-width: 0; }
+.client-shell .b1-ty__nm { margin: 0; font-size: var(--b-body); font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
+.client-shell .b1-ty__inc { margin-top: 2px; font-size: var(--b-sec); color: var(--ink-2); }
+.client-shell .b-ph__pr { grid-area: pr; margin-top: var(--b-sx); font-size: var(--b-price); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.client-shell .b-ph__act { grid-area: act; display: inline-flex; align-items: center; justify-content: flex-end; }
+.client-shell .b-ph__lock { width: 16px; height: 16px; color: var(--ink-3); }
+.client-shell .b-ph__ago { font-size: var(--b-lb); font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
+
+/* Stepper: − con borde blanco .22, + relleno blanco con icono negro. 42. */
+.client-shell .b-qty { display: inline-flex; align-items: center; gap: var(--b-s1); }
+.client-shell .b-qbtn {
+  width: var(--b-step); height: var(--b-step); flex: none;
+  display: grid; place-items: center; border-radius: 50%; cursor: pointer;
+  transition: transform var(--t-ctl) var(--ease), opacity var(--t-ctl) var(--ease);
+}
+.client-shell .b-qbtn svg { width: 18px; height: 18px; }
+/* Se dibuja a 42 (la maqueta) y se toca a 48: un área invisible alrededor
+   (WCAG 2.5.8 / la regla de 44 del audit). Entre − y + quedan 8 + el número,
+   así que las áreas no se pisan. */
+.client-shell .b-qbtn { position: relative; }
+.client-shell .b-qbtn::after { content: ""; position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; transform: translate(-50%, -50%); }
+.client-shell .b-qbtn--dec { background: none; border: 1px solid rgba(255, 255, 255, 0.22); color: var(--ink); }
+.client-shell .b-qbtn--dec:disabled { opacity: .35; cursor: default; }
+/* El "+" lleva el COLOR DE LA MARCA (2026-09-26, Paul: "es negro y no llama
+   la atención"): relleno y signo son el par brandFillPair (4.5:1 medido) y el
+   anillo es --brand-mark (≥3:1 contra #0A0A0A), así el control se ve aunque la
+   marca sea oscura. */
+.client-shell .b-qbtn--add { background: var(--brand-fill); border: 0; color: var(--on-fill); box-shadow: 0 0 0 2px var(--brand-mark); }
+.client-shell .b-qval { min-width: 24px; text-align: center; font-size: var(--b-qty); font-weight: 700; font-variant-numeric: tabular-nums; }
+.client-shell .b-qval__n { display: inline-block; animation: c-num var(--t-ctl) var(--ease) both; }
+
+/* Escalera de precios dentro de la fila: el punto vigente con la marca. */
+.client-shell .b1-line { list-style: none; display: flex; gap: var(--b-s2); margin: var(--b-sm) 0 0; padding: var(--b-sm) 0 0; border-top: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.client-shell .b1-line::-webkit-scrollbar { display: none; }
+.client-shell .b1-line__n { position: relative; flex: none; padding-left: var(--b-s2); }
+.client-shell .b1-line__dot { position: absolute; left: 0; top: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); }
+.client-shell .b1-line__n--on .b1-line__dot { background: var(--brand-mark); }
+.client-shell .b1-line__lb { display: block; font-size: var(--b-lb); font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.client-shell .b1-line__n--on .b1-line__lb { color: var(--ink-2); }
+.client-shell .b1-line__pr { display: block; font-size: var(--b-meta); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.client-shell .b1-line__n--on .b1-line__pr { color: var(--ink); }
+.client-shell .b1-line__sub { display: block; font-size: var(--b-sec); color: var(--ink-3); }
+/* Lo pasado se tacha, no se apaga: un opacity bajo sacaba el texto de AA. */
+.client-shell .b1-line__n--past .b1-line__pr { text-decoration: line-through; }
+
+.client-shell .b-trust { margin-top: var(--b-sm); font-size: var(--b-sec); line-height: 1.45; color: var(--ink-2); }
+
+/* ---------- Así de simple: tres columnas ---------- */
+.client-shell .b1-simple { margin-top: var(--b-s5); }
+.client-shell .b1-pasos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--b-s1); }
+.client-shell .b1-paso { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: var(--b-sm); }
+.client-shell .b1-paso__n { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--surface-2); color: var(--ink); margin-bottom: var(--b-sm); }
+.client-shell .b1-paso__n svg { width: 16px; height: 16px; }
+.client-shell .b1-paso__t { margin: 0; font-size: var(--b-meta); font-weight: 600; line-height: 1.3; }
+.client-shell .b1-paso__i { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.client-shell .b1-paso__d { margin-top: var(--b-sx); font-size: var(--b-sec); line-height: 1.4; color: var(--ink-2); }
+
+/* ---------- Dónde es ---------- */
+.client-shell .b-info { margin-top: var(--b-s5); }
+.client-shell .b-info__b + .b-info__b { margin-top: var(--b-s4); }
+.client-shell .b-map { position: relative; display: grid; place-items: center; height: var(--b-map); border-radius: var(--r-card); overflow: hidden; background: var(--surface-2); color: var(--ink-3); }
+.client-shell .b-map svg { width: 22px; height: 22px; }
+/* El mapa de Google viene claro: se invierte y se gira el tono para que los
+   colores del mapa sigan siendo los suyos (verde el parque, azul el agua)
+   sobre el negro. Es un filtro sobre una imagen ajena, no sobre texto ni
+   controles, y por eso no entra en la regla de brightness de los botones. */
+.client-shell .b-map__frame {
+  position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block;
+  filter: invert(.92) hue-rotate(180deg) saturate(.7) contrast(.9);
+}
+.client-shell .b-donde__txt { margin-top: var(--b-sm); }
+.client-shell .b-donde__nm { font-size: var(--b-ctl); font-weight: 600; }
+.client-shell .b-info__dir { margin-top: 2px; font-size: var(--b-meta); color: var(--ink-2); }
+.client-shell .b-info__txt { font-size: var(--b-ctl); line-height: 1.5; color: var(--ink-2); white-space: pre-line; }
+.client-shell .b-link { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--b-ctl); font-weight: 600; color: var(--ink); transition: opacity var(--t-ctl) var(--ease); }
+
+.client-shell .b-legal { margin-top: var(--b-s4); font-size: var(--b-sec); line-height: 1.5; color: var(--ink-3); }
+.client-shell .b-legal a { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
+.client-shell .b-legal + .b-legal { margin-top: var(--b-s1); }
+
+/* ---------- Lightbox: el flyer entero ---------- */
+.client-shell .b-lightbox {
+  position: fixed; inset: 0; z-index: 90; border: 0; padding: var(--b-s3); width: 100%; height: 100%;
+  display: grid; place-items: center; cursor: zoom-out;
+  background: var(--veil);
+  animation: c-fade 180ms var(--ease) both;
+}
+.client-shell .b-lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.client-shell .b-lightbox--out { animation: c-fade-out 160ms var(--ease) both; }
+.client-shell .b-lightbox__hint { position: absolute; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; text-align: center; font-size: var(--b-meta); color: var(--ink-2); }
+
+/* ---------- La barra de pagar: 86, material translúcido ---------- */
+.client-shell .b-cta {
+  position: sticky; bottom: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--b-s2);
+  min-height: calc(var(--b-bar) + env(safe-area-inset-bottom, 0px));
+  margin: var(--b-s4) calc(var(--pad) * -1) 0;
+  padding: 0 var(--pad) env(safe-area-inset-bottom, 0px);
+  background: var(--material);
+  -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
+}
+.client-shell .b-cta__t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.client-shell .b-cta__t .n { font-size: var(--b-sec); color: var(--ink-2); }
+.client-shell .b-cta__t .n--solo { font-size: var(--b-ctl); color: var(--ink-2); }
+.client-shell .b-cta__t .v { font-size: var(--b-total); font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.15; }
+
+.client-shell .b-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--b-s1);
+  height: var(--b-pill); padding: 0 var(--b-s3); border: 0; border-radius: var(--r-pill);
+  font-family: var(--body); font-weight: 600; font-size: var(--b-ctl); white-space: nowrap; cursor: pointer;
+  transition: transform var(--t-ctl) var(--ease), opacity var(--t-ctl) var(--ease);
+}
+.client-shell .b-btn svg { width: 17px; height: 17px; flex: none; }
+.client-shell .b-btn--go { background: var(--brand-fill); color: var(--on-fill); flex: none; }
+/* Apagado: sin color de marca. Recién se enciende cuando hay qué comprar. */
+.client-shell .b-btn--go:disabled { background: rgba(255, 255, 255, 0.08); color: var(--ink-3); cursor: not-allowed; }
+.client-shell .b-btn--soft { background: none; border: 1px solid rgba(255, 255, 255, 0.22); color: var(--ink); }
+
+.client-shell .b-back {
+  display: inline-flex; align-items: center; min-height: 44px; margin-top: var(--b-s2);
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font-size: var(--b-meta); font-weight: 600; color: var(--ink-2);
+  text-decoration: underline; text-underline-offset: 4px;
+  transition: transform var(--t-ctl) var(--ease), opacity var(--t-ctl) var(--ease);
+}
+
+/* ---------- Tu compra (escritorio) ---------- */
+.client-shell .b-sum { display: none; }
+
+/* ---------- Paso 2: Tus datos ---------- */
+.client-shell .b-head { margin: var(--b-s4) 0 var(--b-s3); }
+.client-shell .b-head__t { margin: 0; font-family: var(--display); font-weight: 800; font-size: var(--b-t2); line-height: .98; letter-spacing: -0.03em; }
+.client-shell .b-head__s { margin-top: var(--b-s1); font-size: var(--b-ctl); color: var(--ink-2); }
+.client-shell .b-panel + .b-panel { margin-top: var(--b-s4); }
+.client-shell .b-panel__t { margin: 0 0 var(--b-sm); font-size: var(--b-lb); font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.client-shell .b-resumen { display: flex; align-items: center; justify-content: space-between; gap: var(--b-sm); padding: var(--b-sm) 0; border-bottom: 1px solid var(--line); font-size: var(--b-ctl); }
+.client-shell .b-resumen b { font-size: var(--b-price); font-weight: 700; font-variant-numeric: tabular-nums; }
+.client-shell .b-desc { display: inline-flex; align-items: center; gap: var(--b-s1); font-weight: 600; font-variant-numeric: tabular-nums; }
+.client-shell .b-desc::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+.client-shell .b-seguro { display: flex; align-items: center; gap: var(--b-s1); margin-top: var(--b-s2); font-size: var(--b-sec); color: var(--ink-2); }
+.client-shell .b-seguro svg { width: 14px; height: 14px; }
+.client-shell .b-pays { display: grid; grid-template-columns: 1fr 1fr; gap: var(--b-s1); }
+.client-shell .b-pay {
+  min-height: var(--b-ctl-h); border-radius: var(--r-ctl); cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink-2);
+  font-weight: 600; font-size: var(--b-ctl);
+  transition: transform var(--t-ctl) var(--ease);
+}
+.client-shell .b-pay--on { border-color: rgba(255, 255, 255, 0.45); background: var(--selected); color: var(--ink); }
+.client-shell .b-promo { display: flex; gap: var(--b-s1); margin-top: var(--b-sm); }
+.client-shell .b-promo .c-input { text-transform: uppercase; }
+.client-shell .b-promo .b-btn { height: var(--b-ctl-h); }
+
+/* ---------- Yape ---------- */
+.client-shell .b-buy.b-yape { max-width: 640px; }
+.client-shell .b-yapecard {
+  /* QR arriba y grande (se escanea desde otro teléfono), número debajo. */
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--b-s2);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: var(--b-s2);
+}
+.client-shell .b-yapeqr { display: block; width: var(--b-yape-qr); max-width: 100%; aspect-ratio: 1; padding: 6px; border-radius: var(--r-ctl); background: #FFFFFF; }
+.client-shell .b-yapeacts { display: flex; flex-wrap: wrap; gap: var(--b-sm); }
+.client-shell .b-yapeqr img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.client-shell .b-yapenum { font-size: var(--b-total); font-weight: 800; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.client-shell .b-yapeheld { margin-top: 2px; font-size: var(--b-meta); color: var(--ink-2); }
+.client-shell .b-yapecard .c-btn { margin-top: var(--b-sm); height: 44px; padding: 0 var(--b-s2); font-size: var(--b-meta); }
+.client-shell .b-monto { display: flex; align-items: center; justify-content: space-between; gap: var(--b-s2); flex-wrap: wrap; }
+.client-shell .b-monto > span { font-size: var(--b-monto); font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+.client-shell .b-monto .c-btn { height: 44px; padding: 0 var(--b-s2); font-size: var(--b-meta); }
+.client-shell .b-aviso { margin-top: var(--b-sm); font-size: var(--b-sec); line-height: 1.45; color: var(--ink-3); }
+.client-shell .b-yapeform { display: flex; flex-direction: column; gap: var(--b-s3); }
+.client-shell .b-yapeform .b-btn--go { width: 100%; height: var(--b-pill-lg); }
+
+/* ============================================================
+   EDITORIAL — el respaldo cuando el flyer no sirve
+   ============================================================ */
+.client-shell .b-editorial .b-hero__over { order: 1; padding-top: var(--b-s4); }
+.client-shell .b-editorial .b-hero { order: 2; padding-top: 0; padding-bottom: var(--b-s3); }
+.client-shell .b-editorial .b-hero__shot { height: 160px; }
+
+/* ============================================================
+   ESCRITORIO (≥1024): 360 / fluido / 320 en 1120
+   ============================================================ */
+@media (min-width: 1024px) {
+  .client-shell { --pad: 32px; --b-h1: 76px; --b-h1-lh: .9; --b-h1-tr: -0.05em; }
+  /* 1120 de CONTENIDO: 360 + 40 + 360 + 40 + 320. */
+  .client-shell .b-buy { max-width: calc(1120px + var(--pad) * 2); }
+  .client-shell .b-buy.b-yape { max-width: calc(640px + var(--pad) * 2); }
+  .client-shell .b-stage {
+    display: grid;
+    grid-template-columns: var(--b-flyer-w) minmax(0, 1fr) 320px;
+    grid-template-areas:
+      "flyer titulo resumen"
+      "flyer lista  resumen";
+    grid-template-rows: auto 1fr;
+    gap: 0 40px; align-items: start;
+    padding-top: var(--b-s5);
+  }
+  .client-shell .b-hero,
+  .client-shell .b-editorial .b-hero { grid-area: flyer; position: sticky; top: calc(var(--b-header) + var(--b-s3)); padding: 0; }
+  .client-shell .b-hero__shot,
+  .client-shell .b-editorial .b-hero__shot { width: var(--b-flyer-w); height: var(--b-flyer-h); }
+  .client-shell .b-aside { display: block; padding-top: var(--b-s2); }
+  .client-shell .b-aside__nm { font-size: var(--b-ctl); font-weight: 600; }
+  .client-shell .b-aside__dir { margin-top: 2px; font-size: var(--b-meta); color: var(--ink-2); }
+  .client-shell .b-hero__over,
+  .client-shell .b-editorial .b-hero__over { grid-area: titulo; padding: 0 0 var(--b-s4); }
+  .client-shell .b-list { grid-area: lista; }
+  /* El dónde ya está en la ficha bajo el flyer. */
+  .client-shell .b-info__donde { display: none; }
+  .client-shell .b-info { margin-top: var(--b-s4); }
+
+  .client-shell .b-sum {
+    grid-area: resumen; display: block; position: sticky; top: calc(var(--b-header) + var(--b-s3));
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card);
+    padding: var(--b-s3);
+  }
+  .client-shell .b-sum__lb { font-size: var(--b-lb); font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+  .client-shell .b-sum__vacio { margin-top: var(--b-sm); font-size: var(--b-meta); color: var(--ink-2); }
+  .client-shell .b-sum__list { list-style: none; margin: var(--b-sm) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--b-s1); }
+  .client-shell .b-sum__list li { display: flex; justify-content: space-between; gap: var(--b-sm); font-size: var(--b-meta); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .client-shell .b-sum__total { display: flex; align-items: baseline; justify-content: space-between; gap: var(--b-sm); margin-top: var(--b-s2); padding-top: var(--b-s2); border-top: 1px solid var(--line); }
+  .client-shell .b-sum__total span { font-size: var(--b-meta); color: var(--ink-2); }
+  .client-shell .b-sum__total b { font-size: var(--b-total); font-weight: 800; font-variant-numeric: tabular-nums; }
+  .client-shell .b-sum .b-btn { width: 100%; height: var(--b-pill-lg); margin-top: var(--b-s3); font-size: var(--b-body); }
+
+  /* En la pantalla de entradas manda la tarjeta de la derecha; en la de
+     datos no hay tarjeta y la barra vuelve (si no, no hay botón de pagar). */
+  .client-shell .b-cta { display: none; }
+  .client-shell .b-buy--datos .b-cta { display: flex; }
+  /* En "Tus datos" la barra mide lo mismo que el formulario (640), no 1120:
+     el total y el botón quedan alineados con lo que se está llenando. */
+  .client-shell .b-buy--datos .b-cta { max-width: calc(640px + var(--pad) * 2); margin-left: auto; margin-right: auto; border-radius: var(--r-card) var(--r-card) 0 0; }
+
+  /* Datos y pago con tarjeta: 640, no 1120. */
+  .client-shell .b-buy > .c-stepwrap:not(:has(> .b-stage)) { max-width: 640px; margin-left: auto; margin-right: auto; }
+}
+
+/* ============================================================
+   MOVIMIENTO DE LA COMPRA
+   ============================================================
+   Primera carga, escalonado: hero 0 · título 60 · entradas 120 ·
+   pasos 200 · dónde 280 · barra 360. 320ms cada uno, la misma curva.
+   Solo opacity y transform: nada empuja el layout (los altos están
+   reservados: la banda mide 216 cargue o no, la barra 86). */
+@keyframes b-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.client-shell .b-buy--primera .b-hero,
+.client-shell .b-buy--primera .b-hero__over,
+.client-shell .b-buy--primera .b-tks,
+.client-shell .b-buy--primera .b-trust,
+.client-shell .b-buy--primera .b1-simple,
+.client-shell .b-buy--primera .b-info,
+.client-shell .b-buy--primera .b-sum,
+.client-shell .b-buy--primera .b-cta { animation: b-in var(--t-in) var(--ease) both; }
+.client-shell .b-buy--primera .b-hero__over { animation-delay: 60ms; }
+.client-shell .b-buy--primera .b-tks,
+.client-shell .b-buy--primera .b-trust,
+.client-shell .b-buy--primera .b-sum { animation-delay: 120ms; }
+.client-shell .b-buy--primera .b1-simple { animation-delay: 200ms; }
+.client-shell .b-buy--primera .b-info { animation-delay: 280ms; }
+.client-shell .b-buy--primera .b-cta { animation-delay: 360ms; }
+/* Editorial: el título va primero, entonces entra primero. */
+.client-shell .b-buy--primera.b-editorial .b-hero__over { animation-delay: 0ms; }
+.client-shell .b-buy--primera.b-editorial .b-hero { animation-delay: 60ms; }
+
+@media (hover: hover) and (pointer: fine) {
+  .client-shell .b-btn--go:hover:not(:disabled) { background: var(--brand-fill-hover); }
+  .client-shell .b-btn--soft:hover:not(:disabled) { border-color: rgba(255, 255, 255, 0.45); }
+  .client-shell .b-qbtn--add:hover { background: var(--brand-fill-hover); }
+  .client-shell .b-qbtn--dec:hover:not(:disabled) { border-color: rgba(255, 255, 255, 0.45); }
+  .client-shell .b-pay:hover { border-color: rgba(255, 255, 255, 0.30); }
+  /* Los links bajan a .7; nunca cambian al color de la marca. */
+  .client-shell .b-link:hover,
+  .client-shell .b-back:hover,
+  .client-shell .b-legal a:hover { opacity: .7; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .client-shell .b-buy--primera .b-hero,
+  .client-shell .b-buy--primera .b-hero__over,
+  .client-shell .b-buy--primera .b-tks,
+  .client-shell .b-buy--primera .b-trust,
+  .client-shell .b-buy--primera .b1-simple,
+  .client-shell .b-buy--primera .b-info,
+  .client-shell .b-buy--primera .b-sum,
+  .client-shell .b-buy--primera .b-cta { animation-name: c-fade; animation-duration: 200ms; animation-delay: 0ms; }
+  .client-shell .b-qval__n { animation: c-fade 200ms linear both; }
+  .client-shell .b-ty__bar { transform: none; transition: opacity 200ms linear; }
+  .client-shell .b-lightbox,
+  .client-shell .b-lightbox--out { animation-duration: 200ms; }
+}
+
+/* Transparencia reducida: la barra es sólida. */
+@media (prefers-reduced-transparency: reduce) {
+  .client-shell .b-cta { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}

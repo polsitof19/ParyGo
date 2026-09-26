@@ -1,0 +1,198 @@
+[
+  {
+    "angulo": "refspec",
+    "cmd": "git push origin HEAD:\"refs/heads/main\"",
+    "nota": "El tokenizer (regex \"...\"|'...'|\\S+) solo des-comilla cuando la comilla es el PRIMER caracter del token. Aca la comilla va a mitad del refspec, asi..."
+  },
+  {
+    "angulo": "refspec",
+    "cmd": "git push origin HEAD:\\main",
+    "nota": "Mismo agujero via escape con backslash. El guard conserva \\main en el token (refspecDst='\\\\main') y SACRED_REF falla; el shell colapsa \\m -> m y gi..."
+  },
+  {
+    "angulo": "refspec",
+    "cmd": "git push origin HEAD:heads/main",
+    "nota": "SACRED_REF solo acepta 'main'/'master' pelado o el prefijo EXACTO refs/heads/. Pero git tambien resuelve la abreviatura 'heads/main' (refs/<name>) ..."
+  },
+  {
+    "angulo": "refspec",
+    "cmd": "git push origin @:heads/main",
+    "nota": "Combina dos huecos: '@' como src (alias de HEAD que git acepta) y 'heads/main' como dst (abreviatura que SACRED_REF no cubre). Independiente de la ..."
+  },
+  {
+    "angulo": "refspec",
+    "cmd": "git push origin @",
+    "nota": "El guard chequea HEAD con /^HEAD$/i pero NO reconoce '@' como alias de HEAD, y con dos posicionales (origin, @) se saltea el chequeo de 'sin refspe...",
+    "permitidoEnRamaDeTrabajo": true
+  },
+  {
+    "angulo": "refspec",
+    "cmd": "git -c remote.origin.push=HEAD:refs/heads/main push origin",
+    "nota": "analyzePushSegment solo mira los tokens DESPUES del literal 'push'; aca el destino real viaja en la opcion -c ANTES del subcomando. El guard ve arg..."
+  },
+  {
+    "angulo": "refspec",
+    "cmd": "git push origin :\"refs/heads/main\"",
+    "nota": "Borrado de la rama sagrada (forma dos-puntos) usando el truco de comilla-a-mitad-de-token. refspecDst='\"refs/heads/main\"' (con comillas) no matchea..."
+  },
+  {
+    "angulo": "refspec",
+    "cmd": "git push origin --delete heads/main",
+    "nota": "Borrado via --delete + abreviatura 'heads/main'. '--delete' es flag (se ignora), el posicional 'heads/main' no matchea SACRED_REF -> PASS; git resu..."
+  },
+  {
+    "angulo": "refspec",
+    "cmd": "git push origin +HEAD:\"refs/heads/main\"",
+    "nota": "Sobrescritura forzada (force) de main via el truco de comilla. refspecDst quita el '+' pero queda '\"refs/heads/main\"' con comillas, que no matchea ..."
+  },
+  {
+    "angulo": "refspec",
+    "cmd": "git push origin refs/tags/vX:heads/main",
+    "nota": "Push de un TAG que mueve una rama: empuja el objeto del tag vX al destino 'heads/main' (abreviatura no cubierta por SACRED_REF) -> PASS, y git actu..."
+  },
+  {
+    "angulo": "shell",
+    "cmd": "r=push; git $r origin main",
+    "nota": "El split parte en `;`. El segmento que lleva `main` es `git $r origin main`: contiene `git` pero NO la palabra literal `push` (esta viene de $r), a..."
+  },
+  {
+    "angulo": "shell",
+    "cmd": "git -c alias.yolo=push yolo origin main",
+    "nota": "El segmento contiene `push` (dentro de `alias.yolo=push`) y `git`, entra a analyze, pero `tokens.indexOf('push')` busca un token EXACTAMENTE igual ..."
+  },
+  {
+    "angulo": "shell",
+    "cmd": "sh -c 'git push origin main'",
+    "nota": "El tokenizer respeta comillas simples: todo `git push origin main` queda como UN solo token. Entonces ningun token es igual a `git` (ni termina en ..."
+  },
+  {
+    "angulo": "shell",
+    "cmd": "(git push origin main)",
+    "nota": "El split no contempla los parentesis de subshell y no hay espacio tras `(`. El tokenizer produce el token `(git` (via \\S+), que no es `git` ni matc..."
+  },
+  {
+    "angulo": "shell",
+    "cmd": "git push origin ma\"in\"",
+    "nota": "Comillas anidadas parciales. El tokenizer arranca con \\S+ y se traga `ma\"in\"` entero como token (las comillas quedan DENTRO), que no matchea SACRED..."
+  },
+  {
+    "angulo": "shell",
+    "cmd": "git push origin \\main",
+    "nota": "Escape con barra invertida. El token queda `\\main` (la barra es \\S), no matchea SACRED_REF por el prefijo `\\`. bash interpreta `\\m` como `m` litera..."
+  },
+  {
+    "angulo": "shell",
+    "cmd": "git push origin \\\nmain",
+    "nota": "Barra invertida al final de linea (continuacion). shellSegments parte en `\\r?\\n`, generando seg1=`git push origin \\` (positionals origin y `\\`, nin..."
+  },
+  {
+    "angulo": "shell",
+    "cmd": "echo main | xargs git push origin",
+    "nota": "El split rompe en `|`. El guard solo analiza `xargs git push origin`: positional=[origin], len<=1 => asume destino = rama actual (refactor/monorepo..."
+  },
+  {
+    "angulo": "shell",
+    "cmd": "xargs -a <(echo main) git push origin",
+    "nota": "Sustitucion de procesos. El guard no parte en `<(...)` y analiza `xargs -a <(echo main) git push origin`: los tokens `<(echo` y `main)` quedan ANTE..."
+  },
+  {
+    "angulo": "indireccion",
+    "cmd": "sh -c 'git push origin HEAD:main'",
+    "nota": "El guard tokeniza el segmento y busca un token que sea exactamente 'git' (o termine en /git). Aqui 'git push origin HEAD:main' es UN solo token ent..."
+  },
+  {
+    "angulo": "indireccion",
+    "cmd": "eval \"git push origin refactor/monorepo:main\"",
+    "nota": "Mismo hueco que sh -c: todo el 'git push ...' queda como un unico token entrecomillado, no hay token 'git' suelto, gi=-1 -> PASS. eval expande y ej..."
+  },
+  {
+    "angulo": "indireccion",
+    "cmd": "echo 'origin refactor/monorepo:main' | xargs git push",
+    "nota": "El refspec destino llega por stdin via xargs, no en la linea. El guard analiza el segmento 'xargs git push': args tras 'push' estan vacios, positio..."
+  },
+  {
+    "angulo": "indireccion",
+    "cmd": "git send-pack --force \"$(git remote get-url origin)\" refactor/monorepo:refs/heads/main",
+    "nota": "send-pack es el plumbing de push pero NO contiene la palabra 'push', asi que el filtro /\\bpush\\b/ nunca activa analyzePushSegment: el segmento se i..."
+  },
+  {
+    "angulo": "indireccion",
+    "cmd": "git -c remote.origin.push=refactor/monorepo:main push origin",
+    "nota": "El guard solo mira los tokens DESPUES de 'push' (args=['origin']); el '-c remote.origin.push=...' queda antes y se ignora. positional=['origin'] (l..."
+  },
+  {
+    "angulo": "indireccion",
+    "cmd": "git config remote.origin.push refactor/monorepo:refs/heads/main && git push origin",
+    "nota": "Primer segmento (config) tiene 'push' dentro de 'remote.origin.push' pero no como token suelto -> pi=-1 -> PASS. Segundo segmento 'git push origin'..."
+  },
+  {
+    "angulo": "indireccion",
+    "cmd": "git config alias.deploy 'push origin HEAD:main' && git deploy",
+    "nota": "Setear el alias: 'push origin HEAD:main' es un token entrecomillado, no hay token 'push' suelto -> PASS. Luego 'git deploy' NO contiene la palabra ..."
+  },
+  {
+    "angulo": "indireccion",
+    "cmd": "git config alias.ship '!git push origin HEAD:refs/heads/main' && git ship",
+    "nota": "Variante shell-alias (prefijo !). El config queda entrecomillado (sin token 'push' suelto -> PASS) y 'git ship' no menciona 'push' -> segmento salt..."
+  },
+  {
+    "angulo": "indireccion",
+    "cmd": "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=remote.origin.push GIT_CONFIG_VALUE_0=refactor/monorepo:main git push origin",
+    "nota": "Las asignaciones GIT_CONFIG_* van antes de 'git' y no son args del push; el guard ve positional=['origin'], HEAD=refactor/monorepo -> PASS. Git iny..."
+  },
+  {
+    "angulo": "indireccion",
+    "cmd": "git config branch.refactor/monorepo.remote origin && git config branch.refactor/monorepo.merge refs/heads/main && git -c push.default=upstream push",
+    "nota": "Se apunta el upstream de refactor/monorepo a main y con push.default=upstream un 'git push' pelado empuja a la rama upstream (main). El guard ve 'g..."
+  },
+  {
+    "angulo": "indireccion",
+    "cmd": "git push origin $(echo main)",
+    "nota": "El destino real 'main' viene de una sustitucion de shell. El guard detecta $() en el posicional y en vez de bloquear cae al camino 'fail-cerrado' q..."
+  },
+  {
+    "angulo": "implementacion",
+    "cmd": "git push origin main\"\"",
+    "nota": "tokenize() usa /\"(...)\"|'(...)'|(\\S+)/ . Como el arg NO empieza con comilla, gana la rama (\\S+) y el token queda como main\"\" con las comillas adent..."
+  },
+  {
+    "angulo": "implementacion",
+    "cmd": "git push origin ma\"\"in",
+    "nota": "Mismo bug de tokenize(): la comilla intercalada queda dentro del token (ma\"\"in) porque solo se captura como grupo entre comillas si el token EMPIEZ..."
+  },
+  {
+    "angulo": "implementacion",
+    "cmd": "git push origin HEAD:ma\"\"in",
+    "nota": "refspecDst hace indexOf(':') y devuelve el lado derecho tal cual: ma\"\"in (con comillas). No matchea SACRED_REF ni la rama HEAD (no es 'HEAD' litera..."
+  },
+  {
+    "angulo": "implementacion",
+    "cmd": "\\git push origin main",
+    "nota": "El localizador de git es tokens.findIndex(t=>t==='git'||/(?:^|/)git$/.test(t)). El escape de shell \\git tokeniza (via \\S+) como \\git, que no es 'gi..."
+  },
+  {
+    "angulo": "implementacion",
+    "cmd": "git p\\ush origin main",
+    "nota": "El gate previo exige /\\bpush\\b/.test(seg). p\\ush no contiene la subcadena contigua 'push', asi que el segmento se saltea entero antes de analizarse..."
+  },
+  {
+    "angulo": "implementacion",
+    "cmd": "git send-pack \"$(git remote get-url origin)\" refs/heads/main",
+    "nota": "El guard solo analiza segmentos que contienen la palabra literal 'push' (/\\bpush\\b/). git send-pack es plumbing real que escribe refs en el remoto ..."
+  },
+  {
+    "angulo": "implementacion",
+    "cmd": "git push origin 'refs/heads/*:refs/heads/*'",
+    "nota": "El guard bloquea --all/--mirror por nombre, pero un refspec wildcard hace lo mismo (empuja todas las ramas incluida main). refspecDst toma todo tra..."
+  },
+  {
+    "angulo": "implementacion",
+    "cmd": "git config remote.origin.push refs/heads/refactor/monorepo:refs/heads/main && git push origin",
+    "nota": "Para 'git push origin' (<=1 posicional) el guard asume destino=rama actual y lee .git/HEAD (refactor/monorepo, no sagrada) => PASS. Nunca lee la co..."
+  },
+  {
+    "angulo": "implementacion",
+    "cmd": "git config push.default upstream && git branch --set-upstream-to=origin/main refactor/monorepo && git push",
+    "nota": "Mismo punto ciego: el guard equipara nombre de rama local con destino remoto. Con push.default=upstream y upstream=origin/main, un 'git push' pelad..."
+  }
+]

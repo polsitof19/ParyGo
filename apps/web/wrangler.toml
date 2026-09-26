@@ -1,0 +1,26 @@
+# Cloudflare Pages config for the ParyGo web app (super admin + brand admin
+# + public buyer site). Built with @cloudflare/next-on-pages; assets and the
+# generated `_worker.js` go in `.vercel/output/static`.
+#
+# Run locally:   npm run preview
+# Build for CF:  npm run build:cf
+#
+# In the Cloudflare dashboard, point the Pages project at this directory
+# (root = apps/web) and use the build command from package.json. The DNS
+# bindings (app.parygo.com, *.parygo.com) are configured in the dashboard,
+# not here.
+
+name = "parygo-app" # el proyecto real en Cloudflare Pages (verificado 2026-09-18)
+compatibility_date = "2025-05-01"
+# nodejs_compat lets us call APIs like Buffer that some transitive deps
+# expect even though we don't use them directly. Required for the
+# `mercadopago` SDK 2.x to load cleanly under Workers.
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
+
+# Smart Placement (2026-09-25): el panel encadena 3–5 consultas a Supabase por
+# pantalla y cada una costaba ~170 ms desde el borde de Lima. Con esto
+# Cloudflare corre las Functions al lado de la base (tras ~30 pedidos de
+# muestra); los archivos estáticos siguen saliendo del borde más cercano.
+[placement]
+mode = "smart"

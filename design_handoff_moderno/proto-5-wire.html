@@ -1,0 +1,155 @@
+/* ============================================================
+   CABLEADO. El del picker es el contrato de PICKER.md: teclas
+   1-N y flechas, R para repetir, ?v= persiste, el highlight se
+   desliza pero el CAMBIO DE VARIANTE es instantaneo (se flipea
+   cien veces por sesion: por la regla de frecuencia, no se anima).
+   ============================================================ */
+var stage = document.getElementById('stage');
+var picker = document.querySelector('.proto-picker');
+var highlight = picker.querySelector('.proto-picker-highlight');
+var items = [].slice.call(picker.querySelectorAll('.proto-picker-item:not(.proto-picker-replay)'));
+var replay = picker.querySelector('.proto-picker-replay');
+var current = 0;
+var marcaIdx = 0;
+var ctx = { qty: [] };
+
+function marca(){ return DATOS[marcaIdx]; }
+
+/* El tema de marca se inyecta con las MISMAS funciones del producto. */
+function aplicarMarca(){
+  var b = marca();
+  var par = brandFillPair(b.color);
+  var r = document.documentElement.style;
+  r.setProperty('--brand', b.color);
+  r.setProperty('--brand-fill', par.fill);
+  r.setProperty('--on-fill', par.on);
+  r.setProperty('--brand-fill-hover', brandFillHover(b.color));
+  r.setProperty('--brand-deep', brandInk(b.color));
+  r.setProperty('--brand-soft', withAlpha(b.color, 0.12));
+  ctx.qty = b.tipos.map(function(){ return 0; });
+
+  var cFill = contrast(parseHex(par.fill), parseHex(par.on));
+  var cInk = contrast(parseHex(brandInk(b.color)), PAPER_3);
+  document.getElementById('nota').innerHTML =
+    '<b>' + esc(b.marca) + '</b> ' + b.color
+    + '<br>relleno+texto ' + cFill.toFixed(2) + ':1'
+    + '<br>tinta sobre papel ' + cInk.toFixed(2) + ':1'
+    + (b.flyer ? '' : '<br>sin flyer (estado vacío real)');
+}
+
+function pintar(){
+  stage.className = 'stage';
+  stage.innerHTML = VARIANTES[current](marca(), ctx);
+}
+
+function mount(i){
+  stage.innerHTML = '';
+  requestAnimationFrame(function(){ current = i; pintar(); });
+}
+
+function moveHighlight(){
+  var el = items[current];
+  highlight.style.width = el.offsetWidth + 'px';
+  highlight.style.transform = 'translateX(' + el.offsetLeft + 'px)';
+}
+
+function setActive(i){
+  if (i < 0 || i >= VARIANTES.length) return;
+  current = i;
+  items.forEach(function(el, j){
+    if (j === i) { el.setAttribute('data-active',''); el.setAttribute('aria-current','true'); }
+    else { el.removeAttribute('data-active'); el.removeAttribute('aria-current'); }
+  });
+  moveHighlight();
+  var url = new URL(location);
+  url.searchParams.set('v', i + 1);
+  history.replaceState(null, '', url);
+  mount(i);
+}
+
+items.forEach(function(el, i){ el.addEventListener('click', function(){ setActive(i); }); });
+if (replay) replay.addEventListener('click', function(){ mount(current); });
+window.addEventListener('resize', moveHighlight);
+
+document.addEventListener('keydown', function(e){
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  var num = parseInt(e.key, 10);
+  if (num >= 1 && num <= VARIANTES.length) setActive(num - 1);
+  else if (e.key === 'ArrowRight') setActive((current + 1) % VARIANTES.length);
+  else if (e.key === 'ArrowLeft') setActive((current - 1 + VARIANTES.length) % VARIANTES.length);
+  else if (e.key === 'r' || e.key === 'R') mount(current);
+});
+
+/* Selector de marca: chrome aparte, no compite con el picker. */
+var cajaMarcas = document.getElementById('marcas');
+function pintarMarca(){
+  var b = marca();
+  cajaMarcas.innerHTML = '<button type="button" aria-label="Cambiar de marca (ahora ' + esc(b.marca) + ')">'
+    + '<i style="background:' + esc(b.color) + '"></i><span>' + esc(b.marca) + '</span></button>';
+}
+cajaMarcas.addEventListener('click', function(){
+  marcaIdx = (marcaIdx + 1) % DATOS.length;
+  var url = new URL(location); url.searchParams.set('m', DATOS[marcaIdx].slug);
+  history.replaceState(null, '', url);
+  aplicarMarca();
+  pintarMarca();
+  pintar();
+});
+
+/* El stepper toca SOLO lo que cambia: su propio control y la barra. Antes
+   rehacia el arbol entero en cada tap —imagen a sangre incluida—, lo que
+   perdia el foco del boton recien apretado y re-disparaba la animacion de
+   entrada en cada incremento, no solo cuando el stepper aparece. */
+function actualizarBarra(){
+  var b = marca(), n = cuantas(ctx);
+  var lb = stage.querySelector('[data-barra-lb]');
+  var monto = stage.querySelector('[data-barra-monto]');
+  var cta = stage.querySelector('[data-pagar]');
+  if (lb) lb.textContent = etiquetaBarra(n);
+  if (monto) monto.textContent = plata(n === 0 ? desde(b) : total(b, ctx));
+  if (cta) { cta.innerHTML = textoCta(n); cta.disabled = n === 0; }
+}
+
+stage.addEventListener('click', function(e){
+  var pagar = e.target.closest('[data-pagar]');
+  if (pagar) { pagar.textContent = 'Acá seguiría el checkout real'; pagar.disabled = true; return; }
+  var mas = e.target.closest('[data-mas]');
+  var menos = e.target.closest('[data-menos]');
+  if (!mas && !menos) return;
+  var i = +(mas || menos).getAttribute(mas ? 'data-mas' : 'data-menos');
+  var antes = ctx.qty[i] || 0;
+  var ahora = Math.max(0, antes + (mas ? 1 : -1));
+  if (ahora === antes) return;
+  ctx.qty[i] = ahora;
+
+  var caja = stage.querySelector('[data-ctl=' + JSON.stringify(String(i)) + ']');
+  if (caja) {
+    var cambiaDeForma = (antes === 0) !== (ahora === 0);
+    if (cambiaDeForma) {
+      var teniaFoco = caja.contains(document.activeElement);
+      caja.innerHTML = controlHTML(marca().tipos[i], i, ctx, ahora > 0);
+      // El boton que se apreto dejo de existir: el foco no puede quedar en el aire.
+      if (teniaFoco) { var sig = caja.querySelector('button'); if (sig) sig.focus(); }
+    } else {
+      var v = caja.querySelector('.qval');
+      if (v) v.textContent = ahora;
+    }
+  }
+  actualizarBarra();
+});
+
+/* Arranque: ?m= elige marca, ?v= elige variante. */
+var sp = new URLSearchParams(location.search);
+var mSlug = sp.get('m');
+if (mSlug) {
+  var k = DATOS.findIndex(function(b){ return b.slug === mSlug; });
+  if (k >= 0) marcaIdx = k;
+}
+aplicarMarca();
+pintarMarca();
+setActive((parseInt(sp.get('v'), 10) || 1) - 1);
+requestAnimationFrame(function(){ requestAnimationFrame(function(){ picker.setAttribute('data-ready',''); }); });
+</script>
+</body>
+</html>

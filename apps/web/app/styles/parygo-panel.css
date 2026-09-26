@@ -1,0 +1,858 @@
+/* ============================================================
+   PANELES PARYGO — base compartida (super admin + panel del organizador).
+   Los VALORES viven en parygo-tokens.css (.pg). Acá están los componentes
+   s-* que usan esos tokens; los dos layouts ponen `pg pg-panel` en el shell.
+   Lo propio de cada superficie vive en cabina-7k29x/super.css y
+   admin/admin.css.
+
+   Reglas del sistema (ver el header de tokens):
+   - --accent y --peri NUNCA son color de texto ni fondo con texto blanco.
+     El acento aparece como punto, anillo de foco o relleno con TINTA encima.
+   - Estados (ok / warn / alert) = PUNTO de color + texto en tinta.
+   - El color aparece solo cuando hay algo que hacer.
+   Tipografía: ver el bloque ESCALA de más abajo.
+
+   DIRECCIÓN DE ARTE (2026-09-23) — TEMA NOCHE, el mismo del comprador.
+   Referencia aprobada por Paul ("Panel organizador ParyGo.html"). Los
+   valores son los de .pg.pg-noche (fondo #0A0A0A, superficie #141414, texto
+   #FFFFFF / #A3A3A3 / #8A8A8A, medidos por test:contrast) y Geist en todo.
+   La estructura la hacen:
+     1. hairlines (1px var(--line)) y filas de 52 como un menú de ajustes,
+     2. jerarquía tipográfica: Geist 600 con tracking negativo en títulos y
+        números; etiquetas de grupo en 13/500 y MINÚSCULA normal (nada de
+        mayúsculas espaciadas: era la firma del dashboard generado),
+     3. superficie #141414 SOLO para lo que pide algo (Yapes por aprobar,
+        solicitudes): el único bloque con fondo es el pendiente.
+   Un solo primario por pantalla: relleno de TINTA con el color del fondo
+   encima (blanco con #0A0A0A en noche, #0A0A0A con blanco en claro), radio
+   10, alto 48. El secundario es el mismo botón con borde.
+
+   CLARO U OSCURO SEGÚN EL TELÉFONO (2026-09-23, pedido de Paul): el panel
+   sigue prefers-color-scheme. Oscuro = los tokens de .pg.pg-noche; claro =
+   el bloque "TEMA CLARO" de abajo, blanco neutro (nunca crema), medido por
+   scripts/check-panel-contrast.mjs dentro de npm run test:contrast.
+   Nada centrado: todo se alinea a la izquierda.
+
+   ESCALA (2026-09-21). Contenida y FIJA, la misma que la página de compra:
+   nada gigante y nada elástico. Cinco escalones, declarados como variables:
+     t1  título de página     28 → 34
+     t2  título de sección    20 → 24   (700)
+     t3  subtítulo            16        (700)
+     body                     16 → 17   a 1.45
+     meta                     13
+     lb   etiqueta mayúsculas 11
+     num  número de stat      26 → 28   (800)
+   Ritmo de espacio en múltiplos de 8 (s1..s6 = 8/16/24/32/48/64), contenedor
+   de 1120, interlínea de títulos 1.05 y áreas de toque de 44px.
+   La DENSIDAD sube por el relleno de las filas, no por achicar la letra.
+   ============================================================ */
+
+.pg-panel {
+  --pad: clamp(16px, 4vw, 32px);
+  --s-t1: 26px; --s-t2: 20px; --s-t3: 16px;
+  --s-body: 15px; --s-meta: 13px; --s-lb: 13px; --s-num: 22px;
+  /* Escalones que antes se escribían sueltos (había 10 tamaños literales):
+       lead  18   entradilla / cifra en línea
+       ctl   15   texto de control (botón, campo, opción)
+       ui    14   interfaz secundaria
+       micro 12   microcopy (pie, nota al pie de tabla)
+     Documentados en DESIGN.md junto con el resto de la rampa. */
+  --s-lead: 18px; --s-ctl: 15px; --s-ui: 14px; --s-micro: 12px;
+  /* Tema noche (2026-09-23):
+       field 16  texto dentro de un campo (16 = iOS no hace zoom al enfocar)
+       cifra 20  las tres cifras del evento que viene
+       hero  24→36  nombre del evento que viene (el título más grande)
+       word  19  wordmark "parygo." del super admin */
+  --s-field: 16px; --s-cifra: 20px; --s-hero: 24px; --s-word: 19px;
+  /* d1 — CIFRA HÉROE (2026-09-22). Un solo número por pantalla: lo que está
+     esperando al usuario ("5 Yapes"). Es la jerarquía por TAMAÑO del ADN de
+     las referencias (DICE separa display y cuerpo 5.9×): acá d1/body es 2.5×
+     en el teléfono y 3.3× en escritorio, sin subir ningún peso. */
+  --s-d1: 40px;
+  --s-s1: 8px; --s-s2: 16px; --s-s3: 24px; --s-s4: 32px; --s-s5: 48px; --s-s6: 64px;
+  /* 100dvh, no 100vh: en Safari de iPhone 100vh mide el viewport GRANDE (sin
+     la barra de direcciones), así que el shell siempre quedaba más alto que lo
+     que se ve y la página arrancaba con scroll vertical de más. 100vh queda
+     antes como respaldo para los navegadores que no entienden dvh. */
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: var(--s-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+@media (min-width: 1024px) {
+  .pg-panel { --s-t1: 36px; --s-t2: 22px; --s-body: 15px; --s-num: 26px; --s-d1: 56px; }
+}
+@media (min-width: 900px) {
+  .pg-panel { --s-hero: 36px; }
+}
+/* Bordes y velos que dependen del fondo. Oscuro por defecto. */
+.pg.pg-panel {
+  color-scheme: dark;
+  --on-accent: #0A0A0A;                         /* número sobre el acento: 7.0:1 en los dos temas */
+  --ctl-line: rgba(255, 255, 255, 0.16);        /* borde del botón secundario */
+  --ctl-line-hover: rgba(255, 255, 255, 0.34);
+  --field-line: rgba(255, 255, 255, 0.14);      /* borde del campo */
+  --field-focus: rgba(255, 255, 255, 0.45);
+  --field-ring: rgba(255, 255, 255, 0.08);
+  --selection: rgba(255, 255, 255, 0.22);
+  --chev: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-opacity='.66' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+/* ---------- TEMA CLARO (teléfono en modo claro) ----------
+   Blanco neutro, tinta #0A0A0A. Contraste medido (check-panel-contrast):
+   --ink 19.8 · --ink-2 ≥ 6.4 · --ink-3 ≥ 4.8 sobre las cuatro superficies;
+   --on-white (#FFFFFF) sobre --ink (#0A0A0A) 19.8; hover del primario
+   #262626 con blanco 15.1. */
+@media (prefers-color-scheme: light) {
+  .pg.pg-panel {
+    color-scheme: light;
+    --bg: #FFFFFF;
+    --surface: #F4F4F5;
+    --surface-2: #EAEAEB;
+    --selected: #E4E4E6;
+    --paper: var(--bg);
+    --paper-2: var(--surface);
+    --paper-3: var(--surface-2);
+    --ink: #0A0A0A;
+    --ink-2: #525252;
+    --ink-3: #616161;
+    --line: rgba(0, 0, 0, 0.10);
+    --sel: rgba(0, 0, 0, 0.04);
+    --on-white: #FFFFFF;
+    --white-hover: #262626;
+    --ctl-line: rgba(0, 0, 0, 0.16);
+    --ctl-line-hover: rgba(0, 0, 0, 0.36);
+    --field-line: rgba(0, 0, 0, 0.16);
+    --field-focus: rgba(0, 0, 0, 0.55);
+    --field-ring: rgba(0, 0, 0, 0.06);
+    --selection: rgba(0, 0, 0, 0.12);
+    --chev: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230A0A0A' stroke-opacity='.66' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  }
+}
+.pg-panel *, .pg-panel *::before, .pg-panel *::after { box-sizing: border-box; }
+.pg-panel a { color: inherit; text-decoration: none; }
+.pg-panel button { font: inherit; }
+.pg-panel code { font-size: 0.92em; background: var(--paper-2); border-radius: var(--r-ctl); padding: 1px 5px; }
+
+/* Foco: anillo de acento (decorativo, sin texto encima). Solo teclado. */
+.pg-panel :where(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-ctl);
+}
+
+/* Que el rebote del scroll (iOS) y el fondo detrás del shell sean negros. */
+html:has(.pg-panel), body:has(.pg-panel) { background: #0A0A0A; }
+@media (prefers-color-scheme: light) { html:has(.pg-panel), body:has(.pg-panel) { background: #FFFFFF; } }
+.pg-panel ::selection { background: var(--selection); }
+
+.pg-panel .s-wrap { max-width: 1120px; margin: 0 auto; padding: var(--s-s4) var(--pad) var(--s-s6); }
+
+/* ---------- Tipo ---------- */
+.pg-panel .s-h1 { font-family: var(--display); font-weight: 600; font-size: var(--s-t1); line-height: 1.08; letter-spacing: -0.03em; }
+/* Títulos de sección: Bricolage 700 a la izquierda. Es la jerarquía la que
+   arma la página ahora que no hay cajas que la armen — no hace falta 800. */
+.pg-panel .s-h2 { font-family: var(--display); font-weight: 600; font-size: var(--s-t2); line-height: 1.15; letter-spacing: -0.02em; }
+.pg-panel .s-h3 { font-family: var(--display); font-weight: 600; font-size: var(--s-t3); line-height: 1.25; letter-spacing: -0.01em; }
+/* Eyebrow: tinta + punto de acento (nunca texto en acento). */
+.pg-panel .eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: var(--s-meta); font-weight: 500;
+  color: var(--ink-2);
+}
+.pg-panel .eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+.pg-panel .s-muted { color: var(--ink-2); }
+.pg-panel .s-muted-3 { color: var(--ink-3); }
+.pg-panel .s-small { font-size: var(--s-meta); }
+/* Link dentro de un párrafo: subrayado, no color (el acento no porta texto). */
+.pg-panel .s-textlink { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; text-decoration-color: var(--line); transition: text-decoration-color .18s, transform .14s ease-out; }
+.pg-panel .s-textlink:hover { text-decoration-color: var(--ink); }
+
+/* ---------- Sección (antes "card") ----------
+   Ya no es una tarjeta: es un bloque que ARRANCA con un hairline y respira.
+   Sin fondo, sin borde cerrado, sin radio, sin sombra. El título va en
+   Bricolage 800 pegado a la línea; el contenido cuelga debajo. */
+/* DENSIDAD MEDIDA (2026-09-21): el hueco entre secciones medía 67–82px en
+   1440 (margen 32 + relleno 24 + el aire propio del h2). La mediana de siete
+   dashboards públicos reales es 20px (banda 12–30). Baja a 16+16 = 32 medido:
+   sigue siendo más aire que el benchmark a propósito, porque acá no hay cajas
+   ni fondos separando — el hairline y el aire SON la estructura, y por debajo
+   de ~24 el hairline se lee como raya de tabla, no como corte de sección. */
+.pg-panel .s-card { background: none; border: 0; border-radius: 0; box-shadow: none; padding: var(--s-s2) 0 0; border-top: 1px solid var(--line); }
+.pg-panel .s-card--lg { padding-top: var(--s-s3); }
+/* Una tabla ancha se desliza en vez de recortarse. */
+.pg-panel .s-card--flush { overflow-x: auto; overflow-y: hidden; }
+/* Bloque anidado: la línea ya la puso el de afuera. */
+.pg-panel .s-card .s-card { border-top: 0; padding-top: 0; }
+.pg-panel .s-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: var(--s-s2); }
+.pg-panel .s-card__title { font-family: var(--display); font-weight: 600; font-size: var(--s-t2); line-height: 1.15; letter-spacing: -0.02em; }
+.pg-panel .s-card__desc { color: var(--ink-2); font-size: var(--s-meta); line-height: 1.45; margin-top: 3px; }
+.pg-panel .s-divider { height: 1px; background: var(--line); margin: var(--s-s3) 0 var(--s-s2); }
+.pg-panel .s-section-lead { font-size: var(--s-lb); font-weight: 500; color: var(--ink-2); margin-bottom: var(--s-s2); }
+/* Vacío: alineado a la izquierda como todo lo demás (nada centrado). */
+.pg-panel .s-empty { text-align: left; color: var(--ink-2); font-size: var(--s-meta); padding: var(--s-s2) 0 var(--s-s3); }
+
+/* ---------- Botones ----------
+   UN primario por pantalla: TINTA sobre acento (5.91:1), radio 10. Hover =
+   acento profundo (tinta 4.61:1). Nunca blanco sobre naranja (2.85:1).
+   Todo lo demás es TEXTO: sin relleno, sin borde, subrayado al pasar. 44px de
+   alto para que el área de toque llegue al mínimo en el teléfono.
+
+   El botón chico mide 44 REALES (antes: 36 dibujados + un ::after que estiraba
+   el área a 44). El pseudo-estirador se fue porque crecía hacia arriba y hacia
+   abajo sin saber qué tenía al lado: medido en iPhone, dos botones de texto
+   apilados ("Enviar" sobre "Desactivar") se montaban 8px, y en la lista de
+   eventos el área de "Editar" se comía 27px de la fila-link de al lado. Un
+   botón de TEXTO sin relleno no se ve más grande por medir 44: no hay caja que
+   crezca, solo aire alrededor de la palabra. */
+.pg-panel .s-btn {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--body); font-weight: 600; font-size: var(--s-ctl);
+  height: 44px; min-width: 44px; padding: 0 2px; border-radius: var(--r-btn);
+  border: 0; background: none; color: var(--ink); cursor: pointer; white-space: nowrap;
+  transition: background-color .18s, color .18s, opacity .18s, transform .14s ease-out;
+}
+.pg-panel .s-btn:disabled { cursor: not-allowed; opacity: .7; }
+.pg-panel .s-btn--sm { height: 44px; font-size: var(--s-meta); }
+.pg-panel .s-btn--lg { height: 48px; font-size: var(--s-ctl); }
+.pg-panel .s-btn--block { width: 100%; }
+/* Primario: el único con relleno. */
+/* Primario: relleno de TINTA con el fondo encima (19.8:1 en los dos temas).
+   El acento no lleva texto. Hover = otro gris medido (--white-hover), nunca
+   un filtro. */
+.pg-panel .s-btn--primary { background: var(--ink); color: var(--on-white); padding: 0 20px; height: 48px; }
+.pg-panel .s-btn--primary.s-btn--sm { padding: 0 16px; height: 44px; }
+.pg-panel .s-btn--primary.s-btn--lg { padding: 0 24px; }
+.pg-panel .s-btn--primary:hover:not(:disabled) { background: var(--white-hover); }
+/* Secundario: el MISMO botón con borde y sin relleno ("Copiar link", "Crear
+   evento"). Al pasar, el borde se aclara. */
+.pg-panel .s-btn--soft { color: var(--ink); border: 1px solid var(--ctl-line); padding: 0 16px; }
+.pg-panel .s-btn--soft:hover:not(:disabled) { border-color: var(--ctl-line-hover); }
+.pg-panel .s-btn--ghost { color: var(--ink-2); }
+.pg-panel .s-btn--ghost:hover:not(:disabled),
+.pg-panel .s-btn--danger-soft:hover:not(:disabled) { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px; }
+/* Destructivo confirmado: TINTA sólida con punto de alerta (es el primario de
+   su paso). Blanco sobre --alert da 4.35:1 (no AA); la tinta invertida, 15.7:1. */
+.pg-panel .s-btn--danger { background: var(--ink); color: var(--paper); padding: 0 18px; }
+.pg-panel .s-btn--danger:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 88%, var(--paper)); }
+.pg-panel .s-btn--danger::before,
+.pg-panel .s-btn--danger-soft::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--alert); flex: none; }
+.pg-panel .s-btn--danger-soft { color: var(--ink); }
+
+/* ---------- Estados: PUNTO + texto en tinta ---------- */
+.pg-panel .s-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: var(--s-meta); font-weight: 500; line-height: 1.3;
+  color: var(--ink-2); white-space: nowrap;
+}
+.pg-panel .s-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--ink-3); }
+.pg-panel .s-badge--ok::before { background: var(--ok); }
+.pg-panel .s-badge--warn::before { background: var(--warn); }
+.pg-panel .s-badge--alert::before { background: var(--alert); }
+.pg-panel .s-badge--todo::before { background: var(--accent); }
+/* Borrador / archivada: punto HUECO — "no pasa nada", no pide acción. */
+.pg-panel .s-badge--draft { color: var(--ink-3); }
+.pg-panel .s-badge--draft::before { background: none; box-shadow: inset 0 0 0 1.5px var(--ink-3); }
+.pg-panel .s-badge--inline { margin-left: 10px; vertical-align: middle; }
+/* Señal de problema dentro de una celda: punto de acento + texto en tinta. */
+.pg-panel .s-flag { display: inline-flex; align-items: center; gap: 7px; font-size: var(--s-meta); font-weight: 500; color: var(--ink-2); }
+.pg-panel .s-flag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
+
+/* ---------- Stats: números, no cajas ----------
+   Una fila de números grandes (Bricolage 800, tabulares) con la etiqueta en
+   11px mayúsculas espaciadas DEBAJO, separados por hairlines verticales.
+
+   DECISIÓN CONSCIENTE sobre el orden: el DOM queda etiqueta → número → sub y
+   el orden VISUAL se invierte con flex `order` (número arriba). O sea, un
+   lector de pantalla dice "Vendidas, 240" y quien ve la pantalla lee
+   "240 / VENDIDAS". Es una divergencia respecto de WCAG 1.3.2, aceptada acá
+   porque el significado no se invierte (la etiqueta sigue pegada a SU número,
+   nunca al de al lado) y porque el orden del DOM es el que se entiende sin
+   ver: el número suelto primero no diría nada. No hay nada enfocable adentro,
+   así que el orden de tabulación no cambia.
+   Neutras por defecto. --alert = hay algo que hacer: punto de acento antes del
+   label. El número sigue en tinta: el color señala, no grita. */
+.pg-panel .s-stat { background: none; border: 0; border-radius: 0; box-shadow: none; padding: 0; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+/* El punto de la etiqueta se alinea con el PRIMER renglón, no con el medio del
+   bloque: con "Solicitudes pendientes" en dos líneas quedaba flotando entre
+   las dos, como si no fuera de ninguna. */
+.pg-panel .s-stat__label { order: 2; font-size: var(--s-micro); font-weight: 400; color: var(--ink-2); display: inline-flex; align-items: flex-start; gap: 7px; }
+.pg-panel .s-stat__label::before { margin-top: 4px; }
+.pg-panel .s-stat__value { order: 1; font-family: var(--display); font-weight: 600; font-size: var(--s-num); line-height: 1.1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--ink); }
+.pg-panel .s-stat__value--money { font-size: calc(var(--s-num) - 2px); }
+.pg-panel .s-stat__sub,
+.pg-panel .s-stat__hint { order: 3; font-size: var(--s-meta); color: var(--ink-2); margin-top: -1px; }
+.pg-panel .s-stat > .a-meter { order: 4; }
+.pg-panel .s-stat--alert .s-stat__label { color: var(--ink-2); }
+.pg-panel .s-stat--alert .s-stat__label::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
+/* Crítico (integridad de datos, p. ej. oversell): punto de ALERTA, distinto del
+   acento de "tarea pendiente". Sigue sin texto en color. */
+.pg-panel .s-stat--crit .s-stat__label::before { background: var(--alert); }
+/* La stat que además es link: lo único que cambia al pasar es el subrayado del
+   número. Sin levantarla del papel, porque ya no hay papel del que levantarla. */
+.pg-panel a.s-stat:hover .s-stat__value { text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 2px; }
+.pg-panel .s-stat__owner { order: 3; display: flex; align-items: center; gap: 9px; min-width: 0; }
+.pg-panel .s-stat__owner-email { font-size: var(--s-ui); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Franja de stats: columnas separadas por hairlines verticales, sin gap
+   horizontal (el hairline ES la separación). El primero de cada fila no lleva
+   línea a la izquierda, y por eso cada breakpoint redefine cuál es "el primero". */
+.pg-panel .s-stats,
+.pg-panel .s-stats-4 { display: grid; gap: var(--s-s3) 0; margin-bottom: var(--s-s3); }
+.pg-panel .s-stats { grid-template-columns: repeat(3, 1fr); }
+.pg-panel .s-stats-4 { grid-template-columns: repeat(4, 1fr); margin-bottom: 0; }
+.pg-panel :is(.s-stats, .s-stats-4) > * { padding-left: var(--s-s3); border-left: 1px solid var(--line); }
+.pg-panel .s-stats > :nth-child(3n + 1),
+.pg-panel .s-stats-4 > :nth-child(4n + 1) { padding-left: 0; border-left: 0; }
+@media (max-width: 860px) {
+  .pg-panel .s-stats,
+  .pg-panel .s-stats-4 { grid-template-columns: 1fr 1fr; }
+  .pg-panel :is(.s-stats, .s-stats-4) > * { padding-left: var(--s-s2); border-left: 1px solid var(--line); }
+  .pg-panel :is(.s-stats, .s-stats-4) > :nth-child(2n + 1) { padding-left: 0; border-left: 0; }
+  /* El último, si queda solo en su fila, ocupa las dos columnas. Si no, se
+     queda en la mitad izquierda con la derecha vacía: la etiqueta se parte en
+     dos líneas ("Solicitudes / pendientes") y el email del dueño se corta a
+     140px teniendo 358 libres. */
+  .pg-panel :is(.s-stats, .s-stats-4) > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+/* ---------- Avatar ---------- */
+.pg-panel .s-avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; font-family: var(--display); font-weight: 600; font-size: var(--s-body); }
+.pg-panel .s-avatar--lg { width: 52px; height: 52px; font-size: var(--s-t2); }
+.pg-panel .s-avatar--sm { width: 30px; height: 30px; font-size: var(--s-meta); }
+
+/* ---------- Formularios ----------
+   Etiqueta chica en mayúsculas ARRIBA, campo sin relleno beige (solo una línea
+   abajo), ayuda en --ink-3 DEBAJO. El campo se lee como un renglón escrito, no
+   como una caja. */
+.pg-panel .s-label { display: block; font-size: var(--s-ui); font-weight: 500; color: var(--ink); margin-bottom: 8px; }
+.pg-panel .s-label .req { color: var(--ink-3); margin-left: 3px; }
+.pg-panel .s-input {
+  width: 100%; height: 48px; padding: 0 14px; background: transparent;
+  border: 1px solid var(--field-line); border-radius: var(--r-btn);
+  font-family: var(--body); font-size: var(--s-field); color: var(--ink);
+  transition: border-color .18s, box-shadow .18s;
+}
+.pg-panel textarea.s-input { height: auto; min-height: 96px; padding: 12px 14px; line-height: 1.5; resize: vertical; }
+.pg-panel .s-input::placeholder { color: var(--ink-3); }
+/* Foco: el borde se aclara y aparece un anillo blanco tenue (el mismo del
+   campo del comprador). */
+.pg-panel .s-input:focus { outline: none; border-color: var(--field-focus); box-shadow: 0 0 0 3px var(--field-ring); }
+.pg-panel .s-input:disabled { color: var(--ink-2); border-style: dashed; }
+/* Chico en ANCHO, no en alto: 34px de alto no se puede tocar. */
+.pg-panel .s-input--sm { width: auto; max-width: 200px; height: 44px; font-size: var(--s-field); } /* 16: con menos, iOS hace zoom al tocar el campo */
+.pg-panel .s-select { -webkit-appearance: none; appearance: none; cursor: pointer; padding-right: 26px;
+  background-image: var(--chev);
+  background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px; }
+.pg-panel .s-select option { background: var(--surface); color: var(--ink); }
+.pg-panel .s-hint { font-size: var(--s-meta); color: var(--ink-3); margin-top: var(--s-s1); }
+/* ---------- Campo de archivo ----------
+   El input[type=file] nativo dibuja su propio botón gris ("Choose File" en
+   WebKit, sin traducir y sin relación con el sistema). Se esconde el control
+   —sigue en el DOM, sigue enfocable y sigue teniendo su <label> de caption, así
+   que el teclado y los lectores de pantalla no cambian— y la parte visible es
+   un botón de texto del sistema más el nombre del archivo elegido.
+   El <label> visible NO lleva aria-hidden: apuntar dos <label> al mismo input
+   es válido y sus textos se concatenan en el nombre accesible. Esconderlo
+   hubiera dejado un control que se puede tocar y que el lector no nombra.
+   Un input `disabled` (modo solo lectura de la impersonación) no se activa
+   desde su label ni viaja en el FormData: el bloqueo sigue siendo el mismo. */
+.pg-panel .s-file { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pg-panel .s-file__input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.pg-panel .s-file__btn { cursor: pointer; }
+.pg-panel .s-file__input:focus-visible + .s-file__btn { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: var(--r-ctl); }
+.pg-panel .s-file__name { font-size: var(--s-meta); color: var(--ink-3); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Selector de color: 44 de alto como cualquier control (medía 42 y el hex que
+   WebKit dibuja adentro quedaba recortado). El hex se lee en el campo de al
+   lado, que es el que se puede copiar. */
+.pg-panel .s-colorpick { font-size: var(--s-field); height: 48px; width: 52px; flex: none; cursor: pointer; border-radius: var(--r-ctl); border: 1px solid var(--line); background: transparent; padding: 3px; }
+/* Error / éxito de campo: punto de color + texto en tinta (--alert 4.35:1 y
+   --ok 3.38:1 como texto no llegan a AA). flex, no inline-flex: dos errores
+   hermanos no deben quedar uno al lado del otro. */
+.pg-panel .s-err,
+.pg-panel .s-hint--ok { display: flex; align-items: center; gap: 7px; font-size: var(--s-meta); margin-top: 5px; color: var(--ink); }
+.pg-panel .s-hint--ok { color: var(--ink-2); }
+.pg-panel .s-err::before,
+.pg-panel .s-hint--ok::before { content: ""; width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.pg-panel .s-err::before { background: var(--alert); }
+.pg-panel .s-hint--ok::before { background: var(--ok); }
+.pg-panel .s-field + .s-field { margin-top: var(--s-s3); }
+/* Una grilla de dos campos junto a un campo suelto (o a otra grilla) también
+   lleva aire: con los campos en caja, la etiqueta de abajo quedaba pegada al
+   borde del campo de arriba. */
+.pg-panel :is(.s-field, .s-form-grid) + :is(.s-field, .s-form-grid) { margin-top: var(--s-s3); }
+/* Ayuda debajo de un campo y, pegada, la etiqueta del siguiente (formularios
+   sin .s-field): el aire lo pone la etiqueta. */
+.pg-panel :is(.s-hint, .s-input) + .s-label { margin-top: var(--s-s3); }
+
+/* ---------- Casilla y plegable ----------
+   Estaban en admin.css scopeados a .admin-shell, pero el super admin los usa
+   también (la página de evento de la cabina tiene "Opciones del checkout" y
+   sus casillas): ahí quedaban SIN ESTILO — el plegable sin triángulo y con un
+   summary de 23px de alto, y la casilla como un cuadradito de 12px que era la
+   única zona activa. Viven acá porque son de los dos paneles.
+   La casilla sigue dibujando 18px; lo que se TOCA es la etiqueta entera. */
+.pg-panel .s-check { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: var(--s-ui); color: var(--ink); cursor: pointer; }
+.pg-panel .s-check input { accent-color: var(--ink); width: 18px; height: 18px; flex: none; }
+.pg-panel .s-details > summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; font-weight: 600; font-size: var(--s-ui); color: var(--ink-2); padding: 4px 0; list-style: none; user-select: none; transition: color .18s, transform .14s ease-out; }
+.pg-panel .s-details > summary::-webkit-details-marker { display: none; }
+.pg-panel .s-details > summary::before { content: '▸'; display: inline-block; margin-right: 8px; color: var(--ink-3); transition: transform .2s var(--ease); }
+.pg-panel .s-details[open] > summary::before { transform: rotate(90deg); }
+.pg-panel .s-details > summary:hover { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .pg-panel .s-details > summary::before { transition: none; } }
+.pg-panel .s-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-s3) var(--s-s3); align-items: start; }
+/* Dentro de una grilla el hermano de al lado NO es el de abajo: sin el reset,
+   la columna derecha bajaba 18px y las dos etiquetas no alineaban. */
+.pg-panel .s-form-grid > .s-field + .s-field,
+.pg-panel .s-form-row > .s-field + .s-field { margin-top: 0; }
+@media (max-width: 820px) { .pg-panel .s-form-grid { grid-template-columns: 1fr; } }
+/* Acciones del formulario: el primario a la izquierda y el resto como texto,
+   separados por aire (ya no hay dos rellenos compitiendo). */
+.pg-panel .s-form-actions { display: flex; align-items: center; justify-content: flex-start; gap: var(--s-s3); margin-top: var(--s-s4); padding-top: var(--s-s3); border-top: 1px solid var(--line); flex-wrap: wrap; }
+.pg-panel .s-form-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.pg-panel .s-form-row__field { flex: 1; min-width: 200px; }
+/* Teléfono: UNA columna. Con el campo y el botón en la misma fila el select
+   quedaba en 216px y el botón primario pegado al borde derecho. */
+@media (max-width: 560px) {
+  .pg-panel .s-form-row { flex-direction: column; align-items: stretch; }
+  .pg-panel .s-form-row__field { min-width: 0; width: 100%; }
+  .pg-panel .s-form-row > .s-btn { align-self: flex-start; }
+}
+.pg-panel .s-pwrap { position: relative; }
+.pg-panel .s-pwrap .s-input { padding-right: 46px; }
+/* 44x44 reales: es un botón dentro del campo, y en el telefono era de 32 y
+   se montaba sobre el input. El icono sigue dibujandose chico. */
+.pg-panel .s-peek { position: absolute; right: -2px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; border: none; background: transparent; color: var(--ink-3); cursor: pointer; border-radius: var(--r-ctl); }
+.pg-panel .s-peek:hover { color: var(--ink); background: var(--sel); }
+.pg-panel .s-pwd-form { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.pg-panel .s-slug-wrap { position: relative; }
+.pg-panel .s-slug-wrap .s-input { padding-right: 106px; }
+.pg-panel .s-slug-suffix { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); font-size: var(--s-ui); color: var(--ink-3); pointer-events: none; }
+
+/* ---------- Avisos (banners y notas de estado) ----------
+   Una LÍNEA con punto, no una caja: hairlines arriba y abajo, sin relleno. */
+.pg-panel .s-banner,
+.pg-panel .s-notice {
+  display: flex; align-items: center; gap: 11px;
+  background: none; border: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0;
+  padding: 12px 0; font-size: var(--s-body); font-weight: 500; color: var(--ink);
+}
+.pg-panel .s-notice { font-weight: 600; }
+/* Avisos consecutivos: una sola línea entre ellos, no dos pegadas. */
+.pg-panel .s-notices > * + * { border-top: 0; }
+/* Con el aviso en dos renglones el punto se alinea con el PRIMERO (antes
+   quedaba flotando entre los dos, sin pertenecer a ninguno). */
+.pg-panel .s-banner,
+.pg-panel .s-notice { align-items: flex-start; }
+.pg-panel .s-banner::before,
+.pg-panel .s-notice::before { content: ""; width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--ink-3); margin-top: calc((1.45em - 8px) / 2); }
+.pg-panel .s-banner--ok::before, .pg-panel .s-notice--ok::before { background: var(--ok); }
+.pg-panel .s-banner--err::before, .pg-panel .s-notice--alert::before { background: var(--alert); }
+.pg-panel .s-notice--warn::before { background: var(--warn); }
+.pg-panel .s-notices { display: flex; flex-direction: column; gap: 0; margin-bottom: var(--s-s3); }
+
+/* ---------- Grillas ---------- */
+.pg-panel .s-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+@media (max-width: 880px) { .pg-panel .s-grid-2 { grid-template-columns: 1fr; } }
+.pg-panel .s-stack { display: flex; flex-direction: column; gap: var(--s-s3); }
+.pg-panel .s-stack--tight { gap: 10px; }
+.pg-panel .s-section { margin-top: var(--s-s3); }
+/* Bloques hermanos en la raíz de una página (ficha de marca, evento): ahora los
+   separa AIRE, y cada uno arranca con su hairline. Solo a nivel .s-wrap para no
+   sumar margen dentro de .s-stack (que ya usa gap). */
+.pg-panel .s-wrap > :is(.s-card, .s-grid-2) + :is(.s-card, .s-grid-2) { margin-top: var(--s-s2); }
+.pg-panel .s-wrap > .s-card.s-section { margin-top: var(--s-s2); }
+/* En una grilla de dos columnas, las dos secciones arrancan alineadas: el gap
+   vertical es aire, el horizontal lo marca la línea de cada bloque. */
+.pg-panel .s-grid-2 { gap: var(--s-s3); }
+
+/* ---------- Tabla de marcas ----------
+   Hairlines, hover con tinte, sin filas pintadas: la alerta es un punto en la
+   celda que falla y el ORDEN (alertas arriba). */
+.pg-panel .s-table { width: 100%; border-collapse: collapse; }
+.pg-panel .s-table thead th { font-size: var(--s-micro); font-weight: 500; color: var(--ink-2); text-align: left; padding: 0 16px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.pg-panel .s-table thead th.num { text-align: right; }
+/* DENSIDAD MEDIDA: la fila de la tabla de marcas medía 70px (avatar de 40
+   + 12 de relleno arriba y abajo). Mediana del benchmark: 32 (GitHub 41).
+   Con 8 de relleno la fila queda en 56 — el piso real lo pone el avatar, no
+   el relleno — y sigue muy por encima de los 44 de área de toque. */
+.pg-panel .s-table tbody td { padding: 8px 16px; border-top: 1px solid var(--line); vertical-align: middle; }
+.pg-panel .s-table tbody tr:first-child td { border-top: 0; }
+/* Sin padding en los extremos: el texto de la tabla cae sobre el mismo margen
+   que el título de la sección, y el tinte del hover cubre la fila entera. */
+.pg-panel .s-table :is(th, td):first-child { padding-left: 0; }
+.pg-panel .s-table :is(th, td):last-child { padding-right: 0; }
+.pg-panel .s-table tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.pg-panel .s-table tbody tr { cursor: pointer; position: relative; transition: background-color .18s; }
+.pg-panel .s-table tbody tr:hover { background: var(--sel); }
+/* La fila entera es el link (::after del primer link cubre la fila). */
+.pg-panel .s-rowlink::after { content: ""; position: absolute; inset: 0; z-index: 0; }
+.pg-panel .s-table td > * { position: relative; z-index: 1; }
+.pg-panel .s-cell-brand { display: flex; align-items: center; gap: 12px; }
+.pg-panel .s-cell-brand .nm { font-size: var(--s-body); font-weight: 600; line-height: 1.2; }
+.pg-panel .s-cell-brand .sl { font-size: var(--s-meta); color: var(--ink-3); white-space: nowrap; }
+.pg-panel .s-saldo-num { font-family: var(--display); font-weight: 600; font-size: var(--s-lead); font-variant-numeric: tabular-nums; }
+.pg-panel .s-cellmeta { font-size: var(--s-meta); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.pg-panel .s-cellmeta--none { color: var(--ink-3); }
+.pg-panel .s-cellmeta .nm { display: block; color: var(--ink); font-weight: 500; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Acciones rápidas por fila (recargar saldo · ver eventos · entrar como marca).
+   z-index para ganarle al ::after del link de la fila. */
+.pg-panel .s-rowacts { display: flex; align-items: center; justify-content: flex-end; gap: 0; position: relative; z-index: 2; }
+/* 44×44 REALES, no un pseudo-elemento centrado: con tres botones pegados, un
+   área de toque más grande que el botón se monta sobre la del vecino y un
+   toque al borde dispara la acción equivocada. Acá al lado hay "recargar
+   saldo", que mueve plata: el área que se toca es exactamente la que se ve. */
+.pg-panel .s-rowbtn {
+  width: 44px; height: 44px; display: grid; place-items: center; flex: none;
+  border: 0; border-radius: var(--r-ctl);
+  background: none; color: var(--ink-3); cursor: pointer;
+  transition: color .18s, background-color .18s, transform .14s ease-out;
+}
+.pg-panel .s-rowbtn:hover { color: var(--ink); background: var(--paper-2); }
+.pg-panel .s-rowbtn svg { width: 16px; height: 16px; }
+
+/* Filas móviles de marca: misma lógica que la tabla (hairline, sin caja). */
+.pg-panel .s-brandcards { display: none; flex-direction: column; gap: 0; }
+.pg-panel .s-brandcard { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; padding: 12px 0; background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; }
+/* La primera SÍ lleva línea: en móvil no hay cabecera de tabla que separe la
+   lista de la franja de números. */
+.pg-panel .s-brandcard__main { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; min-width: 0; color: inherit; }
+.pg-panel .s-brandcard__side { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; flex: none; }
+.pg-panel .s-brandcard .nm { font-size: var(--s-ctl); font-weight: 600; }
+.pg-panel .s-brandcard .meta { display: block; font-size: var(--s-meta); color: var(--ink-2); margin-top: 1px; }
+.pg-panel .s-cardflags { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; }
+/* Tablas: se deslizan en horizontal si no entran (nunca se ocultan). El
+   cambio tabla → cards de la lista de marcas es propio del super admin. */
+.pg-panel .s-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* ---------- Tabla que en el teléfono se vuelve LISTA ----------
+   Medido en iPhone: la tabla por tipo pedía 540px en 358 y la de códigos 771.
+   Deslizar en horizontal es la peor salida en un teléfono — se pierden las
+   columnas de la derecha sin que nada avise. Con `.s-table--stack` cada fila
+   pasa a ser un bloque: el nombre arriba, y los números debajo como pares
+   ETIQUETA + valor que envuelven solos. La etiqueta sale de `data-l`, así que
+   la cabecera no se pierde: viaja pegada a cada número.
+   Sigue siendo un <table> de verdad (no se toca el DOM ni la semántica; solo
+   cambia el display), y arriba de 640 vuelve a ser tabla. */
+@media (max-width: 640px) {
+  .pg-panel .s-table--stack { min-width: 0; width: 100%; }
+  .pg-panel .s-table--stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .pg-panel .s-table--stack tbody,
+  .pg-panel .s-table--stack tfoot { display: block; }
+  .pg-panel .s-table--stack tr {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 18px;
+    padding: 10px 0; border-top: 1px solid var(--line);
+  }
+  .pg-panel .s-table--stack tbody tr:first-child { border-top: 0; }
+  .pg-panel .s-table--stack td { display: inline-flex; align-items: baseline; gap: 6px; padding: 0; border: 0; text-align: left; }
+  /* La primera celda es el título de la fila: renglón propio, sin etiqueta. */
+  .pg-panel .s-table--stack td:first-child { flex-basis: 100%; display: block; font-size: var(--s-ctl); }
+  /* La etiqueta viaja con el número. */
+  .pg-panel .s-table--stack td[data-l]::before {
+    content: attr(data-l);
+    font-size: var(--s-micro); font-weight: 400; color: var(--ink-2);
+  }
+  .pg-panel .s-table--stack td.num { text-align: left; }
+  /* Los botones de la fila, a renglón aparte y alineados a la izquierda. */
+  .pg-panel .s-table--stack td[data-acts] { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 0 18px; margin-top: 2px; }
+  .pg-panel .s-table--stack tfoot tr { border-top: 1px solid var(--ink-3); font-weight: 700; }
+}
+/* Celda con texto largo (email, nombre de evento): una línea con "…". El tope
+   bajó de 190 a 150 a propósito, no por la escala: el contenedor pasó de 1180
+   a 1120 y con los topes viejos la tabla de marcas se cortaba a la derecha
+   (se perdía el tercer botón de la fila). */
+.pg-panel .s-cell-ellipsis { display: inline-block; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+@media (max-width: 460px) {
+  .pg-panel .s-brandcard { grid-template-columns: 1fr; }
+  .pg-panel .s-brandcard__side { flex-direction: row; align-items: center; justify-content: space-between; width: 100%; }
+}
+
+/* ---------- Listas de filas (eventos, historial, archivadas) ----------
+   DENSIDAD MEDIDA (2026-09-21). Se midieron con Playwright las filas de siete
+   dashboards públicos de verdad (GitHub repo e issues, Plausible, Umami,
+   Cloudflare Radar, npm, Grafana Play): mediana 32px en 1440 y 40,5 en 390.
+   Las nuestras medían 70 en 1440 y 75–110 en 390 — más del doble, porque en
+   el teléfono la fila se partía en dos renglones (`flex-wrap`) y el badge y la
+   flecha caían abajo.
+   Piso propio: 48px. No bajamos a 32 porque la fila ENTERA es el link y su
+   área de toque no puede quedar por debajo de 44. O sea: lo más denso que
+   permite el dedo, no lo más denso que permite la pantalla. */
+.pg-panel .s-event-list { list-style: none; margin: 6px 0 0; padding: 0; }
+/* Fila de menú: hairline arriba, sin caja, tinte suave al pasar. */
+.pg-panel .s-event-row { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 5px 0; border-radius: 0; border: 0; border-top: 1px solid var(--line); transition: background-color .18s; }
+.pg-panel .s-event-list > li:first-child .s-event-row,
+.pg-panel .s-event-row:first-child { border-top: 0; }
+.pg-panel .s-event-row:hover { background: var(--sel); }
+/* El link principal llena el alto de la fila: así el área de toque es la fila
+   (48), no los 42 del texto. */
+.pg-panel .s-event-row__main { display: flex; flex-direction: column; justify-content: center; gap: 1px; flex: 1; min-width: 0; align-self: stretch; min-height: 44px; }
+/* Una línea cada uno, con "…" si no cabe: es lo que mantiene la fila en 48 en
+   un teléfono. Sin esto la fecha ("Demo Test · 02 oct. 2026, 05:00 a. m.")
+   pasa de renglón y la fila vuelve a crecer. */
+.pg-panel .s-event-row__name,
+.pg-panel .s-event-row__date { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-panel .s-event-row__name { font-size: var(--s-ctl); font-weight: 600; }
+.pg-panel a.s-event-row__main:hover .s-event-row__name { text-decoration: underline; text-underline-offset: 3px; }
+.pg-panel .s-event-row__date { font-size: var(--s-meta); color: var(--ink-3); }
+/* El estado no se encoge ni se parte: lo que cede es el nombre. */
+.pg-panel .s-event-row > .s-badge { flex: none; }
+/* 44x44 reales. Dibujado sigue siendo un círculo de 32 (el hover), pero la
+   caja que se toca es la que se ve tocar. */
+.pg-panel .s-event-row__go { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; color: var(--ink-3); flex: none; transition: color .18s, background-color .18s; }
+.pg-panel .s-event-row__go:hover { color: var(--ink); background: var(--sel); }
+/* En el teléfono la fila NO se parte: el nombre y su fecha se apilan dentro de
+   la primera columna (que es la que se puede encoger) y el estado + la flecha
+   se quedan a la derecha. Antes `flex-wrap: wrap` mandaba el main a 100% y la
+   fila crecía a 110px con el badge suelto abajo. */
+@media (max-width: 560px) {
+  .pg-panel .s-event-row { gap: 8px; }
+  /* El estado se queda, pero sin su texto largo no hay lugar para todo: en el
+     teléfono el punto ya dice el estado y la palabra se abrevia sola. */
+  .pg-panel .s-event-row > .s-badge { max-width: 84px; overflow: hidden; text-overflow: ellipsis; }
+}
+/* Lista con hairlines (sin cajas): historial, fallidos. */
+.pg-panel .s-hlist { list-style: none; margin: 0; padding: 0; }
+.pg-panel .s-hlist > li { padding: 12px 0; border-top: 1px solid var(--line); }
+.pg-panel .s-hlist > li:first-child { border-top: 0; }
+.pg-panel .s-hlist__row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ---------- Navegación de los paneles (2026-09-23) ----------
+   La de la referencia aprobada. Dos formas, el mismo markup:
+     - COMPU (≥900): barra LATERAL fija de 248 a la izquierda. Arriba el logo
+       y el nombre, las secciones como filas de 44 con ícono (la activa con
+       fondo --surface), y abajo la cuenta y "Cerrar sesión".
+     - TELÉFONO (<900): cabecera de 60 con logo, nombre y salir; las secciones
+       van ABAJO, fijas, con ícono y nombre (.s-tabbar). El pulgar llega y
+       siempre se ve dónde se está.
+   Fondo sólido, sin vidrio: con translucidez el contenido se leía por debajo
+   al scrollear en iPhone. */
+.pg-panel .s-topbar { position: sticky; top: 0; z-index: 40; background: var(--bg); border-bottom: 1px solid var(--line); }
+.pg-panel .s-topbar__inner { min-height: 60px; display: flex; align-items: center; gap: 12px; padding: 8px var(--pad); }
+.pg-panel .s-logo { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; min-width: 0; font-family: var(--display); font-weight: 600; font-size: var(--s-field); letter-spacing: -0.01em; white-space: nowrap; }
+.pg-panel .s-logo__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Wordmark de parygo (super admin): el punto en acento es la excepción
+   documentada del sistema, un glifo decorativo. */
+.pg-panel .s-logo--word { font-weight: 700; font-size: var(--s-word); letter-spacing: -0.03em; }
+.pg-panel .s-logo .dot { color: var(--accent); flex: none; }
+.pg-panel .s-logo .tag { font-family: var(--body); font-size: var(--s-meta); font-weight: 500; letter-spacing: 0; color: var(--ink-3); margin-left: 2px; }
+.pg-panel .s-nav { display: none; }
+.pg-panel .s-nav__ico { width: 18px; height: 18px; flex: none; }
+/* Contador (solicitudes, Yapes): pastilla naranja con el número en #0A0A0A
+   (7.0:1). Es el único texto sobre acento del panel y va en NEGRO, nunca en
+   blanco (2.85:1). */
+.pg-panel .s-nav-count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--r-pill); background: var(--accent); color: var(--on-accent); font-size: var(--s-micro); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.pg-panel .s-topbar__right { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.pg-panel .s-email { display: none; font-size: var(--s-meta); color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-panel .s-iconbtn { width: 44px; height: 44px; display: grid; place-items: center; border-radius: var(--r-btn); border: 0; background: none; color: var(--ink-2); cursor: pointer; font: inherit; transition: color .18s, background-color .18s, transform .14s ease-out; }
+.pg-panel .s-iconbtn:hover { color: var(--ink); background: var(--surface); }
+.pg-panel .s-iconbtn__txt { display: none; }
+
+/* Barra de abajo (teléfono). */
+.pg-panel .s-tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--bg); border-top: 1px solid var(--line);
+}
+.pg-panel .s-tabbar a {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  min-height: 60px; font-size: 11px; font-weight: 500; color: var(--ink-2);
+  transition: color .18s, transform .14s ease-out;
+}
+.pg-panel .s-tabbar a svg { width: 22px; height: 22px; }
+.pg-panel .s-tabbar a[aria-current="page"] { color: var(--ink); font-weight: 600; }
+/* La activa: un punto de acento debajo del nombre (decorativo). */
+.pg-panel .s-tabbar a[aria-current="page"]::after { content: ""; position: absolute; bottom: 5px; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+.pg-panel .s-tabbar .s-nav-count { position: absolute; top: 6px; left: calc(50% + 6px); height: 18px; min-width: 18px; padding: 0 5px; }
+.pg-panel .s-tabbar a:active { transform: scale(.97); }
+/* Que la barra no tape el final de la página. */
+.pg-panel .s-wrap { padding-bottom: calc(var(--s-s6) + 60px + env(safe-area-inset-bottom, 0px)); }
+
+@media (min-width: 900px) {
+  .pg-panel { display: grid; grid-template-columns: 248px minmax(0, 1fr); align-items: start; }
+  .pg-panel > .imp-banner { grid-column: 1 / -1; }
+  .pg-panel .s-tabbar { display: none; }
+  .pg-panel .s-topbar { grid-column: 1; height: 100vh; height: 100dvh; border-bottom: 0; border-right: 1px solid var(--line); }
+  .pg-panel .s-topbar__inner { height: 100%; flex-direction: column; align-items: stretch; gap: 0; padding: 20px 16px; }
+  .pg-panel .s-logo { padding: 0 8px; }
+  .pg-panel .s-nav { display: flex; flex-direction: column; gap: 2px; margin-top: 20px; }
+  .pg-panel .s-nav a {
+    display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: var(--r-btn);
+    font-size: var(--s-ctl); font-weight: 500; color: var(--ink-2);
+    transition: color .18s, background-color .18s, transform .14s ease-out;
+  }
+  .pg-panel .s-nav a > span:not(.s-nav-count) { flex: 1; }
+  .pg-panel .s-nav a:hover { color: var(--ink); }
+  .pg-panel .s-nav a[aria-current="page"] { background: var(--surface); color: var(--ink); font-weight: 600; }
+  .pg-panel .s-topbar__right { margin: auto 0 0; flex-direction: column; align-items: stretch; gap: 4px; }
+  .pg-panel .s-topbar__right form { display: block; }
+  .pg-panel .s-email { display: block; padding: 0 12px 8px; }
+  /* Salir, como una fila más del menú. */
+  .pg-panel .s-topbar__right .s-iconbtn { width: 100%; display: flex; justify-content: flex-start; gap: 12px; padding: 0 12px; font-size: var(--s-ctl); font-weight: 500; }
+  .pg-panel .s-iconbtn__txt { display: inline; }
+  .pg-panel .s-wrap { grid-column: 2; width: 100%; max-width: 1120px; margin: 0; padding: 40px 48px var(--s-s6); }
+}
+
+/* ---------- Cabeceras de página ----------
+   Siempre a la izquierda. El h1 en Bricolage 800 y grande es la única voz alta
+   de la pantalla; debajo, aire hasta el primer hairline. */
+.pg-panel .s-pagehead { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-s2); margin-bottom: var(--s-s4); flex-wrap: wrap; text-align: left; }
+.pg-panel .s-pagehead .s-h1 { margin-top: 8px; }
+/* Teléfono: el primario BAJA, no compite con el título.
+   En 390 el botón medía 280 de los 358 disponibles y quedaba al lado del h1,
+   que es la voz alta de la pantalla: dos bloques fuertes peleando en la misma
+   línea es lo que se ve "mal cuadrado". Abajo y a la izquierda, como todo. */
+@media (max-width: 560px) {
+  .pg-panel .s-pagehead { flex-direction: column; align-items: stretch; gap: var(--s-s2); }
+  .pg-panel .s-pagehead > :last-child:not(:only-child) { align-self: flex-start; }
+}
+/* "volver" es un link suelto, no una palabra dentro de una frase: su area de
+   toque llega a 44 (medida 62x19 en iPhone). El alto extra es el aire que ya
+   lo separaba del h1. */
+.pg-panel .s-back { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; font-size: var(--s-meta); color: var(--ink-2); margin-bottom: 2px; transition: color .18s, transform .14s ease-out; }
+.pg-panel .s-back:hover { color: var(--ink); }
+
+/* ============================================================
+   Motion. Entrada con --ease (sale rápido, llega suave); hovers y
+   presiones con --ease, sin rebote. Todo apagado con reduced-motion.
+   ============================================================ */
+
+/* Presión. El panel se usa desde el teléfono: el :hover no existe ahí, así que
+   sin :active no hay ninguna señal de que el control recibió el toque. 0.97 es
+   el mínimo que se percibe sin que el control "salte"; 140ms ease-out para que
+   la respuesta salga en el primer frame y no al soltar. */
+.pg-panel .s-btn:active:not(:disabled),
+.pg-panel .s-iconbtn:active:not(:disabled),
+.pg-panel .s-rowbtn:active:not(:disabled),
+.pg-panel .s-textlink:active,
+.pg-panel .s-nav a:active,
+.pg-panel .s-back:active,
+.pg-panel .s-details > summary:active,
+.pg-panel .s-fold > summary:active { transform: scale(.97); }
+
+/* Las filas son enteras un link: aplastarlas se vería mal a lo ancho de la
+   pantalla. Su señal de presión es el mismo tinte del hover, que en el
+   teléfono aparece recién al tocar. */
+.pg-panel .s-table tbody tr:active,
+.pg-panel .s-event-row:active,
+.pg-panel .s-brandcard:active { background-color: var(--sel); }
+
+/* ============================================================
+   ORDEN DE PANTALLA (2026-09-22): pendiente arriba → información → lo raro
+   plegado. Cuatro piezas compartidas por los dos paneles.
+   ============================================================ */
+
+/* 1. Lo que espera al usuario: la cifra héroe (--s-d1) + qué es + la acción.
+   Es el ÚNICO primario de la pantalla cuando existe: la plata esperando manda
+   sobre "crear". Sin fondo ni caja; la separa un hairline abajo. */
+/* (2026-09-23) Ya no es una cifra héroe de 56px: es la FILA de la referencia,
+   el único bloque con fondo (--surface) de la pantalla. Punto naranja, qué es
+   en 15/600, por qué importa en 13, y la acción a la derecha. La etiqueta
+   ("Por revisar") queda para el lector de pantalla. */
+.pg-panel .s-due { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; padding: 14px 16px; margin: 0 0 var(--s-s3); background: var(--surface); border-radius: var(--r-ctl); }
+.pg-panel .s-due__txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 220px; }
+.pg-panel .s-due__k { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.pg-panel .s-due__n { display: inline-flex; align-items: center; gap: 12px; font-family: var(--body); font-weight: 600; font-size: var(--s-ctl); line-height: 1.35; font-variant-numeric: tabular-nums; color: var(--ink); }
+.pg-panel .s-due__n::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+.pg-panel .s-due__sub { font-size: var(--s-meta); color: var(--ink-2); max-width: 60ch; padding-left: 20px; }
+/* Lo que sigue ya no dibuja su propio hairline: lo puso este bloque. */
+
+/* Con la cola debajo (Yapes del evento) el hairline lo pone la primera fila. */
+.pg-panel .s-due--queue { margin-bottom: var(--s-s2); }
+.pg-panel .s-due-queue { margin-bottom: var(--s-s4); border-bottom: 1px solid var(--line); }
+
+/* 2. Tarea secundaria: una LÍNEA con punto y un botón de texto. */
+.pg-panel .s-todos { margin: 0 0 var(--s-s4); }
+/* La lista de abajo ya arranca con su hairline: la última tarea no dibuja otro. */
+.pg-panel .s-todos > .s-todo:last-child { border-bottom: 0; }
+.pg-panel .s-todo { display: flex; align-items: center; justify-content: space-between; gap: var(--s-s1) var(--s-s2); flex-wrap: wrap; min-height: 56px; padding: var(--s-s1) 0; border-bottom: 1px solid var(--line); }
+.pg-panel .s-todo__txt { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.pg-panel .s-todo__txt::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; margin-top: var(--s-s1); }
+.pg-panel .s-todo--alert .s-todo__txt::before { background: var(--alert); }
+.pg-panel .s-todo__txt strong { font-weight: 700; }
+.pg-panel .s-todo__sub { display: block; font-size: var(--s-meta); color: var(--ink-2); }
+/* Nada pendiente: se dice, en voz baja. Punto hueco = no pasa nada. */
+.pg-panel .s-calm { display: flex; align-items: center; flex-wrap: wrap; gap: 0 10px; font-size: var(--s-meta); color: var(--ink-2); margin: 0 0 var(--s-s3); }
+.pg-panel .s-calm::before { content: ""; width: 8px; height: 8px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ink-3); flex: none; }
+/* El punto va en el primer renglón y el texto largo NO baja debajo de él: con
+   flex-wrap el texto entero pasaba al renglón siguiente y el punto quedaba
+   solo arriba (se leía como un radio button suelto, cabina 2026-09-26). */
+.pg-panel .s-calm { flex-wrap: nowrap; align-items: flex-start; line-height: 1.45; }
+.pg-panel .s-calm::before { margin-top: calc((1.45em - 8px) / 2); }
+/* "Todo en orden": punto LLENO en --ok. El hueco queda para "todavía no hay datos". */
+.pg-panel .s-calm--ok::before { box-shadow: none; background: var(--ok); }
+
+/* 3. Acciones rápidas visibles: rejilla de filas de 48 con hairline, como un
+   menú (no botones sueltos que se parten en renglones). Dos columnas en el
+   teléfono, cuatro en escritorio. El ícono va en --ink-3: la palabra manda. */
+.pg-panel .s-acts__k { display: block; font-size: var(--s-lb); font-weight: 500; color: var(--ink-2); padding-top: var(--s-s3); }
+.pg-panel .s-acts { display: grid; grid-template-columns: 1fr; gap: 0 var(--s-s4); margin: 10px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.pg-panel .s-acts > li { display: flex; min-width: 0; border-bottom: 1px solid var(--line); }
+.pg-panel .s-act { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 52px; padding: 0; background: none; border: 0; font: inherit; font-size: var(--s-ctl); font-weight: 400; color: var(--ink); text-align: left; cursor: pointer; white-space: nowrap; transition: background-color .18s, transform .14s ease-out; }
+.pg-panel .s-act > svg { width: 18px; height: 18px; flex: none; color: var(--ink-2); transition: color .18s; }
+.pg-panel .s-act > span { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+/* El chevron del final: "esto abre algo". Un link externo o una descarga no
+   lo llevan (no abren una pantalla del panel). */
+.pg-panel .s-act::after { content: ""; width: 7px; height: 7px; flex: none; margin-right: 4px; border-right: 1.5px solid var(--ink-3); border-top: 1.5px solid var(--ink-3); transform: rotate(45deg); }
+.pg-panel .s-act[target="_blank"]::after, .pg-panel .s-act[download]::after { display: none; }
+@media (hover: hover) and (pointer: fine) { .pg-panel .s-act:hover > svg { color: var(--ink); } .pg-panel .s-act:hover { background: var(--sel); } }
+.pg-panel .s-act:active { transform: scale(.98); }
+/* En la compu dos columnas: las acciones de un grupo se leen de un vistazo. */
+@media (min-width: 900px) { .pg-panel .s-acts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* 4. Lo raro, plegado. Un <details> con hairline arriba y el título en t3. */
+.pg-panel .s-folds { margin-top: var(--s-s4); border-bottom: 1px solid var(--line); }
+.pg-panel .s-fold { border-top: 1px solid var(--line); }
+.pg-panel .s-fold > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: var(--s-s2); min-height: 56px; padding: var(--s-s1) 0; transition: transform .14s ease-out; }
+.pg-panel .s-fold > summary::-webkit-details-marker { display: none; }
+.pg-panel .s-fold__t { font-family: var(--display); font-weight: 500; font-size: var(--s-ctl); letter-spacing: 0; color: var(--ink-2); }
+.pg-panel .s-fold__hint { display: block; font-family: var(--body); font-weight: 400; font-size: var(--s-meta); color: var(--ink-2); letter-spacing: 0; }
+.pg-panel .s-fold > summary > svg { width: 16px; height: 16px; flex: none; color: var(--ink-3); transition: transform .18s var(--ease); }
+.pg-panel .s-fold[open] > summary > svg { transform: rotate(180deg); }
+.pg-panel .s-fold > summary:hover .s-fold__t { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px; }
+.pg-panel .s-fold__body { padding: 0 0 var(--s-s3); }
+
+@keyframes s-fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+/* Fade de los skeletons de carga (loading.tsx lo usa inline: animation: 'a-fade .2s both'). */
+@keyframes a-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: no-preference) {
+  /* SOLO el aviso. Un aviso aparece cuando pasó algo y entrar es su mensaje.
+     El resto del panel NO se anima al cargar: las filas de tabla, las tarjetas
+     de marca y las filas de evento entraban con fade-up escalonado (.04/.08/.12)
+     en CADA navegación. El organizador abre esta pantalla decenas de veces por
+     día —y la noche del evento, muchas más—: una animación que se ve tantas
+     veces deja de informar y solo retrasa la lectura. Además el escalonado de
+     filas es la firma visual del dashboard generado. */
+  .pg-panel .s-notice { animation: s-fadeUp .24s var(--ease) both; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pg-panel *, .pg-panel *::before, .pg-panel *::after {
+    animation: none !important;
+    transition-duration: 0ms !important;
+  }
+  .pg-panel .s-btn:hover, .pg-panel .s-rowbtn:hover { transform: none !important; }
+
+  /* La presión NO desaparece: cambia de canal. Con la transición en 0ms un
+     scale(.97) sería un SALTO, peor que el movimiento que se quiso evitar.
+     El velo va como sombra INSET y no como background-color: el botón
+     primario lleva el acento (o el relleno de marca) de fondo y un
+     background-color se lo comería. */
+  .pg-panel .s-btn:active:not(:disabled),
+  .pg-panel .s-iconbtn:active:not(:disabled),
+  .pg-panel .s-rowbtn:active:not(:disabled),
+  .pg-panel .s-textlink:active,
+  .pg-panel .s-nav a:active,
+  .pg-panel .s-back:active,
+  .pg-panel .s-details > summary:active,
+  .pg-panel .s-fold > summary:active,
+  .pg-panel .s-act:active {
+    transform: none !important;
+    box-shadow: inset 0 0 0 999px var(--sel);
+  }
+}

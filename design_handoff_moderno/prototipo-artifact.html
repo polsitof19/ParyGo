@@ -1,0 +1,723 @@
+<title>Compra en tres direcciones</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TOKENS — copiados de apps/web/app/styles/parygo-tokens.css.
+   El prototipo tiene que verse nativo del producto: no invento
+   paleta, no invento escala, no invento curvas.
+   ============================================================ */
+:root {
+  --paper: #FBF7F0; --paper-2: #F4EDE1; --paper-3: #EFE6D6; --surface: #FFFFFF;
+  --ink: #231C17; --ink-2: rgba(35,28,23,.70); --ink-3: rgba(35,28,23,.66);
+  --line: rgba(35,28,23,.13); --sel: rgba(35,28,23,.05);
+  --ok: #2E9E6B; --warn: #C7791A; --alert: #D7472F;
+  --r-pill: 999px; --r-card: 14px; --r-btn: 10px; --r-ctl: 9px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --shadow-sm: 0 1px 2px rgba(35,28,23,.05), 0 6px 16px -12px rgba(35,28,23,.28);
+  --shadow-md: 0 2px 6px rgba(35,28,23,.05), 0 18px 40px -22px rgba(35,28,23,.40);
+  --shadow-lg: 0 4px 12px rgba(35,28,23,.06), 0 40px 80px -34px rgba(35,28,23,.50);
+  --display: "Bricolage Grotesque", system-ui, sans-serif;
+  --body: "Hanken Grotesk", system-ui, sans-serif;
+
+  /* ESCALA FIJA, la misma del producto (DESIGN.md). Ninguna variante la
+     cambia: si la cambiaran, el picker estaría comparando dos cosas. */
+  --t0: 34px; --t1: 32px; --t2: 24px; --t3: 20px;
+  --price: 18px; --lead: 17px; --bodysz: 16px; --ctl: 15px;
+  --ui: 14px; --meta: 13px; --micro: 12px; --lb: 11px;
+  --s1: 8px; --s2: 16px; --s3: 24px; --s4: 32px; --s5: 48px; --s6: 64px;
+  --pad: clamp(16px, 4vw, 32px);
+
+  /* Las inyecta el JS por marca, con las MISMAS funciones del producto. */
+  --brand: #FF6A3D; --brand-fill: #FF6A3D; --on-fill: #231C17;
+  --brand-fill-hover: #E56138; --brand-deep: #AD4829; --brand-soft: rgba(255,106,61,.12);
+}
+@media (min-width: 1024px) { :root { --t1: 50px; --t2: 32px; --t3: 24px; --bodysz: 17px; --price: 21px; } }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--paper); color: var(--ink);
+  font-family: var(--body); font-size: var(--bodysz); line-height: 1.45;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  padding-bottom: 96px; /* el picker no puede tapar el CTA sticky */
+}
+img { display: block; max-width: 100%; }
+button { font: inherit; }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 4px; }
+
+/* ============================================================
+   PICKER — copiado VERBATIM de .claude/skills/prototype/PICKER.md.
+   No se le tocan colores, fuente ni sombras: es chrome, no compite.
+   ============================================================ */
+.proto-picker {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  z-index: 2147483647; display: flex; align-items: center; gap: 2px; padding: 4px;
+  border-radius: 999px; background: rgba(10, 10, 10, 0.82);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4); backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset, 0 8px 24px rgba(0,0,0,0.24), 0 2px 6px rgba(0,0,0,0.12);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px; line-height: 1; -webkit-font-smoothing: antialiased;
+  user-select: none; -webkit-user-select: none;
+}
+.proto-picker-highlight {
+  position: absolute; top: 4px; left: 0; height: 28px; border-radius: 999px;
+  background: rgba(255,255,255,0.12); will-change: transform;
+}
+.proto-picker[data-ready] .proto-picker-highlight {
+  transition: transform 250ms cubic-bezier(0.23,1,0.32,1), width 250ms cubic-bezier(0.23,1,0.32,1);
+}
+@media (prefers-reduced-motion: reduce) { .proto-picker[data-ready] .proto-picker-highlight { transition: none; } }
+.proto-picker-item {
+  position: relative; display: flex; align-items: center; height: 28px; padding: 0 12px;
+  border: 0; border-radius: 999px; background: transparent; color: rgba(255,255,255,0.55);
+  font: inherit; cursor: pointer; transition: color 150ms ease-out;
+}
+.proto-picker-item:hover { color: rgba(255,255,255,0.85); }
+.proto-picker-item:active { transform: scale(0.97); }
+.proto-picker-item:focus-visible { outline: 2px solid rgba(255,255,255,0.4); outline-offset: 2px; }
+.proto-picker-item[data-active] { color: #fff; }
+.proto-picker-divider { width: 1px; height: 16px; margin: 0 4px; background: rgba(255,255,255,0.12); }
+.proto-picker-replay { padding: 0 10px; font-size: 14px; }
+.proto-picker[data-position="top"] { bottom: auto; top: calc(24px + env(safe-area-inset-top, 0px)); }
+
+/* Selector de MARCA. Chrome separado, arriba a la derecha: no es una variante,
+   es el banco de pruebas (tres colores reales, uno de ellos casi blanco). */
+/* UN solo botón que cicla las tres marcas. En el teléfono cualquier barra
+   con tres etiquetas choca con el picker centrado y termina tapando el
+   diseño, que es justo lo que hay que mirar. */
+.proto-marca {
+  position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); left: 12px; z-index: 2147483646;
+  padding: 4px; border-radius: 999px;
+  background: rgba(10,10,10,.82); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 12px; line-height: 1;
+}
+.proto-marca button {
+  display: flex; align-items: center; gap: 7px; height: 28px; min-width: 28px; padding: 0 9px;
+  border: 0; border-radius: 999px; background: transparent; color: #fff; cursor: pointer;
+  transition: opacity 150ms ease-out, transform 140ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .proto-marca button { transition: none; }
+  .proto-marca button:active { transform: none; background: rgba(255,255,255,.18); }
+}
+.proto-marca button:active { transform: scale(.97); }
+.proto-marca i { width: 10px; height: 10px; border-radius: 50%; display: block; flex: none; box-shadow: 0 0 0 1px rgba(255,255,255,.35); }
+.proto-marca span { display: none; }
+@media (min-width: 560px) { .proto-marca span { display: inline; } }
+/* Lectura de contraste: diagnóstico, no diseño. Solo donde sobra lugar. */
+.proto-nota {
+  position: fixed; bottom: 12px; left: 12px; z-index: 2147483646; max-width: 200px; margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; line-height: 1.4;
+  color: rgba(255,255,255,.72); background: rgba(10,10,10,.82); padding: 7px 10px; border-radius: 10px;
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); display: none;
+}
+@media (min-width: 900px) { .proto-nota { display: block; } }
+</style>
+
+<style>
+/* ============================================================
+   LO QUE COMPARTEN LAS TRES (y que por eso no se juzga acá):
+   escala fija, ritmo de 8, un solo botón primario, escalera de
+   fases con candado, copy en tú, línea de responsabilidad del
+   organizador, y la regla dura: el color de marca NO porta texto
+   salvo el par medido brand-fill/on-fill.
+   ============================================================ */
+.stage { min-height: 100vh; min-height: 100dvh; }
+.wrap { max-width: 560px; margin: 0 auto; padding: 0 var(--pad); }
+@media (min-width: 1024px) { .wrap { max-width: 1120px; } }
+
+.lb { font-size: var(--lb); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Escalera de fases: la actual, las que vienen (con candado) y la que pasó.
+   El precio que viene TIENE que leerse: .62 es el mínimo medido que pasa AA. */
+.fases { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: var(--s1) var(--s2); margin-top: var(--s2); align-items: start; }
+.fase { min-width: 0; }
+.fase__n { display: flex; align-items: center; gap: 5px; }
+.fase__p { display: block; margin-top: 2px; font-family: var(--display); font-weight: 800; font-size: var(--price); }
+.fase__d { display: block; margin-top: 1px; font-size: var(--micro); color: var(--ink-3); }
+.fase--futura { opacity: .62; }
+.fase--pasada { opacity: .62; }
+.fase--pasada .fase__p { text-decoration: line-through; text-decoration-thickness: 1px; }
+.fase svg { width: 11px; height: 11px; flex: none; }
+
+/* Stepper. Uno solo por tipo; el area de toque de 44px va por pseudo-elemento
+   para no engordar la caja visible. */
+.qty { display: inline-flex; align-items: center; gap: 10px; }
+.qbtn, .add {
+  position: relative; display: grid; place-items: center; cursor: pointer;
+  border: 1px solid var(--line); background: none; color: var(--ink);
+  transition: border-color .18s, background-color .18s, color .18s, transform .14s ease-out;
+}
+.qbtn::after, .add::after { content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%,-50%); }
+.qbtn { width: 34px; height: 34px; border-radius: var(--r-ctl); }
+.add { width: 40px; height: 40px; border-radius: var(--r-ctl); }
+.add:hover, .qbtn:hover:not(:disabled) { border-color: var(--ink); }
+.add:active, .qbtn:active:not(:disabled) { transform: scale(.96); }
+.qbtn:disabled { opacity: .35; cursor: not-allowed; }
+.qval { min-width: 22px; text-align: center; font-family: var(--display); font-weight: 800; font-size: var(--lead); }
+.qty__in { animation: qin .16s var(--ease) both; }
+@keyframes qin { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+
+/* CTA sticky. Un solo primario en toda la pantalla. */
+.sticky {
+  position: sticky; bottom: 0; z-index: 20; margin-top: var(--s4);
+  padding: var(--s2) var(--pad) calc(var(--s2) + env(safe-area-inset-bottom, 0px));
+  background: var(--paper); border-top: 1px solid var(--line);
+}
+.sticky__in { max-width: 560px; margin: 0 auto; display: flex; align-items: center; gap: var(--s2); }
+@media (min-width: 1024px) { .sticky__in { max-width: 1120px; } }
+.sticky__t { flex: 1; min-width: 0; }
+.sticky__t b { display: block; font-family: var(--display); font-weight: 800; font-size: var(--t3); }
+.cta {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  height: 48px; padding: 0 22px; border: 0; border-radius: var(--r-btn);
+  background: var(--brand-fill); color: var(--on-fill);
+  font-weight: 700; font-size: var(--bodysz); cursor: pointer; white-space: nowrap;
+  transition: background-color .18s, transform .14s ease-out;
+}
+.cta:hover:not(:disabled) { background: var(--brand-fill-hover); }
+.cta:active:not(:disabled) { transform: scale(.97); }
+.cta:disabled {
+  background: transparent; color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line);
+  cursor: default; opacity: 1;
+}
+.resp { margin: var(--s3) 0 0; font-size: var(--micro); line-height: 1.45; color: var(--ink-3); }
+
+/* Entradas: las tres pintan la misma lista, con distinta piel. */
+.ty { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s2); }
+.ty__l { min-width: 0; flex: 1; }
+.ty__nm { font-size: var(--lead); font-weight: 600; line-height: 1.25; }
+.ty__ds { margin-top: 3px; font-size: var(--meta); font-weight: 300; color: var(--ink-2); }
+.ty__pr { font-family: var(--display); font-weight: 800; font-size: var(--t3); }
+.ty__r { display: flex; align-items: center; gap: var(--s2); flex: none; }
+.pocas { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; font-size: var(--lb); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
+.pocas::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--warn); flex: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .stage *, .stage *::before, .stage *::after { animation: none !important; transition-duration: 0ms !important; }
+  .stage button:active { transform: none !important; box-shadow: inset 0 0 0 999px var(--sel); }
+}
+
+/* ============================================================
+   A - EDITORIAL. Eje: MANDA LA TIPOGRAFIA.
+   El nombre del evento es lo mas grande de la pantalla. El flyer
+   es un bloque grande pero subordinado. El color de marca aparece
+   como RELLENO con intencion (la fase activa, el CTA), nunca como
+   tinta suelta. Cero troquel, cero linea punteada. Todo a la
+   izquierda, como los creditos de un afiche.
+   ============================================================ */
+.v-ed .hero { padding: var(--s5) 0 0; }
+.v-ed .hero__kick { display: flex; align-items: center; gap: var(--s1); }
+.v-ed .hero__nm {
+  margin: var(--s2) 0 0; font-family: var(--display); font-weight: 800;
+  font-size: var(--t1); line-height: .92; letter-spacing: -.035em; text-wrap: balance;
+}
+.v-ed .hero__meta { margin: var(--s2) 0 0; font-size: var(--bodysz); color: var(--ink-2); }
+.v-ed .hero__meta b { color: var(--ink); font-weight: 600; }
+/* BANDA, no página: en una revista la foto acompaña al texto. Además es lo
+   que deja el primer precio por encima del pliegue en 390. */
+.v-ed .flyer { margin-top: var(--s3); border-radius: var(--r-card); overflow: hidden; background: var(--paper-3); }
+.v-ed .flyer img { width: 100%; height: clamp(160px, 26vh, 300px); object-fit: cover; }
+.v-ed .flyer--vacio { height: clamp(160px, 26vh, 300px); display: grid; place-items: center; }
+.v-ed .flyer--vacio span { font-family: var(--display); font-weight: 800; font-size: 64px; color: var(--ink-3); opacity: .45; }
+.v-ed .sec { margin-top: var(--s4); }
+.v-ed .sec > h2 {
+  margin: 0; padding-bottom: var(--s1); font-family: var(--body);
+  font-size: var(--lb); font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-3); border-bottom: 2px solid var(--ink);
+}
+.v-ed .ty__pr { font-size: var(--t2); }
+.v-ed .ty__nm { font-size: var(--t3); font-weight: 700; letter-spacing: -.01em; }
+/* La fase activa es un BLOQUE de color con su texto medido: el color con
+   intencion, no un puntito decorativo. */
+.v-ed .fase--activa {
+  margin: -6px -10px; padding: 6px 10px; border-radius: var(--r-ctl);
+  background: var(--brand-fill); color: var(--on-fill);
+}
+.v-ed .fase--activa .fase__d, .v-ed .fase--activa .lb { color: inherit; opacity: .78; }
+.v-ed .ty { padding: var(--s3) 0; border-top: 1px solid var(--line); }
+.v-ed .ty:last-of-type { border-bottom: 1px solid var(--line); }
+.v-ed .resp { border-top: 1px solid var(--line); padding-top: var(--s2); }
+
+/* ============================================================
+   B - CANVAS. Eje: MANDA LA IMAGEN, la interfaz flota.
+   El flyer sangra a pantalla completa y la compra es un panel de
+   papel apoyado encima. Color de marca SOLO en el CTA: todo lo
+   demas es tinta sobre papel. Micro-espaciado apretado, botones
+   pastilla sin mayusculas, como DICE.
+   ============================================================ */
+.v-cv .bleed { position: relative; }
+.v-cv .bleed img { width: 100%; height: clamp(340px, 64vh, 580px); object-fit: cover; }
+.v-cv .bleed--vacio { height: clamp(340px, 64vh, 580px); background: linear-gradient(160deg, var(--brand-soft), var(--paper-3) 70%); }
+/* Negro puro a propósito: es una máscara de legibilidad sobre una foto que
+   sube el promotor, no una sombra sobre papel (misma excepción de DESIGN.md). */
+.v-cv .bleed__veil { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.08) 30%, rgba(0,0,0,.72)); }
+.v-cv .bleed__t { position: absolute; left: 0; right: 0; bottom: 0; padding: var(--s3) var(--pad) var(--s6); }
+.v-cv .bleed__t .lb { color: rgba(255,255,255,.9); text-shadow: 0 1px 8px rgba(0,0,0,.8); }
+.v-cv .bleed__nm {
+  margin: 6px 0 0; font-family: var(--display); font-weight: 800; font-size: var(--t2);
+  line-height: 1.02; letter-spacing: -.03em; color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,.72);
+  max-width: 16ch;
+}
+.v-cv .panel {
+  position: relative; z-index: 2; margin: -40px auto 0; max-width: 560px;
+  background: var(--paper); border-radius: var(--r-card) var(--r-card) 0 0;
+  padding: var(--s3) var(--pad) 0;
+}
+@media (min-width: 1024px) { .v-cv .panel { max-width: 720px; border-radius: var(--r-card); margin-top: -56px; padding-bottom: var(--s3); box-shadow: var(--shadow-lg); } }
+.v-cv .meta { display: flex; flex-wrap: wrap; gap: 2px var(--s2); font-size: var(--meta); color: var(--ink-2); }
+.v-cv .meta b { color: var(--ink); font-weight: 600; }
+.v-cv .ty { padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
+.v-cv .ty:first-of-type { border-top: 1px solid var(--line); margin-top: var(--s3); }
+.v-cv .fases { gap: var(--s2); margin-top: var(--s1); }
+.v-cv .fase__p { font-size: var(--bodysz); }
+/* Pastilla quieta, sin mayusculas: el boton de DICE no grita. */
+.v-cv .cta { border-radius: var(--r-pill); padding: 0 26px; }
+.v-cv .add, .v-cv .qbtn { border-radius: var(--r-pill); }
+.v-cv .sticky { background: rgba(251,247,240,.92); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+
+/* ============================================================
+   C - ENTRADA 2.0. Eje: LA METAFORA DEL BOLETO, sin utileria.
+   Se va el troquel, los semicirculos y los sellos. Lo que queda
+   diciendo "esto es una entrada" es la BANDA de color de 6px, los
+   numeros tabulares, las micro-etiquetas en mayusculas espaciadas
+   y un ritmo fuerte de reglas horizontales. Es la mas densa.
+   ============================================================ */
+.v-e2 .boleto {
+  max-width: 560px; margin: var(--s3) auto 0; background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--r-card); overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+@media (min-width: 1024px) { .v-e2 .boleto { max-width: 720px; } }
+.v-e2 .banda { height: 10px; background: var(--brand); }
+.v-e2 .cab { padding: var(--s3) var(--s3) var(--s2); }
+.v-e2 .cab__nm { margin: var(--s1) 0 0; font-family: var(--display); font-weight: 800; font-size: var(--t2); line-height: 1.04; letter-spacing: -.025em; }
+.v-e2 .cab__meta { margin-top: var(--s3); padding-top: var(--s2); border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: var(--s2); }
+.v-e2 .cab__meta > div > span { display: block; margin-top: 2px; font-size: var(--meta); font-weight: 600; }
+.v-e2 .art { position: relative; aspect-ratio: 16/9; overflow: hidden; background: var(--paper-3); }
+.v-e2 .art img { width: 100%; height: 100%; object-fit: cover; }
+.v-e2 .art--vacio { display: grid; place-items: center; }
+.v-e2 .art--vacio span { font-family: var(--display); font-weight: 800; font-size: 40px; color: var(--ink-3); opacity: .5; }
+.v-e2 .lista { padding: 0 var(--s3) var(--s3); }
+.v-e2 .lista > .lb { display: block; padding: var(--s2) 0 var(--s1); }
+.v-e2 .ty { padding: var(--s2) 0; border-top: 1px solid var(--line); }
+.v-e2 .fases { gap: var(--s2); margin-top: var(--s1); }
+.v-e2 .fase__p { font-size: var(--bodysz); }
+.v-e2 .sticky { background: var(--paper); }
+.v-e2 .resp { padding: 0 var(--pad); }
+</style>
+
+
+<div id="stage" class="stage"></div>
+
+<nav class="proto-picker" data-position="top" aria-label="Prototype variants">
+  <span class="proto-picker-highlight" aria-hidden="true"></span>
+  <button class="proto-picker-item" data-active aria-current="true">Editorial</button>
+  <button class="proto-picker-item">Canvas</button>
+  <button class="proto-picker-item">Entrada 2.0</button>
+  <span class="proto-picker-divider" aria-hidden="true"></span>
+  <button class="proto-picker-item proto-picker-replay" aria-label="Replay animation (R)">&#8635;</button>
+</nav>
+
+<div class="proto-marca" id="marcas"></div>
+<p class="proto-nota" id="nota"></p>
+
+<script>
+/* ============================================================
+   COLOR — portado TAL CUAL de apps/web/lib/brandColors.ts.
+   No es decorado: es la regla dura del sistema. Si el prototipo
+   usara otra matematica, estaria comparando tres disenos con un
+   contraste que el producto no puede dar.
+   ============================================================ */
+var INK = [0x23,0x1c,0x17], PAPER = [0xfb,0xf7,0xf0], PAPER_3 = [0xef,0xe6,0xd6];
+var INK_HEX = '#231C17', PAPER_HEX = '#FBF7F0';
+function parseHex(h){ var m=/^#?([0-9a-f]{6})$/i.exec(String(h||'').trim()); if(!m) return null;
+  var n=parseInt(m[1],16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function relLum(c){ function l(v){ var s=v/255; return s<=0.03928? s/12.92 : Math.pow((s+0.055)/1.055,2.4); }
+  return 0.2126*l(c[0])+0.7152*l(c[1])+0.0722*l(c[2]); }
+function contrast(a,b){ var x=relLum(a), y=relLum(b); var hi=Math.max(x,y), lo=Math.min(x,y); return (hi+0.05)/(lo+0.05); }
+function toHex(c){ function h(n){ return Math.max(0,Math.min(255,Math.round(n))).toString(16).padStart(2,'0'); }
+  return '#'+h(c[0])+h(c[1])+h(c[2]); }
+function mix(rgb,t,m){ return [rgb[0]+(t[0]-rgb[0])*m, rgb[1]+(t[1]-rgb[1])*m, rgb[2]+(t[2]-rgb[2])*m]; }
+
+function brandFillPair(hex){
+  var rgb = hex ? parseHex(hex) : null;
+  if(!rgb) return { fill:'#FF6A3D', on:INK_HEX };
+  var onInk = contrast(rgb,INK), onPaper = contrast(rgb,PAPER);
+  if(onInk >= 4.5) return { fill:toHex(rgb), on:INK_HEX };
+  if(onPaper >= 4.5) return { fill:toHex(rgb), on:PAPER_HEX };
+  var hacia = onInk >= onPaper ? PAPER : INK;
+  var texto = onInk >= onPaper ? INK : PAPER;
+  var textoHex = onInk >= onPaper ? INK_HEX : PAPER_HEX;
+  for(var m=0.04; m<=1.001; m+=0.04){
+    var mez = mix(rgb,hacia,m);
+    if(contrast(mez,texto) >= 4.5) return { fill:toHex(mez), on:textoHex };
+  }
+  return { fill:toHex(hacia), on:textoHex };
+}
+function brandFillHover(hex){
+  var par = brandFillPair(hex), rgb = parseHex(par.fill);
+  var texto = par.on === INK_HEX ? INK : PAPER;
+  for(var m=0.12; m>=0.02; m-=0.02){
+    var c = toHex(mix(rgb,texto,m));
+    if(contrast(parseHex(c),texto) >= 4.5) return c;
+  }
+  var lejos = par.on === INK_HEX ? [255,255,255] : [0,0,0];
+  return toHex(mix(rgb,lejos,0.12));
+}
+function brandInk(hex){
+  var rgb = hex ? parseHex(hex) : null;
+  if(!rgb) return INK_HEX;
+  if(contrast(rgb,PAPER_3) >= 4.5) return toHex(rgb);
+  for(var f=0.995; f>=0; f-=0.005){
+    var c = toHex([rgb[0]*f, rgb[1]*f, rgb[2]*f]);
+    if(contrast(parseHex(c),PAPER_3) >= 4.5) return c;
+  }
+  return INK_HEX;
+}
+function withAlpha(hex,a){ var c=parseHex(hex); return c? 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')' : 'rgba(255,106,61,'+a+')'; }
+
+/* ============================================================
+   DATOS REALES de la base de produccion (solo lectura, snapshot
+   del 2026-09-22). Tres marcas elegidas porque tienen FORMAS
+   distintas, no porque se vean lindas:
+     koko     #7A4DFF  escalera de 3 fases + flyer
+     hoesky   #c2fbff  precio plano + flyer  (casi blanco: el caso
+                       que rompe cualquier "texto sobre el color")
+     demotest #CC422A  2 fases y SIN FLYER   (el estado vacio real)
+   ============================================================ */
+var DATOS = [{"slug":"koko","marca":"Koko","color":"#7A4DFF","logo":null,"wa":"+51999000222","titulo":"Noriel en Lima","cuando":"2026-10-30T03:00:00+00:00","sede":"Centro de Convenciones Lima","dir":"Av. de la Peruanidad s/n, Jesús María, Lima","flyer":"https://mdxtpevisjiqpeklhxdv.supabase.co/storage/v1/object/public/brand-assets/koko/event-MmoW4YELEd.png","bajada":"Noriel por primera vez en Lima. Evento de prueba de ParyGo.","tipos":[{"nombre":"General","precio":2000,"fases":[{"c":2000,"d":"2026-09-27T22:23:00+00:00"},{"c":3000,"d":"2026-10-04T22:23:00+00:00"},{"c":5000,"d":null}]},{"nombre":"VIP","precio":3000,"fases":[{"c":3000,"d":"2026-09-27T22:23:00+00:00"},{"c":4000,"d":"2026-10-04T22:23:00+00:00"},{"c":5000,"d":null}]}]},{"slug":"hoesky","marca":"Hoesky","color":"#c2fbff","logo":"https://mdxtpevisjiqpeklhxdv.supabase.co/storage/v1/object/public/brand-assets/hoesky/logo-S5OzPCa0Ca.png","wa":"+51933726396","titulo":"Ozuna","cuando":"2026-07-20T23:09:00+00:00","sede":"Discoteca Cocos de Lince","dir":"Av. Arequipa 1530","flyer":"https://mdxtpevisjiqpeklhxdv.supabase.co/storage/v1/object/public/brand-assets/hoesky/event-lU6clsry4a.png","bajada":"Evento","tipos":[{"nombre":"General","precio":5000,"fases":[{"c":5000,"d":null}]},{"nombre":"Vip","precio":8000,"fases":[{"c":8000,"d":null}]}]},{"slug":"demotest","marca":"Demo Test","color":"#CC422A","logo":"https://mdxtpevisjiqpeklhxdv.supabase.co/storage/v1/object/public/brand-assets/demotest/logo.svg","wa":"+51999000111","titulo":"E2E Septiembre 183711","cuando":"2026-10-03T09:00:00+00:00","sede":"Local E2E","dir":"Av. Test 123, Lima","flyer":null,"bajada":"Evento de prueba E2E automatizado — no comprar.","tipos":[{"nombre":"General","precio":2000,"fases":[{"c":2000,"d":"2026-09-25T09:00:00+00:00"},{"c":3000,"d":null}]},{"nombre":"VIP","precio":5000,"fases":[{"c":5000,"d":null}]}]}];
+
+var PEN = new Intl.NumberFormat('es-PE', { style:'currency', currency:'PEN', minimumFractionDigits:0 });
+function plata(c){ return PEN.format(c/100).replace('PEN', 'S/').replace(/\s+/g,' ').trim(); }
+var DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+var MESES = ['ene','feb','mar','abr','may','jun','jul','ago','set','oct','nov','dic'];
+function enLima(iso){ return new Date(new Date(iso).toLocaleString('en-US',{ timeZone:'America/Lima' })); }
+function fechaLarga(iso){ var d=enLima(iso);
+  return DIAS[d.getDay()]+', '+d.getDate()+' de '+MESES[d.getMonth()]+'. · '+hora(d); }
+function fechaCorta(iso){ var d=enLima(iso); return d.getDate()+' '+MESES[d.getMonth()]; }
+function hora(d){ var h=d.getHours(), m=d.getMinutes(); var ap=h>=12?'p.m.':'a.m.'; var h12=h%12||12;
+  return h12+(m? ':'+String(m).padStart(2,'0') : '')+' '+ap; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){
+  return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+
+/* La fase ACTIVA se resuelve contra ahora, igual que get_event_active_prices:
+   la primera cuyo corte no pasó. Las de antes quedan tachadas, las de después
+   con candado. El precio que viene tiene que LEERSE: es la señal de urgencia. */
+function faseActiva(fases){
+  var ahora = Date.now();
+  for (var i=0;i<fases.length;i++){ if(!fases[i].d || new Date(fases[i].d).getTime() > ahora) return i; }
+  return fases.length-1;
+}
+var CANDADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">'
+  + '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>';
+
+function escalera(tipo, compacta){
+  var fases = tipo.fases && tipo.fases.length ? tipo.fases : [{ c: tipo.precio, d: null }];
+  if (fases.length < 2) return '';
+  var act = faseActiva(fases);
+  return '<div class="fases">' + fases.map(function(f,i){
+    var estado = i<act ? 'pasada' : (i>act ? 'futura' : 'activa');
+    var etiqueta = i<act ? 'Fase '+(i+1) : (i===act ? 'Ahora' : 'Fase '+(i+1));
+    var corte = f.d ? 'hasta el '+fechaCorta(f.d) : 'hasta agotar';
+    return '<div class="fase fase--'+estado+'">'
+      + '<span class="fase__n lb">'+(i>act? CANDADO : '')+esc(etiqueta)+'</span>'
+      + '<b class="fase__p num">'+plata(f.c)+'</b>'
+      + (compacta && i!==act ? '' : '<span class="fase__d">'+esc(corte)+'</span>')
+      + '</div>';
+  }).join('') + '</div>';
+}
+
+/* Pocas entradas: bandera del servidor al 10% de stock, SIN decir el numero.
+   Aca se simula sobre el segundo tipo para que la senal se pueda juzgar. */
+function pocas(i){ return i===1 ? '<span class="pocas">Quedan pocas</span>' : ''; }
+
+/* El control sale aparte porque se re-pinta SOLO el: antes se rehacia todo el
+   arbol en cada toque —imagen incluida— y eso perdia el foco del boton recien
+   apretado y volvia a disparar la animacion de entrada en cada incremento.
+   `animar` es true unicamente cuando el stepper APARECE (0 -> 1). */
+function controlHTML(t, i, ctx, animar){
+  var n = ctx.qty[i] || 0;
+  if (n === 0) {
+    return '<button class="add" data-mas="'+i+'" aria-label="Sumar '+esc(t.nombre)+'"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>';
+  }
+  return '<span class="qty'+(animar ? ' qty__in' : '')+'">'
+    + '<button class="qbtn" data-menos="'+i+'" aria-label="Restar '+esc(t.nombre)+'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M5 12h14"/></svg></button>'
+    + '<b class="qval num">'+n+'</b>'
+    + '<button class="qbtn" data-mas="'+i+'" aria-label="Sumar '+esc(t.nombre)+'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>'
+    + '</span>';
+}
+
+function filaTipo(t, i, ctx){
+  var fases = t.fases && t.fases.length ? t.fases : [{ c:t.precio, d:null }];
+  var precio = fases[faseActiva(fases)].c;
+  var control = '<span class="ty__ctl" data-ctl="'+i+'" aria-live="polite">'+controlHTML(t, i, ctx, false)+'</span>';
+  return '<div class="ty">'
+    + '<div class="ty__l">'
+      + '<div class="ty__nm">'+esc(t.nombre)+pocas(i)+'</div>'
+      + (ctx.desc ? '<div class="ty__ds">Acceso '+(i===0?'general':'preferencial')+' al evento</div>' : '')
+      + escalera(t, ctx.compacta)
+    + '</div>'
+    + '<div class="ty__r"><b class="ty__pr num">'+plata(precio)+'</b>'+control+'</div>'
+  + '</div>';
+}
+
+function etiquetaBarra(n){ return n===0 ? 'Desde' : (n===1 ? '1 entrada' : n+' entradas'); }
+function desde(b){ return Math.min.apply(null, b.tipos.map(function(t){ var f=t.fases&&t.fases.length?t.fases:[{c:t.precio}]; return f[faseActiva(f)].c; })); }
+function textoCta(n){
+  return n===0 ? 'Elegí tus entradas'
+    : 'Continuar<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+}
+
+function total(b, ctx){
+  var s = 0;
+  b.tipos.forEach(function(t,i){
+    var fases = t.fases && t.fases.length ? t.fases : [{ c:t.precio, d:null }];
+    s += (ctx.qty[i]||0) * fases[faseActiva(fases)].c;
+  });
+  return s;
+}
+function cuantas(ctx){ return ctx.qty.reduce(function(a,b){ return a+(b||0); }, 0); }
+
+function barra(b, ctx){
+  var n = cuantas(ctx), t = total(b, ctx);
+  return '<div class="sticky"><div class="sticky__in">'
+    + '<div class="sticky__t">'
+      + '<span class="lb" data-barra-lb>'+etiquetaBarra(n)+'</span>'
+      + '<b class="num" data-barra-monto>'+plata(n===0 ? desde(b) : t)+'</b>'
+    + '</div>'
+    + '<button class="cta" '+(n===0?'disabled':'')+' data-pagar>'+textoCta(n)+'</button>'
+  + '</div></div>';
+}
+
+function responsabilidad(b){
+  return '<p class="resp">+18 · Cancelaciones y devoluciones las gestiona '+esc(b.marca)+'. '
+    + 'Sin devolución post-pago salvo cancelación del evento. '
+    + 'ParyGo es la plataforma; el evento es responsabilidad de '+esc(b.marca)+'.</p>';
+}
+
+/* ---------- A · EDITORIAL ---------- */
+function vEditorial(b, ctx){
+  var flyer = b.flyer
+    ? '<div class="flyer"><img src="'+esc(b.flyer)+'" alt="" loading="eager"></div>'
+    : '<div class="flyer flyer--vacio"><span>'+esc(b.marca.trim()[0].toUpperCase())+'</span></div>';
+  return '<div class="v-ed">'
+    + '<div class="wrap">'
+      + '<header class="hero">'
+        + '<div class="hero__kick lb">'+esc(b.marca)+' presenta</div>'
+        + '<h1 class="hero__nm">'+esc(b.titulo)+'</h1>'
+        + '<p class="hero__meta"><b>'+esc(fechaLarga(b.cuando))+'</b><br>'+esc(b.sede)+'</p>'
+      + '</header>'
+      + flyer
+      + '<section class="sec"><h2>Entradas</h2>'
+        + b.tipos.map(function(t,i){ return filaTipo(t,i,{ qty:ctx.qty, desc:true, compacta:false }); }).join('')
+      + '</section>'
+      + responsabilidad(b)
+    + '</div>'
+    + barra(b, ctx)
+  + '</div>';
+}
+
+/* ---------- B · CANVAS ---------- */
+function vCanvas(b, ctx){
+  var arte = b.flyer
+    ? '<img src="'+esc(b.flyer)+'" alt="" loading="eager">'
+    : '<div class="bleed--vacio"></div>';
+  return '<div class="v-cv">'
+    + '<div class="bleed">'+arte+'<div class="bleed__veil"></div>'
+      + '<div class="bleed__t"><span class="lb">'+esc(b.marca)+'</span>'
+      + '<h1 class="bleed__nm">'+esc(b.titulo)+'</h1></div>'
+    + '</div>'
+    + '<div class="panel">'
+      + '<div class="meta"><b>'+esc(fechaLarga(b.cuando))+'</b><span>'+esc(b.sede)+'</span></div>'
+      + b.tipos.map(function(t,i){ return filaTipo(t,i,{ qty:ctx.qty, desc:false, compacta:true }); }).join('')
+      + responsabilidad(b)
+    + '</div>'
+    + barra(b, ctx)
+  + '</div>';
+}
+
+/* ---------- C · ENTRADA 2.0 ---------- */
+function vEntrada(b, ctx){
+  var arte = b.flyer
+    ? '<div class="art"><img src="'+esc(b.flyer)+'" alt=""></div>'
+    : '<div class="art art--vacio"><span>'+esc(b.marca.trim()[0].toUpperCase())+'</span></div>';
+  var d = enLima(b.cuando);
+  return '<div class="v-e2">'
+    + '<div class="boleto">'
+      + '<div class="banda"></div>'
+      + '<div class="cab">'
+        + '<span class="lb">'+esc(b.marca)+' · venta oficial</span>'
+        + '<h1 class="cab__nm">'+esc(b.titulo)+'</h1>'
+        + '<div class="cab__meta">'
+          + '<div><span class="lb">Cuándo</span><span class="num">'+esc(fechaCorta(b.cuando))+' · '+esc(hora(d))+'</span></div>'
+          + '<div><span class="lb">Dónde</span><span>'+esc(b.sede)+'</span></div>'
+        + '</div>'
+      + '</div>'
+      + arte
+      + '<div class="lista"><span class="lb">Elegí tu entrada</span>'
+        + b.tipos.map(function(t,i){ return filaTipo(t,i,{ qty:ctx.qty, desc:false, compacta:true }); }).join('')
+      + '</div>'
+    + '</div>'
+    + '<div class="wrap">'+responsabilidad(b)+'</div>'
+    + barra(b, ctx)
+  + '</div>';
+}
+
+var VARIANTES = [vEditorial, vCanvas, vEntrada];
+var NOMBRES = ['Editorial', 'Canvas', 'Entrada 2.0'];
+
+/* ============================================================
+   CABLEADO. El del picker es el contrato de PICKER.md: teclas
+   1-N y flechas, R para repetir, ?v= persiste, el highlight se
+   desliza pero el CAMBIO DE VARIANTE es instantaneo (se flipea
+   cien veces por sesion: por la regla de frecuencia, no se anima).
+   ============================================================ */
+var stage = document.getElementById('stage');
+var picker = document.querySelector('.proto-picker');
+var highlight = picker.querySelector('.proto-picker-highlight');
+var items = [].slice.call(picker.querySelectorAll('.proto-picker-item:not(.proto-picker-replay)'));
+var replay = picker.querySelector('.proto-picker-replay');
+var current = 0;
+var marcaIdx = 0;
+var ctx = { qty: [] };
+
+function marca(){ return DATOS[marcaIdx]; }
+
+/* El tema de marca se inyecta con las MISMAS funciones del producto. */
+function aplicarMarca(){
+  var b = marca();
+  var par = brandFillPair(b.color);
+  var r = document.documentElement.style;
+  r.setProperty('--brand', b.color);
+  r.setProperty('--brand-fill', par.fill);
+  r.setProperty('--on-fill', par.on);
+  r.setProperty('--brand-fill-hover', brandFillHover(b.color));
+  r.setProperty('--brand-deep', brandInk(b.color));
+  r.setProperty('--brand-soft', withAlpha(b.color, 0.12));
+  ctx.qty = b.tipos.map(function(){ return 0; });
+
+  var cFill = contrast(parseHex(par.fill), parseHex(par.on));
+  var cInk = contrast(parseHex(brandInk(b.color)), PAPER_3);
+  document.getElementById('nota').innerHTML =
+    '<b>' + esc(b.marca) + '</b> ' + b.color
+    + '<br>relleno+texto ' + cFill.toFixed(2) + ':1'
+    + '<br>tinta sobre papel ' + cInk.toFixed(2) + ':1'
+    + (b.flyer ? '' : '<br>sin flyer (estado vacío real)');
+}
+
+function pintar(){
+  stage.className = 'stage';
+  stage.innerHTML = VARIANTES[current](marca(), ctx);
+}
+
+function mount(i){
+  stage.innerHTML = '';
+  requestAnimationFrame(function(){ current = i; pintar(); });
+}
+
+function moveHighlight(){
+  var el = items[current];
+  highlight.style.width = el.offsetWidth + 'px';
+  highlight.style.transform = 'translateX(' + el.offsetLeft + 'px)';
+}
+
+function setActive(i){
+  if (i < 0 || i >= VARIANTES.length) return;
+  current = i;
+  items.forEach(function(el, j){
+    if (j === i) { el.setAttribute('data-active',''); el.setAttribute('aria-current','true'); }
+    else { el.removeAttribute('data-active'); el.removeAttribute('aria-current'); }
+  });
+  moveHighlight();
+  var url = new URL(location);
+  url.searchParams.set('v', i + 1);
+  history.replaceState(null, '', url);
+  mount(i);
+}
+
+items.forEach(function(el, i){ el.addEventListener('click', function(){ setActive(i); }); });
+if (replay) replay.addEventListener('click', function(){ mount(current); });
+window.addEventListener('resize', moveHighlight);
+
+document.addEventListener('keydown', function(e){
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  var num = parseInt(e.key, 10);
+  if (num >= 1 && num <= VARIANTES.length) setActive(num - 1);
+  else if (e.key === 'ArrowRight') setActive((current + 1) % VARIANTES.length);
+  else if (e.key === 'ArrowLeft') setActive((current - 1 + VARIANTES.length) % VARIANTES.length);
+  else if (e.key === 'r' || e.key === 'R') mount(current);
+});
+
+/* Selector de marca: chrome aparte, no compite con el picker. */
+var cajaMarcas = document.getElementById('marcas');
+function pintarMarca(){
+  var b = marca();
+  cajaMarcas.innerHTML = '<button type="button" aria-label="Cambiar de marca (ahora ' + esc(b.marca) + ')">'
+    + '<i style="background:' + esc(b.color) + '"></i><span>' + esc(b.marca) + '</span></button>';
+}
+cajaMarcas.addEventListener('click', function(){
+  marcaIdx = (marcaIdx + 1) % DATOS.length;
+  var url = new URL(location); url.searchParams.set('m', DATOS[marcaIdx].slug);
+  history.replaceState(null, '', url);
+  aplicarMarca();
+  pintarMarca();
+  pintar();
+});
+
+/* El stepper toca SOLO lo que cambia: su propio control y la barra. Antes
+   rehacia el arbol entero en cada tap —imagen a sangre incluida—, lo que
+   perdia el foco del boton recien apretado y re-disparaba la animacion de
+   entrada en cada incremento, no solo cuando el stepper aparece. */
+function actualizarBarra(){
+  var b = marca(), n = cuantas(ctx);
+  var lb = stage.querySelector('[data-barra-lb]');
+  var monto = stage.querySelector('[data-barra-monto]');
+  var cta = stage.querySelector('[data-pagar]');
+  if (lb) lb.textContent = etiquetaBarra(n);
+  if (monto) monto.textContent = plata(n === 0 ? desde(b) : total(b, ctx));
+  if (cta) { cta.innerHTML = textoCta(n); cta.disabled = n === 0; }
+}
+
+stage.addEventListener('click', function(e){
+  var pagar = e.target.closest('[data-pagar]');
+  if (pagar) { pagar.textContent = 'Acá seguiría el checkout real'; pagar.disabled = true; return; }
+  var mas = e.target.closest('[data-mas]');
+  var menos = e.target.closest('[data-menos]');
+  if (!mas && !menos) return;
+  var i = +(mas || menos).getAttribute(mas ? 'data-mas' : 'data-menos');
+  var antes = ctx.qty[i] || 0;
+  var ahora = Math.max(0, antes + (mas ? 1 : -1));
+  if (ahora === antes) return;
+  ctx.qty[i] = ahora;
+
+  var caja = stage.querySelector('[data-ctl=' + JSON.stringify(String(i)) + ']');
+  if (caja) {
+    var cambiaDeForma = (antes === 0) !== (ahora === 0);
+    if (cambiaDeForma) {
+      var teniaFoco = caja.contains(document.activeElement);
+      caja.innerHTML = controlHTML(marca().tipos[i], i, ctx, ahora > 0);
+      // El boton que se apreto dejo de existir: el foco no puede quedar en el aire.
+      if (teniaFoco) { var sig = caja.querySelector('button'); if (sig) sig.focus(); }
+    } else {
+      var v = caja.querySelector('.qval');
+      if (v) v.textContent = ahora;
+    }
+  }
+  actualizarBarra();
+});
+
+/* Arranque: ?m= elige marca, ?v= elige variante. */
+var sp = new URLSearchParams(location.search);
+var mSlug = sp.get('m');
+if (mSlug) {
+  var k = DATOS.findIndex(function(b){ return b.slug === mSlug; });
+  if (k >= 0) marcaIdx = k;
+}
+aplicarMarca();
+pintarMarca();
+setActive((parseInt(sp.get('v'), 10) || 1) - 1);
+requestAnimationFrame(function(){ requestAnimationFrame(function(){ picker.setAttribute('data-ready',''); }); });
+</script>

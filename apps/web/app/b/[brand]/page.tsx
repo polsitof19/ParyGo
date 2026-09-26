@@ -1,0 +1,159 @@
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { ArrowRight } from 'lucide-react';
+import { createClient } from '@/lib/supabase/server';
+import { formatPEN } from '@/lib/utils';
+import { isPubliclyOffered } from '@/lib/publicTicketGuard';
+import { tokensPrivados } from '@/lib/privateAccess';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { optimizedImage } from '@/lib/imageUrl';
+import { fmtCuando, distrito } from '@/lib/eventoTexto';
+import { PieMarca } from './Responsable';
+
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
+
+// =============================================================
+// Home de marca (<slug>.parygo.com) — tema noche (2026-09-23)
+// =============================================================
+// Una sola cosa que hacer: elegir el evento y entrar. Arriba la marca con su
+// logo (sin el nombre en texto si hay logo), "Venta oficial · Lima" y una
+// línea. Después, cada evento publicado: el FLYER ENTERO como afiche (en el
+// teléfono a todo el ancho, con su proporción real; en la compu a 360×450 al
+// lado del texto), cuándo y dónde, el nombre y la acción. Sin caja ni banda
+// difuminada (2026-09-25, Paul: "se ve grande"): la banda metía un afiche
+// vertical en un rectángulo ancho con los costados borrosos. El primero lleva
+// el único botón primario; los siguientes, la acción en texto.
+
+type EvRow = {
+  id: string; slug: string; name: string; starts_at: string;
+  venue_name: string | null; venue_address: string | null;
+  cover_url: string | null;
+  cover_w: number | null; cover_h: number | null;
+  is_free: boolean;
+};
+
+// Proporción del afiche. Un flyer vertical se muestra entero; una captura de
+// pantalla (más alta que 4:5) se recorta a 4:5 con object-fit: cover; sin
+// medidas, 4:5 y contain (no se recorta nada a ciegas).
+function formaFlyer(e: EvRow): { ratio: string; cls: string } {
+  if (!e.cover_w || !e.cover_h) return { ratio: '4 / 5', cls: ' bh-ev__art--sin' };
+  const r = e.cover_w / e.cover_h;
+  if (r < 0.8) return { ratio: '4 / 5', cls: '' };
+  return { ratio: `${e.cover_w} / ${e.cover_h}`, cls: r > 1 ? ' bh-ev__art--apaisado' : '' };
+}
+
+function Evento({ e, desde, primero }: { e: EvRow; desde: number | null; primero: boolean }) {
+  const donde = [e.venue_name, distrito(e.venue_address)].filter(Boolean).join(', ');
+  // `desde` es el mínimo PAGO: un evento gratis que además vende entradas
+  // pagas (Standly: cortesía libre + VIP/GENERAL) se compra, no se "reclama".
+  const gratis = e.is_free && desde == null;
+  const forma = formaFlyer(e);
+  return (
+    <li className="bh-ev">
+      <Link href={`/${e.slug}`} className="bh-ev__a">
+        {e.cover_url ? (
+          <span className={`bh-ev__art${forma.cls}`} style={{ aspectRatio: forma.ratio }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={optimizedImage(e.cover_url, { width: 720, quality: 80 })} alt={`Flyer de ${e.name}`} decoding="async" />
+          </span>
+        ) : null}
+        <span className="bh-ev__txt">
+          <span className="bh-ev__cuando"><span className="b-dot" aria-hidden="true" />{[fmtCuando(e.starts_at), donde].filter(Boolean).join(' · ')}</span>
+          <span className="bh-ev__nm">{e.name}</span>
+          {!gratis && desde != null && <span className="bh-ev__desde">Desde {formatPEN(desde)}</span>}
+          <span className={`bh-ev__go${primero ? ' bh-ev__go--pri' : ''}`}>
+            {gratis ? 'Reclama tu entrada gratis' : 'Comprar entradas'} <ArrowRight aria-hidden="true" />
+          </span>
+        </span>
+      </Link>
+    </li>
+  );
+}
+
+export default async function BrandHomePage({ params }: { params: { brand: string } }) {
+  const supabase = createClient();
+  const { data: brand } = await supabase
+    .from('brands')
+    .select('id, name, theme_json, whatsapp_e164, contact_email')
+    .eq('slug', params.brand)
+    .is('archived_at', null)
+    .maybeSingle();
+  if (!brand) notFound();
+  const logoUrl = ((brand.theme_json ?? {}) as { logo_url?: string | null }).logo_url ?? null;
+
+  const now = new Date().toISOString();
+  const { data: upcoming } = await supabase
+    .from('events')
+    .select('id, slug, name, starts_at, venue_name, venue_address, cover_url, cover_w, cover_h, is_free')
+    .eq('brand_id', brand.id)
+    .eq('is_published', true)
+    .is('archived_at', null)
+    .gte('starts_at', now)
+    .order('starts_at', { ascending: true });
+
+  const eventos = (upcoming ?? []) as EvRow[];
+
+  // "Desde S/X" = el mínimo de los tipos activos que SE OFRECEN al público
+  // (isPubliclyOffered). Una cortesía no está a la venta; un evento GRATIS
+  // ofrece sus tipos en 0 y entonces la acción es reclamar, no comprar.
+  const desdePorEvento = new Map<string, number>();
+  if (eventos.length) {
+    const { data: tts } = await supabase
+      .from('ticket_types')
+      .select('id, event_id, price_cents, is_active, is_courtesy')
+      .in('event_id', eventos.map((e) => e.id))
+      .eq('is_active', true);
+    const esGratis = new Map(eventos.map((e) => [e.id, e.is_free === true]));
+    // Las entradas privadas (0066, solo con link) no cuentan para el "desde".
+    const privados = await tokensPrivados(createAdminClient(), (tts ?? []).map((t) => t.id as string));
+    for (const t of (tts ?? []) as { id: string; event_id: string; price_cents: number; is_courtesy: boolean }[]) {
+      if (privados.has(t.id)) continue;
+      if (!isPubliclyOffered(t.price_cents, { eventoEsGratis: esGratis.get(t.event_id), esCortesia: t.is_courtesy })) continue;
+      if (t.price_cents === 0) continue; // las gratis no son un "desde"
+      const ya = desdePorEvento.get(t.event_id);
+      if (ya === undefined || t.price_cents < ya) desdePorEvento.set(t.event_id, t.price_cents);
+    }
+  }
+
+  return (
+    <main className="bh">
+      <header className="bh-marca">
+        {logoUrl ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="bh-marca__logo" src={optimizedImage(logoUrl, { width: 480, quality: 85 })} alt="" height={56} decoding="async" />
+            <h1 className="sr-only">{brand.name}</h1>
+          </>
+        ) : (
+          <h1 className="bh-marca__nm">{brand.name}</h1>
+        )}
+        <p className="bh-marca__ofi">Venta oficial · Lima</p>
+        <p className="bh-marca__p">
+          Entradas oficiales de {brand.name}. Eliges, pagas y tu QR te llega al correo.
+        </p>
+      </header>
+
+      {eventos.length === 0 ? (
+        <section className="bh-vacio">
+          <h2 className="bh-vacio__t">Próximamente</h2>
+          <p className="bh-vacio__p">{brand.name} está preparando su próximo evento. Vuelve en unos días.</p>
+        </section>
+      ) : (
+        <section aria-labelledby="bh-eventos">
+          <h2 className="bh-sec" id="bh-eventos">{eventos.length === 1 ? 'Próximo evento' : 'Próximos eventos'}</h2>
+          <ol className="bh-lista">
+            {eventos.map((e, i) => <Evento key={e.id} e={e} desde={desdePorEvento.get(e.id) ?? null} primero={i === 0} />)}
+          </ol>
+        </section>
+      )}
+
+      {/* Quién responde por los eventos de esta página, y quién vende. */}
+      <PieMarca marca={brand} />
+      <p className="c-foot bh-powered">
+        powered by <a href="https://parygo.com" target="_blank" rel="noopener noreferrer"><b>parygo</b></a>
+        <span className="c-powered__dot" aria-hidden="true" />
+      </p>
+    </main>
+  );
+}

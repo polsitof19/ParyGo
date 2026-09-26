@@ -1,0 +1,193 @@
+<style>
+/* ============================================================
+   LO QUE COMPARTEN LAS TRES (y que por eso no se juzga acá):
+   escala fija, ritmo de 8, un solo botón primario, escalera de
+   fases con candado, copy en tú, línea de responsabilidad del
+   organizador, y la regla dura: el color de marca NO porta texto
+   salvo el par medido brand-fill/on-fill.
+   ============================================================ */
+.stage { min-height: 100vh; min-height: 100dvh; }
+.wrap { max-width: 560px; margin: 0 auto; padding: 0 var(--pad); }
+@media (min-width: 1024px) { .wrap { max-width: 1120px; } }
+
+.lb { font-size: var(--lb); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Escalera de fases: la actual, las que vienen (con candado) y la que pasó.
+   El precio que viene TIENE que leerse: .62 es el mínimo medido que pasa AA. */
+.fases { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: var(--s1) var(--s2); margin-top: var(--s2); align-items: start; }
+.fase { min-width: 0; }
+.fase__n { display: flex; align-items: center; gap: 5px; }
+.fase__p { display: block; margin-top: 2px; font-family: var(--display); font-weight: 800; font-size: var(--price); }
+.fase__d { display: block; margin-top: 1px; font-size: var(--micro); color: var(--ink-3); }
+.fase--futura { opacity: .62; }
+.fase--pasada { opacity: .62; }
+.fase--pasada .fase__p { text-decoration: line-through; text-decoration-thickness: 1px; }
+.fase svg { width: 11px; height: 11px; flex: none; }
+
+/* Stepper. Uno solo por tipo; el area de toque de 44px va por pseudo-elemento
+   para no engordar la caja visible. */
+.qty { display: inline-flex; align-items: center; gap: 10px; }
+.qbtn, .add {
+  position: relative; display: grid; place-items: center; cursor: pointer;
+  border: 1px solid var(--line); background: none; color: var(--ink);
+  transition: border-color .18s, background-color .18s, color .18s, transform .14s ease-out;
+}
+.qbtn::after, .add::after { content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%,-50%); }
+.qbtn { width: 34px; height: 34px; border-radius: var(--r-ctl); }
+.add { width: 40px; height: 40px; border-radius: var(--r-ctl); }
+.add:hover, .qbtn:hover:not(:disabled) { border-color: var(--ink); }
+.add:active, .qbtn:active:not(:disabled) { transform: scale(.96); }
+.qbtn:disabled { opacity: .35; cursor: not-allowed; }
+.qval { min-width: 22px; text-align: center; font-family: var(--display); font-weight: 800; font-size: var(--lead); }
+.qty__in { animation: qin .16s var(--ease) both; }
+@keyframes qin { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+
+/* CTA sticky. Un solo primario en toda la pantalla. */
+.sticky {
+  position: sticky; bottom: 0; z-index: 20; margin-top: var(--s4);
+  padding: var(--s2) var(--pad) calc(var(--s2) + env(safe-area-inset-bottom, 0px));
+  background: var(--paper); border-top: 1px solid var(--line);
+}
+.sticky__in { max-width: 560px; margin: 0 auto; display: flex; align-items: center; gap: var(--s2); }
+@media (min-width: 1024px) { .sticky__in { max-width: 1120px; } }
+.sticky__t { flex: 1; min-width: 0; }
+.sticky__t b { display: block; font-family: var(--display); font-weight: 800; font-size: var(--t3); }
+.cta {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  height: 48px; padding: 0 22px; border: 0; border-radius: var(--r-btn);
+  background: var(--brand-fill); color: var(--on-fill);
+  font-weight: 700; font-size: var(--bodysz); cursor: pointer; white-space: nowrap;
+  transition: background-color .18s, transform .14s ease-out;
+}
+.cta:hover:not(:disabled) { background: var(--brand-fill-hover); }
+.cta:active:not(:disabled) { transform: scale(.97); }
+.cta:disabled {
+  background: transparent; color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line);
+  cursor: default; opacity: 1;
+}
+.resp { margin: var(--s3) 0 0; font-size: var(--micro); line-height: 1.45; color: var(--ink-3); }
+
+/* Entradas: las tres pintan la misma lista, con distinta piel. */
+.ty { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s2); }
+.ty__l { min-width: 0; flex: 1; }
+.ty__nm { font-size: var(--lead); font-weight: 600; line-height: 1.25; }
+.ty__ds { margin-top: 3px; font-size: var(--meta); font-weight: 300; color: var(--ink-2); }
+.ty__pr { font-family: var(--display); font-weight: 800; font-size: var(--t3); }
+.ty__r { display: flex; align-items: center; gap: var(--s2); flex: none; }
+.pocas { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; font-size: var(--lb); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
+.pocas::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--warn); flex: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .stage *, .stage *::before, .stage *::after { animation: none !important; transition-duration: 0ms !important; }
+  .stage button:active { transform: none !important; box-shadow: inset 0 0 0 999px var(--sel); }
+}
+
+/* ============================================================
+   A - EDITORIAL. Eje: MANDA LA TIPOGRAFIA.
+   El nombre del evento es lo mas grande de la pantalla. El flyer
+   es un bloque grande pero subordinado. El color de marca aparece
+   como RELLENO con intencion (la fase activa, el CTA), nunca como
+   tinta suelta. Cero troquel, cero linea punteada. Todo a la
+   izquierda, como los creditos de un afiche.
+   ============================================================ */
+.v-ed .hero { padding: var(--s5) 0 0; }
+.v-ed .hero__kick { display: flex; align-items: center; gap: var(--s1); }
+.v-ed .hero__nm {
+  margin: var(--s2) 0 0; font-family: var(--display); font-weight: 800;
+  font-size: var(--t1); line-height: .92; letter-spacing: -.035em; text-wrap: balance;
+}
+.v-ed .hero__meta { margin: var(--s2) 0 0; font-size: var(--bodysz); color: var(--ink-2); }
+.v-ed .hero__meta b { color: var(--ink); font-weight: 600; }
+/* BANDA, no página: en una revista la foto acompaña al texto. Además es lo
+   que deja el primer precio por encima del pliegue en 390. */
+.v-ed .flyer { margin-top: var(--s3); border-radius: var(--r-card); overflow: hidden; background: var(--paper-3); }
+.v-ed .flyer img { width: 100%; height: clamp(160px, 26vh, 300px); object-fit: cover; }
+.v-ed .flyer--vacio { height: clamp(160px, 26vh, 300px); display: grid; place-items: center; }
+.v-ed .flyer--vacio span { font-family: var(--display); font-weight: 800; font-size: 64px; color: var(--ink-3); opacity: .45; }
+.v-ed .sec { margin-top: var(--s4); }
+.v-ed .sec > h2 {
+  margin: 0; padding-bottom: var(--s1); font-family: var(--body);
+  font-size: var(--lb); font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-3); border-bottom: 2px solid var(--ink);
+}
+.v-ed .ty__pr { font-size: var(--t2); }
+.v-ed .ty__nm { font-size: var(--t3); font-weight: 700; letter-spacing: -.01em; }
+/* La fase activa es un BLOQUE de color con su texto medido: el color con
+   intencion, no un puntito decorativo. */
+.v-ed .fase--activa {
+  margin: -6px -10px; padding: 6px 10px; border-radius: var(--r-ctl);
+  background: var(--brand-fill); color: var(--on-fill);
+}
+.v-ed .fase--activa .fase__d, .v-ed .fase--activa .lb { color: inherit; opacity: .78; }
+.v-ed .ty { padding: var(--s3) 0; border-top: 1px solid var(--line); }
+.v-ed .ty:last-of-type { border-bottom: 1px solid var(--line); }
+.v-ed .resp { border-top: 1px solid var(--line); padding-top: var(--s2); }
+
+/* ============================================================
+   B - CANVAS. Eje: MANDA LA IMAGEN, la interfaz flota.
+   El flyer sangra a pantalla completa y la compra es un panel de
+   papel apoyado encima. Color de marca SOLO en el CTA: todo lo
+   demas es tinta sobre papel. Micro-espaciado apretado, botones
+   pastilla sin mayusculas, como DICE.
+   ============================================================ */
+.v-cv .bleed { position: relative; }
+.v-cv .bleed img { width: 100%; height: clamp(340px, 64vh, 580px); object-fit: cover; }
+.v-cv .bleed--vacio { height: clamp(340px, 64vh, 580px); background: linear-gradient(160deg, var(--brand-soft), var(--paper-3) 70%); }
+/* Negro puro a propósito: es una máscara de legibilidad sobre una foto que
+   sube el promotor, no una sombra sobre papel (misma excepción de DESIGN.md). */
+.v-cv .bleed__veil { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.08) 30%, rgba(0,0,0,.72)); }
+.v-cv .bleed__t { position: absolute; left: 0; right: 0; bottom: 0; padding: var(--s3) var(--pad) var(--s6); }
+.v-cv .bleed__t .lb { color: rgba(255,255,255,.9); text-shadow: 0 1px 8px rgba(0,0,0,.8); }
+.v-cv .bleed__nm {
+  margin: 6px 0 0; font-family: var(--display); font-weight: 800; font-size: var(--t2);
+  line-height: 1.02; letter-spacing: -.03em; color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,.72);
+  max-width: 16ch;
+}
+.v-cv .panel {
+  position: relative; z-index: 2; margin: -40px auto 0; max-width: 560px;
+  background: var(--paper); border-radius: var(--r-card) var(--r-card) 0 0;
+  padding: var(--s3) var(--pad) 0;
+}
+@media (min-width: 1024px) { .v-cv .panel { max-width: 720px; border-radius: var(--r-card); margin-top: -56px; padding-bottom: var(--s3); box-shadow: var(--shadow-lg); } }
+.v-cv .meta { display: flex; flex-wrap: wrap; gap: 2px var(--s2); font-size: var(--meta); color: var(--ink-2); }
+.v-cv .meta b { color: var(--ink); font-weight: 600; }
+.v-cv .ty { padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
+.v-cv .ty:first-of-type { border-top: 1px solid var(--line); margin-top: var(--s3); }
+.v-cv .fases { gap: var(--s2); margin-top: var(--s1); }
+.v-cv .fase__p { font-size: var(--bodysz); }
+/* Pastilla quieta, sin mayusculas: el boton de DICE no grita. */
+.v-cv .cta { border-radius: var(--r-pill); padding: 0 26px; }
+.v-cv .add, .v-cv .qbtn { border-radius: var(--r-pill); }
+.v-cv .sticky { background: rgba(251,247,240,.92); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+
+/* ============================================================
+   C - ENTRADA 2.0. Eje: LA METAFORA DEL BOLETO, sin utileria.
+   Se va el troquel, los semicirculos y los sellos. Lo que queda
+   diciendo "esto es una entrada" es la BANDA de color de 6px, los
+   numeros tabulares, las micro-etiquetas en mayusculas espaciadas
+   y un ritmo fuerte de reglas horizontales. Es la mas densa.
+   ============================================================ */
+.v-e2 .boleto {
+  max-width: 560px; margin: var(--s3) auto 0; background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--r-card); overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+@media (min-width: 1024px) { .v-e2 .boleto { max-width: 720px; } }
+.v-e2 .banda { height: 10px; background: var(--brand); }
+.v-e2 .cab { padding: var(--s3) var(--s3) var(--s2); }
+.v-e2 .cab__nm { margin: var(--s1) 0 0; font-family: var(--display); font-weight: 800; font-size: var(--t2); line-height: 1.04; letter-spacing: -.025em; }
+.v-e2 .cab__meta { margin-top: var(--s3); padding-top: var(--s2); border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: var(--s2); }
+.v-e2 .cab__meta > div > span { display: block; margin-top: 2px; font-size: var(--meta); font-weight: 600; }
+.v-e2 .art { position: relative; aspect-ratio: 16/9; overflow: hidden; background: var(--paper-3); }
+.v-e2 .art img { width: 100%; height: 100%; object-fit: cover; }
+.v-e2 .art--vacio { display: grid; place-items: center; }
+.v-e2 .art--vacio span { font-family: var(--display); font-weight: 800; font-size: 40px; color: var(--ink-3); opacity: .5; }
+.v-e2 .lista { padding: 0 var(--s3) var(--s3); }
+.v-e2 .lista > .lb { display: block; padding: var(--s2) 0 var(--s1); }
+.v-e2 .ty { padding: var(--s2) 0; border-top: 1px solid var(--line); }
+.v-e2 .fases { gap: var(--s2); margin-top: var(--s1); }
+.v-e2 .fase__p { font-size: var(--bodysz); }
+.v-e2 .sticky { background: var(--paper); }
+.v-e2 .resp { padding: 0 var(--pad); }
+</style>
