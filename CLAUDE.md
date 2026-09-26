@@ -45,6 +45,13 @@ supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se regist
   apps/web/wrangler.toml usa name = "parygo-app" (antes decía "parygo-web", un
   proyecto que no existe). Build/root/bindings se configuran en el dashboard.
 - Un push a refactor/monorepo despliega LOS DOS proyectos (landing y app).
+- La landing NO usa next/font/google (2026-09-26): el build de Cloudflare
+  bajaba las fuentes en cada deploy y, cuando Google fallaba ("An error
+  occurred in `next/font`"), la landing no se publicaba (2 de 3 deploys) y
+  parygo.com quedaba en el commit anterior. Bricolage y Hanken van con
+  next/font/local desde apps/landing/app/fonts/ (los mismos woff2 variables
+  latin que servía Google; medido: el h1 mide igual, 346×122 a 390). No
+  volver a next/font/google. La app usa el paquete `geist` (ya local).
 - Router de subdominios *.parygo.com: Worker "parygo-brand-router" (sirve
   <marca>.parygo.com desde la app). Nota: hoesky.parygo.com figura además como
   dominio del proyecto de la landing "parygo", pero hoy sirve la página de la

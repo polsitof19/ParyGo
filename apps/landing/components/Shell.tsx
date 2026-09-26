@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
+import localFont from 'next/font/local';
 import { SITE } from '@/lib/site';
 import { DICT, RUTA, type Lang } from '@/lib/i18n';
 import { JsOn } from '@/components/chrome/JsOn';
@@ -12,8 +12,13 @@ import '@/app/globals.css';
 // tenga su URL, su canonical y su hreflang.
 
 // v7 type system: Bricolage Grotesque (display) + Hanken Grotesk (body).
-const bricolage = Bricolage_Grotesque({ weight: ['400', '700', '800'], subsets: ['latin'], variable: '--font-bricolage', display: 'swap' });
-const hanken = Hanken_Grotesk({ weight: ['400', '500', '600', '700'], subsets: ['latin'], variable: '--font-hanken', display: 'swap' });
+// LOCALES desde 2026-09-26: con next/font/google el build de Cloudflare bajaba
+// las fuentes en cada deploy y, cuando Google no respondía ("An error occurred
+// in `next/font`"), la landing no se publicaba (2 de 3 deploys seguidos). Son
+// los mismos archivos que servía Google (variables, subconjunto latin,
+// app/fonts/), así que se ve igual y el build ya no depende de la red.
+const bricolage = localFont({ src: '../app/fonts/bricolage-latin.woff2', weight: '400 800', variable: '--font-bricolage', display: 'swap' });
+const hanken = localFont({ src: '../app/fonts/hanken-latin.woff2', weight: '400 700', variable: '--font-hanken', display: 'swap' });
 
 export const viewport: Viewport = {
   themeColor: SITE.themeColor,
