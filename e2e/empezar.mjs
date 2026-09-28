@@ -175,7 +175,7 @@ try {
     await p.fill('#ez-nombre', 'Noches Qa');
     await p.locator('.ez-vp--movil').filter({ hasText: 'noches-qa.parygo.com' }).waitFor({ timeout: 5000 }).catch(() => {});
     const vp = await p.locator('.ez-vp--movil').innerText();
-    check('Q', 'paso 2: "¿Cómo se llama tu marca?", no avanza vacío y la vista previa muestra el nombre y el enlace al escribir', sinNombre && /Paso 2 de 5/.test(await texto(p)) && /Noches Qa/.test(vp) && /noches-qa\.parygo\.com/.test(vp), vp.replace(/\s+/g, ' ').slice(0, 90));
+    check('Q', 'paso 2: "¿Cómo se llama tu marca?", no avanza vacío y la barra muestra el enlace armado al escribir', sinNombre && /Paso 2 de 5/.test(await texto(p)) && /noches-qa\.parygo\.com/.test(vp), vp.replace(/\s+/g, ' ').slice(0, 90));
     await continuar(p);
     check('Q', 'paso 3: "¿Cómo quieres tu enlace?" con el enlace armado desde el nombre', /Paso 3 de 5/.test(await texto(p)) && (await p.inputValue('#ez-slug')) === 'noches-qa');
     await p.getByRole('button', { name: /Atrás/ }).click();

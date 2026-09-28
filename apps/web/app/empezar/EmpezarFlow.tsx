@@ -328,6 +328,10 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
           {/* Honeypot: invisible para personas. */}
           <div className="ez-hp" aria-hidden="true"><label>Empresa<input name="empresa" tabIndex={-1} autoComplete="off" /></label></div>
 
+          {/* Celular: la dirección de su página, en vivo, bajo la pregunta. En la
+              compu va en el costado. */}
+          {(paso === 1 || paso === 2) && <VistaPrevia slug={slug} t={t} className="ez-vp--movil" />}
+
           {aviso && <p className="ez-banner" role="alert">{aviso}</p>}
           {!aviso && cancelado && paso === 0 && <p className="ez-banner" role="status">{t.cancelado}</p>}
           <div className="ez-actions">
@@ -347,13 +351,10 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
             )}
           </div>
 
-          {/* Celular: la vista previa DEBAJO de "Continuar" (antes lo empujaba fuera
-              de la pantalla). En la compu va en el costado. */}
-          {(paso === 1 || paso === 2) && <VistaPrevia nombre={nombre} slug={slug} t={t} className="ez-vp--movil" />}
         </form>
       </div>
 
-      <aside className={`ez-resumen${paso > 0 ? " ez-resumen--vp" : ""}`} aria-label={t.tuPlan}>
+      <aside className="ez-resumen" aria-label={t.tuPlan}>
         <p className="ez-resumen__label">{t.tuPlan}</p>
         <p className="ez-resumen__plan">{planTxt}</p>
         <p className="ez-resumen__precio">{precio(elegido)}</p>
@@ -374,8 +375,8 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
             ))}
           </>
         ) : (
-          // Compu, desde el nombre: la vista previa de su página, en vivo.
-          <VistaPrevia nombre={nombre} slug={slug} t={t} className="ez-vp--costado" />
+          // Compu, desde el nombre: la dirección de su página, en vivo.
+          <VistaPrevia slug={slug} t={t} className="ez-vp--costado" />
         )}
       </aside>
     </main>
