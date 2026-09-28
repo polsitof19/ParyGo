@@ -472,6 +472,11 @@ button.ez-volver { background: none; border: 0; padding: 0; margin: 0; font: inh
 .ez-vp__estado-ico { width: 18px; height: 18px; flex: none; }
 .ez-vp__ok { color: #30D158; }
 .ez-vp__no { color: #FF453A; }
+/* En el costado de la compu el panel es angosto: el teléfono usa parte del
+   relleno del panel y la barra achica la letra, así entra un enlace normal
+   ("noches-del-sur.parygo.com") sin cortarse. */
+.ez-vp--costado .ez-vp__cel { margin: 0 calc(-1 * var(--ez-s2)); }
+.ez-vp--costado .ez-vp__barra { margin: 4px 8px 0; padding: 0 10px; font-size: 13px; }
 
 /* — Todo lo que incluye, en el celular: un grupo por fila plegable, como las
      preguntas frecuentes. En la compu no se ve (lo muestra el costado). — */
