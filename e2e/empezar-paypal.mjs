@@ -21,10 +21,17 @@ try {
   await p.goto(`${BASE}/empezar?tipo=marca&lang=en`, { waitUntil: 'networkidle' });
   const html = await p.locator('main').innerText();
   check('en inglés sale en dólares', /US\$59/.test(html) && !/S\/150/.test(html));
+  // Paso a paso (2026-09-28): cada "Continue" lleva a la pregunta siguiente.
+  const seguir = () => p.getByRole('button', { name: /^Continue/ }).click();
   await p.locator('.ez-plan:has(input[value="1"])').click();
+  await seguir();
   await p.fill('#ez-nombre', 'E2E PayPal');
+  await seguir();
   await p.fill('#ez-slug', slug);
+  await p.locator('#e-slug').filter({ hasText: /Available|already belongs/ }).waitFor({ timeout: 10000 }).catch(() => {});
+  await seguir();
   await p.fill('#ez-email', `delivered+paypal${STAMP}@resend.dev`);
+  await seguir();
   await p.fill('#ez-pass', 'E2eAlta!2026');
   const boton = p.getByRole('button', { name: /^Pay US\$59$/ });
   check('el botón dice "Pay US$59"', await boton.count() === 1);
