@@ -631,7 +631,7 @@ Opus para diseño (Plan) y lo de riesgo. Sonnet/Haiku para subagents mecánicos
 - **UI UX Pro Max / SkillUI / impeccable**: solo referencia. Manda el sistema
   de ParyGo: fondos blanco/negro neutro, Geist, sin tarjetas flotantes. La salida
   de SkillUI vive en tmp/skillui/ y no se aplica a nada.
-- **Skills del stack (curadas 2026-09-26, 34 en .claude/skills)**: por
+- **Skills del stack (curadas 2026-09-26, 34 en .claude/skills; 48 desde el 2026-09-28 con las 14 de marketing)**: por
   plataforma → `cloudflare`, `wrangler`, `workers-best-practices` (Pages +
   Worker router), `supabase`, `supabase-postgres-best-practices`, `resend`,
   `mp-integrate`, `mp-webhooks` (oficiales de Mercado Pago),
@@ -655,8 +655,9 @@ Opus para diseño (Plan) y lo de riesgo. Sonnet/Haiku para subagents mecánicos
 - **Marketing (2026-09-28)**: agente `marketing-parygo` (.claude/agents) para
   textos de la landing y /empezar, SEO, conversión y campañas; lista verificada
   de lo que ParyGo hace y lo que está por construir. NUNCA inventa cifras,
-  años ni clientes (Paul lo pidió y se rechazó). Plugin
-  `marketing@knowledge-work-plugins` activado en .claude/settings.json
-  (seo-audit, brand-review, competitive-brief, draft-content, email-sequence,
-  campaign-plan…); en otra máquina, `/plugin install marketing@knowledge-work-plugins`
-  si no aparece.
+  años ni clientes (Paul lo pidió y se rechazó). 14 skills de marketing
+  COPIADAS tal cual en .claude/skills (no plugin, así viajan a la laptop):
+  del plugin marketing de knowledge-work-plugins → seo-audit, brand-review,
+  competitive-brief, content-creation, draft-content, email-sequence,
+  campaign-plan, performance-report; de las skills de claude.ai → copywriting,
+  cro, marketing-psychology, pricing, ad-creative, prospecting.

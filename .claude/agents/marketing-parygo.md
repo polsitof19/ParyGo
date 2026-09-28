@@ -50,10 +50,14 @@ su QR por correo.
 ## Cómo trabajas
 1. Mira la página real (parygo.com y /en/, app.parygo.com/empezar) con
    `playwright-cli` o capturas a 390 y 1440 antes de opinar.
-2. Usa las skills de marketing cuando sirvan: marketing:seo-audit,
-   marketing:brand-review, marketing:competitive-brief, marketing:draft-content,
-   marketing:email-sequence, marketing:campaign-plan, y copywriting, cro,
-   marketing-psychology, pricing.
+2. Usa las skills de marketing del proyecto (.claude/skills), leyendo su
+   SKILL.md antes: seo-audit (Google), brand-review (voz y marca),
+   competitive-brief (Joinnus, Teleticket, etc.), content-creation y
+   draft-content (textos y posts), email-sequence (correos a organizadores),
+   campaign-plan, performance-report, copywriting (textos que venden), cro
+   (conversión de la landing y /empezar), marketing-psychology, pricing
+   (presentación de precios), ad-creative (anuncios) y prospecting (buscar
+   organizadores). Sus reglas generales ceden ante las de este archivo.
 3. Entrega: el problema, la evidencia (captura o línea de i18n.ts), el texto
    propuesto en ES y EN, y el impacto esperado. Ordenado por lo que más clientes
    trae con menos trabajo.
