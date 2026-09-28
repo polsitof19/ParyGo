@@ -411,6 +411,32 @@
   font-weight: 700;
   overflow-wrap: anywhere;
 }
+/* Todo lo que incluye, en el costado (compu). */
+.ez-resumen__h { margin-top: var(--ez-s4) !important; font-family: var(--display); font-weight: 700; font-size: var(--ez-price); letter-spacing: -0.02em; line-height: 1.2; }
+.ez-resumen__gt { margin-top: var(--ez-s3) !important; font-size: var(--ez-meta); font-weight: 700; }
+.ez-resumen__grupo .ez-resumen__list { margin-top: var(--ez-s1); gap: var(--ez-s1); color: var(--ink-2); }
+.ez-resumen__grupo .ez-tick { color: var(--ink); }
+
+/* — Todo lo que incluye, en el celular: un grupo por fila plegable, como las
+     preguntas frecuentes. En la compu no se ve (lo muestra el costado). — */
+.ez-incluye { margin: 0 0 var(--ez-s5); }
+.ez-incluye__grupo { border-top: 1px solid var(--line); }
+.ez-incluye__grupo:last-of-type { border-bottom: 1px solid var(--line); }
+.ez-incluye__t {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--ez-s1);
+  min-height: var(--ez-ctl-h);
+  font-weight: 700;
+}
+.ez-incluye__t::-webkit-details-marker { display: none; }
+.ez-incluye__n { margin-left: auto; font-size: var(--ez-small); font-weight: 600; color: var(--ink-2); }
+.ez-incluye__t::after { content: "+"; width: var(--ez-s3); text-align: center; font-size: var(--ez-price); font-weight: 400; color: var(--ink); }
+.ez-incluye__grupo[open] .ez-incluye__t::after { content: "–"; }
+.ez-incluye__grupo .ez-resumen__list { margin: 0 0 var(--ez-s2); color: var(--ink-2); }
+.ez-incluye__grupo .ez-tick { color: var(--ink); }
 
 /* — Un solo momento de movimiento: el paso del código entra. — */
 .ez-form--codigo { animation: ez-in 320ms var(--ease) both; }
@@ -447,7 +473,12 @@
     background: var(--paper-2);
     border-radius: var(--r-card);
     padding: var(--ez-s4);
+    /* Con la lista completa es más alto que la pantalla: se desplaza dentro. */
+    max-height: calc(100vh - 2 * var(--ez-s4));
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
+  .ez-incluye { display: none; }
 }
 
 /* — Moneda de pago: soles (Mercado Pago) o dólares (PayPal). Control

@@ -49,7 +49,50 @@ const es = {
   acepta: 'Al continuar aceptas los', terminos: 'Términos', y: 'y la', privacidad: 'Política de privacidad',
   cancelado: 'El pago no se completó y no se realizó ningún cargo. Puedes intentarlo nuevamente cuando quieras.',
   tuPlan: 'Tu plan', pagoUnico: 'pago único',
-  resumen: (n: number) => [`${n} ${n === 1 ? 'evento' : 'eventos'} para crear cuando quieras`, 'Cobro directo a tu cuenta', 'Entradas con QR y escáner de acceso', 'Sin comisión por entrada'],
+  // Todo lo que incluye cada evento (Paul, 2026-09-28: "deben saber por qué
+  // pagan"). MISMA lista que la landing (apps/landing/lib/i18n.ts,
+  // precios.detalle): si cambias una, cambia la otra. Solo lo que existe hoy.
+  incluye: {
+    h: 'Todo lo que incluye cada evento',
+    grupos: [
+      { t: 'Tu página y tus entradas', items: [
+        'Tu propia página con tu marca, logo y colores (tumarca.parygo.com)',
+        'Entradas ilimitadas: los tipos que quieras (General, VIP, preventas)',
+        'Preventas que cambian de precio solas en la fecha que elijas',
+        'Entradas privadas por link, con límite de entradas por persona',
+        'Eventos gratuitos con registro',
+        'Marca una entrada como agotada cuando quieras',
+      ] },
+      { t: 'Tus cobros', items: [
+        'Cobras directo en tu propio método de pago: la plata de las entradas es tuya, ParyGo no la toca',
+        'Apruebas cada pago desde tu panel: ves el comprobante, confirmas y la entrada se envía sola',
+        'Te avisamos por correo cuando tienes pagos por aprobar',
+        'Sin comisión por entrada: pagas lo mismo vendas 10 o 1.000',
+      ] },
+      { t: 'Tu equipo y la puerta', items: [
+        'Escáner en la puerta desde tu iPhone o Android, sin instalar nada',
+        'Ves en el momento quién entró y cuándo',
+        'Tu equipo de puerta, cada uno con su propio acceso',
+        'Cortesías y listas de invitados con QR',
+      ] },
+      { t: 'Tus ventas', items: [
+        'Códigos de descuento y links para tus promotores, con lo que vendió cada uno',
+        'Estadísticas de ventas y asistencia en tiempo real',
+        'Lista de compradores, descargable en Excel',
+        'Reporte del evento al terminar, para guardar en PDF',
+        'Tu panel en español o inglés',
+      ] },
+      { t: 'Tu público', items: [
+        'Compra sin crear cuenta: elige, pone su nombre y correo, y paga',
+        'Paga con el método que tú elijas',
+        'Su entrada con QR le llega automáticamente al correo',
+        'La guarda como imagen o la manda por WhatsApp',
+        'Si pierde el correo, la pide de nuevo sin escribirte',
+        'Agrega el evento a su calendario',
+        'Todo desde el navegador, en iPhone, Android o computadora',
+      ] },
+    ],
+  },
   // Mensajes del servidor
   m: {
     revisa: 'Revisa los campos marcados.',
@@ -117,7 +160,47 @@ const en: T = {
   acepta: 'By continuing you accept the', terminos: 'Terms', y: 'and the', privacidad: 'Privacy Policy',
   cancelado: 'The payment was not completed and no charge was made. You can try again whenever you like.',
   tuPlan: 'Your plan', pagoUnico: 'one-time payment',
-  resumen: (n) => [`${n} ${n === 1 ? 'event' : 'events'} to create whenever you want`, 'Direct payments to your account', 'QR tickets and entry scanner', 'No per-ticket fees'],
+  incluye: {
+    h: 'Everything each event includes',
+    grupos: [
+      { t: 'Your page and your tickets', items: [
+        'Your own page with your brand, logo and colors (yourbrand.parygo.com)',
+        'Unlimited tickets: any ticket types you want (General, VIP, presales)',
+        'Presales that change price on their own on the date you choose',
+        'Private tickets by link, with a per-person limit',
+        'Free events with registration',
+        'Mark a ticket type as sold out whenever you want',
+      ] },
+      { t: 'Your payments', items: [
+        'Get paid directly through your own payment method: ticket money is yours, ParyGo never touches it',
+        'Approve each payment from your dashboard: see the receipt, confirm, and the ticket is sent automatically',
+        'We email you when you have payments to approve',
+        'No per-ticket fee: you pay the same whether you sell 10 or 1,000',
+      ] },
+      { t: 'Your team and the door', items: [
+        'Door scanner on your iPhone or Android, nothing to install',
+        'See who got in and when, in real time',
+        'Your door team, each with their own access',
+        'Complimentary tickets and guest lists with QR',
+      ] },
+      { t: 'Your sales', items: [
+        'Discount codes and promoter links, with what each one sold',
+        'Real-time sales and attendance stats',
+        'Buyer list, downloadable to Excel',
+        'Post-event report, ready to save as PDF',
+        'Your dashboard in English or Spanish',
+      ] },
+      { t: 'Your audience', items: [
+        'Buys without creating an account: picks, enters name and email, and pays',
+        'Pays with the method you choose',
+        'Their QR ticket arrives in their inbox automatically',
+        'Saves it as an image or sends it on WhatsApp',
+        'If they lose the email, they get it again without contacting you',
+        'Adds the event to their calendar',
+        'All from the browser, on iPhone, Android or computer',
+      ] },
+    ],
+  },
   m: {
     revisa: 'Please review the highlighted fields.',
     pronto: 'This payment method will be available very soon. In the meantime, you can pay in the other currency.',

@@ -146,6 +146,20 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
               <p className="ez-incl">{t.incluido} <strong>{t.sinComision}</strong></p>
             </fieldset>
 
+            {/* Celular: qué incluye, plegable por grupo (el primero abierto) para
+                no enterrar el formulario. En la compu lo muestra el costado. */}
+            <section className="ez-incluye" aria-labelledby="ez-incluye-h">
+              <h2 className="ez-h2" id="ez-incluye-h">{t.incluye.h}</h2>
+              {t.incluye.grupos.map((g, i) => (
+                <details key={g.t} className="ez-incluye__grupo" open={i === 0}>
+                  <summary className="ez-incluye__t">{g.t}<span className="ez-incluye__n">{g.items.length}</span></summary>
+                  <ul className="ez-resumen__list">
+                    {g.items.map((x) => <li key={x}><Check aria-hidden="true" className="ez-tick" />{x}</li>)}
+                  </ul>
+                </details>
+              ))}
+            </section>
+
             <fieldset className="ez-datos">
               <legend className="ez-h2">{t.tuMarca}</legend>
 
@@ -223,15 +237,20 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
         {elegido.eventos > 1 && (
           <p className="ez-resumen__meta">{formatoPrecio(Math.round(elegido[moneda] / elegido.eventos / 100) * 100, moneda)} {t.porEvento} · {t.pagoUnico}</p>
         )}
-        <ul className="ez-resumen__list">
-          {t.resumen(elegido.eventos).map((x) => (
-            <li key={x}><Check aria-hidden="true" className="ez-tick" />{x}</li>
-          ))}
-        </ul>
         <p className="ez-resumen__url">
           <span className="ez-ok" aria-hidden="true" />
           {slug || t.linkPh}.parygo.com
         </p>
+        {/* Compu: todo lo que incluye, a la vista mientras completa los datos. */}
+        <p className="ez-resumen__h">{t.incluye.h}</p>
+        {t.incluye.grupos.map((g) => (
+          <div key={g.t} className="ez-resumen__grupo">
+            <p className="ez-resumen__gt">{g.t}</p>
+            <ul className="ez-resumen__list">
+              {g.items.map((x) => <li key={x}><Check aria-hidden="true" className="ez-tick" />{x}</li>)}
+            </ul>
+          </div>
+        ))}
       </aside>
     </main>
   );

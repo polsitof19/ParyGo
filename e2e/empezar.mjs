@@ -142,6 +142,11 @@ try {
     const u = new URL(p.url());
     const marcado = await p.locator('.ez-plan input[type=radio]:checked').getAttribute('value');
     check('Q', 'marca: formulario con el pack y la moneda que traía', u.searchParams.get('pack') === '3' && u.searchParams.get('moneda') === 'PEN' && marcado === '3' && (await p.locator('#ez-email').count()) === 1, p.url().replace(BASE, ''));
+    // Antes de pagar ve TODO lo que incluye (celular: 5 grupos plegables, el
+    // primero abierto; la compu lo muestra en el costado).
+    const grupos = await p.locator('.ez-incluye__grupo').count();
+    const abierto = await p.locator('.ez-incluye__grupo[open]').count();
+    check('Q', 'marca: "Todo lo que incluye" antes del formulario (5 grupos, 1 abierto)', /Todo lo que incluye cada evento/.test(await texto(p)) && grupos === 5 && abierto === 1, `grupos=${grupos} abiertos=${abierto}`);
 
     await p.goto(`${BASE}/empezar?pack=3`, { waitUntil: 'networkidle' });
     await p.getByRole('link', { name: /Un evento privado/ }).click();

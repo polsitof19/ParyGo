@@ -61,7 +61,8 @@ export function Pricing({ t }: { t: Dict }) {
 
         {/* El detalle de TODO lo que incluye (Paul, 2026-09-28: el sistema hace
             mucho y la página no lo contaba). Solo lo que existe hoy: lo que está
-            por construir no va acá. */}
+            por construir no va acá. La MISMA lista vive en apps/web/app/empezar/
+            textos.ts (incluye), a la vista antes de pagar: si cambias una, la otra. */}
         <div className="detalle reveal">
           <h3 className="h3 detalle__h">{c.detalle.h3}</h3>
           <p className="detalle__lede">{c.detalle.lede}</p>
