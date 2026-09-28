@@ -5,7 +5,6 @@ import { empezar } from '@/lib/cta';
 import type { Dict } from '@/lib/i18n';
 import { SITE } from '@/lib/site';
 import { Idioma } from '@/components/Idioma';
-import { Logo } from '@/components/Logo';
 
 export function Header({ t }: { t: Dict }) {
   const [scrolled, setScrolled] = useState(false);
@@ -22,7 +21,7 @@ export function Header({ t }: { t: Dict }) {
     <header className={`header${scrolled ? ' scrolled' : ''}`} id="header">
       <div className="container header__inner">
         <a href="#top" className="logo" aria-label="ParyGo">
-          <Logo />
+          parygo<span className="dot">.</span>
         </a>
         <nav className="nav" aria-label="primary">
           <a href="#como">{h.nav[0]}</a>

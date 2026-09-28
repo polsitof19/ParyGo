@@ -225,9 +225,6 @@ h1, h2, h3, h4, p { margin: 0; }
   align-items: baseline;
 }
 .logo .dot { color: var(--tangerine); }
-/* La "p." del logo (components/Logo.tsx) al lado del wordmark. */
-.logo { gap: 0.36em; align-items: center; }
-.logo__marca { width: 1.2em; height: 1.2em; flex: none; }
 .nav {
   display: flex;
   align-items: center;
