@@ -1,5 +1,5 @@
-// Shell de email con la identidad cálida (mismo sistema que el email del ticket):
-// fondo crema, tarjeta blanca, logo de la marca, color de marca con contraste
+// Shell de email NEUTRO (mismo sistema que el email del ticket, 2026-09-28):
+// fondo blanco, tinta #0A0A0A, logo de la marca, color de marca con contraste
 // automático. Email-safe: tablas + estilos inline, fuentes web-safe.
 import { brandColor, brandInk, brandFillPair } from '@/lib/brandColors';
 
@@ -10,7 +10,7 @@ export function escapeHtml(s: string): string {
 }
 
 const FONT = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
-const CREAM = '#FBF7F0', CREAM3 = '#EFE6D6', INK = '#231C17', INK2 = '#6B5F54', INK3 = '#A89B8C';
+const BG = '#FFFFFF', LINE = '#E5E5E5', INK = '#0A0A0A', INK2 = '#525252', INK3 = '#6B6B6B';
 const ALERT = '#C0392B';
 
 export type WarmEmailOpts = {
@@ -33,7 +33,7 @@ export function renderWarmEmail(o: WarmEmailOpts): { html: string } {
   // El BOTÓN usa el par medido a 4.5:1 (brandFillPair), no el color crudo: el
   // promotor elige cualquier color y no hay forma de garantizar que el texto se
   // lea encima. El crudo se queda en la banda de 6px, que no lleva texto.
-  const par = brandFillPair(primary);
+  const par = brandFillPair(primary, 'neutra');
   const onBrand = par.on;
   const ink = brandInk(o.primaryColor ?? undefined);
   const band = o.tone === 'alert' ? ALERT : primary;
@@ -48,7 +48,7 @@ export function renderWarmEmail(o: WarmEmailOpts): { html: string } {
     .join('');
 
   const highlight = o.highlight
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0 16px"><tr><td style="border:2px dashed ${CREAM3};border-radius:14px;padding:16px;text-align:center">
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0 16px"><tr><td style="border:2px dashed ${LINE};border-radius:14px;padding:16px;text-align:center">
         <p style="margin:0 0 4px;font-family:${FONT};font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:${INK3}">${escapeHtml(o.highlight.label)}</p>
         <p style="margin:0;font-family:${FONT};font-size:30px;font-weight:800;letter-spacing:.08em;color:${ink}">${escapeHtml(o.highlight.value)}</p>
       </td></tr></table>`
@@ -60,9 +60,9 @@ export function renderWarmEmail(o: WarmEmailOpts): { html: string } {
 
   return {
     html: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(o.title)}</title></head>
-<body style="margin:0;padding:0;background:${CREAM}">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CREAM}"><tr><td align="center" style="padding:32px 16px">
-  <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border:1px solid ${CREAM3};border-radius:20px;overflow:hidden">
+<body style="margin:0;padding:0;background:${BG}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG}"><tr><td align="center" style="padding:32px 16px">
+  <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border:1px solid ${LINE};border-radius:20px;overflow:hidden">
     <tr><td style="height:6px;background:${band};font-size:0;line-height:0">&nbsp;</td></tr>
     <tr><td style="padding:26px 32px 0">${logo}</td></tr>
     <tr><td style="padding:18px 32px 0">

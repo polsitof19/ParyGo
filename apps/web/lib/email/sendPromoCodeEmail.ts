@@ -41,7 +41,7 @@ export async function sendPromoCodeEmail(codeId: string, toEmail: string): Promi
     ],
     highlight: { label: 'Tu código', value: code.code },
     button: { label: 'Ir al evento →', url: eventUrl },
-    footerHtml: `<p style="margin:0;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:12.5px;line-height:1.5;color:#6B5F54">Comparte el link del evento; tus invitados ingresan el código <strong>${escapeHtml(code.code)}</strong> al comprar.</p>`,
+    footerHtml: `<p style="margin:0;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:12.5px;line-height:1.5;color:#525252">Comparte el link del evento; tus invitados ingresan el código <strong>${escapeHtml(code.code)}</strong> al comprar.</p>`,
   });
 
   const text = [

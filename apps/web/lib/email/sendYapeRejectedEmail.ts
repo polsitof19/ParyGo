@@ -38,7 +38,7 @@ export async function sendYapeRejectedEmail(orderId: string, reason: string | nu
     paragraphs,
     button: { label: 'Volver a intentar →', url: eventUrl },
     footerHtml: wa
-      ? `<p style="margin:0;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:12.5px;line-height:1.5;color:#6B5F54">¿Dudas? <a href="https://wa.me/${wa}" style="color:#6B5F54;font-weight:600">WhatsApp ${escapeHtml(brandName)}</a></p>`
+      ? `<p style="margin:0;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:12.5px;line-height:1.5;color:#525252">¿Dudas? <a href="https://wa.me/${wa}" style="color:#525252;font-weight:600">WhatsApp ${escapeHtml(brandName)}</a></p>`
       : null,
   });
 

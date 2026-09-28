@@ -38,7 +38,7 @@ export async function sendEventCancelledEmail(args: {
   // marca: el promotor elige cualquier color y no hay forma de garantizar que
   // el texto se lea encima. El color crudo se sigue usando en la banda de 6px,
   // que no lleva texto. Misma regla que la web y que la previa del super admin.
-  const par = brandFillPair(primary);
+  const par = brandFillPair(primary, 'neutra');
   const onBrand = par.on;
   const brandBtn = par.fill;
   const ink = brandInk(theme.primary_color);
@@ -91,13 +91,13 @@ function renderHtml(p: {
   brand: BrandForEmail; primary: string; onBrand: string; brandBtn: string; ink: string; logoUrl: string | null; supportWhatsapp: string;
 }): string {
   const FONT = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
-  const CREAM = '#FBF7F0', CREAM3 = '#EFE6D6', INK = '#231C17', INK2 = '#6B5F54', INK3 = '#A89B8C';
+  const BG = '#FFFFFF', LINE = '#E5E5E5', INK = '#0A0A0A', INK2 = '#525252', INK3 = '#6B6B6B';
   const brandName = p.brand.name;
   const brandHeader = p.logoUrl
     ? `<img src="${escapeHtml(p.logoUrl)}" alt="${escapeHtml(brandName)}" height="44" style="display:block;height:44px;width:auto;max-height:44px;border:0;outline:none;text-decoration:none">`
     : `<span style="font-family:${FONT};font-size:20px;font-weight:800;letter-spacing:-0.02em;color:${INK}">${escapeHtml(brandName)}</span>`;
   const brandWaButton = p.brand.whatsapp_e164
-    ? `<a href="${whatsappLink(p.brand.whatsapp_e164.replace(/[^\d]/g, ''), `Hola, consulta sobre la cancelación de ${p.eventName}`)}" style="display:inline-block;padding:11px 20px;background:#ffffff;border:1.5px solid ${CREAM3};border-radius:999px;color:${INK};text-decoration:none;font-family:${FONT};font-weight:600;font-size:13px">WhatsApp ${escapeHtml(brandName)}</a>`
+    ? `<a href="${whatsappLink(p.brand.whatsapp_e164.replace(/[^\d]/g, ''), `Hola, consulta sobre la cancelación de ${p.eventName}`)}" style="display:inline-block;padding:11px 20px;background:#ffffff;border:1.5px solid ${LINE};border-radius:999px;color:${INK};text-decoration:none;font-family:${FONT};font-weight:600;font-size:13px">WhatsApp ${escapeHtml(brandName)}</a>`
     : '';
   const supportLine = p.supportWhatsapp
     ? `<p style="margin:14px 0 0;font-family:${FONT};font-size:12px;line-height:1.5;color:${INK3}">&iquest;Dudas? Soporte ParyGo: <a href="https://wa.me/${p.supportWhatsapp.replace(/[^\d]/g, '')}" style="color:${p.ink};font-weight:600;text-decoration:none">WhatsApp</a></p>`
@@ -106,15 +106,15 @@ function renderHtml(p: {
     ? `<p style="margin:14px 0 0;font-family:${FONT};font-size:14px;line-height:1.55;color:${INK2}"><strong style="color:${INK}">Motivo:</strong> ${escapeHtml(p.reason)}</p>`
     : '';
   const refundLine = p.brand.whatsapp_e164
-    ? `Para coordinar la devoluci&oacute;n de tu pago, escrib&iacute; a ${escapeHtml(brandName)}.`
+    ? `Para coordinar la devoluci&oacute;n de tu pago, escrescrib&iacute; aiacute;bele a ${escapeHtml(brandName)}.`
     : `${escapeHtml(brandName)} se contactar&aacute; por la devoluci&oacute;n de tu pago.`;
 
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(p.eventName)}</title></head>
-<body style="margin:0;padding:0;background:${CREAM};-webkit-text-size-adjust:100%">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CREAM}">
+<body style="margin:0;padding:0;background:${BG};-webkit-text-size-adjust:100%">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG}">
   <tr><td align="center" style="padding:32px 16px">
-    <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border:1px solid ${CREAM3};border-radius:20px;overflow:hidden">
+    <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border:1px solid ${LINE};border-radius:20px;overflow:hidden">
       <tr><td style="height:6px;background:${p.primary};font-size:0;line-height:0">&nbsp;</td></tr>
       <tr><td style="padding:26px 32px 0">${brandHeader}</td></tr>
       <tr><td style="padding:18px 32px 0">

@@ -200,8 +200,12 @@ para OK de Paul.
   parygo-panel.css, blanco neutro #FFFFFF / #F4F4F5, tinta #0A0A0A, medido
   por scripts/check-panel-contrast.mjs (en test:contrast). El número sobre
   el acento usa --on-accent (#0A0A0A en los dos temas), nunca --on-white.
-  PENDIENTES para otra rama (siguen en crema): la landing y los emails de
-  recordatorio, cancelado, cambio de fecha y Yape.
+  Los emails de recordatorio, cancelado, cambio de fecha, Yape (recuperación y
+  aviso al organizador) y el shell renderWarmEmail (promo, Yape rechazado) van
+  en BLANCO como la entrada desde 2026-09-28 (#FFFFFF, tinta #0A0A0A, línea
+  #E5E5E5, botón brandFillPair 'neutra'); e2e/correos-neutros.mts falla si
+  vuelve un crema o un voseo. PENDIENTES (siguen en crema): la landing y los
+  correos del alta con pack (sendAltaEmails, al organizador).
 - Botón primario = TINTA sobre acento (5.91:1 medido) en la landing. Blanco
   sobre naranja da 2.85:1 y FALLA AA — no usarlo nunca. En los PANELES (noche)
   el primario es RELLENO DE TINTA (blanco en noche, #0A0A0A en claro); el acento
