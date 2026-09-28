@@ -194,6 +194,8 @@ try {
     await continuar(p);
     await linkResuelto(p);
     await continuar(p);
+    const t4 = await texto(p);
+    check('Q', 'paso 4: "¿Cuál es tu correo?" dice que sirve para ingresar y para los avisos', /¿Cuál es tu correo\?/.test(t4) && /Para ingresar a tu panel/.test(t4) && /Para tus avisos/.test(t4));
     await p.fill('#ez-email', `qa${STAMP}@example.com`);
     await p.fill('#ez-wa', '123');
     await continuar(p);

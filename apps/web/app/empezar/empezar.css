@@ -420,6 +420,11 @@
 .ez-field--q .ez-input { font-size: var(--ez-price); min-height: var(--ez-btn-h); }
 button.ez-volver { background: none; border: 0; padding: 0; margin: 0; font: inherit; font-size: var(--ez-meta); font-weight: 700; color: var(--ink); cursor: pointer; }
 /* Revisar antes de pagar: cada dato con su "Editar" (vuelve a ese paso). */
+/* Para qué sirve el correo (paso 4): dos filas con ícono. */
+.ez-usos { list-style: none; padding: 0; margin: 0 0 var(--ez-s3); display: grid; gap: var(--ez-s2); }
+.ez-usos li { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: var(--ez-s2); align-items: start; font-size: var(--ez-meta); color: var(--ink-2); }
+.ez-usos b { display: block; color: var(--ink); font-size: var(--ez-body); }
+.ez-usos__ico { width: 20px; height: 20px; margin-top: 2px; color: var(--ink); }
 .ez-revisa { margin: 0 0 var(--ez-s4); border-top: 1px solid var(--line); }
 .ez-revisa > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--ez-s2); align-items: center; padding: var(--ez-s1) 0; border-bottom: 1px solid var(--line); }
 .ez-revisa dt { grid-column: 1; font-size: var(--ez-small); color: var(--ink-2); }
