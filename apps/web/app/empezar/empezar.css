@@ -546,6 +546,11 @@ button.ez-volver { background: none; border: 0; padding: 0; margin: 0; font: inh
   /* La pregunta de cada paso, un escalón debajo del título grande. */
   .ez-h1--q { font-size: var(--ez-total); }
   .ez-vp--movil { display: none; }
+  /* Desde el paso 2 el costado lleva el iPhone: sube y el teléfono se
+     achica para entrar entero en una pantalla de 900 px de alto. */
+  .ez-resumen--vp { margin-top: var(--ez-s5); }
+  .ez-resumen--vp .ez-vp { margin-top: var(--ez-s3); }
+  .ez-resumen--vp .ez-vp__iphone { width: 220px; }
 }
 
 /* — Moneda de pago: soles (Mercado Pago) o dólares (PayPal). Control

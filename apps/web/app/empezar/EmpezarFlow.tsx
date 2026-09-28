@@ -353,7 +353,7 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
         </form>
       </div>
 
-      <aside className="ez-resumen" aria-label={t.tuPlan}>
+      <aside className={`ez-resumen${paso > 0 ? " ez-resumen--vp" : ""}`} aria-label={t.tuPlan}>
         <p className="ez-resumen__label">{t.tuPlan}</p>
         <p className="ez-resumen__plan">{planTxt}</p>
         <p className="ez-resumen__precio">{precio(elegido)}</p>
