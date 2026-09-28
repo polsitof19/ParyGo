@@ -75,9 +75,13 @@ for (const ancho of [390, 1440]) {
     check(`${tag} · responde 200`, r?.status() === 200, r?.status());
     check(`${tag} · tema noche y fondo #0A0A0A`, /\bpg-noche\b/.test(m.tema) && m.fondo === 'rgb(10, 10, 10)', `${m.tema} · ${m.fondo}`);
     check(`${tag} · Geist cargada; ni Bricolage ni Hanken`, m.cargadas.some((f) => /geist/i.test(f)) && !m.cargadas.some((f) => /bricolage|hanken/i.test(f)), m.cargadas.join(', '));
-    check(`${tag} · peso real del título (${m.pesoReal?.peso})`, !!m.pesoReal && Number(m.pesoReal.peso) >= 700 && m.pesoReal.wPeso > m.pesoReal.w400, JSON.stringify(m.pesoReal));
+    // Sin evento a la venta (el de la URL ya pasó, o la home no lista
+    // ninguno) no hay título ni flyer que medir: se avisa y se saltea, no es
+    // falla de la app. Tema, fuente y logo se siguen midiendo.
+    if (!m.pesoReal) { console.log(`– ${tag} · sin evento a la venta: título y flyer no se miden`); }
+    else check(`${tag} · peso real del título (${m.pesoReal?.peso})`, !!m.pesoReal && Number(m.pesoReal.peso) >= 700 && m.pesoReal.wPeso > m.pesoReal.w400, JSON.stringify(m.pesoReal));
     check(`${tag} · logo de la marca cargado (imagen)`, !!m.logo && m.logo.w > 0, JSON.stringify(m.logo));
-    if (pg.id === 'code-standly') {
+    if (pg.id === 'code-standly' && m.pesoReal) {
       check(`${tag} · dirección Canvas`, /\bb-canvas\b/.test(m.dir ?? ''), m.dir);
       check(`${tag} · banda del flyer (216 en teléfono, 360×450 en escritorio)`, movil ? m.banda?.h === 216 : (m.banda?.w === 360 && m.banda?.h === 450), JSON.stringify(m.banda));
     }
