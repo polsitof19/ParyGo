@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
-import { ArrowRight, Check, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Bell, Check, Eye, EyeOff, LogIn } from 'lucide-react';
 import { pagarAlta, slugDisponible, type AltaState } from './actions';
 import { CLAVE_ALTA } from './listo/Completar';
 import { TEXTOS, formatoPrecio, type Lang, type Moneda } from './textos';
@@ -292,6 +292,14 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
                   aria-invalid={!!err.email} aria-describedby="e-email" />
                 <p id="e-email" className={err.email ? 'ez-err' : 'ez-hint'}>{err.email ?? t.correoHint}</p>
               </div>
+              <ul className="ez-usos">
+                {t.w.correoUsos.map((u, i) => (
+                  <li key={u.t}>
+                    {i === 0 ? <LogIn aria-hidden="true" className="ez-usos__ico" /> : <Bell aria-hidden="true" className="ez-usos__ico" />}
+                    <span><b>{u.t}</b>{u.d}</span>
+                  </li>
+                ))}
+              </ul>
               <div className="ez-field">
                 <label htmlFor="ez-wa" className="ez-label">{t.wa} <span className="ez-opt">{t.opcional}</span></label>
                 <input id="ez-wa" type="tel" className="ez-input" value={whatsapp} onChange={(e) => { setWhatsapp(e.target.value); limpiar('whatsapp'); }}
