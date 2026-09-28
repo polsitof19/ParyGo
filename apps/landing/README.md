@@ -30,7 +30,7 @@ parygo/
 │   ├── layout.tsx            # Fuentes + metadata + viewport
 │   ├── page.tsx              # Composición de secciones
 │   ├── globals.css           # Design tokens + utilidades
-│   ├── icon.svg              # Favicon
+│   ├── (íconos en public/: favicon.ico, favicon.svg, icon.png, apple-icon.png)
 │   ├── sitemap.ts            # Sitemap automático
 │   ├── robots.ts             # robots.txt automático
 │   └── manifest.ts           # PWA manifest
