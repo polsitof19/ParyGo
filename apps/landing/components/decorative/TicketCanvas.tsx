@@ -181,13 +181,6 @@ export function TicketCanvas({ mountId, textos }: { mountId: string; textos: Tex
       const ticket = new THREE.Mesh(geo, [front, side]);
       group.add(ticket);
 
-      const sphereA = new THREE.Mesh(new THREE.SphereGeometry(0.22, 32, 32), new THREE.MeshPhysicalMaterial({ color: '#5B6CFF', roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.1 }));
-      sphereA.position.set(1.7, 1.05, 0.6);
-      group.add(sphereA);
-      const sphereB = new THREE.Mesh(new THREE.SphereGeometry(0.15, 32, 32), new THREE.MeshPhysicalMaterial({ color: '#FFFFFF', roughness: 0.25, clearcoat: 1 }));
-      sphereB.position.set(-1.6, -0.95, 0.7);
-      group.add(sphereB);
-
       scene.add(new THREE.AmbientLight('#fff4e8', 0.85));
       const key = new THREE.DirectionalLight('#ffffff', 1.5);
       key.position.set(3, 4, 5);
@@ -195,7 +188,7 @@ export function TicketCanvas({ mountId, textos }: { mountId: string; textos: Tex
       const warm = new THREE.DirectionalLight('#FFB48E', 0.7);
       warm.position.set(-4, -1, 2);
       scene.add(warm);
-      const rim = new THREE.PointLight('#5B6CFF', 0.6, 20);
+      const rim = new THREE.PointLight('#FFB38F', 0.6, 20); // cálida: el lavanda no es de la marca
       rim.position.set(-3, 2, -2);
       scene.add(rim);
 

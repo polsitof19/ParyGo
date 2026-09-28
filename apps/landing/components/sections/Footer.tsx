@@ -11,7 +11,7 @@ export function Footer({ t }: { t: Dict }) {
       <div className="container">
         <div className="footer__grid">
           <div className="footer__col footer__brand">
-            <a href="#top" className="logo">parygo<span className="dot">.</span></a>
+            <a href="#top" className="logo" aria-label="ParyGo">parygo<span className="dot">.</span></a>
             <p>{f.brand}</p>
             <Idioma lang={t.lang} label={t.idioma.label} className="idioma--footer" />
           </div>

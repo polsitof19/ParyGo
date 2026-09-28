@@ -34,7 +34,6 @@ export function Hero({ t }: { t: Dict }) {
     <section className="section hero" aria-labelledby="hero-title">
       <div className="hero__blobs" aria-hidden="true">
         <div className="b1" />
-        <div className="b2" />
         <div className="b3" />
       </div>
 
@@ -42,9 +41,9 @@ export function Hero({ t }: { t: Dict }) {
         <div className="hero__grid">
           <div>
             <h1 className="h1 hero__title" id="hero-title">
-              <span className="ink">{l1.nodes}</span>
+              <span className="ink hero__linea">{l1.nodes}</span>
               <br />
-              {l2.nodes}
+              <span className="hero__linea">{l2.nodes}</span>
               <br />
               {/* El punto va pegado a la frase resaltada: suelto, en inglés ("your revenue") caía solo en otro renglón. */}
               <span className="hero__cierre">
@@ -65,6 +64,8 @@ export function Hero({ t }: { t: Dict }) {
               </a>
             </div>
             <div className="hero__chips reveal">
+              {/* "Desde S/ 50 por evento" va acá el día que exista el evento privado de S/ 50
+                  (Paul, 2026-09-28). Hasta entonces sin chip de precio: el más barato hoy es S/ 150. */}
               {h.chips.map((c) => (
                 <span key={c} className="chip"><Check className="tick" aria-hidden="true" /> {c}</span>
               ))}

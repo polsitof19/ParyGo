@@ -15,7 +15,7 @@ export type Dict = {
   meta: { title: string; description: string; keywords: string[] };
   idioma: { label: string };
   header: { nav: [string, string, string, string]; login: string; loginAria: string; cta: string };
-  hero: { l1: string; l2: string; l3: string; sub: string; cta: string; ver: string; chips: [string, string, string]; ticket: { titulo: string; noche: string; fecha: string; escanea: string; puerta: string } };
+  hero: { l1: string; l2: string; l3: string; sub: string; cta: string; ver: string; chips: [string, string, string]; desde: [string, string]; ticket: { titulo: string; noche: string; fecha: string; escanea: string; puerta: string } };
   uses: { h2: Resaltado; items: string[]; note: Resaltado };
   how: { h2: Resaltado; paso: string; steps: { t: string; d: string }[] };
   seg: { h2: Resaltado; lede: string; flujo: { publico: string; publicoTxt: string; paga: string; cuenta: string; cuentaTxt: string; parygo: string; parygoTxt: string; aria: string }; puntos: { t: string; d: string }[] };
@@ -24,7 +24,7 @@ export type Dict = {
   demo: { h2: Resaltado; items: { t: string; d: string }[]; tag: string; evt1: string; evt2: string; meta: string; tk1: [string, string]; tk2: [string, string]; buy: string };
   comp: { h2: Resaltado; lede: string; items: { t: string; d: string }[] };
   cmp: { h2: Resaltado; aria: string; p: string; o: string; filas: { t: string; p: string; o: string }[] };
-  precios: { h2: Resaltado; lede: string; evento: string; eventos: string; qty: Record<number, string>; perks: Record<number, string[]>; badge: string; porEvento: string; ahorras: string; pagoUnico: string; elegir: string; note: string; noteUsd: string };
+  precios: { h2: Resaltado; lede: string; evento: string; eventos: string; qty: Record<number, string>; perks: Record<number, string[]>; badge: string; porEvento: string; ahorras: string; pagoUnico: string; elegir: string; note: string; noteUsd: string; detalle: { h3: string; lede: string; grupos: { t: string; items: string[] }[] } };
   faq: { h2: Resaltado; lede: string; items: { q: string; a: string }[] };
   final: { h2: string; p: string; cta: string; precios: string };
   footer: { brand: string; producto: string; ayuda: string; legal: string; links: { como: string; seguridad: string; incluye: string; precios: string; crear: string; preguntas: string; panel: string; terminos: string; privacidad: string }; copy: string; made: string };
@@ -46,6 +46,7 @@ const es: Dict = {
     sub: 'Vende las entradas de tus eventos con tu propia marca. Tu público paga directamente a tu cuenta, sin comisiones por entrada, y tú controlas cada acceso.',
     cta: 'Comenzar', ver: 'Ver cómo funciona',
     chips: ['Pagos directos a tu cuenta', 'Sin comisión por entrada', 'Tu página lista en minutos'],
+    desde: ['Desde ', ' por evento'],
     ticket: { titulo: 'VERANO SUNSET', noche: 'NOCHE 04', fecha: 'SÁB 24 ENE · 10:00 PM · CLUB DELMAR', escanea: 'ESCANEA', puerta: 'EN PUERTA' },
   },
   uses: {
@@ -151,6 +152,48 @@ const es: Dict = {
     },
     badge: 'Más elegido', porEvento: 'por evento', ahorras: 'Ahorras', pagoUnico: 'Pago único', elegir: 'Elegir',
     note: 'Cada evento incluye entradas ilimitadas y todas las funciones.',
+    detalle: {
+      h3: 'Todo lo que incluye cada evento, en detalle',
+      lede: 'Cada paquete trae el sistema completo. Esto es lo que tienes tú y lo que vive tu público.',
+      grupos: [
+        { t: 'Tu página y tus entradas', items: [
+          'Tu propia página con tu marca, logo y colores (tumarca.parygo.com)',
+          'Entradas ilimitadas: los tipos que quieras (General, VIP, preventas)',
+          'Preventas que cambian de precio solas en la fecha que elijas',
+          'Entradas privadas por link, con límite de entradas por persona',
+          'Eventos gratuitos con registro',
+          'Marca una entrada como agotada cuando quieras',
+        ] },
+        { t: 'Tus cobros', items: [
+          'Cobras directo en tu propio método de pago: la plata de las entradas es tuya, ParyGo no la toca',
+          'Apruebas cada pago desde tu panel: ves el comprobante, confirmas y la entrada se envía sola',
+          'Te avisamos por correo cuando tienes pagos por aprobar',
+          'Sin comisión por entrada: pagas lo mismo vendas 10 o 1.000',
+        ] },
+        { t: 'Tu equipo y la puerta', items: [
+          'Escáner en la puerta desde tu iPhone o Android, sin instalar nada',
+          'Ves en el momento quién entró y cuándo',
+          'Tu equipo de puerta, cada uno con su propio acceso',
+          'Cortesías y listas de invitados con QR',
+        ] },
+        { t: 'Tus ventas', items: [
+          'Códigos de descuento y links para tus promotores, con lo que vendió cada uno',
+          'Estadísticas de ventas y asistencia en tiempo real',
+          'Lista de compradores, descargable en Excel',
+          'Reporte del evento al terminar, para guardar en PDF',
+          'Tu panel en español o inglés',
+        ] },
+        { t: 'Tu público', items: [
+          'Compra sin crear cuenta: elige, pone su nombre y correo, y paga',
+          'Paga con el método que tú elijas',
+          'Su entrada con QR le llega automáticamente al correo',
+          'La guarda como imagen o la manda por WhatsApp',
+          'Si pierde el correo, la pide de nuevo sin escribirte',
+          'Agrega el evento a su calendario',
+          'Todo desde el navegador, en iPhone, Android o computadora',
+        ] },
+      ],
+    },
     noteUsd: ' Los pagos en dólares se procesan de forma segura con PayPal, con tu cuenta o con tarjeta.',
   },
   faq: {
@@ -179,7 +222,7 @@ const es: Dict = {
     producto: 'Producto', ayuda: 'Ayuda', legal: 'Legal',
     links: { como: 'Cómo funciona', seguridad: 'Seguridad', incluye: 'Qué incluye', precios: 'Precios', crear: 'Crear mi marca', preguntas: 'Preguntas frecuentes', panel: 'Ingresar al panel', terminos: 'Términos', privacidad: 'Privacidad' },
     copy: '© 2015 ParyGo. Todos los derechos reservados.',
-    made: 'Vende con tu marca. Cobra directamente.',
+    made: 'Hecho en Lima, Perú.',
   },
 };
 
@@ -199,6 +242,7 @@ const en: Dict = {
     sub: 'Sell tickets for your events under your own brand. Your audience pays directly into your account, with no per-ticket fees, and you control every entry.',
     cta: 'Get started', ver: 'See how it works',
     chips: ['Payments straight to your account', 'No per-ticket fees', 'Your page ready in minutes'],
+    desde: ['From ', ' per event'],
     ticket: { titulo: 'SUMMER SUNSET', noche: 'NIGHT 04', fecha: 'SAT JAN 24 · 10:00 PM · CLUB DELMAR', escanea: 'SCAN', puerta: 'AT THE DOOR' },
   },
   uses: {
@@ -304,6 +348,48 @@ const en: Dict = {
     },
     badge: 'Most popular', porEvento: 'per event', ahorras: 'You save', pagoUnico: 'One-time payment', elegir: 'Choose',
     note: 'Every event includes unlimited tickets and every feature.',
+    detalle: {
+      h3: 'Everything each event includes, in detail',
+      lede: 'Every package comes with the full system. Here is what you get and what your audience experiences.',
+      grupos: [
+        { t: 'Your page and your tickets', items: [
+          'Your own page with your brand, logo and colors (yourbrand.parygo.com)',
+          'Unlimited tickets: any ticket types you want (General, VIP, presales)',
+          'Presales that change price on their own on the date you choose',
+          'Private tickets by link, with a per-person limit',
+          'Free events with registration',
+          'Mark a ticket type as sold out whenever you want',
+        ] },
+        { t: 'Your payments', items: [
+          'Get paid directly through your own payment method: ticket money is yours, ParyGo never touches it',
+          'Approve each payment from your dashboard: see the receipt, confirm, and the ticket is sent automatically',
+          'We email you when you have payments to approve',
+          'No per-ticket fee: you pay the same whether you sell 10 or 1,000',
+        ] },
+        { t: 'Your team and the door', items: [
+          'Door scanner on your iPhone or Android, nothing to install',
+          'See who got in and when, in real time',
+          'Your door team, each with their own access',
+          'Complimentary tickets and guest lists with QR',
+        ] },
+        { t: 'Your sales', items: [
+          'Discount codes and promoter links, with what each one sold',
+          'Real-time sales and attendance stats',
+          'Buyer list, downloadable to Excel',
+          'Post-event report, ready to save as PDF',
+          'Your dashboard in English or Spanish',
+        ] },
+        { t: 'Your audience', items: [
+          'Buys without creating an account: picks, enters name and email, and pays',
+          'Pays with the method you choose',
+          'Their QR ticket arrives in their inbox automatically',
+          'Saves it as an image or sends it on WhatsApp',
+          'If they lose the email, they get it again without contacting you',
+          'Adds the event to their calendar',
+          'All from the browser, on iPhone, Android or computer',
+        ] },
+      ],
+    },
     noteUsd: ' Payments in US dollars are processed securely through PayPal, with your account or a card.',
   },
   faq: {
@@ -332,7 +418,7 @@ const en: Dict = {
     producto: 'Product', ayuda: 'Help', legal: 'Legal',
     links: { como: 'How it works', seguridad: 'Security', incluye: 'What\'s included', precios: 'Pricing', crear: 'Create my brand', preguntas: 'FAQ', panel: 'Log in to the dashboard', terminos: 'Terms', privacidad: 'Privacy' },
     copy: '© 2015 ParyGo. All rights reserved.',
-    made: 'Sell under your brand. Get paid directly.',
+    made: 'Made in Lima, Peru.',
   },
 };
 
