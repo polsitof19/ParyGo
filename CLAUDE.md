@@ -438,6 +438,16 @@ dueña) se libera al pedirlo. Las páginas "listo" van con fetchCache
 e2e/empezar.mjs 37/37 (el pago aprobado se simula con settle_pack_purchase;
 el re-fetch real a MP necesita credenciales de prueba).
 
+PREGUNTA EN /empezar (2026-09-28, Paul): sin ?tipo= la primera pantalla es
+"¿Qué vas a organizar?" (TipoDeEvento.tsx): "Una marca o productora" →
+?tipo=marca, el formulario de siempre con pack/moneda/lang de la landing;
+"Un evento privado" → ?tipo=privado, "Muy pronto" con WhatsApp de soporte
+(NEXT_PUBLIC_SUPPORT_WHATSAPP) y correo, SIN formulario ni cobro (el evento
+privado de S/ 50 / 200 entradas todavía no existe). cancelado=1 (vuelta de
+MP) y "Intentar nuevamente" de /listo saltan la pregunta. Sin JS: links.
+e2e/empezar.mjs paso Q; toda navegación de prueba al formulario va con
+tipo=marca. Cuando exista el evento privado, esta pantalla lo abre.
+
 SIN PRUEBA GRATIS (2026-09-26, Paul: "mejor que compren directo"): /empezar
 ofrece SOLO los paquetes 1/3/5/10 (un link viejo ?pack=prueba cae en 1); se
 sacaron enviarCodigo/confirmarAlta, el código por correo (sendCodigoAlta) y
