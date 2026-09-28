@@ -178,6 +178,15 @@ try {
     check('Q', 'paso 2: "¿Cómo se llama tu marca?", no avanza vacío y la barra muestra el enlace armado al escribir', sinNombre && /Paso 2 de 5/.test(await texto(p)) && /noches-qa\.parygo\.com/.test(vp), vp.replace(/\s+/g, ' ').slice(0, 90));
     await continuar(p);
     check('Q', 'paso 3: "¿Cómo quieres tu enlace?" con el enlace armado desde el nombre', /Paso 3 de 5/.test(await texto(p)) && (await p.inputValue('#ez-slug')) === 'noches-qa');
+    // La barra del celular dibujado: check verde si está libre, ✕ si no.
+    await linkResuelto(p);
+    const okLibre = (await p.locator('.ez-vp--movil .ez-vp__ok').count()) === 1;
+    await p.fill('#ez-slug', 'code');
+    await p.locator('.ez-vp--movil .ez-vp__no').waitFor({ timeout: 10000 }).catch(() => {});
+    const noTomado = (await p.locator('.ez-vp--movil .ez-vp__no').count()) === 1 && (await p.locator('.ez-vp--movil .ez-vp__ok').count()) === 0;
+    check('Q', 'la barra muestra check verde con un enlace libre y ✕ con uno ocupado', okLibre && noTomado, `libre=${okLibre} ocupado=${noTomado}`);
+    await p.fill('#ez-slug', 'noches-qa');
+    await linkResuelto(p);
     await p.getByRole('button', { name: /Atrás/ }).click();
     check('Q', '"Atrás" vuelve al nombre sin perderlo', (await p.inputValue('#ez-nombre')) === 'Noches Qa');
     // WhatsApp mal escrito: frena en SU paso (antes recién lo decía el

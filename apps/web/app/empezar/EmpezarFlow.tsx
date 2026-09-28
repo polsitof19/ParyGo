@@ -257,6 +257,8 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
                 <input id="ez-nombre" className="ez-input" value={nombre} onChange={(e) => { setNombre(e.target.value); limpiar('nombre'); }}
                   maxLength={60} autoComplete="organization" placeholder={t.nombrePh} aria-invalid={!!err.nombre} aria-describedby={err.nombre ? 'e-nombre' : undefined} />
                 {err.nombre && <p id="e-nombre" className="ez-err">{err.nombre}</p>}
+                {/* El enlace que se arma solo ya es de otra marca: se avisa acá, antes del paso del enlace. */}
+                {!err.nombre && libre === false && <p className="ez-hint" aria-live="polite">{t.w.ocupadoPaso}</p>}
               </div>
             </div>
           )}
@@ -330,7 +332,7 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
 
           {/* Celular: la dirección de su página, en vivo, bajo la pregunta. En la
               compu va en el costado. */}
-          {(paso === 1 || paso === 2) && <VistaPrevia slug={slug} t={t} className="ez-vp--movil" />}
+          {(paso === 1 || paso === 2) && <VistaPrevia slug={slug} libre={libre} t={t} className="ez-vp--movil" />}
 
           {aviso && <p className="ez-banner" role="alert">{aviso}</p>}
           {!aviso && cancelado && paso === 0 && <p className="ez-banner" role="status">{t.cancelado}</p>}
@@ -376,7 +378,7 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
           </>
         ) : (
           // Compu, desde el nombre: la dirección de su página, en vivo.
-          <VistaPrevia slug={slug} t={t} className="ez-vp--costado" />
+          <VistaPrevia slug={slug} libre={libre} t={t} className="ez-vp--costado" />
         )}
       </aside>
     </main>
