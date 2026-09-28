@@ -243,6 +243,8 @@ export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false, l
         <ChevronDown aria-hidden="true" />
       </summary>
       <div className="s-fold__body">
+        {/* Primero: al fondo, debajo del link privado, nadie lo encontraba. */}
+        {!ro && <MarcarAgotada eventId={eventId} tt={tt} />}
         <form action={action} onSubmit={(e) => guardPrice(e, t, free, tt.priceCents)}>
           <input type="hidden" name="event_id" value={eventId} />
           <input type="hidden" name="ticket_type_id" value={tt.id} />
@@ -278,7 +280,6 @@ export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false, l
         </form>
         {!ro && !(isFirst && isLast) && <MoveTicketType eventId={eventId} ttId={tt.id} isFirst={isFirst} isLast={isLast} />}
         {!ro && <PrivateLink eventId={eventId} tt={tt} link={linkPrivado} limite={limitePrivado} eventName={eventName} />}
-        {!ro && <MarcarAgotada eventId={eventId} tt={tt} />}
       </div>
     </details>
   );

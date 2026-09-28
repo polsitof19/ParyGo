@@ -77,7 +77,7 @@ supabase/migrations. NO es Firebase. No hay RENIEC. Los compradores no se regist
   la orden (antes el comprador dejaba sus datos y caía en "no tiene Yape
   configurado"). Paso P del E2E: número mal escrito rechazado, número + QR
   desde Mi marca, el comprador ve QR y número al pagar, marca sin Yape → 0
-  órdenes. Code tiene número pero NO QR subido (funciona igual, con "copiar").
+  órdenes. Code tiene número Y QR subido (verificado 2026-09-28; ya le pagaron así).
 - Yape manual: COMPLETO punta a punta. Comprobante público → revisión en panel
   (autenticada, scoped por marca, transición de estado atómica) → emisión →
   email. Es el camino que cobra hoy.
@@ -396,12 +396,13 @@ supabase/verify-0053-0058.mjs (comprobaciones de estado esperado).
 OJO con `mgmt.mjs types`: PISA database.types.ts entero y regenerarlo completo
 rompe tipos afinados a mano — las columnas nuevas se agregan a mano.
 
-PENDIENTE (encontrado 2026-09-23): la 0054 agregó brands.yape_qr_url SIN
-`grant select (yape_qr_url) on public.brands to authenticated` (las columnas
-de brands se exponen una por una: 0023/0043/0052). Con la sesión del
-organizador daba "permission denied" y "Mi marca" salía EN BLANCO. El panel
-ya la lee con service role acotada a la marca; la migración del grant queda
-para cuando Paul la apruebe (no hace falta para que ande).
+CERRADO (0074, 2026-09-28): la 0054 había agregado brands.yape_qr_url sin
+`grant select ... to authenticated` (las columnas de brands se exponen una por
+una: 0023/0043/0052) y "Mi marca" salía en blanco con la sesión del
+organizador. Probado con JWT real: el organizador la lee; anon sigue sin
+permiso. Queda al mismo nivel que yape_number/yape_holder (brands_read_public
+es `true`, así que cualquier sesión lee la fila de otra marca: el QR y el
+número se le muestran igual a todo comprador que paga con Yape).
 
 PACKS DE EVENTOS (0070, en PRODUCCIÓN desde 2026-09-25, con las claves de MP
 de Paul cargadas en Cloudflare). El organizador compra 1/3/5/10 eventos en /admin/comprar con
@@ -508,7 +509,7 @@ cada consulta cruzaba el continente. Se prendió por la API de Cloudflare
 [placement] de apps/web/wrangler.toml NO lo aplicó la integración con Git.
 Verificar con el GET del proyecto de Pages; el PATCH conserva las variables.
 
-Incrementales, idempotentes, numeradas (vamos por 0073). Backwards-compatible
+Incrementales, idempotentes, numeradas (vamos por 0074). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
 para no romper la app vieja desplegada.
 
@@ -561,7 +562,9 @@ para no romper la app vieja desplegada.
   topes (0060 y 0067). En
   solo lectura (super mirando) el token NO se manda al navegador. Paso O del E2E.
 - MARCAR COMO AGOTADA (2026-09-26, Paul, para la cortesía de Tío Code):
-  Entradas → el tipo → "Marcar como agotada" (marcarAgotadaAction). La
+  Entradas → el tipo → "Marcar como agotada" (marcarAgotadaAction), PRIMERO
+  al abrir la entrada (2026-09-28: al fondo, bajo el link privado, Paul no lo
+  encontraba). El super admin en solo lectura no lo ve (sí en modo edición). La
   capacidad queda en vendidas + reservas vigentes (quien está pagando
   termina), escritura optimista contra sold, events_log. Se reabre subiendo
   la Capacidad. La fila plegada dice "agotada" (el revalidate remonta la

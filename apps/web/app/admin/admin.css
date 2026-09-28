@@ -623,4 +623,4 @@
 .admin-shell .a-priv__num { max-width: 160px; }
 
 /* Marcar un tipo como agotado (2026-09-26): al pie del tipo, separado por hairline. */
-.admin-shell .a-agotada { margin-top: var(--s-s2); padding-top: var(--s-s2); border-top: 1px solid var(--line); }
+.admin-shell .a-agotada { margin-bottom: var(--s-s2); padding-bottom: var(--s-s2); border-bottom: 1px solid var(--line); }
