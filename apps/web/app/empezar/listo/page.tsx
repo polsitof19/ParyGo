@@ -82,7 +82,7 @@ export default async function AltaListaPage({ searchParams }: { searchParams: Pa
       <>
         <h1 className="ez-h1">{l.fallo}</h1>
         <p className="ez-lede">{l.falloTxt}</p>
-        <div className="ez-actions ez-actions--top"><Link href={`/empezar?pack=${compra.pack}&moneda=${moneda}&${q}`} className="ez-btn ez-btn--primary">{l.reintentar}</Link></div>
+        <div className="ez-actions ez-actions--top"><Link href={`/empezar?tipo=marca&pack=${compra.pack}&moneda=${moneda}&${q}`} className="ez-btn ez-btn--primary">{l.reintentar}</Link></div>
       </>
     );
   } else {

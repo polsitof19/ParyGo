@@ -18,7 +18,7 @@ let brandId = null;
 const b = await chromium.launch();
 try {
   const p = await b.newPage();
-  await p.goto(`${BASE}/empezar?lang=en`, { waitUntil: 'networkidle' });
+  await p.goto(`${BASE}/empezar?tipo=marca&lang=en`, { waitUntil: 'networkidle' });
   const html = await p.locator('main').innerText();
   check('en inglés sale en dólares', /US\$59/.test(html) && !/S\/150/.test(html));
   await p.locator('.ez-plan:has(input[value="1"])').click();

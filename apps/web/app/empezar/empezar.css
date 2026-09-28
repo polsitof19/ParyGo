@@ -352,6 +352,35 @@
 
 .ez a.ez-btn { text-decoration: none; }
 .ez-actions--top { margin-top: var(--ez-s4); }
+/* Secundario: mismo botón con borde (el acento no porta texto). */
+.ez-btn--soft { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ez-ctl-line); }
+@media (hover: hover) and (pointer: fine) { .ez-btn--soft:hover { background: var(--paper-2); } }
+.ez-btn__ico { width: 20px; height: 20px; flex: none; }
+
+/* — Primera pregunta: "¿Qué vas a organizar?" (TipoDeEvento.tsx). Dos
+     tarjetas-link; la que pide algo es el link entero, sin radios. — */
+.ez-tipo { display: grid; gap: var(--ez-s2); margin-top: var(--ez-s4); }
+.ez-tipo__card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--ez-s2);
+  row-gap: 4px;
+  align-items: start;
+  padding: var(--ez-s3);
+  background: var(--paper-2);
+  border: 1.5px solid transparent;
+  border-radius: var(--r-card);
+  text-decoration: none;
+  color: var(--ink);
+  transition: border-color 180ms var(--ease), transform 160ms var(--ease);
+}
+.ez a.ez-tipo__card { text-decoration: none; }
+.ez-tipo__card:active { transform: scale(0.98); }
+@media (hover: hover) and (pointer: fine) { .ez-tipo__card:hover { border-color: var(--ez-ctl-line); } }
+.ez-tipo__ico { grid-row: span 2; width: 28px; height: 28px; margin-top: 2px; color: var(--ink); }
+.ez-tipo__t { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ez-s1); font-family: var(--display); font-weight: 700; font-size: var(--ez-price); letter-spacing: -0.02em; line-height: 1.2; }
+.ez-tipo__d { font-size: var(--ez-meta); color: var(--ink-2); }
+.ez-volver { display: inline-flex; align-items: center; min-height: 44px; margin-bottom: var(--ez-s2); font-size: var(--ez-meta); font-weight: 700; color: var(--ink); }
 
 .ez-hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 
@@ -393,12 +422,14 @@
   .ez-form--codigo { animation: ez-fade 200ms linear both; }
   .ez-plan__dot::after,
   .ez-btn,
-  .ez-btn__arrow { transition: none; }
+  .ez-btn__arrow,
+  .ez-tipo__card { transition: none; }
 }
 @keyframes ez-fade { from { opacity: 0; } to { opacity: 1; } }
 
 @media (min-width: 640px) {
   .ez-btn { width: auto; justify-self: start; }
+  .ez-tipo { grid-template-columns: 1fr 1fr; }
 }
 @media (min-width: 960px) {
   .ez { --ez-h1: 64px; }
