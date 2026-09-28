@@ -90,23 +90,23 @@ export function TicketCanvas({ mountId, textos }: { mountId: string; textos: Tex
       g.fillStyle = '#FFFFFF';
       g.font = `800 54px ${display}, sans-serif`;
       g.fillText('parygo.', 40, 78);
-      g.fillStyle = '#231C17';
+      g.fillStyle = '#0A0A0A';
       g.font = `800 46px ${display}, sans-serif`;
       g.fillText(textos.titulo, 40, 220);
       g.fillStyle = '#FF6A3D';
       g.font = `800 40px ${display}, sans-serif`;
       g.fillText(textos.noche, 40, 268);
-      g.fillStyle = '#6B5F54';
+      g.fillStyle = '#525252';
       g.font = `500 20px ${bodyFont}, sans-serif`;
       g.fillText(textos.fecha, 40, 312);
-      g.fillStyle = '#231C17';
+      g.fillStyle = '#0A0A0A';
       g.font = `700 22px ${bodyFont}, sans-serif`;
       g.fillText('★ ADMIT ONE', 40, 372);
-      g.fillStyle = '#A89B8C';
+      g.fillStyle = '#6B6B6B';
       g.font = `500 16px ${bodyFont}, sans-serif`;
       g.fillText('TKT / VS04', 40, 404);
 
-      g.strokeStyle = '#EFE6D6';
+      g.strokeStyle = '#E5E5E5';
       g.lineWidth = 3;
       g.setLineDash([8, 8]);
       g.beginPath();
@@ -122,14 +122,14 @@ export function TicketCanvas({ mountId, textos }: { mountId: string; textos: Tex
         seed = (seed * 9301 + 49297) % 233280;
         return seed / 233280;
       };
-      g.fillStyle = '#231C17';
+      g.fillStyle = '#0A0A0A';
       for (let y = 0; y < cells; y++)
         for (let x = 0; x < cells; x++) {
           if ((x < 3 && y < 3) || (x > 7 && y < 3) || (x < 3 && y > 7)) continue;
           if (rnd() < 0.5) g.fillRect(qx + x * cs, qy + y * cs, cs, cs);
         }
       const mk = (mxp: number, myp: number) => {
-        g.fillStyle = '#231C17';
+        g.fillStyle = '#0A0A0A';
         g.fillRect(qx + mxp * cs, qy + myp * cs, cs * 3, cs * 3);
         g.fillStyle = '#FFF';
         g.fillRect(qx + (mxp + 0.7) * cs, qy + (myp + 0.7) * cs, cs * 1.6, cs * 1.6);
@@ -137,7 +137,7 @@ export function TicketCanvas({ mountId, textos }: { mountId: string; textos: Tex
         g.fillRect(qx + (mxp + 1.1) * cs, qy + (myp + 1.1) * cs, cs * 0.8, cs * 0.8);
       };
       mk(0, 0); mk(8, 0); mk(0, 8);
-      g.fillStyle = '#6B5F54';
+      g.fillStyle = '#525252';
       g.font = `700 15px ${bodyFont}, sans-serif`;
       g.textAlign = 'center';
       g.fillText(textos.escanea, 593, 300);
@@ -188,11 +188,12 @@ export function TicketCanvas({ mountId, textos }: { mountId: string; textos: Tex
       sphereB.position.set(-1.6, -0.95, 0.7);
       group.add(sphereB);
 
-      scene.add(new THREE.AmbientLight('#fff4e8', 0.85));
+      // Sobre la página blanca la cara salía gris sucio: más ambiente (era 0.85).
+      scene.add(new THREE.AmbientLight('#FFFFFF', 1.35));
       const key = new THREE.DirectionalLight('#ffffff', 1.5);
       key.position.set(3, 4, 5);
       scene.add(key);
-      const warm = new THREE.DirectionalLight('#FFB48E', 0.7);
+      const warm = new THREE.DirectionalLight('#FFB48E', 0.5);
       warm.position.set(-4, -1, 2);
       scene.add(warm);
       const rim = new THREE.PointLight('#5B6CFF', 0.6, 20);

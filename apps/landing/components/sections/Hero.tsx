@@ -79,11 +79,11 @@ export function Hero({ t }: { t: Dict }) {
             <div className="fallback" aria-hidden="true">
               <svg viewBox="0 0 240 150" width="80%" xmlns="http://www.w3.org/2000/svg">
                 <rect x="6" y="14" width="228" height="122" rx="18" fill="#fff" />
-                <line x1="160" y1="14" x2="160" y2="136" stroke="#EFE6D6" strokeWidth="2" strokeDasharray="5 5" />
-                <text x="30" y="52" fontFamily="var(--display)" fontWeight="800" fontSize="22" fill="#231C17">PARYGO</text>
-                <text x="30" y="80" fontFamily="var(--body)" fontSize="11" fill="#6B5F54">ADMIT ONE</text>
+                <line x1="160" y1="14" x2="160" y2="136" stroke="#E5E5E5" strokeWidth="2" strokeDasharray="5 5" />
+                <text x="30" y="52" fontFamily="var(--display)" fontWeight="800" fontSize="22" fill="#0A0A0A">PARYGO</text>
+                <text x="30" y="80" fontFamily="var(--body)" fontSize="11" fill="#525252">ADMIT ONE</text>
                 <rect x="30" y="94" width="90" height="8" rx="4" fill="#FF6A3D" />
-                <rect x="178" y="44" width="40" height="40" rx="8" fill="#231C17" />
+                <rect x="178" y="44" width="40" height="40" rx="8" fill="#0A0A0A" />
               </svg>
             </div>
             <TicketCanvas mountId="heroVisual" textos={h.ticket} />
