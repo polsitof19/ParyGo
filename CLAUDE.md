@@ -200,8 +200,13 @@ para OK de Paul.
   parygo-panel.css, blanco neutro #FFFFFF / #F4F4F5, tinta #0A0A0A, medido
   por scripts/check-panel-contrast.mjs (en test:contrast). El número sobre
   el acento usa --on-accent (#0A0A0A en los dos temas), nunca --on-white.
-  PENDIENTES para otra rama (siguen en crema): la landing y los emails de
-  recordatorio, cancelado, cambio de fecha y Yape.
+  La LANDING pasó a BLANCO NEUTRO el 2026-09-28 (rama diseno/landing-blanca;
+  Paul: "el mejor para el ojo, que sea confiable y venda"): --bg #FFFFFF /
+  #F5F5F5 / #EBEBEB, tinta #0A0A0A, sombras de tinta neutra; el tangerina
+  sigue como CTA (tinta sobre acento) y decoración. Criterio: la lee el
+  ORGANIZADOR antes de pagar (texto largo, precios): polaridad positiva se
+  lee mejor y el blanco transmite confianza. Los emails: ver rama
+  diseno/correos-neutros.
 - Botón primario = TINTA sobre acento (5.91:1 medido) en la landing. Blanco
   sobre naranja da 2.85:1 y FALLA AA — no usarlo nunca. En los PANELES (noche)
   el primario es RELLENO DE TINTA (blanco en noche, #0A0A0A en claro); el acento
