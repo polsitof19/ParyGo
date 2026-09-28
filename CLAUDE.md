@@ -447,6 +447,19 @@ privado de S/ 50 / 200 entradas todavía no existe). cancelado=1 (vuelta de
 MP) y "Intentar nuevamente" de /listo saltan la pregunta. Sin JS: links.
 e2e/empezar.mjs paso Q; toda navegación de prueba al formulario va con
 tipo=marca. Cuando exista el evento privado, esta pantalla lo abre.
+ALTA PASO A PASO (mismo día, Paul): el formulario de marca son 5 pasos en
+UN solo <form> (EmpezarFlow.tsx): 1 paquete + "Todo lo que incluye" (costado
+en la compu, plegable en el celular; MISMA lista que la landing, precios.
+detalle ↔ textos.ts incluye) · 2 nombre · 3 enlace · 4 correo + WhatsApp ·
+5 contraseña + "Revisa tu plan" (Editar por dato) + Pagar. "Continuar"/Enter
+valida con las reglas del servidor (SLUG_OK, waOk duplican SLUG_RE y
+normalizarWhatsapp: si cambias una, la otra); si pagarAlta rechaza un campo,
+vuelve a su paso. pagarAlta recibe los mismos ocultos de siempre y la
+contraseña sigue sin viajar antes del pago. VistaPrevia.tsx = la parte de
+arriba de un iPhone con la barra de Safari y <enlace>.parygo.com, check
+verde si está libre y ✕ si no (Paul probó el iPhone entero y prefirió esto).
+e2e: llenar() avanza pregunta por pregunta; Q cubre nombre vacío, enlace
+armado, check/✕, "Atrás", WhatsApp inválido.
 
 SIN PRUEBA GRATIS (2026-09-26, Paul: "mejor que compren directo"): /empezar
 ofrece SOLO los paquetes 1/3/5/10 (un link viejo ?pack=prueba cae en 1); se
