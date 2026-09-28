@@ -28,6 +28,13 @@ function aSlug(nombre: string): string {
 // = SLUG_RE de lib/altaMarca.ts (ese módulo es de servidor: no se importa acá).
 const SLUG_OK = /^[a-z0-9][a-z0-9-]{0,30}[a-z0-9]$/;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// = normalizarWhatsapp + la regla de actions.ts: vacío, celular peruano de 9
+// dígitos que empieza en 9, o +/00 con código de país (8 a 15 dígitos).
+function waOk(v: string): boolean {
+  const x = v.replace(/[\s\-().]/g, '');
+  if (x === '' || /^9\d{8}$/.test(x)) return true;
+  return /^\+\d{8,15}$/.test(x.startsWith('00') ? `+${x.slice(2)}` : x);
+}
 
 // Paso a paso (Paul, 2026-09-28): una pregunta por pantalla. Todo vive en UN
 // solo <form>; los campos viajan en los ocultos, así que pagarAlta recibe lo
@@ -120,6 +127,7 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
     if (p === 1) { if (n.length < 2) e.nombre = t.m.nombreCorto; else if (n.length > 60) e.nombre = t.m.nombreLargo; }
     if (p === 2) { if (!SLUG_OK.test(slug)) e.slug = t.m.slugMal; else if (libre === false) e.slug = t.linkTomado; }
     if (p === 3 && !EMAIL_OK.test(email)) e.email = t.m.correoMal;
+    if (p === 3 && !waOk(whatsapp)) e.whatsapp = t.m.waMal;
     if (p === 4 && password.length < 8) e.password = t.m.passCorta;
     setErrPaso(e);
     return Object.keys(e).length === 0;
@@ -129,13 +137,20 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
   // Antes del último paso, "enviar" es "Continuar". En el último: la
   // contraseña NO va al servidor antes del pago; queda en este navegador y
   // /empezar/listo la usa al volver con el pago aprobado.
+  // Si el paso no valida: la pregunta arriba a la vista (WebKit bajaba la
+  // página al mostrar el error) y el cursor de vuelta en el campo.
+  const mostrarError = () => {
+    window.scrollTo({ top: 0 });
+    const id = FOCO[paso];
+    if (id) document.getElementById(id)?.focus({ preventScroll: true });
+  };
   function alEnviar(e: React.FormEvent<HTMLFormElement>) {
     if (paso < 4) {
       e.preventDefault();
-      if (validar(paso)) ir((paso + 1) as Paso);
+      if (validar(paso)) ir((paso + 1) as Paso); else mostrarError();
       return;
     }
-    if (!validar(4)) { e.preventDefault(); return; }
+    if (!validar(4)) { e.preventDefault(); mostrarError(); return; }
     try { sessionStorage.setItem(CLAVE_ALTA, JSON.stringify({ email: email.toLowerCase(), password })); } catch { /* la elige al volver */ }
   }
 

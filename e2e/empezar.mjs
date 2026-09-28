@@ -180,6 +180,18 @@ try {
     check('Q', 'paso 3: "¿Cómo quieres tu enlace?" con el enlace armado desde el nombre', /Paso 3 de 5/.test(await texto(p)) && (await p.inputValue('#ez-slug')) === 'noches-qa');
     await p.getByRole('button', { name: /Atrás/ }).click();
     check('Q', '"Atrás" vuelve al nombre sin perderlo', (await p.inputValue('#ez-nombre')) === 'Noches Qa');
+    // WhatsApp mal escrito: frena en SU paso (antes recién lo decía el
+    // servidor al pagar — review de Codex 2026-09-28).
+    await continuar(p);
+    await linkResuelto(p);
+    await continuar(p);
+    await p.fill('#ez-email', `qa${STAMP}@example.com`);
+    await p.fill('#ez-wa', '123');
+    await continuar(p);
+    const waFrena = (await p.locator('#ez-wa').count()) === 1 && /Incluye el código de país/.test(await texto(p));
+    await p.fill('#ez-wa', '999 111 222');
+    await continuar(p);
+    check('Q', 'WhatsApp mal escrito no deja avanzar; un celular peruano sí (paso 5)', waFrena && /Paso 5 de 5/.test(await texto(p)) && (await p.locator('#ez-pass').count()) === 1);
 
     await p.goto(`${BASE}/empezar?pack=3`, { waitUntil: 'networkidle' });
     await p.getByRole('link', { name: /Un evento privado/ }).click();
