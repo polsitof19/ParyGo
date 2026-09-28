@@ -964,6 +964,18 @@ h1, h2, h3, h4, p { margin: 0; }
   color: var(--ink);
 }
 .plans-banner .star { color: var(--tangerine); }
+/* Detalle de lo que incluye, debajo de los paquetes. */
+.detalle { margin-top: clamp(56px, 8vw, 88px); padding-top: clamp(40px, 6vw, 64px); border-top: 1.5px solid var(--line); }
+.detalle__h { text-align: center; max-width: 22ch; margin: 0 auto; }
+.detalle__lede { text-align: center; color: var(--ink-2); font-size: 17px; line-height: 1.5; max-width: 52ch; margin: 14px auto 0; }
+.detalle__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 40px; }
+.detalle__grupo { background: var(--white); border: 1.5px solid var(--cream-3); border-radius: var(--r-md); padding: 26px 24px; }
+.detalle__t { font-family: var(--display); font-weight: 800; font-size: 20px; letter-spacing: -0.02em; margin: 0 0 16px; }
+.detalle__list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; font-size: 15px; line-height: 1.45; color: var(--ink-2); }
+.detalle__list li { display: grid; grid-template-columns: 16px 1fr; gap: 10px; align-items: start; }
+.detalle__cta { display: flex; justify-content: center; margin-top: 36px; }
+@media (max-width: 980px) { .detalle__grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .detalle__grid { grid-template-columns: 1fr; gap: 14px; } .detalle__grupo { padding: 22px 20px; } }
 .plans-note {
   text-align: center;
   margin-top: 28px;

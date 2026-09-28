@@ -58,6 +58,29 @@ export function Pricing({ t }: { t: Dict }) {
           {c.note}
           {m === 'USD' && c.noteUsd}
         </p>
+
+        {/* El detalle de TODO lo que incluye (Paul, 2026-09-28: el sistema hace
+            mucho y la página no lo contaba). Solo lo que existe hoy: lo que está
+            por construir no va acá. */}
+        <div className="detalle reveal">
+          <h3 className="h3 detalle__h">{c.detalle.h3}</h3>
+          <p className="detalle__lede">{c.detalle.lede}</p>
+          <div className="detalle__grid">
+            {c.detalle.grupos.map((g) => (
+              <div key={g.t} className="detalle__grupo">
+                <h4 className="detalle__t">{g.t}</h4>
+                <ul className="detalle__list">
+                  {g.items.map((it) => (
+                    <li key={it}><Check className="plan__tick" aria-hidden="true" />{it}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div className="detalle__cta">
+            <a href={empezar(t.lang)} className="btn btn-primary btn-lg">{t.hero.cta} <span className="arrow" aria-hidden="true">→</span></a>
+          </div>
+        </div>
       </div>
     </section>
   );
