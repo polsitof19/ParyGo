@@ -27,12 +27,22 @@ const check = (paso, nombre, ok, detalle = '') => { R.push({ paso, nombre, ok })
 const usuarios = [];
 const marcas = [];
 
+// El alta es paso a paso (2026-09-28): paquete → nombre → enlace → correo →
+// contraseña. "Continuar" valida cada paso; el último tiene "Pagar …".
+const continuar = (p) => p.getByRole('button', { name: /^(Continuar|Continue)/ }).click();
+// Espera a que el chequeo del enlace (450 ms + servidor) diga algo.
+const linkResuelto = (p) => p.locator('#e-slug').filter({ hasText: /Disponible|ya pertenece|Solo minúsculas/ }).waitFor({ timeout: 10000 }).catch(() => {});
 async function llenar(p, { plan, nombre, slug, email }) {
   await p.goto(`${BASE}/empezar?tipo=marca`, { waitUntil: 'networkidle' });
   await p.locator(`.ez-plan:has(input[value="${plan}"])`).click();
+  await continuar(p);
   await p.fill('#ez-nombre', nombre);
+  await continuar(p);
   if (slug) await p.fill('#ez-slug', slug);
+  await linkResuelto(p);
+  await continuar(p);
   await p.fill('#ez-email', email);
+  await continuar(p);
   await p.fill('#ez-pass', 'E2eAlta!2026');
 }
 const pagarBtn = (p) => p.getByRole('button', { name: /^Pagar / });
@@ -81,24 +91,34 @@ try {
     if (await p.locator('.ez-plan.is-off').count()) {
       log('B · el server no tiene PARYGO_MP_*: se saltea');
     } else {
-    await llenar(p, { plan: '1', nombre: 'Otro Code', slug: 'code', email: `delivered+alta-b${STAMP}@resend.dev` });
-    await p.getByText(/ya pertenece a otra marca/i).waitFor({ timeout: 8000 }).catch(() => {});
+    // Paso a paso: el enlace tomado frena en SU paso (no deja ni continuar).
+    await p.locator('.ez-plan:has(input[value="1"])').click();
+    await continuar(p);
+    await p.fill('#ez-nombre', 'Otro Code');
+    await continuar(p);
+    await p.fill('#ez-slug', 'code');
+    await linkResuelto(p);
+    await continuar(p);
     const t1 = await texto(p);
-    check('B', 'link de una marca existente: avisa y no deja pagar', /ya pertenece a otra marca/i.test(t1) && await pagarBtn(p).isDisabled());
+    check('B', 'link de una marca existente: avisa y no deja seguir', /ya pertenece a otra marca/i.test(t1) && (await p.locator('#ez-slug').count()) === 1 && (await pagarBtn(p).count()) === 0);
 
     await p.fill('#ez-slug', 'soporte');
-    await p.getByText(/ya pertenece a otra marca/i).waitFor({ timeout: 8000 }).catch(() => {});
+    await linkResuelto(p);
     check('B', 'link reservado (soporte): no disponible', /ya pertenece a otra marca/i.test(await texto(p)));
 
     await p.fill('#ez-slug', `e2e-alta-b${STAMP}`);
-    // Dominios internos (puestos de puerta, cuentas de prueba): rechazados.
+    await linkResuelto(p);
+    await continuar(p);
+    // Dominios internos (puestos de puerta, cuentas de prueba): el servidor
+    // los rechaza y el alta vuelve al paso del correo.
     await p.fill('#ez-email', 'gate-12345678-puerta@gate.parygo.local');
-    await p.waitForTimeout(900);
+    await continuar(p);
+    await p.fill('#ez-pass', 'E2eAlta!2026');
     await enviar(p);
     await p.getByText(/Usa tu propio correo/).waitFor({ timeout: 10000 }).catch(() => {});
-    check('B', 'correo de dominio interno (@gate.parygo.local): rechazado', /Usa tu propio correo/.test(await texto(p)) && p.url().startsWith(BASE));
+    check('B', 'correo de dominio interno (@gate.parygo.local): rechazado y vuelve al paso del correo', /Usa tu propio correo/.test(await texto(p)) && (await p.locator('#ez-email').count()) === 1 && p.url().startsWith(BASE));
     await p.fill('#ez-email', `delivered+alta-a${STAMP}@resend.dev`);
-    await p.waitForTimeout(900);
+    await continuar(p);
     await enviar(p);
     await p.getByText(/ya tiene una cuenta/i).waitFor({ timeout: 15000 }).catch(() => {});
     check('B', 'correo de alguien que ya tiene cuenta: lo manda a entrar, no a pagar', /ya tiene una cuenta/i.test(await texto(p)) && p.url().startsWith(BASE));
@@ -141,12 +161,25 @@ try {
     await p.waitForURL(/tipo=marca/);
     const u = new URL(p.url());
     const marcado = await p.locator('.ez-plan input[type=radio]:checked').getAttribute('value');
-    check('Q', 'marca: formulario con el pack y la moneda que traía', u.searchParams.get('pack') === '3' && u.searchParams.get('moneda') === 'PEN' && marcado === '3' && (await p.locator('#ez-email').count()) === 1, p.url().replace(BASE, ''));
+    check('Q', 'marca: paso 1 de 5 con el pack y la moneda que traía', u.searchParams.get('pack') === '3' && u.searchParams.get('moneda') === 'PEN' && marcado === '3' && (await p.locator('.ez-plan').count()) === 4 && /Paso 1 de 5/.test(await texto(p)), p.url().replace(BASE, ''));
     // Antes de pagar ve TODO lo que incluye (celular: 5 grupos plegables, el
     // primero abierto; la compu lo muestra en el costado).
     const grupos = await p.locator('.ez-incluye__grupo').count();
     const abierto = await p.locator('.ez-incluye__grupo[open]').count();
-    check('Q', 'marca: "Todo lo que incluye" antes del formulario (5 grupos, 1 abierto)', /Todo lo que incluye cada evento/.test(await texto(p)) && grupos === 5 && abierto === 1, `grupos=${grupos} abiertos=${abierto}`);
+    check('Q', 'marca: "Todo lo que incluye" antes de los datos (5 grupos, 1 abierto)', /Todo lo que incluye cada evento/.test(await texto(p)) && grupos === 5 && abierto === 1, `grupos=${grupos} abiertos=${abierto}`);
+
+    // Paso a paso con vista previa en vivo.
+    await continuar(p);
+    await continuar(p); // sin nombre: no avanza
+    const sinNombre = (await p.locator('#ez-nombre').count()) === 1 && /Escribe el nombre de tu marca/.test(await texto(p));
+    await p.fill('#ez-nombre', 'Noches Qa');
+    await p.locator('.ez-vp--movil').filter({ hasText: 'noches-qa.parygo.com' }).waitFor({ timeout: 5000 }).catch(() => {});
+    const vp = await p.locator('.ez-vp--movil').innerText();
+    check('Q', 'paso 2: "¿Cómo se llama tu marca?", no avanza vacío y la vista previa muestra el nombre y el enlace al escribir', sinNombre && /Paso 2 de 5/.test(await texto(p)) && /Noches Qa/.test(vp) && /noches-qa\.parygo\.com/.test(vp), vp.replace(/\s+/g, ' ').slice(0, 90));
+    await continuar(p);
+    check('Q', 'paso 3: "¿Cómo quieres tu enlace?" con el enlace armado desde el nombre', /Paso 3 de 5/.test(await texto(p)) && (await p.inputValue('#ez-slug')) === 'noches-qa');
+    await p.getByRole('button', { name: /Atrás/ }).click();
+    check('Q', '"Atrás" vuelve al nombre sin perderlo', (await p.inputValue('#ez-nombre')) === 'Noches Qa');
 
     await p.goto(`${BASE}/empezar?pack=3`, { waitUntil: 'networkidle' });
     await p.getByRole('link', { name: /Un evento privado/ }).click();
@@ -159,7 +192,7 @@ try {
 
     await p.goto(`${BASE}/empezar?pack=1&moneda=PEN&cancelado=1`, { waitUntil: 'networkidle' });
     const t2 = await texto(p);
-    check('Q', 'vuelta de un pago cancelado: directo al formulario, con su aviso', (await p.locator('#ez-email').count()) === 1 && /no se completó/i.test(t2) && !/¿Qué vas a organizar\?/.test(t2));
+    check('Q', 'vuelta de un pago cancelado: directo al formulario, con su aviso', (await p.locator('.ez-plan').count()) === 4 && /no se completó/i.test(t2) && !/¿Qué vas a organizar\?/.test(t2));
 
     await p.goto(`${BASE}/empezar?lang=en`, { waitUntil: 'networkidle' });
     check('Q', 'en inglés: "What are you organizing?"', /What are you organizing\?/.test(await texto(p)));
