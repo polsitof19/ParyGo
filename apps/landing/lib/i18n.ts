@@ -222,7 +222,7 @@ const es: Dict = {
     producto: 'Producto', ayuda: 'Ayuda', legal: 'Legal',
     links: { como: 'Cómo funciona', seguridad: 'Seguridad', incluye: 'Qué incluye', precios: 'Precios', crear: 'Crear mi marca', preguntas: 'Preguntas frecuentes', panel: 'Ingresar al panel', terminos: 'Términos', privacidad: 'Privacidad' },
     copy: '© 2015 ParyGo. Todos los derechos reservados.',
-    made: 'Hecho en Lima, Perú.',
+    made: 'Vende con tu marca. Cobra directamente.',
   },
 };
 
@@ -418,7 +418,7 @@ const en: Dict = {
     producto: 'Product', ayuda: 'Help', legal: 'Legal',
     links: { como: 'How it works', seguridad: 'Security', incluye: 'What\'s included', precios: 'Pricing', crear: 'Create my brand', preguntas: 'FAQ', panel: 'Log in to the dashboard', terminos: 'Terms', privacidad: 'Privacy' },
     copy: '© 2015 ParyGo. All rights reserved.',
-    made: 'Made in Lima, Peru.',
+    made: 'Sell under your brand. Get paid directly.',
   },
 };
 
