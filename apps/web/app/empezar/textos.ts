@@ -15,6 +15,22 @@ export function formatoPrecio(centavos: number, moneda: Moneda): string {
 const es = {
   h1a: 'Tu marca, lista para ', h1b: 'vender', h1c: '.',
   lede1: 'Elige tu paquete, completa tus datos y en pocos minutos tendrás tu página', lede2: 'con entradas, cobro directo y control de acceso.',
+  // Primera pregunta de /empezar (Paul, 2026-09-28): antes de mostrar los
+  // paquetes de marca, se pregunta qué va a organizar. Evento privado
+  // (cumpleaños, reunión) todavía no existe: muestra "muy pronto" + contacto.
+  tipo: {
+    h1: '¿Qué vas a organizar?',
+    sub: 'Elige la opción que se parece más a tu evento.',
+    marca: { t: 'Una marca o productora', d: 'Discotecas, conciertos, fiestas y eventos que organizas seguido.' },
+    privado: { t: 'Un evento privado', d: 'Cumpleaños, reuniones y celebraciones. Un solo evento.', badge: 'Muy pronto' },
+    pronto: {
+      h1: 'Los eventos privados llegan muy pronto',
+      sub: 'Estamos terminando esta opción para cumpleaños, reuniones y celebraciones. Mientras tanto, escríbenos y te ayudamos a armar tu evento a mano.',
+      volver: '‹ Elegir otra opción',
+      wa: 'Escribir por WhatsApp',
+      correo: 'Escribir por correo',
+    },
+  },
   elige: 'Elige tu paquete',
   evento: 'evento', eventos: 'eventos', puntual: 'Para un evento puntual.', porEvento: 'por evento',
   masElegido: 'El más elegido',
@@ -70,6 +86,19 @@ type T = typeof es;
 const en: T = {
   h1a: 'Your brand, ready to ', h1b: 'sell', h1c: '.',
   lede1: 'Choose your package, complete your details and in a few minutes you will have your page', lede2: 'with tickets, direct payments and entry control.',
+  tipo: {
+    h1: 'What are you organizing?',
+    sub: 'Choose the option that fits your event best.',
+    marca: { t: 'A brand or promoter', d: 'Clubs, concerts, parties and events you run regularly.' },
+    privado: { t: 'A private event', d: 'Birthdays, gatherings and celebrations. A single event.', badge: 'Coming soon' },
+    pronto: {
+      h1: 'Private events are coming very soon',
+      sub: "We're finishing this option for birthdays, gatherings and celebrations. In the meantime, write to us and we'll help you set up your event by hand.",
+      volver: '‹ Choose another option',
+      wa: 'Write on WhatsApp',
+      correo: 'Write by email',
+    },
+  },
   elige: 'Choose your package',
   evento: 'event', eventos: 'events', puntual: 'For a one-off event.', porEvento: 'per event',
   masElegido: 'Most popular',

@@ -28,7 +28,7 @@ const usuarios = [];
 const marcas = [];
 
 async function llenar(p, { plan, nombre, slug, email }) {
-  await p.goto(`${BASE}/empezar`, { waitUntil: 'networkidle' });
+  await p.goto(`${BASE}/empezar?tipo=marca`, { waitUntil: 'networkidle' });
   await p.locator(`.ez-plan:has(input[value="${plan}"])`).click();
   await p.fill('#ez-nombre', nombre);
   if (slug) await p.fill('#ez-slug', slug);
@@ -77,7 +77,7 @@ try {
   // ---------- B ----------
   {
     const p = await b.newPage({ viewport: { width: 390, height: 844 } });
-    await p.goto(`${BASE}/empezar?pack=1`, { waitUntil: 'networkidle' });
+    await p.goto(`${BASE}/empezar?tipo=marca&pack=1`, { waitUntil: 'networkidle' });
     if (await p.locator('.ez-plan.is-off').count()) {
       log('B · el server no tiene PARYGO_MP_*: se saltea');
     } else {
@@ -114,14 +114,50 @@ try {
   // un link viejo con ?pack=prueba cae en el paquete de 1 evento.
   {
     const p = await b.newPage({ viewport: { width: 390, height: 844 } });
-    await p.goto(`${BASE}/empezar?pack=prueba`, { waitUntil: 'networkidle' });
+    await p.goto(`${BASE}/empezar?tipo=marca&pack=prueba`, { waitUntil: 'networkidle' });
     const txt = await texto(p);
     const opciones = await p.locator('.ez-plan input[type=radio]').evaluateAll((xs) => xs.map((x) => x.value));
     check('C', 'sin prueba gratis: solo los paquetes 1/3/5/10', JSON.stringify(opciones) === '["1","3","5","10"]' && !/Prueba gratuita|Gratis|Enviarme el código/.test(txt), JSON.stringify(opciones));
     const marcado = await p.locator('.ez-plan input[type=radio]:checked').getAttribute('value');
     check('C', 'un link viejo con ?pack=prueba elige el paquete de 1 evento', marcado === '1', marcado);
-    await p.goto(`${BASE}/empezar?lang=en`, { waitUntil: 'networkidle' });
+    await p.goto(`${BASE}/empezar?tipo=marca&lang=en`, { waitUntil: 'networkidle' });
     check('C', 'en inglés tampoco: sin "Free trial"', !/Free trial|Send me the code/.test(await texto(p)));
+    await p.close();
+  }
+
+  // ---------- Q ----------
+  // Primera pregunta (2026-09-28): "¿Qué vas a organizar?" antes del
+  // formulario. Marca → el formulario de siempre con el pack/moneda que traía;
+  // evento privado → "muy pronto" (no existe todavía), sin formulario ni pago;
+  // la vuelta de un pago cancelado va directo al formulario.
+  {
+    const p = await b.newPage({ viewport: { width: 390, height: 844 } });
+    await p.goto(`${BASE}/empezar?pack=3&moneda=PEN`, { waitUntil: 'networkidle' });
+    const t0 = await texto(p);
+    const cards = await p.locator('.ez-tipo__card').count();
+    check('Q', 'sin tipo: primero la pregunta, sin formulario', /¿Qué vas a organizar\?/.test(t0) && cards === 2 && (await p.locator('#ez-email').count()) === 0, `tarjetas=${cards}`);
+
+    await p.getByRole('link', { name: /Una marca o productora/ }).click();
+    await p.waitForURL(/tipo=marca/);
+    const u = new URL(p.url());
+    const marcado = await p.locator('.ez-plan input[type=radio]:checked').getAttribute('value');
+    check('Q', 'marca: formulario con el pack y la moneda que traía', u.searchParams.get('pack') === '3' && u.searchParams.get('moneda') === 'PEN' && marcado === '3' && (await p.locator('#ez-email').count()) === 1, p.url().replace(BASE, ''));
+
+    await p.goto(`${BASE}/empezar?pack=3`, { waitUntil: 'networkidle' });
+    await p.getByRole('link', { name: /Un evento privado/ }).click();
+    await p.waitForURL(/tipo=privado/);
+    const t1 = await texto(p);
+    check('Q', 'evento privado: "muy pronto", sin formulario ni botón de pagar', /muy pronto/i.test(t1) && (await p.locator('#ez-email').count()) === 0 && (await pagarBtn(p).count()) === 0);
+    await p.getByRole('link', { name: /Elegir otra opción/ }).click();
+    await p.waitForLoadState('networkidle');
+    check('Q', 'desde "muy pronto" se vuelve a la pregunta', /¿Qué vas a organizar\?/.test(await texto(p)) && new URL(p.url()).searchParams.get('pack') === '3');
+
+    await p.goto(`${BASE}/empezar?pack=1&moneda=PEN&cancelado=1`, { waitUntil: 'networkidle' });
+    const t2 = await texto(p);
+    check('Q', 'vuelta de un pago cancelado: directo al formulario, con su aviso', (await p.locator('#ez-email').count()) === 1 && /no se completó/i.test(t2) && !/¿Qué vas a organizar\?/.test(t2));
+
+    await p.goto(`${BASE}/empezar?lang=en`, { waitUntil: 'networkidle' });
+    check('Q', 'en inglés: "What are you organizing?"', /What are you organizing\?/.test(await texto(p)));
     await p.close();
   }
 
@@ -133,7 +169,7 @@ try {
   {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
     const p = await ctx.newPage();
-    await p.goto(`${BASE}/empezar?pack=1`, { waitUntil: 'networkidle' });
+    await p.goto(`${BASE}/empezar?tipo=marca&pack=1`, { waitUntil: 'networkidle' });
     const conPagos = !(await p.locator('.ez-plan.is-off').count());
     if (!conPagos) {
       log('D · el server no tiene PARYGO_MP_*: se saltea el pago');
@@ -216,7 +252,7 @@ try {
   {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
     const p = await ctx.newPage();
-    await p.goto(`${BASE}/empezar?pack=1`, { waitUntil: 'networkidle' });
+    await p.goto(`${BASE}/empezar?tipo=marca&pack=1`, { waitUntil: 'networkidle' });
     if (!(await p.locator('.ez-plan.is-off').count())) {
       const email = `delivered+alta-e${STAMP}@resend.dev`;
       await llenar(p, { plan: '1', nombre: `E2E Alta Otro ${STAMP}`, email });
