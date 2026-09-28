@@ -37,6 +37,12 @@ export function metadataDe(lang: Lang): Metadata {
     authors: [{ name: SITE.name }],
     creator: SITE.name,
     publisher: SITE.name,
+    // Íconos en public/ con ?v=N: /favicon.ico se cachea 1 día y sin versión
+    // Chrome seguía con el logo viejo. Subir N al cambiar el logo.
+    icons: {
+      icon: [{ url: '/favicon.ico?v=2', sizes: 'any' }, { url: '/favicon.svg?v=2', type: 'image/svg+xml' }],
+      apple: '/apple-icon.png?v=2',
+    },
     alternates: {
       canonical: RUTA[lang],
       languages: { es: RUTA.es, en: RUTA.en, 'x-default': RUTA.es },
