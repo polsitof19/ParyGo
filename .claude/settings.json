@@ -11,5 +11,16 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "marketing@knowledge-work-plugins": true
+  },
+  "extraKnownMarketplaces": {
+    "knowledge-work-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/knowledge-work-plugins"
+      }
+    }
   }
 }

@@ -652,3 +652,11 @@ Opus para diseño (Plan) y lo de riesgo. Sonnet/Haiku para subagents mecánicos
   el server correctos, limpia demotest) y `deploy-parygo` (check-runs +
   smokes de solo lectura tras cada push). Los genéricos (code review,
   tests, seguridad, performance web) los da el plugin agent-skills.
+- **Marketing (2026-09-28)**: agente `marketing-parygo` (.claude/agents) para
+  textos de la landing y /empezar, SEO, conversión y campañas; lista verificada
+  de lo que ParyGo hace y lo que está por construir. NUNCA inventa cifras,
+  años ni clientes (Paul lo pidió y se rechazó). Plugin
+  `marketing@knowledge-work-plugins` activado en .claude/settings.json
+  (seo-audit, brand-review, competitive-brief, draft-content, email-sequence,
+  campaign-plan…); en otra máquina, `/plugin install marketing@knowledge-work-plugins`
+  si no aparece.
