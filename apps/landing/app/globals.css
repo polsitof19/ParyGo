@@ -21,7 +21,7 @@
 
   --maxw: 1180px;
   --pad-x: clamp(22px, 5vw, 72px);
-  --pad-y: clamp(80px, 11vw, 112px);
+  --pad-y: clamp(56px, 11vw, 112px);
 
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -225,6 +225,9 @@ h1, h2, h3, h4, p { margin: 0; }
   align-items: baseline;
 }
 .logo .dot { color: var(--tangerine); }
+/* La "p." del logo (components/Logo.tsx) al lado del wordmark. */
+.logo { gap: 0.36em; align-items: center; }
+.logo__marca { width: 1.2em; height: 1.2em; flex: none; }
 .nav {
   display: flex;
   align-items: center;
@@ -438,6 +441,7 @@ h1, h2, h3, h4, p { margin: 0; }
   animation: blobFloat 14s ease-in-out infinite;
 }
 .hero__blobs .b2 {
+  display: none; /* lavanda: no es de la marca */
   width: 320px; height: 320px;
   background: radial-gradient(circle at 50% 50%, #C9D0FF, #9FB0FF);
   bottom: -6%; right: 22%;
@@ -468,6 +472,8 @@ h1, h2, h3, h4, p { margin: 0; }
   align-items: center;
 }
 .hero__title { margin: 22px 0 26px; position: relative; z-index: 2; }
+/* Cada renglón del h1 entero: sin esto "tus" quedaba solo en la compu. */
+.hero__linea { white-space: nowrap; }
 .hero__title .ink { color: var(--ink); }
 .hero__sub { margin-bottom: 36px; }
 .hero__ctas { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
@@ -485,6 +491,8 @@ h1, h2, h3, h4, p { margin: 0; }
   font-weight: 600;
   color: var(--ink-2);
 }
+/* El precio: el chip que más importa, en tinta y con el borde del acento. */
+.chip--precio { color: var(--ink); font-weight: 700; border-color: var(--tangerine); }
 .chip .tick {
   width: 16px; height: 16px;
   border-radius: 50%;
@@ -539,7 +547,7 @@ h1, h2, h3, h4, p { margin: 0; }
 
 @media (max-width: 880px) {
   .hero__grid { grid-template-columns: 1fr; }
-  .hero__visual { max-width: 420px; justify-self: center; order: -1; margin-bottom: 8px; }
+  .hero__visual { max-width: 420px; justify-self: center; margin-top: 8px; }
 }
 
 /* ============================================================
@@ -650,7 +658,7 @@ h1, h2, h3, h4, p { margin: 0; }
 }
 .step__icon svg { width: 30px; height: 30px; }
 .step:nth-child(1) .step__icon { background: var(--tangerine); }
-.step:nth-child(2) .step__icon { background: var(--peri); }
+.step:nth-child(2) .step__icon { background: var(--cream-2); color: var(--ink); }
 .step:nth-child(3) .step__icon { background: var(--ink); }
 .step__num {
   font-family: var(--display);
@@ -701,7 +709,7 @@ h1, h2, h3, h4, p { margin: 0; }
   color: var(--tangerine);
 }
 .inc__icon svg { width: 24px; height: 24px; }
-.inc:nth-child(3n+2) .inc__icon { background: #E9ECFF; color: var(--peri); }
+.inc:nth-child(3n+2) .inc__icon { background: var(--cream-2); color: var(--ink); }
 .inc:nth-child(3n+3) .inc__icon { background: var(--cream-2); color: var(--ink); }
 .inc__title { font-weight: 700; font-size: 16px; line-height: 1.25; letter-spacing: -0.01em; }
 .inc--feature {
@@ -847,7 +855,7 @@ h1, h2, h3, h4, p { margin: 0; }
 .pscr__buy {
   margin-top: auto;
   background: var(--tangerine);
-  color: #fff;
+  color: var(--ink); /* blanco sobre tangerina = 2.85:1, prohibido */
   text-align: center;
   padding: 13px;
   border-radius: 14px;
@@ -863,7 +871,6 @@ h1, h2, h3, h4, p { margin: 0; }
 }
 @media (max-width: 820px) {
   .demo__grid { grid-template-columns: 1fr; }
-  .phone-stage { order: -1; }
   .phone { transform: rotateY(-12deg) rotateX(3deg); }
 }
 
@@ -910,7 +917,7 @@ h1, h2, h3, h4, p { margin: 0; }
   font-size: 19px;
   letter-spacing: -0.01em;
 }
-.plan__qty { font-size: 13px; color: var(--ink-3); font-weight: 600; }
+.plan__qty { font-size: 15px; color: var(--ink-2); font-weight: 600; } /* lo que se compara: legible */
 .plan__price {
   font-family: var(--display);
   font-weight: 800;
@@ -924,7 +931,7 @@ h1, h2, h3, h4, p { margin: 0; }
 .plan__list {
   list-style: none; padding: 0; margin: 8px 0 0;
   display: flex; flex-direction: column; gap: 9px;
-  font-size: 14px; color: var(--ink-2);
+  font-size: 15px; color: var(--ink-2);
 }
 .plan__list li { display: grid; grid-template-columns: 16px 1fr; gap: 9px; align-items: flex-start; line-height: 1.4; }
 .plan__list .tick {
@@ -1133,6 +1140,10 @@ h1, h2, h3, h4, p { margin: 0; }
 /* Hero: el squiggle ya subraya; la palabra va en tinta en el teléfono (40px)
    y en --tangerine-deep recién cuando el h1 pasa los 56px (11vw >= 56). */
 .hero__title .squiggle.accent { text-decoration: none; color: var(--ink); }
+/* Subrayado solo donde importa: el h1 y el h2 de precios. En todos los h2
+   era ruido (~10 por página) y dejaba de marcar lo importante. */
+.h2 .accent, .uses__note .accent, .includes__note .accent { text-decoration: none; }
+#pricing-title .accent { text-decoration: underline; text-decoration-color: var(--tangerine); }
 @media (min-width: 510px) { .hero__title .squiggle.accent { color: var(--tangerine-deep); } }
 
 .chip .tick { width: 18px; height: 18px; padding: 3px; background: var(--tangerine); color: var(--ink); stroke-width: 3; }
@@ -1270,7 +1281,7 @@ h1, h2, h3, h4, p { margin: 0; }
 .tabla__p .tabla__ico { color: var(--ink); }
 .tabla__o .tabla__ico { color: var(--ink-3); }
 
-.plan__percu { font-family: var(--body); font-weight: 600; font-size: 13px; color: var(--ink-2); }
+.plan__percu { font-family: var(--body); font-weight: 600; font-size: 15px; color: var(--ink-2); }
 
 /* Preguntas frecuentes */
 .faq__grid {
@@ -1292,10 +1303,10 @@ h1, h2, h3, h4, p { margin: 0; }
   gap: 18px;
   padding: 20px 0;
   min-height: 44px;
-  font-family: var(--display);
-  font-weight: 700;
+  font-family: var(--body);
+  font-weight: 600;
   font-size: 18px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
 }
 .faq__q::-webkit-details-marker { display: none; }
 .faq__q:focus-visible { outline: 3px solid var(--tangerine); outline-offset: 4px; border-radius: 6px; }

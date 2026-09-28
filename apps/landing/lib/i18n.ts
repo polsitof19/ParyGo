@@ -15,7 +15,7 @@ export type Dict = {
   meta: { title: string; description: string; keywords: string[] };
   idioma: { label: string };
   header: { nav: [string, string, string, string]; login: string; loginAria: string; cta: string };
-  hero: { l1: string; l2: string; l3: string; sub: string; cta: string; ver: string; chips: [string, string, string]; ticket: { titulo: string; noche: string; fecha: string; escanea: string; puerta: string } };
+  hero: { l1: string; l2: string; l3: string; sub: string; cta: string; ver: string; chips: [string, string, string]; desde: [string, string]; ticket: { titulo: string; noche: string; fecha: string; escanea: string; puerta: string } };
   uses: { h2: Resaltado; items: string[]; note: Resaltado };
   how: { h2: Resaltado; paso: string; steps: { t: string; d: string }[] };
   seg: { h2: Resaltado; lede: string; flujo: { publico: string; publicoTxt: string; paga: string; cuenta: string; cuentaTxt: string; parygo: string; parygoTxt: string; aria: string }; puntos: { t: string; d: string }[] };
@@ -46,6 +46,7 @@ const es: Dict = {
     sub: 'Vende las entradas de tus eventos con tu propia marca. Tu público paga directamente a tu cuenta, sin comisiones por entrada, y tú controlas cada acceso.',
     cta: 'Comenzar', ver: 'Ver cómo funciona',
     chips: ['Pagos directos a tu cuenta', 'Sin comisión por entrada', 'Tu página lista en minutos'],
+    desde: ['Desde ', ' por evento'],
     ticket: { titulo: 'VERANO SUNSET', noche: 'NOCHE 04', fecha: 'SÁB 24 ENE · 10:00 PM · CLUB DELMAR', escanea: 'ESCANEA', puerta: 'EN PUERTA' },
   },
   uses: {
@@ -179,7 +180,7 @@ const es: Dict = {
     producto: 'Producto', ayuda: 'Ayuda', legal: 'Legal',
     links: { como: 'Cómo funciona', seguridad: 'Seguridad', incluye: 'Qué incluye', precios: 'Precios', crear: 'Crear mi marca', preguntas: 'Preguntas frecuentes', panel: 'Ingresar al panel', terminos: 'Términos', privacidad: 'Privacidad' },
     copy: '© 2015 ParyGo. Todos los derechos reservados.',
-    made: 'Vende con tu marca. Cobra directamente.',
+    made: 'Hecho en Lima, Perú.',
   },
 };
 
@@ -199,6 +200,7 @@ const en: Dict = {
     sub: 'Sell tickets for your events under your own brand. Your audience pays directly into your account, with no per-ticket fees, and you control every entry.',
     cta: 'Get started', ver: 'See how it works',
     chips: ['Payments straight to your account', 'No per-ticket fees', 'Your page ready in minutes'],
+    desde: ['From ', ' per event'],
     ticket: { titulo: 'SUMMER SUNSET', noche: 'NIGHT 04', fecha: 'SAT JAN 24 · 10:00 PM · CLUB DELMAR', escanea: 'SCAN', puerta: 'AT THE DOOR' },
   },
   uses: {
@@ -332,7 +334,7 @@ const en: Dict = {
     producto: 'Product', ayuda: 'Help', legal: 'Legal',
     links: { como: 'How it works', seguridad: 'Security', incluye: 'What\'s included', precios: 'Pricing', crear: 'Create my brand', preguntas: 'FAQ', panel: 'Log in to the dashboard', terminos: 'Terms', privacidad: 'Privacy' },
     copy: '© 2015 ParyGo. All rights reserved.',
-    made: 'Sell under your brand. Get paid directly.',
+    made: 'Made in Lima, Peru.',
   },
 };
 

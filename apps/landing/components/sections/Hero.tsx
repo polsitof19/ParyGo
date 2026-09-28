@@ -2,6 +2,8 @@ import { Check } from 'lucide-react';
 import { empezar } from '@/lib/cta';
 import type { Dict } from '@/lib/i18n';
 import { TicketCanvas } from '@/components/decorative/TicketCanvas';
+import { PrecioLocal } from '@/components/PrecioLocal';
+import { PACKS } from '@/lib/packs';
 
 // Splits a phrase into <span.word> with a sequential --w index so the CSS can
 // reveal each word in turn (refinamiento 2). `start` keeps the index running
@@ -34,7 +36,6 @@ export function Hero({ t }: { t: Dict }) {
     <section className="section hero" aria-labelledby="hero-title">
       <div className="hero__blobs" aria-hidden="true">
         <div className="b1" />
-        <div className="b2" />
         <div className="b3" />
       </div>
 
@@ -42,9 +43,9 @@ export function Hero({ t }: { t: Dict }) {
         <div className="hero__grid">
           <div>
             <h1 className="h1 hero__title" id="hero-title">
-              <span className="ink">{l1.nodes}</span>
+              <span className="ink hero__linea">{l1.nodes}</span>
               <br />
-              {l2.nodes}
+              <span className="hero__linea">{l2.nodes}</span>
               <br />
               {/* El punto va pegado a la frase resaltada: suelto, en inglés ("your revenue") caía solo en otro renglón. */}
               <span className="hero__cierre">
@@ -65,6 +66,8 @@ export function Hero({ t }: { t: Dict }) {
               </a>
             </div>
             <div className="hero__chips reveal">
+              {/* El precio arriba: antes aparecía recién a la mitad de la página. */}
+              <span className="chip chip--precio"><Check className="tick" aria-hidden="true" /> {h.desde[0]}<PrecioLocal pen={PACKS[0].pen} usd={PACKS[0].usd} lang={t.lang} />{h.desde[1]}</span>
               {h.chips.map((c) => (
                 <span key={c} className="chip"><Check className="tick" aria-hidden="true" /> {c}</span>
               ))}
