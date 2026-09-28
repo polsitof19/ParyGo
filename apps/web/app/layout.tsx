@@ -36,6 +36,12 @@ export const metadata: Metadata = {
     template: '%s · ParyGo',
   },
   description: 'Plataforma de ticketing para promotores de eventos urbanos.',
+  // Íconos en public/, NO en app/: Next 14 compila app/icon.png como ruta de
+  // servidor (no edge) y el build de Cloudflare (next-on-pages) falla.
+  icons: {
+    icon: [{ url: '/favicon.ico', sizes: 'any' }, { url: '/icon.svg', type: 'image/svg+xml' }],
+    apple: '/apple-icon.png',
+  },
   robots: {
     // App surface is not indexable. Public event pages override this in their own metadata.
     index: false,
