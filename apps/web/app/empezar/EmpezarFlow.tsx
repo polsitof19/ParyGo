@@ -258,7 +258,6 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
                   maxLength={60} autoComplete="organization" placeholder={t.nombrePh} aria-invalid={!!err.nombre} aria-describedby={err.nombre ? 'e-nombre' : undefined} />
                 {err.nombre && <p id="e-nombre" className="ez-err">{err.nombre}</p>}
               </div>
-              <VistaPrevia nombre={nombre} slug={slug} t={t} className="ez-vp--movil" />
             </div>
           )}
 
@@ -278,7 +277,6 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
                   {hintSlug ?? <><span className="ez-ok" aria-hidden="true" />{t.linkLibre}</>}
                 </p>
               </div>
-              <VistaPrevia nombre={nombre} slug={slug} t={t} className="ez-vp--movil" />
             </div>
           )}
 
@@ -348,6 +346,10 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
               </>
             )}
           </div>
+
+          {/* Celular: la vista previa DEBAJO de "Continuar" (antes lo empujaba fuera
+              de la pantalla). En la compu va en el costado. */}
+          {(paso === 1 || paso === 2) && <VistaPrevia nombre={nombre} slug={slug} t={t} className="ez-vp--movil" />}
         </form>
       </div>
 
