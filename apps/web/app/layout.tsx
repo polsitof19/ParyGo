@@ -38,9 +38,10 @@ export const metadata: Metadata = {
   description: 'Plataforma de ticketing para promotores de eventos urbanos.',
   // Íconos en public/, NO en app/: Next 14 compila app/icon.png como ruta de
   // servidor (no edge) y el build de Cloudflare (next-on-pages) falla.
+  // ?v=N: el navegador guarda /icon.svg 4 h; subir N al cambiar el logo.
   icons: {
-    icon: [{ url: '/favicon.ico', sizes: 'any' }, { url: '/icon.svg', type: 'image/svg+xml' }],
-    apple: '/apple-icon.png',
+    icon: [{ url: '/favicon.ico?v=2', sizes: 'any' }, { url: '/icon.svg?v=2', type: 'image/svg+xml' }],
+    apple: '/apple-icon.png?v=2',
   },
   robots: {
     // App surface is not indexable. Public event pages override this in their own metadata.
