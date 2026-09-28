@@ -430,6 +430,8 @@ button.ez-volver { background: none; border: 0; padding: 0; margin: 0; font: inh
      la dirección de su página, en vivo. Blanco sobre el papel, borde de
      control (3:1) y la parte que eligió en tinta. — */
 .ez-vp { margin: var(--ez-s4) 0 0; }
+/* En el celular va entre el campo y "Continuar": aire antes del botón. */
+.ez-vp--movil { margin-bottom: var(--ez-s4); }
 .ez-vp__cap { font-size: var(--ez-meta); font-weight: 700; color: var(--ink-2); margin-bottom: var(--ez-s1); }
 .ez-vp__barra {
   display: flex;
