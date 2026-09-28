@@ -2,8 +2,6 @@ import { Check } from 'lucide-react';
 import { empezar } from '@/lib/cta';
 import type { Dict } from '@/lib/i18n';
 import { TicketCanvas } from '@/components/decorative/TicketCanvas';
-import { PrecioLocal } from '@/components/PrecioLocal';
-import { PACKS } from '@/lib/packs';
 
 // Splits a phrase into <span.word> with a sequential --w index so the CSS can
 // reveal each word in turn (refinamiento 2). `start` keeps the index running
@@ -66,8 +64,8 @@ export function Hero({ t }: { t: Dict }) {
               </a>
             </div>
             <div className="hero__chips reveal">
-              {/* El precio arriba: antes aparecía recién a la mitad de la página. */}
-              <span className="chip chip--precio"><Check className="tick" aria-hidden="true" /> {h.desde[0]}<PrecioLocal pen={PACKS[0].pen} usd={PACKS[0].usd} lang={t.lang} />{h.desde[1]}</span>
+              {/* "Desde S/ 50 por evento" va acá el día que exista el evento privado de S/ 50
+                  (Paul, 2026-09-28). Hasta entonces sin chip de precio: el más barato hoy es S/ 150. */}
               {h.chips.map((c) => (
                 <span key={c} className="chip"><Check className="tick" aria-hidden="true" /> {c}</span>
               ))}
