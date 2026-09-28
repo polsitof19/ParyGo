@@ -12,9 +12,11 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',
-    background_color: '#0d0d10',
-    theme_color: '#0d0d10',
+    background_color: '#0A0A0A',
+    theme_color: '#0A0A0A',
+    // El mismo "P." de la landing (app/icon.*, copiados de apps/landing/app).
     icons: [
+      { src: '/icon.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
       { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
     ],
   };
