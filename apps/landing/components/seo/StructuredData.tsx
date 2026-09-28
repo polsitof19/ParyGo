@@ -16,7 +16,7 @@ export function StructuredData({ t }: { t: Dict }) {
     '@type': 'Organization',
     name: SITE.name,
     url: SITE.url,
-    logo: `${SITE.url}/og.png`,
+    logo: `${SITE.url}/icon.png`,
     description: t.meta.description,
     contactPoint: [{ '@type': 'ContactPoint', contactType: 'sales', email: SITE.email, availableLanguage: ['Spanish', 'English'], areaServed: ['Latin America', 'Worldwide'] }],
   };

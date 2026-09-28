@@ -15,5 +15,5 @@ export const SITE = {
   email: 'parygoasistencia@gmail.com',
   themeColor: '#FBF7F0',
   // PNG rasterizado 1200x630 (los crawlers sociales —WhatsApp, FB, X— no aceptan SVG).
-  ogImage: '/og.png',
+  ogImage: '/og.png?v=2', // ?v: WhatsApp cachea la imagen por URL
 } as const;

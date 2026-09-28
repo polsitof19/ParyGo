@@ -48,7 +48,6 @@ parygo/
 │   └── utils.ts              # cn() helper
 ├── public/
 │   ├── _headers              # Security headers + caching para Cloudflare Pages
-│   ├── og.svg                # OG image (TODO: rasterizar a PNG 1200×630)
 │   └── favicon.svg
 ├── next.config.mjs           # output:'export', images.unoptimized, optimizePackageImports
 ├── tailwind.config.ts        # Paleta + tipografías + animaciones

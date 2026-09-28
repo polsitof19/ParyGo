@@ -1,5 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <rect width="32" height="32" rx="7" fill="#FF6A3D"/>
-  <text x="14.5" y="23.5" text-anchor="middle" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="22" font-weight="900" fill="#FFF7ED" letter-spacing="-1">P</text>
-  <circle cx="24.5" cy="21" r="2.6" fill="#FFF7ED"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="116" fill="#FF6A3D"/>
+  <g fill="#0A0A0A" transform="translate(-4 -15)">
+    <rect x="138" y="128" width="66" height="290" rx="4"/>
+    <path fill-rule="evenodd" d="M276 124a108 108 0 1 1 0 216a108 108 0 1 1 0-216zM276 180a52 52 0 1 0 0 104a52 52 0 1 0 0-104z"/>
+    <circle cx="246" cy="394" r="24"/>
+  </g>
 </svg>
