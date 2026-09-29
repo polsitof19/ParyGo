@@ -19,9 +19,13 @@ const STAMP = Date.now().toString().slice(-7);
 const R = [];
 const check = (nombre, ok, detalle = '') => { R.push(ok); log(`${ok ? '✔' : '✘'} ${nombre}${detalle ? ' — ' + detalle : ''}`); };
 const marcasCreadas = new Set();
+// Cada enlace se anota ANTES de empezar su flujo: si un paso falla, la
+// limpieza igual encuentra la marca y su compra (review de Codex).
+const slugsUsados = new Set();
 
 // Recorre el alta en inglés (dólares → PayPal) hasta el botón de pagar.
 async function hastaPagar(ctx, { tipo, slug, email }) {
+  slugsUsados.add(slug);
   const p = await ctx.newPage();
   await p.goto(`${BASE}/empezar?tipo=${tipo}&lang=en`, { waitUntil: 'networkidle' });
   const seguir = () => p.getByRole('button', { name: /^Continue/ }).click();
@@ -119,6 +123,10 @@ try {
 } finally {
   await b.close();
   await svc.from('brands').update({ tipo: demoAntes?.tipo ?? 'marca' }).eq('id', DEMO);
+  if (slugsUsados.size) {
+    const { data: extra } = await svc.from('brands').select('id').in('slug', [...slugsUsados]);
+    for (const x of extra ?? []) marcasCreadas.add(x.id);
+  }
   for (const id of marcasCreadas) {
     await svc.from('pack_purchases').update({ status: 'failed' }).eq('brand_id', id).eq('status', 'pending');
     await svc.from('brands').update({ is_test: true, archived_at: new Date().toISOString() }).eq('id', id);
