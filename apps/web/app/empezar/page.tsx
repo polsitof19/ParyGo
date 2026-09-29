@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { mpListo, paypalListo } from '@/lib/cobroParygo';
-import { PACKS } from '@/lib/packs';
+import { PACK_PRIVADO, PACKS } from '@/lib/packs';
 import { EmpezarFlow, type Plan } from './EmpezarFlow';
-import { EventoPrivadoPronto } from './EventoPrivadoPronto';
 import { TipoDeEvento } from './TipoDeEvento';
 import { esLang, esMoneda, type Moneda } from './textos';
 
@@ -36,7 +35,6 @@ export default function EmpezarPage({ searchParams }: { searchParams: Params }) 
     if (typeof v === 'string' && v) qs.set(k, v);
   }
   if (!tipo) return <TipoDeEvento lang={lang} qs={qs} />;
-  if (tipo === 'privado') return <EventoPrivadoPronto lang={lang} volverHref={`?${qs.toString()}`} />;
 
   // Moneda: la que vio en la landing (?moneda=) manda; si llega directo, en
   // inglés dólares y en español según el país (Cloudflare manda cf-ipcountry).
@@ -45,20 +43,24 @@ export default function EmpezarPage({ searchParams }: { searchParams: Params }) 
   const pedido = PLANES.find((p) => p === searchParams.pack) ?? '1';
 
   // Los precios salen de lib/packs.ts, la misma fuente que cobra el servidor:
-  // la pantalla solo los muestra, el monto lo fija pagarAlta.
-  const planes: Plan[] = PACKS.map((p) => ({
-    id: String(p.eventos) as Plan['id'],
-    eventos: p.eventos,
-    PEN: p.pen,
-    USD: p.usd,
-    destacado: p.eventos === 3,
-  }));
+  // la pantalla solo los muestra, el monto lo fija iniciarCompraPack (según
+  // brands.tipo). El evento privado (0075) es un solo plan.
+  const planes: Plan[] = tipo === 'privado'
+    ? [{ id: '1', eventos: 1, PEN: PACK_PRIVADO.pen, USD: PACK_PRIVADO.usd }]
+    : PACKS.map((p) => ({
+      id: String(p.eventos) as Plan['id'],
+      eventos: p.eventos,
+      PEN: p.pen,
+      USD: p.usd,
+      destacado: p.eventos === 3,
+    }));
 
   return (
     <EmpezarFlow
       lang={lang}
+      tipo={tipo}
       planes={planes}
-      inicial={pedido}
+      inicial={tipo === 'privado' ? '1' : pedido}
       monedaInicial={moneda}
       disponible={{ PEN: mpListo(), USD: paypalListo() }}
       cancelado={searchParams.cancelado === '1'}

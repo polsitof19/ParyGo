@@ -6,6 +6,7 @@ import { ArrowRight, Bell, Check, Eye, EyeOff, LogIn } from 'lucide-react';
 import { pagarAlta, slugDisponible, type AltaState } from './actions';
 import { CLAVE_ALTA } from './listo/Completar';
 import { TEXTOS, formatoPrecio, type Lang, type Moneda } from './textos';
+import type { TipoMarca } from '@/lib/packs';
 import { VistaPrevia } from './VistaPrevia';
 
 export type Plan = {
@@ -56,15 +57,20 @@ function Enviar({ children, disabled, espera }: { children: React.ReactNode; dis
   );
 }
 
-export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial, disponible, cancelado }: {
+export function EmpezarFlow({ lang, tipo = 'marca', planes, inicial: planInicial, monedaInicial, disponible, cancelado }: {
   lang: Lang;
+  // Marca o evento privado (0075): cambia los textos y va en un oculto; el
+  // precio NO sale de acá (lo decide el server por brands.tipo).
+  tipo?: TipoMarca;
   planes: Plan[];
   inicial: Opcion;
   monedaInicial: Moneda;
   disponible: Record<Moneda, boolean>;
   cancelado?: boolean;
 }) {
-  const t = TEXTOS[lang];
+  const base = TEXTOS[lang];
+  // Evento privado: sus textos encima de los de siempre.
+  const t = tipo === 'privado' ? { ...base, ...base.privado, w: { ...base.w, ...base.privado.w } } : base;
   const [paso, setPaso] = useState<Paso>(0);
   const [moneda, setMoneda] = useState<Moneda>(monedaInicial);
   const pagos = disponible[moneda];
@@ -157,6 +163,7 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
   const ocultos = (
     <>
       <input type="hidden" name="lang" value={lang} />
+      <input type="hidden" name="tipo" value={tipo} />
       <input type="hidden" name="moneda" value={moneda} />
       <input type="hidden" name="plan" value={plan} />
       <input type="hidden" name="nombre" value={nombre} />
@@ -181,7 +188,7 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
     </label>
   );
 
-  const planTxt = `${elegido.eventos} ${elegido.eventos === 1 ? t.evento : t.eventos}`;
+  const planTxt = tipo === 'privado' ? base.privado.planNombre : `${elegido.eventos} ${elegido.eventos === 1 ? t.evento : t.eventos}`;
   const hintSlug = err.slug ?? (libre === false ? t.linkTomado : libre ? null : slug.length >= 2 ? t.w.buscando : t.linkHint);
 
   return (
@@ -224,8 +231,8 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
 
                 {planes.map((p) => fila(
                   p.id,
-                  `${p.eventos} ${p.eventos === 1 ? t.evento : t.eventos}`,
-                  p.eventos === 1 ? t.puntual : `${formatoPrecio(Math.round(p[moneda] / p.eventos / 100) * 100, moneda)} ${t.porEvento}.`,
+                  tipo === 'privado' ? base.privado.planNombre : `${p.eventos} ${p.eventos === 1 ? t.evento : t.eventos}`,
+                  tipo === 'privado' ? base.privado.planDet : p.eventos === 1 ? t.puntual : `${formatoPrecio(Math.round(p[moneda] / p.eventos / 100) * 100, moneda)} ${t.porEvento}.`,
                   precio(p),
                   !pagos,
                   p.destacado,

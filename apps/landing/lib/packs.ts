@@ -9,3 +9,7 @@ export const PACKS = [
   { eventos: 5, pen: 600, usd: 229 },
   { eventos: 10, pen: 1100, usd: 399 },
 ] as const;
+
+// Evento privado (0075, Paul 2026-09-28): 1 evento, hasta 200 entradas.
+// = PACK_PRIVADO de apps/web/lib/packs.ts (esa es la que COBRA).
+export const PACK_PRIVADO = { eventos: 1, pen: 50, usd: 19 } as const;

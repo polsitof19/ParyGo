@@ -19,7 +19,8 @@ export default async function ComprarPage({ searchParams }: { searchParams: { ca
   if (ctx.soloLectura) redirect('/admin');
   const { t } = await textosPanel();
 
-  const { data: brand } = await createAdminClient().from('brands').select('event_balance').eq('id', ctx.brandId).single();
+  const { data: brand } = await createAdminClient().from('brands').select('event_balance, tipo').eq('id', ctx.brandId).single();
+  const privado = brand?.tipo === 'privado';
 
   return (
     <div style={{ maxWidth: 680 }}>
@@ -28,10 +29,10 @@ export default async function ComprarPage({ searchParams }: { searchParams: { ca
       </Link>
       <h1 className="s-h1" style={{ marginTop: 8 }}>{t('Comprar eventos', 'Buy events')}</h1>
       <p className="s-card__desc" style={{ marginBottom: 'var(--s-s3)' }}>
-        {t(`Tienes ${brand?.event_balance ?? 0} evento${brand?.event_balance === 1 ? '' : 's'} de saldo. Cada evento es uno que creas, con entradas sin límite. Pagas y el saldo se suma al toque. En Perú, con MercadoPago (tarjeta o Yape); desde afuera, con PayPal en dólares.`, `You have ${brand?.event_balance ?? 0} event${brand?.event_balance === 1 ? '' : 's'} in your balance. Each event is one you create, with unlimited tickets. Pay and your balance updates instantly. In Peru, with MercadoPago (card or Yape); from abroad, with PayPal in dollars.`)}
+        {t(`Tienes ${brand?.event_balance ?? 0} evento${brand?.event_balance === 1 ? '' : 's'} de saldo. ${privado ? 'Cada evento privado es uno que creas, con hasta 200 entradas.' : 'Cada evento es uno que creas, con entradas sin límite.'} Pagas y el saldo se suma al toque. En Perú, con MercadoPago (tarjeta o Yape); desde afuera, con PayPal en dólares.`, `You have ${brand?.event_balance ?? 0} event${brand?.event_balance === 1 ? '' : 's'} in your balance. ${privado ? 'Each private event is one you create, with up to 200 tickets.' : 'Each event is one you create, with unlimited tickets.'} Pay and your balance updates instantly. In Peru, with MercadoPago (card or Yape); from abroad, with PayPal in dollars.`)}
       </p>
       {searchParams.cancelado && <p className="s-notice" role="status">{t('No se completó el pago. No se te cobró nada.', 'The payment was not completed. You were not charged.')}</p>}
-      <ComprarPacks mp={mpListo()} paypal={paypalListo()} />
+      <ComprarPacks mp={mpListo()} paypal={paypalListo()} privado={privado} />
     </div>
   );
 }

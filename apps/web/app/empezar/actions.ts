@@ -5,7 +5,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { publicEnv } from '@/lib/env';
-import { packDe } from '@/lib/packs';
+import { esTipoMarca, packDe } from '@/lib/packs';
 import { mpListo, paypalListo } from '@/lib/cobroParygo';
 import { iniciarCompraPack } from '@/lib/compraPack';
 import { crearMarcaParaUsuario, SLUGS_RESERVADOS, SLUG_RE } from '@/lib/altaMarca';
@@ -135,7 +135,10 @@ export async function pagarAlta(_prev: AltaState, fd: FormData): Promise<AltaSta
   const lang: Lang = esLang(fd.get('lang'));
   const m = TEXTOS[lang].m;
 
-  const p = esquemas(m).pago.safeParse({ ...campos(fd), plan: fd.get('plan') });
+  // Marca o evento privado (0075). El evento privado es de a UNO: el plan
+  // se fuerza a 1 y el precio lo pone iniciarCompraPack según brands.tipo.
+  const tipo = esTipoMarca(fd.get('tipo'));
+  const p = esquemas(m).pago.safeParse({ ...campos(fd), plan: tipo === 'privado' ? '1' : fd.get('plan') });
   if (!p.success) return { ok: false, paso: 'datos', message: m.revisa, fieldErrors: errores(p.error) };
   const d = p.data;
   const pack = packDe(Number(d.plan));
@@ -164,20 +167,26 @@ export async function pagarAlta(_prev: AltaState, fd: FormData): Promise<AltaSta
   // Con una ya pagada, a terminar esa. Se reusa SOLO la del mismo link, sin
   // tocarle nada: el formulario no tiene sesión, y cambiar nombre o link de
   // una marca ajena escribiendo su correo era posible (security review).
-  const { data: previas } = await admin.from('brands').select('id, slug').eq('contact_email', d.email).not('archived_at', 'is', null);
+  const { data: previas } = await admin.from('brands').select('id, slug, tipo').eq('contact_email', d.email).not('archived_at', 'is', null);
   let brandId: string | null = null;
   for (const b of previas ?? []) {
     const { count: miembros } = await admin.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', b.id);
     if (miembros) continue;
     const { count: pagadas } = await admin.from('pack_purchases').select('id', { count: 'exact', head: true }).eq('brand_id', b.id).eq('status', 'paid');
     if (pagadas) return { ok: false, paso: 'datos', message: m.pagoEsperando };
-    if (b.slug === d.slug) brandId = b.id;
+    // Se reusa SOLO si es del mismo tipo: brands.tipo no cambia nunca (si
+    // una pestaña "privado" y otra "marca" pudieran pisarse el tipo, se
+    // pagaba S/ 50 y quedaba una marca sin tope). Otro tipo = enlace ocupado.
+    if (b.slug === d.slug) {
+      if ((b.tipo ?? 'marca') !== tipo) return tomado(m);
+      brandId = b.id;
+    }
   }
   if (!brandId) {
     if (!(await slugLibre(d.slug))) return tomado(m);
     const alta = await crearMarcaParaUsuario({
       userId: null, email: d.email, nombre: d.nombre, slug: d.slug,
-      whatsappE164: d.whatsapp || null, prueba: false, idioma: lang,
+      whatsappE164: d.whatsapp || null, prueba: false, idioma: lang, tipo,
     });
     if (!alta.ok) return alta.motivo === 'slug_en_uso' ? tomado(m) : { ok: false, paso: 'datos', message: m.noPago };
     brandId = alta.brandId;
@@ -190,7 +199,7 @@ export async function pagarAlta(_prev: AltaState, fd: FormData): Promise<AltaSta
     brandId, userId: null, email: d.email, pack, pasarela,
     volver: (id) => `${app}/empezar/listo?compra=${id}&${q}`,
     sufijoPaypal: `&${q}`,
-    cancelar: `${app}/empezar?pack=${d.plan}&moneda=${moneda}&${q}&cancelado=1`,
+    cancelar: `${app}/empezar?tipo=${tipo}&pack=${d.plan}&moneda=${moneda}&${q}&cancelado=1`,
   });
   if (!compra.ok) return { ok: false, paso: 'datos', message: m.noPago };
   redirect(compra.destino);

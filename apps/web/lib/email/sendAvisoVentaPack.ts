@@ -16,17 +16,18 @@ export async function avisarVentaPack(compraId: string): Promise<void> {
     const admin = createAdminClient();
     const { data: c } = await admin
       .from('pack_purchases')
-      .select('pack, currency, amount_cents, provider, created_by, brand:brands ( name, slug, contact_email, is_test, event_balance )')
+      .select('pack, currency, amount_cents, provider, created_by, brand:brands ( name, slug, contact_email, is_test, event_balance, tipo )')
       .eq('id', compraId)
       .maybeSingle();
     const b = (Array.isArray(c?.brand) ? c?.brand[0] : c?.brand) as
-      | { name: string; slug: string; contact_email: string | null; is_test: boolean; event_balance: number }
+      | { name: string; slug: string; contact_email: string | null; is_test: boolean; event_balance: number; tipo: string }
       | null
       | undefined;
     if (!c || !b || b.is_test) return;
 
     const monto = `${c.currency === 'USD' ? 'US$' : 'S/'}${(c.amount_cents / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
-    const eventos = `${c.pack} evento${c.pack === 1 ? '' : 's'}`;
+    // Evento privado (0075): que se lea de un vistazo qué vendiste.
+    const eventos = b.tipo === 'privado' ? '1 evento privado' : `${c.pack} evento${c.pack === 1 ? '' : 's'}`;
     const via = c.provider === 'paypal' ? 'PayPal' : 'Mercado Pago';
     // created_by nulo = alta nueva desde /empezar; con usuario = recompra desde el panel.
     const tipo = c.created_by ? 'Recompra desde su panel' : 'Marca nueva (alta desde /empezar)';

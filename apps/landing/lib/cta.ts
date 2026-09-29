@@ -6,8 +6,10 @@
 // pague exactamente lo que se le mostró.
 const EMPEZAR = 'https://app.parygo.com/empezar';
 
-export function empezar(lang: 'es' | 'en', extra?: { pack?: number; moneda?: 'PEN' | 'USD' }): string {
+export function empezar(lang: 'es' | 'en', extra?: { pack?: number; moneda?: 'PEN' | 'USD'; tipo?: 'marca' | 'privado' }): string {
   const q = new URLSearchParams();
+  // Evento privado (0075): entra directo a su alta, sin la pregunta.
+  if (extra?.tipo) q.set('tipo', extra.tipo);
   if (extra?.pack) q.set('pack', String(extra.pack));
   if (extra?.moneda) q.set('moneda', extra.moneda);
   if (lang === 'en') q.set('lang', 'en');

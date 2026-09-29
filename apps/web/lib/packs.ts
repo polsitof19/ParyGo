@@ -17,7 +17,15 @@ export function packDe(eventos: number): Pack | null {
   return PACKS.find((p) => p.eventos === eventos) ?? null;
 }
 
-export function precioDe(p: Pack, pasarela: Pasarela): { currency: 'PEN' | 'USD'; cents: number } {
+// Evento privado (0075, Paul 2026-09-28): cumpleaños, reuniones. UN evento,
+// hasta 200 entradas (lo impone la base). El precio NO lo elige quien llama:
+// iniciarCompraPack lo decide leyendo brands.tipo, que solo escribe el server
+// al crear la marca y no cambia nunca. = apps/landing/lib/packs.ts.
+export const PACK_PRIVADO = { eventos: 1, pen: 5000, usd: 1900 } as const;
+export type TipoMarca = 'marca' | 'privado';
+export const esTipoMarca = (v: unknown): TipoMarca => (v === 'privado' ? 'privado' : 'marca');
+
+export function precioDe(p: { pen: number; usd: number }, pasarela: Pasarela): { currency: 'PEN' | 'USD'; cents: number } {
   return pasarela === 'mercadopago' ? { currency: 'PEN', cents: p.pen } : { currency: 'USD', cents: p.usd };
 }
 

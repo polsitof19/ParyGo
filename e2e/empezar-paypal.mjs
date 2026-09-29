@@ -5,22 +5,26 @@
 // Una orden sin aprobar no cobra nada y PayPal la vence sola.
 // Volumen: 1 marca (queda archivada, is_test, compra en 'failed').
 //
-//   node e2e/empezar-paypal.mjs
+//   node e2e/empezar-paypal.mjs                      (marca: US$59)
+//   E2E_TIPO=privado node e2e/empezar-paypal.mjs     (evento privado, 0075:
+//   US$19; prueba que el PRECIO lo pone el servidor según brands.tipo)
 import { chromium } from 'playwright';
 import { svc, BASE, log } from './lib.mjs';
 
 const STAMP = Date.now().toString().slice(-7);
 const R = [];
 const check = (nombre, ok, detalle = '') => { R.push(ok); log(`${ok ? '✔' : '✘'} ${nombre}${detalle ? ' — ' + detalle : ''}`); };
-const slug = `e2e-paypal${STAMP}`;
+const PRIV = process.env.E2E_TIPO === 'privado';
+const USD = PRIV ? 19 : 59;
+const slug = `e2e-paypal${PRIV ? '-priv' : ''}${STAMP}`;
 let brandId = null;
 
 const b = await chromium.launch();
 try {
   const p = await b.newPage();
-  await p.goto(`${BASE}/empezar?tipo=marca&lang=en`, { waitUntil: 'networkidle' });
+  await p.goto(`${BASE}/empezar?tipo=${PRIV ? 'privado' : 'marca'}&lang=en`, { waitUntil: 'networkidle' });
   const html = await p.locator('main').innerText();
-  check('en inglés sale en dólares', /US\$59/.test(html) && !/S\/150/.test(html));
+  check(`en inglés sale en dólares (US$${USD})`, html.includes(`US$${USD}`) && !html.includes('S/'));
   // Paso a paso (2026-09-28): cada "Continue" lleva a la pregunta siguiente.
   const seguir = () => p.getByRole('button', { name: /^Continue/ }).click();
   await p.locator('.ez-plan:has(input[value="1"])').click();
@@ -33,19 +37,20 @@ try {
   await p.fill('#ez-email', `delivered+paypal${STAMP}@resend.dev`);
   await seguir();
   await p.fill('#ez-pass', 'E2eAlta!2026');
-  const boton = p.getByRole('button', { name: /^Pay US\$59$/ });
-  check('el botón dice "Pay US$59"', await boton.count() === 1);
+  const boton = p.getByRole('button', { name: `Pay US$${USD}`, exact: true });
+  check(`el botón dice "Pay US$${USD}"`, await boton.count() === 1);
   await boton.click();
   await p.waitForURL(/paypal\.com/, { timeout: 40000, waitUntil: 'commit' });
   const url = new URL(p.url());
   check('va a paypal.com (live, no sandbox)', url.hostname.endsWith('paypal.com') && !url.hostname.includes('sandbox'), url.hostname);
 
-  const { data: marca } = await svc.from('brands').select('id, archived_at, idioma').eq('slug', slug).single();
+  const { data: marca } = await svc.from('brands').select('id, archived_at, idioma, tipo').eq('slug', slug).single();
   brandId = marca?.id;
   check('marca creada archivada y sin dueño', !!marca?.archived_at);
   check('el alta en inglés deja el panel en inglés (idioma=en)', marca?.idioma === 'en', marca?.idioma);
+  check(`la marca queda con tipo ${PRIV ? 'privado' : 'marca'}`, marca?.tipo === (PRIV ? 'privado' : 'marca'), marca?.tipo);
   const { data: compra } = await svc.from('pack_purchases').select('id, provider, provider_ref, amount_cents, currency, status, created_by').eq('brand_id', brandId).single();
-  check('compra PayPal US$59 pendiente', compra?.provider === 'paypal' && compra.amount_cents === 5900 && compra.currency === 'USD' && compra.status === 'pending' && compra.created_by === null, JSON.stringify({ ...compra, provider_ref: compra?.provider_ref ? '…' : null }));
+  check(`compra PayPal US$${USD} pendiente (monto puesto por el servidor)`, compra?.provider === 'paypal' && compra.amount_cents === USD * 100 && compra.currency === 'USD' && compra.status === 'pending' && compra.created_by === null, JSON.stringify({ ...compra, provider_ref: compra?.provider_ref ? '…' : null }));
   check('la orden de PayPal es la de la URL', !!compra?.provider_ref && p.url().includes(compra.provider_ref));
 
   // Vuelta SIN aprobar: PayPal niega la captura (ORDER_NOT_APPROVED) → la
