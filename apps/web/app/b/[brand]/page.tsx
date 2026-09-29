@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { formatPEN } from '@/lib/utils';
@@ -27,6 +27,7 @@ export const dynamic = 'force-dynamic';
 
 type EvRow = {
   id: string; slug: string; name: string; starts_at: string;
+  tope_entradas: number | null;
   venue_name: string | null; venue_address: string | null;
   cover_url: string | null;
   cover_w: number | null; cover_h: number | null;
@@ -85,7 +86,7 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
   const now = new Date().toISOString();
   const { data: upcoming } = await supabase
     .from('events')
-    .select('id, slug, name, starts_at, venue_name, venue_address, cover_url, cover_w, cover_h, is_free')
+    .select('id, slug, name, starts_at, venue_name, venue_address, cover_url, cover_w, cover_h, is_free, tope_entradas')
     .eq('brand_id', brand.id)
     .eq('is_published', true)
     .is('archived_at', null)
@@ -93,6 +94,13 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
     .order('starts_at', { ascending: true });
 
   const eventos = (upcoming ?? []) as EvRow[];
+
+  // Evento privado (Paul, 2026-09-28): el link que se manda por WhatsApp
+  // (ana30.parygo.com) abre DIRECTO el evento, con el botón de la entrada a
+  // la vista. Se reconoce por el tope de su evento (solo los privados lo
+  // tienen); brands.tipo no se lee acá: anon no tiene grant de esa columna.
+  const unico = eventos.length === 1 ? eventos[0] : undefined;
+  if (unico && unico.tope_entradas != null) redirect(`/${unico.slug}`);
 
   // "Desde S/X" = el mínimo de los tipos activos que SE OFRECEN al público
   // (isPubliclyOffered). Una cortesía no está a la venta; un evento GRATIS

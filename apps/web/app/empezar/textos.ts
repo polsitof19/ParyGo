@@ -114,7 +114,12 @@ const es = {
     elige: 'Tu plan', planNombre: '1 evento privado', planDet: 'Hasta 200 entradas en total.',
     incluido: 'Incluye tu página del evento, entradas con QR, cobro directo a tu cuenta y escáner en la puerta.',
     nombrePh: 'Ej. Cumpleaños de Ana',
-    w: { nombre: '¿Cómo se llama tu evento?', nombreHint: 'Es el nombre que verán tus invitados en la página y en sus entradas.', rMarca: 'Evento' },
+    // El link del evento (Paul, 2026-09-28): corto y fácil de dictar.
+    linkPh: 'tuevento', linkHint: 'Solo minúsculas, números y guiones. Ej.: ana30, boda-luis-y-maria.',
+    linkTomado: 'Ese enlace ya está en uso. Prueba con otro.',
+    w: { nombre: '¿Cómo se llama tu evento?', nombreHint: 'Es el nombre que verán tus invitados en la página y en sus entradas.', rMarca: 'Evento',
+      enlaceHint: 'Es el link que les mandarás a tus invitados por WhatsApp. Mejor corto y fácil de dictar: ana30, boda-luis-y-maria.',
+      ocupadoPaso: 'Ese enlace ya está en uso: en el siguiente paso eliges otro.' },
     incluye: {
       h: 'Todo lo que incluye tu evento',
       grupos: [
@@ -268,7 +273,11 @@ const en: T = {
     elige: 'Your plan', planNombre: '1 private event', planDet: 'Up to 200 tickets in total.',
     incluido: 'Includes your event page, QR tickets, direct payments to your account and a door scanner.',
     nombrePh: "e.g. Ana's Birthday",
-    w: { nombre: "What's your event called?", nombreHint: 'This is the name your guests will see on the page and on their tickets.', rMarca: 'Event' },
+    linkPh: 'yourevent', linkHint: 'Lowercase letters, numbers and hyphens only. E.g.: ana30, luis-and-maria-wedding.',
+    linkTomado: 'That link is already in use. Please try another.',
+    w: { nombre: "What's your event called?", nombreHint: 'This is the name your guests will see on the page and on their tickets.', rMarca: 'Event',
+      enlaceHint: 'This is the link you will send your guests on WhatsApp. Short and easy to say works best: ana30, luis-and-maria-wedding.',
+      ocupadoPaso: 'That link is already in use: you will pick another one in the next step.' },
     incluye: {
       h: 'Everything your event includes',
       grupos: [
