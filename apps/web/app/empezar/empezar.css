@@ -352,6 +352,22 @@
 
 .ez a.ez-btn { text-decoration: none; }
 .ez-actions--top { margin-top: var(--ez-s4); }
+.ez-fine--pago { margin-bottom: var(--ez-s2); }
+/* REGLA (Paul, 2026-09-28): en el celular el botón del paso ("Continuar" /
+   "Pagar") SIEMPRE a la vista, sin bajar. La barra queda pegada abajo
+   mientras el contenido pasa por detrás; en su lugar natural (al final del
+   formulario) se suelta sola. Respeta la barra de inicio del iPhone. */
+@media (max-width: 959px) {
+  .ez-actions--fija {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin: 0 calc(-1 * var(--ez-s2));
+    padding: var(--ez-s1) var(--ez-s2) calc(var(--ez-s1) + env(safe-area-inset-bottom));
+    background: var(--paper);
+    border-top: 1px solid var(--line);
+  }
+}
 /* Secundario: mismo botón con borde (el acento no porta texto). */
 .ez-btn--soft { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ez-ctl-line); }
 @media (hover: hover) and (pointer: fine) { .ez-btn--soft:hover { background: var(--paper-2); } }
