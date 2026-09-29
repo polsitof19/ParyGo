@@ -856,3 +856,9 @@ html:has(.pg-panel), body:has(.pg-panel) { background: #0A0A0A; }
     box-shadow: inset 0 0 0 999px var(--sel);
   }
 }
+
+/* Tema de la página de compra (Mi marca, 0076): cada opción es un botón con
+   su miniatura; como todo control del panel, responde al toque. */
+.pg-panel .s-tema { transition: transform .14s ease-out; }
+.pg-panel .s-tema:active { transform: scale(.97); }
+.pg-panel .s-tema:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }

@@ -7,6 +7,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { SettingsForm } from './SettingsForm';
 import { MpCredentialsForm } from './MpCredentialsForm';
 import { IdiomaSelector } from './IdiomaSelector';
+import { TemaCompraSelector } from './TemaCompraSelector';
+import { esTema } from '@/lib/temaCompra.mjs';
 import { esIdioma } from '@/lib/idioma';
 import { textosPanel } from '@/lib/idiomaServer';
 
@@ -31,7 +33,7 @@ export default async function AdminSettingsPage() {
   const [{ data: brand }, { data: mpStatus }, { data: qrRow }] = await Promise.all([
     supabase
       .from('brands')
-      .select('id, name, contact_email, whatsapp_e164, instagram, yape_number, yape_holder, notify_yape_recovery, notify_yape_digest, theme_json, idioma')
+      .select('id, name, contact_email, whatsapp_e164, instagram, yape_number, yape_holder, notify_yape_recovery, notify_yape_digest, theme_json, idioma, tema_compra')
       .eq('id', ctx.brandId)
       .single(),
     admin.rpc('get_brand_mp_status', { p_brand_id: ctx.brandId }),
@@ -87,6 +89,10 @@ export default async function AdminSettingsPage() {
         notifyYapeDigest={Boolean(brand.notify_yape_digest)}
         readOnly={impersonating}
       />
+
+      <div style={{ marginTop: 16 }}>
+        <TemaCompraSelector tema={esTema(brand.tema_compra)} primary={theme.primary_color ?? '#FF6A3D'} disabled={impersonating} />
+      </div>
 
       <div style={{ marginTop: 16 }}>
         <MpCredentialsForm
