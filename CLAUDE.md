@@ -185,6 +185,21 @@ para OK de Paul.
   blobs, rellenos sin texto. NUNCA color de texto ni texto blanco encima.
   Razón: en páginas públicas de marca --accent toma var(--brand), elegido por el
   promotor, y no hay forma de garantizar contraste sobre un color arbitrario.
+- TEMA DEL COMPRADOR ELEGIDO POR LA MARCA (0076, 2026-09-28, Paul: "el negro
+  se ve IA"): brands.tema_compra = blanco (default, TODAS las marcas pasaron a
+  blanco) | crema | negro | marca (fondo del color de la marca). La paleta
+  sale SOLO de apps/web/lib/temaCompra.mjs (JS puro + .d.mts; la importan
+  b/[brand]/layout.tsx, Mi marca y scripts/check-temas-compra.mjs: sin
+  copias) y va como variables CSS inline + clase `tema-<tema>` (y
+  `tema-claro`). Tinta/--ink-2/--ink-3 se CALCULAN contra la superficie más
+  desfavorable (7/6/4.5; en "marca" 5.5/4.5/4.5 con el fondo corrido lo
+  mínimo y el botón de TINTA); la marca como punto/anillo 3:1 contra el fondo
+  del tema. En client.css/compra.css NO hay rgba(255,255,255,…): se usan
+  --edge*, --ink-hover, --sel del tema. La entrada con QR y el QR de Yape
+  siguen BLANCOS en todos los temas. Mi marca muestra cada tema en miniatura
+  con el LOGO real (un logo de letras blancas sin fondo desaparece en claro).
+  Lo de abajo sobre el negro describe el tema "negro", que es idéntico al de
+  antes.
 - FONDOS NEUTROS en las superficies del COMPRADOR (regla vigente desde el
   2026-09-23, reemplaza a "papel crema" ahí): blanco #FFFFFF o negro #0A0A0A;
   nunca crema, marrón ni tintes cálidos. Aplica a b/[brand]/* (compra, datos,

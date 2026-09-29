@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTextos } from '@/components/IdiomaPanel';
 import { brandFillPair } from '@/lib/brandColors';
-import { paletaCompra, type TemaCompra } from '@/lib/temaCompra.mjs';
+import { paletaCompra, type TemaCompra as TemaCompraType } from '@/lib/temaCompra.mjs';
 import { cambiarTemaCompraAction } from './actions';
 
 // Cómo ven los compradores la página de la marca (0076, Paul 2026-09-28):
@@ -12,21 +12,23 @@ import { cambiarTemaCompraAction } from './actions';
 // PREVIA con la paleta real (lib/temaCompra.mjs, la misma de la página y del
 // test de contraste) y el color guardado de la marca: fondo, texto, punto de
 // marca y el botón de comprar. Se guarda al tocar.
-export function TemaCompraSelector({ tema, primary, disabled }: { tema: TemaCompra; primary: string; disabled: boolean }) {
+// Con el LOGO real en cada miniatura: un logo de letras blancas sin fondo
+// propio desaparece en blanco/crema, y el organizador tiene que verlo acá.
+export function TemaCompraSelector({ tema, primary, logoUrl, disabled }: { tema: TemaCompraType; primary: string; logoUrl: string | null; disabled: boolean }) {
   const { t } = useTextos();
   const router = useRouter();
-  const [elegido, setElegido] = useState<TemaCompra>(tema);
+  const [elegido, setElegido] = useState<TemaCompraType>(tema);
   const [pendiente, start] = useTransition();
   const [error, setError] = useState(false);
 
-  const opciones: { v: TemaCompra; nombre: string }[] = [
+  const opciones: { v: TemaCompraType; nombre: string }[] = [
     { v: 'blanco', nombre: t('Blanco', 'White') },
     { v: 'crema', nombre: t('Crema', 'Cream') },
     { v: 'negro', nombre: t('Negro', 'Black') },
     { v: 'marca', nombre: t('Tu color', 'Your color') },
   ];
 
-  function elegir(v: TemaCompra) {
+  function elegir(v: TemaCompraType) {
     if (v === elegido || disabled) return;
     const antes = elegido;
     setElegido(v);
@@ -65,6 +67,10 @@ export function TemaCompraSelector({ tema, primary, disabled }: { tema: TemaComp
             >
               {/* La miniatura: la paleta real de ese tema con TU color. */}
               <span aria-hidden="true" style={{ display: 'grid', gap: 6, padding: 'var(--s-s2)', borderRadius: 'var(--r-ctl)', background: p.hex.bg, border: `1px solid ${p.vars['--line']}` }}>
+                {logoUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={logoUrl} alt="" style={{ height: 20, width: 'auto', maxWidth: '100%', objectFit: 'contain', justifySelf: 'start' }} />
+                )}
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: p.hex.mark, flex: 'none' }} />
                   <span style={{ color: p.hex.ink, fontWeight: 600, fontSize: 'var(--s-meta)' }}>{t('Tu evento', 'Your event')}</span>

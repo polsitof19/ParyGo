@@ -117,6 +117,8 @@ export function paletaCompra(tema, brandHex) {
     '--edge': rgba(p.ink, 0.22), '--edge-soft': rgba(p.ink, 0.10), '--edge-faint': rgba(p.ink, 0.08),
     '--edge-hover': rgba(p.ink, 0.30), '--edge-strong': rgba(p.ink, 0.45),
     '--ink-hover': hex(hover),
+    // Lo que se ve al tocar un control (review de Codex): tinta al 6 %.
+    '--sel': rgba(p.ink, 0.06),
     '--material': rgba(p.bg, 0.72),
     '--brand-mark': hex(mark),
   };

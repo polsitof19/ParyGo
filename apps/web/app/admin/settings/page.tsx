@@ -91,7 +91,7 @@ export default async function AdminSettingsPage() {
       />
 
       <div style={{ marginTop: 16 }}>
-        <TemaCompraSelector tema={esTema(brand.tema_compra)} primary={theme.primary_color ?? '#FF6A3D'} disabled={impersonating} />
+        <TemaCompraSelector tema={esTema(brand.tema_compra)} primary={theme.primary_color ?? '#FF6A3D'} logoUrl={theme.logo_url ?? null} disabled={impersonating} />
       </div>
 
       <div style={{ marginTop: 16 }}>
