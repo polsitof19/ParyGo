@@ -27,10 +27,7 @@ export function TipoDeEvento({ lang, qs }: { lang: Lang; qs: URLSearchParams }) 
           </a>
           <a href={href('privado')} className="ez-tipo__card">
             <PartyPopper className="ez-tipo__ico" aria-hidden="true" />
-            <span className="ez-tipo__t">
-              {t.privado.t}
-              <span className="ez-tag"><span className="ez-tag__dot" aria-hidden="true" />{t.privado.badge}</span>
-            </span>
+            <span className="ez-tipo__t">{t.privado.t}</span>
             <span className="ez-tipo__d">{t.privado.d}</span>
           </a>
         </div>

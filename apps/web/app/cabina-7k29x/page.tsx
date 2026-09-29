@@ -45,6 +45,7 @@ type BrandRow = {
   eventsSelling: number;
   archived: boolean;
   test: boolean;
+  privado: boolean;
   logoUrl: string | null;
   color: string | null;
   nextEvent: { name: string; starts_at: string } | null;
@@ -56,7 +57,7 @@ export default async function MarcasPage() {
   const admin = createAdminClient();
   const prueba = new Set(await idsMarcasDePrueba(admin));
   const [{ data: brands }, { data: members }, { data: events }, paidOrders, { count: solicitudes }] = await Promise.all([
-    supabase.from('brands').select('id, slug, name, event_balance, archived_at, theme_json').order('created_at', { ascending: false }),
+    supabase.from('brands').select('id, slug, name, event_balance, archived_at, theme_json, tipo').order('created_at', { ascending: false }),
     supabase.from('brand_members').select('brand_id, display_name, role').eq('role', 'brand_admin'),
     supabase.from('events').select('brand_id, name, starts_at, ends_at, is_published, archived_at'),
     // Última venta por marca: ordenadas por paid_at DESC, la primera aparición
@@ -105,6 +106,7 @@ export default async function MarcasPage() {
       eventsSelling: evByBrand.get(b.id)?.selling ?? 0,
       archived: !!b.archived_at,
       test: prueba.has(b.id),
+      privado: b.tipo === 'privado',
       logoUrl: tj.logo_url ?? null,
       color: tj.primary_color ?? null,
       nextEvent: nextByBrand.get(b.id) ?? null,
@@ -156,7 +158,7 @@ export default async function MarcasPage() {
               logo={r.logoUrl}
               color={r.color}
               estado={r.eventsSelling > 0 ? 'vendiendo' : 'quieta'}
-              detalle={[quedan(r.event_balance), r.lastSale ? `vendió ${agoEs(r.lastSale)}` : 'sin ventas'].join(' · ')}
+              detalle={[r.privado ? 'Evento privado' : null, quedan(r.event_balance), r.lastSale ? `vendió ${agoEs(r.lastSale)}` : 'sin ventas'].filter(Boolean).join(' · ')}
               alerta={!r.owner ? 'Sin dueño' : null}
             />
           ))}

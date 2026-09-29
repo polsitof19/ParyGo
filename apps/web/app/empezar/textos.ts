@@ -17,19 +17,12 @@ const es = {
   lede1: 'Elige tu paquete, completa tus datos y en pocos minutos tendrás tu página', lede2: 'con entradas, cobro directo y control de acceso.',
   // Primera pregunta de /empezar (Paul, 2026-09-28): antes de mostrar los
   // paquetes de marca, se pregunta qué va a organizar. Evento privado
-  // (cumpleaños, reunión) todavía no existe: muestra "muy pronto" + contacto.
+  // (cumpleaños, reunión, 0075) abre el mismo alta con los textos de privado.
   tipo: {
     h1: '¿Qué vas a organizar?',
     sub: 'Elige la opción que se parece más a tu evento.',
     marca: { t: 'Una marca o productora', d: 'Discotecas, conciertos, fiestas y eventos que organizas seguido.' },
-    privado: { t: 'Un evento privado', d: 'Cumpleaños, reuniones y celebraciones. Un solo evento.', badge: 'Muy pronto' },
-    pronto: {
-      h1: 'Los eventos privados llegan muy pronto',
-      sub: 'Estamos terminando esta opción para cumpleaños, reuniones y celebraciones. Mientras tanto, escríbenos y te ayudamos a armar tu evento a mano.',
-      volver: '‹ Elegir otra opción',
-      wa: 'Escribir por WhatsApp',
-      correo: 'Escribir por correo',
-    },
+    privado: { t: 'Un evento privado', d: 'Cumpleaños, reuniones y celebraciones. Hasta 200 invitados.' },
   },
   elige: 'Elige tu paquete',
   evento: 'evento', eventos: 'eventos', puntual: 'Para un evento puntual.', porEvento: 'por evento',
@@ -112,6 +105,45 @@ const es = {
       ] },
     ],
   },
+  // Evento privado (0075, Paul 2026-09-28): lo que cambia respecto de la
+  // marca. EmpezarFlow lo mezcla encima de los textos de siempre. Hasta 200
+  // entradas: la lista NO dice "ilimitadas" (sería falso).
+  privado: {
+    h1a: 'Tu evento, listo para ', h1b: 'celebrar', h1c: '.',
+    lede1: 'Elige tu plan, completa tus datos y en pocos minutos tendrás tu página', lede2: 'con entradas con QR, cobro directo y control en la puerta.',
+    elige: 'Tu plan', planNombre: '1 evento privado', planDet: 'Hasta 200 entradas en total.',
+    incluido: 'Incluye tu página del evento, entradas con QR, cobro directo a tu cuenta y escáner en la puerta.',
+    nombrePh: 'Ej. Cumpleaños de Ana',
+    w: { nombre: '¿Cómo se llama tu evento?', nombreHint: 'Es el nombre que verán tus invitados en la página y en sus entradas.', rMarca: 'Evento' },
+    incluye: {
+      h: 'Todo lo que incluye tu evento',
+      grupos: [
+        { t: 'Tu página y tus entradas', items: [
+          'Tu página del evento, con su nombre y su foto (tuevento.parygo.com)',
+          'Hasta 200 entradas en total: los tipos que quieras (General, VIP, preventas)',
+          'Entradas privadas por link, o solo con invitación',
+          'Eventos gratuitos con registro',
+        ] },
+        { t: 'Tus cobros', items: [
+          'Tus invitados te pagan directo en tu propio método de pago: ParyGo no toca esa plata',
+          'Apruebas cada pago desde tu panel y la entrada se envía sola',
+          'Te avisamos por correo cuando tienes pagos por aprobar',
+        ] },
+        { t: 'La puerta', items: [
+          'Escáner en la puerta desde tu iPhone o Android, sin instalar nada',
+          'Ves en el momento quién llegó',
+          'Alguien de confianza puede escanear con su propio acceso',
+          'Cortesías y listas de invitados con QR',
+        ] },
+        { t: 'Tus invitados', items: [
+          'Sin crear cuenta: ponen su nombre y correo',
+          'Su QR les llega automáticamente al correo',
+          'Lo guardan como imagen o lo mandan por WhatsApp',
+          'Todo desde el navegador, en iPhone, Android o computadora',
+        ] },
+      ],
+    },
+  },
   // Mensajes del servidor
   m: {
     revisa: 'Revisa los campos marcados.',
@@ -152,14 +184,7 @@ const en: T = {
     h1: 'What are you organizing?',
     sub: 'Choose the option that fits your event best.',
     marca: { t: 'A brand or promoter', d: 'Clubs, concerts, parties and events you run regularly.' },
-    privado: { t: 'A private event', d: 'Birthdays, gatherings and celebrations. A single event.', badge: 'Coming soon' },
-    pronto: {
-      h1: 'Private events are coming very soon',
-      sub: "We're finishing this option for birthdays, gatherings and celebrations. In the meantime, write to us and we'll help you set up your event by hand.",
-      volver: '‹ Choose another option',
-      wa: 'Write on WhatsApp',
-      correo: 'Write by email',
-    },
+    privado: { t: 'A private event', d: 'Birthdays, gatherings and celebrations. Up to 200 guests.' },
   },
   elige: 'Choose your package',
   evento: 'event', eventos: 'events', puntual: 'For a one-off event.', porEvento: 'per event',
@@ -236,6 +261,42 @@ const en: T = {
         'All from the browser, on iPhone, Android or computer',
       ] },
     ],
+  },
+  privado: {
+    h1a: 'Your event, ready to ', h1b: 'celebrate', h1c: '.',
+    lede1: 'Choose your plan, complete your details and in a few minutes you will have your page', lede2: 'with QR tickets, direct payments and door control.',
+    elige: 'Your plan', planNombre: '1 private event', planDet: 'Up to 200 tickets in total.',
+    incluido: 'Includes your event page, QR tickets, direct payments to your account and a door scanner.',
+    nombrePh: "e.g. Ana's Birthday",
+    w: { nombre: "What's your event called?", nombreHint: 'This is the name your guests will see on the page and on their tickets.', rMarca: 'Event' },
+    incluye: {
+      h: 'Everything your event includes',
+      grupos: [
+        { t: 'Your page and your tickets', items: [
+          'Your event page, with its name and photo (yourevent.parygo.com)',
+          'Up to 200 tickets in total: any ticket types you want (General, VIP, presales)',
+          'Private tickets by link, or invitation only',
+          'Free events with registration',
+        ] },
+        { t: 'Your payments', items: [
+          'Your guests pay you directly through your own payment method: ParyGo never touches that money',
+          'Approve each payment from your dashboard and the ticket is sent automatically',
+          'We email you when you have payments to approve',
+        ] },
+        { t: 'The door', items: [
+          'Door scanner on your iPhone or Android, nothing to install',
+          'See who arrived, in real time',
+          'Someone you trust can scan with their own access',
+          'Complimentary tickets and guest lists with QR',
+        ] },
+        { t: 'Your guests', items: [
+          'No account needed: they enter their name and email',
+          'Their QR ticket arrives in their inbox automatically',
+          'They save it as an image or send it on WhatsApp',
+          'All from the browser, on iPhone, Android or computer',
+        ] },
+      ],
+    },
   },
   m: {
     revisa: 'Please review the highlighted fields.',

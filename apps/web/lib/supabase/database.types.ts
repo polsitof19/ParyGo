@@ -102,6 +102,7 @@ export type Database = {
           event_balance: number
           id: string
           idioma: string
+          tipo: string
           instagram: string | null
           is_test: boolean
           prueba_disponible: boolean
@@ -125,6 +126,7 @@ export type Database = {
           event_balance?: number
           id?: string
           idioma?: string
+          tipo?: string
           instagram?: string | null
           is_test?: boolean
           prueba_disponible?: boolean
@@ -148,6 +150,7 @@ export type Database = {
           event_balance?: number
           id?: string
           idioma?: string
+          tipo?: string
           instagram?: string | null
           is_test?: boolean
           prueba_disponible?: boolean
@@ -182,6 +185,7 @@ export type Database = {
           // rompe tipos afinados; ver CLAUDE.md).
           max_per_person: number | null
           es_prueba: boolean
+          tope_entradas: number | null
           is_published: boolean
           min_age: number
           require_age_confirmation: boolean
@@ -215,6 +219,7 @@ export type Database = {
           is_free?: boolean
           max_per_person?: number | null
           es_prueba?: boolean
+          tope_entradas?: number | null
           is_published?: boolean
           min_age?: number
           require_age_confirmation?: boolean
@@ -248,6 +253,7 @@ export type Database = {
           is_free?: boolean
           max_per_person?: number | null
           es_prueba?: boolean
+          tope_entradas?: number | null
           is_published?: boolean
           min_age?: number
           require_age_confirmation?: boolean

@@ -5,7 +5,7 @@ import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createClient } from '@/lib/supabase/server';
 import { EventBuilder } from './EventBuilder';
-import { pruebaDisponible, PRUEBA_TOPE_ENTRADAS } from '@/lib/prueba';
+import { pruebaDisponible, PRIVADO_TOPE_ENTRADAS, PRUEBA_TOPE_ENTRADAS } from '@/lib/prueba';
 import { textosPanel } from '@/lib/idiomaServer';
 
 export const runtime = 'edge';
@@ -25,7 +25,7 @@ export default async function NewBrandEventPage() {
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
-    .select('id, name, event_balance')
+    .select('id, name, event_balance, tipo')
     .eq('id', ctx.brandId)
     .single();
   if (!brand) redirect('/admin');
@@ -47,6 +47,11 @@ export default async function NewBrandEventPage() {
             ? t(
                 `Tres pasos: lo básico, las entradas y (si quieres) los detalles. Es tu evento de prueba gratis: hasta ${PRUEBA_TOPE_ENTRADAS} entradas en total, sumando todos los tipos. Se crea en borrador y lo publicas cuando esté listo.`,
                 `Three steps: the basics, tickets and (if you want) the details. This is your free trial event: up to ${PRUEBA_TOPE_ENTRADAS} tickets in total, across all types combined. It's created as a draft and you publish it when ready.`
+              )
+            : brand.tipo === 'privado'
+            ? t(
+                `Tres pasos: lo básico, las entradas y (si quieres) los detalles. Es un evento privado: hasta ${PRIVADO_TOPE_ENTRADAS} entradas en total, sumando todos los tipos. Usa 1 de tu saldo (${brand.event_balance} disponible${brand.event_balance === 1 ? '' : 's'}). Se crea en borrador y lo publicas cuando esté listo.`,
+                `Three steps: the basics, tickets and (if you want) the details. It's a private event: up to ${PRIVADO_TOPE_ENTRADAS} tickets in total, across all types combined. Uses 1 from your balance (${brand.event_balance} available). It's created as a draft and you publish it when ready.`
               )
             : t(
                 `Tres pasos: lo básico, las entradas y (si quieres) los detalles. Usa 1 de tu saldo (${brand.event_balance} disponible${brand.event_balance === 1 ? '' : 's'}). Se crea en borrador y lo publicas cuando esté listo.`,

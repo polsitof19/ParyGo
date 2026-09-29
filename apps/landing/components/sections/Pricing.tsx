@@ -5,6 +5,7 @@ import { empezar } from '@/lib/cta';
 import type { Dict } from '@/lib/i18n';
 import { Resaltado } from '@/components/Resaltado';
 import { PACKS, precio, useMoneda } from '@/lib/precios';
+import { PACK_PRIVADO } from '@/lib/packs';
 
 // 06 — Precios (4 packs; todos incluyen todo, solo cambia la cantidad). La
 // moneda sale del país del visitante (lib/precios.ts): soles en Perú, dólares
@@ -57,6 +58,12 @@ export function Pricing({ t }: { t: Dict }) {
         <p className="plans-note reveal">
           {c.note}
           {m === 'USD' && c.noteUsd}
+        </p>
+
+        {/* Evento privado (0075): cumpleaños y reuniones, directo a su alta. */}
+        <p className="plans-privado reveal">
+          <strong>{c.privado.t}</strong> {c.privado.d} <strong>{precio(m === 'PEN' ? PACK_PRIVADO.pen : PACK_PRIVADO.usd, m)}</strong>.{' '}
+          <a href={empezar(t.lang, { tipo: 'privado', moneda: m })}>{c.privado.cta} <span aria-hidden="true">→</span></a>
         </p>
 
         {/* El detalle de TODO lo que incluye (Paul, 2026-09-28: el sistema hace

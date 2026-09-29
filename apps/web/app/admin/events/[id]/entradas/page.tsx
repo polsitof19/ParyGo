@@ -22,7 +22,7 @@ export default async function EventTicketsPage({ params }: { params: { id: strin
   const { t } = await textosPanel();
 
   const admin = createAdminClient();
-  const { data: event } = await admin.from('events').select('id, brand_id, is_free, slug, name, es_prueba').eq('id', params.id).maybeSingle();
+  const { data: event } = await admin.from('events').select('id, brand_id, is_free, slug, name, es_prueba, tope_entradas').eq('id', params.id).maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
 
   const { data: tts } = await admin
@@ -63,6 +63,15 @@ export default async function EventTicketsPage({ params }: { params: { id: strin
           {t(
             `Evento de prueba gratis: hasta ${PRUEBA_TOPE_ENTRADAS} entradas en total, sumando todos los tipos. Tienes ${rows.reduce((s, r) => s + r.capacity, 0)} de ${PRUEBA_TOPE_ENTRADAS} cargadas.`,
             `Free trial event: up to ${PRUEBA_TOPE_ENTRADAS} tickets in total, adding up all types. You have ${rows.reduce((s, r) => s + r.capacity, 0)} of ${PRUEBA_TOPE_ENTRADAS} loaded.`,
+          )}
+        </p>
+      )}
+      {/* Evento privado (0075): el tope vive en el evento, lo puso la base. */}
+      {event.tope_entradas != null && (
+        <p className="s-card__desc" style={{ marginBottom: 'var(--s-s3)' }}>
+          {t(
+            `Evento privado: hasta ${event.tope_entradas} entradas en total, sumando todos los tipos. Tienes ${rows.reduce((s, r) => s + (r.capacity ?? 0), 0)} de ${event.tope_entradas} cargadas.`,
+            `Private event: up to ${event.tope_entradas} tickets in total, adding up all types. You have ${rows.reduce((s, r) => s + (r.capacity ?? 0), 0)} of ${event.tope_entradas} loaded.`,
           )}
         </p>
       )}

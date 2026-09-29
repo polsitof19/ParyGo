@@ -32,6 +32,9 @@ export async function crearMarcaParaUsuario(a: {
   prueba: boolean;
   // Idioma del panel (0073): el del alta. Sin él, español.
   idioma?: Idioma;
+  // Evento privado (0075): se fija AL CREAR y no cambia nunca (el precio de
+  // cada compra sale de acá). Sin él, marca.
+  tipo?: 'marca' | 'privado';
 }): Promise<AltaMarca> {
   const admin = createAdminClient();
   const { data: brand, error } = await admin
@@ -45,6 +48,7 @@ export async function crearMarcaParaUsuario(a: {
       notify_yape_digest: true,
       prueba_disponible: a.prueba,
       idioma: a.idioma ?? 'es',
+      tipo: a.tipo ?? 'marca',
       // Sin dueña = alta con pack sin pagar: ARCHIVADA (no se ve en
       // <slug>.parygo.com) hasta que la dueña la reclama con el pago aprobado.
       // Si no, cualquiera publicaba gratis una página con el nombre de otro.

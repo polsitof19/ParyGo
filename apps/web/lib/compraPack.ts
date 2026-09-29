@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { textos, type Idioma } from '@/lib/idioma';
 import { publicEnv } from '@/lib/env';
-import { precioDe, type Pack, type Pasarela } from '@/lib/packs';
+import { PACK_PRIVADO, precioDe, type Pack, type Pasarela } from '@/lib/packs';
 import { mpCrearPreferencia, mpPago, paypalCrearOrden } from '@/lib/cobroParygo';
 import { avisarVentaPack } from '@/lib/email/sendAvisoVentaPack';
 
@@ -25,8 +25,15 @@ export async function iniciarCompraPack(a: {
   l?: Idioma;
 }): Promise<{ ok: true; destino: string; compraId: string } | { ok: false; message: string }> {
   const { t } = textos(a.l ?? 'es');
-  const { currency, cents } = precioDe(a.pack, a.pasarela);
   const admin = createAdminClient();
+  // El PRECIO depende del tipo de la marca (0075), leído de la base: una
+  // marca privada paga PACK_PRIVADO y solo de a un evento. Acá y no en cada
+  // llamador: /empezar y /admin/comprar pasan por el mismo lugar.
+  const { data: marca } = await admin.from('brands').select('tipo').eq('id', a.brandId).maybeSingle();
+  if (!marca) return { ok: false, message: t('No se pudo iniciar la compra. Intenta de nuevo.', 'The purchase could not be started. Please try again.') };
+  const privado = marca.tipo === 'privado';
+  if (privado && a.pack.eventos !== 1) return { ok: false, message: t('Un evento privado se compra de a uno.', 'Private events are bought one at a time.') };
+  const { currency, cents } = precioDe(privado ? PACK_PRIVADO : a.pack, a.pasarela);
   const { data: compra, error } = await admin
     .from('pack_purchases')
     .insert({ brand_id: a.brandId, pack: a.pack.eventos, provider: a.pasarela, currency, amount_cents: cents, created_by: a.userId })
@@ -37,7 +44,7 @@ export async function iniciarCompraPack(a: {
   const app = publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
   const exito = a.volver ? a.volver(compra.id) : `${app}/admin/comprar/listo?compra=${compra.id}`;
   const fallo = a.cancelar ?? `${app}/admin/comprar?cancelado=1`;
-  const titulo = `ParyGo · ${a.pack.eventos} evento${a.pack.eventos === 1 ? '' : 's'}`;
+  const titulo = privado ? 'ParyGo · evento privado' : `ParyGo · ${a.pack.eventos} evento${a.pack.eventos === 1 ? '' : 's'}`;
   try {
     if (a.pasarela === 'mercadopago') {
       const pref = await mpCrearPreferencia({ compraId: compra.id, titulo, soles: cents / 100, email: a.email, exito, fallo });

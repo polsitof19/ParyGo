@@ -24,7 +24,7 @@ export type Dict = {
   demo: { h2: Resaltado; items: { t: string; d: string }[]; tag: string; evt1: string; evt2: string; meta: string; tk1: [string, string]; tk2: [string, string]; buy: string };
   comp: { h2: Resaltado; lede: string; items: { t: string; d: string }[] };
   cmp: { h2: Resaltado; aria: string; p: string; o: string; filas: { t: string; p: string; o: string }[] };
-  precios: { h2: Resaltado; lede: string; evento: string; eventos: string; qty: Record<number, string>; perks: Record<number, string[]>; badge: string; porEvento: string; ahorras: string; pagoUnico: string; elegir: string; note: string; noteUsd: string; detalle: { h3: string; lede: string; grupos: { t: string; items: string[] }[] } };
+  precios: { h2: Resaltado; lede: string; evento: string; eventos: string; qty: Record<number, string>; perks: Record<number, string[]>; badge: string; porEvento: string; ahorras: string; pagoUnico: string; elegir: string; note: string; noteUsd: string; privado: { t: string; d: string; cta: string }; detalle: { h3: string; lede: string; grupos: { t: string; items: string[] }[] } };
   faq: { h2: Resaltado; lede: string; items: { q: string; a: string }[] };
   final: { h2: string; p: string; cta: string; precios: string };
   footer: { brand: string; producto: string; ayuda: string; legal: string; links: { como: string; seguridad: string; incluye: string; precios: string; crear: string; preguntas: string; panel: string; terminos: string; privacidad: string }; copy: string; made: string };
@@ -194,6 +194,7 @@ const es: Dict = {
         ] },
       ],
     },
+    privado: { t: '¿Un cumpleaños, una reunión o una celebración?', d: 'Evento privado: un evento, hasta 200 entradas, por', cta: 'Crear mi evento privado' },
     noteUsd: ' Los pagos en dólares se procesan de forma segura con PayPal, con tu cuenta o con tarjeta.',
   },
   faq: {
@@ -390,6 +391,7 @@ const en: Dict = {
         ] },
       ],
     },
+    privado: { t: 'A birthday, a gathering or a celebration?', d: 'Private event: one event, up to 200 tickets, for', cta: 'Create my private event' },
     noteUsd: ' Payments in US dollars are processed securely through PayPal, with your account or a card.',
   },
   faq: {

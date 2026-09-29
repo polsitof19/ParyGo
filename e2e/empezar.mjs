@@ -148,8 +148,8 @@ try {
   // ---------- Q ----------
   // Primera pregunta (2026-09-28): "¿Qué vas a organizar?" antes del
   // formulario. Marca → el formulario de siempre con el pack/moneda que traía;
-  // evento privado → "muy pronto" (no existe todavía), sin formulario ni pago;
-  // la vuelta de un pago cancelado va directo al formulario.
+  // evento privado (0075) → el mismo alta a S/50 con tope 200; la vuelta de
+  // un pago cancelado va directo al formulario.
   {
     const p = await b.newPage({ viewport: { width: 390, height: 844 } });
     await p.goto(`${BASE}/empezar?pack=3&moneda=PEN`, { waitUntil: 'networkidle' });
@@ -209,14 +209,19 @@ try {
     await continuar(p);
     check('Q', 'WhatsApp mal escrito no deja avanzar; un celular peruano sí (paso 5)', waFrena && /Paso 5 de 5/.test(await texto(p)) && (await p.locator('#ez-pass').count()) === 1);
 
-    await p.goto(`${BASE}/empezar?pack=3`, { waitUntil: 'networkidle' });
+    // Evento privado (0075): el mismo alta, un solo plan de S/50 con tope
+    // 200, SIN "entradas ilimitadas" en la lista, y la pregunta del nombre
+    // habla del evento.
+    await p.goto(`${BASE}/empezar?pack=3&moneda=PEN`, { waitUntil: 'networkidle' });
     await p.getByRole('link', { name: /Un evento privado/ }).click();
     await p.waitForURL(/tipo=privado/);
     const t1 = await texto(p);
-    check('Q', 'evento privado: "muy pronto", sin formulario ni botón de pagar', /muy pronto/i.test(t1) && (await p.locator('#ez-email').count()) === 0 && (await pagarBtn(p).count()) === 0);
-    await p.getByRole('link', { name: /Elegir otra opción/ }).click();
-    await p.waitForLoadState('networkidle');
-    check('Q', 'desde "muy pronto" se vuelve a la pregunta', /¿Qué vas a organizar\?/.test(await texto(p)) && new URL(p.url()).searchParams.get('pack') === '3');
+    const planesPriv = await p.locator('.ez-plan').count();
+    check('Q', 'evento privado: un solo plan "1 evento privado" de S/50, hasta 200 entradas', planesPriv === 1 && /1 evento privado/.test(t1) && /S\/50/.test(t1) && /Hasta 200 entradas/.test(t1), `planes=${planesPriv}`);
+    check('Q', 'evento privado: la lista de lo que incluye NO promete entradas ilimitadas', /Todo lo que incluye tu evento/.test(t1) && !/ilimitad/i.test(t1));
+    await continuar(p);
+    check('Q', 'evento privado: "¿Cómo se llama tu evento?"', /¿Cómo se llama tu evento\?/.test(await texto(p)));
+    check('Q', 'evento privado: el formulario manda tipo=privado al servidor', (await p.locator('input[name="tipo"]').inputValue()) === 'privado');
 
     await p.goto(`${BASE}/empezar?pack=1&moneda=PEN&cancelado=1`, { waitUntil: 'networkidle' });
     const t2 = await texto(p);

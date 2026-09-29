@@ -4,6 +4,8 @@ import { textos, type Idioma } from '@/lib/idioma';
 // Prueba gratis (0069; tope 20 desde 0071): 1 evento sin saldo, hasta 20 entradas.
 // Tiene que coincidir con prueba_tope_entradas() en la base.
 export const PRUEBA_TOPE_ENTRADAS = 20;
+// Evento privado (0075): = privado_tope_entradas() en la base.
+export const PRIVADO_TOPE_ENTRADAS = 200;
 
 // Se lee con service role ACOTADO a la marca de la sesión: las columnas de
 // brands se exponen a `authenticated` una por una (0023/0043/0052) y esta no
@@ -21,5 +23,8 @@ export function mensajePrueba(msg: string | undefined | null, l: Idioma = 'es'):
   if (!msg) return null;
   if (msg.includes('PRUEBA_TOPE_ENTRADAS')) return t(`Tu evento de prueba admite hasta ${PRUEBA_TOPE_ENTRADAS} entradas en total, sumando todos los tipos (también las gratis y cortesías).`, `Your trial event allows up to ${PRUEBA_TOPE_ENTRADAS} tickets in total, across all types (including free and complimentary ones).`);
   if (msg.includes('PRUEBA_SIN_ILIMITADO')) return t(`En el evento de prueba no hay entradas sin límite: el total es de hasta ${PRUEBA_TOPE_ENTRADAS}.`, `Trial events cannot have unlimited tickets: the total is up to ${PRUEBA_TOPE_ENTRADAS}.`);
+  // Evento privado (0075). Van DESPUÉS: 'PRUEBA_TOPE_ENTRADAS' contiene 'TOPE_ENTRADAS'.
+  if (msg.includes('TOPE_ENTRADAS')) return t(`Tu evento privado admite hasta ${PRIVADO_TOPE_ENTRADAS} entradas en total, sumando todos los tipos (también las gratis y cortesías).`, `Your private event allows up to ${PRIVADO_TOPE_ENTRADAS} tickets in total, across all types (including free and complimentary ones).`);
+  if (msg.includes('TOPE_SIN_ILIMITADO')) return t(`En un evento privado no hay entradas sin límite: el total es de hasta ${PRIVADO_TOPE_ENTRADAS}.`, `Private events cannot have unlimited tickets: the total is up to ${PRIVADO_TOPE_ENTRADAS}.`);
   return null;
 }
