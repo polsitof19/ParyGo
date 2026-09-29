@@ -438,12 +438,27 @@ dueña) se libera al pedirlo. Las páginas "listo" van con fetchCache
 e2e/empezar.mjs 37/37 (el pago aprobado se simula con settle_pack_purchase;
 el re-fetch real a MP necesita credenciales de prueba).
 
+EVENTO PRIVADO (0075, en PRODUCCIÓN desde 2026-09-28, pedido de Paul):
+cumpleaños, reuniones. S/ 50 · US$ 19 (PACK_PRIVADO en los dos packs.ts),
+UN evento, HASTA 200 ENTRADAS. brands.tipo ('marca'|'privado') lo escribe
+solo el server AL CREAR la marca y NO cambia nunca (guard_brand_tipo);
+events.tope_entradas lo pone la base al crear el evento (o si cambia de
+marca) y el tope lo aplica check_prueba_capacidad (el candado FOR UPDATE de
+la prueba gratis, extendido): suma de capacidades ≤ 200, sin ilimitadas.
+El PRECIO lo decide iniciarCompraPack (lib/compraPack.ts) leyendo
+brands.tipo: nunca el navegador; privado solo de a 1. pagarAlta reusa una
+marca pendiente SOLO si es del mismo tipo (si no, "enlace ocupado"): si el
+tipo pudiera pisarse, dos pestañas = S/ 50 y marca sin tope. Errores TOPE_*
+en palabras del organizador (lib/prueba.ts). Tests: e2e/privado-0075.mjs
+(JWT real + concurrencia + mover tipo, 11/11), empezar.mjs Q y
+E2E_TIPO=privado empezar-paypal.mjs (US$19 puesto por el server). Security
+review y Codex adversarial OK. La landing dice "Desde S/ 50 por evento".
+
 PREGUNTA EN /empezar (2026-09-28, Paul): sin ?tipo= la primera pantalla es
 "¿Qué vas a organizar?" (TipoDeEvento.tsx): "Una marca o productora" →
 ?tipo=marca, el formulario de siempre con pack/moneda/lang de la landing;
-"Un evento privado" → ?tipo=privado, "Muy pronto" con WhatsApp de soporte
-(NEXT_PUBLIC_SUPPORT_WHATSAPP) y correo, SIN formulario ni cobro (el evento
-privado de S/ 50 / 200 entradas todavía no existe). cancelado=1 (vuelta de
+"Un evento privado" → ?tipo=privado, el MISMO alta con los textos de privado
+(ver EVENTO PRIVADO arriba; hasta el 28/09 era un "Muy pronto"). cancelado=1 (vuelta de
 MP) y "Intentar nuevamente" de /listo saltan la pregunta. Sin JS: links.
 e2e/empezar.mjs paso Q; toda navegación de prueba al formulario va con
 tipo=marca. Cuando exista el evento privado, esta pantalla lo abre.
@@ -532,7 +547,7 @@ cada consulta cruzaba el continente. Se prendió por la API de Cloudflare
 [placement] de apps/web/wrangler.toml NO lo aplicó la integración con Git.
 Verificar con el GET del proyecto de Pages; el PATCH conserva las variables.
 
-Incrementales, idempotentes, numeradas (vamos por 0074). Backwards-compatible
+Incrementales, idempotentes, numeradas (vamos por 0075). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
 para no romper la app vieja desplegada.
 
