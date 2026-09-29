@@ -99,7 +99,8 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
   // (ana30.parygo.com) abre DIRECTO el evento, con el botón de la entrada a
   // la vista. Se reconoce por el tope de su evento (solo los privados lo
   // tienen); brands.tipo no se lee acá: anon no tiene grant de esa columna.
-  if (eventos.length === 1 && eventos[0].tope_entradas != null) redirect(`/${eventos[0].slug}`);
+  const unico = eventos.length === 1 ? eventos[0] : undefined;
+  if (unico && unico.tope_entradas != null) redirect(`/${unico.slug}`);
 
   // "Desde S/X" = el mínimo de los tipos activos que SE OFRECEN al público
   // (isPubliclyOffered). Una cortesía no está a la venta; un evento GRATIS
