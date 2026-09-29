@@ -168,6 +168,11 @@ try {
     const abierto = await p.locator('.ez-incluye__grupo[open]').count();
     check('Q', 'marca: "Todo lo que incluye" antes de los datos (5 grupos, 1 abierto)', /Todo lo que incluye cada evento/.test(await texto(p)) && grupos === 5 && abierto === 1, `grupos=${grupos} abiertos=${abierto}`);
 
+    // Celular: el botón del paso SIEMPRE a la vista sin bajar (barra fija),
+    // medido en el paso más largo (Paul, 2026-09-28).
+    const bb = await p.getByRole('button', { name: /^Continuar/ }).boundingBox();
+    check('Q', 'celular: "Continuar" se ve sin bajar en el paso 1 (el más largo)', !!bb && bb.y >= 0 && bb.y + bb.height <= 844, bb ? `y=${Math.round(bb.y)} fin=${Math.round(bb.y + bb.height)} de 844` : 'sin botón');
+
     // Paso a paso con vista previa en vivo.
     await continuar(p);
     await continuar(p); // sin nombre: no avanza

@@ -344,20 +344,22 @@ export function EmpezarFlow({ lang, planes, inicial: planInicial, monedaInicial,
 
           {aviso && <p className="ez-banner" role="alert">{aviso}</p>}
           {!aviso && cancelado && paso === 0 && <p className="ez-banner" role="status">{t.cancelado}</p>}
-          <div className="ez-actions">
+          {paso === 4 && (
+            <p className="ez-fine ez-fine--pago">
+              {t.finoPago[moneda]}{' '}
+              {t.acepta}{' '}
+              <a href="/terminos" target="_blank" rel="noopener">{t.terminos}</a> {t.y} <a href="/privacidad" target="_blank" rel="noopener">{t.privacidad}</a>.
+            </p>
+          )}
+          {/* En el celular esta barra queda FIJA abajo (empezar.css): el botón
+              del paso siempre a la vista, sin tener que bajar (Paul, 2026-09-28). */}
+          <div className="ez-actions ez-actions--fija">
             {paso < 4 ? (
               <button type="submit" className="ez-btn ez-btn--primary">
                 {t.w.continuar} <ArrowRight aria-hidden="true" className="ez-btn__arrow" />
               </button>
             ) : (
-              <>
-                <Enviar disabled={libre === false || !pagos} espera={t.momento}>{t.pagar(precio(elegido))}</Enviar>
-                <p className="ez-fine">
-                  {t.finoPago[moneda]}{' '}
-                  {t.acepta}{' '}
-                  <a href="/terminos" target="_blank" rel="noopener">{t.terminos}</a> {t.y} <a href="/privacidad" target="_blank" rel="noopener">{t.privacidad}</a>.
-                </p>
-              </>
+              <Enviar disabled={libre === false || !pagos} espera={t.momento}>{t.pagar(precio(elegido))}</Enviar>
             )}
           </div>
 
