@@ -35,6 +35,17 @@
 // ─────────────────────────────────────────────────────────────────────────
 import { chromium, webkit } from 'playwright';
 import { svc, BASE } from './lib.mjs';
+import { paletaCompra } from '../apps/web/lib/temaCompra.mjs';
+
+// Tema de la compra (0076): el fondo y la barra se esperan del tema que tiene
+// la marca, con la misma paleta que la app (antes se exigía el negro fijo).
+const rgbDe = (h) => `rgb(${parseInt(h.slice(1, 3), 16)}, ${parseInt(h.slice(3, 5), 16)}, ${parseInt(h.slice(5, 7), 16)})`;
+async function temaEsperado(slug) {
+  const { data } = await svc.from('brands').select('tema_compra, theme_json').eq('slug', slug).single();
+  const pal = paletaCompra(data?.tema_compra, data?.theme_json?.primary_color);
+  const bar = pal.vars['--material']; // rgba(r, g, b, 0.72)
+  return { tema: pal.tema, fondo: rgbDe(pal.hex.bg), barra: bar };
+}
 
 const MARCA = 'demotest';
 const PROHIBIDAS = new Set(['code']);
@@ -135,7 +146,8 @@ export async function verificarCanvas({ browser, base = PROD ? BASE_PROD : BASE 
     const tag = `canvas ${ancho}`;
     check(`${tag} · responde 200`, r?.status() === 200, r?.status());
     check(`${tag} · dirección canvas (flyer 4:5)`, /\bb-canvas\b/.test(m.clases), m.clases);
-    check(`${tag} · tema noche montado (pg-noche) y fondo #0A0A0A`, /\bpg-noche\b/.test(m.tema) && m.fondo === 'rgb(10, 10, 10)', `${m.tema} · ${m.fondo}`);
+    const esp = await temaEsperado(MARCA);
+    check(`${tag} · tema ${esp.tema} montado y su fondo`, m.tema.split(/\s+/).includes(`tema-${esp.tema}`) && m.fondo === esp.fondo, `${m.tema} · ${m.fondo} (esperado ${esp.fondo})`);
     check(`${tag} · la letra es Geist`, /geist/i.test(m.fuente), m.fuente.slice(0, 80));
     check(`${tag} · carga Geist y NO carga Bricolage ni Hanken`, m.fuentesCargadas.some((f) => /geist/i.test(f)) && !m.fuentesCargadas.some((f) => /bricolage|hanken/i.test(f)), [...new Set(m.fuentesCargadas)].join(', ').slice(0, 200));
     check(`${tag} · eyebrow con fecha y lugar sobre el título`, !!m.kicker && /\d{1,2}:\d{2}/.test(m.kicker) && m.kicker === m.kicker.toUpperCase(), m.kicker);
@@ -146,7 +158,7 @@ export async function verificarCanvas({ browser, base = PROD ? BASE_PROD : BASE 
       check(`${tag} · banda de 216 a lo ancho (350 en 390)`, m.banda && m.banda.height === 216 && m.banda.width === 350, JSON.stringify(m.banda));
       check(`${tag} · el título va DEBAJO de la banda`, m.banda && m.titulo && m.titulo.top >= m.banda.bottom, JSON.stringify({ banda: m.banda, titulo: m.titulo }));
       check(`${tag} · sin rail en el teléfono`, !m.rail, JSON.stringify(m.rail));
-      check(`${tag} · barra de pagar de 86, translúcida con blur`, m.cta && m.cta.alto >= 86 && /blur/.test(m.cta.blur) && /rgba\(10, 10, 10, 0\.72\)/.test(m.cta.fondo), JSON.stringify(m.cta));
+      check(`${tag} · barra de pagar de 86, translúcida con blur`, m.cta && m.cta.alto >= 86 && /blur/.test(m.cta.blur) && m.cta.fondo === esp.barra, `${JSON.stringify(m.cta)} (esperado ${esp.barra})`);
       check(`${tag} · stepper de 42`, m.stepper === 42, m.stepper);
     } else {
       check(`${tag} · h1 76/800`, m.h1?.size === '76px' && m.h1?.weight === '800', JSON.stringify(m.h1));

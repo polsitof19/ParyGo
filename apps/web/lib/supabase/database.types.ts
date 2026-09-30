@@ -103,6 +103,7 @@ export type Database = {
           id: string
           idioma: string
           tipo: string
+          tema_compra: string
           instagram: string | null
           is_test: boolean
           prueba_disponible: boolean
@@ -127,6 +128,7 @@ export type Database = {
           id?: string
           idioma?: string
           tipo?: string
+          tema_compra?: string
           instagram?: string | null
           is_test?: boolean
           prueba_disponible?: boolean
@@ -151,6 +153,7 @@ export type Database = {
           id?: string
           idioma?: string
           tipo?: string
+          tema_compra?: string
           instagram?: string | null
           is_test?: boolean
           prueba_disponible?: boolean

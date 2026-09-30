@@ -5,11 +5,13 @@
 //
 //   node e2e/smoke-prod-noche.mjs            capturas en tmp/prod-noche/
 //
-// Mide: tema noche montado y fondo #0A0A0A; la letra es Geist, se cargó, y el
+// Mide: el tema que eligió la marca (0076) y su fondo; la letra es Geist, se cargó, y el
 // peso es REAL (el h1 a 800 mide más que el mismo texto a 400: si la variable
 // no aplicara el eje, medirían igual); el logo es la imagen de la marca, cargada;
 // en el evento, la dirección que le toca (Canvas con un flyer 4:5).
 import { chromium } from 'playwright';
+import { svc } from './lib.mjs';
+import { paletaCompra } from '../apps/web/lib/temaCompra.mjs';
 import { mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,6 +28,13 @@ const UA_IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleW
 
 let fallas = 0;
 const check = (n, ok, d = '') => { if (!ok) fallas += 1; console.log(`${ok ? '✔' : '✘'} ${n}${d ? ' — ' + String(d).slice(0, 220) : ''}`); };
+
+// Tema de la compra (0076): el fondo esperado sale del tema que ELIGIÓ la
+// marca (blanco, crema, negro o su color), con la misma paleta que la app.
+const { data: code } = await svc.from('brands').select('tema_compra, theme_json').eq('slug', 'code').single();
+const PAL = paletaCompra(code?.tema_compra, code?.theme_json?.primary_color);
+const rgbDe = (h) => `rgb(${parseInt(h.slice(1, 3), 16)}, ${parseInt(h.slice(3, 5), 16)}, ${parseInt(h.slice(5, 7), 16)})`;
+const FONDO = rgbDe(PAL.hex.bg);
 
 const browser = await chromium.launch();
 for (const ancho of [390, 1440]) {
@@ -73,7 +82,7 @@ for (const ancho of [390, 1440]) {
     }, pg.h);
     const tag = `${pg.id} ${ancho}`;
     check(`${tag} · responde 200`, r?.status() === 200, r?.status());
-    check(`${tag} · tema noche y fondo #0A0A0A`, /\bpg-noche\b/.test(m.tema) && m.fondo === 'rgb(10, 10, 10)', `${m.tema} · ${m.fondo}`);
+    check(`${tag} · tema ${PAL.tema} y su fondo ${PAL.hex.bg}`, m.tema.split(/\s+/).includes(`tema-${PAL.tema}`) && m.fondo === FONDO, `${m.tema} · ${m.fondo}`);
     check(`${tag} · Geist cargada; ni Bricolage ni Hanken`, m.cargadas.some((f) => /geist/i.test(f)) && !m.cargadas.some((f) => /bricolage|hanken/i.test(f)), m.cargadas.join(', '));
     // Sin evento a la venta (el de la URL ya pasó, o la home no lista
     // ninguno) no hay título ni flyer que medir: se avisa y se saltea, no es

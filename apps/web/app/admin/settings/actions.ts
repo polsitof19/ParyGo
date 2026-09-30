@@ -11,6 +11,7 @@ import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { serverEnv } from '@/lib/env';
 import { validateMercadoPagoToken } from '@/lib/mercadopago';
 import { esIdioma, type Textos } from '@/lib/idioma';
+import { TEMAS } from '@/lib/temaCompra.mjs';
 import { textosPanel, idiomaPanel } from '@/lib/idiomaServer';
 
 export type SettingsState = {
@@ -302,5 +303,21 @@ export async function cambiarIdiomaAction(idioma: string): Promise<{ ok: boolean
   if (error) return { ok: false };
   await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId: ctxW.brandId, accion: 'brand_idioma_updated', diff: { idioma } });
   revalidatePath('/admin', 'layout');
+  return { ok: true };
+}
+
+// Tema de la página de compra (0076): blanco, crema, negro o el color de la
+// marca. Misma forma que el idioma: la marca sale de la sesión, el valor se
+// valida contra la lista cerrada (el CHECK de la base es la segunda red).
+export async function cambiarTemaCompraAction(tema: string): Promise<{ ok: boolean }> {
+  if (!(TEMAS as string[]).includes(tema)) return { ok: false };
+  const user = await requireSession();
+  const ctxW = contextoEscritura(user);
+  if (!ctxW) return { ok: false };
+  const admin = createAdminClient();
+  const { error } = await admin.from('brands').update({ tema_compra: tema }).eq('id', ctxW.brandId);
+  if (error) return { ok: false };
+  await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId: ctxW.brandId, accion: 'brand_tema_compra_updated', diff: { tema_compra: tema } });
+  revalidatePath('/admin/settings');
   return { ok: true };
 }

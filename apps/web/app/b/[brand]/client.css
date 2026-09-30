@@ -148,8 +148,10 @@
 .client-shell .c-btn svg { width: 17px; height: 17px; flex: none; }
 .client-shell .c-btn:disabled { opacity: .5; cursor: not-allowed; }
 .client-shell .c-btn--brand { background: var(--brand-fill); color: var(--on-fill); }
-.client-shell .c-btn--white { background: #FFFFFF; color: var(--on-white); }
-.client-shell .c-btn--soft { border-color: rgba(255, 255, 255, 0.22); color: var(--ink); }
+/* "Guardar imagen" y parecidos: el botón neutro es TINTA sobre el fondo del
+   tema (en noche: blanco con texto negro, como siempre). */
+.client-shell .c-btn--white { background: var(--ink); color: var(--bg); }
+.client-shell .c-btn--soft { border-color: var(--edge); color: var(--ink); }
 .client-shell .c-btn--ghost { color: var(--ink-2); height: auto; min-height: 44px; padding: var(--b-s1) var(--b-sm); }
 .client-shell .c-btn--block { width: 100%; }
 .client-shell .c-btn--lg { height: var(--b-pill-lg); font-size: var(--b-body); }
@@ -184,7 +186,7 @@
 .client-shell select.c-input { padding-right: var(--b-s4); background-image: linear-gradient(45deg, transparent 50%, var(--ink-2) 50%), linear-gradient(135deg, var(--ink-2) 50%, transparent 50%); background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
 .client-shell .c-input::placeholder { color: var(--ink-3); }
 .client-shell .c-input:focus,
-.client-shell .c-input:focus-visible { outline: none; border-color: rgba(255, 255, 255, 0.45); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08); }
+.client-shell .c-input:focus-visible { outline: none; border-color: var(--edge-strong); box-shadow: 0 0 0 3px var(--edge-faint); }
 .client-shell .c-doc { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: var(--b-s1); }
 .client-shell .c-check { display: flex; align-items: flex-start; gap: var(--b-sm); min-height: 44px; font-size: var(--b-ctl); line-height: 1.45; color: var(--ink); cursor: pointer; }
 .client-shell .c-check input { margin-top: 2px; width: 20px; height: 20px; accent-color: var(--brand-mark); flex-shrink: 0; }
@@ -196,7 +198,7 @@
 .client-shell .c-file__btn {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--b-s1);
   min-height: 112px; padding: var(--b-s3) var(--b-s2); text-align: center;
-  border: 1.5px dashed rgba(255, 255, 255, 0.22); border-radius: var(--r-card);
+  border: 1.5px dashed var(--edge); border-radius: var(--r-card);
   background: var(--surface); color: var(--ink); cursor: pointer;
   font-weight: 600; font-size: var(--b-ctl);
   transition: transform var(--t-ctl) var(--ease);
@@ -338,15 +340,15 @@
    control "pegado" después del toque. */
 @media (hover: hover) and (pointer: fine) {
   .client-shell .c-btn--brand:hover:not(:disabled) { background: var(--brand-fill-hover); }
-  .client-shell .c-btn--white:hover:not(:disabled) { background: var(--white-hover); }
-  .client-shell .c-btn--soft:hover:not(:disabled) { border-color: rgba(255, 255, 255, 0.45); }
+  .client-shell .c-btn--white:hover:not(:disabled) { background: var(--ink-hover); }
+  .client-shell .c-btn--soft:hover:not(:disabled) { border-color: var(--edge-strong); }
   .client-shell .c-btn--ghost:hover { opacity: .7; }
   .client-shell .c-foot a:hover,
   .client-shell .c-pass__foot a:hover,
   .client-shell .c-powered a:hover,
   .client-shell .c-state__link:hover,
   .client-shell .c-lockup:hover { opacity: .7; }
-  .client-shell .c-file__btn:hover { border-color: rgba(255, 255, 255, 0.45); }
+  .client-shell .c-file__btn:hover { border-color: var(--edge-strong); }
 }
 
 /* Movimiento reducido: NO se apaga todo. Lo que entra lo hace con un fundido
