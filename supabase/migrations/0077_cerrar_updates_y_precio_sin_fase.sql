@@ -15,13 +15,17 @@
 --    ticket_types.price_cents, que en la práctica es el precio MÁS BARATO.
 --    Con fases con fecha de fin, al terminar la última (o en un hueco entre
 --    dos) se vendía al precio de la primera preventa. Ahora, sin fase activa:
---    la última fase que ya terminó; si ninguna terminó, la próxima; y recién
---    si no hay fases, el precio base. Mismo RETURNS: CREATE OR REPLACE
---    conserva los grants (pública a propósito: la página de compra la usa).
+--    la PRÓXIMA fase (antes de la primera o en un hueco: nunca más barato de
+--    lo que viene); si no hay próxima, la última que terminó; y recién sin
+--    fases, el precio base. armarEscalera (conceptos.tsx) replica la regla
+--    para que lo que se MUESTRA sea lo que se COBRA. Mismo RETURNS: CREATE OR
+--    REPLACE conserva los grants (pública a propósito: la página la usa).
+-- 3) TRUNCATE no pasa por RLS: nadie con JWT lo necesita en ninguna tabla.
 -- =============================================================
 
 revoke update on public.orders, public.tickets, public.yape_proofs from anon, authenticated;
 revoke insert, update, delete, truncate on public.promo_codes from anon, authenticated;
+revoke truncate on all tables in schema public from anon, authenticated;
 
 drop policy if exists orders_update_brand on public.orders;
 drop policy if exists tickets_validate_brand on public.tickets;
@@ -44,7 +48,7 @@ set search_path = public
 as $$
   select
     tt.id,
-    coalesce(act.price_cents, prev.price_cents, nx.price_cents, tt.price_cents) as active_price_cents,
+    coalesce(act.price_cents, nx.price_cents, prev.price_cents, tt.price_cents) as active_price_cents,
     act.name     as active_name,
     act.ends_at  as active_ends_at,
     nx.price_cents as next_price_cents,
