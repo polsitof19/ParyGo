@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireSession, type SessionUser } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { eventoCobra, marcaTieneMetodo } from '@/lib/metodoPago';
 import { limaToIso, shiftEnd, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
 import { eventOverAt, isPubliclyOffered } from '@/lib/publicTicketGuard';
 import { generarToken, tokensPrivados, parseMaxPorPersona } from '@/lib/privateAccess';
@@ -187,7 +188,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
 export async function setEventPublishedAction(
   eventId: string,
   publish: boolean
-): Promise<{ ok: boolean; message?: string }> {
+): Promise<{ ok: boolean; message?: string; code?: 'falta_metodo' }> {
   const user = await requireSession();
   const { t } = await textosPanel();
   const auth = await authEvent(eventId, user);
@@ -209,6 +210,12 @@ export async function setEventPublishedAction(
     const { data: ev } = await admin.from('events').select('starts_at, ends_at').eq('id', eventId).eq('brand_id', brandId).maybeSingle();
     if (ev && eventOverAt(ev.starts_at, ev.ends_at) < Date.now()) {
       return { ok: false, message: t('Este evento ya terminó. Cambia la fecha antes de publicarlo.', 'This event has already ended. Change the date before publishing it.') };
+    }
+    // Guard: un evento que COBRA no se publica sin método de pago (si no, el
+    // comprador dejaba sus datos y recién ahí veía que no había cómo pagar).
+    // Un evento gratis o solo con cortesías se publica igual.
+    if ((await eventoCobra(admin, eventId, brandId)) && !(await marcaTieneMetodo(admin, brandId))) {
+      return { ok: false, code: 'falta_metodo', message: t('Antes de publicar, elige cómo te pagan en Mi marca.', 'Before publishing, choose how you get paid in My brand.') };
     }
   }
 
