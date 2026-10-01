@@ -154,7 +154,7 @@ export function EmpezarFlow({ lang, tipo = 'marca', planes, inicial: planInicial
     if (p === 3 && !EMAIL_OK.test(email)) e.email = t.m.correoMal;
     if (p === 3 && !waOk(whatsapp)) e.whatsapp = t.m.waMal;
     else if (p === 3 && esPrueba && whatsapp.trim() === '') e.whatsapp = t.m.waObligatorio;
-    if (p === 4 && codigo.length !== 8) e.codigo = t.m.escribeCodigo;
+    if (p === 4 && codigo.length !== 6 && codigo.length !== 8) e.codigo = t.m.escribeCodigo;
     if (p === 5 && !passwordOk(password)) e.password = t.m.passRegla;
     setErrPaso(e);
     return Object.keys(e).length === 0;
@@ -378,7 +378,7 @@ export function EmpezarFlow({ lang, tipo = 'marca', planes, inicial: planInicial
                 <label htmlFor="ez-codigo" className="ez-label">{t.c.label}</label>
                 <input id="ez-codigo" className="ez-input ez-input--code" value={codigo}
                   onChange={(e) => { setCodigo(e.target.value.replace(/\D/g, '').slice(0, 8)); limpiar('codigo'); }}
-                  inputMode="numeric" autoComplete="one-time-code" maxLength={8} pattern="[0-9]*" placeholder="00000000"
+                  inputMode="numeric" autoComplete="one-time-code" maxLength={8} pattern="[0-9]*" placeholder="000000"
                   aria-invalid={!!err.codigo} aria-describedby="e-codigo" />
                 <p id="e-codigo" className={err.codigo ? 'ez-err' : 'ez-hint'} aria-live="polite">{err.codigo ?? reenv ?? t.c.spam}</p>
               </div>

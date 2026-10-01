@@ -23,7 +23,8 @@ const TXT = {
 
 export async function sendCodigoAlta(a: { to: string; codigo: string; lang?: 'es' | 'en' }): Promise<SendResult> {
   const t = TXT[a.lang === 'en' ? 'en' : 'es'];
-  const grupos = a.codigo.length === 8 ? `${a.codigo.slice(0, 4)} ${a.codigo.slice(4)}` : a.codigo;
+  const mitad = a.codigo.length / 2;
+  const grupos = a.codigo.length >= 6 ? `${a.codigo.slice(0, mitad)} ${a.codigo.slice(mitad)}` : a.codigo;
   const FONT = "'Hanken Grotesk', Helvetica, Arial, sans-serif";
   const html = `<!doctype html><html lang="${a.lang === 'en' ? 'en' : 'es'}"><body style="margin:0;background:#FBF7F0;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FBF7F0;padding:32px 16px;">

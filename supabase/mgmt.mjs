@@ -96,8 +96,13 @@ if (cmd === 'info') {
   // Regla de contraseñas de Supabase Auth (2026-10-01, lib/password.ts):
   //   node supabase/mgmt.mjs auth          → muestra SOLO estos campos (nada secreto)
   //   node supabase/mgmt.mjs auth politica → fija 8+ con minúscula, MAYÚSCULA y número
+  //   node supabase/mgmt.mjs auth otp6     → código del alta de 6 dígitos
   const CAMPOS = ['password_min_length', 'password_required_characters', 'mailer_otp_length', 'mailer_otp_exp', 'external_email_enabled', 'mailer_autoconfirm'];
   const ver = (c) => Object.fromEntries(CAMPOS.map((k) => [k, c[k]]));
+  if (arg === 'otp6') {
+    // Código del alta de 6 dígitos (Paul, 2026-10-01; Supabase no baja de 6).
+    await api(`/v1/projects/${REF}/config/auth`, { method: 'PATCH', body: JSON.stringify({ mailer_otp_length: 6 }) });
+  }
   if (arg === 'politica') {
     const antes = await api(`/v1/projects/${REF}/config/auth`);
     console.log('antes:', JSON.stringify(ver(antes)));

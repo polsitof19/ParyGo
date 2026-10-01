@@ -19,7 +19,7 @@ import { TEXTOS, esLang, esMoneda, type Lang, type Textos } from './textos';
 // Alta AUTOSERVICIO de un organizador (app.parygo.com/empezar).
 // =============================================================
 // Desde 2026-10-01 (bloque "Cuentas", AGENTS.md) TODA alta confirma el correo
-// con un código de 8 dígitos ANTES de seguir (Paul: "para que no creen así
+// con un código de 6 dígitos (Paul: "más corto"; es el mínimo de Supabase) ANTES de seguir (Paul: "para que no creen así
 // como si nada"), y vuelve la PRUEBA GRATIS (1 evento, hasta 10 entradas).
 //   1. enviarCodigo: valida los datos, manda el código. Usuario nuevo SIN
 //      confirmar y con contraseña AL AZAR (con la suya acá, cualquiera
@@ -205,8 +205,9 @@ export async function confirmarCodigo(_prev: AltaState, fd: FormData): Promise<A
   const email = z.string().trim().toLowerCase().email().safeParse(fd.get('email') ?? '');
   if (!email.success) return { ok: false, paso: 'datos', message: m.revisa, fieldErrors: { email: m.correoMal } };
   const codigo = String(fd.get('codigo') ?? '').replace(/\D/g, '');
-  if (codigo.length !== 8) return { ok: false, paso: 'codigo', message: null, fieldErrors: { codigo: m.escribeCodigo } };
-  // 5 intentos por correo y 30 por conexión por hora: un código de 8 dígitos
+  // 6 (actual) u 8 (los que se mandaron antes del cambio de largo, 2026-10-01).
+  if (codigo.length !== 6 && codigo.length !== 8) return { ok: false, paso: 'codigo', message: null, fieldErrors: { codigo: m.escribeCodigo } };
+  // 5 intentos por correo y 30 por conexión por hora: un código de 6 dígitos
   // no se adivina a fuerza bruta con eso.
   if (!(await dentroDelTope('verif', email.data, 5, 30))) return { ok: false, paso: 'codigo', message: m.muchos };
 

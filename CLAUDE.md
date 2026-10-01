@@ -415,7 +415,7 @@ CUENTAS CON CÓDIGO + PRUEBA GRATIS (0080 + 0081, 2026-10-01, Paul: "todas
 las cuentas con código al correo" y "prueba de 10 entradas"). Reemplaza a
 "ALTA CON PACK SIN CÓDIGO" y a "SIN PRUEBA GRATIS" (quedan como historia).
 /empezar: paquete (para marca: Prueba gratis · 1 · 3 · 5 · 10) → nombre →
-enlace → correo + WhatsApp → CÓDIGO de 8 dígitos → contraseña → Pagar o
+enlace → correo + WhatsApp → CÓDIGO de 6 dígitos → contraseña → Pagar o
 "Crear mi prueba". Server: enviarCodigo (generateLink: usuario nuevo SIN
 confirmar con passwordAlAzar(); antes, usuario_id_por_email; un correo que ya
 tiene cuenta recibe "ya tienes cuenta" y el form responde IGUAL: no enumera),
@@ -431,7 +431,7 @@ prueba_disponible; tope prueba_tope_entradas() = 10 (lib/prueba.ts igual);
 WhatsApp obligatorio y 1 prueba por WhatsApp, 3 por IP por día; no hay prueba
 con un alta de paquete a medias. Candados atómicos tomar_candado (0080):
 código 60 s por correo, pago 30 s por marca, prueba 120 s. Topes: 5 envíos/h
-por correo, 5 verificaciones/h. Limpieza diaria: pruebas sin eventos a los 30
+por correo, 5 verificaciones/h. Código de 6 dígitos (Paul pidió 4; Supabase no baja de 6): `node supabase/mgmt.mjs auth otp6`. Limpieza diaria: pruebas sin eventos a los 30
 días se archivan, liberan el link y la membresía. 0081: brands sin
 INSERT/UPDATE/DELETE para anon/authenticated (como 0078). CONTRASEÑAS: regla
 única lib/password.ts (8+, mayúscula, minúscula y número) en todos los que la
