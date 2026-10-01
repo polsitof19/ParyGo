@@ -113,6 +113,7 @@ export type Database = {
           instagram: string | null
           is_test: boolean
           prueba_disponible: boolean
+          alta_usuario: string | null
           mp_access_token_enc: string | null
           mp_public_key_enc: string | null
           name: string
@@ -138,6 +139,7 @@ export type Database = {
           instagram?: string | null
           is_test?: boolean
           prueba_disponible?: boolean
+          alta_usuario?: string | null
           mp_access_token_enc?: string | null
           mp_public_key_enc?: string | null
           name: string
@@ -163,6 +165,7 @@ export type Database = {
           instagram?: string | null
           is_test?: boolean
           prueba_disponible?: boolean
+          alta_usuario?: string | null
           mp_access_token_enc?: string | null
           mp_public_key_enc?: string | null
           name?: string
@@ -1218,6 +1221,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      tomar_candado: {
+        Args: { p_clave: string; p_segundos: number }
+        Returns: boolean
+      }
       attach_reservation_to_order: {
         Args: { p_order_id: string; p_session_id: string }
         Returns: number

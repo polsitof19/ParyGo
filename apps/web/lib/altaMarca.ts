@@ -35,6 +35,9 @@ export async function crearMarcaParaUsuario(a: {
   // Evento privado (0075): se fija AL CREAR y no cambia nunca (el precio de
   // cada compra sale de acá). Sin él, marca.
   tipo?: 'marca' | 'privado';
+  // Quién verificó el correo de un alta con paquete (0080): la marca nace sin
+  // dueña y solo ESA persona la reclama al volver del pago.
+  altaUsuario?: string;
 }): Promise<AltaMarca> {
   const admin = createAdminClient();
   const { data: brand, error } = await admin
@@ -49,6 +52,7 @@ export async function crearMarcaParaUsuario(a: {
       prueba_disponible: a.prueba,
       idioma: a.idioma ?? 'es',
       tipo: a.tipo ?? 'marca',
+      ...(a.altaUsuario ? { alta_usuario: a.altaUsuario } : {}),
       // Sin dueña = alta con pack sin pagar: ARCHIVADA (no se ve en
       // <slug>.parygo.com) hasta que la dueña la reclama con el pago aprobado.
       // Si no, cualquiera publicaba gratis una página con el nombre de otro.
