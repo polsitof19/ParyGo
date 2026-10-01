@@ -411,6 +411,36 @@ supabase/verify-0053-0058.mjs (comprobaciones de estado esperado).
 OJO con `mgmt.mjs types`: PISA database.types.ts entero y regenerarlo completo
 rompe tipos afinados a mano — las columnas nuevas se agregan a mano.
 
+CUENTAS CON CÓDIGO + PRUEBA GRATIS (0080 + 0081, 2026-10-01, Paul: "todas
+las cuentas con código al correo" y "prueba de 10 entradas"). Reemplaza a
+"ALTA CON PACK SIN CÓDIGO" y a "SIN PRUEBA GRATIS" (quedan como historia).
+/empezar: paquete (para marca: Prueba gratis · 1 · 3 · 5 · 10) → nombre →
+enlace → correo + WhatsApp → CÓDIGO de 8 dígitos → contraseña → Pagar o
+"Crear mi prueba". Server: enviarCodigo (generateLink: usuario nuevo SIN
+confirmar con passwordAlAzar(); antes, usuario_id_por_email; un correo que ya
+tiene cuenta recibe "ya tienes cuenta" y el form responde IGUAL: no enumera),
+la verificación va por fetch a POST /empezar/verificar (NO como server action:
+verifyOtp abre sesión y Next 14 remontaba el form al paso 1) y finalizarAlta
+(el correo sale de la SESIÓN verificada, nunca del form; todo lo que puede
+fallar se valida ANTES de fijar la contraseña y abrir sesión). Paquete: marca
+ARCHIVADA sin dueña con brands.alta_usuario = quien verificó;
+pack_purchases.created_by sigue null (centinela de 0072 y /listo); /listo la
+publica SOLO si la sesión es alta_usuario (sin sesión → /login?next=…, ruta
+permitida en lib/loginNext.ts). Prueba: marca publicada con dueña y
+prueba_disponible; tope prueba_tope_entradas() = 10 (lib/prueba.ts igual);
+WhatsApp obligatorio y 1 prueba por WhatsApp, 3 por IP por día; no hay prueba
+con un alta de paquete a medias. Candados atómicos tomar_candado (0080):
+código 60 s por correo, pago 30 s por marca, prueba 120 s. Topes: 5 envíos/h
+por correo, 5 verificaciones/h. Limpieza diaria: pruebas sin eventos a los 30
+días se archivan, liberan el link y la membresía. 0081: brands sin
+INSERT/UPDATE/DELETE para anon/authenticated (como 0078). CONTRASEÑAS: regla
+única lib/password.ts (8+, mayúscula, minúscula y número) en todos los que la
+fijan; en Supabase Auth se activa con `node supabase/mgmt.mjs auth politica`
+(NO antes de que esté desplegado el /empezar nuevo: el viejo creaba la cuenta
+después del pago). Tests: e2e/empezar.mjs 53/53, e2e/capturas-alta.mjs 8/8,
+e2e/prueba-0069.mjs, login-next 19/19, permisos-escritura (8 tablas).
+Security review y revisión adversarial de Codex (plan en AGENTS.md).
+
 PANEL ÚNICO ESCRITOR (0077 + 0078, en PRODUCCIÓN desde 2026-10-01, regla de
 Paul: "las estadísticas no se mueven; el organizador edita su evento, entradas
 y precios solo desde el panel"). anon/authenticated NO tienen INSERT/UPDATE/
@@ -591,7 +621,7 @@ cada consulta cruzaba el continente. Se prendió por la API de Cloudflare
 [placement] de apps/web/wrangler.toml NO lo aplicó la integración con Git.
 Verificar con el GET del proyecto de Pages; el PATCH conserva las variables.
 
-Incrementales, idempotentes, numeradas (vamos por 0079). Backwards-compatible
+Incrementales, idempotentes, numeradas (vamos por 0081). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
 para no romper la app vieja desplegada.
 
