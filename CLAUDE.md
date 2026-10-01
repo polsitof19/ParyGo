@@ -411,6 +411,23 @@ supabase/verify-0053-0058.mjs (comprobaciones de estado esperado).
 OJO con `mgmt.mjs types`: PISA database.types.ts entero y regenerarlo completo
 rompe tipos afinados a mano — las columnas nuevas se agregan a mano.
 
+PRIMEROS PASOS + MÉTODO DE PAGO (2026-10-01, panel nuevo parte 2). Textos
+genéricos "método de pago" / "cómo te pagan" (Yape es UNA opción, Perú). El
+método SOLO se exige si el evento COBRA (lib/metodoPago.ts eventoCobra: no
+is_free y una entrada activa, no cortesía, price_cents > 0; falla cerrado);
+hoy "tiene método" = brands.yape_number (MP por marca no cuenta hasta
+"Conectar Mercado Pago"). setEventPublishedAction (panel y cabina) rechaza
+code 'falta_metodo'; el evento muestra "Antes de publicar, elige cómo te
+pagan" con el único primario → /admin/settings#cobro. Un evento PUBLICADO que
+pasa a cobrar sin método (entrada con precio nueva/reactivada, quitar
+"gratis") vuelve a borrador con aviso (bajarABorradorSiFaltaMetodo). Mi marca
+no deja vaciar el Yape con eventos publicados que cobran. Portada: "Primeros
+pasos" (SetupChecklist) con pasos que se tildan solos; "Elige cómo te pagan"
+solo aparece si alguna entrada cobra; desaparece al completar o con un
+escaneo (Code/Hoesky no la ven). Mi marca: "Cómo te pagan" primero (id
+cobro), MP plegado "próximamente", lo demás plegado con su valor; el form va
+al pie con form=. Tests: e2e/publicar-metodo.mjs, fase1 181/181, panel-en.
+
 CREAR EVENTO = ASISTENTE (0082, 2026-10-01, Paul: "que haga preguntas…
 se vería más profesional y fácil"). /admin/events/new es EventWizard.tsx
 (reemplazó a EventBuilder): UNA pregunta por pantalla, 6 pasos: nombre (link
