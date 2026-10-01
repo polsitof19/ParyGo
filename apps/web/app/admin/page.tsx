@@ -10,12 +10,16 @@ import { SetupChecklist, type SetupStep } from './SetupChecklist';
 import { LowBalanceNotice } from './LowBalanceNotice';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
 import { setEventArchivedAction } from './events/[id]/edit-actions';
-import { pruebaDisponible } from '@/lib/prueba';
+import { pruebaDisponible, PRUEBA_TOPE_ENTRADAS } from '@/lib/prueba';
+import { publicEnv } from '@/lib/env';
 import { todas } from '@/lib/todas';
 import { textosPanel } from '@/lib/idiomaServer';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
+
+// Un evento "pasó" 12 h después de empezar (misma regla de toda la portada).
+const isPastEv = (e: { starts_at: string }, nowMs: number) => Date.parse(e.starts_at) + 12 * 3600 * 1000 < nowMs;
 
 export default async function AdminHomePage() {
   const user = await requireSession();
@@ -34,11 +38,11 @@ export default async function AdminHomePage() {
   // órdenes pagadas sin entradas: ahora lo resuelve la base con un anti-join.
   const supabase = createClient();
   const adminCli = createAdminClient();
-  const [{ data: brand }, { data: events }, pendingProofs, stuckRows, { count: activeTypeCount }, { data: mpStatus }, pruebaLibre] = await Promise.all([
+  const [{ data: brand }, { data: events }, pendingProofs, stuckRows, { count: activeTypeCount }, pruebaLibre, { count: paidTypeCount }, { count: ticketCount }, { count: scannedCount }] = await Promise.all([
     supabase.from('brands').select('id, slug, name, yape_number, event_balance').eq('id', brandId).single(),
     supabase
       .from('events')
-      .select('id, slug, name, starts_at, is_published, cover_url, archived_at, venue_name')
+      .select('id, slug, name, starts_at, is_published, cover_url, archived_at, venue_name, es_prueba')
       .eq('brand_id', brandId)
       .order('starts_at', { ascending: false }),
     todas((a, b) => supabase
@@ -52,8 +56,15 @@ export default async function AdminHomePage() {
     // Yape no atómico). Service role acotado a la marca. Normalmente vacío.
     todas((a, b) => adminCli.from('orders').select('id, buyer_name, total_cents, created_at, event_id, tickets!left(id)').eq('brand_id', brandId).eq('status', 'paid').is('tickets', null).order('id').range(a, b)),
     adminCli.from('ticket_types').select('id, events!inner(brand_id)', { count: 'exact', head: true }).eq('events.brand_id', brandId).eq('is_active', true),
-    adminCli.rpc('get_brand_mp_status', { p_brand_id: brandId }),
     impersonating ? Promise.resolve(false) : pruebaDisponible(brandId),
+    // Primeros pasos: ¿alguna entrada de un evento activo COBRA? (precio > 0,
+    // no cortesía, evento no gratis). Solo entonces se pide el método de pago.
+    adminCli.from('ticket_types').select('id, events!inner(brand_id, is_free, archived_at)', { count: 'exact', head: true })
+      .eq('events.brand_id', brandId).eq('events.is_free', false).is('events.archived_at', null)
+      .eq('is_active', true).eq('is_courtesy', false).gt('price_cents', 0),
+    // Compra de prueba: entradas emitidas y entradas que ya pasaron por puerta.
+    adminCli.from('tickets').select('id', { count: 'exact', head: true }).eq('brand_id', brandId).is('invalidated_at', null),
+    adminCli.from('tickets').select('id', { count: 'exact', head: true }).eq('brand_id', brandId).not('validated_at', 'is', null),
   ]);
   if (!brand) return null;
 
@@ -79,10 +90,9 @@ export default async function AdminHomePage() {
     pendingEventCount += 1;
   }
 
-  const mpRow = Array.isArray(mpStatus) ? mpStatus[0] : null;
-  const mpConfigured = Boolean(mpRow?.has_access_token && mpRow?.has_public_key);
   const eventNameById = new Map((events ?? []).map((e) => [e.id, e.name] as const));
   const nowMs = Date.now();
+  const fmtDay = (iso: string) => new Date(iso).toLocaleDateString(loc, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'America/Lima' });
   const firstPendingEvent = activeEvents.find((e) => (pendingByEvent.get(e.id) ?? 0) > 0) ?? null;
   const stuckOrders = ((stuckRows ?? []) as { id: string; buyer_name: string | null; total_cents: number | null; created_at: string; event_id: string }[])
     .map((o) => ({ id: o.id, buyerName: o.buyer_name, totalCents: o.total_cents ?? 0, createdAt: o.created_at, eventName: eventNameById.get(o.event_id) ?? t('Evento', 'Event') }));
@@ -91,18 +101,32 @@ export default async function AdminHomePage() {
   // Sin saldo, la prueba gratis (0069) también deja crear (una sola vez).
   const canCreate = balance > 0 || pruebaLibre;
 
-  // Setup guiado (Grupo B): progreso DERIVADO de los datos (no hay flag en BD).
-  // Pasos = configurar cobro → crear evento → cargar entradas → publicar.
-  const cobroReady = Boolean(brand.yape_number) || mpConfigured;
-  const hasEvent = (events?.length ?? 0) > 0;
+  // PRIMEROS PASOS (2026-10-01): progreso DERIVADO de los datos. El paso del
+  // método de pago aparece SOLO si alguna entrada cobra; hoy el único método
+  // que cobra es el Yape del organizador (MP por marca está diferido).
+  // Una marca con una entrada ya escaneada hizo el recorrido entero: no lo ve
+  // más (Code y Hoesky), aunque hoy no tenga un evento publicado.
+  const cobra = (paidTypeCount ?? 0) > 0;
+  const cobroReady = Boolean(brand.yape_number);
   const hasTickets = (activeTypeCount ?? 0) > 0;
-  const firstEventId = activeEvents[0]?.id ?? (events ?? [])[0]?.id ?? null;
+  const guideEvent = activeEvents.find((e) => !isPastEv(e, nowMs)) ?? activeEvents[0] ?? null;
+  const evHref = guideEvent ? `/admin/events/${guideEvent.id}` : '/admin/events/new';
+  const publicHref = guideEvent ? `https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${guideEvent.slug}` : evHref;
+  const scanned = (scannedCount ?? 0) > 0;
+  const enPrueba = pruebaLibre || activeEvents.some((e) => e.es_prueba && !isPastEv(e, nowMs));
+  const compra = firstPendingEvent
+    ? { href: `/admin/events/${firstPendingEvent.id}/yape`, cta: t('Aprobar el Yape', 'Approve the Yape'), desc: t('Tu compra está esperando. Aprueba el comprobante y te llega la entrada.', 'Your purchase is waiting. Approve the receipt and the ticket arrives.'), external: false }
+    : (ticketCount ?? 0) > 0
+      ? { href: '/scan', cta: t('Abrir escáner', 'Open scanner'), desc: t('Ya tienes una entrada. Escanéala para ver cómo funciona la puerta.', 'You already have a ticket. Scan it to see how the door works.'), external: false }
+      : { href: publicHref, cta: t('Abrir mi página', 'Open my page'), desc: t('Compra una entrada como si fueras tu cliente. Así ves todo lo que ve.', 'Buy a ticket as if you were your customer. That way you see everything they see.'), external: Boolean(guideEvent) };
   const setupSteps: SetupStep[] = [
-    { key: 'cobro', title: t('Configura tu cobro', 'Set up your payments'), desc: t('Carga tu Yape (o tus credenciales de tarjeta) para recibir los pagos.', 'Add your Yape (or your card credentials) to start receiving payments.'), done: cobroReady, href: '/admin/settings', cta: t('Configurar', 'Set up') },
-    { key: 'evento', title: t('Crea tu primer evento', 'Create your first event'), desc: t('Nombre, fecha y lugar. Te toma un par de minutos.', 'Name, date and venue. It takes you a couple of minutes.'), done: hasEvent, href: '/admin/events/new', cta: t('Crear', 'Create') },
-    { key: 'entradas', title: t('Carga tus entradas', 'Add your tickets'), desc: t('Define tipos de entrada, precios y cupos.', 'Define ticket types, prices and capacity.'), done: hasTickets, href: firstEventId ? `/admin/events/${firstEventId}/editar#entradas` : '/admin/events/new', cta: t('Cargar', 'Add') },
-    { key: 'publicar', title: t('Publica tu evento', 'Publish your event'), desc: t('Cuando esté listo, ponlo en vivo para empezar a vender.', 'When it is ready, take it live to start selling.'), done: publishedCount > 0, href: firstEventId ? `/admin/events/${firstEventId}` : '/admin/events/new', cta: t('Publicar', 'Publish') },
+    { key: 'evento', title: t('Crea tu evento', 'Create your event'), desc: t('Nombre, fecha y lugar. Te toma un par de minutos.', 'Name, date and venue. It takes you a couple of minutes.'), done: (events?.length ?? 0) > 0, href: canCreate ? '/admin/events/new' : '/admin/comprar', cta: canCreate ? t('Crear evento', 'Create event') : t('Comprar eventos', 'Buy events'), detail: guideEvent ? `${guideEvent.name} · ${fmtDay(guideEvent.starts_at)}` : undefined },
+    { key: 'entradas', title: t('Agrega tus entradas', 'Add your tickets'), desc: enPrueba ? t(`Precio y cuántas hay. En tu prueba, hasta ${PRUEBA_TOPE_ENTRADAS}.`, `Price and how many. In your trial, up to ${PRUEBA_TOPE_ENTRADAS}.`) : t('Precio y cuántas hay de cada una.', 'Price and how many of each.'), done: hasTickets, href: guideEvent ? `/admin/events/${guideEvent.id}/entradas` : '/admin/events/new', cta: t('Agregar entradas', 'Add tickets') },
+    ...(cobra ? [{ key: 'cobro', title: t('Elige cómo te pagan', 'Choose how you get paid'), desc: t('Tus compradores necesitan saber a dónde pagarte. La plata va directo a ti.', 'Your buyers need to know where to pay you. The money goes straight to you.'), done: cobroReady, href: '/admin/settings#cobro', cta: t('Elegir método de pago', 'Choose payment method'), detail: cobroReady ? `Yape · ${brand.yape_number}` : undefined }] : []),
+    { key: 'publicar', title: t('Publícalo y comparte el link', 'Publish it and share the link'), desc: t('Publícalo y manda el link por WhatsApp o ponlo en tu Instagram.', 'Publish it and send the link on WhatsApp or put it on your Instagram.'), done: publishedCount > 0, href: evHref, cta: t('Ir a publicar', 'Go to publish') },
+    { key: 'compra', title: t('Haz una compra de prueba', 'Make a test purchase'), desc: compra.desc, done: scanned, href: compra.href, cta: compra.cta, external: compra.external },
   ];
+  const showSetup = !impersonating && !scanned && setupSteps.some((st) => !st.done);
 
   // ORDEN (2026-09-23, referencia aprobada): lo pendiente arriba (una fila con
   // fondo), después EL EVENTO QUE VIENE (flyer, tres cifras, escáner y link,
@@ -113,7 +137,7 @@ export default async function AdminHomePage() {
 
   // Tus eventos: los que vienen (y los borradores) a la vista; los que ya
   // pasaron, plegados en "Anteriores".
-  const isPast = (e: { starts_at: string }) => Date.parse(e.starts_at) + 12 * 3600 * 1000 < nowMs;
+  const isPast = (e: { starts_at: string }) => isPastEv(e, nowMs);
   const upcoming = activeEvents.filter((e) => !isPast(e)).sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at));
   const pastEvents = activeEvents.filter(isPast);
   const fmtWhen = (iso: string) => new Date(iso).toLocaleString(loc, { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' });
@@ -177,8 +201,9 @@ export default async function AdminHomePage() {
       )}
 
       {/* Aviso de saldo bajo (solo dueño): es una tarea, va arriba. */}
-      {/* Con la prueba gratis sin usar, "te quedaste sin saldo" sería falso. */}
-      {!impersonating && !(balance === 0 && canCreate) && (
+      {/* Con la prueba gratis sin usar —o usándola— "te quedaste sin saldo" en
+          rojo asustaba a quien recién empieza: no se muestra. */}
+      {!impersonating && !(balance === 0 && (canCreate || enPrueba)) && (
         <LowBalanceNotice balance={balance} />
       )}
 
@@ -186,8 +211,15 @@ export default async function AdminHomePage() {
           Re-emitir es escritura → oculto en solo lectura. */}
       {stuckOrders.length > 0 && !impersonating && <TicketRecovery orders={stuckOrders} />}
 
-      {/* Setup guiado: solo el dueño y solo si falta algún paso (se auto-oculta). */}
-      {!impersonating && <SetupChecklist steps={setupSteps} brandName={brand.name} />}
+      {/* Primeros pasos: solo el dueño y solo hasta el primer escaneo. Con
+          Yapes por aprobar el primario es "Revisar Yapes" y el paso va soft. */}
+      {showSetup && (
+        <SetupChecklist
+          steps={setupSteps}
+          primary={!hasDue}
+          lead={enPrueba ? t(`Tu prueba gratis: 1 evento, hasta ${PRUEBA_TOPE_ENTRADAS} entradas.`, `Your free trial: 1 event, up to ${PRUEBA_TOPE_ENTRADAS} tickets.`) : null}
+        />
+      )}
 
       {/* 2) TUS EVENTOS: tarjetas con el flyer. Primero los que vienen (el más
           cercano primero) y los borradores; lo pasado, plegado abajo. */}
@@ -196,7 +228,7 @@ export default async function AdminHomePage() {
           <h1 id="a-mine-title" className="s-h1">{t('Eventos', 'Events')}</h1>
           {createBtn}
         </div>
-        {!events || events.length === 0 ? (
+        {!events || events.length === 0 ? (showSetup ? null :
           <p className="s-empty">
             {canCreate
               ? t('Todavía no creaste ningún evento. Usa “Crear evento” para arrancar.', 'You haven’t created an event yet. Use “Create event” to get started.')

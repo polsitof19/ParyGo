@@ -30,6 +30,8 @@ const p = await ctx.newPage();
 
 async function elegir(valor) {
   await p.goto(`${BASE}/admin/settings`, { waitUntil: 'networkidle' });
+  // Plegado en Mi marca desde 2026-10-01 ("Idioma · Language").
+  await p.locator('details:has(#idioma) > summary').click();
   await p.selectOption('#idioma', valor);
   await p.waitForFunction((v) => document.querySelector('.pg-panel')?.getAttribute('lang') === v, valor, { timeout: 20000 });
   const { data } = await svc.from('brands').select('idioma').eq('id', brand.id).single();

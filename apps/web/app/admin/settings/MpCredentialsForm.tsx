@@ -20,18 +20,15 @@ export function MpCredentialsForm({ hasAccessToken, hasPublicKey, readOnly = fal
   const configured = hasAccessToken && hasPublicKey;
 
   return (
-    <section className="s-card">
-      <div className="s-card__head" style={{ marginBottom: 6 }}>
-        <p className="s-section-lead" style={{ margin: 0 }}>{t('Cobro con tarjeta · MercadoPago', 'Card payments · MercadoPago')}</p>
-        <span className={`a-flag ${configured ? 'a-flag--on' : 'a-flag--off'}`}>
+    // Va dentro del pliegue "Tarjeta con Mercado Pago (próximamente)" de Mi
+    // marca: el título lo pone el pliegue. MP por marca está diferido, así
+    // que acá no se promete que cobre (2026-10-01).
+    <section>
+      <p className="s-card__desc" style={{ marginBottom: 12 }}>
+        <span className={`a-flag ${configured ? 'a-flag--on' : 'a-flag--off'}`} style={{ marginRight: 8 }}>
           {configured ? t('Configurado', 'Configured') : t('No configurado', 'Not configured')}
         </span>
-      </div>
-      <p className="s-card__desc" style={{ marginBottom: 10 }}>
-        {t('Pega tus credenciales de MercadoPago para habilitar el pago con', 'Paste your MercadoPago credentials to enable payment with')} <strong>{t('tarjeta', 'card')}</strong> {t('en tu checkout. Las guardamos encriptadas; nunca las mostramos de vuelta. Si no las cargas, tu checkout sigue funcionando solo con Yape.', 'in your checkout. We store them encrypted; we never show them back to you. If you don’t add them, your checkout keeps working with Yape only.')}
-      </p>
-      <p className="s-card__desc" style={{ marginBottom: 12, color: 'var(--ink-2)' }}>
-        💳 <strong>{t('Con tarjeta el cobro es instantáneo', 'With card the charge is instant')}</strong>{t(': la entrada y el QR salen solos al pagar, sin que tengas que revisar el comprobante a mano como en Yape.', ': the ticket and QR are issued automatically on payment, without you having to check the receipt by hand like with Yape.')}
+        {t('Todavía no está listo para cobrar. Por ahora tus compradores te pagan con Yape; te avisamos cuando puedas conectar tu cuenta de Mercado Pago.', 'It is not ready to take payments yet. For now your buyers pay you with Yape; we will let you know when you can connect your Mercado Pago account.')}
       </p>
 
       {/* .s-details en vez de una caja beige con borde y radio: era el último

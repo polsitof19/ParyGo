@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
@@ -38,13 +39,19 @@ export default async function ScanPage() {
 
   return (
     <div className="k-stack">
-      <div>
-        <span className="k-eyebrow">{t('Validador', 'Door staff')}</span>
-        <h1 className="k-h1" style={{ marginTop: 2 }}>{t('Escanear entradas', 'Scan tickets')}</h1>
-      </div>
+      {/* Sin eyebrow "Validador" (2026-10-01): el organizador también entra
+          acá, y un rótulo en mayúsculas encima del título no informa nada. */}
+      <h1 className="k-h1">{t('Escanear entradas', 'Scan tickets')}</h1>
 
       {!events || events.length === 0 ? (
-        <div className="k-empty">{t('No hay eventos cargados para validar. Pídele al organizador que publique el evento.', 'No events loaded to validate. Ask the organizer to publish the event.')}</div>
+        membership.role === 'brand_admin' ? (
+          <div className="k-empty">
+            <p style={{ margin: '0 0 16px' }}>{t('Publica un evento para escanear sus entradas.', 'Publish an event to scan its tickets.')}</p>
+            <Link href="/admin" className="k-btn k-btn--soft">{t('Ir a mis eventos', 'Go to my events')}</Link>
+          </div>
+        ) : (
+          <div className="k-empty">{t('No hay eventos cargados para validar. Pídele al organizador que publique el evento.', 'No events loaded to validate. Ask the organizer to publish the event.')}</div>
+        )
       ) : (
         <Scanner events={events} brandName={brand.name} />
       )}
