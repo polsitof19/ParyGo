@@ -3,6 +3,8 @@ import { todas } from '@/lib/todas';
 import { idsMarcasDePrueba, sinMarcasDePrueba } from '@/lib/marcasDePrueba';
 import { VentasPacks } from '../VentasPacks';
 import { Barras } from '../visual';
+import { AvisosVentas } from '../AvisosVentas';
+import { vapidPublica } from '@/lib/push';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -65,6 +67,9 @@ export default async function VentasPage() {
 
       {/* 1) Tus ventas de paquetes (la plata de ParyGo). */}
       <VentasPacks />
+
+      {/* Aviso al teléfono por cada paquete pagado (0079). */}
+      <AvisosVentas vapid={vapidPublica()} />
 
       {/* 2) Entradas en toda la plataforma. */}
       <section className="s-section" aria-labelledby="v-entradas">

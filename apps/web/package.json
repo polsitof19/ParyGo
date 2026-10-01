@@ -13,6 +13,7 @@
     "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_REF --schema public > lib/supabase/database.types.ts"
   },
   "dependencies": {
+    "@block65/webcrypto-web-push": "2.0.0",
     "@supabase/ssr": "0.5.2",
     "@supabase/supabase-js": "2.47.10",
     "@yudiel/react-qr-scanner": "2.1.0",
