@@ -692,8 +692,8 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   if (isUnlimited) {
     update.is_unlimited = true;
   } else {
-    if (!Number.isFinite(newCapacity) || newCapacity < 1) return { ok: false, message: t('Capacidad inválida.', 'Invalid capacity.') };
-    if (newCapacity < sold) return { ok: false, message: t(`No puedes bajar la capacidad por debajo de lo vendido (${sold}).`, `You cannot lower the capacity below what's already sold (${sold}).`) };
+    if (!Number.isFinite(newCapacity) || newCapacity < 1) return { ok: false, message: t('Revisa "Cuántas hay": tiene que ser 1 o más.', 'Check "How many": it must be 1 or more.') };
+    if (newCapacity < sold) return { ok: false, message: t(`"Cuántas hay" no puede ser menor que las ya vendidas (${sold}).`, `"How many" cannot be lower than the tickets already sold (${sold}).`) };
     update.is_unlimited = false;
     update.capacity = newCapacity;
   }
@@ -710,7 +710,7 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
     if (newPriceCents < 0) return { ok: false, message: t('Precio inválido.', 'Invalid price.') };
     const phaseCount = (phaseRows ?? []).length;
     if (phaseCount > 1) {
-      return { ok: false, message: t('Este tipo tiene fases de preventa; el precio se gestiona por fases (no editable aquí).', 'This type has presale phases; the price is managed by phases (not editable here).') };
+      return { ok: false, message: t('El precio de esta entrada sube por fechas (preventa) y aquí no se puede cambiar. Si necesitas otro precio, crea una entrada nueva y pausa esta.', 'This ticket price goes up by date (presale) and cannot be changed here. If you need another price, create a new ticket and pause this one.') };
     }
     update.price_cents = newPriceCents;
   }
@@ -766,7 +766,7 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
   const priceCents =Math.round(parseFloat(String(formData.get('price_soles') ?? '')) * 100);
   if (!Number.isFinite(priceCents) || priceCents < 0) return { ok: false, message: t('Precio inválido.', 'Invalid price.') };
   const capacity = isUnlimited ? 0 : parseInt(String(formData.get('capacity') ?? ''), 10);
-  if (!isUnlimited && (!Number.isFinite(capacity) || capacity < 1)) return { ok: false, message: t('Capacidad inválida.', 'Invalid capacity.') };
+  if (!isUnlimited && (!Number.isFinite(capacity) || capacity < 1)) return { ok: false, message: t('Revisa "Cuántas hay": tiene que ser 1 o más.', 'Check "How many": it must be 1 or more.') };
   const pricingErr = validateTicketTypePricing(
     [{ name, isUnlimited, pricesCents: [priceCents] }],
     { freeConfirmed: formData.get('confirm_free') === '1' },
