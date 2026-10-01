@@ -24,7 +24,7 @@ export type Dict = {
   demo: { h2: Resaltado; items: { t: string; d: string }[]; tag: string; evt1: string; evt2: string; meta: string; tk1: [string, string]; tk2: [string, string]; buy: string };
   comp: { h2: Resaltado; lede: string; items: { t: string; d: string }[] };
   cmp: { h2: Resaltado; aria: string; p: string; o: string; filas: { t: string; p: string; o: string }[] };
-  precios: { h2: Resaltado; lede: string; evento: string; eventos: string; qty: Record<number, string>; perks: Record<number, string[]>; badge: string; porEvento: string; ahorras: string; pagoUnico: string; elegir: string; note: string; noteUsd: string; privado: { t: string; d: string; cta: string }; detalle: { h3: string; lede: string; grupos: { t: string; items: string[] }[] } };
+  precios: { h2: Resaltado; lede: string; evento: string; eventos: string; qty: Record<number, string>; perks: Record<number, string[]>; badge: string; porEvento: string; ahorras: string; pagoUnico: string; elegir: string; note: string; noteUsd: string; privado: { t: string; d: string; cta: string }; prueba: { t: string; d: string; cta: string }; detalle: { h3: string; lede: string; grupos: { t: string; items: string[] }[] } };
   faq: { h2: Resaltado; lede: string; items: { q: string; a: string }[] };
   final: { h2: string; p: string; cta: string; precios: string };
   footer: { brand: string; producto: string; ayuda: string; legal: string; links: { como: string; seguridad: string; incluye: string; precios: string; crear: string; preguntas: string; panel: string; terminos: string; privacidad: string }; copy: string; made: string };
@@ -152,6 +152,7 @@ const es: Dict = {
     },
     badge: 'Más elegido', porEvento: 'por evento', ahorras: 'Ahorras', pagoUnico: 'Pago único', elegir: 'Elegir',
     note: 'Cada evento incluye entradas ilimitadas y todas las funciones.',
+    prueba: { t: 'Prueba gratis:', d: '1 evento, hasta 10 entradas, sin tarjeta.', cta: 'Empezar la prueba' },
     detalle: {
       h3: 'Todo lo que incluye cada evento, en detalle',
       lede: 'Cada paquete trae el sistema completo. Esto es lo que tienes tú y lo que vive tu público.',
@@ -349,6 +350,7 @@ const en: Dict = {
     },
     badge: 'Most popular', porEvento: 'per event', ahorras: 'You save', pagoUnico: 'One-time payment', elegir: 'Choose',
     note: 'Every event includes unlimited tickets and every feature.',
+    prueba: { t: 'Free trial:', d: '1 event, up to 10 tickets, no card needed.', cta: 'Start the trial' },
     detalle: {
       h3: 'Everything each event includes, in detail',
       lede: 'Every package comes with the full system. Here is what you get and what your audience experiences.',

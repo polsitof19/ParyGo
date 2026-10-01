@@ -593,3 +593,10 @@ button.ez-volver { background: none; border: 0; padding: 0; margin: 0; font: inh
 }
 .ez-moneda__op.is-on { background: var(--ink); color: var(--paper); }
 .ez-moneda__op:has(.ez-plan__radio:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* Regla de contraseña en vivo (0080) */
+.ez-reglas { list-style: none; margin: var(--ez-s2) 0 0; padding: 0; display: grid; gap: var(--ez-s1); font-size: var(--ez-small); color: var(--ink-2); }
+.ez-reglas li { display: flex; align-items: center; gap: var(--ez-s1); }
+.ez-reglas li.is-ok { color: var(--ink); }
+.ez-reglas .ez-ok { margin-right: 0; }
+.ez-pend { display: inline-block; width: 8px; height: 8px; border-radius: 50%; box-sizing: border-box; border: 1.5px solid var(--ink-3); }

@@ -61,6 +61,18 @@ const es = {
   acepta: 'Al continuar aceptas los', terminos: 'Términos', y: 'y la', privacidad: 'Política de privacidad',
   cancelado: 'El pago no se completó y no se realizó ningún cargo. Puedes intentarlo nuevamente cuando quieras.',
   tuPlan: 'Tu plan', pagoUnico: 'pago único',
+  // Código al correo, prueba gratis y contraseña con regla (0080, 2026-10-01)
+  c: {
+    h: 'Te mandamos un código a tu correo', llegoA: 'Llegó a ', llegoB: '. Escríbelo para confirmar que el correo es tuyo.',
+    label: 'Código de 8 dígitos', spam: '¿No lo ves? Revisa spam o promociones.',
+    reenviar: 'Reenviar código', reenviado: 'Te enviamos un código nuevo.', cambiar: 'Cambiar correo',
+    claveHint: 'Con ella y tu correo entrarás a tu panel.',
+    reglas: ['8 o más caracteres', 'Una mayúscula', 'Una minúscula', 'Un número'],
+    crearPrueba: 'Crear mi prueba',
+    pruebaNombre: 'Prueba gratis', pruebaDet: '1 evento, hasta 10 entradas, sin tarjeta', pruebaPrecio: 'Gratis',
+    waObligatorio: '(obligatorio)', waHintPrueba: 'La prueba gratis es una por WhatsApp. Con código de país.',
+    finoPrueba: 'Sin tarjeta. Al finalizar ingresarás directamente a tu panel.',
+  },
   // Todo lo que incluye cada evento (Paul, 2026-09-28: "deben saber por qué
   // pagan"). MISMA lista que la landing (apps/landing/lib/i18n.ts,
   // precios.detalle): si cambias una, cambia la otra. Solo lo que existe hoy.
@@ -233,6 +245,17 @@ const en: T = {
     vista: 'Your page will be at',
     ocupadoPaso: 'That link already belongs to another brand: you will pick another one in the next step.',
     buscando: 'Checking…',
+  },
+  c: {
+    h: 'We sent a code to your email', llegoA: 'It arrived at ', llegoB: '. Enter it to confirm the email is yours.',
+    label: '8-digit code', spam: "Can't find it? Check spam or promotions.",
+    reenviar: 'Resend code', reenviado: 'We sent you a new code.', cambiar: 'Change email',
+    claveHint: 'With it and your email you will log in to your dashboard.',
+    reglas: ['8 or more characters', 'An uppercase letter', 'A lowercase letter', 'A number'],
+    crearPrueba: 'Create my trial',
+    pruebaNombre: 'Free trial', pruebaDet: '1 event, up to 10 tickets, no card needed', pruebaPrecio: 'Free',
+    waObligatorio: '(required)', waHintPrueba: 'The free trial is one per WhatsApp number. Include your country code.',
+    finoPrueba: 'No card needed. When you finish, you will go straight to your dashboard.',
   },
   finoPago: { PEN: 'Secure card payment through Mercado Pago. When you finish, you will go straight to your dashboard.', USD: 'Secure payment in US dollars with PayPal, using your account or a card. When you finish, you will go straight to your dashboard.' },
   acepta: 'By continuing you accept the', terminos: 'Terms', y: 'and the', privacidad: 'Privacy Policy',

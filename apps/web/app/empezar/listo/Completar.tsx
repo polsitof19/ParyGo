@@ -1,58 +1,34 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { completarAlta, type CompletarState } from './actions';
+import { passwordOk } from '@/lib/password';
 import { TEXTOS, type Lang } from '../textos';
 
-// La contraseña que eligió en /empezar quedó SOLO en este navegador
-// (sessionStorage), nunca en el servidor antes del pago. Si vuelve en el mismo
-// navegador, el alta se cierra sola; si no (otro dispositivo, el link del
-// correo), la elige acá.
-export const CLAVE_ALTA = 'parygo-alta';
-
-function Boton({ children, espera }: { children: React.ReactNode; espera: string }) {
+function Boton({ children, espera, disabled }: { children: React.ReactNode; espera: string; disabled?: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className="ez-btn ez-btn--primary" disabled={pending} aria-busy={pending}>
+    <button type="submit" className="ez-btn ez-btn--primary" disabled={disabled || pending} aria-busy={pending}>
       {pending ? espera : <>{children} <ArrowRight aria-hidden="true" className="ez-btn__arrow" /></>}
     </button>
   );
 }
 
-export function Completar({ compraId, lang, email, emailVisible }: { compraId: string; lang: Lang; email: string; emailVisible: string }) {
+// nueva = alta con código (brands.alta_usuario): la cuenta ya existe con su
+// contraseña, así que solo se entra al panel. Alta vieja: elige contraseña acá.
+export function Completar({ compraId, lang, emailVisible, nueva }: { compraId: string; lang: Lang; emailVisible: string; nueva: boolean }) {
   const t = TEXTOS[lang];
   const [estado, enviar] = useFormState(completarAlta, { ok: false, message: null } as CompletarState);
   const [password, setPassword] = useState('');
   const [ver, setVer] = useState(false);
-  const [auto, setAuto] = useState(false);
-  const form = useRef<HTMLFormElement>(null);
-
-  useEffect(() => {
-    try {
-      const g = JSON.parse(sessionStorage.getItem(CLAVE_ALTA) ?? 'null') as { email?: string; password?: string } | null;
-      if (g?.email?.toLowerCase() === email && g.password && g.password.length >= 8) {
-        setPassword(g.password);
-        setAuto(true);
-      }
-    } catch { /* sin sessionStorage: la elige a mano */ }
-  }, [email]);
-  // Un solo intento automático; si falla, queda el formulario con el aviso.
-  useEffect(() => {
-    if (auto && password) {
-      try { sessionStorage.removeItem(CLAVE_ALTA); } catch {}
-      form.current?.requestSubmit();
-    }
-  }, [auto, password]);
 
   return (
-    <form ref={form} action={enviar} className="ez-form ez-form--codigo">
+    <form action={enviar} className="ez-form ez-form--codigo">
       <input type="hidden" name="compra" value={compraId} />
       <input type="hidden" name="lang" value={lang} />
-      {auto && !estado.message ? (
-        <p className="ez-body">{t.l.creando}</p>
-      ) : (
+      {!nueva && (
         <>
           <h2 className="ez-h2">{t.l.elige}</h2>
           <p className="ez-body">{t.l.eligeTxt} <strong>{emailVisible}</strong> {t.l.eligeTxt2}</p>
@@ -65,13 +41,13 @@ export function Completar({ compraId, lang, email, emailVisible }: { compraId: s
                 {ver ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
               </button>
             </div>
-            <p className="ez-hint">{t.l.minimo}</p>
+            <p className={password && !passwordOk(password) ? 'ez-err' : 'ez-hint'}>{t.l.passRango}</p>
           </div>
-          {estado.message && <p className="ez-banner" role="alert">{estado.message}</p>}
-          <div className="ez-actions"><Boton espera={t.momento}>{t.l.entrar}</Boton></div>
+          <input type="hidden" name="password" value={password} />
         </>
       )}
-      <input type="hidden" name="password" value={password} />
+      {estado.message && <p className="ez-banner" role="alert">{estado.message}</p>}
+      <div className="ez-actions"><Boton espera={t.momento} disabled={!nueva && !passwordOk(password)}>{t.l.entrar}</Boton></div>
     </form>
   );
 }
