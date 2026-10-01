@@ -85,3 +85,41 @@ self.addEventListener('fetch', (event) => {
 
   // 3. Todo lo demás → passthrough (no respondWith) → red normal.
 });
+
+/* ------------------------------------------------------------
+   AVISOS PUSH (2026-10-01): "Nueva venta" de paquetes al teléfono del super
+   admin (lib/push.ts). La cabina registra ESTE mismo SW para suscribirse; el
+   payload es { title, body, url, tag }. Tocar el aviso abre (o enfoca) la
+   cabina en la marca que compró. Solo URLs del mismo origen.
+   ------------------------------------------------------------ */
+self.addEventListener('push', (event) => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; } catch (e) { d = { body: event.data ? event.data.text() : '' }; }
+  event.waitUntil(
+    self.registration.showNotification(d.title || 'ParyGo', {
+      body: d.body || '',
+      icon: '/icon.png?v=2',
+      badge: '/icon.png?v=2',
+      tag: d.tag || undefined,
+      data: { url: d.url || '/cabina-7k29x' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  let destino = '/cabina-7k29x';
+  try {
+    const u = new URL((event.notification.data && event.notification.data.url) || destino, self.location.origin);
+    if (u.origin === self.location.origin) destino = u.pathname + u.search;
+  } catch (e) { /* queda la cabina */ }
+  event.waitUntil(
+    (async () => {
+      const ventanas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const w of ventanas) {
+        if (new URL(w.url).pathname === destino && 'focus' in w) return w.focus();
+      }
+      return self.clients.openWindow(destino);
+    })()
+  );
+});

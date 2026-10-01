@@ -1,6 +1,7 @@
 import { sendViaResend, FROM_EMAIL } from '@/lib/email/send';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { publicEnv, serverEnv } from '@/lib/env';
+import { pushAlSuperAdmin } from '@/lib/push';
 
 // Aviso a PAUL (SUPER_ADMIN_EMAIL) cada vez que alguien le paga un paquete
 // (2026-09-26, pedido de Paul). Lo llaman los tres caminos que acreditan una
@@ -52,7 +53,15 @@ ${filas.map(([k, v]) => `<tr><td style="font-size:15px;line-height:1.5;padding:8
 </table></td></tr></table></body></html>`;
     const text = [`Nueva venta: ${monto}`, `${marca} compró ${eventos}.`, '', ...filas.map(([k, v]) => `${k}: ${v}`), '', `Cabina: ${cabina}`].join('\n');
 
-    await sendViaResend({
+    // El aviso push al teléfono (0079) sale junto con el correo; si uno falla,
+    // el otro igual llega.
+    const push = pushAlSuperAdmin({
+      title: `💰 ${monto} · ${marca}`,
+      body: `${eventos} · ${via} · ${tipo}`,
+      url: `/cabina-7k29x/brands/${encodeURIComponent(b.slug)}`,
+      tag: `venta-${compraId}`,
+    });
+    const correo = sendViaResend({
       from: `ParyGo <${FROM_EMAIL()}>`,
       to: [serverEnv.SUPER_ADMIN_EMAIL],
       subject: `💰 Nueva venta: ${marca} · ${eventos} · ${monto}`,
@@ -60,6 +69,9 @@ ${filas.map(([k, v]) => `<tr><td style="font-size:15px;line-height:1.5;padding:8
       text,
       tags: [{ name: 'kind', value: 'aviso_venta_pack' }],
     });
+    // allSettled: un correo que falla no corta el push a mitad de camino.
+    const [, r] = await Promise.allSettled([push, correo]);
+    if (r.status === 'rejected') throw r.reason;
   } catch (e) {
     console.error('[avisarVentaPack] no se pudo avisar', e instanceof Error ? e.message : String(e));
   }
