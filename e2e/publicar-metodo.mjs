@@ -73,6 +73,16 @@ try {
   const msC = await esperaPublicado(gratis);
   check('(c) evento gratis sin yape_number publica', msC >= 0, `${msC} ms`);
 
+  // (f) NO gratis, única entrada S/0 NO cortesía, sin método: no cobra, se publica
+  const cero = await crear('cero-no-cortesia', 0);
+  await svc.from('ticket_types').update({ is_courtesy: false }).eq('event_id', cero);
+  await svc.from('brands').update({ yape_number: null }).eq('id', brand.id);
+  await abrir(cero);
+  check('(f) S/0 no cortesía: sin aviso de método', (await p.getByText('Antes de publicar, elige cómo te pagan.').count()) === 0);
+  await publicar.click();
+  const msF = await esperaPublicado(cero);
+  check('(f) evento no gratis con única entrada S/0 sin yape_number publica', msF >= 0, `${msF} ms`);
+
   // (d) publicado y gratis, sin método: quitarle "gratis" (con entrada de S/10) lo baja a borrador
   await svc.from('brands').update({ yape_number: null }).eq('id', brand.id);
   await p.goto(`${BASE}/admin/events/${gratisCon}/editar`, { waitUntil: 'load' });
