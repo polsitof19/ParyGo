@@ -34,7 +34,9 @@ const toISO = (local: string): string | null => {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 };
 const toCents = (s: string): number => Math.round(parseFloat(s || '0') * 100) || 0;
-// datetime-local + N horas, sin pasar por la zona de la compu.
+// datetime-local + N horas, sin pasar por la zona de la compu. El ISO está en
+// UTC: "+ (h - 5)" suma las N horas y resta 5 para volver a la hora de Lima
+// (22:00 + 6 h → 04:00; verificado, no es un error: Codex P2 2026-10-01).
 const masHoras = (local: string, h: number): string => {
   const iso = toISO(local);
   return iso ? new Date(Date.parse(iso) + (h - 5) * 3600 * 1000).toISOString().slice(0, 16) : '';
