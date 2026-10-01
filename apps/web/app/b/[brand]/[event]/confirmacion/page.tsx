@@ -1,7 +1,9 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { Check, ArrowRight, MapPin, Ticket as TicketIcon } from 'lucide-react';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { liquidarPagoMp } from '@/lib/liquidarPagoMp';
+import { enqueueTicketEmail } from '@/lib/email/enqueueTicketEmail';
 import { generateQrSvg } from '@/lib/qr';
 import { formatPEN, formatEventDate } from '@/lib/utils';
 import { ConfirmationPoller } from './ConfirmationPoller';
@@ -19,13 +21,14 @@ export default async function ConfirmationPage({
   searchParams,
 }: {
   params: { brand: string; event: string };
-  searchParams: { order?: string; pendiente?: string; c?: string; v?: string };
+  searchParams: { order?: string; pendiente?: string; c?: string; v?: string; payment_id?: string; collection_id?: string };
 }) {
   if (!searchParams.order || !UUID_RE.test(searchParams.order)) notFound();
 
   const admin = createAdminClient();
   type OrderWithJoins = {
     id: string;
+    brand_id: string;
     status: string;
     payment_method: 'mercadopago' | 'yape_manual';
     total_cents: number;
@@ -37,7 +40,7 @@ export default async function ConfirmationPage({
   const orderResult = await admin
     .from('orders')
     .select(`
-      id, status, payment_method, total_cents,
+      id, brand_id, status, payment_method, total_cents,
       buyer_name,
       event:events ( name, starts_at, ends_at, venue_name, venue_address, venue_maps_url, venue_lat, venue_lng, require_dni ),
       brand:brands ( slug, name, whatsapp_e164, contact_email, theme_json ),
@@ -55,11 +58,37 @@ export default async function ConfirmationPage({
   const event = order.event;
   const brand = order.brand;
 
+  // VUELTA DE MERCADO PAGO (respaldo del webhook): MP agrega ?payment_id= al
+  // volver. Si la orden sigue sin cobrar, se re-pide ese pago a MP con el token
+  // de la marca y se liquida por el mismo camino que el webhook
+  // (lib/liquidarPagoMp.ts: tiene que ser de ESTA orden, en soles y por el
+  // total congelado). Sin esto, un webhook que no llega = pagó y sin entrada.
+  const paymentId = searchParams.payment_id ?? searchParams.collection_id;
+  let mpRechazado = false;
+  if (
+    order.payment_method === 'mercadopago' &&
+    ['pending_payment', 'failed', 'expired'].includes(order.status) &&
+    paymentId && /^\d{1,20}$/.test(paymentId) &&
+    // Una consulta a MP cada 10 s por orden (la página es pública y el poller
+    // refresca solo: sin esto, un id de orden alcanzaba para machacar la API de
+    // MP de la marca; security review A1).
+    (await admin.rpc('tomar_candado', { p_clave: `mp_vuelta:${order.id}`, p_segundos: 10 })).data === true
+  ) {
+    const r = await liquidarPagoMp(admin, order.brand_id, paymentId, { origen: 'vuelta', orderEsperada: order.id });
+    if (r.ok && (r.action === 'issued' || r.action === 'already_issued')) {
+      const encolado = await enqueueTicketEmail(admin, order.id);
+      if (!encolado.ok) console.error('[confirmacion] no se pudo encolar el email', { orderId: order.id, reason: encolado.reason });
+      // Se vuelve a pintar ya pagada (sin payment_id: no se re-consulta a MP).
+      redirect(`/${params.event}/confirmacion?order=${order.id}`);
+    }
+    mpRechazado = r.ok && r.action === 'recorded' && ['rejected', 'cancelled'].includes(r.status);
+  }
+
   // Pago MP que terminó RECHAZADO/cancelado: no es "pendiente" → mostramos error
   // accionable en vez de un spinner eterno.
   const isFailed =
     order.payment_method === 'mercadopago' &&
-    ['failed', 'rejected', 'cancelled'].includes(order.status);
+    (mpRechazado || ['failed', 'rejected', 'cancelled'].includes(order.status));
   const isPending =
     !isFailed &&
     (searchParams.pendiente === '1' ||
