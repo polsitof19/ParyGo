@@ -227,6 +227,10 @@
 .client-shell .c-foot { margin: 0 var(--pad); padding: var(--b-s3) 0 var(--b-s4); font-size: var(--b-sec); line-height: 1.5; color: var(--ink-3); text-align: left; max-width: 1120px; }
 .client-shell .c-foot a { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
 .client-shell .c-foot--resp { max-width: 56ch; }
+/* Franja "Evento de prueba" (evento de una prueba gratis). Texto en tinta,
+   el color lo lleva el punto (regla de los semánticos). */
+.client-shell .c-prueba { display: flex; align-items: center; gap: var(--b-s1); margin: 0; padding: var(--b-s2) var(--pad); border-bottom: 1px solid var(--edge); font-size: var(--b-sec); font-weight: 600; color: var(--ink); }
+.client-shell .c-prueba::before { content: ''; flex: none; width: var(--b-s1); height: var(--b-s1); border-radius: var(--r-pill); background: var(--warn); }
 /* Pie de la página del evento: alineado con la columna de compra. */
 .client-shell .c-foot--compra { max-width: 560px; margin: 0 auto; padding-left: var(--pad); padding-right: var(--pad); }
 .client-shell .c-foot--compra p + p { margin-top: var(--b-sx); }

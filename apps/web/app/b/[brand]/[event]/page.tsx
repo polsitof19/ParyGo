@@ -41,7 +41,7 @@ async function loadEvent(brandSlug: string, eventSlug: string, acceso: string | 
     .select(`
       id, slug, name, description, starts_at, ends_at,
       venue_name, venue_address, venue_lat, venue_lng, venue_maps_url,
-      cover_url, cover_w, cover_h, min_age, max_per_person, require_age_confirmation, require_dni, collect_attendee_names, refund_policy, is_published, is_free
+      cover_url, cover_w, cover_h, min_age, max_per_person, require_age_confirmation, require_dni, collect_attendee_names, refund_policy, is_published, is_free, es_prueba
     `)
     .eq('brand_id', brand.id)
     .eq('slug', eventSlug)
@@ -290,6 +290,9 @@ export default async function EventPage({ params, searchParams }: Props) {
   return (
     <>
       <EventStructuredData brand={brand} event={event} ticketTypes={ticketTypes} />
+
+      {/* Prueba gratis (Paul, 2026-10-01): que nadie lo tome por un evento real. */}
+      {event.es_prueba && <p className="c-prueba" role="note">Evento de prueba</p>}
 
       <article className={`c-checkout-canvas ${claseDireccion(direccion)}`}>
         {/* CHECKOUT (hero, entradas, datos/pago, resumen y "dónde" viven en el panel) */}
