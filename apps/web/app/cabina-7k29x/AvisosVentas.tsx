@@ -33,8 +33,11 @@ export function AvisosVentas({ vapid }: { vapid: string | null }) {
         return setEstado(ios && !instalada ? 'instalar' : 'sin-soporte');
       }
       if (Notification.permission === 'denied') return setEstado('bloqueado');
-      const reg = await registro();
-      setEstado((await reg.pushManager.getSubscription()) ? 'activo' : 'apagado');
+      // Al abrir NO se registra nada ni se espera `ready` (sin SW registrado
+      // nunca resuelve y en WebKit colgaba la pantalla): solo se mira si ya
+      // hay registro. El registro se hace recién al tocar "Activar".
+      const reg = await navigator.serviceWorker.getRegistration('/');
+      setEstado(reg && (await reg.pushManager.getSubscription()) ? 'activo' : 'apagado');
     })().catch(() => setEstado('sin-soporte'));
   }, [vapid]);
 
