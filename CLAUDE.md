@@ -411,6 +411,28 @@ supabase/verify-0053-0058.mjs (comprobaciones de estado esperado).
 OJO con `mgmt.mjs types`: PISA database.types.ts entero y regenerarlo completo
 rompe tipos afinados a mano — las columnas nuevas se agregan a mano.
 
+MP POR MARCA, 4 BUGS CERRADOS (0083 + 0084, 2026-10-01). Un solo camino
+liquida un pago de tarjeta de una marca: lib/liquidarPagoMp.ts (re-pide el
+pago a MP con el token de la marca; external_reference = la orden esperada;
+metadata.brand_id OBLIGATORIA; moneda PEN; el monto lo contrasta
+settle_mp_payment). Lo usan el webhook (con el data.id FIRMADO de la URL, no
+el del body; ignora tópicos que no son pagos) y la VUELTA del comprador a
+/confirmacion?payment_id= (respaldo si el webhook no llega; tomar_candado
+`mp_vuelta:<orden>` 10 s para no machacar la API de MP de la marca).
+(1) Un rechazo ya NO pasa la orden a failed (el comprador reintenta en el
+mismo checkout; el hold vence solo) y settle acepta failed/expired (re-toma el
+promo liberado). (2) Reembolso/contracargo → refund_mp_order: refunded +
+entradas ANULADAS en la misma transacción, SOLO si es el pago que liquidó
+(orders.mp_payment_id; un duplicado devuelto → payment_mismatch); settle no
+resucita una refunded y anota mp_duplicate_payment. Reembolso PARCIAL no anula
+(decisión de negocio). (3) La preferencia va con UN ítem por orders.total_cents
+releído (el código fijo con N entradas daba 1 céntimo de diferencia). (4) Ver
+vuelta arriba. Pago tardío con el cupo ya lleno → oversold_no_capacity y el
+organizador devuelve (la plata cobrada manda). Test: e2e/mp-liquidar.mjs
+22/22 (JWT real, concurrencia, duplicado, approved atrasado). Security review
++ 2 rondas Codex. Falta: "Conectar Mercado Pago" (OAuth) para que la marca no
+cargue claves ni webhook secret a mano.
+
 PRIMEROS PASOS + MÉTODO DE PAGO (2026-10-01, panel nuevo parte 2). Textos
 genéricos "método de pago" / "cómo te pagan" (Yape es UNA opción, Perú). El
 método SOLO se exige si el evento COBRA (lib/metodoPago.ts eventoCobra: no
@@ -653,7 +675,7 @@ cada consulta cruzaba el continente. Se prendió por la API de Cloudflare
 [placement] de apps/web/wrangler.toml NO lo aplicó la integración con Git.
 Verificar con el GET del proyecto de Pages; el PATCH conserva las variables.
 
-Incrementales, idempotentes, numeradas (vamos por 0082). Backwards-compatible
+Incrementales, idempotentes, numeradas (vamos por 0084). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
 para no romper la app vieja desplegada.
 
