@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireSession, type SessionUser } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { eventoCobra, marcaTieneMetodo } from '@/lib/metodoPago';
+import { eventoCobra, marcaTieneMetodo, bajarABorradorSiFaltaMetodo } from '@/lib/metodoPago';
 import { limaToIso, shiftEnd, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
 import { eventOverAt, isPubliclyOffered } from '@/lib/publicTicketGuard';
 import { generarToken, tokensPrivados, parseMaxPorPersona } from '@/lib/privateAccess';
@@ -177,7 +177,8 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
   revalidatePath(`/cabina-7k29x/events/${eventId}`);
-  return { ok: true, message: t('Evento actualizado.', 'Event updated.') };
+  const bajado = await bajarABorradorSiFaltaMetodo(admin, eventId, brandId);
+  return { ok: true, message: t('Evento actualizado.' + (bajado ? ' Lo pasamos a borrador: para vender con precio, primero elige cómo te pagan en Mi marca.' : ''), 'Event updated.' + (bajado ? ' We moved it back to draft: to sell paid tickets, first choose how you get paid in My brand.' : '')) };
 }
 
 // ===== 1.b) Publicar / despublicar el evento (brand_admin de SU evento) =====
@@ -745,7 +746,8 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId: eventId, accion: 'ticket_type_edited', diff: { ticket_type_id: ttId, cambios: update } });
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
-  return { ok: true, message: t(`"${name}" actualizado.`, `"${name}" updated.`) };
+  const bajado = await bajarABorradorSiFaltaMetodo(admin, eventId, brandId);
+  return { ok: true, message: t(`"${name}" actualizado.` + (bajado ? ' Lo pasamos a borrador: para vender con precio, primero elige cómo te pagan en Mi marca.' : ''), `"${name}" updated.` + (bajado ? ' We moved it back to draft: to sell paid tickets, first choose how you get paid in My brand.' : '')) };
 }
 
 // ===== 3) Crear un tipo de entrada nuevo (libre) =====
@@ -808,7 +810,8 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
   await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId, accion: 'ticket_type_created', diff: { ticket_type_id: created.id } });
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
-  return { ok: true, message: t(`"${name}" creado.`, `"${name}" created.`) };
+  const bajado = await bajarABorradorSiFaltaMetodo(admin, eventId, brandId);
+  return { ok: true, message: t(`"${name}" creado.` + (bajado ? ' Lo pasamos a borrador: para vender con precio, primero elige cómo te pagan en Mi marca.' : ''), `"${name}" created.` + (bajado ? ' We moved it back to draft: to sell paid tickets, first choose how you get paid in My brand.' : '')) };
 }
 
 // ===== Entradas PRIVADAS con link (0066) =====

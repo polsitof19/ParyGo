@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { nanoid } from 'nanoid';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { marcaTieneMetodo, marcaCobraEnVivo } from '@/lib/metodoPago';
 import { contextoEscritura } from '@/lib/impersonation';
 import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { serverEnv } from '@/lib/env';
@@ -154,6 +155,12 @@ export async function updateBrandSettingsAction(
   // Avisos de Yape por email (Grupo C). Checkboxes → 'on'/ausente. Opt-in.
   const notifyYapeRecovery = formData.get('notify_yape_recovery') === 'on';
   const notifyYapeDigest = formData.get('notify_yape_digest') === 'on';
+
+  // No se puede quitar el único método de pago con eventos a la venta que
+  // cobran (quedarían publicados sin cómo pagar: security review 2026-10-01).
+  if (!parsed.data.yape_number && (await marcaTieneMetodo(admin, brandId)) && (await marcaCobraEnVivo(admin, brandId))) {
+    return { ok: false, message: t('Tienes eventos a la venta que cobran: no puedes quitar tu método de pago. Pásalos a borrador primero.', 'You have paid events on sale: you cannot remove your payment method. Move them to draft first.'), fieldErrors: { yape_number: t('Requerido mientras vendes', 'Required while selling') } };
+  }
 
   const { error: updErr } = await admin
     .from('brands')
