@@ -27,7 +27,6 @@
 import { chromium } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
 import { svc, anon, env, BASE, log, otpSession } from './lib.mjs';
-import { parcheRemonte } from './_parche-remonte.mjs';
 
 const STAMP = Date.now().toString().slice(-7);
 const R = [];
@@ -45,11 +44,7 @@ const continuar = (p) => p.getByRole('button', { name: /^(Continuar|Continue)/ }
 const linkResuelto = (p) => p.locator('#e-slug').filter({ hasText: /Disponible|ya pertenece|Solo minúsculas/ }).waitFor({ timeout: 10000 }).catch(() => {});
 // Llena hasta el paso del correo y manda el código (queda en la pantalla del
 // código si el servidor lo aceptó, o en el paso del correo con su error).
-// E2E_PARCHE_REMONTE=1: ver e2e/_parche-remonte.mjs (sin él, F/G/D/H fallan
-// mientras la pantalla se reinicie al verificar el código).
-const PARCHE = process.env.E2E_PARCHE_REMONTE === '1';
 async function llenar(p, { plan, nombre, slug, email, wa = WA }) {
-  if (PARCHE && !p.__parche) { p.__parche = true; await parcheRemonte(p.context()); }
   await p.goto(`${BASE}/empezar?tipo=marca`, { waitUntil: 'networkidle' });
   await p.locator(`.ez-plan:has(input[value="${plan}"])`).click();
   await continuar(p);
@@ -153,8 +148,10 @@ try {
     check('B', 'correo de dominio interno (@gate.parygo.local): rechazado, sigue en el paso del correo', /Usa tu propio correo/.test(await texto(p)) && (await p.locator('#ez-email').count()) === 1 && (await p.locator('#ez-codigo').count()) === 0);
     await p.fill('#ez-email', `delivered+alta-a${STAMP}@resend.dev`);
     await continuar(p);
-    await p.getByText(/ya tiene una cuenta/i).waitFor({ timeout: 15000 }).catch(() => {});
-    check('B', 'correo de alguien que ya tiene cuenta: lo manda a entrar, sin código', /ya tiene una cuenta/i.test(await texto(p)) && (await p.locator('#ez-codigo').count()) === 0);
+    // Un correo que YA tiene cuenta responde igual que uno nuevo (no revela
+    // quién tiene cuenta): aparece la pantalla del código y no se crea marca.
+    await p.locator('#ez-codigo').waitFor({ timeout: 15000 }).catch(() => {});
+    check('B', 'correo de alguien que ya tiene cuenta: misma pantalla del código que un alta nueva, sin avisar que existe', (await p.locator('#ez-codigo').count()) === 1 && !/ya tiene una cuenta/i.test(await texto(p)));
 
     const { count } = await svc.from('brands').select('id', { count: 'exact', head: true }).eq('slug', `e2e-alta-b${STAMP}`);
     check('B', 'ninguna marca creada en los intentos fallidos', count === 0, `marcas=${count}`);
@@ -284,6 +281,10 @@ try {
     await continuar(p);
     await p.locator('#e-codigo.ez-err').waitFor({ timeout: 15000 }).catch(() => {});
     check('F', 'código incorrecto: lo dice y se queda en el código', /no es correcto o ya venció/.test(await texto(p)) && (await p.locator('#ez-pass').count()) === 0);
+
+    await p.getByRole('button', { name: 'Reenviar código' }).click();
+    await p.locator('#e-codigo').filter({ hasText: /Espera un minuto/ }).waitFor({ timeout: 15000 }).catch(() => {});
+    check('F', 'reenviar después de un código incorrecto también muestra su aviso', /Espera un minuto para pedir otro/.test(await p.locator('#e-codigo').innerText()));
 
     await conCodigo(p, email);
     check('F', 'con el código bueno pasa a la contraseña', /Paso 6 de 6/.test(await texto(p)) && (await pagarBtn(p).innerText()).includes('Crear mi prueba'));

@@ -3,11 +3,9 @@
 // desbordes (scroll horizontal, elementos fuera de pantalla, texto cortado).
 // Crea (y borra al final) un usuario de prueba por viewport; NO crea marcas.
 //   node e2e/capturas-alta.mjs      -> tmp/capturas-alta/
-// Con E2E_PARCHE_REMONTE=1 pasa del código a la contraseña pese al reinicio.
 import { mkdirSync } from 'node:fs';
 import { chromium } from 'playwright';
 import { svc, BASE, log } from './lib.mjs';
-import { parcheRemonte } from './_parche-remonte.mjs';
 
 const OUT = 'tmp/capturas-alta';
 mkdirSync(OUT, { recursive: true });
@@ -37,7 +35,6 @@ try {
   for (const [w, h] of [[390, 844], [1440, 900]]) {
     const email = `delivered+alta-cap${w}${STAMP}@resend.dev`;
     const ctx = await b.newContext({ viewport: { width: w, height: h } });
-    await parcheRemonte(ctx);
     const p = await ctx.newPage();
     await p.goto(`${BASE}/empezar?tipo=marca`, { waitUntil: 'networkidle' });
     const sig = () => p.getByRole('button', { name: /^Continuar/ }).click();
@@ -68,7 +65,7 @@ try {
     await p.fill('#ez-codigo', data.properties.email_otp);
     await sig();
     await p.locator('#ez-pass').waitFor({ timeout: 15000 }).catch(() => {});
-    if (!(await p.locator('#ez-pass').count())) { check(`${w} contraseña: se llega desde el código`, false, 'la pantalla se reinició (usa E2E_PARCHE_REMONTE=1)'); await ctx.close(); continue; }
+    if (!(await p.locator('#ez-pass').count())) { check(`${w} contraseña: se llega desde el código`, false, 'la pantalla se reinició'); await ctx.close(); continue; }
     await p.fill('#ez-pass', 'abcdefgh1');
     await p.waitForTimeout(400);
     await p.screenshot({ path: `${OUT}/${w}-2-contrasena.png`, fullPage: true });
