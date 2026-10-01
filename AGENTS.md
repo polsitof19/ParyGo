@@ -1,38 +1,24 @@
-# AGENTS.md — Bloque "Crear evento como asistente" (panel nuevo, parte 1)
+# AGENTS.md — Panel nuevo, parte 2: Primeros pasos, método de pago y Mi marca
 
-Plan de trabajo (2026-10-01). Reglas del repo: CLAUDE.md (manda). Rama: `panel/crear-evento`. El bloque anterior (Cuentas) quedó en `docs/bloque-cuentas.md`.
+Plan (2026-10-01). Reglas: CLAUDE.md. Rama: `panel/primeros-pasos`. Bloques anteriores en `docs/`.
+Maquetas: `tmp/maquetas-panel/v2/salida/1-eventos-*`, `2-mi-marca-*`, `3-evento-*` (y videos).
+Auditoría UX de referencia (puntos A1–A17): la del agente ui-ux-designer del 2026-10-01, resumida abajo.
 
-## Por qué
-Paul: "cuando le dé a crear evento, que haga preguntas: cómo se llama su evento y que aparezca cómo sería el link, cuándo empieza y cuándo termina con hora, luego la ubicación, luego tipos de entradas, y eso que sea opcional para que pueda ver todo. Se vería mucho más profesional y fácil."
-Maquetas de referencia: `tmp/maquetas-panel/v2/salida/4-crear-evento-*.png` y `video-1/2-*.mp4` (vista previa en vivo a la derecha en PC).
-
-## Flujo (una pregunta por pantalla, como /empezar)
-1. **¿Cómo se llama tu evento?** → debajo, el link REAL `<slug-marca>.parygo.com/<slug-evento>` armándose en vivo, con ✓ libre / ✕ ocupado (chequeo con debounce 450 ms) y "Cambiar link" para editarlo.
-2. **¿Cuándo es?** → empieza (fecha + hora) y termina (fecha + hora). Termina por defecto = empieza + 6 h; termina > empieza. Hora de Lima (como hoy).
-3. **¿Dónde es?** → nombre del lugar + dirección; opcional "Link de Google Maps" (https).
-4. **Entradas (opcional)** → agregar tipos rápido: nombre, precio o "Gratis", cuántas hay. "Preventa: ¿el precio sube en alguna fecha?" plegado (fases). Botón **"Saltar por ahora"**: se crea sin entradas y se agregan después en Entradas. En prueba: contador "Vas X de 10" y sin "Sin límite"; en evento privado: tope 200.
-5. **Flyer (opcional)** → subir imagen (mismo aviso de captura de pantalla de hoy); "Saltar por ahora".
-6. **Revisa tu evento** → cada dato con "Editar" (salta al paso) + "Crear evento". Debajo: "Usa 1 de tu saldo (te quedan N)" o "Es tu evento de prueba".
-
-- Barra "Atrás · Paso N de 6" + progreso, como /empezar. Enter = Continuar. Botón principal fijo abajo en <960 px (regla de CLAUDE.md).
-- **PC (≥1280):** columna del asistente a la izquierda y a la derecha una **vista previa en vivo** de la página de compra (teléfono con la barra de Safari y el link): nombre, fecha, lugar, flyer y las entradas a medida que se agregan. Reusar el CSS de las maquetas v2 (`tmp/maquetas-panel/v2/css/previews.css`) llevándolo a `apps/web/app/admin/admin.css` con tokens; nada de tamaños sueltos.
-- Estilo: el del PANEL (tema noche/claro según el teléfono, Geist, `s-*`, un solo primario por pantalla, sin mayúsculas espaciadas). Textos con `t('es','en')` (panel en inglés, 0073).
-- Se borra `EventBuilder.tsx` (reemplazado por `EventWizard.tsx`).
-
-## Servidor
-- **0082_evento_sin_entradas.sql**: `create or replace function public.create_brand_event` igual a 0013 pero SIN el `raise NO_TICKET_TYPES` (acepta `[]`); `jsonb_array_length` del log sigue andando con `[]`. La prueba (0069) la envuelve: hereda. Revokes de siempre. Ensayo con dryrun.
-- `actions.ts`: `ticket_types` `.min(0)`; además acepta `venue_maps_url` (https, validado como en `edit-actions.ts:47`) y lo guarda con un update aparte (como `is_free`). Nueva server action `eventoSlugLibre(slug)` → acotada a la marca de la sesión (`contextoEscritura`), consulta `events` por `(brand_id, slug)`.
-- Publicar sin entradas sigue bloqueado (`setEventPublishedAction` exige un tipo activo): el detalle del evento ya muestra el aviso.
+## Decisiones de Paul
+- Textos genéricos: **"método de pago" / "cómo te pagan"**, nunca "Pon tu Yape" (ParyGo es internacional; Yape es UNA opción, solo Perú).
+- **El método de pago solo se exige si el evento COBRA**: evento gratis, o solo entradas gratis/cortesías → se publica sin método. Al menos una entrada paga (precio > 0, no cortesía, evento no gratis) → hay que tener método antes de publicar.
+- Hoy el único método que cobra es el Yape del organizador (`brands.yape_number`); Mercado Pago por marca está diferido y NO cuenta como método hasta que exista "Conectar Mercado Pago".
 
 ## Tareas
-- [x] 1. 0082: dryrun → aplicar → verificar que `create_brand_event` con `[]` crea el evento y descuenta 1 de saldo (demotest, con service role, y revertir/limpiar). **Listo:** e2e/prueba-0069 y privado-0075 en verde.
-- [x] 2. `actions.ts` (min 0, maps, `eventoSlugLibre`). **Listo:** tsc limpio.
-- [x] 3. `EventWizard.tsx` + CSS en admin.css + `page.tsx` (pasar slug de la marca, saldo, si es prueba/privado y el tope). **Listo:** capturas 390 y 1440 de los 6 pasos sin desbordes; en PC la vista previa cambia en vivo.
-- [x] 4. E2E: reescribir `fillBuilder` de `e2e/fase1.mjs` fase B para el asistente (la fase B reenvía la POST de la server action con `ticket_types_json` alterado: mantener el nombre del oculto `ticket_types_json` y `confirm_free` para no romper eso) + caso nuevo "crear sin entradas → evento creado, no se puede publicar". **Listo:** fase1 182+/182+, panel-en, prueba-0069, privado-0075.
-- [x] 5. Revisión (security-reviewer liviano: solo toca saldo vía la RPC existente) + capturas a Paul. Merge con su OK.
+- [ ] 1. **Bloqueo de publicar sin método** (`app/admin/events/[id]/edit-actions.ts` `setEventPublishedAction`): si el evento cobra (regla de arriba; reusar la lógica de `lib/publicTicketGuard.ts` si sirve) y la marca no tiene `yape_number` → `{ ok:false, code:'falta_metodo', message: t('Antes de publicar, elige cómo te pagan en Mi marca.', 'Before publishing, choose how you get paid in My brand.') }`. `events/[id]/page.tsx` + `PublishControl.tsx`: aviso "Antes de publicar, elige cómo te pagan" con ÚNICO primario "Elegir método de pago" → `/admin/settings#cobro`; "Publicar evento" deshabilitado con el motivo. Si ya está publicado y cobra y se quedó sin método: `.s-due` "Tu evento no puede cobrar: falta tu método de pago". **Listo:** E2E: evento pago sin método no se publica; gratis sí; pago con método sí. Security review (toca publicación).
+- [ ] 2. **Primeros pasos** (rehacer `app/admin/SetupChecklist.tsx` + `app/admin/page.tsx` + `admin.css`, maqueta 1-eventos): pasos que se tildan solos desde los datos (sin flag en la base):
+  1 Crea tu evento → `/admin/events/new` · 2 Agrega tus entradas → `/admin/events/{id}/entradas` (arregla el link viejo a /editar#entradas) · 3 **solo si alguna entrada cobra**: Elige cómo te pagan → `/admin/settings#cobro` · 4 Publícalo y comparte el link → `/admin/events/{id}` · 5 Haz una compra de prueba (sin órdenes → abre la página pública; con comprobante pendiente → `/yape`; con entrada emitida sin escanear → `/scan`; listo cuando hay un escaneo de la marca).
+  "Vas N de M", barra de avance, el paso siguiente con el ÚNICO primario (si hay `.s-due` de Yapes por aprobar, ese es el primario y el paso va soft), hechos con punto verde sin tachado ni opacity. En prueba: "Tu prueba gratis: 1 evento, hasta 10 entradas." Desaparece cuando todo está hecho. Las consultas nuevas (count head de órdenes y ticket_scans de la marca) dentro del Promise.all existente. Motion solo en eventos. **Listo:** capturas 390/1440 con marca nueva; Code y Hoesky no lo ven (tienen escaneos).
+- [ ] 3. **Mi marca con el cobro primero** (`app/admin/settings/page.tsx`, `SettingsForm.tsx`, maqueta 2-mi-marca): sección "Cómo te pagan" ARRIBA con `id="cobro"` y estado (punto verde "Listo: tus compradores te pagan con Yape a 9xx…" / punto rojo "Falta: sin un método de pago nadie puede pagarte"); dentro, la opción Yape (Perú): número, titular (placeholder "Nombre que figura en tu Yape"), QR; botón "Guardar" visible sin scroll en 390. Las credenciales de Mercado Pago (MpCredentialsForm) se pliegan como "Tarjeta con Mercado Pago (próximamente)" sin prometer que funciona. Contacto, Marca visual, Tema de compra, Avisos, Equipo de puerta e Idioma plegados debajo, cada uno con su valor actual en la segunda línea. **Listo:** /admin/settings#cobro muestra número, QR y Guardar sin scroll largo en 390; fase1 (paso P de Yape) en verde.
+- [ ] 4. **Arreglos chicos del primer uso**: no mostrar `LowBalanceNotice` en rojo si la marca está usando su prueba (evento `es_prueba` vigente); "Entradas" con 0 tipos abre "Agregar tipo de entrada" desplegado; textos simples en `EditEventForms.tsx` ("Cuántas hay"/"Sin límite", "Preventa"); `edit-actions.ts:706` "se gestiona por fases (no editable aquí)" → mensaje que diga qué hacer; escáner del organizador sin eventos publicados: "Publica un evento para escanear sus entradas" sin eyebrow "Validador".
+- [ ] 5. E2E: fase1 completo + panel-en + caso nuevo del bloqueo de publicar (pago sin método / gratis / con método). Capturas de Primeros pasos y Mi marca. security-reviewer sobre la tarea 1. Codex review. Merge con OK.
 
-## Fuera de alcance (siguientes partes del panel nuevo)
-"Primeros pasos" en la portada, "Pon tu método de pago" y bloqueo de publicar sin método, Mi marca con el cobro primero, textos simples en Entradas, editor de preventas después de crear.
+## Fuera de alcance
+Conectar Mercado Pago (bloque siguiente: arreglar los 4 bugs de MP por marca + OAuth), pago manual genérico por país, PayPal de entradas, cripto, editor de preventas después de crear.
 
 ## Bloqueos
-(anotar acá)
