@@ -197,25 +197,27 @@ export async function setEventPublishedAction(
   if (!brandId) return { ok: false, message: t('No tienes permiso sobre este evento.', 'You do not have permission over this event.') };
 
   const admin = createAdminClient();
-  // Guard: no publicar un evento sin al menos un tipo de entrada activo.
+  // Guards de publicar, en UN viaje paralelo (cada consulta cuesta ~170 ms
+  // desde Lima; encadenadas, publicar tardaba ~4 s).
   if (publish) {
-    const { count } = await admin
-      .from('ticket_types')
-      .select('id', { count: 'exact', head: true })
-      .eq('event_id', eventId)
-      .eq('is_active', true);
+    const [{ count }, { data: ev }, cobra, metodo] = await Promise.all([
+      admin.from('ticket_types').select('id', { count: 'exact', head: true }).eq('event_id', eventId).eq('is_active', true),
+      admin.from('events').select('starts_at, ends_at').eq('id', eventId).eq('brand_id', brandId).maybeSingle(),
+      eventoCobra(admin, eventId, brandId),
+      marcaTieneMetodo(admin, brandId),
+    ]);
+    // Sin al menos un tipo de entrada activo, nada que vender.
     if (!count || count === 0) {
       return { ok: false, message: t('Agrega al menos un tipo de entrada activo antes de publicar.', 'Add at least one active ticket type before publishing.') };
     }
-    // Guard: no publicar un evento que ya terminó (nadie podría comprar).
-    const { data: ev } = await admin.from('events').select('starts_at, ends_at').eq('id', eventId).eq('brand_id', brandId).maybeSingle();
+    // Un evento que ya terminó: nadie podría comprar.
     if (ev && eventOverAt(ev.starts_at, ev.ends_at) < Date.now()) {
       return { ok: false, message: t('Este evento ya terminó. Cambia la fecha antes de publicarlo.', 'This event has already ended. Change the date before publishing it.') };
     }
-    // Guard: un evento que COBRA no se publica sin método de pago (si no, el
+    // Un evento que COBRA no se publica sin método de pago (si no, el
     // comprador dejaba sus datos y recién ahí veía que no había cómo pagar).
     // Un evento gratis o solo con cortesías se publica igual.
-    if ((await eventoCobra(admin, eventId, brandId)) && !(await marcaTieneMetodo(admin, brandId))) {
+    if (cobra && !metodo) {
       return { ok: false, code: 'falta_metodo', message: t('Antes de publicar, elige cómo te pagan en Mi marca.', 'Before publishing, choose how you get paid in My brand.') };
     }
   }

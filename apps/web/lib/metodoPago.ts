@@ -7,16 +7,15 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 // trigger (0059), así que "no cortesía" = se vende con precio.
 // Falla CERRADO: si no se puede leer, se asume que cobra.
 export async function eventoCobra(admin: SupabaseClient, eventId: string, brandId: string): Promise<boolean> {
-  const { data: ev, error } = await admin.from('events').select('is_free').eq('id', eventId).eq('brand_id', brandId).maybeSingle();
-  if (error) return true;
+  // Las dos consultas en paralelo (una sola espera desde Lima).
+  const [{ data: ev, error }, { count, error: e2 }] = await Promise.all([
+    admin.from('events').select('is_free').eq('id', eventId).eq('brand_id', brandId).maybeSingle(),
+    admin.from('ticket_types').select('id', { count: 'exact', head: true })
+      .eq('event_id', eventId).eq('is_active', true).eq('is_courtesy', false),
+  ]);
+  if (error || e2) return true;
   if (!ev || ev.is_free) return false;
-  const { count, error: e2 } = await admin
-    .from('ticket_types')
-    .select('id', { count: 'exact', head: true })
-    .eq('event_id', eventId)
-    .eq('is_active', true)
-    .eq('is_courtesy', false);
-  return e2 ? true : (count ?? 0) > 0;
+  return (count ?? 0) > 0;
 }
 
 // Métodos con los que hoy una marca COBRA entradas. Hoy: su Yape (Perú). El
