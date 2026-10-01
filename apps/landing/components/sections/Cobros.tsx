@@ -2,18 +2,18 @@ import { Bitcoin, CreditCard, Globe, Smartphone, Wallet, Zap } from 'lucide-reac
 import type { Dict } from '@/lib/i18n';
 import { Resaltado } from '@/components/Resaltado';
 
-// Medios con los que el público le paga al organizador. Lo disponible hoy es
-// lo que el sistema cobra (CLAUDE.md): tarjeta vía Mercado Pago y Yape en
-// Perú. PayPal y cripto: pedido de Paul "lo haremos pronto, poco a poco"
-// (2026-09-25), así que van rotulados "Próximamente", nunca como disponibles.
-// Mismo orden que t.cobros.medios.
+// Medios con los que el público le paga al organizador. Todos "Disponible"
+// por decisión de Paul (2026-10-01: "pon todo disponible porque ya ahora lo
+// implementaremos"): Mercado Pago con conectar cuenta, PayPal, cripto y los
+// medios locales por país están en construcción. Mismo orden que
+// t.cobros.medios. El campo `ya` queda para volver a marcar "Próximamente".
 const MEDIOS = [
   { I: CreditCard, ya: true },
   { I: Wallet, ya: true },
   { I: Smartphone, ya: true },
-  { I: Globe, ya: false },
-  { I: Bitcoin, ya: false },
-  { I: Zap, ya: false },
+  { I: Globe, ya: true },
+  { I: Bitcoin, ya: true },
+  { I: Zap, ya: true },
 ];
 
 export function Cobros({ t }: { t: Dict }) {
