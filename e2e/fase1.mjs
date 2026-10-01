@@ -1189,6 +1189,9 @@ if (!S.eventId) {
     // Validación de UI: token inválido se rechaza limpio sin guardar.
     await go(adm.page, '/admin/settings');
     if (await adm.page.locator('#mp_access_token').count()) {
+      // Desde 2026-10-01 va plegado en "Tarjeta con Mercado Pago (próximamente)".
+      const mpFold = adm.page.locator('details:has(#mp_access_token)');
+      if (!(await mpFold.evaluate((d) => d.open))) await mpFold.locator('> summary').click();
       await adm.page.fill('#mp_access_token', 'TEST-0000000000000000-000000-00000000000000000000000000000000-000000000');
       await adm.page.fill('#mp_public_key', 'TEST-00000000-0000-0000-0000-000000000000');
       await adm.page.getByRole('button', { name: /Validar y guardar/ }).click();

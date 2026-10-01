@@ -76,9 +76,9 @@ export default async function EventTicketsPage({ params }: { params: { id: strin
         </p>
       )}
       <div className="s-folds">
-        {rows.length === 0 && <p className="s-empty">{t('Este evento no tiene entradas todavía. Crea la primera abajo.', 'This event has no ticket types yet. Create the first one below.')}</p>}
+        {rows.length === 0 && <p className="s-empty">{t('Este evento no tiene entradas todavía. Agrega la primera aquí abajo: nombre, precio y cuántas hay.', 'This event has no ticket types yet. Add the first one below: name, price and how many.')}</p>}
         {rows.map((t, i) => <TicketTypeEditor key={t.id} isFirst={i === 0} isLast={i === rows.length - 1} eventId={event.id} eventIsFree={eventIsFree} tt={t} readOnly={impersonating} linkPrivado={impersonating ? null : linkDe(t.id)} limitePrivado={limites.get(t.id) ?? null} eventName={event.name} />)}
-        {!impersonating && <NewTicketTypeForm eventId={event.id} eventIsFree={eventIsFree} />}
+        {!impersonating && <NewTicketTypeForm eventId={event.id} eventIsFree={eventIsFree} abierto={rows.length === 0} />}
       </div>
     </section>
   );

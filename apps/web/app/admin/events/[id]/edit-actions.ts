@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireSession, type SessionUser } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { eventoCobra, marcaTieneMetodo, bajarABorradorSiFaltaMetodo } from '@/lib/metodoPago';
 import { limaToIso, shiftEnd, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
 import { eventOverAt, isPubliclyOffered } from '@/lib/publicTicketGuard';
 import { generarToken, tokensPrivados, parseMaxPorPersona } from '@/lib/privateAccess';
@@ -176,7 +177,8 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
   revalidatePath(`/cabina-7k29x/events/${eventId}`);
-  return { ok: true, message: t('Evento actualizado.', 'Event updated.') };
+  const bajado = await bajarABorradorSiFaltaMetodo(admin, eventId, brandId);
+  return { ok: true, message: t('Evento actualizado.' + (bajado ? ' Lo pasamos a borrador: para vender con precio, primero elige cómo te pagan en Mi marca.' : ''), 'Event updated.' + (bajado ? ' We moved it back to draft: to sell paid tickets, first choose how you get paid in My brand.' : '')) };
 }
 
 // ===== 1.b) Publicar / despublicar el evento (brand_admin de SU evento) =====
@@ -187,7 +189,7 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
 export async function setEventPublishedAction(
   eventId: string,
   publish: boolean
-): Promise<{ ok: boolean; message?: string }> {
+): Promise<{ ok: boolean; message?: string; code?: 'falta_metodo' }> {
   const user = await requireSession();
   const { t } = await textosPanel();
   const auth = await authEvent(eventId, user);
@@ -195,20 +197,28 @@ export async function setEventPublishedAction(
   if (!brandId) return { ok: false, message: t('No tienes permiso sobre este evento.', 'You do not have permission over this event.') };
 
   const admin = createAdminClient();
-  // Guard: no publicar un evento sin al menos un tipo de entrada activo.
+  // Guards de publicar, en UN viaje paralelo (cada consulta cuesta ~170 ms
+  // desde Lima; encadenadas, publicar tardaba ~4 s).
   if (publish) {
-    const { count } = await admin
-      .from('ticket_types')
-      .select('id', { count: 'exact', head: true })
-      .eq('event_id', eventId)
-      .eq('is_active', true);
+    const [{ count }, { data: ev }, cobra, metodo] = await Promise.all([
+      admin.from('ticket_types').select('id', { count: 'exact', head: true }).eq('event_id', eventId).eq('is_active', true),
+      admin.from('events').select('starts_at, ends_at').eq('id', eventId).eq('brand_id', brandId).maybeSingle(),
+      eventoCobra(admin, eventId, brandId),
+      marcaTieneMetodo(admin, brandId),
+    ]);
+    // Sin al menos un tipo de entrada activo, nada que vender.
     if (!count || count === 0) {
       return { ok: false, message: t('Agrega al menos un tipo de entrada activo antes de publicar.', 'Add at least one active ticket type before publishing.') };
     }
-    // Guard: no publicar un evento que ya terminó (nadie podría comprar).
-    const { data: ev } = await admin.from('events').select('starts_at, ends_at').eq('id', eventId).eq('brand_id', brandId).maybeSingle();
+    // Un evento que ya terminó: nadie podría comprar.
     if (ev && eventOverAt(ev.starts_at, ev.ends_at) < Date.now()) {
       return { ok: false, message: t('Este evento ya terminó. Cambia la fecha antes de publicarlo.', 'This event has already ended. Change the date before publishing it.') };
+    }
+    // Un evento que COBRA no se publica sin método de pago (si no, el
+    // comprador dejaba sus datos y recién ahí veía que no había cómo pagar).
+    // Un evento gratis o solo con cortesías se publica igual.
+    if (cobra && !metodo) {
+      return { ok: false, code: 'falta_metodo', message: t('Antes de publicar, elige cómo te pagan en Mi marca.', 'Before publishing, choose how you get paid in My brand.') };
     }
   }
 
@@ -685,8 +695,8 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   if (isUnlimited) {
     update.is_unlimited = true;
   } else {
-    if (!Number.isFinite(newCapacity) || newCapacity < 1) return { ok: false, message: t('Capacidad inválida.', 'Invalid capacity.') };
-    if (newCapacity < sold) return { ok: false, message: t(`No puedes bajar la capacidad por debajo de lo vendido (${sold}).`, `You cannot lower the capacity below what's already sold (${sold}).`) };
+    if (!Number.isFinite(newCapacity) || newCapacity < 1) return { ok: false, message: t('Revisa "Cuántas hay": tiene que ser 1 o más.', 'Check "How many": it must be 1 or more.') };
+    if (newCapacity < sold) return { ok: false, message: t(`"Cuántas hay" no puede ser menor que las ya vendidas (${sold}).`, `"How many" cannot be lower than the tickets already sold (${sold}).`) };
     update.is_unlimited = false;
     update.capacity = newCapacity;
   }
@@ -703,7 +713,7 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
     if (newPriceCents < 0) return { ok: false, message: t('Precio inválido.', 'Invalid price.') };
     const phaseCount = (phaseRows ?? []).length;
     if (phaseCount > 1) {
-      return { ok: false, message: t('Este tipo tiene fases de preventa; el precio se gestiona por fases (no editable aquí).', 'This type has presale phases; the price is managed by phases (not editable here).') };
+      return { ok: false, message: t('El precio de esta entrada sube por fechas (preventa) y aquí no se puede cambiar. Si necesitas otro precio, crea una entrada nueva y pausa esta.', 'This ticket price goes up by date (presale) and cannot be changed here. If you need another price, create a new ticket and pause this one.') };
     }
     update.price_cents = newPriceCents;
   }
@@ -738,7 +748,8 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId: eventId, accion: 'ticket_type_edited', diff: { ticket_type_id: ttId, cambios: update } });
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
-  return { ok: true, message: t(`"${name}" actualizado.`, `"${name}" updated.`) };
+  const bajado = await bajarABorradorSiFaltaMetodo(admin, eventId, brandId);
+  return { ok: true, message: t(`"${name}" actualizado.` + (bajado ? ' Lo pasamos a borrador: para vender con precio, primero elige cómo te pagan en Mi marca.' : ''), `"${name}" updated.` + (bajado ? ' We moved it back to draft: to sell paid tickets, first choose how you get paid in My brand.' : '')) };
 }
 
 // ===== 3) Crear un tipo de entrada nuevo (libre) =====
@@ -759,7 +770,7 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
   const priceCents =Math.round(parseFloat(String(formData.get('price_soles') ?? '')) * 100);
   if (!Number.isFinite(priceCents) || priceCents < 0) return { ok: false, message: t('Precio inválido.', 'Invalid price.') };
   const capacity = isUnlimited ? 0 : parseInt(String(formData.get('capacity') ?? ''), 10);
-  if (!isUnlimited && (!Number.isFinite(capacity) || capacity < 1)) return { ok: false, message: t('Capacidad inválida.', 'Invalid capacity.') };
+  if (!isUnlimited && (!Number.isFinite(capacity) || capacity < 1)) return { ok: false, message: t('Revisa "Cuántas hay": tiene que ser 1 o más.', 'Check "How many": it must be 1 or more.') };
   const pricingErr = validateTicketTypePricing(
     [{ name, isUnlimited, pricesCents: [priceCents] }],
     { freeConfirmed: formData.get('confirm_free') === '1' },
@@ -801,7 +812,8 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
   await auditarEscrituraSuper(admin, { user, modo: auth?.modo ?? null, brandId, eventId, accion: 'ticket_type_created', diff: { ticket_type_id: created.id } });
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/editar`);
-  return { ok: true, message: t(`"${name}" creado.`, `"${name}" created.`) };
+  const bajado = await bajarABorradorSiFaltaMetodo(admin, eventId, brandId);
+  return { ok: true, message: t(`"${name}" creado.` + (bajado ? ' Lo pasamos a borrador: para vender con precio, primero elige cómo te pagan en Mi marca.' : ''), `"${name}" created.` + (bajado ? ' We moved it back to draft: to sell paid tickets, first choose how you get paid in My brand.' : '')) };
 }
 
 // ===== Entradas PRIVADAS con link (0066) =====

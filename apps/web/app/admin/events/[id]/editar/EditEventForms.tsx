@@ -155,7 +155,7 @@ function guardFreePrice(e: React.FormEvent<HTMLFormElement>, t: Textos['t'], pre
   const unlimited = (form.elements.namedItem('is_unlimited') as HTMLInputElement | null)?.checked;
   if (unlimited) {
     e.preventDefault();
-    window.alert(t('Un tipo no puede ser gratis e ilimitado a la vez. Pon un cupo o un precio.', 'A type cannot be free and unlimited at the same time. Set a capacity or a price.'));
+    window.alert(t('Una entrada no puede ser gratis y sin límite a la vez. Pon cuántas hay o un precio.', 'A type cannot be free and unlimited at the same time. Set a capacity or a price.'));
     return;
   }
   if (previousPriceCents === 0) return;
@@ -178,7 +178,7 @@ function guardPrice(e: React.FormEvent<HTMLFormElement>, t: Textos['t'], free: b
   if (!priceEl || priceEl.disabled) return;
   if ((form.elements.namedItem('is_unlimited') as HTMLInputElement | null)?.checked) {
     e.preventDefault();
-    window.alert(t('Una entrada no puede ser gratis y sin límite a la vez. Pon una capacidad o un precio.', 'A ticket cannot be free and unlimited at the same time. Set a capacity or a price.'));
+    window.alert(t('Una entrada no puede ser gratis y sin límite a la vez. Pon cuántas hay o un precio.', 'A ticket cannot be free and unlimited at the same time. Set a capacity or a price.'));
     return;
   }
   if (hidden) hidden.value = '1';
@@ -256,7 +256,7 @@ export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false, l
           </div>
           <div className="s-form-grid">
             <div className="s-field">
-              <label className="s-label" htmlFor={`tt-cap-${tt.id}`}>{t('Capacidad', 'Capacity')}{!tt.isUnlimited && tt.sold > 0 && !ro && <span className="s-muted" style={{ fontWeight: 500 }}> · {t(`mín. ${tt.sold} (vendidas)`, `min. ${tt.sold} (sold)`)}</span>}</label>
+              <label className="s-label" htmlFor={`tt-cap-${tt.id}`}>{t('Cuántas hay', 'How many')}{!tt.isUnlimited && tt.sold > 0 && !ro && <span className="s-muted" style={{ fontWeight: 500 }}> · {t(`mín. ${tt.sold} (vendidas)`, `min. ${tt.sold} (sold)`)}</span>}</label>
               <input id={`tt-cap-${tt.id}`} name="capacity" type="number" min={Math.max(1, tt.sold)} defaultValue={tt.capacity || ''} className="s-input" disabled={tt.isUnlimited || ro} />
               <label className="s-check"><input type="checkbox" name="is_unlimited" defaultChecked={tt.isUnlimited} disabled={ro} /> {t('Sin límite', 'Unlimited')}</label>
             </div>
@@ -301,14 +301,15 @@ function MoveTicketType({ eventId, ttId, isFirst, isLast }: { eventId: string; t
   );
 }
 
-export function NewTicketTypeForm({ eventId, eventIsFree }: { eventId: string; eventIsFree: boolean }) {
+// abierto: con 0 tipos el formulario ya viene desplegado (no hay nada más que hacer acá).
+export function NewTicketTypeForm({ eventId, eventIsFree, abierto = false }: { eventId: string; eventIsFree: boolean; abierto?: boolean }) {
   const { t } = useTextos();
   const [state, action] = useFormFeedback(createTicketTypeAction, initial);
   // Tras crear, el formulario se vacía (remonta con una key nueva).
   const [round, setRound] = useState(0);
   useEffect(() => { if (state.ok) setRound((r) => r + 1); }, [state]);
   return (
-    <details className="s-fold">
+    <details className="s-fold" open={abierto || undefined}>
       <summary>
         <span className="a-tt-sum">
           <Plus className="a-tt-plus" aria-hidden="true" />
@@ -339,7 +340,7 @@ function NewTicketTypeFields({ eventId, eventIsFree, action }: { eventId: string
       </div>
       <div className="s-form-grid">
         <div className="s-field">
-          <label className="s-label" htmlFor="tt-new-cap">{t('Capacidad', 'Capacity')}</label>
+          <label className="s-label" htmlFor="tt-new-cap">{t('Cuántas hay', 'How many')}</label>
           <input id="tt-new-cap" name="capacity" type="number" min={1} placeholder="100" className="s-input" />
           <label className="s-check"><input type="checkbox" name="is_unlimited" /> {t('Sin límite', 'Unlimited')}</label>
         </div>
@@ -446,7 +447,7 @@ function MarcarAgotada({ eventId, tt }: { eventId: string; tt: TtRow }) {
   if (agotada) {
     return (
       <p className="s-hint a-agotada">
-        {t('Agotada: ya no se vende. Para volver a vender, sube la Capacidad y guarda los cambios.', 'Sold out: it is no longer on sale. To sell again, raise the Capacity and save the changes.')}
+        {t('Agotada: ya no se vende. Para volver a vender, sube «Cuántas hay» y guarda los cambios.', 'Sold out: it is no longer on sale. To sell again, raise “How many” and save the changes.')}
       </p>
     );
   }

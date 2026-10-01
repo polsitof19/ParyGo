@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { eventoCobra, marcaTieneMetodo } from '@/lib/metodoPago';
 import { solesToCents } from '@/lib/utils';
 import { validateTicketTypePricing } from '@/lib/eventValidation';
 import { eventOverAt } from '@/lib/publicTicketGuard';
@@ -148,9 +149,14 @@ export async function setEventPublishedAction(
       return { ok: false, message: 'Agrega al menos un tipo de entrada activo antes de publicar.' };
     }
     // Guard: no publicar un evento que ya terminó (nadie podría comprar).
-    const { data: ev } = await admin.from('events').select('starts_at, ends_at').eq('id', eventId).maybeSingle();
+    const { data: ev } = await admin.from('events').select('starts_at, ends_at, brand_id').eq('id', eventId).maybeSingle();
     if (ev && eventOverAt(ev.starts_at, ev.ends_at) < Date.now()) {
       return { ok: false, message: 'Este evento ya terminó. Cambia la fecha antes de publicarlo.' };
+    }
+    // Mismo guard que el panel (lib/metodoPago.ts): un evento que cobra no se
+    // publica si la marca no tiene método de pago.
+    if (ev && (await eventoCobra(admin, eventId, ev.brand_id)) && !(await marcaTieneMetodo(admin, ev.brand_id))) {
+      return { ok: false, message: 'Este evento cobra y la marca no tiene método de pago. Cárgalo en la ficha de la marca antes de publicar.' };
     }
   }
 

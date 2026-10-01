@@ -10,6 +10,7 @@ import { optimizedImage } from '@/lib/imageUrl';
 import { textosPanel } from '@/lib/idiomaServer';
 import { EventButtons } from './QuickActions';
 import { PublishControl } from './PublishControl';
+import { eventoCobra, marcaTieneMetodo } from '@/lib/metodoPago';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -34,7 +35,7 @@ export default async function AdminEventPage({ params }: { params: { id: string 
     .maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
 
-  const [{ data: pend }, { data: types }] = await Promise.all([
+  const [{ data: pend }, { data: types }, cobra, tieneMetodo] = await Promise.all([
     todas((a, b) => admin
       .from('yape_proofs')
       // Solo los de ESTE evento (antes se traían los de toda la marca).
@@ -45,7 +46,11 @@ export default async function AdminEventPage({ params }: { params: { id: string 
       .order('id')
       .range(a, b)).then((data) => ({ data })),
     admin.from('ticket_types').select('id, name, color_hex, is_active').eq('event_id', event.id).order('sort_order'),
+    // Método de pago: solo hace falta si el evento cobra (lib/metodoPago.ts).
+    eventoCobra(admin, event.id, event.brand_id),
+    marcaTieneMetodo(admin, event.brand_id),
   ]);
+  const faltaMetodo = cobra && !tieneMetodo;
   const yapes = ((pend ?? []) as { order: { event_id: string } | null }[]).filter((p) => p.order?.event_id === event.id).length;
   const tipos = types ?? [];
 
@@ -87,7 +92,7 @@ export default async function AdminEventPage({ params }: { params: { id: string 
         </div>
       </header>
 
-      <PublishControl eventId={event.id} isPublished={!!event.is_published} impersonating={impersonating} />
+      <PublishControl eventId={event.id} isPublished={!!event.is_published} impersonating={impersonating} faltaMetodo={faltaMetodo} />
 
       {yapes > 0 && (
         <div className="s-due" role="status">
