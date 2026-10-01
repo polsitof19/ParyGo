@@ -668,12 +668,20 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
         brandId: event.brand_id,
         orderId: order.id,
         eventName: event.name,
-        items: resolved.map((r) => ({
-          id: r.id,
-          title: `${r.name} · ${event.name}`,
-          quantity: r.quantity,
-          unitPrice: r.price_cents / 100,
-        })),
+        // UN ítem por el TOTAL congelado de la orden. Antes iba uno por tipo
+        // con precio unitario; un código fijo repartido entre N entradas no
+        // siempre divide exacto y MP cobraba 1 céntimo de más o de menos →
+        // settle_mp_payment lo rechazaba (amount_mismatch) y el comprador
+        // pagaba sin recibir la entrada.
+        items: [{
+          id: order.id,
+          title: (() => {
+            const n = resolved.reduce((a, r) => a + r.quantity, 0);
+            return `${event.name} · ${n} ${n === 1 ? 'entrada' : 'entradas'}`;
+          })(),
+          quantity: 1,
+          unitPrice: totalCents / 100,
+        }],
         payer: {
           name: parsed.data.buyerName,
           email: parsed.data.buyerEmail,
