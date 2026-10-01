@@ -81,7 +81,7 @@ const es = {
     grupos: [
       { t: 'Tu página y tus entradas', items: [
         'Tu propia página con tu marca, logo y colores (tumarca.parygo.com)',
-        'Entradas ilimitadas: los tipos que quieras (General, VIP, preventas)',
+        'Hasta 100.000 entradas: los tipos que quieras (General, VIP, preventas)',
         'Preventas que cambian de precio solas en la fecha que elijas',
         'Entradas privadas por link, con límite de entradas por persona',
         'Eventos gratuitos con registro',
@@ -267,7 +267,7 @@ const en: T = {
     grupos: [
       { t: 'Your page and your tickets', items: [
         'Your own page with your brand, logo and colors (yourbrand.parygo.com)',
-        'Unlimited tickets: any ticket types you want (General, VIP, presales)',
+        'Up to 100,000 tickets: any ticket types you want (General, VIP, presales)',
         'Presales that change price on their own on the date you choose',
         'Private tickets by link, with a per-person limit',
         'Free events with registration',
