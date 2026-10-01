@@ -6,7 +6,7 @@
 //   node e2e/empezar.mjs            (server en BASE, por defecto localhost:3001)
 //
 // Flujo desde 2026-10-01 (bloque "Cuentas"): paquete (o Prueba gratis) →
-// nombre → enlace → correo + WhatsApp → CÓDIGO de 8 dígitos al correo →
+// nombre → enlace → correo + WhatsApp → CÓDIGO de 6 dígitos al correo →
 // contraseña (8+, mayúscula, minúscula, número) → Pagar / "Crear mi prueba".
 // El test no lee correos: el código válido lo fabrica con generateLink
 // (magiclink) DESPUÉS de que la app mandó el suyo (el último anula al anterior).

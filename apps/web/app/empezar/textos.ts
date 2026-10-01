@@ -64,7 +64,7 @@ const es = {
   // Código al correo, prueba gratis y contraseña con regla (0080, 2026-10-01)
   c: {
     h: 'Te mandamos un código a tu correo', llegoA: 'Llegó a ', llegoB: '. Escríbelo para confirmar que el correo es tuyo.',
-    label: 'Código de 8 dígitos', spam: '¿No lo ves? Revisa spam o promociones.',
+    label: 'Código de 6 dígitos', spam: '¿No lo ves? Revisa spam o promociones.',
     reenviar: 'Reenviar código', reenviado: 'Te enviamos un código nuevo.', cambiar: 'Cambiar correo',
     claveHint: 'Con ella y tu correo entrarás a tu panel.',
     reglas: ['8 o más caracteres', 'Una mayúscula', 'Una minúscula', 'Un número'],
@@ -177,7 +177,7 @@ const es = {
     // Código al correo y prueba gratis (0080, 2026-10-01)
     noCodigo: 'No pudimos enviarte el código. Inténtalo nuevamente en un momento.',
     esperaCodigo: 'Ya te enviamos un código. Espera un minuto para pedir otro.',
-    escribeCodigo: 'Escribe los 8 dígitos del código.',
+    escribeCodigo: 'Escribe los 6 dígitos del código.',
     codigoMal: 'Ese código no es correcto o ya venció. Revísalo o pide uno nuevo.',
     sinVerificar: 'Primero confirma tu correo con el código.',
     passRegla: 'Mínimo 8 caracteres, con una mayúscula, una minúscula y un número.',
@@ -249,7 +249,7 @@ const en: T = {
   },
   c: {
     h: 'We sent a code to your email', llegoA: 'It arrived at ', llegoB: '. Enter it to confirm the email is yours.',
-    label: '8-digit code', spam: "Can't find it? Check spam or promotions.",
+    label: '6-digit code', spam: "Can't find it? Check spam or promotions.",
     reenviar: 'Resend code', reenviado: 'We sent you a new code.', cambiar: 'Change email',
     claveHint: 'With it and your email you will log in to your dashboard.',
     reglas: ['8 or more characters', 'An uppercase letter', 'A lowercase letter', 'A number'],
@@ -357,7 +357,7 @@ const en: T = {
     correoMal: 'Please check your email.', passCorta: 'At least 8 characters.', passLarga: 'Maximum 72 characters.', waMal: 'Include your country code, for example +1 555 123 4567.',
     noCodigo: 'We could not send you the code. Please try again in a moment.',
     esperaCodigo: 'We already sent you a code. Wait a minute to request another one.',
-    escribeCodigo: 'Enter the 8 digits of the code.',
+    escribeCodigo: 'Enter the 6 digits of the code.',
     codigoMal: 'That code is incorrect or expired. Check it or request a new one.',
     sinVerificar: 'First confirm your email with the code.',
     passRegla: 'At least 8 characters, with an uppercase letter, a lowercase letter and a number.',
