@@ -25,11 +25,11 @@ Maquetas de referencia: `tmp/maquetas-panel/v2/salida/4-crear-evento-*.png` y `v
 - Publicar sin entradas sigue bloqueado (`setEventPublishedAction` exige un tipo activo): el detalle del evento ya muestra el aviso.
 
 ## Tareas
-- [ ] 1. 0082: dryrun → aplicar → verificar que `create_brand_event` con `[]` crea el evento y descuenta 1 de saldo (demotest, con service role, y revertir/limpiar). **Listo:** e2e/prueba-0069 y privado-0075 en verde.
-- [ ] 2. `actions.ts` (min 0, maps, `eventoSlugLibre`). **Listo:** tsc limpio.
-- [ ] 3. `EventWizard.tsx` + CSS en admin.css + `page.tsx` (pasar slug de la marca, saldo, si es prueba/privado y el tope). **Listo:** capturas 390 y 1440 de los 6 pasos sin desbordes; en PC la vista previa cambia en vivo.
-- [ ] 4. E2E: reescribir `fillBuilder` de `e2e/fase1.mjs` fase B para el asistente (la fase B reenvía la POST de la server action con `ticket_types_json` alterado: mantener el nombre del oculto `ticket_types_json` y `confirm_free` para no romper eso) + caso nuevo "crear sin entradas → evento creado, no se puede publicar". **Listo:** fase1 182+/182+, panel-en, prueba-0069, privado-0075.
-- [ ] 5. Revisión (security-reviewer liviano: solo toca saldo vía la RPC existente) + capturas a Paul. Merge con su OK.
+- [x] 1. 0082: dryrun → aplicar → verificar que `create_brand_event` con `[]` crea el evento y descuenta 1 de saldo (demotest, con service role, y revertir/limpiar). **Listo:** e2e/prueba-0069 y privado-0075 en verde.
+- [x] 2. `actions.ts` (min 0, maps, `eventoSlugLibre`). **Listo:** tsc limpio.
+- [x] 3. `EventWizard.tsx` + CSS en admin.css + `page.tsx` (pasar slug de la marca, saldo, si es prueba/privado y el tope). **Listo:** capturas 390 y 1440 de los 6 pasos sin desbordes; en PC la vista previa cambia en vivo.
+- [x] 4. E2E: reescribir `fillBuilder` de `e2e/fase1.mjs` fase B para el asistente (la fase B reenvía la POST de la server action con `ticket_types_json` alterado: mantener el nombre del oculto `ticket_types_json` y `confirm_free` para no romper eso) + caso nuevo "crear sin entradas → evento creado, no se puede publicar". **Listo:** fase1 182+/182+, panel-en, prueba-0069, privado-0075.
+- [x] 5. Revisión (security-reviewer liviano: solo toca saldo vía la RPC existente) + capturas a Paul. Merge con su OK.
 
 ## Fuera de alcance (siguientes partes del panel nuevo)
 "Primeros pasos" en la portada, "Pon tu método de pago" y bloqueo de publicar sin método, Mi marca con el cobro primero, textos simples en Entradas, editor de preventas después de crear.

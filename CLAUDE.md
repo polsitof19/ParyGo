@@ -326,7 +326,7 @@ para OK de Paul.
   Entradas (/entradas): cada tipo es una fila plegada con UN botón "Guardar
   cambios de <nombre>" + "Agregar tipo de entrada" (nombre, precio o gratis,
   cuántas, color). Datos del evento (/editar): datos, flyer y gestión, con
-  "Guardar datos del evento". Crear evento = formulario en 3 pasos. iPhone:
+  "Guardar datos del evento". Crear evento = asistente de 6 pasos (ver CREAR EVENTO = ASISTENTE). iPhone:
   ningún campo con letra < 16px (Safari hace zoom; audit-iphone lo mide como
   "zoom") y html con touch-action: manipulation. El E2E (paso J) verifica el
   menú, las secciones y que el evento abra sin cifras.
@@ -410,6 +410,21 @@ Herramientas versionadas: supabase/mgmt.mjs (Management API; lee el token de
 supabase/verify-0053-0058.mjs (comprobaciones de estado esperado).
 OJO con `mgmt.mjs types`: PISA database.types.ts entero y regenerarlo completo
 rompe tipos afinados a mano — las columnas nuevas se agregan a mano.
+
+CREAR EVENTO = ASISTENTE (0082, 2026-10-01, Paul: "que haga preguntas…
+se vería más profesional y fácil"). /admin/events/new es EventWizard.tsx
+(reemplazó a EventBuilder): UNA pregunta por pantalla, 6 pasos: nombre (link
+REAL <marca>.parygo.com/<evento> con ✓/✕ en vivo vía eventoSlugLibre, acotada
+a la marca de la sesión) · cuándo (empieza/termina con hora de Lima) · dónde
+(lugar obligatorio, dirección y link de Maps opcionales) · entradas OPCIONAL
+("Saltar por ahora"; en prueba/privado contador "Vas X de N" sin "Sin
+límite") · flyer opcional · revisión con "Editar" y "Crear evento". En PC
+(≥1280) la página de compra se arma EN VIVO a la derecha (clases cw-* en
+admin.css). Sigue siendo un solo <form> con la misma createBrandEventAction y
+los ocultos ticket_types_json / confirm_free / is_free. 0082:
+create_brand_event acepta [] (sin NO_TICKET_TYPES para el array vacío);
+publicar sin un tipo activo sigue bloqueado. fase1 186/186 (fase B recorre el
+asistente + caso "sin entradas").
 
 CUENTAS CON CÓDIGO + PRUEBA GRATIS (0080 + 0081, 2026-10-01, Paul: "todas
 las cuentas con código al correo" y "prueba de 10 entradas"). Reemplaza a
@@ -621,7 +636,7 @@ cada consulta cruzaba el continente. Se prendió por la API de Cloudflare
 [placement] de apps/web/wrangler.toml NO lo aplicó la integración con Git.
 Verificar con el GET del proyecto de Pages; el PATCH conserva las variables.
 
-Incrementales, idempotentes, numeradas (vamos por 0081). Backwards-compatible
+Incrementales, idempotentes, numeradas (vamos por 0082). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
 para no romper la app vieja desplegada.
 
