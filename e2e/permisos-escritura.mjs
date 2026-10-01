@@ -1,4 +1,4 @@
-// 0077 + 0078: nadie con JWT escribe directo en orders / tickets /
+// 0077 + 0078 + 0081 (brands): nadie con JWT escribe directo en orders / tickets /
 // yape_proofs / promo_codes (lo vendido) ni en events / ticket_types /
 // fases / validator_codes (eso solo desde el panel). Permisos por JWT REAL
 // (dueño y puerta de demotest) y anon; con service-role el test no probaría
@@ -42,8 +42,9 @@ const intentos = [
   evento && ['events', { is_free: evento.is_free }, evento.id],
   tipo && ['ticket_types', { sold: tipo.sold }, tipo.id],
   fase && ['ticket_type_price_phases', { price_cents: fase.price_cents }, fase.id],
+  ['brands', { alta_usuario: null }, brand.id],
 ].filter(Boolean);
-check('demotest tiene filas para probar las 7 tablas', intentos.length === 7, `${intentos.length}/7`);
+check('demotest tiene filas para probar las 8 tablas', intentos.length === 8, `${intentos.length}/8`);
 
 const roles = [
   ['anon', anon()],

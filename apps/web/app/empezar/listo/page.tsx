@@ -43,7 +43,7 @@ export default async function AltaListaPage({ searchParams }: { searchParams: Pa
     compra = await leer();
   }
   const { data: brand } = compra
-    ? await admin.from('brands').select('name, slug, contact_email, event_balance, archived_at').eq('id', compra.brand_id).single()
+    ? await admin.from('brands').select('name, slug, contact_email, event_balance, archived_at, alta_usuario').eq('id', compra.brand_id).single()
     : { data: null };
   const { count: miembros } = compra
     ? await admin.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', compra.brand_id)
@@ -65,7 +65,7 @@ export default async function AltaListaPage({ searchParams }: { searchParams: Pa
       <>
         <h1 className="ez-h1">{l.aprobadoA}<span className="ez-squiggle">{l.aprobadoB}</span>{l.aprobadoC}</h1>
         <p className="ez-lede">{a}<strong className="ez-url">{b}</strong>{c}</p>
-        <Completar compraId={compra.id} lang={lang} email={(brand.contact_email ?? '').toLowerCase()} emailVisible={enmascarar(brand.contact_email ?? '')} />
+        <Completar compraId={compra.id} lang={lang} emailVisible={enmascarar(brand.contact_email ?? '')} nueva={!!brand.alta_usuario} />
       </>
     );
   } else if (compra.status === 'paid') {

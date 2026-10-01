@@ -92,7 +92,25 @@ if (cmd === 'info') {
   console.log(`aplicando ${p} (${sql.length} chars) en ${REF}…`);
   console.log(JSON.stringify(await query(sql), null, 1));
   console.log('OK');
+} else if (cmd === 'auth') {
+  // Regla de contraseñas de Supabase Auth (2026-10-01, lib/password.ts):
+  //   node supabase/mgmt.mjs auth          → muestra SOLO estos campos (nada secreto)
+  //   node supabase/mgmt.mjs auth politica → fija 8+ con minúscula, MAYÚSCULA y número
+  const CAMPOS = ['password_min_length', 'password_required_characters', 'mailer_otp_length', 'mailer_otp_exp', 'external_email_enabled', 'mailer_autoconfirm'];
+  const ver = (c) => Object.fromEntries(CAMPOS.map((k) => [k, c[k]]));
+  if (arg === 'politica') {
+    const antes = await api(`/v1/projects/${REF}/config/auth`);
+    console.log('antes:', JSON.stringify(ver(antes)));
+    await api(`/v1/projects/${REF}/config/auth`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        password_min_length: 8,
+        password_required_characters: 'abcdefghijklmnopqrstuvwxyz:ABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789',
+      }),
+    });
+  }
+  console.log('ahora:', JSON.stringify(ver(await api(`/v1/projects/${REF}/config/auth`))));
 } else {
-  console.log('uso: node supabase/mgmt.mjs [info|branches|sql <SQL>|file <archivo>]');
+  console.log('uso: node supabase/mgmt.mjs [info|branches|sql <SQL>|file <archivo>|auth [politica]]');
 }
 }

@@ -6,6 +6,7 @@ import { requireSession } from '@/lib/auth';
 import { contextoEscritura } from '@/lib/impersonation';
 import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { passwordOk, PASSWORD_REGLA } from '@/lib/password';
 import { issueTicketsForOrder } from '@/lib/tickets';
 import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
 import { publicEnv } from '@/lib/env';
@@ -156,7 +157,7 @@ export async function setValidatorPasswordAction(
   if (!ctxW) return { ok: false, message: t('No autorizado.', 'Not authorized.') };
   const userId = String(formData.get('user_id') ?? '');
   const password = String(formData.get('password') ?? '');
-  if (password.length < 8) return { ok: false, message: t('Mínimo 8 caracteres.', 'Minimum 8 characters.') };
+  if (!passwordOk(password)) return { ok: false, message: t(PASSWORD_REGLA.es, PASSWORD_REGLA.en) };
 
   const admin = createAdminClient();
   // Target MUST be a validator of THIS brand.

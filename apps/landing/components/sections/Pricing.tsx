@@ -60,6 +60,12 @@ export function Pricing({ t }: { t: Dict }) {
           {m === 'USD' && c.noteUsd}
         </p>
 
+        {/* Prueba gratis (2026-10-01): 1 evento, hasta 10 entradas. */}
+        <p className="plans-privado reveal">
+          <strong>{c.prueba.t}</strong> {c.prueba.d}{' '}
+          <a href={empezar(t.lang, { tipo: 'marca', pack: 'prueba' })}>{c.prueba.cta} <span aria-hidden="true">→</span></a>
+        </p>
+
         {/* Evento privado (0075): cumpleaños y reuniones, directo a su alta. */}
         <p className="plans-privado reveal">
           <strong>{c.privado.t}</strong> {c.privado.d} <strong>{precio(m === 'PEN' ? PACK_PRIVADO.pen : PACK_PRIVADO.usd, m)}</strong>.{' '}

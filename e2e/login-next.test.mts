@@ -6,6 +6,11 @@ const { volverA } = await import('@/lib/loginNext');
 const CASOS: [string, string, string, string][] = [
   // [next, destino por rol, esperado, qué prueba]
   ['/scan', '/admin', '/scan', 'organizador vuelve al escáner'],
+  ['/empezar/listo?compra=123e4567-e89b-12d3-a456-426614174000&lang=es', '/', '/empezar/listo?compra=123e4567-e89b-12d3-a456-426614174000&lang=es', 'alta pagada en otro navegador vuelve a reclamar (0080)'],
+  ['/empezar/listo?compra=123e4567-e89b-12d3-a456-426614174000', '/', '/empezar/listo?compra=123e4567-e89b-12d3-a456-426614174000', 'alta pagada sin lang'],
+  ['/empezar/listo?compra=123e4567-e89b-12d3-a456-426614174000&next=//evil.com', '/', '/', 'listo con parámetros extra: se ignora'],
+  ['/empezar/listo?compra=//evil.com', '/', '/', 'listo con compra que no es UUID'],
+  ['/empezar/listo/../../evil', '/', '/', 'listo con ruta inventada'],
   ['/scan', '/scan', '/scan', 'validador vuelve al escáner'],
   ['/admin/events/abc-123', '/admin', '/admin/events/abc-123', 'organizador vuelve a su pantalla del panel'],
   ['/admin', '/scan', '/scan', 'validador NO entra al panel por next'],

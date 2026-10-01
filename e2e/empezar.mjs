@@ -1,22 +1,29 @@
-// Alta autoservicio (/empezar, 2026-09-25) contra un server LOCAL que habla
-// con la base de producción. Volumen: 2 marcas y 3 usuarios de prueba, que se
-// borran al final (la marca con compra no se puede borrar —pack_purchases es
-// on delete restrict—: queda ARCHIVADA, is_test y con la compra en 'failed').
+// Alta autoservicio (/empezar) contra un server LOCAL que habla con la base de
+// producción. Volumen: pocas marcas y usuarios de prueba, que se borran al
+// final (la marca con compra no se puede borrar —pack_purchases es on delete
+// restrict—: queda ARCHIVADA, is_test y con la compra en 'failed').
 //
 //   node e2e/empezar.mjs            (server en BASE, por defecto localhost:3001)
 //
-// SIN PRUEBA GRATIS desde 2026-09-26 (Paul: "mejor que compren directo").
-// A. Permisos de usuario_id_por_email y una persona = dueña de UNA marca
-//    (deja además una cuenta confirmada que usan B y D).
-// B. Negativos con el botón de pagar: link ocupado, link reservado, correo
-//    interno, correo de alguien con cuenta. Ninguno crea marca.
-// C. La prueba gratis ya no se ofrece: solo paquetes, y ?pack=prueba cae en 1.
-// D. Pack (si el server tiene PARYGO_MP_*): datos → Pagar → Mercado Pago, sin
-//    código ni cuenta; pago aprobado (simulado con la RPC del webhook) → vuelve
-//    en el mismo navegador y entra directo a su panel con 1 evento de saldo.
-// E. Pagó y vuelve desde otro navegador: elige la contraseña y entra.
-// Para D y E el server se compila con NEXT_PUBLIC_APP_URL=https://app.parygo.com
-// (MP rechaza back_urls http://localhost).
+// Flujo desde 2026-10-01 (bloque "Cuentas"): paquete (o Prueba gratis) →
+// nombre → enlace → correo + WhatsApp → CÓDIGO de 8 dígitos al correo →
+// contraseña (8+, mayúscula, minúscula, número) → Pagar / "Crear mi prueba".
+// El test no lee correos: el código válido lo fabrica con generateLink
+// (magiclink) DESPUÉS de que la app mandó el suyo (el último anula al anterior).
+// A. Permisos de usuario_id_por_email y una persona = dueña de UNA marca.
+// B. Negativos en el paso del correo: link ocupado, reservado, correo interno,
+//    correo de alguien con cuenta. Ninguno crea marca.
+// C. Se ofrece la Prueba gratis + paquetes 1/3/5/10; ?pack=prueba la elige.
+// F. Prueba gratis completa: contraseña débil rechazada, código incorrecto,
+//    reenviar antes de 60 s, marca publicada con dueña y entra a /admin.
+// G. Prueba con un WhatsApp ya usado: rechazo y no crea marca.
+// D. Paquete: tras finalizarAlta queda marca ARCHIVADA, sin dueña y con
+//    alta_usuario; pago aprobado (settle_pack_purchase) → /empezar/listo con la
+//    MISMA sesión publica; con OTRA sesión rechaza; sin sesión va a
+//    /login?next=... y al entrar vuelve y reclama.
+// Para D el server se levanta con PARYGO_MP_ACCESS_TOKEN/WEBHOOK_SECRET (con
+// credenciales ficticias la compra queda 'failed' y se simula igual el pago) y
+// se compila con NEXT_PUBLIC_APP_URL=https://app.parygo.com.
 import { chromium } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
 import { svc, anon, env, BASE, log, otpSession } from './lib.mjs';
@@ -26,13 +33,18 @@ const R = [];
 const check = (paso, nombre, ok, detalle = '') => { R.push({ paso, nombre, ok }); log(`${paso} ${ok ? '✔' : '✘'} ${nombre}${detalle ? ' — ' + detalle : ''}`); };
 const usuarios = [];
 const marcas = [];
+const PASS = 'E2eAlta!2026';
+// Un WhatsApp peruano de 9 dígitos distinto por corrida (la prueba es 1 por número).
+const WA = `95${STAMP}`;
 
-// El alta es paso a paso (2026-09-28): paquete → nombre → enlace → correo →
-// contraseña. "Continuar" valida cada paso; el último tiene "Pagar …".
+// El alta es paso a paso: paquete → nombre → enlace → correo+WhatsApp → código
+// → contraseña. "Continuar" valida cada paso.
 const continuar = (p) => p.getByRole('button', { name: /^(Continuar|Continue)/ }).click();
 // Espera a que el chequeo del enlace (450 ms + servidor) diga algo.
 const linkResuelto = (p) => p.locator('#e-slug').filter({ hasText: /Disponible|ya pertenece|Solo minúsculas/ }).waitFor({ timeout: 10000 }).catch(() => {});
-async function llenar(p, { plan, nombre, slug, email }) {
+// Llena hasta el paso del correo y manda el código (queda en la pantalla del
+// código si el servidor lo aceptó, o en el paso del correo con su error).
+async function llenar(p, { plan, nombre, slug, email, wa = WA }) {
   await p.goto(`${BASE}/empezar?tipo=marca`, { waitUntil: 'networkidle' });
   await p.locator(`.ez-plan:has(input[value="${plan}"])`).click();
   await continuar(p);
@@ -42,12 +54,32 @@ async function llenar(p, { plan, nombre, slug, email }) {
   await linkResuelto(p);
   await continuar(p);
   await p.fill('#ez-email', email);
+  await p.fill('#ez-wa', wa);
   await continuar(p);
-  await p.fill('#ez-pass', 'E2eAlta!2026');
 }
-const pagarBtn = (p) => p.getByRole('button', { name: /^Pagar / });
-const enviar = (p) => pagarBtn(p).click();
+// Código válido para ese correo: un link nuevo con service role (invalida el
+// que mandó la app, como lo haría la persona con el suyo).
+async function codigoPara(email) {
+  const { data, error } = await svc.auth.admin.generateLink({ type: 'magiclink', email });
+  if (error) throw new Error('generateLink ' + error.message);
+  return data.properties.email_otp;
+}
+// Escribe el código bueno y pasa a la contraseña.
+async function conCodigo(p, email) {
+  await p.locator('#ez-codigo').waitFor({ timeout: 15000 });
+  await p.fill('#ez-codigo', await codigoPara(email));
+  await continuar(p);
+  await p.locator('#ez-pass').waitFor({ timeout: 15000 }).catch(async () => { const t = (await texto(p)).replace(/\s+/g, ' '); throw new Error(/^Paso 1 de 6/.test(t) ? 'con el código correcto la pantalla se REINICIÓ al paso 1 (se perdieron los datos)' : 'no llegó a la contraseña. Pantalla: ' + t.slice(0, 200)); });
+}
+async function rastrear(email) {
+  const { data } = await svc.rpc('usuario_id_por_email', { p_email: email });
+  if (data) usuarios.push(data);
+  return data;
+}
+const pagarBtn = (p) => p.getByRole('button', { name: /^(Pagar |Crear mi prueba)/ });
 const texto = (p) => p.locator('main').innerText();
+// Un bloque que se rompe no tapa a los demás: queda como una falla con su motivo.
+const bloque = (paso, fn) => fn().catch((e) => check(paso, 'excepción', false, String(e.message).split(/\s+/).join(' ').slice(0, 600)));
 
 const b = await chromium.launch();
 try {
@@ -85,14 +117,12 @@ try {
   }
 
   // ---------- B ----------
+  // Los negativos frenan en el paso del correo (enviarCodigo) o antes: ningún
+  // código sale ni se crea marca.
   {
     const p = await b.newPage({ viewport: { width: 390, height: 844 } });
-    await p.goto(`${BASE}/empezar?tipo=marca&pack=1`, { waitUntil: 'networkidle' });
-    if (await p.locator('.ez-plan.is-off').count()) {
-      log('B · el server no tiene PARYGO_MP_*: se saltea');
-    } else {
-    // Paso a paso: el enlace tomado frena en SU paso (no deja ni continuar).
-    await p.locator('.ez-plan:has(input[value="1"])').click();
+    await p.goto(`${BASE}/empezar?tipo=marca`, { waitUntil: 'networkidle' });
+    await p.locator('.ez-plan:has(input[value="prueba"])').click();
     await continuar(p);
     await p.fill('#ez-nombre', 'Otro Code');
     await continuar(p);
@@ -100,48 +130,48 @@ try {
     await linkResuelto(p);
     await continuar(p);
     const t1 = await texto(p);
-    check('B', 'link de una marca existente: avisa y no deja seguir', /ya pertenece a otra marca/i.test(t1) && (await p.locator('#ez-slug').count()) === 1 && (await pagarBtn(p).count()) === 0);
+    check('B', 'link de una marca existente: avisa y no deja seguir', /ya pertenece a otra marca/i.test(t1) && (await p.locator('#ez-slug').count()) === 1 && (await p.locator('#ez-email').count()) === 0);
 
     await p.fill('#ez-slug', 'soporte');
-    await linkResuelto(p);
+    await p.getByText(/ya pertenece a otra marca/i).first().waitFor({ timeout: 10000 }).catch(() => {});
     check('B', 'link reservado (soporte): no disponible', /ya pertenece a otra marca/i.test(await texto(p)));
 
     await p.fill('#ez-slug', `e2e-alta-b${STAMP}`);
     await linkResuelto(p);
     await continuar(p);
     // Dominios internos (puestos de puerta, cuentas de prueba): el servidor
-    // los rechaza y el alta vuelve al paso del correo.
+    // los rechaza y el alta se queda en el paso del correo, sin código.
     await p.fill('#ez-email', 'gate-12345678-puerta@gate.parygo.local');
+    await p.fill('#ez-wa', WA);
     await continuar(p);
-    await p.fill('#ez-pass', 'E2eAlta!2026');
-    await enviar(p);
-    await p.getByText(/Usa tu propio correo/).waitFor({ timeout: 10000 }).catch(() => {});
-    check('B', 'correo de dominio interno (@gate.parygo.local): rechazado y vuelve al paso del correo', /Usa tu propio correo/.test(await texto(p)) && (await p.locator('#ez-email').count()) === 1 && p.url().startsWith(BASE));
+    await p.getByText(/Usa tu propio correo/).waitFor({ timeout: 15000 }).catch(() => {});
+    check('B', 'correo de dominio interno (@gate.parygo.local): rechazado, sigue en el paso del correo', /Usa tu propio correo/.test(await texto(p)) && (await p.locator('#ez-email').count()) === 1 && (await p.locator('#ez-codigo').count()) === 0);
     await p.fill('#ez-email', `delivered+alta-a${STAMP}@resend.dev`);
     await continuar(p);
-    await enviar(p);
-    await p.getByText(/ya tiene una cuenta/i).waitFor({ timeout: 15000 }).catch(() => {});
-    check('B', 'correo de alguien que ya tiene cuenta: lo manda a entrar, no a pagar', /ya tiene una cuenta/i.test(await texto(p)) && p.url().startsWith(BASE));
+    // Un correo que YA tiene cuenta responde igual que uno nuevo (no revela
+    // quién tiene cuenta): aparece la pantalla del código y no se crea marca.
+    await p.locator('#ez-codigo').waitFor({ timeout: 15000 }).catch(() => {});
+    check('B', 'correo de alguien que ya tiene cuenta: misma pantalla del código que un alta nueva, sin avisar que existe', (await p.locator('#ez-codigo').count()) === 1 && !/ya tiene una cuenta/i.test(await texto(p)));
 
     const { count } = await svc.from('brands').select('id', { count: 'exact', head: true }).eq('slug', `e2e-alta-b${STAMP}`);
     check('B', 'ninguna marca creada en los intentos fallidos', count === 0, `marcas=${count}`);
-    }
     await p.close();
   }
 
   // ---------- C ----------
-  // Ya no hay prueba gratis: solo los cuatro paquetes, sin paso de código, y
-  // un link viejo con ?pack=prueba cae en el paquete de 1 evento.
+  // Vuelve la prueba gratis: se ofrece primero y un link con ?pack=prueba la elige.
   {
     const p = await b.newPage({ viewport: { width: 390, height: 844 } });
     await p.goto(`${BASE}/empezar?tipo=marca&pack=prueba`, { waitUntil: 'networkidle' });
     const txt = await texto(p);
     const opciones = await p.locator('.ez-plan input[type=radio]').evaluateAll((xs) => xs.map((x) => x.value));
-    check('C', 'sin prueba gratis: solo los paquetes 1/3/5/10', JSON.stringify(opciones) === '["1","3","5","10"]' && !/Prueba gratuita|Gratis|Enviarme el código/.test(txt), JSON.stringify(opciones));
+    check('C', 'se ofrece la prueba gratis y los paquetes 1/3/5/10', JSON.stringify(opciones) === '["prueba","1","3","5","10"]' && /Prueba gratis/.test(txt) && /hasta 10 entradas/.test(txt), JSON.stringify(opciones));
     const marcado = await p.locator('.ez-plan input[type=radio]:checked').getAttribute('value');
-    check('C', 'un link viejo con ?pack=prueba elige el paquete de 1 evento', marcado === '1', marcado);
+    check('C', 'un link con ?pack=prueba elige la prueba', marcado === 'prueba', marcado);
+    await p.goto(`${BASE}/empezar?tipo=privado`, { waitUntil: 'networkidle' });
+    check('C', 'el evento privado no tiene prueba', (await p.locator('.ez-plan input[value="prueba"]').count()) === 0);
     await p.goto(`${BASE}/empezar?tipo=marca&lang=en`, { waitUntil: 'networkidle' });
-    check('C', 'en inglés tampoco: sin "Free trial"', !/Free trial|Send me the code/.test(await texto(p)));
+    check('C', 'en inglés: "Free trial"', /Free trial/.test(await texto(p)));
     await p.close();
   }
 
@@ -161,7 +191,7 @@ try {
     await p.waitForURL(/tipo=marca/);
     const u = new URL(p.url());
     const marcado = await p.locator('.ez-plan input[type=radio]:checked').getAttribute('value');
-    check('Q', 'marca: paso 1 de 5 con el pack y la moneda que traía', u.searchParams.get('pack') === '3' && u.searchParams.get('moneda') === 'PEN' && marcado === '3' && (await p.locator('.ez-plan').count()) === 4 && /Paso 1 de 5/.test(await texto(p)), p.url().replace(BASE, ''));
+    check('Q', 'marca: paso 1 de 6 con el pack y la moneda que traía', u.searchParams.get('pack') === '3' && u.searchParams.get('moneda') === 'PEN' && marcado === '3' && (await p.locator('.ez-plan').count()) === 5 && /Paso 1 de 6/.test(await texto(p)), p.url().replace(BASE, ''));
     // Antes de pagar ve TODO lo que incluye (celular: 5 grupos plegables, el
     // primero abierto; la compu lo muestra en el costado).
     const grupos = await p.locator('.ez-incluye__grupo').count();
@@ -180,9 +210,9 @@ try {
     await p.fill('#ez-nombre', 'Noches Qa');
     await p.locator('.ez-vp--movil').filter({ hasText: 'noches-qa.parygo.com' }).waitFor({ timeout: 5000 }).catch(() => {});
     const vp = await p.locator('.ez-vp--movil').innerText();
-    check('Q', 'paso 2: "¿Cómo se llama tu marca?", no avanza vacío y la barra muestra el enlace armado al escribir', sinNombre && /Paso 2 de 5/.test(await texto(p)) && /noches-qa\.parygo\.com/.test(vp), vp.replace(/\s+/g, ' ').slice(0, 90));
+    check('Q', 'paso 2: "¿Cómo se llama tu marca?", no avanza vacío y la barra muestra el enlace armado al escribir', sinNombre && /Paso 2 de 6/.test(await texto(p)) && /noches-qa\.parygo\.com/.test(vp), vp.replace(/\s+/g, ' ').slice(0, 90));
     await continuar(p);
-    check('Q', 'paso 3: "¿Cómo quieres tu enlace?" con el enlace armado desde el nombre', /Paso 3 de 5/.test(await texto(p)) && (await p.inputValue('#ez-slug')) === 'noches-qa');
+    check('Q', 'paso 3: "¿Cómo quieres tu enlace?" con el enlace armado desde el nombre', /Paso 3 de 6/.test(await texto(p)) && (await p.inputValue('#ez-slug')) === 'noches-qa');
     // La barra del celular dibujado: check verde si está libre, ✕ si no.
     await linkResuelto(p);
     const okLibre = (await p.locator('.ez-vp--movil .ez-vp__ok').count()) === 1;
@@ -204,10 +234,8 @@ try {
     await p.fill('#ez-email', `qa${STAMP}@example.com`);
     await p.fill('#ez-wa', '123');
     await continuar(p);
-    const waFrena = (await p.locator('#ez-wa').count()) === 1 && /Incluye el código de país/.test(await texto(p));
-    await p.fill('#ez-wa', '999 111 222');
-    await continuar(p);
-    check('Q', 'WhatsApp mal escrito no deja avanzar; un celular peruano sí (paso 5)', waFrena && /Paso 5 de 5/.test(await texto(p)) && (await p.locator('#ez-pass').count()) === 1);
+    const waFrena = (await p.locator('#ez-wa').count()) === 1 && /Incluye el código de país/.test(await texto(p)) && (await p.locator('#ez-codigo').count()) === 0;
+    check('Q', 'WhatsApp mal escrito no deja avanzar (ni manda código)', waFrena);
 
     // Evento privado (0075): el mismo alta, un solo plan de S/50 con tope
     // 200, SIN "entradas ilimitadas" en la lista, y la pregunta del nombre
@@ -225,131 +253,193 @@ try {
 
     await p.goto(`${BASE}/empezar?pack=1&moneda=PEN&cancelado=1`, { waitUntil: 'networkidle' });
     const t2 = await texto(p);
-    check('Q', 'vuelta de un pago cancelado: directo al formulario, con su aviso', (await p.locator('.ez-plan').count()) === 4 && /no se completó/i.test(t2) && !/¿Qué vas a organizar\?/.test(t2));
+    check('Q', 'vuelta de un pago cancelado: directo al formulario, con su aviso', (await p.locator('.ez-plan').count()) === 5 && /no se completó/i.test(t2) && !/¿Qué vas a organizar\?/.test(t2));
 
     await p.goto(`${BASE}/empezar?lang=en`, { waitUntil: 'networkidle' });
     check('Q', 'en inglés: "What are you organizing?"', /What are you organizing\?/.test(await texto(p)));
     await p.close();
   }
 
-  // ---------- D ----------
-  // Pack: datos → "Pagar" → Mercado Pago, SIN código. La contraseña no viaja
-  // al servidor: queda en el navegador. El pago aprobado se SIMULA con la misma
-  // RPC que llama el webhook tras re-pedir el pago a MP (settle_pack_purchase);
-  // la llamada real a MP necesita credenciales de prueba.
-  {
+  // ---------- F ----------
+  // Prueba gratis completa, en el celular.
+  await bloque('F', async () => {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
     const p = await ctx.newPage();
+    const email = `delivered+alta-f${STAMP}@resend.dev`;
+    const slug = `e2e-alta-f${STAMP}`;
+    await llenar(p, { plan: 'prueba', nombre: `E2E Prueba ${STAMP}`, slug, email });
+    await p.locator('#ez-codigo').waitFor({ timeout: 15000 });
+    const tc = await texto(p);
+    check('F', 'pasa a la pantalla del código y dice a qué correo llegó', /Te mandamos un código/.test(tc) && tc.includes(email));
+    await rastrear(email);
+
+    await p.getByRole('button', { name: 'Reenviar código' }).click();
+    await p.locator('#e-codigo').filter({ hasText: /Espera un minuto/ }).waitFor({ timeout: 15000 }).catch(() => {});
+    check('F', 'reenviar antes de 60 s: "Espera un minuto"', /Espera un minuto para pedir otro/.test(await p.locator('#e-codigo').innerText()));
+
+    await p.fill('#ez-codigo', '12345678');
+    await continuar(p);
+    await p.locator('#e-codigo.ez-err').waitFor({ timeout: 15000 }).catch(() => {});
+    check('F', 'código incorrecto: lo dice y se queda en el código', /no es correcto o ya venció/.test(await texto(p)) && (await p.locator('#ez-pass').count()) === 0);
+
+    await p.getByRole('button', { name: 'Reenviar código' }).click();
+    await p.locator('#e-codigo').filter({ hasText: /Espera un minuto/ }).waitFor({ timeout: 15000 }).catch(() => {});
+    check('F', 'reenviar después de un código incorrecto también muestra su aviso', /Espera un minuto para pedir otro/.test(await p.locator('#e-codigo').innerText()));
+
+    await conCodigo(p, email);
+    check('F', 'con el código bueno pasa a la contraseña', /Paso 6 de 6/.test(await texto(p)) && (await pagarBtn(p).innerText()).includes('Crear mi prueba'));
+
+    await p.fill('#ez-pass', 'abcdefgh1');
+    const reglasOk = await p.locator('.ez-reglas li.is-ok').count();
+    const apagado = await pagarBtn(p).isDisabled();
+    await pagarBtn(p).evaluate((e) => { e.disabled = false; });
+    await pagarBtn(p).click();
+    await p.locator('#e-pass.ez-err').waitFor({ timeout: 5000 }).catch(() => {});
+    check('F', 'contraseña débil ("abcdefgh1", sin mayúscula): 3 de 4 reglas, botón apagado y, forzado, la rechaza', reglasOk === 3 && apagado && /Mínimo 8 caracteres/.test(await p.locator('#e-pass').innerText()) && !p.url().includes('/admin'), `reglas=${reglasOk}`);
+
+    await p.fill('#ez-pass', PASS);
+    check('F', 'con una buena, las 4 reglas en verde', (await p.locator('.ez-reglas li.is-ok').count()) === 4);
+    await pagarBtn(p).click();
+    await p.waitForURL(/\/admin/, { timeout: 40000 });
+    check('F', '"Crear mi prueba" entra a /admin', /\/admin/.test(p.url()), p.url());
+    const { data: m } = await svc.from('brands').select('id, archived_at, prueba_disponible, alta_usuario, whatsapp_e164, tipo').eq('slug', slug).single();
+    if (m) { marcas.push({ id: m.id, borrar: true }); await svc.from('brands').update({ is_test: true }).eq('id', m.id); }
+    const { data: mem } = await svc.from('brand_members').select('user_id, role').eq('brand_id', m.id);
+    const uid = await rastrear(email);
+    check('F', 'marca publicada, con prueba disponible y dueña = quien verificó', m.archived_at === null && m.prueba_disponible === true && mem?.length === 1 && mem[0].role === 'brand_admin' && mem[0].user_id === uid, JSON.stringify({ arch: m.archived_at, prueba: m.prueba_disponible, mem }));
+    const { error: le } = await anon().auth.signInWithPassword({ email, password: PASS });
+    check('F', 'entra con la contraseña que eligió', !le, le?.message);
+    await ctx.close();
+  });
+
+  // ---------- G ----------
+  // Otra prueba con el MISMO WhatsApp: rechazada, sin marca.
+  await bloque('G', async () => {
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+    const p = await ctx.newPage();
+    const email = `delivered+alta-g${STAMP}@resend.dev`;
+    const slug = `e2e-alta-g${STAMP}`;
+    await llenar(p, { plan: 'prueba', nombre: `E2E Prueba G ${STAMP}`, slug, email });
+    await conCodigo(p, email);
+    await rastrear(email);
+    await p.fill('#ez-pass', PASS);
+    await pagarBtn(p).click();
+    await p.getByText(/ya usó una prueba gratis/).first().waitFor({ timeout: 20000 }).catch(() => {});
+    const { count } = await svc.from('brands').select('id', { count: 'exact', head: true }).eq('slug', slug);
+    check('G', 'WhatsApp que ya usó una prueba: rechazo, vuelve al paso del WhatsApp y no crea marca', /ya usó una prueba gratis/.test(await texto(p)) && (await p.locator('#ez-wa').count()) === 1 && count === 0, `marcas=${count}`);
+    await ctx.close();
+  });
+
+  // ---------- D / H ----------
+  // Paquete: el alta crea la marca ARCHIVADA, sin dueña y con alta_usuario; el
+  // pago aprobado se SIMULA con la RPC del webhook (settle_pack_purchase). Con
+  // credenciales de MP ficticias la preferencia falla y la compra queda
+  // 'failed' (settle_pack_purchase acredita igual desde 'failed').
+  async function altaPack(ctx, sfx) {
+    const p = await ctx.newPage();
     await p.goto(`${BASE}/empezar?tipo=marca&pack=1`, { waitUntil: 'networkidle' });
-    const conPagos = !(await p.locator('.ez-plan.is-off').count());
-    if (!conPagos) {
-      log('D · el server no tiene PARYGO_MP_*: se saltea el pago');
+    if (await p.locator('.ez-plan.is-off').count()) return null;
+    const email = `delivered+alta-${sfx}${STAMP}@resend.dev`;
+    const slug = `e2e-alta-${sfx}-${STAMP}`;
+    await llenar(p, { plan: '1', nombre: `E2E Alta ${sfx} ${STAMP}`, slug, email, wa: `9${sfx === 'd' ? '6' : '7'}${STAMP}` });
+    await conCodigo(p, email);
+    const userId = await rastrear(email);
+    await p.fill('#ez-pass', PASS);
+    const boton = await pagarBtn(p).innerText();
+    await pagarBtn(p).click();
+    await Promise.race([
+      p.waitForURL(/mercadopago\.com/, { timeout: 40000, waitUntil: 'commit' }),
+      p.locator('.ez-banner[role=alert]').waitFor({ timeout: 40000 }),
+    ]).catch(() => {});
+    const { data: m } = await svc.from('brands').select('id, archived_at, alta_usuario').eq('slug', slug).single();
+    marcas.push({ id: m.id, borrar: false });
+    await svc.from('brands').update({ is_test: true }).eq('id', m.id);
+    const { count: miembros } = await svc.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', m.id);
+    const { data: c } = await svc.from('pack_purchases').select('id, pack, currency, amount_cents, status').eq('brand_id', m.id);
+    return { p, email, slug, userId, m, miembros, c, boton, enMp: /mercadopago\.com/.test(p.url()) };
+  }
+  const aprobar = (id, tag) => svc.rpc('settle_pack_purchase', { p_purchase_id: id, p_provider: 'mercadopago', p_payment_id: `e2e-sim-${tag}${STAMP}`, p_paid_cents: 15000, p_currency: 'PEN' });
+  const btnPanel = (p) => p.getByRole('button', { name: /Ingresar a mi panel/ });
+
+  await bloque('D', async () => {
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+    const a = await altaPack(ctx, 'd');
+    if (!a) {
+      log('D · el server no tiene PARYGO_MP_*: se saltea');
     } else {
-      // Un correo que ya tiene cuenta no paga: entra y compra desde su panel.
-      await llenar(p, { plan: '1', nombre: 'Otro pago', slug: `e2e-alta-otro${STAMP}`, email: `delivered+alta-a${STAMP}@resend.dev` });
-      await p.getByRole('button', { name: /^Pagar S\/150$/ }).click();
-      await p.getByText(/ya tiene una cuenta/i).waitFor({ timeout: 15000 }).catch(() => {});
-      check('D', 'correo con cuenta: no lo manda a pagar', /ya tiene una cuenta/i.test(await texto(p)) && p.url().startsWith(BASE));
+      const { p, email, userId, m, c } = a;
+      check('D', 'el botón es "Pagar S/150" (tras el código y la contraseña)', a.boton.startsWith('Pagar S/150'), a.boton);
+      check('D', 'tras finalizarAlta: marca archivada, sin dueña y con alta_usuario = quien verificó', !!m.archived_at && a.miembros === 0 && m.alta_usuario === userId && !!userId, JSON.stringify({ arch: !!m.archived_at, miembros: a.miembros }));
+      check('D', 'compra de 1 evento, S/150 PEN, creada (' + (a.enMp ? 'fue a Mercado Pago' : 'MP ficticio: queda failed') + ')', c?.length === 1 && c[0].pack === 1 && c[0].amount_cents === 15000 && c[0].currency === 'PEN', JSON.stringify(c));
 
-      const email = `delivered+alta-d${STAMP}@resend.dev`;
-      const slug = `e2e-alta-pack-${STAMP}`;
-      await llenar(p, { plan: '1', nombre: `E2E Alta Pack ${STAMP}`, email });
-      check('D', 'el botón es "Pagar S/150" (sin código)', await p.getByRole('button', { name: 'Pagar S/150' }).count() === 1);
-      const posts = [];
-      p.on('request', (r) => { if (r.method() === 'POST' && r.url().startsWith(BASE)) posts.push(r.postData() ?? ''); });
-      await p.getByRole('button', { name: /^Pagar S\/150$/ }).click();
-      await p.waitForURL(/mercadopago\.com/, { timeout: 40000, waitUntil: 'commit' });
-      check('D', 'va directo a Mercado Pago', /mercadopago\.com/.test(p.url()), p.url().slice(0, 70));
-      check('D', 'la contraseña NO viajó al servidor antes del pago', posts.length > 0 && !posts.some((x) => x.includes('E2eAlta!2026')), `${posts.length} POST`);
-
-      const { data: m } = await svc.from('brands').select('id, name, event_balance, prueba_disponible, archived_at').eq('slug', slug).single();
-      if (m) marcas.push({ id: m.id, borrar: false });
-      const { count: sinDuena } = await svc.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', m.id);
-      const { data: ya } = await svc.rpc('usuario_id_por_email', { p_email: email });
-      check('D', 'antes de pagar: marca sin dueña y NINGUNA cuenta creada', sinDuena === 0 && !ya);
-      check('D', 'antes de pagar: la marca está oculta (archivada), no se publica gratis', !!m.archived_at);
-
-      // Alguien escribe ESE correo con otro nombre y otro link: no toca la marca
-      // pendiente ajena (se crea otra aparte).
-      const intruso = await ctx.newPage();
-      await llenar(intruso, { plan: '1', nombre: `Intruso ${STAMP}`, slug: `e2e-alta-intruso-${STAMP}`, email });
-      await intruso.getByRole('button', { name: /^Pagar S\/150$/ }).click();
-      await intruso.waitForURL(/mercadopago\.com/, { timeout: 40000, waitUntil: 'commit' }).catch(() => {});
-      await intruso.close();
-      const { data: mSigue } = await svc.from('brands').select('name, slug').eq('id', m.id).single();
-      const { data: mIntr } = await svc.from('brands').select('id').eq('slug', `e2e-alta-intruso-${STAMP}`).maybeSingle();
-      if (mIntr) marcas.push({ id: mIntr.id, borrar: false });
-      check('D', 'escribir el correo de otro NO renombra ni cambia el link de su marca pendiente', mSigue?.name === m.name && mSigue?.slug === slug, JSON.stringify(mSigue));
-      const { data: c } = await svc.from('pack_purchases').select('id, pack, currency, amount_cents, status, provider_ref').eq('brand_id', m.id);
-      check('D', 'compra pendiente de 1 evento, S/150 PEN, con preferencia de MP', c?.length === 1 && c[0].pack === 1 && c[0].amount_cents === 15000 && c[0].currency === 'PEN' && c[0].status === 'pending' && !!c[0].provider_ref, JSON.stringify(c));
-
-      // Volver SIN pagar: la página dice "confirmando" y no deja crear nada.
+      // Sin pago: /listo no deja reclamar nada.
       await p.goto(`${BASE}/empezar/listo?compra=${c[0].id}`, { waitUntil: 'networkidle' });
-      const sinCuenta = !(await svc.rpc('usuario_id_por_email', { p_email: email })).data;
-      check('D', 'sin pago aprobado: "Estamos confirmando" y ninguna cuenta', /confirmando tu pago/i.test(await texto(p)) && sinCuenta);
+      check('D', 'sin pago aprobado no hay botón de reclamar', (await btnPanel(p).count()) === 0);
 
-      // Pago aprobado (simulado, mismo camino que el webhook).
-      const { data: s } = await svc.rpc('settle_pack_purchase', { p_purchase_id: c[0].id, p_provider: 'mercadopago', p_payment_id: `e2e-sim-${STAMP}`, p_paid_cents: 15000, p_currency: 'PEN' });
+      const { data: s } = await aprobar(c[0].id, 'd');
       check('D', 'pago aprobado acreditado (+1 evento)', s?.action === 'credited' && s?.new_balance === 1, JSON.stringify(s));
 
-      // Se quedó en "confirmando" (la página se recarga sola): cuando llega la
-      // aprobación, entra SOLO a su panel con la contraseña que dejó guardada.
-      await p.waitForURL(/\/admin/, { timeout: 40000 });
-      await p.getByText(/Primeros pasos|Inicia sesión/).first().waitFor({ timeout: 30000 }).catch(() => {});
-      const panel = await p.locator('body').innerText();
-      check('D', 'vuelve del pago y entra DIRECTO a su panel', /Primeros pasos/.test(panel) && !/Inicia sesión/.test(panel), p.url());
-      const { data: duena } = await svc.from('brand_members').select('user_id, role').eq('brand_id', m.id);
-      if (duena?.[0]) usuarios.push(duena[0].user_id);
-      check('D', 'cuenta creada recién ahora, dueña de la marca', duena?.length === 1 && duena[0].role === 'brand_admin');
-      const { data: uAlta } = await svc.auth.admin.getUserById(duena[0].user_id);
-      check('D', 'la cuenta queda marcada "correo sin verificar" (las invitaciones no le cuelgan otra marca)', uAlta?.user?.user_metadata?.alta_sin_verificar === true);
-      const { data: mPub } = await svc.from('brands').select('archived_at').eq('id', m.id).single();
-      check('D', 'al reclamarla, la marca se publica', mPub?.archived_at === null);
-      const { data: m2 } = await svc.from('brands').select('event_balance').eq('id', m.id).single();
-      check('D', 'saldo de 1 evento listo para crear', m2?.event_balance === 1);
-      const { error: le } = await anon().auth.signInWithPassword({ email, password: 'E2eAlta!2026' });
-      check('D', 'entra con la contraseña que eligió antes de pagar', !le, le?.message);
+      // OTRA sesión (otra persona ya con cuenta): rechazo, la marca sigue pendiente.
+      const otro = await b.newContext({ viewport: { width: 390, height: 844 } });
+      const q = await otro.newPage();
+      await q.goto(`${BASE}/login`, { waitUntil: 'networkidle' });
+      await q.fill('#email', `delivered+alta-a${STAMP}@resend.dev`);
+      await q.fill('#password', PASS);
+      await q.locator('form button[type=submit]').click();
+      await q.waitForURL(/\/admin/, { timeout: 30000 });
+      await q.goto(`${BASE}/empezar/listo?compra=${c[0].id}`, { waitUntil: 'networkidle' });
+      await btnPanel(q).click();
+      await q.getByText(/Entraste con otra cuenta/).waitFor({ timeout: 15000 }).catch(() => {});
+      const { data: m2 } = await svc.from('brands').select('archived_at').eq('id', m.id).single();
+      const { count: mi2 } = await svc.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', m.id);
+      check('D', 'con OTRA sesión: "Entraste con otra cuenta", la marca sigue archivada y sin dueña', /Entraste con otra cuenta/.test(await texto(q)) && !!m2.archived_at && mi2 === 0);
+      await otro.close();
 
-      // Otra vez el link: ya tiene dueña → no se crea otra cuenta.
+      // La MISMA sesión (la de la contraseña recién puesta) la reclama.
+      await p.goto(`${BASE}/empezar/listo?compra=${c[0].id}`, { waitUntil: 'networkidle' });
+      check('D', 'pagó y vuelve con su sesión: no le pide contraseña, solo "Ingresar a mi panel"', (await btnPanel(p).count()) === 1 && (await p.locator('#ez-pass2').count()) === 0);
+      await btnPanel(p).click();
+      await p.waitForURL(/\/admin/, { timeout: 40000 });
+      const { data: m3 } = await svc.from('brands').select('archived_at, event_balance').eq('id', m.id).single();
+      const { data: mem } = await svc.from('brand_members').select('user_id, role').eq('brand_id', m.id);
+      check('D', 'MISMA sesión: marca publicada, dueña = quien verificó, saldo 1', m3.archived_at === null && m3.event_balance === 1 && mem?.length === 1 && mem[0].user_id === userId && mem[0].role === 'brand_admin', JSON.stringify({ m3, mem }));
+      const { data: uAlta } = await svc.auth.admin.getUserById(userId);
+      check('D', 'la cuenta NO lleva "alta_sin_verificar" (el correo se verificó con el código)', uAlta?.user?.user_metadata?.alta_sin_verificar !== true && !!uAlta?.user?.email_confirmed_at);
       await p.goto(`${BASE}/empezar/listo?compra=${c[0].id}`, { waitUntil: 'networkidle' });
       check('D', 'el link usado otra vez: "ya está lista"', /ya está lista/i.test(await texto(p)));
     }
     await ctx.close();
-  }
+  });
 
-  // ---------- E ----------
-  // Pagó y volvió desde OTRO navegador (o el link del correo): elige la
-  // contraseña en /empezar/listo.
-  {
+  // H: pagó y vuelve SIN sesión (otro navegador): login con next y reclama.
+  await bloque('H', async () => {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
-    const p = await ctx.newPage();
-    await p.goto(`${BASE}/empezar?tipo=marca&pack=1`, { waitUntil: 'networkidle' });
-    if (!(await p.locator('.ez-plan.is-off').count())) {
-      const email = `delivered+alta-e${STAMP}@resend.dev`;
-      await llenar(p, { plan: '1', nombre: `E2E Alta Otro ${STAMP}`, email });
-      await p.getByRole('button', { name: /^Pagar S\/150$/ }).click();
-      await p.waitForURL(/mercadopago\.com/, { timeout: 40000, waitUntil: 'commit' });
-      const { data: m } = await svc.from('brands').select('id').eq('slug', `e2e-alta-otro-${STAMP}`).single();
-      if (m) marcas.push({ id: m.id, borrar: false });
-      const { data: c } = await svc.from('pack_purchases').select('id').eq('brand_id', m.id).single();
-      await svc.rpc('settle_pack_purchase', { p_purchase_id: c.id, p_provider: 'mercadopago', p_payment_id: `e2e-sim-e${STAMP}`, p_paid_cents: 15000, p_currency: 'PEN' });
-
-      const otro = await b.newContext({ viewport: { width: 390, height: 844 } });
-      const q = await otro.newPage();
-      await q.goto(`${BASE}/empezar/listo?compra=${c.id}`, { waitUntil: 'networkidle' });
-      check('E', 'otro navegador: pide elegir la contraseña', /Elige tu contraseña/.test(await q.locator('main').innerText()));
-      await q.screenshot({ path: 'tmp/empezar/listo-elegir.png' });
-      await q.fill('#ez-pass2', 'OtraClave!2026');
-      await q.getByRole('button', { name: /Ingresar a mi panel/ }).click();
-      await q.waitForURL(/\/admin/, { timeout: 40000 });
-      await q.getByText(/Primeros pasos|Inicia sesión/).first().waitFor({ timeout: 30000 }).catch(() => {});
-      check('E', 'entra a su panel con la contraseña nueva', /Primeros pasos/.test(await q.locator('body').innerText()));
-      const { data: duena } = await svc.from('brand_members').select('user_id').eq('brand_id', m.id);
-      if (duena?.[0]) usuarios.push(duena[0].user_id);
-      await otro.close();
+    const a = await altaPack(ctx, 'h');
+    if (a) {
+      const { m, c, email, userId } = a;
+      await aprobar(c[0].id, 'h');
+      const nuevo = await b.newContext({ viewport: { width: 390, height: 844 } });
+      const q = await nuevo.newPage();
+      const listo = `/empezar/listo?compra=${c[0].id}&lang=es`;
+      await q.goto(`${BASE}/empezar/listo?compra=${c[0].id}`, { waitUntil: 'networkidle' });
+      await btnPanel(q).click();
+      await q.waitForURL(/\/login\?next=/, { timeout: 15000 }).catch(() => {});
+      const nx = new URL(q.url()).searchParams.get('next');
+      check('H', 'sin sesión: lo manda a /login con next a /empezar/listo?compra=', /\/login/.test(q.url()) && nx === listo, q.url().replace(BASE, ''));
+      await q.fill('#email', email);
+      await q.fill('#password', PASS);
+      await q.locator('form button[type=submit]').click();
+      await q.waitForURL(/\/empezar\/listo\?compra=/, { timeout: 30000 }).catch(() => {});
+      check('H', 'tras entrar vuelve a /empezar/listo', /\/empezar\/listo\?compra=/.test(q.url()), q.url().replace(BASE, ''));
+      await btnPanel(q).click();
+      await q.waitForURL(/\/admin/, { timeout: 40000 }).catch(() => {});
+      const { data: m3 } = await svc.from('brands').select('archived_at').eq('id', m.id).single();
+      const { data: mem } = await svc.from('brand_members').select('user_id').eq('brand_id', m.id);
+      check('H', 'y reclama: marca publicada y dueña = quien verificó', /\/admin/.test(q.url()) && m3.archived_at === null && mem?.length === 1 && mem[0].user_id === userId);
+      await nuevo.close();
     }
     await ctx.close();
-  }
+  });
 } catch (e) {
   check('!', 'excepción', false, e.message);
 } finally {
@@ -371,6 +461,9 @@ try {
     const { count } = await svc.from('brand_members').select('brand_id', { count: 'exact', head: true }).eq('user_id', u);
     if (!count) await svc.auth.admin.deleteUser(u);
   }
+  // Los topes por correo/conexión (ticket_resend_attempts) que dejaron ESTAS
+  // altas de prueba: sin borrarlos, 4 corridas seguidas agotan el tope por IP.
+  for (const pre of ['alta', 'verif', 'prueba']) await svc.from('ticket_resend_attempts').delete().like('email', `${pre}:delivered+alta-%@resend.dev`);
   log(`limpieza: ${marcas.length} marcas, ${new Set(usuarios).size} usuarios revisados`);
 }
 

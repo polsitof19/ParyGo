@@ -5,6 +5,7 @@ import { PACK_PRIVADO, PACKS } from '@/lib/packs';
 import { EmpezarFlow, type Plan } from './EmpezarFlow';
 import { TipoDeEvento } from './TipoDeEvento';
 import { esLang, esMoneda, type Moneda } from './textos';
+type PlanId = Plan['id'] | 'prueba';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,7 @@ export function generateMetadata({ searchParams }: { searchParams: Params }): Me
     : { title: 'Crea tu marca · ParyGo', description: 'Elige tu paquete y ten tu página tumarca.parygo.com lista para vender entradas.' };
 }
 
-// Sin prueba gratis (Paul, 2026-09-26: "mejor que compren directo").
+// Paquetes; la prueba gratis (?pack=prueba, solo marca) se agrega aparte.
 const PLANES = ['1', '3', '5', '10'] as const;
 
 export default function EmpezarPage({ searchParams }: { searchParams: Params }) {
@@ -40,7 +41,7 @@ export default function EmpezarPage({ searchParams }: { searchParams: Params }) 
   // inglés dólares y en español según el país (Cloudflare manda cf-ipcountry).
   const pais = headers().get('cf-ipcountry')?.toUpperCase() ?? '';
   const moneda: Moneda = esMoneda(searchParams.moneda) ?? (lang === 'en' ? 'USD' : pais && pais !== 'PE' ? 'USD' : 'PEN');
-  const pedido = PLANES.find((p) => p === searchParams.pack) ?? '1';
+  const pedido: PlanId = searchParams.pack === 'prueba' && tipo === 'marca' ? 'prueba' : PLANES.find((p) => p === searchParams.pack) ?? '1';
 
   // Los precios salen de lib/packs.ts, la misma fuente que cobra el servidor:
   // la pantalla solo los muestra, el monto lo fija iniciarCompraPack (según

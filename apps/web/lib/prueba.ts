@@ -1,9 +1,9 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { textos, type Idioma } from '@/lib/idioma';
 
-// Prueba gratis (0069; tope 20 desde 0071): 1 evento sin saldo, hasta 20 entradas.
+// Prueba gratis (0069; tope 20 desde 0071, 10 desde 0080): 1 evento sin saldo, hasta 10 entradas.
 // Tiene que coincidir con prueba_tope_entradas() en la base.
-export const PRUEBA_TOPE_ENTRADAS = 20;
+export const PRUEBA_TOPE_ENTRADAS = 10;
 // Evento privado (0075): = privado_tope_entradas() en la base.
 export const PRIVADO_TOPE_ENTRADAS = 200;
 

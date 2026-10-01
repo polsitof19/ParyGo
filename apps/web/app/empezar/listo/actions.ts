@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { sendAltaBienvenida } from '@/lib/email/sendAltaEmails';
+import { passwordOk } from '@/lib/password';
 import { TEXTOS, esLang } from '../textos';
 
 export type CompletarState = { ok: boolean; message: string | null };
@@ -28,17 +29,52 @@ export async function completarAlta(_prev: CompletarState, fd: FormData): Promis
   const compraId = String(fd.get('compra') ?? '');
   const password = String(fd.get('password') ?? '');
   if (!UUID_RE.test(compraId)) return { ok: false, message: l.linkMal };
-  if (password.length < 8 || password.length > 72) return { ok: false, message: l.passRango };
 
   const admin = createAdminClient();
   const { data: compra } = await admin.from('pack_purchases').select('id, status, brand_id, created_by').eq('id', compraId).maybeSingle();
   if (!compra || compra.created_by !== null) return { ok: false, message: l.linkMal };
   if (compra.status !== 'paid') return { ok: false, message: l.sinConfirmar };
 
-  const { data: brand } = await admin.from('brands').select('id, name, slug, contact_email, archived_at').eq('id', compra.brand_id).single();
+  const { data: brand } = await admin.from('brands').select('id, name, slug, contact_email, archived_at, alta_usuario').eq('id', compra.brand_id).single();
   const { count: miembros } = await admin.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', compra.brand_id);
   if (!brand || miembros || !brand.archived_at) redirect('/login');
   const email = (brand.contact_email ?? '').toLowerCase();
+
+  // ALTA CON CÓDIGO (0080, 2026-10-01): la cuenta ya existe, verificada y con
+  // su contraseña. La marca la reclama SOLO quien verificó el correo
+  // (brands.alta_usuario); el id de la compra solo no alcanza. Si vuelve del
+  // pago en otro navegador, entra con su correo y contraseña y vuelve acá.
+  if (brand.alta_usuario) {
+    const { data: { user } } = await createClient().auth.getUser();
+    if (!user) redirect(`/login?next=${encodeURIComponent(`/empezar/listo?compra=${compra.id}&lang=${lang}`)}`);
+    if (user.id !== brand.alta_usuario) return { ok: false, message: l.otraCuenta };
+    const { error: e } = await admin.from('brand_members').insert({ brand_id: brand.id, user_id: user.id, role: 'brand_admin', display_name: email });
+    if (e && e.code !== '23505') {
+      console.error('[empezar/listo] membresía', e.message);
+      return { ok: false, message: l.noAlta };
+    }
+    if (e) {
+      // 23505: o la otra pestaña ya la reclamó (bien: al panel) o esta persona
+      // ya es dueña de OTRA marca (una por persona, 0071) y este paquete
+      // pagado quedaría trabado (security review M2): se registra para que
+      // Paul lo resuelva y se le avisa, en vez de mandarla al panel de la otra.
+      const { data: suya } = await admin.from('brand_members').select('user_id').eq('brand_id', brand.id).eq('user_id', user.id).maybeSingle();
+      if (!suya) {
+        await admin.from('events_log').insert({ brand_id: brand.id, actor_user_id: user.id, type: 'alta_pagada_trabada', payload: { purchase_id: compra.id, motivo: 'ya_es_duena_de_otra_marca' } });
+        console.error('[empezar/listo] alta pagada trabada: ya es dueña de otra marca', brand.id);
+        return { ok: false, message: l.trabada };
+      }
+    }
+    if (!e) {
+      await admin.from('brands').update({ archived_at: null }).eq('id', brand.id);
+      await admin.from('events_log').insert({ brand_id: brand.id, actor_user_id: user.id, type: 'brand_self_signup_claimed', payload: { purchase_id: compra.id, verificado: true } });
+      await sendAltaBienvenida({ to: email, marca: brand.name, slug: brand.slug, lang });
+    }
+    redirect('/admin');
+  }
+
+  // ---- Altas viejas (antes del 2026-10-01, sin código): contraseña acá ----
+  if (!passwordOk(password)) return { ok: false, message: l.passRango };
 
   // ¿Ya hay una cuenta con ese correo? Solo se retoma una SIN confirmar y sin
   // marca (alguien empezó la prueba con este correo y no puso el código: si no
