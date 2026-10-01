@@ -273,32 +273,60 @@ await step('B', 'Organizador: crear evento, entradas, promo, preventa, publicar,
   const ends = new Date(starts.getTime() + 7 * 3600000);
   const phaseUp = new Date(Math.floor((now.getTime() + 3 * day) / 3600000) * 3600000);
 
-  async function fillBuilder({ name, slug, startsAt, endsAt, types, bypassMin = false }) {
+  // Crear evento = asistente de 6 pasos (EventWizard): una pregunta por pantalla,
+  // todo en UN form. hasta=4 se queda en el paso 4 tras "Continuar" (para ver el
+  // error en línea); sinEntradas = "Saltar por ahora" en el paso 4; si no, deja
+  // el paso 6 listo para "Crear evento".
+  const sigue = async () => { await p.getByRole('button', { name: 'Continuar', exact: true }).click(); };
+  async function fillBuilder({ name, slug, startsAt, endsAt, types = [], bypassMin = false, hasta = 6, sinEntradas = false }) {
     await go(p, '/admin/events/new');
-    if (bypassMin) await p.evaluate(() => document.querySelectorAll('input[type=datetime-local]').forEach((i) => i.removeAttribute('min')));
+    const quitaMin = () => p.evaluate(() => document.querySelectorAll('input[type=datetime-local]').forEach((i) => i.removeAttribute('min')));
+    // 1 · nombre + link (se arma solo; "Cambiar link" lo deja a mano)
     await p.fill('#name', name);
+    await p.getByRole('button', { name: 'Cambiar link' }).click();
     await p.fill('#slug', slug);
-    await p.fill('#description', 'Evento de prueba E2E automatizado — no comprar.');
+    await sigue();
+    // 2 · cuándo
+    if (bypassMin) await quitaMin();
     await p.fill('#starts_at', limaLocal(startsAt));
     if (endsAt) await p.fill('#ends_at', limaLocal(endsAt));
+    await sigue();
+    // 3 · dónde
     await p.fill('#venue_name', 'Local E2E');
     await p.fill('#venue_address', 'Av. Test 123, Lima');
-    const sec = p.locator('section.s-card').nth(1);
-    for (let i = 0; i < types.length; i++) {
-      if (i > 0) await sec.getByRole('button', { name: 'Tipo', exact: true }).click();
-      const card = sec.locator(':scope > .s-stack > .s-card').nth(i);
-      const t = types[i];
-      await card.locator('input[placeholder="General / VIP"]').fill(t.name);
-      if (t.desc) await card.locator('textarea').fill(t.desc);
-      if (t.unlimited) await card.getByText('Stock ilimitado').click();
-      else await card.locator('div:has(> label:text-is("Cupo")) > input').fill(String(t.capacity));
-      for (let j = 0; j < t.phases.length; j++) {
-        if (j > 0) await card.getByRole('button', { name: 'Fase', exact: true }).click();
-        if (bypassMin) await p.evaluate(() => document.querySelectorAll('input[type=datetime-local]').forEach((i) => i.removeAttribute('min')));
-        await card.locator('input[placeholder="30"]').nth(j).fill(String(t.phases[j].price));
-        if (t.phases[j].until) await card.locator('input[type="datetime-local"]').nth(j).fill(limaLocal(t.phases[j].until));
+    await sigue();
+    // 4 · entradas (opcional)
+    if (sinEntradas) {
+      await p.getByRole('button', { name: 'Saltar por ahora' }).click(); // 4 -> 5
+      await p.getByRole('button', { name: 'Saltar por ahora' }).click(); // 5 -> 6
+    } else {
+      for (let i = 0; i < types.length; i++) {
+        if (i > 0) await p.getByRole('button', { name: /Agregar otro tipo/ }).click();
+        const t = types[i];
+        await p.fill(`#tt-${i}-name`, t.name);
+        const gratis = t.phases[0].price === 0;
+        const cuadro = p.locator('.cw-tt').nth(i);
+        if (gratis) await cuadro.getByLabel('Gratis', { exact: true }).check();
+        else await p.fill(`#tt-${i}-price`, String(t.phases[0].price));
+        if (t.unlimited) await cuadro.getByLabel('Sin límite').check();
+        else await p.fill(`#tt-${i}-cap`, String(t.capacity));
+        if (t.phases.length > 1) {
+          await cuadro.locator('summary').click();
+          for (let j = 1; j < t.phases.length; j++) {
+            await cuadro.getByRole('button', { name: /Agregar (una|otra) subida/ }).click();
+            if (bypassMin) await quitaMin();
+            await p.fill(`#tt-${i}-ph-${j}`, String(t.phases[j].price));
+            if (t.phases[j - 1].until) await p.fill(`#tt-${i}-hasta-${j - 1}`, limaLocal(t.phases[j - 1].until));
+          }
+        }
       }
+      await sigue();
+      if (hasta === 4) return;
+      await p.getByRole('button', { name: 'Saltar por ahora' }).click(); // 5 · sin flyer
     }
+    // 6 · revisión; "Más detalles" lleva la descripción
+    await p.getByText('Más detalles').click();
+    await p.fill('#description', 'Evento de prueba E2E automatizado — no comprar.');
   }
 
   await fillBuilder({
@@ -390,16 +418,46 @@ await step('B', 'Organizador: crear evento, entradas, promo, preventa, publicar,
     check('B', 'bug4: server exige confirmación para tipo S/0 con aforo', /Confirma que/.test(r4.text) && !r4.created && r4.balDelta === 0, `${lastMsg(r4.text)} · creados=${r4.created} Δsaldo=${r4.balDelta}`);
   } else note('B', 'no se capturó el request de crear evento: se saltean los replays del bug 4');
 
-  // UI: S/0 + ilimitado se frena antes de enviar (alerta, sin navegar).
+  // UI: S/0 + ilimitado se frena en el paso 4 con un error en línea (sin alert, sin avanzar).
   p.__dialogs = [];
   await fillBuilder({
-    name: `E2E Inval ${STAMP}`, slug: `e2e-inval-${STAMP}-ui`, startsAt: starts, endsAt: ends,
+    name: `E2E Inval ${STAMP}`, slug: `e2e-inval-${STAMP}-ui`, startsAt: starts, endsAt: ends, hasta: 4,
     types: [{ name: 'Gratis', unlimited: true, phases: [{ price: 0 }] }],
   });
-  await p.getByRole('button', { name: 'Crear evento' }).click();
-  await sleep(1500);
+  await sleep(500);
   await shot(p, 'B', 'builder-gratis-ilimitado');
-  check('B', 'bug4: builder frena S/0 + ilimitado con alerta', p.__dialogs.some((d) => /alert: .*gratis e ilimitado/.test(d)) && /\/admin\/events\/new/.test(p.url()), p.__dialogs.join(' | '));
+  const errLinea = await p.locator('.s-err').filter({ hasText: /gratis no puede ser sin límite/ }).filter({ visible: true }).count();
+  check('B', 'bug4: el asistente frena S/0 + ilimitado con error en línea en el paso 4 (sin alert, sin navegar)',
+    errLinea > 0 && !p.__dialogs.some((d) => /^alert/.test(d)) && p.url().includes("/admin/events/new") && (await p.getByText('Paso 4 de 6').count()) > 0, p.__dialogs.join(' | ') || `errores en línea=${errLinea}`);
+
+  // Evento SIN entradas ("Saltar por ahora"): se crea, gasta 1 de saldo y no se publica.
+  const slugSin = `e2e-sin-entradas-${STAMP}`;
+  const balSin0 = (await dbBrand()).event_balance;
+  await fillBuilder({ name: `E2E Sin entradas ${STAMP}`, slug: slugSin, startsAt: starts, endsAt: ends, sinEntradas: true });
+  await p.getByRole('button', { name: 'Crear evento' }).click();
+  await p.waitForURL(/[/]admin[/]events[/][0-9a-f-]{36}/, { timeout: 45000 }).catch(() => {});
+  const mSin = p.url().match(/[/]admin[/]events[/]([0-9a-f-]{36})/);
+  const sinId = mSin?.[1];
+  const sinEv = sinId ? (await svc.from('events').select('id, brand_id, is_published').eq('id', sinId).maybeSingle()).data : null;
+  const sinTipos = sinId ? ((await svc.from('ticket_types').select('id').eq('event_id', sinId)).data ?? []).length : -1;
+  check('B', 'evento SIN entradas se crea en demotest, en borrador y con 0 tipos', sinEv?.brand_id === BRAND_ID && sinEv.is_published === false && sinTipos === 0, `${p.url()} tipos=${sinTipos}`);
+  const balSin1 = (await dbBrand()).event_balance;
+  check('B', 'evento SIN entradas descuenta 1 de saldo', balSin1 === balSin0 - 1, `${balSin0} → ${balSin1}`);
+  if (sinId) {
+    await settle(p);
+    const t0 = (await toastLog(p)).length;
+    await p.getByRole('button', { name: /Publicar evento/ }).click().catch(() => {});
+    await sleep(3000);
+    const msgSin = (await toastLog(p)).slice(t0).join(' | ');
+    const pubSin = (await svc.from('events').select('is_published').eq('id', sinId).single()).data.is_published;
+    await shot(p, 'B', 'sin-entradas-publicar');
+    check('B', '"Publicar" NO deja publicar un evento sin tipo de entrada activo', pubSin === false && /al menos un tipo de entrada/.test(msgSin), `publicado=${pubSin} · ${msgSin}`);
+    // Limpieza: borrar el evento (service role, solo demotest) y devolver el saldo.
+    const del = await svc.from('events').delete().eq('id', sinId).eq('brand_id', BRAND_ID);
+    const upd = await svc.from('brands').update({ event_balance: balSin0 }).eq('id', BRAND_ID).eq('event_balance', balSin1);
+    const balSin2 = (await dbBrand()).event_balance;
+    check('B', 'limpieza del evento sin entradas: borrado y saldo devuelto', !del.error && !upd.error && balSin2 === balSin0, `${del.error?.message ?? ''} ${upd.error?.message ?? ''} saldo=${balSin2}`);
+  }
 
   // Editar: mover el inicio corre el fin con el mismo delta; al pasado se rechaza.
   const ev0 = (await svc.from('events').select('starts_at, ends_at').eq('id', S.eventId).single()).data;
