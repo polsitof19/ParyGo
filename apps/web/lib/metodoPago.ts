@@ -3,15 +3,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 // ¿Hace falta un método de pago para publicar este evento? (Paul, 2026-10-01:
 // "algunos eventos tal vez sean gratis y no es necesario el método de pago").
 // Un evento COBRA si no está marcado gratis y tiene al menos una entrada activa
-// que no es cortesía. En un evento pago un tipo de S/0 nace cortesía por
-// trigger (0059), así que "no cortesía" = se vende con precio.
+// que no es cortesía y tiene precio > 0 (un S/0 que quedó de cuando el evento
+// era gratis no se vende en un evento pago: publicTicketGuard lo oculta;
+// Codex P2 2026-10-01).
 // Falla CERRADO: si no se puede leer, se asume que cobra.
 export async function eventoCobra(admin: SupabaseClient, eventId: string, brandId: string): Promise<boolean> {
   // Las dos consultas en paralelo (una sola espera desde Lima).
   const [{ data: ev, error }, { count, error: e2 }] = await Promise.all([
     admin.from('events').select('is_free').eq('id', eventId).eq('brand_id', brandId).maybeSingle(),
     admin.from('ticket_types').select('id', { count: 'exact', head: true })
-      .eq('event_id', eventId).eq('is_active', true).eq('is_courtesy', false),
+      .eq('event_id', eventId).eq('is_active', true).eq('is_courtesy', false).gt('price_cents', 0),
   ]);
   if (error || e2) return true;
   if (!ev || ev.is_free) return false;
