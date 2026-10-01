@@ -102,19 +102,30 @@ export type Peldano = {
   estado: 'pasada' | 'vigente' | 'futura';
 };
 
-/** Misma regla que get_event_active_prices: vigente = la primera cuya ventana
- *  contiene a ahora. Los tres conceptos parten de esta misma lista. */
+/** Misma regla que get_event_active_prices (0077): vigente = la fase cuya
+ *  ventana contiene a ahora; si ninguna (antes de la primera, en un hueco o
+ *  después de la última), la PRÓXIMA y, si no hay próxima, la última que
+ *  terminó. Lo que se muestra es lo que cobra startCheckout. Los tres
+ *  conceptos parten de esta misma lista. */
 export function armarEscalera(t: TicketType): Peldano[] {
   const ahora = Date.now();
   if (t.phases.length === 0) {
     return [{ titulo: t.name, sub: null, precio: t.active_price_cents, estado: 'vigente' }];
   }
   const ordenadas = [...t.phases].sort((a, b) => a.sort_order - b.sort_order);
-  const iVigente = ordenadas.findIndex((f) => {
+  let iVigente = ordenadas.findIndex((f) => {
     const empezo = !f.starts_at || Date.parse(f.starts_at) <= ahora;
     const sigue = !f.ends_at || Date.parse(f.ends_at) > ahora;
     return empezo && sigue;
   });
+  if (iVigente === -1) {
+    // Sin fecha, Date.parse da NaN y las dos comparaciones la descartan.
+    const proxima = ordenadas.map((f, i) => ({ i, s: Date.parse(f.starts_at ?? '') }))
+      .filter((x) => x.s > ahora).sort((a, b) => a.s - b.s)[0];
+    const ultima = ordenadas.map((f, i) => ({ i, e: Date.parse(f.ends_at ?? '') }))
+      .filter((x) => x.e <= ahora).sort((a, b) => b.e - a.e)[0];
+    iVigente = proxima?.i ?? ultima?.i ?? -1;
+  }
   return ordenadas.map((f, i) => {
     const estado: Peldano['estado'] = i === iVigente ? 'vigente' : i < iVigente || iVigente === -1 ? 'pasada' : 'futura';
     // Sin nombre: las del medio son preventas numeradas y la última la Regular,
