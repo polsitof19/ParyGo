@@ -411,6 +411,35 @@ supabase/verify-0053-0058.mjs (comprobaciones de estado esperado).
 OJO con `mgmt.mjs types`: PISA database.types.ts entero y regenerarlo completo
 rompe tipos afinados a mano — las columnas nuevas se agregan a mano.
 
+PANEL ÚNICO ESCRITOR (0077 + 0078, en PRODUCCIÓN desde 2026-10-01, regla de
+Paul: "las estadísticas no se mueven; el organizador edita su evento, entradas
+y precios solo desde el panel"). anon/authenticated NO tienen INSERT/UPDATE/
+DELETE en orders, tickets, yape_proofs, promo_codes, events, ticket_types,
+ticket_type_price_phases ni validator_codes (ni TRUNCATE en ninguna tabla de
+public); se borraron sus policies de escritura. Antes el dueño podía poner su
+orden en 'paid' o ticket_types.sold=0 por PostgREST y el PERSONAL DE PUERTA
+podía re-habilitar un QR usado. Toda escritura de la app va por service role
+o RPC DEFINER: si algo nuevo escribe con la sesión del usuario, va a fallar
+con 42501 (a propósito). Test: e2e/permisos-escritura.mjs (JWT real de anon,
+dueño y puerta, 27/27). Mismo día, get_event_active_prices: sin fase activa
+cobra la PRÓXIMA fase, si no hay la ÚLTIMA terminada y recién sin fases el
+base (antes caía al base, que suele ser la preventa más barata); armarEscalera
+(conceptos.tsx) replica la regla para que lo que se MUESTRA sea lo que se
+COBRA. Test: e2e/precio-sin-fase.mjs (13/13).
+
+AVISO PUSH DE VENTAS (0079, tabla en producción 2026-10-01; código en la rama
+feat/push-ventas): push_suscripciones solo service role (probado con JWT:
+42501). lib/push.ts con @block65/webcrypto-web-push (aes128gcm, el único que
+acepta Apple; @pushforge/builder usaba aesgcm y NO llega a iPhone). Secreto
+VAPID_PRIVATE_JWK en Cloudflare (parygo-app) y en apps/web/.env.local; la
+clave pública se deriva del JWK. Se activa en Cabina → Ventas. Test:
+e2e/push-cifrado.mts.
+
+MARKETING vive fuera del repo desde 2026-10-01: D:\ParyGo nuevo\ParyGo-Marketing
+(git propio). La landing marca TODOS los medios de cobro como "Disponible" por
+decisión de Paul (se implementan ya: Mercado Pago con conectar cuenta, PayPal,
+cripto y medios locales).
+
 CERRADO (0074, 2026-09-28): la 0054 había agregado brands.yape_qr_url sin
 `grant select ... to authenticated` (las columnas de brands se exponen una por
 una: 0023/0043/0052) y "Mi marca" salía en blanco con la sesión del
@@ -562,7 +591,7 @@ cada consulta cruzaba el continente. Se prendió por la API de Cloudflare
 [placement] de apps/web/wrangler.toml NO lo aplicó la integración con Git.
 Verificar con el GET del proyecto de Pages; el PATCH conserva las variables.
 
-Incrementales, idempotentes, numeradas (vamos por 0075). Backwards-compatible
+Incrementales, idempotentes, numeradas (vamos por 0079). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
 para no romper la app vieja desplegada.
 
