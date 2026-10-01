@@ -46,9 +46,26 @@ function eventSchema(t: Textos['t']) {
     ends_at: z.string().optional().or(z.literal('')),
     venue_name: z.string().max(120).optional().or(z.literal('')),
     venue_address: z.string().max(200).optional().or(z.literal('')),
+    // Enlace de Google Maps (asistente, paso "Dónde"): https, va a un href.
+    venue_maps_url: z.string().url().startsWith('https://').max(500).optional().or(z.literal('')),
     min_age: z.string().optional().or(z.literal('')),
     refund_policy: z.string().max(500).optional().or(z.literal('')),
   });
+}
+
+const SLUG_EVENTO = /^[a-z0-9][a-z0-9-]{0,40}[a-z0-9]$/;
+
+// Aviso en vivo del link del evento en el asistente (✓ libre / ✕ en uso).
+// Acotado a la marca de la SESIÓN: el slug es único por marca (0001).
+export async function eventoSlugLibre(slug: string): Promise<boolean> {
+  const user = await requireSession();
+  const ctxW = contextoEscritura(user);
+  const s = String(slug ?? '').trim().toLowerCase();
+  if (!ctxW || !SLUG_EVENTO.test(s)) return false;
+  const { count } = await createAdminClient()
+    .from('events').select('id', { count: 'exact', head: true })
+    .eq('brand_id', ctxW.brandId).eq('slug', s);
+  return !count;
 }
 
 export async function createBrandEventAction(
@@ -81,7 +98,9 @@ export async function createBrandEventAction(
   } catch {
     return { ok: false, message: t('Tipos de entrada inválidos.', 'Invalid ticket types.') };
   }
-  const parsedTT = z.array(ticketTypeSchema).min(1, t('Agrega al menos un tipo de entrada', 'Add at least one ticket type')).safeParse(ticketTypesRaw);
+  // Las entradas son opcionales (0082): el asistente deja "saltar por ahora" y
+  // se agregan después en Entradas. Publicar sin un tipo activo sigue bloqueado.
+  const parsedTT = z.array(ticketTypeSchema).safeParse(ticketTypesRaw);
   if (!parsedTT.success) {
     return { ok: false, message: parsedTT.error.errors[0]?.message ?? t('Revisa los tipos de entrada.', 'Check the ticket types.') };
   }
@@ -160,6 +179,13 @@ export async function createBrandEventAction(
     if (freeErr) console.error('[createEvent] no se pudo marcar gratis', { newEventId, detalle: freeErr.message });
   }
 
+  // El enlace de Google Maps, por la misma razón (la RPC no lo conoce).
+  const mapsUrl = parsedEvent.data.venue_maps_url;
+  if (!error && newEventId && mapsUrl) {
+    const { error: mapsErr } = await admin.from('events').update({ venue_maps_url: mapsUrl }).eq('id', newEventId);
+    if (mapsErr) console.error('[createEvent] no se guardó el enlace de mapa', { newEventId, detalle: mapsErr.message });
+  }
+
   // Las medidas del flyer (0065), por la misma razón: create_brand_event no
   // las conoce. Si esto falla, la página las mide por red (el respaldo).
   if (!error && newEventId && dims?.cover_w) {
@@ -172,7 +198,7 @@ export async function createBrandEventAction(
     const tope = mensajePrueba(msg, await idiomaPanel());
     if (tope) return { ok: false, message: tope };
     if (msg.includes('INSUFFICIENT_BALANCE') || msg.includes('NO_TRIAL')) {
-      return { ok: false, message: t('Tu marca no tiene saldo de eventos. Contacta a ParyGo para cargar un pack.', 'Your brand has no event balance. Contact ParyGo to load a pack.') };
+      return { ok: false, message: t('Tu marca no tiene saldo de eventos. Compra un paquete en Comprar eventos.', 'Your brand has no event balance. Buy a pack in Buy events.') };
     }
     if (msg.includes('NO_TICKET_TYPES')) {
       return { ok: false, message: t('Agrega al menos un tipo de entrada.', 'Add at least one ticket type.') };
@@ -181,7 +207,7 @@ export async function createBrandEventAction(
       if (/ttpp_ticket_sort_uniq/.test(msg)) {
         return { ok: false, message: t('Dos fases de un tipo de entrada tienen el mismo orden.', 'Two phases of a ticket type have the same order.') };
       }
-      return { ok: false, message: t('Ya existe un evento con ese slug.', 'An event with that slug already exists.'), fieldErrors: { slug: t('En uso', 'In use') } };
+      return { ok: false, message: t('Ya tienes un evento con ese link. Cámbialo en el primer paso.', 'You already have an event with that link. Change it in the first step.'), fieldErrors: { slug: t('En uso', 'In use') } };
     }
     if (error?.code === '23514') {
       return { ok: false, message: t('Una fase de precio tiene fechas o precio inválidos.', 'A price phase has invalid dates or price.') };

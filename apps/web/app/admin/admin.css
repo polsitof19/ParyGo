@@ -54,12 +54,187 @@
 .admin-shell .a-jump a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; font-size: var(--s-ui); font-weight: 600; color: var(--ink-2); text-decoration: underline; text-underline-offset: 4px; }
 .admin-shell .a-anchor { scroll-margin-top: 84px; }
 
-/* ---------- Crear evento: pasos numerados ---------- */
-.admin-shell .a-step { display: flex; align-items: center; gap: 10px; }
-.admin-shell .a-step__n {
-  display: inline-grid; place-items: center; width: 26px; height: 26px; flex: none; border-radius: 50%;
-  background: var(--accent); color: var(--on-accent); font-size: var(--s-meta); font-weight: 600;
+/* ---------- Crear evento: el ASISTENTE (2026-10-01) ----------
+   Una pregunta por pantalla (EventWizard.tsx), como /empezar. A la izquierda
+   la pregunta; en la compu (≥1280) a la derecha la página de compra EN VIVO
+   dentro de un teléfono (maquetas v2, tmp/maquetas-panel/v2). En el celular
+   no hay vista previa: el paso 1 ya muestra el link en una línea. */
+.admin-shell .cw { display: grid; gap: var(--s-s5); }
+.admin-shell .cw-col { min-width: 0; max-width: 640px; }
+.admin-shell .cw [hidden] { display: none !important; }
+.admin-shell .cw-h1 { margin-top: var(--s-s1); }
+.admin-shell .cw-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s-s2); min-height: 44px; margin-top: var(--s-s2); }
+.admin-shell .cw-atras {
+  display: inline-flex; align-items: center; gap: var(--s-s1); min-height: 44px; padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: var(--s-ui); font-weight: 600; color: var(--ink);
+  transition: transform .14s ease-out;
 }
+.admin-shell .cw-atras svg { width: var(--s-s2); height: var(--s-s2); }
+.admin-shell .cw-atras:active { transform: scale(.97); }
+.admin-shell .cw-n { font-size: var(--s-meta); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+/* Progreso: barra decorativa de acento (el texto "Paso N de 6" lo dice). */
+.admin-shell .cw-barra { height: 4px; margin: var(--s-s1) 0 var(--s-s4); border-radius: var(--r-pill); background: var(--line); overflow: hidden; }
+.admin-shell .cw-barra span { display: block; height: 100%; background: var(--accent); transform-origin: left; transform: scaleX(var(--p)); transition: transform .22s var(--ease); }
+
+.admin-shell .cw-q { font-family: var(--display); font-weight: 600; font-size: var(--s-t2); line-height: 1.2; letter-spacing: -0.02em; margin-bottom: var(--s-s1); }
+.admin-shell .cw-q:focus { outline: none; }
+.admin-shell .cw-q + .s-field, .admin-shell .cw-q + .cw-grid { margin-top: var(--s-s3); }
+.admin-shell .cw-sub { font-size: var(--s-ui); color: var(--ink-2); line-height: 1.45; margin-bottom: var(--s-s3); }
+.admin-shell .cw-opt { font-weight: 400; color: var(--ink-3); }
+.admin-shell .cw-hint-top { margin: 0 0 var(--s-s2); }
+.admin-shell .cw-corto { max-width: 120px; }
+.admin-shell .cw .s-input + .s-check { margin-top: var(--s-s1); }
+
+/* Paso 1: el link real, en una línea (lo que comparte). ✓/✕ son íconos con
+   --ok/--alert (≥3:1 de objeto gráfico); la palabra va en tinta. */
+.admin-shell .cw-link { display: flex; align-items: center; gap: var(--s-s1); min-width: 0; margin-top: var(--s-s3); font-size: var(--s-ui); color: var(--ink-2); }
+.admin-shell .cw-link__lock { width: 14px; height: 14px; flex: none; color: var(--ink-3); }
+.admin-shell .cw-link__url { min-width: 0; overflow-wrap: anywhere; }
+.admin-shell .cw-link__url b { color: var(--ink); font-weight: 600; }
+.admin-shell .cw-link__st { display: inline-flex; align-items: center; gap: 6px; flex: none; margin-left: auto; color: var(--ink); font-weight: 500; }
+.admin-shell .cw-link__st svg { width: 18px; height: 18px; }
+.admin-shell .cw-ok { color: var(--ok); }
+.admin-shell .cw-no { color: var(--alert); }
+.admin-shell .cw-link + .s-hint { margin-top: var(--s-s1); }
+/* El campo del link con la dirección de la marca delante. */
+.admin-shell .cw-affix { display: flex; align-items: center; border: 1px solid var(--field-line); border-radius: var(--r-btn); transition: border-color .18s, box-shadow .18s; }
+.admin-shell .cw-affix:focus-within { border-color: var(--field-focus); box-shadow: 0 0 0 3px var(--field-ring); }
+.admin-shell .cw-affix .s-input { border: 0; box-shadow: none; padding-left: 2px; min-width: 0; }
+.admin-shell .cw-affix__pre { flex: none; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 14px; font-size: var(--s-field); color: var(--ink-3); }
+
+/* Paso 4: cada tipo separado por hairline (sin tarjetas). */
+.admin-shell .cw-tt { padding: var(--s-s3) 0; border-top: 1px solid var(--line); }
+.admin-shell .s-check + .cw-tt, .admin-shell .cw-hint-top + .cw-tt { margin-top: var(--s-s2); }
+.admin-shell .cw-tt__head { display: flex; align-items: flex-end; gap: var(--s-s1); }
+.admin-shell .cw-tt__name { flex: 1; min-width: 0; }
+.admin-shell .cw-quitar { width: 48px; height: 48px; flex: none; color: var(--ink-2); }
+.admin-shell .cw-quitar svg { width: 18px; height: 18px; }
+.admin-shell .cw-tt .cw-grid { margin-top: var(--s-s2); grid-template-columns: 1fr 1fr; gap: var(--s-s2); }
+.admin-shell .cw-pre { margin-top: var(--s-s2); }
+.admin-shell .cw-pre > .s-btn { margin-top: var(--s-s1); }
+.admin-shell .cw-fase { padding: var(--s-s2) 0 0; }
+.admin-shell .cw-fase + .cw-fase { margin-top: var(--s-s1); border-top: 1px solid var(--line); }
+.admin-shell .cw-fase__t { font-size: var(--s-ui); font-weight: 500; margin-bottom: var(--s-s1); }
+.admin-shell .cw-fase__fecha { margin-top: var(--s-s1); }
+.admin-shell .cw-fase__precio .s-input { max-width: 200px; }
+.admin-shell .cw-mas { display: flex; align-items: center; justify-content: space-between; gap: var(--s-s2); flex-wrap: wrap; padding-top: var(--s-s3); border-top: 1px solid var(--line); }
+.admin-shell .s-check + .cw-mas, .admin-shell .cw-hint-top + .cw-mas { margin-top: var(--s-s2); }
+.admin-shell .cw-cuenta { font-size: var(--s-ui); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+/* Paso 5: el flyer elegido al lado del botón. */
+.admin-shell .cw-flyer { display: flex; align-items: flex-start; gap: var(--s-s2); }
+.admin-shell .cw-flyer__img { width: 96px; height: 120px; flex: none; object-fit: cover; border-radius: var(--r-ctl); border: 1px solid var(--line); }
+.admin-shell .cw-flyer__txt { flex: 1; min-width: 0; }
+
+/* Paso 6: la revisión, filas con hairline y "Editar" a la derecha. */
+.admin-shell .cw-rev { border-top: 1px solid var(--line); }
+.admin-shell .cw-rev > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--s-s2); align-items: center; padding: var(--s-s1) 0; border-bottom: 1px solid var(--line); }
+.admin-shell .cw-rev dt { grid-column: 1; font-size: var(--s-meta); color: var(--ink-2); }
+.admin-shell .cw-rev dd { grid-column: 1; margin: 0; font-size: var(--s-ctl); font-weight: 600; overflow-wrap: anywhere; }
+.admin-shell .cw-rev > div > .s-btn { grid-column: 2; grid-row: 1 / span 2; }
+.admin-shell .cw-rev__l { display: block; }
+.admin-shell .cw-mas-det { margin-top: var(--s-s2); }
+.admin-shell .cw-mas-det > .s-field { margin-top: var(--s-s2); }
+.admin-shell .cw-saldo { margin-top: var(--s-s3); font-size: var(--s-ui); color: var(--ink-2); }
+.admin-shell .cw-aviso { margin-top: var(--s-s3); }
+
+/* Acciones: un solo primario; "Saltar por ahora" como texto. */
+.admin-shell .cw-acc { display: flex; align-items: center; gap: var(--s-s3); flex-wrap: wrap; margin-top: var(--s-s4); }
+.admin-shell .cw-acc .s-btn:active { transform: scale(.97); }
+/* REGLA (Paul, 2026-09-28): en el celular el botón del paso SIEMPRE a la
+   vista. Barra pegada abajo, sobre la barra de secciones del panel (.s-tabbar,
+   60 + zona segura) en <900; de 900 a 959 no hay barra de secciones. */
+@media (max-width: 959px) {
+  .admin-shell .cw-acc {
+    position: sticky; bottom: 0; z-index: 5;
+    margin: var(--s-s4) calc(-1 * var(--pad)) 0;
+    padding: var(--s-s1) var(--pad);
+    background: var(--bg); border-top: 1px solid var(--line);
+  }
+  .admin-shell .cw-acc .s-btn--primary { flex: 1; }
+}
+@media (max-width: 899px) {
+  .admin-shell .cw-acc { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* Cambio de paso: fundido + 8px, 220ms, solo después de tocar algo (nada al
+   cargar). Reduced-motion: fundido de 200ms. */
+@keyframes cw-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes cw-fade { from { opacity: 0; } to { opacity: 1; } }
+.admin-shell .cw--anim .cw-paso:not([hidden]) { animation: cw-in .22s cubic-bezier(0.23, 1, 0.32, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell .cw--anim .cw-paso:not([hidden]) { animation: cw-fade .2s linear both; }
+  .admin-shell .cw-barra span { transition: none; }
+  .admin-shell .cw-atras:active, .admin-shell .cw-acc .s-btn:active { transform: none; }
+}
+
+/* ---------- La vista previa (compu ≥1280) ----------
+   El MARCO es el dibujo de un iPhone (el mismo de VistaPrevia.tsx de
+   /empezar y de las maquetas v2): sus medidas son del teléfono dibujado, no
+   de la interfaz, y por eso son literales (408 de ancho = pantalla de 390).
+   Lo de ADENTRO es la página de compra con la escala del comprador
+   (--b-*, copiada de client.css a 390) y los colores del TEMA de la marca
+   (paletaCompra, inline desde page.tsx): fondo, tinta y botón medidos. */
+.admin-shell .cw-vista { display: none; }
+@media (min-width: 1280px) {
+  .admin-shell .cw { grid-template-columns: minmax(0, 1fr) 408px; align-items: start; }
+  .admin-shell .cw-vista { display: block; position: sticky; top: var(--s-s4); }
+}
+.admin-shell .cw-vista__t { font-size: var(--s-ui); font-weight: 600; color: var(--ink-2); margin-bottom: var(--s-s2); }
+.admin-shell .cw-cel {
+  width: 408px; height: min(800px, calc(100dvh - 120px)); padding: 9px; border-radius: 56px;
+  background: #1C1C1E; box-shadow: inset 0 0 0 2px #3A3A3C;
+}
+.admin-shell .cw-cel__pantalla {
+  --b-h1: 40px; --b-total: 22px; --b-price: 18px; --b-body: 16px; --b-ctl: 15px; --b-meta: 13px; --b-sec: 12.5px; --b-lb: 11px;
+  --b-sx: 4px; --b-s1: 8px; --b-sm: 12px; --b-s2: 16px; --b-s3: 24px; --b-s4: 32px;
+  --b-header: 56px; --b-band: 216px; --b-step: 42px; --b-pill: 50px; --b-bar: 86px;
+  height: 100%; display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 47px; background: var(--bg); color: var(--ink);
+}
+.admin-shell .cw-cel__estado { position: relative; flex: none; height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; font-size: 14px; font-weight: 600; }
+.admin-shell .cw-cel__isla { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 96px; height: 26px; border-radius: var(--r-pill); background: #000000; }
+.admin-shell .cw-cel__ico { display: inline-flex; gap: 4px; }
+.admin-shell .cw-cel__ico svg { width: 15px; height: 15px; }
+.admin-shell .cw-cel__barra {
+  flex: none; display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0;
+  height: 38px; margin: 2px 12px 6px; padding: 0 12px; border-radius: 12px;
+  background: var(--surface-2); color: var(--ink-2); font-size: 14px;
+}
+.admin-shell .cw-cel__barra svg { width: 13px; height: 13px; flex: none; }
+.admin-shell .cw-cel__url { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-shell .cw-cel__url b { color: var(--ink); font-weight: 600; }
+.admin-shell .cw-cel__pag { flex: 1; min-height: 0; overflow: hidden; position: relative; padding: 0 var(--b-s2) var(--b-s3); }
+.admin-shell .cw-pv__head { display: flex; align-items: center; height: var(--b-header); margin: 0 calc(-1 * var(--b-s2)); padding: 0 var(--b-s2); border-bottom: 1px solid var(--line); font-size: var(--b-ctl); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-shell .cw-pv__ph { color: var(--ink-3); font-weight: 500; }
+/* La banda del flyer: alto fijo (216) y el flyer entero, como b-hero__shot. */
+.admin-shell .cw-pv__fly { position: relative; isolation: isolate; display: grid; place-items: center; height: var(--b-band); margin-top: var(--b-s2); border-radius: var(--r-card); overflow: hidden; background: var(--surface); font-size: var(--b-ctl); }
+/* Velo sobre FOTO (excepción de DESIGN.md): el flyer difuminado rellena la banda. */
+.admin-shell .cw-pv__blur { position: absolute; inset: -12%; background-size: cover; background-position: center; filter: blur(28px) brightness(.55); }
+.admin-shell .cw-pv__fly img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.admin-shell .cw-pv__kicker { margin-top: var(--b-s3); font-size: var(--b-lb); font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); line-height: 1.4; }
+.admin-shell .cw-pv__name { margin-top: var(--b-sm); font-family: var(--display); font-weight: 800; font-size: var(--b-h1); line-height: .95; letter-spacing: -0.04em; overflow-wrap: break-word; text-wrap: balance; }
+.admin-shell .cw-pv__linea { display: flex; align-items: center; gap: var(--b-s1); margin-top: var(--b-s2); font-size: var(--b-ctl); color: var(--ink-2); }
+.admin-shell .cw-pv__dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--brand-mark); }
+.admin-shell .cw-pv__tks { margin-top: var(--b-s4); display: flex; flex-direction: column; gap: var(--b-s1); }
+.admin-shell .cw-pv__h { font-size: var(--b-total); font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; }
+.admin-shell .cw-pv__hint { display: flex; align-items: center; gap: var(--b-sx); margin-bottom: var(--b-s1); font-size: var(--b-ctl); color: var(--ink-2); }
+.admin-shell .cw-pv__plus,
+.admin-shell .cw-pv__mas { display: inline-grid; place-items: center; flex: none; border-radius: 50%; background: var(--brand-fill); color: var(--on-fill); box-shadow: 0 0 0 2px var(--brand-mark); font-weight: 700; line-height: 1; }
+.admin-shell .cw-pv__plus { width: var(--b-s3); height: var(--b-s3); }
+.admin-shell .cw-pv__tk { display: flex; align-items: center; gap: var(--b-sm); padding: var(--b-s2); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); }
+.admin-shell .cw-pv__tkt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--b-sx); }
+.admin-shell .cw-pv__tkt b { font-size: var(--b-body); font-weight: 600; overflow-wrap: anywhere; }
+.admin-shell .cw-pv__tkt span { font-size: var(--b-price); font-weight: 700; font-variant-numeric: tabular-nums; }
+.admin-shell .cw-pv__menos { display: inline-grid; place-items: center; width: var(--b-step); height: var(--b-step); flex: none; border-radius: 50%; border: 1px solid var(--edge); color: var(--ink-2); font-size: var(--b-total); }
+.admin-shell .cw-pv__qty { min-width: var(--b-s2); text-align: center; font-size: var(--b-price); font-weight: 600; }
+.admin-shell .cw-pv__mas { width: var(--b-step); height: var(--b-step); font-size: var(--b-total); }
+.admin-shell .cw-pv__tkph { display: grid; place-items: center; min-height: 76px; padding: var(--b-s2); border: 1.5px dashed var(--edge); border-radius: var(--r-card); font-size: var(--b-ctl); color: var(--ink-3); text-align: center; }
+.admin-shell .cw-pv__cta { flex: none; display: flex; align-items: center; justify-content: space-between; gap: var(--b-s2); min-height: var(--b-bar); padding: 0 var(--b-s2) var(--b-s1); border-top: 1px solid var(--edge-soft); background: var(--bg); }
+.admin-shell .cw-pv__desde { display: flex; flex-direction: column; min-width: 0; }
+.admin-shell .cw-pv__desde > span { font-size: var(--b-sec); color: var(--ink-2); }
+.admin-shell .cw-pv__desde b { font-size: var(--b-total); font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.15; white-space: nowrap; }
+.admin-shell .cw-pv__btn { display: inline-flex; align-items: center; height: var(--b-pill); padding: 0 var(--b-s3); border-radius: var(--r-pill); background: var(--edge-faint); color: var(--ink-3); font-size: var(--b-ctl); font-weight: 600; white-space: nowrap; }
 
 /* ---------- Lista de eventos: vendidas ---------- */
 .admin-shell .a-evrow__sold { font-size: var(--s-micro); font-weight: 400; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
