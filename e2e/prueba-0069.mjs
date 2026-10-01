@@ -27,7 +27,7 @@ try {
   const r = await Promise.all(['a', 'b'].map((x) => svc.rpc('create_brand_trial_event', {
     p_brand_id: DEMO, p_actor_user_id: null,
     p_event: { slug: `prueba-0069-${sufijo}-${x}`, name: 'Prueba 0069', starts_at: '2027-01-10T02:00:00Z' },
-    p_ticket_types: tt([TOPE - 11, 9]), // suma TOPE-2
+    p_ticket_types: tt([TOPE - 4, 2]), // suma TOPE-2 (con tope 10: 6 + 2)
   })));
   const oks = r.filter((x) => !x.error);
   oks.forEach((x) => creados.push(x.data));
@@ -53,7 +53,7 @@ try {
   const { data: ev2 } = await svc.from('events').select('es_prueba').eq('id', ev).single();
   check(!!e1.error && ev2.es_prueba, `organizador no quita es_prueba (${e1.error?.message ?? 'SIN ERROR'})`);
   const e2 = await org.from('ticket_types').update({ capacity: 500 }).eq('id', tts[0].id).select('id');
-  check(!!e2.error && e2.error.message.includes('PRUEBA_TOPE'), `organizador no pasa el tope (${e2.error?.message ?? 'SIN ERROR'})`);
+  check(!!e2.error && /PRUEBA_TOPE|permission denied/i.test(e2.error.message), `organizador no pasa el tope (por el tope o sin permiso de escritura directa) (${e2.error?.message ?? 'SIN ERROR'})`);
   const e3 = await org.rpc('create_brand_trial_event', { p_brand_id: DEMO, p_actor_user_id: null, p_event: {}, p_ticket_types: [] });
   check(!!e3.error && /permission denied/i.test(e3.error.message), `organizador no llama al RPC (${e3.error?.message ?? 'SIN ERROR'})`);
   const e4 = await org.from('brands').update({ prueba_disponible: true }).eq('id', DEMO).select('id');
