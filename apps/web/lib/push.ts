@@ -55,7 +55,10 @@ export async function pushAlSuperAdmin(aviso: AvisoPush): Promise<{ enviados: nu
         { endpoint: s.endpoint, expirationTime: null, keys: { p256dh: s.p256dh, auth: s.auth } },
         { subject: 'mailto:parygoasistencia@gmail.com', publicKey: pub, privateKey: k.d },
       );
-      const r = await fetch(s.endpoint, { method: 'POST', headers, body });
+      // Timeout: corre dentro del webhook de MP y un servicio colgado no debe
+      // demorar la respuesta. Sin redirects: el allowlist de hosts se aplica
+      // al guardar la suscripción y un 3xx lo esquivaría.
+      const r = await fetch(s.endpoint, { method: 'POST', headers, body, redirect: 'manual', signal: AbortSignal.timeout(4000) });
       if (r.status === 404 || r.status === 410) {
         await admin.from('push_suscripciones').delete().eq('id', s.id);
         fallidos++;
