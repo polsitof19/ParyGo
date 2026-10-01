@@ -38,10 +38,9 @@ export async function liquidarPagoMp(
   if (!UUID_RE.test(orderId)) return { ok: false, ignored: 'no_external_reference' };
   // La vuelta trae la orden en la URL: el pago tiene que ser de ESA orden.
   if (opts.orderEsperada && opts.orderEsperada !== orderId) return { ok: false, ignored: 'order_mismatch' };
-  // La preferencia lleva metadata.brand_id; otro brand = ignorar (settle además
-  // filtra por brand_id).
-  const metaBrand = payment?.metadata?.brand_id;
-  if (metaBrand && metaBrand !== brandId) return { ok: false, orderId, ignored: 'brand_mismatch' };
+  // Toda preferencia de entradas lleva metadata.brand_id: sin ella o con otra
+  // marca, no es un pago nuestro (settle además filtra por brand_id).
+  if (payment?.metadata?.brand_id !== brandId) return { ok: false, orderId, ignored: 'brand_mismatch' };
 
   const log = (type: string, payload: Record<string, unknown>) =>
     admin.from('events_log').insert({ brand_id: brandId, order_id: orderId, type, payload });
@@ -51,9 +50,13 @@ export async function liquidarPagoMp(
   if (opts.origen === 'webhook') await log('mp_webhook_received', { payment_id: paymentId, status, action: opts.action ?? null });
 
   if (status === 'refunded' || status === 'charged_back') {
-    // Devuelta: la orden pasa a refunded y sus entradas se ANULAN (0083).
-    const { error } = await admin.rpc('refund_mp_order', { p_order_id: orderId, p_brand_id: brandId, p_status: status });
+    // Devuelta: la orden pasa a refunded y sus entradas se ANULAN (0083/0084),
+    // solo si es EL pago que la liquidó (un duplicado devuelto no las toca).
+    // Un reembolso PARCIAL deja el pago 'approved': la entrada sigue válida
+    // (decisión de negocio: el organizador anula a mano si corresponde).
+    const { data, error } = await admin.rpc('refund_mp_order', { p_order_id: orderId, p_brand_id: brandId, p_payment_id: paymentId, p_status: status });
     if (error) return { ok: false, error: error.message, retry: true };
+    if (!(data as { ok?: boolean } | null)?.ok) return { ok: false, orderId, status, ignored: (data as { action?: string } | null)?.action ?? 'refund_skipped' };
     return { ok: true, orderId, status, action: 'refunded' };
   }
 

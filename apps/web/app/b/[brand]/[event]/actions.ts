@@ -664,6 +664,12 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
 
   if (parsed.data.method === 'mercadopago') {
     try {
+      // El monto que va a MP sale de la ORDEN ya escrita (el que contrasta
+      // settle_mp_payment), no de una variable local: si algún día el promo no
+      // devolviera su total, el comprador pagaría otro monto y no recibiría la
+      // entrada (security review M4).
+      const { data: congelada } = await admin.from('orders').select('total_cents').eq('id', order.id).single();
+      if (typeof congelada?.total_cents !== 'number' || congelada.total_cents <= 0) throw new Error('total congelado ilegible');
       const pref = await createMercadoPagoPreference({
         brandId: event.brand_id,
         orderId: order.id,
@@ -680,7 +686,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
             return `${event.name} · ${n} ${n === 1 ? 'entrada' : 'entradas'}`;
           })(),
           quantity: 1,
-          unitPrice: totalCents / 100,
+          unitPrice: congelada.total_cents / 100,
         }],
         payer: {
           name: parsed.data.buyerName,

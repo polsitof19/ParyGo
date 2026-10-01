@@ -1,4 +1,4 @@
-// 0083: Mercado Pago por marca — pago aprobado tras un rechazo y reembolso que
+// 0083 + 0084: Mercado Pago por marca — pago aprobado tras un rechazo y reembolso que
 // anula entradas. Contra la base REAL, solo en demotest, un puñado de filas.
 //
 //   node e2e/mp-liquidar.mjs
@@ -12,6 +12,10 @@
 //    'already_issued', exactamente qty entradas.
 // 5. Reembolso: orden refunded, entradas anuladas, `sold` vuelve; repetirlo no
 //    hace nada. Una orden no cobrada no se "devuelve".
+// 6. (0084) Devolver OTRO pago de la orden (duplicado) no anula nada; un
+//    segundo pago aprobado queda en la bitácora; un "approved" atrasado no
+//    resucita una orden devuelta; reembolso y aviso aprobado A LA VEZ terminan
+//    en un estado coherente (nunca paid con entradas anuladas).
 // Al final borra todo lo creado y verifica que `sold` quedó como estaba.
 import { svc, anon, env, log, otpSession } from './lib.mjs';
 import { createClient } from '@supabase/supabase-js';
@@ -51,7 +55,7 @@ const orden = async (status) => {
 const settle = (cli, id, pago, cents = TOTAL) => cli.rpc('settle_mp_payment', {
   p_order_id: id, p_brand_id: brand.id, p_payment_id: pago, p_status: 'approved', p_paid_amount_cents: cents,
 });
-const refund = (cli, id) => cli.rpc('refund_mp_order', { p_order_id: id, p_brand_id: brand.id, p_status: 'refunded' });
+const refund = (cli, id, pago) => cli.rpc('refund_mp_order', { p_order_id: id, p_brand_id: brand.id, p_payment_id: pago, p_status: 'refunded' });
 const entradas = async (id) => (await svc.from('tickets').select('id, invalidated_at').eq('order_id', id)).data ?? [];
 const estado = async (id) => (await svc.from('orders').select('status').eq('id', id).single()).data.status;
 
@@ -65,7 +69,7 @@ try {
   for (const [quien, cli] of [['anon', anon()], ['brand_admin', auth]]) {
     const s = await settle(cli, o0, `e2e-${quien}-${STAMP}`);
     check(`${quien} NO puede ejecutar settle_mp_payment`, !!s.error && !s.data, s.error?.code);
-    const r = await refund(cli, o0);
+    const r = await refund(cli, o0, 'x');
     check(`${quien} NO puede ejecutar refund_mp_order`, !!r.error && !r.data, r.error?.code);
   }
   check('los intentos sin permiso no emitieron nada', (await entradas(o0)).length === 0 && (await estado(o0)) === 'failed');
@@ -91,14 +95,31 @@ try {
 
   // ---------- 5. reembolso ----------
   const antes = await sold();
-  const r1 = await refund(svc, o2);
+  const otro = await refund(svc, o2, `e2e-dup-${STAMP}`);
+  check('devolver OTRO pago de la orden no anula nada', otro.data?.action === 'payment_mismatch' && (await entradas(o2)).every((t) => !t.invalidated_at) && (await estado(o2)) === 'paid', JSON.stringify(otro.data ?? otro.error));
+  const dup = await settle(svc, o2, `e2e-dup-${STAMP}`);
+  const { count: nDup } = await svc.from('events_log').select('id', { count: 'exact', head: true }).eq('order_id', o2).eq('type', 'mp_duplicate_payment');
+  check('un segundo pago aprobado queda anotado (mp_duplicate_payment)', dup.data?.action === 'already_issued' && nDup === 1, `${dup.data?.action} n=${nDup}`);
+  const r1 = await refund(svc, o2, pago);
   check('reembolso → refunded y entradas anuladas', r1.data?.action === 'refunded' && r1.data?.tickets_anuladas === QTY, JSON.stringify(r1.data ?? r1.error));
   check('la orden quedó refunded', (await estado(o2)) === 'refunded');
   check('todas sus entradas tienen invalidated_at', (await entradas(o2)).every((t) => t.invalidated_at));
   check(`sold bajó ${QTY}`, (await sold()) === antes - QTY, `sold=${await sold()}`);
-  const r2 = await refund(svc, o2);
+  const r2 = await refund(svc, o2, pago);
   check('repetir el reembolso no hace nada', r2.data?.tickets_anuladas === 0, JSON.stringify(r2.data));
-  const r3 = await refund(svc, o1);
+  const tarde = await settle(svc, o2, pago);
+  check('un approved atrasado no resucita la orden devuelta', tarde.data?.action === 'refunded' && (await estado(o2)) === 'refunded', JSON.stringify(tarde.data ?? tarde.error));
+
+  // Reembolso y aviso aprobado del mismo pago a la vez sobre una orden ya pagada.
+  const o3 = await orden('pending_payment');
+  const p3 = `e2e-rc-${STAMP}`;
+  await settle(svc, o3, p3);
+  await Promise.all([refund(svc, o3, p3), settle(svc, o3, p3)]);
+  const est3 = await estado(o3), tk3 = await entradas(o3);
+  const coherente = (est3 === 'refunded' && tk3.every((t) => t.invalidated_at)) || (est3 === 'paid' && tk3.every((t) => !t.invalidated_at));
+  check('reembolso + aprobado a la vez → estado coherente', coherente, `${est3} anuladas=${tk3.filter((t) => t.invalidated_at).length}/${tk3.length}`);
+
+  const r3 = await refund(svc, o1, 'x');
   check('una orden no cobrada no se devuelve', r3.data?.action === 'not_paid' && (await estado(o1)) === 'failed', JSON.stringify(r3.data));
 } finally {
   // Limpieza: entradas (el trigger descuenta las activas de sold), ítems, bitácora y órdenes.

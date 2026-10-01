@@ -68,7 +68,11 @@ export default async function ConfirmationPage({
   if (
     order.payment_method === 'mercadopago' &&
     ['pending_payment', 'failed', 'expired'].includes(order.status) &&
-    paymentId && /^\d{1,20}$/.test(paymentId)
+    paymentId && /^\d{1,20}$/.test(paymentId) &&
+    // Una consulta a MP cada 10 s por orden (la página es pública y el poller
+    // refresca solo: sin esto, un id de orden alcanzaba para machacar la API de
+    // MP de la marca; security review A1).
+    (await admin.rpc('tomar_candado', { p_clave: `mp_vuelta:${order.id}`, p_segundos: 10 })).data === true
   ) {
     const r = await liquidarPagoMp(admin, order.brand_id, paymentId, { origen: 'vuelta', orderEsperada: order.id });
     if (r.ok && (r.action === 'issued' || r.action === 'already_issued')) {
