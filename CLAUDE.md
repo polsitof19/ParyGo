@@ -435,7 +435,7 @@ por correo, 5 verificaciones/h. Código de 6 dígitos (Paul pidió 4; Supabase n
 días se archivan, liberan el link y la membresía. 0081: brands sin
 INSERT/UPDATE/DELETE para anon/authenticated (como 0078). CONTRASEÑAS: regla
 única lib/password.ts (8+, mayúscula, minúscula y número) en todos los que la
-fijan; en Supabase Auth se activa con `node supabase/mgmt.mjs auth politica`
+fijan; en Supabase Auth ACTIVA desde 2026-10-01 (`node supabase/mgmt.mjs auth politica`; verificado: "abcdefgh1" rechazada, código de 6)
 (NO antes de que esté desplegado el /empezar nuevo: el viejo creaba la cuenta
 después del pago). Tests: e2e/empezar.mjs 53/53, e2e/capturas-alta.mjs 8/8,
 e2e/prueba-0069.mjs, login-next 19/19, permisos-escritura (8 tablas).
