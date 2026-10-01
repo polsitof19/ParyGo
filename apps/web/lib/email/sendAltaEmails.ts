@@ -67,3 +67,25 @@ Did not create this account? Reply to this email and we will look into it.`
     tags: [{ name: 'kind', value: 'alta_bienvenida' }],
   });
 }
+
+// Alguien pidió crear una cuenta con un correo que YA tiene cuenta (security
+// review 2026-10-01, M1): /empezar responde igual que siempre ("te mandamos un
+// código") para no revelar qué correos existen, y a la casilla le llega esto.
+export async function sendYaTienesCuenta(a: { to: string; lang?: 'es' | 'en' }): Promise<SendResult> {
+  const login = `${publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')}/login`;
+  const en = a.lang === 'en';
+  const cuerpo = en
+    ? `Someone tried to create a ParyGo account with this email, but it already has one. Log in with your email and password.<br><br><span style="color:rgba(35,28,23,0.70);font-size:15px;">If it was not you, you can ignore this email: nothing changed in your account.</span>`
+    : `Alguien intentó crear una cuenta de ParyGo con este correo, pero ya tiene una. Ingresa con tu correo y tu contraseña.<br><br><span style="color:rgba(35,28,23,0.70);font-size:15px;">Si no fuiste tú, ignora este correo: tu cuenta no cambió.</span>`;
+  return sendViaResend({
+    from: `ParyGo <${FROM_EMAIL()}>`,
+    to: [a.to],
+    replyTo: SOPORTE,
+    subject: en ? 'You already have a ParyGo account' : 'Ya tienes una cuenta en ParyGo',
+    html: shell(cuerpo, { href: login, label: en ? 'Log in' : 'Ingresar' }),
+    text: en
+      ? `This email already has a ParyGo account. Log in: ${login}\nIf it was not you, ignore this email.`
+      : `Este correo ya tiene una cuenta en ParyGo. Ingresa: ${login}\nSi no fuiste tú, ignora este correo.`,
+    tags: [{ name: 'kind', value: 'alta_ya_tiene_cuenta' }],
+  });
+}

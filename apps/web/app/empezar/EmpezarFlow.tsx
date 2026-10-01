@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { ArrowRight, Bell, Check, Eye, EyeOff, LogIn } from 'lucide-react';
-import { confirmarCodigo, enviarCodigo, finalizarAlta, slugDisponible, type AltaState } from './actions';
+import { enviarCodigo, finalizarAlta, slugDisponible, type AltaState } from './actions';
 import { passwordOk } from '@/lib/password';
 import { TEXTOS, formatoPrecio, type Lang, type Moneda } from './textos';
 import type { TipoMarca } from '@/lib/packs';
@@ -48,8 +48,9 @@ const FOCO: Partial<Record<Paso, string>> = { 1: 'ez-nombre', 2: 'ez-slug', 3: '
 
 const inicial: AltaState = { ok: false, paso: 'datos', message: null };
 
-function Enviar({ children, disabled, espera }: { children: React.ReactNode; disabled?: boolean; espera: string }) {
-  const { pending } = useFormStatus();
+function Enviar({ children, disabled, espera, ocupado }: { children: React.ReactNode; disabled?: boolean; espera: string; ocupado?: boolean }) {
+  const { pending: enviando } = useFormStatus();
+  const pending = enviando || !!ocupado;
   return (
     <button type="submit" className="ez-btn ez-btn--primary" disabled={disabled || pending} aria-busy={pending}>
       {pending ? espera : <>{children} <ArrowRight aria-hidden="true" className="ez-btn__arrow" /></>}
@@ -88,7 +89,8 @@ export function EmpezarFlow({ lang, tipo = 'marca', planes, inicial: planInicial
   const [ultimo, setUltimo] = useState<AltaState>(inicial);
 
   const [rEnviar, accEnviar] = useFormState(enviarCodigo, inicial);
-  const [rConfirmar, accConfirmar] = useFormState(confirmarCodigo, inicial);
+  // El código se verifica por fetch (verificar/route.ts), no como acción: ver ahí por qué.
+  const [verificando, setVerificando] = useState(false);
   const [rFinal, accFinal] = useFormState(finalizarAlta, inicial);
   // Errores del servidor (se borran al editar ese campo) y los de cada paso.
   const [errSrv, setErrSrv] = useState<AltaState['fieldErrors']>({});
@@ -124,7 +126,6 @@ export function EmpezarFlow({ lang, tipo = 'marca', planes, inicial: planInicial
   }
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => alResultado(rEnviar), [rEnviar]);
-  useEffect(() => alResultado(rConfirmar), [rConfirmar]);
   useEffect(() => alResultado(rFinal), [rFinal]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
@@ -177,12 +178,32 @@ export function EmpezarFlow({ lang, tipo = 'marca', planes, inicial: planInicial
     }
     if (!validar(paso)) { e.preventDefault(); mostrarError(); return; }
     setErrSrv({}); setUltimo(inicial);
+    if (paso === 4) {
+      e.preventDefault();
+      void verificar(new FormData(e.currentTarget));
+    }
+  }
+
+  async function verificar(fd: FormData) {
+    setVerificando(true);
+    try {
+      const res = await fetch('/empezar/verificar', { method: 'POST', body: fd, credentials: 'same-origin' });
+      const r = (await res.json()) as AltaState;
+      if (r.ir) { window.location.assign(r.ir); return; }
+      alResultado(r);
+    } catch {
+      alResultado({ ok: false, paso: 'codigo', message: t.m.noCodigo });
+    } finally {
+      setVerificando(false);
+    }
   }
 
   // Reenviar: mismo envío del paso 3 con reenvio=1, sin salir de la pantalla.
   const [reenviando, setReenviando] = useState(false);
   async function reenviar() {
     setReenviando(true);
+    // Sin esto el error del código anterior tapaba el aviso del reenvío.
+    setErrSrv({}); setErrPaso({});
     const fd = new FormData();
     for (const [k, v] of Object.entries({ nombre, slug, email, whatsapp, plan, tipo, lang, moneda, reenvio: '1', empresa: '' })) fd.set(k, v);
     const r = await enviarCodigo(inicial, fd);
@@ -246,7 +267,7 @@ export function EmpezarFlow({ lang, tipo = 'marca', planes, inicial: planInicial
           </>
         )}
 
-        <form action={paso === 3 ? accEnviar : paso === 4 ? accConfirmar : accFinal} onSubmit={alEnviar} className={`ez-form${paso > 0 ? ' ez-form--paso' : ''}`} noValidate>
+        <form action={paso === 3 ? accEnviar : accFinal} onSubmit={alEnviar} className={`ez-form${paso > 0 ? ' ez-form--paso' : ''}`} noValidate>
           {paso === 0 && (
             <>
               <fieldset className="ez-planes">
@@ -424,7 +445,7 @@ export function EmpezarFlow({ lang, tipo = 'marca', planes, inicial: planInicial
                 {t.w.continuar} <ArrowRight aria-hidden="true" className="ez-btn__arrow" />
               </button>
             ) : paso < 5 ? (
-              <Enviar espera={t.momento}>{t.w.continuar}</Enviar>
+              <Enviar espera={t.momento} ocupado={verificando}>{t.w.continuar}</Enviar>
             ) : (
               <Enviar disabled={libre === false || !passwordOk(password) || (!esPrueba && !pagos)} espera={t.momento}>
                 {esPrueba ? t.c.crearPrueba : t.pagar(precio(elegido))}

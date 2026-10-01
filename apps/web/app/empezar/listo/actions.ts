@@ -49,10 +49,21 @@ export async function completarAlta(_prev: CompletarState, fd: FormData): Promis
     if (!user) redirect(`/login?next=${encodeURIComponent(`/empezar/listo?compra=${compra.id}&lang=${lang}`)}`);
     if (user.id !== brand.alta_usuario) return { ok: false, message: l.otraCuenta };
     const { error: e } = await admin.from('brand_members').insert({ brand_id: brand.id, user_id: user.id, role: 'brand_admin', display_name: email });
-    // Dos pestañas a la vez: la otra ya la reclamó (una dueña por persona).
     if (e && e.code !== '23505') {
       console.error('[empezar/listo] membresía', e.message);
       return { ok: false, message: l.noAlta };
+    }
+    if (e) {
+      // 23505: o la otra pestaña ya la reclamó (bien: al panel) o esta persona
+      // ya es dueña de OTRA marca (una por persona, 0071) y este paquete
+      // pagado quedaría trabado (security review M2): se registra para que
+      // Paul lo resuelva y se le avisa, en vez de mandarla al panel de la otra.
+      const { data: suya } = await admin.from('brand_members').select('user_id').eq('brand_id', brand.id).eq('user_id', user.id).maybeSingle();
+      if (!suya) {
+        await admin.from('events_log').insert({ brand_id: brand.id, actor_user_id: user.id, type: 'alta_pagada_trabada', payload: { purchase_id: compra.id, motivo: 'ya_es_duena_de_otra_marca' } });
+        console.error('[empezar/listo] alta pagada trabada: ya es dueña de otra marca', brand.id);
+        return { ok: false, message: l.trabada };
+      }
     }
     if (!e) {
       await admin.from('brands').update({ archived_at: null }).eq('id', brand.id);

@@ -12,6 +12,7 @@ import { iniciarCompraPack } from '@/lib/compraPack';
 import { crearMarcaParaUsuario, SLUGS_RESERVADOS, SLUG_RE } from '@/lib/altaMarca';
 import { passwordOk, passwordAlAzar } from '@/lib/password';
 import { sendCodigoAlta } from '@/lib/email/sendCodigoAlta';
+import { sendYaTienesCuenta } from '@/lib/email/sendAltaEmails';
 import { TEXTOS, esLang, esMoneda, type Lang, type Textos } from './textos';
 
 // =============================================================
@@ -66,6 +67,9 @@ export type AltaState = {
   paso: 'datos' | 'codigo' | 'clave';
   message: string | null;
   fieldErrors?: Partial<Record<Campo, string>>;
+  // A dónde ir (p. ej. /admin si ya tenía marca). Lo usa la verificación por
+  // fetch (verificar/route.ts), que no puede hacer redirect.
+  ir?: string;
 };
 
 function errores(e: z.ZodError): AltaState['fieldErrors'] {
@@ -174,7 +178,11 @@ export async function enviarCodigo(_prev: AltaState, fd: FormData): Promise<Alta
   // magiclink reemplaza el token de acceso vigente de esa persona.
   const { data: existenteId } = await admin.rpc('usuario_id_por_email', { p_email: d.email });
   if (existenteId && (await yaTieneCuenta(existenteId as string))) {
-    return { ok: false, paso: 'datos', message: m.cuenta, fieldErrors: { email: m.cuentaCampo } };
+    // Misma respuesta que un alta nueva: el formulario no revela qué correos
+    // tienen cuenta (security review M1). A esa casilla le llega "ya tienes
+    // cuenta, ingresa" en vez de un código.
+    await sendYaTienesCuenta({ to: d.email, lang });
+    return { ok: true, paso: 'codigo', message: null };
   }
   // Usuario nuevo SIN confirmar y con contraseña AL AZAR (cumple la regla de
   // Supabase Auth): la suya se pone recién en finalizarAlta, con el correo ya
@@ -206,7 +214,7 @@ export async function confirmarCodigo(_prev: AltaState, fd: FormData): Promise<A
   const v = await supabase.auth.verifyOtp({ email: email.data, token: codigo, type: 'email' });
   if (v.error || !v.data.user) return { ok: false, paso: 'codigo', message: null, fieldErrors: { codigo: m.codigoMal } };
   // Doble envío o alguien que ya tiene marca: al panel, sin tocar nada suyo.
-  if (await yaTieneCuenta(v.data.user.id)) redirect('/admin');
+  if (await yaTieneCuenta(v.data.user.id)) return { ok: true, paso: 'clave', message: null, ir: '/admin' };
   return { ok: true, paso: 'clave', message: null };
 }
 
@@ -226,7 +234,6 @@ export async function finalizarAlta(_prev: AltaState, fd: FormData): Promise<Alt
   if (await yaTieneCuenta(user.id)) redirect('/admin');
 
   const { tipo, p } = leerDatos(fd, m);
-  // El correo del form se ignora: va el de la sesión (y así pasa la validación).
   const datos = p.success ? p.data : null;
   if (!datos) return { ok: false, paso: 'datos', message: m.revisa, fieldErrors: errores(p.error!) };
   if (datos.plan === 'prueba' && tipo !== 'marca') return { ok: false, paso: 'datos', message: m.revisa };
@@ -234,9 +241,56 @@ export async function finalizarAlta(_prev: AltaState, fd: FormData): Promise<Alt
   const password = String(fd.get('password') ?? '');
   if (!passwordOk(password)) return { ok: false, paso: 'clave', message: null, fieldErrors: { password: m.passRegla } };
 
-  // Recién con el correo probado, SU contraseña. Cambiarla cierra las
-  // sesiones (la del código incluida): se vuelve a entrar con la nueva.
   const admin = createAdminClient();
+  // Altas con paquete pendientes de ESTA persona (archivadas y sin dueña).
+  const { data: previas } = await admin.from('brands').select('id, slug, tipo').eq('alta_usuario', user.id).not('archived_at', 'is', null);
+  const pendientes: { id: string; slug: string; tipo: string | null; pagada: boolean }[] = [];
+  for (const b of previas ?? []) {
+    const { count: miembros } = await admin.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', b.id);
+    if (miembros) continue;
+    const { count: pagadas } = await admin.from('pack_purchases').select('id', { count: 'exact', head: true }).eq('brand_id', b.id).eq('status', 'paid');
+    pendientes.push({ ...b, pagada: !!pagadas });
+  }
+  // Con un paquete ya pagado, a terminar esa marca (si no, la plata quedaba
+  // trabada en una marca sin dueña: security review M2).
+  if (pendientes.some((b) => b.pagada)) return { ok: false, paso: 'clave', message: m.pagoEsperando };
+
+  // Las verificaciones de cada camino van ANTES de tocar la contraseña o la
+  // sesión: abrir sesión cambia cookies y Next redibuja la página; un error
+  // después de eso reiniciaba el formulario.
+  let brandId: string | null = null;
+  let pack: ReturnType<typeof packDe> = null;
+  let pasarela: 'paypal' | 'mercadopago' = 'mercadopago';
+  const moneda = esMoneda(fd.get('moneda')) ?? 'PEN';
+  if (datos.plan === 'prueba') {
+    // Una persona con un alta de paquete a medias no saca además una prueba.
+    if (pendientes.length) return { ok: false, paso: 'clave', message: m.pagoEsperando };
+    if (!(await candado(`prueba:${user.id}`, 120))) return { ok: false, paso: 'clave', message: m.muchos };
+    // Una prueba por WhatsApp (cualquier marca que ya lo use).
+    const { count: conEseWa } = await admin.from('brands').select('id', { count: 'exact', head: true }).eq('whatsapp_e164', datos.whatsapp);
+    if (conEseWa) return { ok: false, paso: 'datos', message: m.pruebaUsada, fieldErrors: { whatsapp: m.pruebaUsada } };
+    if (!(await slugLibre(datos.slug))) return tomado(m);
+    // El cupo del día se gasta recién acá: un link tomado no lo consume (B2).
+    if (!(await dentroDelTope('prueba', email, 1, 3, 86400))) return { ok: false, paso: 'clave', message: m.muchos };
+  } else {
+    pack = packDe(Number(datos.plan));
+    // Soles → Mercado Pago; dólares → PayPal. La moneda la elige el navegador
+    // entre dos precios legítimos; el monto lo pone el server (precioDe).
+    pasarela = moneda === 'USD' ? 'paypal' : 'mercadopago';
+    if (!pack || !(pasarela === 'paypal' ? paypalListo() : mpListo())) return { ok: false, paso: 'clave', message: m.pronto };
+    // Se reusa la del mismo link; brands.tipo no cambia nunca (otro tipo =
+    // enlace ocupado).
+    const misma = pendientes.find((b) => b.slug === datos.slug);
+    if (misma) {
+      if ((misma.tipo ?? 'marca') !== tipo) return tomado(m);
+      brandId = misma.id;
+    } else if (!(await slugLibre(datos.slug))) {
+      return tomado(m);
+    }
+  }
+
+  // Recién con el correo probado y todo verificado, SU contraseña. Cambiarla
+  // cierra las sesiones (la del código incluida): se vuelve a entrar.
   const { error: pwErr } = await admin.auth.admin.updateUserById(user.id, { password });
   const { error: inErr } = pwErr ? { error: pwErr } : await supabase.auth.signInWithPassword({ email, password });
   if (inErr) {
@@ -246,13 +300,6 @@ export async function finalizarAlta(_prev: AltaState, fd: FormData): Promise<Alt
 
   // ------------------------------ PRUEBA ------------------------------
   if (datos.plan === 'prueba') {
-    if (!(await candado(`prueba:${user.id}`, 120))) return { ok: false, paso: 'clave', message: m.muchos };
-    // Una prueba por WhatsApp (cualquier marca que ya lo use) y hasta 3
-    // pruebas por conexión por día: con varios correos no alcanza.
-    const { count: conEseWa } = await admin.from('brands').select('id', { count: 'exact', head: true }).eq('whatsapp_e164', datos.whatsapp);
-    if (conEseWa) return { ok: false, paso: 'datos', message: m.pruebaUsada, fieldErrors: { whatsapp: m.pruebaUsada } };
-    if (!(await dentroDelTope('prueba', email, 1, 3, 86400))) return { ok: false, paso: 'clave', message: m.muchos };
-    if (!(await slugLibre(datos.slug))) return tomado(m);
     const alta = await crearMarcaParaUsuario({
       userId: user.id, email, nombre: datos.nombre, slug: datos.slug,
       whatsappE164: datos.whatsapp, prueba: true, idioma: lang, tipo: 'marca',
@@ -266,32 +313,7 @@ export async function finalizarAlta(_prev: AltaState, fd: FormData): Promise<Alt
   }
 
   // ------------------------------ PAQUETE -----------------------------
-  const pack = packDe(Number(datos.plan));
-  // Soles → Mercado Pago; dólares → PayPal. La moneda la elige el navegador
-  // entre dos precios legítimos; el monto lo pone el server (precioDe).
-  const moneda = esMoneda(fd.get('moneda')) ?? 'PEN';
-  const pasarela = moneda === 'USD' ? 'paypal' : 'mercadopago';
-  if (!pack || !(pasarela === 'paypal' ? paypalListo() : mpListo())) {
-    return { ok: false, paso: 'clave', message: m.pronto };
-  }
-
-  // Altas con pack pendientes de ESTA persona (archivadas y sin dueña). Con
-  // una ya pagada, a terminar esa. Se reusa la del mismo link y tipo.
-  const { data: previas } = await admin.from('brands').select('id, slug, tipo').eq('alta_usuario', user.id).not('archived_at', 'is', null);
-  let brandId: string | null = null;
-  for (const b of previas ?? []) {
-    const { count: miembros } = await admin.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', b.id);
-    if (miembros) continue;
-    const { count: pagadas } = await admin.from('pack_purchases').select('id', { count: 'exact', head: true }).eq('brand_id', b.id).eq('status', 'paid');
-    if (pagadas) return { ok: false, paso: 'clave', message: m.pagoEsperando };
-    // brands.tipo no cambia nunca: otra pestaña con otro tipo = enlace ocupado.
-    if (b.slug === datos.slug) {
-      if ((b.tipo ?? 'marca') !== tipo) return tomado(m);
-      brandId = b.id;
-    }
-  }
   if (!brandId) {
-    if (!(await slugLibre(datos.slug))) return tomado(m);
     const alta = await crearMarcaParaUsuario({
       userId: null, altaUsuario: user.id, email, nombre: datos.nombre, slug: datos.slug,
       whatsappE164: datos.whatsapp || null, prueba: false, idioma: lang, tipo,
@@ -307,7 +329,7 @@ export async function finalizarAlta(_prev: AltaState, fd: FormData): Promise<Alt
   const compra = await iniciarCompraPack({
     l: lang,
     // userId null: es el centinela de "alta desde /empezar" (0072 y /listo).
-    brandId, userId: null, email, pack, pasarela,
+    brandId, userId: null, email, pack: pack!, pasarela,
     volver: (id) => `${app}/empezar/listo?compra=${id}&${q}`,
     sufijoPaypal: `&${q}`,
     cancelar: `${app}/empezar?tipo=${tipo}&pack=${datos.plan}&moneda=${moneda}&${q}&cancelado=1`,
