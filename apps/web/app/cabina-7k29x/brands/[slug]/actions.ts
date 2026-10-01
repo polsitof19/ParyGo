@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import { passwordOk, PASSWORD_REGLA } from '@/lib/password';
 import { yapeNumberSchema } from '@/lib/yapeNumber';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
@@ -18,7 +19,7 @@ export type SetBrandPwdState = { ok: boolean; message: string | null };
 const setPwdSchema = z.object({
   brand_id: z.string().uuid(),
   user_id: z.string().uuid(),
-  password: z.string().min(8, 'Mínimo 8 caracteres.'),
+  password: z.string().refine(passwordOk, PASSWORD_REGLA.es),
 });
 
 // Super admin sets a brand_admin's password (target must be brand_admin of

@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import { passwordOk, PASSWORD_REGLA } from '@/lib/password';
 import { yapeNumberSchema } from '@/lib/yapeNumber';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
@@ -172,7 +173,7 @@ const ownerSchema = z.object({
     .max(32)
     .regex(/^[a-z0-9][a-z0-9-]{0,30}[a-z0-9]$/, 'Solo minúsculas, números y guiones'),
   owner_email: z.string().email('Email inválido.'),
-  owner_password: z.string().min(8, 'Mínimo 8 caracteres.').max(72),
+  owner_password: z.string().refine(passwordOk, PASSWORD_REGLA.es),
   // Branding opcional: si Paul no elige color, usa el default.
   primary_color: z
     .string()
