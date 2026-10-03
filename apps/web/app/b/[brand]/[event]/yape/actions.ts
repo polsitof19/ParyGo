@@ -13,7 +13,7 @@ type Result =
 const schema = z.object({
   order_id: z.string().uuid(),
   amount_soles: z.string().min(1),
-  operation_number: z.string().min(3).max(40),
+  operation_number: z.string().min(3).max(100),
   payer_name: z.string().min(2).max(120),
   security_code: z.string().min(2).max(20),
 });

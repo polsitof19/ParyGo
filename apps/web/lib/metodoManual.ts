@@ -45,6 +45,19 @@ export const NOMBRE_MEDIO: Record<Medio, { es: string; en: string }> = {
 export const medioFrase = (medio: Medio, l: 'es' | 'en' = 'es') =>
   medio === 'transferencia' ? NOMBRE_MEDIO[medio][l].toLowerCase() : NOMBRE_MEDIO[medio][l];
 
+// Red de USDT tal como la lee el comprador ("Solo red TRC20 (Tron)").
+const RED_NOMBRE: Record<string, string> = { TRC20: 'TRC20 (Tron)', ERC20: 'ERC20 (Ethereum)', BEP20: 'BEP20 (BNB Chain)', POLYGON: 'Polygon', SOLANA: 'Solana' };
+export const nombreRed = (red: string | null | undefined) => RED_NOMBRE[(red ?? '').toUpperCase()] ?? (red ?? '');
+
+// La cuenta como se LEE (la copia sigue siendo el valor crudo): celulares
+// agrupados. Yape y todo lo que no calza queda tal cual.
+export function cuentaLegible(medio: Medio, cuenta: string): string {
+  if (medio === 'nequi' && /^\d{10}$/.test(cuenta)) return cuenta.replace(/^(\d{3})(\d{3})(\d{4})$/, '$1 $2 $3');
+  if (medio === 'bizum' && /^\d{9}$/.test(cuenta)) return cuenta.replace(/^(\d{3})(\d{3})(\d{3})$/, '$1 $2 $3');
+  if (medio === 'zelle' && /^\d{10}$/.test(cuenta)) return cuenta.replace(/^(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3');
+  return cuenta;
+}
+
 type Ok = { ok: true; cuenta: string; titular: string };
 type Mal = { ok: false; es: string; en: string };
 const mal = (es: string, en: string): Mal => ({ ok: false, es, en });

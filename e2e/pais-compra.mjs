@@ -88,7 +88,7 @@ try {
   const orderId = new URL(p.url()).searchParams.get('order');
   await p.waitForLoadState('networkidle', { timeout: 6000 }).catch(() => {});
   txt = norm(await p.locator('body').innerText());
-  check('/yape: Nequi, cuenta 3001234567 y monto "$ 50.000"', /Nequi/.test(txt) && txt.includes(CUENTA) && /\$\s?50\.000/.test(txt), txt.slice(0, 260));
+  check('/yape: Nequi, cuenta "300 123 4567" (agrupada) y monto "$ 50.000"', /Nequi/.test(txt) && txt.includes('300 123 4567') && /\$\s?50\.000/.test(txt), txt.slice(0, 260));
   check('/yape: sin "yape(a)", ni "S/"', !/yape/i.test(txt.replace(/\/yape/g, '')) && !/S\//.test(txt), txt.match(/.{20}(yape|S\/).{20}/i)?.[0]);
 
   // ---------- panel del dueño (sesión real) ----------

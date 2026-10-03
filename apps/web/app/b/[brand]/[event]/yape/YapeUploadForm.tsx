@@ -56,15 +56,15 @@ export function YapeUploadForm({ orderId, expectedAmountCents, moneda, medio = '
       className="b-yapeform"
     >
       <div className="c-field">
-        <label htmlFor="amount" className="c-label">{esYape ? 'Monto que yapeaste' : 'Monto que pagaste'} ({simbolo(moneda)})</label>
+        <label htmlFor="amount" className="c-label">{esYape ? 'Monto que yapeaste' : medio === 'usdt' ? 'Monto que enviaste' : 'Monto que pagaste'} ({medio === 'usdt' ? 'USDT' : simbolo(moneda)})</label>
         <input id="amount" name="amount_soles" type="number" step={sinDecimales(moneda) ? 1 : 0.01} required defaultValue={sinDecimales(moneda) ? String(expectedAmountCents / 100) : (expectedAmountCents / 100).toFixed(2)} className="c-input" inputMode="decimal" />
-        <p className="c-help">Debe ser exactamente {formatMoney(expectedAmountCents, moneda)}</p>
+        <p className="c-help">Debe ser exactamente {medio === 'usdt' ? `${(expectedAmountCents / 100).toFixed(2)} USDT` : formatMoney(expectedAmountCents, moneda)}</p>
       </div>
 
       <div className="c-field">
-        <label htmlFor="operation_number" className="c-label">N° de operación</label>
-        <input id="operation_number" name="operation_number" required placeholder="00012345" maxLength={20} className="c-input" inputMode="numeric" />
-        <p className="c-help">{esYape ? <>Aparece en tu app Yape como &quot;N° de operación&quot;.</> : <>Aparece en tu comprobante como &quot;N° de operación&quot; o referencia.</>}</p>
+        <label htmlFor="operation_number" className="c-label">{esYape ? 'N° de operación' : medio === 'usdt' ? 'Hash de la transacción (TxID)' : 'N° de operación o referencia'}</label>
+        <input id="operation_number" name="operation_number" required placeholder={medio === 'usdt' ? '0x… o hash de la transacción' : '00012345'} maxLength={esYape ? 20 : 100} className="c-input" inputMode={esYape ? 'numeric' : 'text'} />
+        <p className="c-help">{esYape ? <>Aparece en tu app Yape como &quot;N° de operación&quot;.</> : medio === 'usdt' ? <>Lo ves en tu billetera o exchange, en el detalle del envío.</> : <>Aparece en tu comprobante como &quot;N° de operación&quot; o referencia.</>}</p>
       </div>
 
       <div className="c-field">
@@ -73,11 +73,13 @@ export function YapeUploadForm({ orderId, expectedAmountCents, moneda, medio = '
         <p className="c-help">Debe coincidir con el nombre del comprobante.</p>
       </div>
 
-      <div className="c-field">
-        <label htmlFor="security_code" className="c-label">{esYape ? 'Código de seguridad' : 'Código de seguridad (si tu comprobante lo trae)'}</label>
-        <input id="security_code" name="security_code" required={esYape} placeholder="123 o ABC456" maxLength={20} className="c-input" />
-        <p className="c-help">El código de 3-4 caracteres que figura en el comprobante.</p>
-      </div>
+      {esYape && (
+        <div className="c-field">
+          <label htmlFor="security_code" className="c-label">Código de seguridad</label>
+          <input id="security_code" name="security_code" required placeholder="123 o ABC456" maxLength={20} className="c-input" />
+          <p className="c-help">El código de 3-4 caracteres que figura en el comprobante.</p>
+        </div>
+      )}
 
       <div className="c-field">
         <label htmlFor="receipt" className="c-label">Captura del comprobante</label>

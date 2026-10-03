@@ -128,17 +128,19 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
         // Mercado Pago por OAuth (0086): abierto si está conectado o si se
         // acaba de volver de MP (para ver el aviso).
         tarjeta={
-          <div className="s-folds a-cobro__mp">
-            {avisoMp && <p className={avisoMp.ok ? 's-banner s-banner--ok' : 's-banner s-banner--err'} role="status">{avisoMp.texto}</p>}
-            {fold(
-              t('Mercado Pago (tarjeta y más)', 'Mercado Pago (card and more)'),
-              moneda !== 'PEN' ? t('No disponible', 'Not available') : mpEstado.conectada ? t('Conectado', 'Connected') : t('Sin conectar', 'Not connected'),
-              moneda === 'PEN'
-                ? <MpConexion conectada={mpEstado.conectada} cuenta={mpEstado.cuenta} disponible={mpOauthListo()} puede={!impersonating && duenaRealDe(user) === ctx.brandId} />
-                : <p className="s-card__desc">{t('Mercado Pago solo cobra en soles por ahora.', 'Mercado Pago only charges in soles for now.')}</p>,
-              (moneda === 'PEN' && mpEstado.conectada) || !!avisoMp || undefined,
-            )}
-          </div>
+          moneda === 'PEN' ? (
+            <div className="s-folds a-cobro__mp">
+              {avisoMp && <p className={avisoMp.ok ? 's-banner s-banner--ok' : 's-banner s-banner--err'} role="status">{avisoMp.texto}</p>}
+              {fold(
+                t('Mercado Pago (tarjeta y más)', 'Mercado Pago (card and more)'),
+                mpEstado.conectada ? t('Conectado', 'Connected') : t('Sin conectar', 'Not connected'),
+                <MpConexion conectada={mpEstado.conectada} cuenta={mpEstado.cuenta} disponible={mpOauthListo()} puede={!impersonating && duenaRealDe(user) === ctx.brandId} />,
+                mpEstado.conectada || !!avisoMp || undefined,
+              )}
+            </div>
+          ) : (
+            <p className="s-hint a-cobro__mp">{t('Tarjeta: por ahora solo en Perú.', 'Card: Peru only for now.')}</p>
+          )
         }
         tema={fold(
           t('Tema de tu página de compra', 'Your purchase page theme'),

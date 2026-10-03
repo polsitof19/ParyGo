@@ -820,7 +820,9 @@
 .admin-shell .a-cobro { scroll-margin-top: 76px; padding-top: var(--s-s3); border-top: 1px solid var(--line); }
 .admin-shell .a-cobro__estado { margin: var(--s-s1) 0 var(--s-s3); color: var(--ink); font-size: var(--s-ctl); }
 .admin-shell .a-cobro__estado--falta::before { box-shadow: none; background: var(--alert); }
-.admin-shell .a-cobro__op { font-weight: 600; font-size: var(--s-t3); margin: 0 0 var(--s-s2); }
+.admin-shell .a-cobro__dir { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; resize: vertical; }
+.admin-shell .s-avatar.a-cobro__qrvacio { background: var(--paper-2); color: var(--ink-3); font-size: var(--s-meta); border-radius: var(--r-ctl); }
+.admin-shell .a-cobro__quitar { font-size: var(--s-meta); color: var(--ink-2); }
 .admin-shell .a-cobro__qr { height: 64px; width: 64px; border-radius: var(--r-ctl); border: 1px solid var(--line); object-fit: cover; }
 .admin-shell .a-cobro__mp { margin-top: var(--s-s3); }
 .admin-shell .a-marca-folds { margin-top: var(--s-s5); }
