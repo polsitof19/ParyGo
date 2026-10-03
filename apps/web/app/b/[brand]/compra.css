@@ -14,10 +14,11 @@
    .b-hero (banda + ficha), .b-hero__over (título), .b-list, .b-sum.
 
    Teléfono (390): una columna, gutter 20, barra de pagar fija de 86.
-   Escritorio (≥1024): grilla 360 / fluido / 320 en 1120 — el flyer a
+   Escritorio (≥1200): grilla 360 / fluido / 320 en 1120 — el flyer a
    360×450 con su ficha a la izquierda, título + entradas + pasos + legal
-   al centro, "Tu compra" en tarjeta de 320 a la derecha. SIN flyer
-   (.b-stage--solo): fluido / 320, sin la columna del flyer.
+   al centro, "Tu compra" en tarjeta de 320 a la derecha. 1024–1199, y sin
+   flyer (.b-stage--solo) en todo escritorio: fluido / 320, el flyer (si
+   hay) arriba del título.
    ============================================================ */
 
 .client-shell .b-buy {
@@ -302,8 +303,11 @@
 .client-shell .b-editorial .b-hero__shot { height: 160px; }
 
 /* ============================================================
-   ESCRITORIO (≥1024): 360 / fluido / 320 en 1120
-   ============================================================ */
+   ESCRITORIO (≥1024): fluido / 320 en 1120; desde 1200, 360 / fluido / 320
+   ============================================================
+   Entre 1024 y 1199 las tres columnas dejaban 200–276 al centro (título
+   partido, pasos ilegibles): ahí van DOS, con el flyer arriba del título
+   dentro de la columna de contenido. Las tres, solo desde 1200. */
 @media (min-width: 1024px) {
   .client-shell { --pad: 32px; --b-h1: 76px; --b-h1-lh: .9; --b-h1-tr: -0.05em; }
   /* 1120 de CONTENIDO: 360 + 40 + 360 + 40 + 320. */
@@ -311,40 +315,30 @@
   .client-shell .b-buy.b-yape { max-width: calc(640px + var(--pad) * 2); }
   .client-shell .b-stage {
     display: grid;
-    grid-template-columns: var(--b-flyer-w) minmax(0, 1fr) 320px;
+    grid-template-columns: minmax(0, 1fr) 320px;
     grid-template-areas:
-      "flyer titulo resumen"
-      "flyer lista  resumen";
-    grid-template-rows: auto 1fr;
+      "flyer  resumen"
+      "titulo resumen"
+      "lista  resumen";
+    grid-template-rows: auto auto 1fr;
     gap: 0 40px; align-items: start;
     padding-top: var(--b-s5);
   }
+  /* El flyer entero (contain) a 360×450, alineado a la izquierda. */
   .client-shell .b-hero,
-  .client-shell .b-editorial .b-hero { grid-area: flyer; position: sticky; top: calc(var(--b-header) + var(--b-s3)); padding: 0; }
+  .client-shell .b-editorial .b-hero { grid-area: flyer; padding: 0 0 var(--b-s4); }
   .client-shell .b-hero__shot,
   .client-shell .b-editorial .b-hero__shot { width: var(--b-flyer-w); height: var(--b-flyer-h); }
-  .client-shell .b-aside { display: block; padding-top: var(--b-s2); }
   .client-shell .b-aside__nm { font-size: var(--b-ctl); font-weight: 600; }
   .client-shell .b-aside__dir { margin-top: 2px; font-size: var(--b-meta); color: var(--ink-2); }
   .client-shell .b-hero__over,
   .client-shell .b-editorial .b-hero__over { grid-area: titulo; padding: 0 0 var(--b-s4); }
   .client-shell .b-list { grid-area: lista; }
-  /* El dónde ya está en la ficha bajo el flyer. */
-  .client-shell .b-info__donde { display: none; }
   .client-shell .b-info { margin-top: var(--b-s4); }
 
-  /* SIN FLYER: la columna de 360 quedaba vacía (solo la ficha del lugar) y
-     el contenido se apretaba en una columna de teléfono. Se saca: entradas
-     al centro (1120 − 40 − 320) y "Tu compra" a la derecha. El dónde vuelve
-     a su bloque con mapa, porque ya no hay ficha bajo el flyer. */
-  .client-shell .b-stage--solo {
-    grid-template-columns: minmax(0, 1fr) 320px;
-    grid-template-areas:
-      "titulo resumen"
-      "lista  resumen";
-  }
+  /* SIN FLYER: no hay nada que poner en la fila (o columna) del flyer. El
+     dónde va en su bloque con mapa, porque no hay ficha bajo el flyer. */
   .client-shell .b-stage--solo .b-hero { display: none; }
-  .client-shell .b-stage--solo .b-info__donde { display: block; }
 
   .client-shell .b-sum {
     grid-area: resumen; display: block; position: sticky; top: calc(var(--b-header) + var(--b-s3));
@@ -370,6 +364,30 @@
 
   /* Datos y pago con tarjeta: 640, no 1120. */
   .client-shell .b-buy > .c-stepwrap:not(:has(> .b-stage)) { max-width: 640px; margin-left: auto; margin-right: auto; }
+}
+
+/* Tres columnas desde 1200: el flyer a 360×450 con su ficha a la izquierda,
+   sticky; el dónde ya está en esa ficha. Sin flyer siguen siendo dos (la
+   columna de 360 quedaba vacía y el contenido se apretaba como en teléfono). */
+@media (min-width: 1200px) {
+  .client-shell .b-stage {
+    grid-template-columns: var(--b-flyer-w) minmax(0, 1fr) 320px;
+    grid-template-areas:
+      "flyer titulo resumen"
+      "flyer lista  resumen";
+    grid-template-rows: auto 1fr;
+  }
+  .client-shell .b-hero,
+  .client-shell .b-editorial .b-hero { position: sticky; top: calc(var(--b-header) + var(--b-s3)); padding: 0; }
+  .client-shell .b-aside { display: block; padding-top: var(--b-s2); }
+  .client-shell .b-info__donde { display: none; }
+  .client-shell .b-stage--solo {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-areas:
+      "titulo resumen"
+      "lista  resumen";
+  }
+  .client-shell .b-stage--solo .b-info__donde { display: block; }
 }
 
 /* ============================================================
