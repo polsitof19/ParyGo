@@ -149,6 +149,24 @@ export default async function ConfirmationPage({
     );
   }
 
+  // Yape sin comprobante a las 48 h: la reserva venció (0085). Antes de esto
+  // la orden quedaba pendiente para siempre.
+  if (order.payment_method === 'yape_manual' && order.status === 'expired') {
+    return (
+      <main className="c-state c-checkout-canvas">
+        <span className="c-eyebrow c-state__dot c-state__dot--alert">Reserva vencida</span>
+        <h1 className="c-h1">Tu reserva venció</h1>
+        <p className="c-muted">
+          No recibimos tu comprobante de Yape a tiempo, así que no se emitió ninguna entrada. Si todavía hay entradas, puedes comprar de nuevo.
+        </p>
+        <a href={`/${params.event}`} className="c-btn c-btn--brand">Comprar de nuevo</a>
+        {brand?.whatsapp_e164 && (
+          <p><a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" className="c-state__link">¿Ya yapeaste? Escribe al organizador</a></p>
+        )}
+      </main>
+    );
+  }
+
   if (isYapeRejected) {
     return (
       <main className="c-state c-checkout-canvas">
