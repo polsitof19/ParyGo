@@ -18,7 +18,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 type OrderView = {
   id: string;
   status: string;
-  payment_method: 'mercadopago' | 'yape_manual';
+  payment_method: 'mercadopago' | 'yape_manual' | 'paypal';
   event: { name: string; starts_at: string; venue_name: string | null; cover_url: string | null } | null;
   brand: { slug: string; name: string; whatsapp_e164: string | null; contact_email: string | null; zona_horaria: string; metodo_manual: string | null; theme_json: { logo_url?: string | null } | null } | null;
   tickets: {

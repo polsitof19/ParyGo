@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { SettingsForm } from './SettingsForm';
 import { MpConexion } from './MpConexion';
+import { PaypalConexion } from './PaypalConexion';
+import { paypalSirve } from '@/lib/paypalMarca';
 import { duenaRealDe, estadoMp, mpOauthListo } from '@/lib/mpConexion';
 import { IdiomaSelector } from './IdiomaSelector';
 import { TemaCompraSelector } from './TemaCompraSelector';
@@ -33,7 +35,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
   // con la sesión del organizador daba "permission denied for table brands",
   // brand quedaba null y "Mi marca" salía EN BLANCO. Se lee con service role,
   // acotada a la marca de la sesión (ctx.brandId), igual que en actions.ts.
-  const [{ data: brand }, mpEstado, { data: qrRow }, { count: puertaCount }, { count: eventosCount }] = await Promise.all([
+  const [{ data: brand }, mpEstado, { data: qrRow }, { data: ppRow }, { count: puertaCount }, { count: eventosCount }] = await Promise.all([
     supabase
       .from('brands')
       .select('id, name, contact_email, whatsapp_e164, instagram, yape_number, yape_holder, notify_yape_recovery, notify_yape_digest, theme_json, idioma, tema_compra, moneda, zona_horaria, metodo_manual')
@@ -41,6 +43,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
       .single(),
     estadoMp(admin, ctx.brandId),
     admin.from('brands').select('yape_qr_url').eq('id', ctx.brandId).maybeSingle(),
+    admin.from('brands').select('paypal_client_id, moneda, is_test').eq('id', ctx.brandId).maybeSingle(),
     // Cuántas personas tiene en puerta: el valor de la fila "Equipo de puerta".
     admin.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', ctx.brandId).eq('role', 'validator'),
     // Con cualquier evento la moneda queda bloqueada (trigger guard_brand_moneda).
@@ -128,7 +131,8 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
         // Mercado Pago por OAuth (0086): abierto si está conectado o si se
         // acaba de volver de MP (para ver el aviso).
         tarjeta={
-          moneda === 'PEN' ? (
+          <>
+          {moneda === 'PEN' ? (
             <div className="s-folds a-cobro__mp">
               {avisoMp && <p className={avisoMp.ok ? 's-banner s-banner--ok' : 's-banner s-banner--err'} role="status">{avisoMp.texto}</p>}
               {fold(
@@ -140,7 +144,22 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
             </div>
           ) : (
             <p className="s-hint a-cobro__mp">{t('Tarjeta: por ahora solo en Perú.', 'Card: Peru only for now.')}</p>
-          )
+          )}
+          <div className="s-folds a-cobro__mp">
+            {fold(
+              t('PayPal (cuenta PayPal y tarjeta)', 'PayPal (PayPal account and card)'),
+              ppRow?.paypal_client_id ? t('Conectado', 'Connected') : t('Sin conectar', 'Not connected'),
+              <PaypalConexion
+                conectada={!!ppRow?.paypal_client_id}
+                ultimos4={ppRow?.paypal_client_id ? ppRow.paypal_client_id.slice(-4) : null}
+                sirve={paypalSirve(ppRow?.moneda)}
+                puede={!impersonating && duenaRealDe(user) === ctx.brandId}
+                esPrueba={ppRow?.is_test === true}
+              />,
+              !!ppRow?.paypal_client_id || undefined,
+            )}
+          </div>
+          </>
         }
         tema={fold(
           t('Tema de tu página de compra', 'Your purchase page theme'),

@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic';
 
 const BATCH = 1000;
 const docLabel = (t: string | null) => (t === 'ce' ? 'CE' : t === 'passport' ? 'Pasaporte' : 'DNI');
-const methodLabel = (m: string) => (m === 'mercadopago' ? 'MercadoPago' : m === 'yape_manual' ? 'Yape' : m);
+const methodLabel = (m: string) => (m === 'mercadopago' ? 'MercadoPago' : m === 'paypal' ? 'PayPal' : m === 'yape_manual' ? 'Yape' : m);
 const fmtDate = (iso: string, zona: Zona) =>
   formatEnZona(iso, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, zona, 'es-PE');
 

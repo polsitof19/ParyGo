@@ -89,7 +89,7 @@ export default async function ReportePage({ params }: { params: { id: string } }
     byMethod.set(k, cur);
   }
   const medio = medioDe(medioRes.data?.metodo_manual);
-  const methodLabel = (m: string) => (m === 'mercadopago' ? 'MercadoPago' : m === 'yape_manual' ? NOMBRE_MEDIO[medio].es : m === 'courtesy' ? t('Cortesías', 'Complimentary') : m);
+  const methodLabel = (m: string) => (m === 'mercadopago' ? 'MercadoPago' : m === 'paypal' ? 'PayPal' : m === 'yape_manual' ? NOMBRE_MEDIO[medio].es : m === 'courtesy' ? t('Cortesías', 'Complimentary') : m);
 
   // Ventas por promotor (reusa la lógica del panel de promotores).
   const promoCodes = (promoRes.data ?? []) as { id: string; code: string; label: string | null }[];

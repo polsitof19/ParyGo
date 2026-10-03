@@ -25,7 +25,7 @@ export type ClientRow = {
 };
 
 const docLabel = (tt: Textos['t'], d: string | null) => (d === 'ce' ? 'CE' : d === 'passport' ? tt('Pasaporte', 'Passport') : 'DNI');
-const methodLabel = (m: string, manual = 'Yape') => (m === 'mercadopago' ? 'MercadoPago' : m === 'yape_manual' ? manual : m);
+const methodLabel = (m: string, manual = 'Yape') => (m === 'mercadopago' ? 'MercadoPago' : m === 'paypal' ? 'PayPal' : m === 'yape_manual' ? manual : m);
 const fmtDate = (iso: string, loc: string, zona: Zona) => formatEnZona(iso, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, zona, loc);
 
 // Escape CSV: comillas dobladas + envolver si hay coma/comilla/salto de línea.

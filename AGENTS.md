@@ -140,9 +140,9 @@ la marca; ParyGo sigue sin tocarla.
   custom_id, invoice_id), capturar con ALREADY_CAPTURED, rechazo, custom_id
   ajeno, montos 0.01/19.99/1234.50. **Listo**: test verde, tsc, empezar-paypal
   (packs) sin cambios de comportamiento.
-- [ ] 3. Mi marca: conectar/desconectar + guía; bloqueo con pago activo;
+- [x] 3. Mi marca: conectar/desconectar + guía; bloqueo con pago activo;
   metodoPago cuenta PayPal. **Listo**: tsc, capturas 390/1440, publicar-metodo.
-- [ ] 4. Checkout + confirmación + webhook. **Listo**: tsc; fase1 sin cambios
+- [x] 4. Checkout + confirmación + webhook. **Listo**: tsc; fase1 sin cambios
   (Yape idéntico); prueba de la vuelta y del webhook con fetch interceptado.
 - [ ] 5. Security review + Codex; E2E punta a punta con PayPal SANDBOX en una
   marca is_test (pendiente de las credenciales sandbox de Paul); deploy.

@@ -41,9 +41,9 @@ function bulkUnitPrice(t: TicketType, q: number): number {
 }
 
 export function EventCheckoutPanel({
-  brand, event, ticketTypes, mpConfigured, mpPublicKey, refCode = '', accessToken, topePorTipo, shareUrl, direccion = 'editorial',
+  brand, event, ticketTypes, mpConfigured, paypalConfigured = false, mpPublicKey, refCode = '', accessToken, topePorTipo, shareUrl, direccion = 'editorial',
 }: {
-  brand: Brand; event: Event; ticketTypes: TicketType[]; mpConfigured: boolean; mpPublicKey: string | null;
+  brand: Brand; event: Event; ticketTypes: TicketType[]; mpConfigured: boolean; paypalConfigured?: boolean; mpPublicKey: string | null;
   refCode?: string; shareUrl: string;
   /** Token del link privado (?acceso=): viaja al reservar y al confirmar (0066). */
   accessToken?: string;
@@ -108,8 +108,8 @@ export function EventCheckoutPanel({
   // Código de RR.PP. (promo_codes) — opcional. Se ingresa en el paso 1 o 2 y se
   // aplica en el paso 2 junto al email. B5: pre-rellena con ?ref del promotor.
   const [promoInput, setPromoInput] = useState(refCode.toUpperCase());
-  const [method, setMethod] = useState<'yape_manual' | 'mercadopago'>(
-    brand.yape_number ? 'yape_manual' : mpConfigured ? 'mercadopago' : 'yape_manual'
+  const [method, setMethod] = useState<'yape_manual' | 'mercadopago' | 'paypal'>(
+    brand.yape_number ? 'yape_manual' : mpConfigured ? 'mercadopago' : paypalConfigured ? 'paypal' : 'yape_manual'
   );
   const [mpCheckout, setMpCheckout] = useState<{ preferenceId: string; initPoint: string } | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -300,6 +300,8 @@ export function EventCheckoutPanel({
         ? 'Obtener entrada gratis'
         : method === 'mercadopago'
           ? `Pagar ${fmt(finalTotal)}`
+          : method === 'paypal'
+          ? 'Pagar con PayPal'
           : esYapeMedio ? 'Pagar con Yape' : `Pagar con ${frMedio}`;
   const isYape = method === 'yape_manual' && !esGratis;
 
@@ -359,6 +361,10 @@ export function EventCheckoutPanel({
   // medio de pago que el organizador no configuró.
   const payLabel = eventoGratis
     ? 'gratis'
+    : paypalConfigured && !mpConfigured && !brand.yape_number
+    ? 'Pagas con PayPal o tarjeta'
+    : brand.yape_number && paypalConfigured
+    ? `Pagas con ${frMedio}, PayPal o tarjeta`
     : brand.yape_number && mpConfigured
     ? `Pagas con ${frMedio} o tarjeta`
     : brand.yape_number
@@ -366,7 +372,7 @@ export function EventCheckoutPanel({
       : mpConfigured
         ? 'Pagas con tarjeta'
         : 'Pago seguro';
-  const ctaMetodo = method === 'mercadopago' ? 'Pagar con tarjeta' : brand.yape_number ? (esYapeMedio ? 'Pagar con Yape' : `Pagar con ${frMedio}`) : 'Pagar';
+  const ctaMetodo = method === 'mercadopago' ? 'Pagar con tarjeta' : method === 'paypal' ? 'Pagar con PayPal' : brand.yape_number ? (esYapeMedio ? 'Pagar con Yape' : `Pagar con ${frMedio}`) : 'Pagar';
   // Un solo texto para el botón del paso 1, en la barra (teléfono) y en el
   // rail (escritorio): antes el rail decía "Continuar" y la barra otra cosa.
   // En cero el botón está apagado; dice QUÉ hacer, no el nombre del paso
@@ -383,6 +389,7 @@ function fraseConfianza(pago: string): string {
   // QR sale al instante y que no se cobra nada.
   // Evento gratis: sin frase (Paul, 2026-09-23: se lee como relleno).
   if (pago === 'gratis') return '';
+  if (/PayPal/.test(pago)) return brand.yape_number ? `Pagas por ${frMedio}, PayPal o tarjeta y tu entrada te llega al correo al toque.` : 'Pagas con PayPal o tarjeta y tu entrada te llega al correo al toque.';
   if (/tarjeta/i.test(pago) && brand.yape_number) return `Pagas por ${frMedio} o tarjeta y tu entrada te llega al correo al toque.`;
   if (/tarjeta/i.test(pago)) return 'Pagas con tarjeta y tu entrada te llega al correo al toque.';
   return `Pagas por ${frMedio} y tu entrada te llega al correo al toque.`;
@@ -555,15 +562,22 @@ function fraseConfianza(pago: string): string {
             )}
 
             {/* Pago: solo se pregunta si de verdad hay dos formas. */}
-            {!esGratis && brand.yape_number && mpConfigured && (
+            {!esGratis && [Boolean(brand.yape_number), mpConfigured, paypalConfigured].filter(Boolean).length >= 2 && (
               <div className="b-panel">
                 <p className="b-panel__t">¿Cómo pagas?</p>
                 <div className="b-pays" role="radiogroup" aria-label="Forma de pago">
-                  <button type="button" role="radio" aria-checked={method === 'yape_manual'} className={`b-pay${method === 'yape_manual' ? ' b-pay--on' : ''}`} onClick={() => setMethod('yape_manual')}>{nombreMedio}</button>
-                  <button type="button" role="radio" aria-checked={method === 'mercadopago'} className={`b-pay${method === 'mercadopago' ? ' b-pay--on' : ''}`} onClick={() => setMethod('mercadopago')}>Tarjeta</button>
+                  {brand.yape_number && (
+                    <button type="button" role="radio" aria-checked={method === 'yape_manual'} className={`b-pay${method === 'yape_manual' ? ' b-pay--on' : ''}`} onClick={() => setMethod('yape_manual')}>{nombreMedio}</button>
+                  )}
+                  {mpConfigured && (
+                    <button type="button" role="radio" aria-checked={method === 'mercadopago'} className={`b-pay${method === 'mercadopago' ? ' b-pay--on' : ''}`} onClick={() => setMethod('mercadopago')}>Tarjeta</button>
+                  )}
+                  {paypalConfigured && (
+                    <button type="button" role="radio" aria-checked={method === 'paypal'} className={`b-pay${method === 'paypal' ? ' b-pay--on' : ''}`} onClick={() => setMethod('paypal')}>PayPal o tarjeta</button>
+                  )}
                 </div>
                 <p className="c-help" style={{ marginTop: 10 }}>
-                  {isYape ? (esYapeMedio ? 'En la pantalla siguiente yapeas y subes tu comprobante.' : `En la pantalla siguiente pagas con ${frMedio} y subes tu comprobante.`) : 'Pagas con tarjeta y tu QR llega al instante.'}
+                  {isYape ? (esYapeMedio ? 'En la pantalla siguiente yapeas y subes tu comprobante.' : `En la pantalla siguiente pagas con ${frMedio} y subes tu comprobante.`) : method === 'paypal' ? 'Pagas con PayPal o con tarjeta y tu QR llega al instante.' : 'Pagas con tarjeta y tu QR llega al instante.'}
                 </p>
               </div>
             )}
@@ -645,7 +659,7 @@ function fraseConfianza(pago: string): string {
           ) : (
             <button type="submit" form="checkout-form" className="b-btn b-btn--go" disabled={isPending || totalItems === 0}>
               {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              {!isPending && method === 'mercadopago' && !esGratis && <Lock className="h-4 w-4" />}
+              {!isPending && (method === 'mercadopago' || method === 'paypal') && !esGratis && <Lock className="h-4 w-4" />}
               {ctaLabel}
             </button>
           )}

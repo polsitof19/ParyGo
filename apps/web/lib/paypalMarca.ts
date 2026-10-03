@@ -148,7 +148,7 @@ export async function procesarAvisoPaypal(
     return { ok: false, motivo: 'ignorado', detalle: 'evento' };
   }
 
-  const { data: candado } = await admin.rpc('tomar_candado', { p_clave: `pp_aviso:${capId}`, p_segundos: 10 });
+  const { data: candado } = await admin.rpc('tomar_candado', { p_clave: `pp_aviso:${evento}:${capId}`, p_segundos: 10 });
   if (candado !== true) return { ok: false, motivo: 'reintentar' };
 
   let c: CredMarca | null;
