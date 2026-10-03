@@ -45,6 +45,7 @@ export async function liquidarPagoMp(
   // collector_id del pago re-pedido, no un dato del aviso.
   const { data: conexion } = await admin.from('brands').select('mp_oauth_user_id').eq('id', brandId).maybeSingle();
   if (!conexion?.mp_oauth_user_id || String(payment?.collector_id ?? '') !== conexion.mp_oauth_user_id) {
+    await admin.from('events_log').insert({ brand_id: brandId, order_id: orderId, type: 'mp_collector_mismatch', payload: { payment_id: paymentId, collector_id: String(payment?.collector_id ?? ''), cuenta: conexion?.mp_oauth_user_id ?? null } });
     return { ok: false, orderId, ignored: 'collector_mismatch' };
   }
 

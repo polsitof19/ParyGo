@@ -24,6 +24,18 @@ export function duenaRealDe(user: SessionUser): string | null {
   return user.brandMemberships.find((m) => m.role === 'brand_admin')?.brandId ?? null;
 }
 
+// ¿Hay pagos con tarjeta de esta marca que todavía pueden liquidarse? (orden MP
+// con preferencia, sin pago registrado, creada en las últimas 48 h). Mientras
+// haya, no se desconecta ni se cambia de cuenta: el pago se valida contra la
+// cuenta conectada (collector_id).
+export async function pagosMpEnCurso(admin: SupabaseClient, brandId: string): Promise<boolean> {
+  const { count, error } = await admin.from('orders').select('id', { count: 'exact', head: true })
+    .eq('brand_id', brandId).eq('payment_method', 'mercadopago').eq('status', 'pending_payment')
+    .not('mp_preference_id', 'is', null).is('mp_payment_id', null)
+    .gt('created_at', new Date(Date.now() - 48 * 3600_000).toISOString());
+  return error ? true : (count ?? 0) > 0; // falla cerrado
+}
+
 export type EstadoMp = { conectada: boolean; cuenta: string | null; desde: string | null };
 
 export async function estadoMp(admin: SupabaseClient, brandId: string): Promise<EstadoMp> {
@@ -61,11 +73,23 @@ export async function tokenVigenteMp(admin: SupabaseClient, brandId: string, key
   }
   const r = await refrescarToken({ clientId, clientSecret, refreshToken: fila.refresh_token });
   if (r.ok) {
-    await admin.rpc('refresh_brand_mp_oauth', {
-      p_brand_id: brandId, p_user_id: fila.user_id, p_access_token: r.tokens.accessToken,
-      p_refresh_token: r.tokens.refreshToken, p_expires_at: r.tokens.expiresAt.toISOString(), p_encryption_key: key,
-    });
+    // MP rota el refresh token (el viejo ya no sirve): si no se guarda el par
+    // nuevo, el próximo refresh daría invalid_grant. Se verifica y reintenta
+    // (security review H2).
+    for (let intento = 0; intento < 3; intento++) {
+      const { data: guardado, error: eG } = await admin.rpc('refresh_brand_mp_oauth', {
+        p_brand_id: brandId, p_user_id: fila.user_id, p_access_token: r.tokens.accessToken,
+        p_refresh_token: r.tokens.refreshToken, p_expires_at: r.tokens.expiresAt.toISOString(), p_encryption_key: key,
+      });
+      if (!eG && guardado === true) return r.tokens.accessToken;
+      if (!eG && guardado === false) break; // la marca se desconectó o cambió de cuenta mientras tanto
+      await new Promise((ok) => setTimeout(ok, 300 * (intento + 1)));
+    }
+    await admin.from('events_log').insert({ brand_id: brandId, type: 'mp_refresh_no_guardado', payload: { cuenta: fila.user_id } });
     return r.tokens.accessToken;
+  }
+  if (r.error === 'config') {
+    await admin.from('events_log').insert({ brand_id: brandId, type: 'mp_refresh_config', payload: { cuenta: fila.user_id } });
   }
   if (r.error === 'revocado') {
     await admin.rpc('clear_brand_mp_oauth', { p_brand_id: brandId });

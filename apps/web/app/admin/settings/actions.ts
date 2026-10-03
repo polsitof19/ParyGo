@@ -12,8 +12,8 @@ import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { serverEnv } from '@/lib/env';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { alAzar, crearPkce, urlAutorizacion } from '@/lib/mpOauth';
-import { COOKIE_MP_OAUTH, duenaRealDe, mpClient, mpOauthListo, redirectUriMp } from '@/lib/mpConexion';
+import { alAzar, crearPkce, firmarCookie, urlAutorizacion } from '@/lib/mpOauth';
+import { COOKIE_MP_OAUTH, duenaRealDe, mpClient, mpOauthListo, pagosMpEnCurso, redirectUriMp } from '@/lib/mpConexion';
 import { esIdioma, type Textos } from '@/lib/idioma';
 import { TEMAS } from '@/lib/temaCompra.mjs';
 import { textosPanel, idiomaPanel } from '@/lib/idiomaServer';
@@ -210,7 +210,8 @@ export async function conectarMpAction(): Promise<void> {
   if (!brandId || !mpOauthListo()) redirect('/admin/settings?mp=no_disponible#cobro');
   const { verifier, challenge } = await crearPkce();
   const state = alAzar(32);
-  cookies().set(COOKIE_MP_OAUTH, JSON.stringify({ s: state, v: verifier, b: brandId, u: user.id }), {
+  const valor = await firmarCookie(serverEnv.BRAND_CREDS_ENCRYPTION_KEY, { s: state, v: verifier, b: brandId, u: user.id, e: Date.now() + 600_000 });
+  cookies().set(COOKIE_MP_OAUTH, valor, {
     httpOnly: true, secure: true, sameSite: 'lax', maxAge: 600, path: '/admin/settings/mercadopago',
   });
   redirect(urlAutorizacion({ clientId: mpClient().clientId, redirectUri: redirectUriMp(), state, challenge }));
@@ -229,6 +230,11 @@ export async function desconectarMpAction(): Promise<SettingsState> {
   if (!b?.mp_oauth_user_id) return { ok: true, message: t('Mercado Pago ya estaba desconectado.', 'Mercado Pago was already disconnected.') };
   // Mismo criterio que quitar el Yape: sin otro método no se deja a la venta un
   // evento que cobra.
+  // Un pago con tarjeta en curso se liquida con ESTA cuenta (collector_id):
+  // desconectar ahora dejaría a ese comprador cobrado y sin entrada (review M1).
+  if (await pagosMpEnCurso(admin, brandId)) {
+    return { ok: false, message: t('Hay compradores pagando con tarjeta en este momento. Intenta desconectar en un rato.', 'Some buyers are paying by card right now. Try disconnecting in a while.') };
+  }
   if (!b.yape_number?.trim() && cobra) {
     return { ok: false, message: t('Tienes eventos a la venta que cobran y Mercado Pago es tu único método de pago. Agrega otro o pasa esos eventos a borrador primero.', 'You have paid events on sale and Mercado Pago is your only payment method. Add another one or move those events to draft first.') };
   }

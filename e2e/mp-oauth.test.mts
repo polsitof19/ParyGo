@@ -1,6 +1,6 @@
 // Test de lib/mpOauth.ts con fetch SIMULADO (nunca llama a Mercado Pago).
 //   cd apps/web && npx tsx ../../e2e/mp-oauth.test.mts
-const { crearPkce, urlAutorizacion, canjearCodigo, refrescarToken, idDeLaCuenta, igualesSeguro, alAzar } = await import('@/lib/mpOauth');
+const { crearPkce, urlAutorizacion, canjearCodigo, refrescarToken, idDeLaCuenta, igualesSeguro, alAzar, firmarCookie, leerCookieFirmada } = await import('@/lib/mpOauth');
 const { createHash } = await import('node:crypto');
 
 let ok = 0, mal = 0;
@@ -42,6 +42,11 @@ const rev = await refrescarToken({ clientId: '1', clientSecret: 's', refreshToke
 check('refresh 400 invalid_grant → revocado', !rev.ok && rev.error === 'revocado');
 check('refresh manda grant refresh_token', ultimo!.body.grant_type === 'refresh_token' && ultimo!.body.refresh_token === 'TG-r');
 
+for (const [st, body] of [[401, { message: 'invalid client_secret' }], [403, {}], [400, { error: 'invalid_client' }]] as const) {
+  responder(st, body);
+  const c2 = await refrescarToken({ clientId: '1', clientSecret: 's', refreshToken: 'r' });
+  check(`refresh ${st} ${JSON.stringify(body)} → config (NO desconecta)`, !c2.ok && c2.error === 'config');
+}
 for (const st of [429, 500, 503]) {
   responder(st, {});
   const t = await refrescarToken({ clientId: '1', clientSecret: 's', refreshToken: 'r' });
@@ -56,6 +61,14 @@ check('users/me devuelve el id', (await idDeLaCuenta('t')) === '987654');
 responder(401, {});
 check('users/me 401 → null', (await idDeLaCuenta('t')) === null);
 
+const ck = await firmarCookie('clave', { s: 'S', v: 'V', b: 'marca', u: 'yo', e: 1 });
+const leida = await leerCookieFirmada<{ b: string }>('clave', ck);
+check('cookie firmada se lee', leida?.b === 'marca');
+const [datos, firma] = ck.split('.');
+const otraMarca = Buffer.from(JSON.stringify({ s: 'S', v: 'V', b: 'ajena', u: 'yo', e: 1 })).toString('base64url');
+check('cookie con datos cambiados → null', (await leerCookieFirmada('clave', `${otraMarca}.${firma}`)) === null);
+check('cookie con otra clave → null', (await leerCookieFirmada('otra', ck)) === null);
+check('cookie sin firma / vacía → null', (await leerCookieFirmada('clave', datos)) === null && (await leerCookieFirmada('clave', undefined)) === null);
 check('igualesSeguro', igualesSeguro('abc', 'abc') && !igualesSeguro('abc', 'abd') && !igualesSeguro('abc', 'ab'));
 
 console.log(mal ? `✘ ${mal} fallas, ${ok} OK` : `✔ ${ok}/${ok}`);

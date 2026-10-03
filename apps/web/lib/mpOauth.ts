@@ -49,10 +49,12 @@ function leerTokens(j: Record<string, unknown>): TokensMp | null {
   return { accessToken: access, publicKey: pub, refreshToken: refresh, userId: user, expiresAt: new Date(Date.now() + exp * 1000) };
 }
 
-// 'revocado' = MP rechazó el code/refresh (invalid_grant y demás 4xx salvo 429):
-// definitivo. 'transitorio' = red, timeout, 429 o 5xx: se reintenta otro día
-// sin desconectar a nadie (revisión de Codex 2026-10-03).
-export type ErrorMp = 'revocado' | 'transitorio' | 'incompleto';
+// 'revocado' = MP respondió 400 invalid_grant: el code/refresh ya no sirve
+// (definitivo). 'config' = otro 4xx (client_secret mal cargado, app de MP mal
+// configurada): NO es culpa de la marca y no se desconecta a nadie (security
+// review H1: un secreto mal pegado borraba todas las conexiones).
+// 'transitorio' = red, timeout, 429 o 5xx: se reintenta después.
+export type ErrorMp = 'revocado' | 'config' | 'transitorio' | 'incompleto';
 export type ResultadoTokens = { ok: true; tokens: TokensMp } | { ok: false; error: ErrorMp };
 
 async function pedirToken(body: Record<string, string>): Promise<ResultadoTokens> {
@@ -68,8 +70,8 @@ async function pedirToken(body: Record<string, string>): Promise<ResultadoTokens
     return { ok: false, error: 'transitorio' };
   }
   if (res.status === 429 || res.status >= 500) return { ok: false, error: 'transitorio' };
-  if (!res.ok) return { ok: false, error: 'revocado' };
   const j = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!res.ok) return { ok: false, error: res.status === 400 && j.error === 'invalid_grant' ? 'revocado' : 'config' };
   const tokens = leerTokens(j);
   return tokens ? { ok: true, tokens } : { ok: false, error: 'incompleto' };
 }
@@ -115,4 +117,26 @@ export function igualesSeguro(a: string, b: string): boolean {
   let d = 0;
   for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return d === 0;
+}
+
+// Cookie del OAuth firmada (security review M3): si alguien pudiera fijar
+// cookies desde un subdominio hermano (*.parygo.com), no podría armar una con
+// la marca y el usuario de otra persona sin la clave del server.
+async function hmac(clave: string, datos: string): Promise<string> {
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(`mp-oauth:${clave}`), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return b64url(new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(datos))));
+}
+export async function firmarCookie(clave: string, valor: Record<string, string | number>): Promise<string> {
+  const datos = b64url(new TextEncoder().encode(JSON.stringify(valor)));
+  return `${datos}.${await hmac(clave, datos)}`;
+}
+export async function leerCookieFirmada<T>(clave: string, raw: string | undefined): Promise<T | null> {
+  const [datos, firma] = (raw ?? '').split('.');
+  if (!datos || !firma || !igualesSeguro(firma, await hmac(clave, datos))) return null;
+  try {
+    const bin = atob(datos.replace(/-/g, '+').replace(/_/g, '/'));
+    return JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)))) as T;
+  } catch {
+    return null;
+  }
 }

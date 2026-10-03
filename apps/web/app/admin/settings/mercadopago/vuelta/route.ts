@@ -3,8 +3,8 @@ import { cookies } from 'next/headers';
 import { getSessionUser } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv } from '@/lib/env';
-import { canjearCodigo, idDeLaCuenta, igualesSeguro } from '@/lib/mpOauth';
-import { COOKIE_MP_OAUTH, duenaRealDe, mpClient, redirectUriMp } from '@/lib/mpConexion';
+import { canjearCodigo, idDeLaCuenta, igualesSeguro, leerCookieFirmada } from '@/lib/mpOauth';
+import { COOKIE_MP_OAUTH, duenaRealDe, mpClient, pagosMpEnCurso, redirectUriMp } from '@/lib/mpConexion';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -25,31 +25,41 @@ export async function GET(req: NextRequest) {
     return res;
   };
 
-  const raw = cookies().get(COOKIE_MP_OAUTH)?.value;
-  let c: { s?: string; v?: string; b?: string; u?: string } = {};
-  try { c = raw ? JSON.parse(raw) : {}; } catch { c = {}; }
+  // Cookie FIRMADA por el server (security review M3) y con vencimiento propio.
+  const c = (await leerCookieFirmada<{ s?: string; v?: string; b?: string; u?: string; e?: number }>(
+    serverEnv.BRAND_CREDS_ENCRYPTION_KEY, cookies().get(COOKIE_MP_OAUTH)?.value)) ?? {};
 
   const user = await getSessionUser();
   const brandId = user ? duenaRealDe(user) : null;
   const admin = createAdminClient();
+  // Bitácora del fallo con candado: recargar /vuelta en bucle no llena la tabla.
   const fallo = async (motivo: string) => {
-    if (brandId) await admin.from('events_log').insert({ brand_id: brandId, actor_user_id: user?.id ?? null, type: 'mp_conectar_fallido', payload: { motivo } });
+    if (brandId && (await admin.rpc('tomar_candado', { p_clave: `mp_vuelta_fallo:${brandId}`, p_segundos: 10 })).data === true) {
+      await admin.from('events_log').insert({ brand_id: brandId, actor_user_id: user?.id ?? null, type: 'mp_conectar_fallido', payload: { motivo } });
+    }
     return volver(motivo);
   };
 
   if (url.searchParams.get('error')) return volver('cancelado');
   const code = url.searchParams.get('code') ?? '';
   const state = url.searchParams.get('state') ?? '';
-  if (!user || !brandId || !c.s || !c.v || c.b !== brandId || c.u !== user.id) return fallo('sesion');
+  if (!user || !brandId || !c.s || !c.v || c.b !== brandId || c.u !== user.id || !c.e || c.e < Date.now()) return fallo('sesion');
   if (!state || !igualesSeguro(state, c.s) || !code) return fallo('sesion');
 
   const { clientId, clientSecret } = mpClient();
   if (!clientId || !clientSecret) return fallo('no_disponible');
   const r = await canjearCodigo({ clientId, clientSecret, code, redirectUri: redirectUriMp(), verifier: c.v });
-  if (!r.ok) return fallo(r.error === 'transitorio' ? 'intenta_de_nuevo' : 'rechazado');
+  if (!r.ok) return fallo(r.error === 'transitorio' || r.error === 'config' ? 'intenta_de_nuevo' : 'rechazado');
 
   const id = await idDeLaCuenta(r.tokens.accessToken);
   if (id !== r.tokens.userId) return fallo('cuenta_no_coincide');
+
+  // Cambiar a OTRA cuenta con pagos con tarjeta en curso los dejaría sin
+  // liquidar (se validan contra la cuenta conectada: review M1).
+  const { data: actual } = await admin.from('brands').select('mp_oauth_user_id').eq('id', brandId).maybeSingle();
+  if (actual?.mp_oauth_user_id && actual.mp_oauth_user_id !== r.tokens.userId && (await pagosMpEnCurso(admin, brandId))) {
+    return fallo('pagos_en_curso');
+  }
 
   const { data, error } = await admin.rpc('set_brand_mp_oauth', {
     p_brand_id: brandId, p_access_token: r.tokens.accessToken, p_public_key: r.tokens.publicKey,

@@ -55,7 +55,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
   const tema = esTema(brand.tema_compra);
   const temaNombre = { blanco: t('Blanco', 'White'), crema: t('Crema', 'Cream'), negro: t('Negro', 'Black'), marca: t('Tu color', 'Your color') }[tema];
   // Resultado de la vuelta de Mercado Pago (mercadopago/vuelta/route.ts).
-  const avisoMp = searchParams.mp ? ({
+  const avisosMp: Record<string, { ok: boolean; texto: string }> = {
     conectado: { ok: true, texto: t('Listo: Mercado Pago quedó conectado.', 'Done: Mercado Pago is connected.') },
     cancelado: { ok: false, texto: t('No se conectó: cancelaste en Mercado Pago.', 'Not connected: you cancelled in Mercado Pago.') },
     sesion: { ok: false, texto: t('No se pudo conectar: el enlace venció o se abrió en otra sesión. Vuelve a tocar "Conectar Mercado Pago".', 'Could not connect: the link expired or was opened in another session. Tap "Connect Mercado Pago" again.') },
@@ -64,7 +64,9 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
     cuenta_no_coincide: { ok: false, texto: t('No pudimos confirmar tu cuenta de Mercado Pago. Intenta de nuevo.', 'We could not confirm your Mercado Pago account. Try again.') },
     cuenta_en_otra_marca: { ok: false, texto: t('Esa cuenta de Mercado Pago ya está conectada a otra marca.', 'That Mercado Pago account is already connected to another brand.') },
     no_disponible: { ok: false, texto: t('Conectar Mercado Pago todavía no está disponible.', 'Connecting Mercado Pago is not available yet.') },
-  } as Record<string, { ok: boolean; texto: string }>)[searchParams.mp] ?? null : null;
+    pagos_en_curso: { ok: false, texto: t('Hay compradores pagando con tarjeta en tu cuenta actual. Cambia de cuenta en un rato.', 'Some buyers are paying by card on your current account. Switch accounts in a while.') },
+  };
+  const avisoMp = searchParams.mp && Object.hasOwn(avisosMp, searchParams.mp) ? avisosMp[searchParams.mp] : null;
   const puerta = puertaCount ?? 0;
   const fold = (titulo: string, valor: string, body: React.ReactNode, open?: boolean) => (
     <details className="s-fold" open={open}>

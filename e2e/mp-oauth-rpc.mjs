@@ -80,6 +80,15 @@ try {
   const g2 = (await svc.rpc('get_brand_mp_oauth', { p_brand_id: demo.id, p_encryption_key: KEY })).data?.[0];
   check('refresh con la misma cuenta → par nuevo guardado', r2.data === true && g2?.access_token === 'APP_USR-nuevo' && g2?.refresh_token === 'TG-nuevo');
 
+  // Candado del refresco (tomar_candado, base real): dos a la vez → uno solo.
+  const clave = `mp_refresh:e2e-${STAMP}`;
+  const [k1, k2] = await Promise.all([
+    svc.rpc('tomar_candado', { p_clave: clave, p_segundos: 5 }),
+    svc.rpc('tomar_candado', { p_clave: clave, p_segundos: 5 }),
+  ]);
+  check('candado del refresco: dos a la vez → un true y un false', [k1.data, k2.data].sort().join(',') === 'false,true', `${k1.data}/${k2.data}`);
+  await svc.from('candados_alta').delete().eq('clave', clave);
+
   // ---------- 4. desconectar ----------
   await svc.rpc('clear_brand_mp_oauth', { p_brand_id: demo.id });
   const g3 = await svc.rpc('get_brand_mp_oauth', { p_brand_id: demo.id, p_encryption_key: KEY });

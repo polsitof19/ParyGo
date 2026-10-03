@@ -8,13 +8,17 @@ let ok = 0, mal = 0;
 const check = (n: string, c: boolean, d = '') => { c ? ok++ : mal++; console.log(`${c ? '✔' : '✘'} ${n}${d ? ' · ' + d : ''}`); };
 
 // Base simulada: el candado es atómico (como tomar_candado) y se registra todo.
-function base(venceEnMs: number) {
-  const st = { candado: false, refrescos: 0, limpiada: false, log: [] as string[], token: 'viejo' };
+function base(venceEnMs: number, fallaGuardado = 0) {
+  const st = { candado: false, refrescos: 0, intentosGuardado: 0, limpiada: false, log: [] as string[], token: 'viejo' };
   const admin = {
     rpc: async (fn: string, a: Record<string, unknown>) => {
       if (fn === 'get_brand_mp_oauth') return { data: [{ access_token: st.token, refresh_token: 'TG', user_id: '99', expires_at: new Date(Date.now() + venceEnMs).toISOString() }], error: null };
       if (fn === 'tomar_candado') { const gana = !st.candado; st.candado = true; return { data: gana, error: null }; }
-      if (fn === 'refresh_brand_mp_oauth') { st.refrescos++; st.token = String(a.p_access_token); return { data: true, error: null }; }
+      if (fn === 'refresh_brand_mp_oauth') {
+        st.intentosGuardado++;
+        if (st.intentosGuardado <= fallaGuardado) return { data: null, error: { message: 'timeout' } };
+        st.refrescos++; st.token = String(a.p_access_token); return { data: true, error: null };
+      }
       if (fn === 'clear_brand_mp_oauth') { st.limpiada = true; return { data: null, error: null }; }
       return { data: null, error: { message: 'rpc desconocida ' + fn } };
     },
@@ -50,6 +54,21 @@ const DIA = 864e5;
   let err = '';
   try { await tokenVigenteMp(admin, 'b', 'k'); } catch (e) { err = (e as Error).message; }
   check('revocado → desconecta + bitácora + error', st.limpiada && st.log.includes('mp_refresh_revocado') && /revocada/.test(err), err); }
+
+// 3b. Error de configuración (401: client_secret mal cargado) → NO desconecta.
+{ const { st, admin } = base(3 * DIA); mp(401, { message: 'invalid client' });
+  const t = await tokenVigenteMp(admin, 'b', 'k');
+  check('401 config → no desconecta, sigue con el token vigente, se anota', t === 'viejo' && !st.limpiada && st.log.includes('mp_refresh_config')); }
+
+// 3c. El guardado del par nuevo falla 2 veces → reintenta y guarda (H2).
+{ const { st, admin } = base(3 * DIA, 2); mp(200, nuevo);
+  const t = await tokenVigenteMp(admin, 'b', 'k');
+  check('guardado falla 2 veces → reintenta y queda guardado', t === 'APP_USR-nuevo' && st.refrescos === 1 && st.intentosGuardado === 3, `intentos=${st.intentosGuardado}`); }
+
+// 3d. El guardado falla siempre → se anota mp_refresh_no_guardado.
+{ const { st, admin } = base(3 * DIA, 9); mp(200, nuevo);
+  await tokenVigenteMp(admin, 'b', 'k');
+  check('guardado falla siempre → bitácora mp_refresh_no_guardado', st.log.includes('mp_refresh_no_guardado') && st.intentosGuardado === 3); }
 
 // 4. Transitorio (503) con token aún válido → sigue cobrando, nada se borra.
 { const { st, admin } = base(3 * DIA); mp(503, {});
