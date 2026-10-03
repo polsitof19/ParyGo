@@ -211,7 +211,9 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
         if (!tt.unlimited && !((parseInt(tt.capacity || '0', 10) || 0) > 0)) e[`tt-${i}-cap`] = t('¿Cuántas hay? Pon un número.', 'How many are there? Type a number.');
         if (tt.unlimited && (tt.gratis || toCents(tt.phases[0]?.priceSoles ?? '') === 0)) e[`tt-${i}-cap`] = t('Una entrada gratis no puede ser sin límite. Pon cuántas hay.', 'A free ticket cannot be unlimited. Set how many there are.');
         if (!tt.gratis && tt.phases.length > 1) {
-          const malo = tt.phases.some((ph, j) => (j > 0 && ph.priceSoles === '') || (j < tt.phases.length - 1 && !ph.until));
+          // Una fecha "hasta" que no existe en la zona (salto del horario de verano)
+          // daría una fase abierta sin aviso: se trata como vacía.
+          const malo = tt.phases.some((ph, j) => (j > 0 && ph.priceSoles === '') || (j < tt.phases.length - 1 && (!ph.until || !toISO(alFinDelDia(ph.until), zona))));
           if (malo) e[`tt-${i}-ph`] = t('Completa el precio y la fecha de cada subida.', 'Fill in the price and date of each increase.');
         }
       });

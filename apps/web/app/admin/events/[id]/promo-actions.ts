@@ -63,8 +63,9 @@ export type CreatePromoInput = {
   code: string;
   label: string;
   discountType: 'percent' | 'fixed' | 'free';
-  // For percent: 1..100. For fixed: amount in SOLES (we convert to cents). Ignored for free.
-  discountValue: number;
+  // For percent: 1..100. For fixed: amount in the brand's currency, as typed
+  // (aCentavos converts it). Ignored for free.
+  discountValue: number | string;
   // null = unlimited
   maxUses: number | null;
   perEmailLimit: number;
@@ -113,7 +114,8 @@ export async function createPromoCode(input: CreatePromoInput): Promise<CreateRe
 
   let discountValue = 0;
   if (input.discountType === 'percent') {
-    discountValue = Math.round(input.discountValue);
+    discountValue = Math.round(Number(input.discountValue));
+    if (!Number.isFinite(discountValue)) discountValue = 0;
     if (discountValue < 1 || discountValue > 100) {
       return { ok: false, message: t('El porcentaje debe estar entre 1 y 100.', 'The percentage must be between 1 and 100.') };
     }

@@ -88,7 +88,9 @@ export function PromoCodeManager({
         code: code.trim(),
         label: label.trim(),
         discountType,
-        discountValue: discountType === 'free' ? 0 : Number(discountValue),
+        // El monto viaja como TEXTO: el server lo lee con aCentavos en la moneda
+        // de la marca (en COP "50.000" es cincuenta mil; Number() daba 50).
+        discountValue: discountType === 'free' ? 0 : discountValue,
         maxUses: limitMode === 'unlimited' ? null : Number(maxUses),
         perEmailLimit: Number(perEmailLimit) || 1,
         appliesToAll,

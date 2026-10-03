@@ -57,30 +57,45 @@ try {
   const dmo = await svc.from('brands').update({ moneda: 'USD', metodo_manual: 'zelle' }).eq('id', demo.id);
   check('demotest (con eventos) tampoco cambia', !!dmo.error, dmo.error?.message);
 
-  // ---------- carrera: evento nuevo + cambio de moneda a la vez ----------
+  // ---------- 0089: la RPC compara la moneda con la que se leyeron los precios ----------
   await svc.from('events').delete().eq('id', e1.data.id);
+  await svc.from('brands').update({ moneda: 'COP', metodo_manual: 'transferencia', event_balance: 2 }).eq('id', tmp.id);
+  const rpc = (n, moneda) => svc.rpc('create_brand_event', {
+    p_brand_id: tmp.id, p_actor_user_id: sesion.user.id, p_ticket_types: [],
+    p_event: { ...evento(n), ...(moneda ? { moneda } : {}) },
+  });
+  const r1 = await rpc('m1', 'USD');
+  const { data: b1 } = await svc.from('brands').select('event_balance').eq('id', tmp.id).single();
+  check('RPC con moneda distinta → MONEDA_CAMBIO y el saldo no se gasta', /MONEDA_CAMBIO/.test(r1.error?.message ?? '') && b1.event_balance === 2, r1.error?.message);
+  const r2 = await rpc('m2', 'COP');
+  check('RPC con la misma moneda → crea', !r2.error && !!r2.data, r2.error?.message);
+  await svc.from('events').delete().eq('brand_id', tmp.id);
+  const r3 = await rpc('m3', null);
+  check('RPC sin moneda (deploy viejo) → crea igual', !r3.error && !!r3.data, r3.error?.message);
+
+  // ---------- carrera: evento nuevo + cambio de moneda a la vez ----------
+  // Invariante: si el evento existe, su marca tiene la moneda que había cuando
+  // se creó. Con FOR SHARE, o el cambio va primero (y el evento nace con la
+  // moneda nueva) o el evento va primero (y el cambio choca con él). Se mide
+  // con la moneda final y la creación de cada uno.
   let malas = 0;
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 6; i++) {
     const de = i % 2 ? 'COP' : 'USD', a = i % 2 ? 'USD' : 'COP';
     await svc.from('events').delete().eq('brand_id', tmp.id);
     await svc.from('brands').update({ moneda: de, metodo_manual: 'transferencia' }).eq('id', tmp.id);
     const [ev, cambio] = await Promise.all([
-      svc.from('events').insert(evento(`c${i}`)).select('id, created_at').single(),
+      svc.from('events').insert(evento(`c${i}`)).select('id').single(),
       svc.from('brands').update({ moneda: a }).eq('id', tmp.id),
     ]);
-    // Inválido: el evento existe Y la moneda cambió DESPUÉS de crearlo. Si el
-    // cambio ganó, el evento nace con la moneda nueva (válido).
-    if (!ev.error && !cambio.error) {
-      // Los dos pasaron: válido solo si el cambio se aplicó antes del evento.
-      // Con FOR SHARE el UPDATE posterior ve el evento y falla, así que si los
-      // dos pasaron el cambio fue primero; se verifica que no quede un cambio
-      // posible ahora.
-      const otra = await svc.from('brands').update({ moneda: de }).eq('id', tmp.id);
-      if (!otra.error) malas++;
-    }
-    if (ev.error && cambio.error) malas++;
+    const { data: fin } = await svc.from('brands').select('moneda').eq('id', tmp.id).single();
+    // Los dos no pueden pasar si el evento fue primero; si los dos pasaron, el
+    // cambio fue primero y la moneda final es la nueva. Si solo el evento pasó,
+    // la moneda sigue siendo la vieja. Nunca: los dos fallan.
+    const ok = (!ev.error && !cambio.error && fin.moneda === a)
+      || (!ev.error && cambio.error && /MONEDA_CON_EVENTOS/.test(cambio.error.message) && fin.moneda === de);
+    if (!ok) malas++;
   }
-  check('carrera evento + cambio de moneda: nunca un evento con la moneda cambiada después', malas === 0, `${malas} malas en 4`);
+  check('carrera evento + cambio de moneda: siempre uno de los dos órdenes válidos', malas === 0, `${malas} malas en 6`);
 } finally {
   await svc.from('events').delete().eq('brand_id', tmp.id);
   await svc.from('brands').delete().eq('id', tmp.id);

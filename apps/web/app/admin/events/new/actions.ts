@@ -177,6 +177,9 @@ export async function createBrandEventAction(
       cover_url: coverUrl,
       min_age: parsedEvent.data.min_age ? parseInt(parsedEvent.data.min_age, 10) : 18,
       refund_policy: parsedEvent.data.refund_policy || null,
+      // 0089: la RPC la compara bajo el lock de la marca (los precios se
+      // leyeron en esta moneda).
+      moneda,
     },
     p_ticket_types: parsedTT.data,
   });
@@ -210,6 +213,9 @@ export async function createBrandEventAction(
     const msg = error?.message ?? '';
     const tope = mensajePrueba(msg, await idiomaPanel());
     if (tope) return { ok: false, message: tope };
+    if (msg.includes('MONEDA_CAMBIO')) {
+      return { ok: false, message: t('La moneda de tu marca cambió mientras creabas el evento. Revisa los precios y vuelve a intentarlo.', "Your brand's currency changed while you were creating the event. Check the prices and try again.") };
+    }
     if (msg.includes('INSUFFICIENT_BALANCE') || msg.includes('NO_TRIAL')) {
       return { ok: false, message: t('Tu marca no tiene saldo de eventos. Compra un paquete en Comprar eventos.', 'Your brand has no event balance. Buy a pack in Buy events.') };
     }
