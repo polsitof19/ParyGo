@@ -135,7 +135,7 @@ la marca; ParyGo sigue sin tocarla.
   moneda distinta, otra marca, idempotencia, 2 settles simultáneos → 1 emite,
   capture_id de otra orden rechazado, refund anula, parcial no; sandbox en
   marca no-test rechazado. **Listo**: todo verde y demotest intacta.
-- [ ] 2. lib/paypalApi.ts + refactor de cobroParygo.ts. e2e/paypal-api.test.mts
+- [x] 2. lib/paypalApi.ts + refactor de cobroParygo.ts. e2e/paypal-api.test.mts
   con fetch interceptado: cuerpo de la orden (monto por texto, moneda,
   custom_id, invoice_id), capturar con ALREADY_CAPTURED, rechazo, custom_id
   ajeno, montos 0.01/19.99/1234.50. **Listo**: test verde, tsc, empezar-paypal

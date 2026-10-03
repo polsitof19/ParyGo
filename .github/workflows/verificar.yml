@@ -41,7 +41,7 @@ jobs:
       - name: refresco del token (un solo refresh, revocado vs transitorio)
         run: cd apps/web && npx -y tsx ../../e2e/mp-refresh.test.mts
       - name: moneda, hora y medio manual por país
-        run: cd apps/web && npx -y tsx ../../e2e/moneda.test.mts && npx -y tsx ../../e2e/zona.test.mts && npx -y tsx ../../e2e/metodo-manual.test.mts
+        run: cd apps/web && npx -y tsx ../../e2e/moneda.test.mts && npx -y tsx ../../e2e/zona.test.mts && npx -y tsx ../../e2e/metodo-manual.test.mts && npx -y tsx ../../e2e/paypal-api.test.mts
 
   base:
     name: permisos y dinero (demotest)
