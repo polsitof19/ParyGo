@@ -92,7 +92,7 @@ las server actions con service role.
 
 ## Tareas (por bloques; commit después de cada uno)
 ### Bloque 1 — base y dinero mostrado
-- [ ] 1. 0088 + dryrun + aplicar + `e2e/pais-0088.mjs` (JWT real: anon lee las 3
+- [x] 1. 0088 + dryrun + aplicar + `e2e/pais-0088.mjs` (JWT real: anon lee las 3
   columnas y no escribe; trigger rechaza cambiar moneda con un evento (y la carrera evento+cambio se serializa); CHECK
   rechaza yape+COP). **Listo:** test verde, demotest queda en PEN/yape.
 - [ ] 2. `lib/moneda.ts`: `formatMoney(cents, moneda)` (Intl, sin decimales en

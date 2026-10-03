@@ -84,5 +84,8 @@ jobs:
       - if: env.HAY_SECRETOS == 'true'
         name: Conectar MP 0086 (RPCs, JWT real, concurrencia)
         run: node e2e/mp-oauth-rpc.mjs
+      - if: env.HAY_SECRETOS == 'true'
+        name: país 0088 (moneda, medio, carrera)
+        run: node e2e/pais-0088.mjs
       - if: always() && env.HAY_SECRETOS == 'true'
         run: rm -f apps/web/.env.local
