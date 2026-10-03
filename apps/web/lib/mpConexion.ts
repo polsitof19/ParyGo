@@ -24,15 +24,17 @@ export function duenaRealDe(user: SessionUser): string | null {
   return user.brandMemberships.find((m) => m.role === 'brand_admin')?.brandId ?? null;
 }
 
-// ¿Hay pagos con tarjeta de esta marca que todavía pueden liquidarse? (orden MP
-// con preferencia, sin pago registrado, creada en las últimas 48 h). Mientras
-// haya, no se desconecta ni se cambia de cuenta: el pago se valida contra la
-// cuenta conectada (collector_id).
+// ¿Hay un comprador pagando con tarjeta AHORA? (orden MP con preferencia, sin
+// pago registrado, de los últimos 30 min: lo que dura un checkout activo y el
+// hold del promo). Mientras haya, no se desconecta ni se cambia de cuenta: el
+// pago se valida contra la cuenta conectada (collector_id). Con 48 h un
+// checkout abandonado dejaba a la marca sin poder desconectar dos días (Codex);
+// un pago más tardío queda en la bitácora como mp_collector_mismatch.
 export async function pagosMpEnCurso(admin: SupabaseClient, brandId: string): Promise<boolean> {
   const { count, error } = await admin.from('orders').select('id', { count: 'exact', head: true })
     .eq('brand_id', brandId).eq('payment_method', 'mercadopago').eq('status', 'pending_payment')
     .not('mp_preference_id', 'is', null).is('mp_payment_id', null)
-    .gt('created_at', new Date(Date.now() - 48 * 3600_000).toISOString());
+    .gt('created_at', new Date(Date.now() - 30 * 60_000).toISOString());
   return error ? true : (count ?? 0) > 0; // falla cerrado
 }
 
@@ -102,6 +104,10 @@ export async function tokenVigenteMp(admin: SupabaseClient, brandId: string, key
       if (!eG && guardado === false) throw new Error('La conexión de Mercado Pago cambió mientras se renovaba. Intenta de nuevo.');
       await new Promise((ok) => setTimeout(ok, 300 * (intento + 1)));
     }
+    // Decisión (Codex lo marcó dos veces): fallar acá no recupera nada —MP ya
+    // rotó el refresh— y solo perdería este cobro. Se usa el token nuevo
+    // (válido) y queda en la bitácora; si el próximo refresh da invalid_grant,
+    // la marca se desconecta con aviso y vuelve a conectar.
     await admin.from('events_log').insert({ brand_id: brandId, type: 'mp_refresh_no_guardado', payload: { cuenta: fila.user_id } });
     return r.tokens.accessToken;
   }

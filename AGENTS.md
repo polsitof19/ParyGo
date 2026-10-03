@@ -48,9 +48,11 @@ Paul nunca toca esa plata (no hay `marketplace_fee`).
   un aviso ajeno que reintente no hace daño). Acreditar sigue dependiendo del
   re-pedido + `settle_pack_purchase`.
 - Desconectar: mismo criterio que quitar el Yape (`marcaCobraEnVivo` con el
-  único método) → bloqueado. Órdenes MP pendientes: se dejan; la vuelta y el
-  webhook ya no pueden re-pedir el pago sin token → quedan en `pending_payment`
-  y el hold vence solo (documentado en el aviso de desconectar).
+  único método) → bloqueado. Un pago con tarjeta ACTIVO (orden MP con
+  preferencia sin pago, < 30 min) también bloquea desconectar o cambiar de
+  cuenta (security review M1; 48 h bloqueaba dos días por un checkout
+  abandonado). Órdenes más viejas: se dejan; un pago tardío queda como
+  `mp_collector_mismatch` en la bitácora.
 - Bitácora `events_log` con actor: `mp_conectado`, `mp_desconectado`,
   `mp_refresh_revocado`, `mp_conectar_fallido` (motivo, sin tokens).
 - CSRF/PKCE: `state` 32 bytes + `code_verifier` en cookie httpOnly/secure/
