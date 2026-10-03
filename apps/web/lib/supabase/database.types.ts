@@ -115,6 +115,11 @@ export type Database = {
           prueba_disponible: boolean
           alta_usuario: string | null
           mp_oauth_user_id: string | null
+          paypal_client_id: string | null
+          paypal_secret_enc: string | null
+          paypal_webhook_id: string | null
+          paypal_sandbox: boolean
+          paypal_conectado_at: string | null
           mp_oauth_expires_at: string | null
           mp_conectado_at: string | null
           mp_access_token_enc: string | null
@@ -147,6 +152,11 @@ export type Database = {
           prueba_disponible?: boolean
           alta_usuario?: string | null
           mp_oauth_user_id?: string | null
+          paypal_client_id?: string | null
+          paypal_secret_enc?: string | null
+          paypal_webhook_id?: string | null
+          paypal_sandbox?: boolean
+          paypal_conectado_at?: string | null
           mp_oauth_expires_at?: string | null
           mp_conectado_at?: string | null
           mp_access_token_enc?: string | null
@@ -179,6 +189,11 @@ export type Database = {
           prueba_disponible?: boolean
           alta_usuario?: string | null
           mp_oauth_user_id?: string | null
+          paypal_client_id?: string | null
+          paypal_secret_enc?: string | null
+          paypal_webhook_id?: string | null
+          paypal_sandbox?: boolean
+          paypal_conectado_at?: string | null
           mp_oauth_expires_at?: string | null
           mp_conectado_at?: string | null
           mp_access_token_enc?: string | null
@@ -445,6 +460,9 @@ export type Database = {
           ip_address: unknown
           marketing_opt_in: boolean
           mp_payment_id: string | null
+          paypal_order_id: string | null
+          paypal_client_id: string | null
+          paypal_capture_id: string | null
           mp_payment_status: string | null
           mp_preference_id: string | null
           promo_code_id: string | null
@@ -480,6 +498,9 @@ export type Database = {
           ip_address?: unknown
           marketing_opt_in?: boolean
           mp_payment_id?: string | null
+          paypal_order_id?: string | null
+          paypal_client_id?: string | null
+          paypal_capture_id?: string | null
           mp_payment_status?: string | null
           mp_preference_id?: string | null
           paid_at?: string | null
@@ -513,6 +534,9 @@ export type Database = {
           ip_address?: unknown
           marketing_opt_in?: boolean
           mp_payment_id?: string | null
+          paypal_order_id?: string | null
+          paypal_client_id?: string | null
+          paypal_capture_id?: string | null
           mp_payment_status?: string | null
           mp_preference_id?: string | null
           paid_at?: string | null
@@ -1255,6 +1279,30 @@ export type Database = {
         Args: { p_brand_id: string; p_encryption_key: string }
         Returns: { access_token: string; refresh_token: string; user_id: string; expires_at: string }[]
       }
+      set_brand_paypal: {
+        Args: { p_brand_id: string; p_client_id: string; p_secret: string; p_webhook_id: string | null; p_sandbox: boolean; p_encryption_key: string }
+        Returns: Json
+      }
+      clear_brand_paypal: {
+        Args: { p_brand_id: string }
+        Returns: Json
+      }
+      get_brand_paypal_credentials: {
+        Args: { p_brand_id: string; p_encryption_key: string }
+        Returns: { client_id: string; secret: string; webhook_id: string | null; sandbox: boolean; moneda: string }[]
+      }
+      puede_cobrar_paypal: {
+        Args: { p_order_id: string; p_brand_id: string; p_paypal_order_id: string; p_client_id: string }
+        Returns: Json
+      }
+      settle_paypal_payment: {
+        Args: { p_order_id: string; p_brand_id: string; p_capture_id: string; p_paid_cents: number; p_currency: string }
+        Returns: Json
+      }
+      refund_paypal_order: {
+        Args: { p_order_id: string; p_brand_id: string; p_capture_id: string; p_motivo: string }
+        Returns: Json
+      }
       clear_brand_mp_oauth: {
         Args: { p_brand_id: string }
         Returns: undefined
@@ -1598,7 +1646,7 @@ export type Database = {
         | "failed"
         | "refunded"
         | "expired"
-      payment_method: "mercadopago" | "yape_manual" | "courtesy"
+      payment_method: "mercadopago" | "yape_manual" | "courtesy" | "paypal"
       user_role: "super_admin" | "brand_admin" | "validator"
       yape_proof_status: "pending_review" | "approved" | "rejected"
     }
@@ -1736,7 +1784,7 @@ export const Constants = {
         "refunded",
         "expired",
       ],
-      payment_method: ["mercadopago", "yape_manual", "courtesy"],
+      payment_method: ["mercadopago", "yape_manual", "courtesy", "paypal"],
       user_role: ["super_admin", "brand_admin", "validator"],
       yape_proof_status: ["pending_review", "approved", "rejected"],
     },
