@@ -411,6 +411,19 @@ supabase/verify-0053-0058.mjs (comprobaciones de estado esperado).
 OJO con `mgmt.mjs types`: PISA database.types.ts entero y regenerarlo completo
 rompe tipos afinados a mano — las columnas nuevas se agregan a mano.
 
+SALUD DE LA BASE (0085, 2026-10-03, avisos de Supabase). anon ya NO ejecuta
+is_super_admin / user_brands / user_is_brand_member (solo las usan policies de
+authenticated, que conserva su grant) ni handle_new_user (trigger);
+get_event_active_prices sigue pública a propósito. search_path fijo en 7
+funciones, 2 policies con (select auth.uid()), 25 índices de FK. Yape SIN
+comprobante a las 48 h → 'expired' (cleanup_expired_reservations, cada 5 min;
+su reserva ya vencía sola) y la confirmación muestra "Tu reserva venció". Con
+comprobante NUNCA vence (lo decide el organizador). Protección de contraseñas
+filtradas (HIBP) es SOLO plan Pro: `node supabase/mgmt.mjs auth hibp` da 402 en
+Free. net._http_response (respuestas del cron de pg_net) llegó a 69 MB con 720
+filas: `vacuum full net._http_response` la dejó en 0,7 MB (base 190 → 123 MB).
+Test: e2e/salud-0085.mjs 13/13 + permisos-escritura.
+
 MP POR MARCA, 4 BUGS CERRADOS (0083 + 0084, 2026-10-01). Un solo camino
 liquida un pago de tarjeta de una marca: lib/liquidarPagoMp.ts (re-pide el
 pago a MP con el token de la marca; external_reference = la orden esperada;
@@ -675,7 +688,7 @@ cada consulta cruzaba el continente. Se prendió por la API de Cloudflare
 [placement] de apps/web/wrangler.toml NO lo aplicó la integración con Git.
 Verificar con el GET del proyecto de Pages; el PATCH conserva las variables.
 
-Incrementales, idempotentes, numeradas (vamos por 0084). Backwards-compatible
+Incrementales, idempotentes, numeradas (vamos por 0085). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
 para no romper la app vieja desplegada.
 
@@ -797,7 +810,7 @@ Opus para diseño (Plan) y lo de riesgo. Sonnet/Haiku para subagents mecánicos
 - **UI UX Pro Max / SkillUI / impeccable**: solo referencia. Manda el sistema
   de ParyGo: fondos blanco/negro neutro, Geist, sin tarjetas flotantes. La salida
   de SkillUI vive en tmp/skillui/ y no se aplica a nada.
-- **Skills del stack (curadas 2026-09-26, 34 en .claude/skills; 48 desde el 2026-09-28 con las 14 de marketing)**: por
+- **Skills del stack (curadas 2026-09-26; 41 en .claude/skills desde el 2026-10-03, con las 14 de marketing; se sacaron 7 que duplicaban plugins o pedían herramientas no instaladas)**: por
   plataforma → `cloudflare`, `wrangler`, `workers-best-practices` (Pages +
   Worker router), `supabase`, `supabase-postgres-best-practices`, `resend`,
   `mp-integrate`, `mp-webhooks` (oficiales de Mercado Pago),
@@ -814,9 +827,12 @@ Opus para diseño (Plan) y lo de riesgo. Sonnet/Haiku para subagents mecánicos
   (`update` deja enlaces simbólicos a .agents/, que está gitignored, y un
   enlace no viaja bien entre PC y laptop). Agentes en .claude/agents, todos
   de ParyGo: `security-reviewer` (dinero/auth/acceso, obligatorio),
-  `ui-ux-designer`, `e2e-parygo` (corre la prueba correcta con el build y
-  el server correctos, limpia demotest) y `deploy-parygo` (check-runs +
-  smokes de solo lectura tras cada push). Los genéricos (code review,
+  `ui-ux-designer` (reescrito 2026-10-03: describía otro proyecto),
+  `e2e-parygo` (corre la prueba correcta con el build y el server correctos,
+  limpia demotest; fase1 SIEMPRE en segundo plano por el corte de 600 s),
+  `deploy-parygo` (check-runs + smokes de solo lectura tras cada push) y
+  `migraciones-parygo` (2026-10-03: revisión estática + dryrun + aplicar SOLO
+  si se le dice "aplicar" + grants y prueba). Los genéricos (code review,
   tests, seguridad, performance web) los da el plugin agent-skills.
 - **Marketing (2026-09-28)**: agente `marketing-parygo` (.claude/agents) para
   textos de la landing y /empezar, SEO, conversión y campañas; lista verificada

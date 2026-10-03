@@ -97,11 +97,16 @@ if (cmd === 'info') {
   //   node supabase/mgmt.mjs auth          → muestra SOLO estos campos (nada secreto)
   //   node supabase/mgmt.mjs auth politica → fija 8+ con minúscula, MAYÚSCULA y número
   //   node supabase/mgmt.mjs auth otp6     → código del alta de 6 dígitos
-  const CAMPOS = ['password_min_length', 'password_required_characters', 'mailer_otp_length', 'mailer_otp_exp', 'external_email_enabled', 'mailer_autoconfirm'];
+  //   node supabase/mgmt.mjs auth hibp     → rechaza contraseñas filtradas (HaveIBeenPwned; SOLO plan Pro: en Free da 402)
+  const CAMPOS = ['password_hibp_enabled', 'password_min_length', 'password_required_characters', 'mailer_otp_length', 'mailer_otp_exp', 'external_email_enabled', 'mailer_autoconfirm'];
   const ver = (c) => Object.fromEntries(CAMPOS.map((k) => [k, c[k]]));
   if (arg === 'otp6') {
     // Código del alta de 6 dígitos (Paul, 2026-10-01; Supabase no baja de 6).
     await api(`/v1/projects/${REF}/config/auth`, { method: 'PATCH', body: JSON.stringify({ mailer_otp_length: 6 }) });
+  }
+  if (arg === 'hibp') {
+    // Aviso de Supabase "Leaked Password Protection Disabled" (2026-10-03).
+    await api(`/v1/projects/${REF}/config/auth`, { method: 'PATCH', body: JSON.stringify({ password_hibp_enabled: true }) });
   }
   if (arg === 'politica') {
     const antes = await api(`/v1/projects/${REF}/config/auth`);
@@ -116,6 +121,6 @@ if (cmd === 'info') {
   }
   console.log('ahora:', JSON.stringify(ver(await api(`/v1/projects/${REF}/config/auth`))));
 } else {
-  console.log('uso: node supabase/mgmt.mjs [info|branches|sql <SQL>|file <archivo>|auth [politica]]');
+  console.log('uso: node supabase/mgmt.mjs [info|branches|sql <SQL>|file <archivo>|auth [politica|otp6|hibp]]');
 }
 }
