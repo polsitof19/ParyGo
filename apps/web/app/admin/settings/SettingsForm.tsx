@@ -78,6 +78,7 @@ export function SettingsForm(props: Props) {
   const [medio, setMedio] = useState<Medio>(props.medio);
   const pais = PAISES.find((p) => p.id === paisId) ?? PAISES[0]!;
   const cambiaMoneda = pais.moneda !== props.moneda;
+  const prefijoWa = (PAISES.find((p) => p.id === props.paisId) ?? PAISES[0]!).prefijo;
   // Los medios del país, más el que ya tiene la marca (misma moneda, otro país).
   const medios = cambiaMoneda ? pais.medios : Array.from(new Set<Medio>([...pais.medios, props.medio]));
   const nombreMedio = (m: Medio) => NOMBRE_MEDIO[m][idioma === 'en' ? 'en' : 'es'];
@@ -196,8 +197,8 @@ export function SettingsForm(props: Props) {
               <p className="s-hint">{t('Es tu contacto público: lo ven los compradores en la página del evento, al pagar y en la entrada, y es la dirección a la que le responden a tus emails. No es tu email para entrar al panel.', 'This is your public contact: buyers see it on the event page, at checkout and on the ticket, and it is the address they reply to on your emails. It is not your email to log in to the dashboard.')}</p>
             </Field>
             <div className="s-field">
-              <Field label={t('WhatsApp (formato +51999000111)', 'WhatsApp (format +51999000111)')} htmlFor="whatsapp_e164" error={err.whatsapp_e164}>
-                <input form={FORM} id="whatsapp_e164" name="whatsapp_e164" type="tel" inputMode="tel" defaultValue={props.whatsapp} placeholder="+51999000111" className="s-input" disabled={ro} />
+              <Field label={t(`WhatsApp (formato ${prefijoWa}999000111)`, `WhatsApp (format ${prefijoWa}999000111)`)} htmlFor="whatsapp_e164" error={err.whatsapp_e164}>
+                <input form={FORM} id="whatsapp_e164" name="whatsapp_e164" type="tel" inputMode="tel" defaultValue={props.whatsapp} placeholder={`${prefijoWa}…`} className="s-input" disabled={ro} />
               </Field>
             </div>
             <div className="s-field">

@@ -18,7 +18,7 @@ export function InviteBrandAdmin({ brandId, brandName }: { brandId: string; bran
           id="invite-email"
           name="email"
           type="email"
-          placeholder="promotor@code.com.pe"
+          placeholder="correo@marca.com"
           required
           className="s-input"
         />

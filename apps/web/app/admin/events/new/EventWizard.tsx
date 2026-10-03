@@ -5,6 +5,7 @@ import { useFormState, useFormStatus } from 'react-dom';
 import { BatteryFull, CheckCircle2, ChevronLeft, Lock, Plus, Signal, Trash2, Wifi, XCircle } from 'lucide-react';
 import { pareceCaptura, medirImagen } from '@/lib/flyer';
 import { useTextos } from '@/components/IdiomaPanel';
+import { NombresEntrada } from '@/app/admin/NombresEntrada';
 import { aCentavos, formatMoney, simbolo, sinDecimales, NOMBRE_MONEDA, type Moneda } from '@/lib/moneda';
 import { paisDe } from '@/lib/metodoManual';
 import { localAUtc, utcALocal, ciudadDe, type Zona } from '@/lib/zona';
@@ -54,7 +55,7 @@ const alFinDelDia = (local: string): string => {
   if (!hora || hora === '00:00' || hora === '00:00:00') return `${fecha}T${FIN_DEL_DIA}`;
   return local;
 };
-// El link sale del nombre ("Density · Noche 04" → density-noche-04) mientras
+// El link sale del nombre ("Noche de música 04" → noche-de-musica-04) mientras
 // el organizador no lo toque; si lo edita a mano, se respeta.
 const aSlug = (n: string): string => n
   .normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -358,7 +359,7 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
             <h2 className="cw-q" id="cw-q-1" tabIndex={-1}><label htmlFor="name">{t('¿Cómo se llama tu evento?', "What's your event called?")}</label></h2>
             <div className="s-field">
               <input
-                id="name" name="name" className="s-input" placeholder="Density · Noche 04" maxLength={120} autoComplete="off" value={name} {...inv('name')}
+                id="name" name="name" className="s-input" maxLength={120} autoComplete="off" value={name} {...inv('name')}
                 onChange={(e) => { setName(e.target.value); limpiar('name'); if (!slugManual.current) { setSlug(aSlug(e.target.value)); limpiar('slug'); } }}
               />
               {err('name')}
@@ -416,18 +417,18 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
             {pregunta(3, t('¿Dónde es?', 'Where is it?'))}
             <div className="s-field">
               <label htmlFor="venue_name" className="s-label">{t('Nombre del lugar', 'Name of the place')}</label>
-              <input id="venue_name" name="venue_name" className="s-input" placeholder="Club Foso" maxLength={120} value={venueName} {...inv('venue_name')}
+              <input id="venue_name" name="venue_name" className="s-input" maxLength={120} value={venueName} {...inv('venue_name')}
                 onChange={(e) => { setVenueName(e.target.value); limpiar('venue_name'); }} />
               {err('venue_name')}
             </div>
             <div className="s-field">
               <label htmlFor="venue_address" className="s-label">{t('Dirección', 'Address')} <span className="cw-opt">{t('(opcional)', '(optional)')}</span></label>
-              <input id="venue_address" name="venue_address" className="s-input" placeholder="Av. Foso 123, Miraflores" maxLength={200} value={venueAddress}
+              <input id="venue_address" name="venue_address" className="s-input" maxLength={200} value={venueAddress}
                 onChange={(e) => setVenueAddress(e.target.value)} />
             </div>
             <div className="s-field">
               <label htmlFor="venue_maps_url" className="s-label">{t('Link de Google Maps', 'Google Maps link')} <span className="cw-opt">{t('(opcional)', '(optional)')}</span></label>
-              <input id="venue_maps_url" name="venue_maps_url" type="url" inputMode="url" className="s-input" placeholder="https://maps.app.goo.gl/…" maxLength={500} value={mapsUrl} {...inv('venue_maps_url')}
+              <input id="venue_maps_url" name="venue_maps_url" type="url" inputMode="url" className="s-input" placeholder={t('Pega el link de Google Maps', 'Paste the Google Maps link')} maxLength={500} value={mapsUrl} {...inv('venue_maps_url')}
                 onChange={(e) => { setMapsUrl(e.target.value.trim()); limpiar('venue_maps_url'); }} />
               {err('venue_maps_url') ?? <p className="s-hint">{t('En Google Maps: Compartir → Copiar enlace. Tu comprador llega con un toque.', 'In Google Maps: Share → Copy link. Your buyer gets there in one tap.')}</p>}
             </div>
@@ -461,8 +462,9 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
                 <div className="cw-tt__head">
                   <div className="cw-tt__name">
                     <label htmlFor={`tt-${i}-name`} className="s-label">{t('Nombre de la entrada', 'Ticket name')}</label>
-                    <input id={`tt-${i}-name`} className="s-input" placeholder="General / VIP" maxLength={80} value={tt.name} {...inv(`tt-${i}-name`)}
+                    <input id={`tt-${i}-name`} className="s-input" maxLength={80} value={tt.name} {...inv(`tt-${i}-name`)}
                       onChange={(e) => { patchTT(i, { name: e.target.value }); limpiar(`tt-${i}-name`); }} />
+                    <NombresEntrada inputId={`tt-${i}-name`} onPick={(n) => { patchTT(i, { name: n }); limpiar(`tt-${i}-name`); }} />
                   </div>
                   <button type="button" className="s-btn s-btn--ghost cw-quitar" onClick={() => { setTts((s) => s.filter((_, k) => k !== i)); setErrs({}); }} aria-label={t(`Quitar ${tt.name || 'esta entrada'}`, `Remove ${tt.name || 'this ticket'}`)}>
                     <Trash2 aria-hidden="true" />
@@ -603,7 +605,7 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
               <summary>{t('Más detalles (opcional)', 'More details (optional)')}</summary>
               <div className="s-field">
                 <label htmlFor="description" className="s-label">{t('Descripción corta', 'Short description')}</label>
-                <textarea id="description" name="description" rows={2} maxLength={2000} className="s-input" placeholder="DJ Headliner · Club Foso · Lima" />
+                <textarea id="description" name="description" rows={2} maxLength={2000} className="s-input" />
                 {err('description')}
               </div>
               <div className="s-field">

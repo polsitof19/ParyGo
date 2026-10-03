@@ -69,7 +69,7 @@ export function YapeUploadForm({ orderId, expectedAmountCents, moneda, medio = '
 
       <div className="c-field">
         <label htmlFor="payer_name" className="c-label">{esYape ? 'Tu nombre completo (como en Yape)' : 'Tu nombre completo (como en el comprobante)'}</label>
-        <input id="payer_name" name="payer_name" required defaultValue={buyerName} placeholder="María López" className="c-input" />
+        <input id="payer_name" name="payer_name" required defaultValue={buyerName} className="c-input" />
         <p className="c-help">Debe coincidir con el nombre del comprobante.</p>
       </div>
 

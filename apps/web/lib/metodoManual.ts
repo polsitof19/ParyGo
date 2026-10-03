@@ -14,17 +14,17 @@ export const medioDe = (v: unknown): Medio =>
 const MONEDA_DEL_MEDIO: Partial<Record<Medio, Moneda>> = { yape: 'PEN', nequi: 'COP', bizum: 'EUR', zelle: 'USD', usdt: 'USD' };
 export const medioSirve = (medio: Medio, moneda: Moneda) => (MONEDA_DEL_MEDIO[medio] ?? moneda) === moneda;
 
-export type Pais = { id: string; nombre: string; name: string; moneda: Moneda; zona: Zona; medios: Medio[] };
+export type Pais = { id: string; nombre: string; name: string; moneda: Moneda; zona: Zona; prefijo: string; medios: Medio[] };
 // País = preset de moneda + zona. Los medios en el orden en que se ofrecen.
 export const PAISES: Pais[] = [
-  { id: 'PE', nombre: 'Perú', name: 'Peru', moneda: 'PEN', zona: 'America/Lima', medios: ['yape', 'transferencia'] },
-  { id: 'CO', nombre: 'Colombia', name: 'Colombia', moneda: 'COP', zona: 'America/Bogota', medios: ['nequi', 'transferencia'] },
-  { id: 'MX', nombre: 'México', name: 'Mexico', moneda: 'MXN', zona: 'America/Mexico_City', medios: ['transferencia'] },
-  { id: 'CL', nombre: 'Chile', name: 'Chile', moneda: 'CLP', zona: 'America/Santiago', medios: ['transferencia'] },
-  { id: 'AR', nombre: 'Argentina', name: 'Argentina', moneda: 'ARS', zona: 'America/Argentina/Buenos_Aires', medios: ['transferencia'] },
-  { id: 'EC', nombre: 'Ecuador', name: 'Ecuador', moneda: 'USD', zona: 'America/Guayaquil', medios: ['transferencia', 'usdt', 'zelle'] },
-  { id: 'ES', nombre: 'España', name: 'Spain', moneda: 'EUR', zona: 'Europe/Madrid', medios: ['bizum', 'transferencia'] },
-  { id: 'US', nombre: 'Estados Unidos', name: 'United States', moneda: 'USD', zona: 'America/New_York', medios: ['zelle', 'usdt', 'transferencia'] },
+  { id: 'PE', nombre: 'Perú', name: 'Peru', moneda: 'PEN', zona: 'America/Lima', prefijo: '+51', medios: ['yape', 'transferencia'] },
+  { id: 'CO', nombre: 'Colombia', name: 'Colombia', moneda: 'COP', zona: 'America/Bogota', prefijo: '+57', medios: ['nequi', 'transferencia'] },
+  { id: 'MX', nombre: 'México', name: 'Mexico', moneda: 'MXN', zona: 'America/Mexico_City', prefijo: '+52', medios: ['transferencia'] },
+  { id: 'CL', nombre: 'Chile', name: 'Chile', moneda: 'CLP', zona: 'America/Santiago', prefijo: '+56', medios: ['transferencia'] },
+  { id: 'AR', nombre: 'Argentina', name: 'Argentina', moneda: 'ARS', zona: 'America/Argentina/Buenos_Aires', prefijo: '+54', medios: ['transferencia'] },
+  { id: 'EC', nombre: 'Ecuador', name: 'Ecuador', moneda: 'USD', zona: 'America/Guayaquil', prefijo: '+593', medios: ['transferencia', 'usdt', 'zelle'] },
+  { id: 'ES', nombre: 'España', name: 'Spain', moneda: 'EUR', zona: 'Europe/Madrid', prefijo: '+34', medios: ['bizum', 'transferencia'] },
+  { id: 'US', nombre: 'Estados Unidos', name: 'United States', moneda: 'USD', zona: 'America/New_York', prefijo: '+1', medios: ['zelle', 'usdt', 'transferencia'] },
 ];
 // La marca guarda moneda + zona, no el país: se reconoce por las dos.
 export const paisDe = (moneda: string, zona: string): Pais =>

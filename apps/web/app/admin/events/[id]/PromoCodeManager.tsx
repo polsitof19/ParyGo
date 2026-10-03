@@ -140,7 +140,7 @@ export function PromoCodeManager({
           </div>
           <div className="s-field">
             <label htmlFor="promo_label" className="s-label">{t('Etiqueta (RRPP / canal)', 'Label (promoter / channel)')}</label>
-            <input id="promo_label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t('Juan RRPP / Instagram', 'John Promoter / Instagram')} maxLength={80} className="s-input" />
+            <input id="promo_label" value={label} onChange={(e) => setLabel(e.target.value)} maxLength={80} className="s-input" />
           </div>
         </div>
 

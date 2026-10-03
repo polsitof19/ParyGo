@@ -336,7 +336,7 @@ export function EmpezarFlow({ lang, tipo = 'marca', planes, inicial: planInicial
               <p className="ez-lede">{t.w.nombreHint}</p>
               <div className="ez-field ez-field--q">
                 <input id="ez-nombre" className="ez-input" value={nombre} onChange={(e) => { setNombre(e.target.value); limpiar('nombre'); }}
-                  maxLength={60} autoComplete="organization" placeholder={t.nombrePh} aria-invalid={!!err.nombre} aria-describedby={err.nombre ? 'e-nombre' : undefined} />
+                  maxLength={60} autoComplete="organization" placeholder={t.nombrePh || undefined} aria-invalid={!!err.nombre} aria-describedby={err.nombre ? 'e-nombre' : undefined} />
                 {err.nombre && <p id="e-nombre" className="ez-err">{err.nombre}</p>}
                 {/* El enlace que se arma solo ya es de otra marca: se avisa acá, antes del paso del enlace. */}
                 {!err.nombre && libre === false && <p className="ez-hint" aria-live="polite">{t.w.ocupadoPaso}</p>}
@@ -393,7 +393,7 @@ export function EmpezarFlow({ lang, tipo = 'marca', planes, inicial: planInicial
               <div className="ez-field">
                 <label htmlFor="ez-wa" className="ez-label">{t.wa} <span className="ez-opt">{esPrueba ? t.c.waObligatorio : t.opcional}</span></label>
                 <input id="ez-wa" type="tel" className="ez-input" value={whatsapp} onChange={(e) => { setWhatsapp(e.target.value); limpiar('whatsapp'); }}
-                  autoComplete="tel" inputMode="tel" placeholder={t.waPh} aria-invalid={!!err.whatsapp} aria-describedby="e-wa" />
+                  autoComplete="tel" inputMode="tel" placeholder={`${pais.prefijo} …`} aria-invalid={!!err.whatsapp} aria-describedby="e-wa" />
                 <p id="e-wa" className={err.whatsapp ? 'ez-err' : 'ez-hint'}>{err.whatsapp ?? (esPrueba ? t.c.waHintPrueba : t.waHint)}</p>
               </div>
             </div>
