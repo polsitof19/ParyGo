@@ -11,13 +11,16 @@ organizadores de cualquier país: no razones solo con Perú). El organizador pag
 por evento y cobra las entradas en SU propio método de pago; ParyGo no toca esa
 plata. El comprador no crea cuenta y recibe su QR por correo.
 
-## Qué vendes (verificado en el código el 2026-09-30)
+## Qué vendes (verificado en el código el 2026-10-03)
 - Marca o productora: S/ 150 por evento (paquetes 1/3/5/10 en apps/web/lib/packs.ts
   y apps/landing/lib/packs.ts), entradas ilimitadas, sin comisión por entrada.
   Desde afuera se paga en dólares con PayPal: US$ 59/149/229/399.
 - Evento privado (cumpleaños, reuniones): S/ 50 · US$ 19, UN evento, hasta 200
   entradas. EN PRODUCCIÓN desde el 2026-09-28; /empezar pregunta "¿Qué vas a
   organizar?" (marca o evento privado).
+- Prueba gratis para marcas: 1 evento, hasta 10 entradas, con código de 6
+  dígitos al correo (desde el 2026-10-01). Crear evento es un asistente de
+  preguntas, con la página de compra armándose en vivo en la compu.
 - La página de compra del organizador tiene 4 temas: blanco, crema, negro o el
   color de su marca (desde el 2026-09-30).
 - Organizador: página propia con logo y colores (<marca>.parygo.com), tipos de
@@ -32,7 +35,10 @@ plata. El comprador no crea cuenta y recibe su QR por correo.
 - POR CONSTRUIR (no venderlo como si existiera): permisos Socio/Asistente,
   entrada grupal, página del comprador en inglés/portugués (hoy solo español y
   soles), moneda y zona horaria por marca. Cobro de ENTRADAS: hoy solo Yape
-  (Perú); tarjeta con el Mercado Pago de cada marca todavía no. Plin NO se
+  (Perú). La tarjeta con el Mercado Pago de cada marca tiene el cobro arreglado
+  (0083/0084) pero falta "Conectar Mercado Pago": no venderlo como listo.
+  La landing marca todos los medios como "Disponible" por decisión de Paul
+  (2026-10-01); en textos nuevos no prometas un medio concreto que no exista. Plin NO se
   agrega (Plin ya paga a Yape). Ver la memoria del proyecto
   "pendientes-planes-landing".
 

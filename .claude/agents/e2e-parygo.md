@@ -1,6 +1,6 @@
 ---
 name: e2e-parygo
-description: Corre las pruebas E2E de ParyGo (fase1, empezar, panel-en, packs-rpc, sesion-adulterada, empezar-paypal) contra un server local con el build correcto, respetando las reglas de demotest, y devuelve un informe con evidencia. Usar después de CUALQUIER cambio en apps/web antes de pushear a refactor/monorepo.
+description: Corre las pruebas E2E de ParyGo (fase1, empezar, publicar-metodo, panel-en, mp-liquidar, packs-rpc, permisos y demás) contra un server local con el build correcto, respetando las reglas de demotest, y devuelve un informe con evidencia. Usar después de CUALQUIER cambio en apps/web antes de pushear a refactor/monorepo.
 model: sonnet
 tools: Bash, PowerShell, Read, Grep, Glob
 ---
@@ -25,11 +25,28 @@ con el entorno correcto, y reportar con evidencia. No editas código de la app.
    Si hace falta MP/PayPal reales, las variables se pasan en la línea del comando,
    nunca se escriben a un archivo.
 
-## Qué correr según lo que cambió
+## Límite de 600 s de la herramienta
+fase1 dura ≈14 min: córrelo SIEMPRE en segundo plano
+(`node e2e/fase1.mjs > /tmp/fase1.log 2>&1` con run_in_background) y lee el log
+al terminar. Si una corrida se corta a la mitad (paso K deja credenciales MP
+dummy en demotest), esa corrida NO cuenta: `node e2e/cleanup.mjs` y repetir.
+
+## Qué correr según lo que cambió (mínimo para dar "listo")
+- Cualquier cambio en apps/web: `fase1` + `cleanup`. Sin fase1 en verde no hay
+  "listo", aunque lo demás pase.
 - Panel del organizador, comprador, Yape, escáner, cortesías, códigos, privadas:
-  `node e2e/fase1.mjs` (≈8 min, 181 checks, pasos A–P) y después SIEMPRE
+  `node e2e/fase1.mjs` (≈14 min, 186 checks, pasos A–P) y después SIEMPRE
   `node e2e/cleanup.mjs` (re-archiva demotest y apaga sus avisos).
-- Alta autoservicio (/empezar): `node e2e/empezar.mjs` (37 checks).
+- Publicar / método de pago: `node e2e/publicar-metodo.mjs` (16).
+- Pagos con tarjeta de una marca (liquidar, reembolso, webhook):
+  `node e2e/mp-liquidar.mjs` (22, contra la base: no necesita server).
+- Permisos (RLS, revokes, migraciones): `node e2e/permisos-escritura.mjs` y la
+  prueba de la migración que se haya agregado (p. ej. `e2e/salud-0085.mjs`).
+- Precios y fases: `node e2e/precio-sin-fase.mjs`.
+- Prueba gratis / evento privado: `node e2e/prueba-0069.mjs`, `node e2e/privado-0075.mjs`.
+- Login y redirecciones: `npx tsx e2e/login-next.test.mts`.
+- Alta autoservicio (/empezar): `node e2e/empezar.mjs` (≈40–53 checks; el paso D
+  se salta sin PARYGO_MP_* en el server, es lo previsto).
 - Panel en inglés: `node e2e/panel-en.mjs` (no a la vez que fase1: los dos usan demotest).
 - Packs / saldo / RPCs con JWT real y concurrencia: `node e2e/packs-rpc.mjs`.
 - Sesión / auth: `node e2e/sesion-adulterada.mjs`.
