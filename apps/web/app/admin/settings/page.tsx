@@ -5,7 +5,8 @@ import { ownerBrandContext } from '@/lib/impersonation';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { SettingsForm } from './SettingsForm';
-import { MpCredentialsForm } from './MpCredentialsForm';
+import { MpConexion } from './MpConexion';
+import { duenaRealDe, estadoMp, mpOauthListo } from '@/lib/mpConexion';
 import { IdiomaSelector } from './IdiomaSelector';
 import { TemaCompraSelector } from './TemaCompraSelector';
 import { esTema } from '@/lib/temaCompra.mjs';
@@ -15,7 +16,7 @@ import { textosPanel } from '@/lib/idiomaServer';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-export default async function AdminSettingsPage() {
+export default async function AdminSettingsPage({ searchParams }: { searchParams: { mp?: string } }) {
   const user = await requireSession();
   const ctx = ownerBrandContext(user);
   if (!ctx) return null;
@@ -30,22 +31,18 @@ export default async function AdminSettingsPage() {
   // con la sesión del organizador daba "permission denied for table brands",
   // brand quedaba null y "Mi marca" salía EN BLANCO. Se lee con service role,
   // acotada a la marca de la sesión (ctx.brandId), igual que en actions.ts.
-  const [{ data: brand }, { data: mpStatus }, { data: qrRow }, { count: puertaCount }] = await Promise.all([
+  const [{ data: brand }, mpEstado, { data: qrRow }, { count: puertaCount }] = await Promise.all([
     supabase
       .from('brands')
       .select('id, name, contact_email, whatsapp_e164, instagram, yape_number, yape_holder, notify_yape_recovery, notify_yape_digest, theme_json, idioma, tema_compra')
       .eq('id', ctx.brandId)
       .single(),
-    admin.rpc('get_brand_mp_status', { p_brand_id: ctx.brandId }),
+    estadoMp(admin, ctx.brandId),
     admin.from('brands').select('yape_qr_url').eq('id', ctx.brandId).maybeSingle(),
     // Cuántas personas tiene en puerta: el valor de la fila "Equipo de puerta".
     admin.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', ctx.brandId).eq('role', 'validator'),
   ]);
   if (!brand) return null;
-  const mp = (Array.isArray(mpStatus) ? mpStatus[0] : null) ?? {
-    has_access_token: false,
-    has_public_key: false,
-  };
 
   const theme = (brand.theme_json ?? {}) as {
     logo_url?: string | null;
@@ -57,7 +54,17 @@ export default async function AdminSettingsPage() {
   const idioma = esIdioma(brand.idioma) ? brand.idioma : 'es';
   const tema = esTema(brand.tema_compra);
   const temaNombre = { blanco: t('Blanco', 'White'), crema: t('Crema', 'Cream'), negro: t('Negro', 'Black'), marca: t('Tu color', 'Your color') }[tema];
-  const mpListo = Boolean(mp.has_access_token && mp.has_public_key);
+  // Resultado de la vuelta de Mercado Pago (mercadopago/vuelta/route.ts).
+  const avisoMp = searchParams.mp ? ({
+    conectado: { ok: true, texto: t('Listo: Mercado Pago quedó conectado.', 'Done: Mercado Pago is connected.') },
+    cancelado: { ok: false, texto: t('No se conectó: cancelaste en Mercado Pago.', 'Not connected: you cancelled in Mercado Pago.') },
+    sesion: { ok: false, texto: t('No se pudo conectar: el enlace venció o se abrió en otra sesión. Vuelve a tocar "Conectar Mercado Pago".', 'Could not connect: the link expired or was opened in another session. Tap "Connect Mercado Pago" again.') },
+    rechazado: { ok: false, texto: t('Mercado Pago no aprobó la conexión. Vuelve a intentarlo.', 'Mercado Pago did not approve the connection. Try again.') },
+    intenta_de_nuevo: { ok: false, texto: t('Mercado Pago no respondió. Intenta de nuevo en un momento.', 'Mercado Pago did not respond. Try again in a moment.') },
+    cuenta_no_coincide: { ok: false, texto: t('No pudimos confirmar tu cuenta de Mercado Pago. Intenta de nuevo.', 'We could not confirm your Mercado Pago account. Try again.') },
+    cuenta_en_otra_marca: { ok: false, texto: t('Esa cuenta de Mercado Pago ya está conectada a otra marca.', 'That Mercado Pago account is already connected to another brand.') },
+    no_disponible: { ok: false, texto: t('Conectar Mercado Pago todavía no está disponible.', 'Connecting Mercado Pago is not available yet.') },
+  } as Record<string, { ok: boolean; texto: string }>)[searchParams.mp] ?? null : null;
   const puerta = puertaCount ?? 0;
   const fold = (titulo: string, valor: string, body: React.ReactNode, open?: boolean) => (
     <details className="s-fold" open={open}>
@@ -106,16 +113,16 @@ export default async function AdminSettingsPage() {
         notifyYapeRecovery={Boolean(brand.notify_yape_recovery)}
         notifyYapeDigest={Boolean(brand.notify_yape_digest)}
         readOnly={impersonating}
-        // Mercado Pago por marca está DIFERIDO: no cuenta como método de pago
-        // y no se promete. Plegado; abierto solo si ya hay credenciales
-        // cargadas (es estado real y ahí está "Quitar credenciales").
+        // Mercado Pago por OAuth (0086): abierto si está conectado o si se
+        // acaba de volver de MP (para ver el aviso).
         tarjeta={
           <div className="s-folds a-cobro__mp">
+            {avisoMp && <p className={avisoMp.ok ? 's-banner s-banner--ok' : 's-banner s-banner--err'} role="status">{avisoMp.texto}</p>}
             {fold(
-              t('Tarjeta con Mercado Pago (próximamente)', 'Card with Mercado Pago (coming soon)'),
-              mpListo ? t('Credenciales cargadas', 'Credentials saved') : t('Todavía no disponible para cobrar', 'Not available for payments yet'),
-              <MpCredentialsForm hasAccessToken={Boolean(mp.has_access_token)} hasPublicKey={Boolean(mp.has_public_key)} readOnly={impersonating} />,
-              mpListo || undefined,
+              t('Mercado Pago (tarjeta y más)', 'Mercado Pago (card and more)'),
+              mpEstado.conectada ? t('Conectado', 'Connected') : t('Sin conectar', 'Not connected'),
+              <MpConexion conectada={mpEstado.conectada} cuenta={mpEstado.cuenta} disponible={mpOauthListo()} puede={!impersonating && duenaRealDe(user) === ctx.brandId} />,
+              mpEstado.conectada || !!avisoMp || undefined,
             )}
           </div>
         }

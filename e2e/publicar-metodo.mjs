@@ -2,7 +2,7 @@
 // real del dueño por la UI. Guarda yape_number y saldo; los restaura al final.
 //   node e2e/publicar-metodo.mjs
 import { chromium } from 'playwright';
-import { svc, BASE, log, otpSession, sessionCookies } from './lib.mjs';
+import { svc, env, BASE, log, sleep, otpSession, sessionCookies } from './lib.mjs';
 
 const R = [];
 const check = (n, ok, d = '') => { R.push(ok); log(`${ok ? '✔' : '✘'} ${n}${d ? ' — ' + d : ''}`); };
@@ -104,6 +104,28 @@ try {
   check('(e) vaciar el número con eventos que cobran: rechazado con mensaje', rech);
   const { data: bn } = await svc.from('brands').select('yape_number').eq('id', brand.id).single();
   check('(e) el número sigue guardado', bn.yape_number === '987654321', String(bn.yape_number));
+
+  // (g) Mercado Pago conectado (0086, conexión simulada por la RPC de la
+  // vuelta del OAuth): cuenta como método. Se puede vaciar el Yape y un evento
+  // que cobra se publica solo con MP.
+  const { data: g0 } = await svc.rpc('set_brand_mp_oauth', {
+    p_brand_id: brand.id, p_access_token: 'TEST-e2e-dummy', p_public_key: 'TEST-e2e-pk', p_refresh_token: 'TG-e2e',
+    p_user_id: `e2epm${Date.now().toString().slice(-6)}`, p_expires_at: new Date(Date.now() + 180 * 864e5).toISOString(),
+    p_encryption_key: env.BRAND_CREDS_ENCRYPTION_KEY,
+  });
+  check('(g) precondición: MP conectado (simulado)', g0?.ok === true, JSON.stringify(g0));
+  await p.goto(`${BASE}/admin/settings`, { waitUntil: 'load' });
+  await p.locator('#yape_number').fill('');
+  await p.getByRole('button', { name: 'Guardar configuración' }).click();
+  await sleep(3000);
+  const { data: bg } = await svc.from('brands').select('yape_number').eq('id', brand.id).single();
+  check('(g) con MP conectado SÍ se puede vaciar el Yape', !bg.yape_number, String(bg.yape_number));
+  await svc.from('events').update({ is_published: false }).eq('id', pago);
+  await abrir(pago);
+  check('(g) solo MP: sin aviso de método', (await p.getByText('Antes de publicar, elige cómo te pagan.').count()) === 0);
+  await publicar.click();
+  const msG = await esperaPublicado(pago);
+  check('(g) evento que cobra se publica solo con MP conectado', msG >= 0, `${msG} ms`);
 } catch (e) {
   check('excepción', false, e.message);
 } finally {
@@ -113,6 +135,7 @@ try {
     const { error } = await svc.from('events').delete().eq('id', id);
     if (error) log(`no se pudo borrar ${id}: ${error.message} (queda despublicado)`);
   }
+  await svc.rpc('clear_brand_mp_oauth', { p_brand_id: brand.id });
   await svc.from('brands').update(antes).eq('id', brand.id);
   log(`restaurado: yape_number ${antes.yape_number ? 'original' : 'null'}, saldo ${antes.event_balance}`);
 }

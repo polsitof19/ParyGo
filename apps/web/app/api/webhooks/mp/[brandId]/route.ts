@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { serverEnv } from '@/lib/env';
+import { mpWebhookSecret } from '@/lib/cobroParygo';
 import { liquidarPagoMp } from '@/lib/liquidarPagoMp';
 import { sendTicketEmail } from '@/lib/email/sendTicketEmail';
 import { verifyMpSignature } from '@/lib/mpSignature';
@@ -37,16 +37,17 @@ export async function POST(
   // RPC service-role con la clave del server; nunca en texto plano en la DB).
   const { data: brand } = await admin
     .from('brands')
-    .select('id')
+    .select('id, mp_oauth_user_id')
     .eq('id', params.brandId)
     .maybeSingle();
   if (!brand) {
     return NextResponse.json({ error: 'brand_not_found' }, { status: 404 });
   }
-  const { data: webhookSecret } = await admin.rpc('get_brand_mp_webhook_secret', {
-    p_brand_id: brand.id,
-    p_encryption_key: serverEnv.BRAND_CREDS_ENCRYPTION_KEY,
-  });
+  // Desde 0086 una marca cobra con tarjeta SOLO conectada por OAuth: las
+  // preferencias se crean con un token de la app de ParyGo y MP firma los
+  // avisos con el secreto de ESA app (doc oficial: el secreto es de la
+  // aplicación, no del vendedor). Sin conexión, no hay nada que verificar.
+  const webhookSecret = brand.mp_oauth_user_id ? mpWebhookSecret() : null;
 
   // 2. Verify MP signature — MANDATORY, no exceptions. There is NO environment
   // bypass: a brand without a webhook secret cannot be verified, so we reject

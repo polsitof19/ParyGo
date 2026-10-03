@@ -16,6 +16,8 @@ export type MpPago = {
   external_reference?: string | null;
   transaction_amount?: number;
   currency_id?: string;
+  // Cuenta de MP que COBRA (el vendedor). Con OAuth = brands.mp_oauth_user_id.
+  collector_id?: number | string;
   metadata?: { brand_id?: string; [k: string]: unknown } | null;
 };
 

@@ -114,6 +114,9 @@ export type Database = {
           is_test: boolean
           prueba_disponible: boolean
           alta_usuario: string | null
+          mp_oauth_user_id: string | null
+          mp_oauth_expires_at: string | null
+          mp_conectado_at: string | null
           mp_access_token_enc: string | null
           mp_public_key_enc: string | null
           name: string
@@ -140,6 +143,9 @@ export type Database = {
           is_test?: boolean
           prueba_disponible?: boolean
           alta_usuario?: string | null
+          mp_oauth_user_id?: string | null
+          mp_oauth_expires_at?: string | null
+          mp_conectado_at?: string | null
           mp_access_token_enc?: string | null
           mp_public_key_enc?: string | null
           name: string
@@ -166,6 +172,9 @@ export type Database = {
           is_test?: boolean
           prueba_disponible?: boolean
           alta_usuario?: string | null
+          mp_oauth_user_id?: string | null
+          mp_oauth_expires_at?: string | null
+          mp_conectado_at?: string | null
           mp_access_token_enc?: string | null
           mp_public_key_enc?: string | null
           name?: string
@@ -1224,6 +1233,26 @@ export type Database = {
       tomar_candado: {
         Args: { p_clave: string; p_segundos: number }
         Returns: boolean
+      }
+      set_brand_mp_oauth: {
+        Args: { p_brand_id: string; p_access_token: string; p_public_key: string; p_refresh_token: string; p_user_id: string; p_expires_at: string; p_encryption_key: string }
+        Returns: Json
+      }
+      refresh_brand_mp_oauth: {
+        Args: { p_brand_id: string; p_user_id: string; p_access_token: string; p_refresh_token: string; p_expires_at: string; p_encryption_key: string }
+        Returns: boolean
+      }
+      get_brand_mp_oauth: {
+        Args: { p_brand_id: string; p_encryption_key: string }
+        Returns: { access_token: string; refresh_token: string; user_id: string; expires_at: string }[]
+      }
+      clear_brand_mp_oauth: {
+        Args: { p_brand_id: string }
+        Returns: undefined
+      }
+      refund_mp_order: {
+        Args: { p_order_id: string; p_brand_id: string; p_payment_id: string; p_status: string }
+        Returns: Json
       }
       attach_reservation_to_order: {
         Args: { p_order_id: string; p_session_id: string }
