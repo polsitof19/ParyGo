@@ -45,6 +45,21 @@ la marca; ParyGo sigue sin tocarla.
    vuelve, no se cobra nada y la reserva vence sola. Rechazo de PayPal →
    orden failed, libera cupo y promo, pantalla "PayPal no aprobó el pago" con
    volver a intentar (otra orden).
+   **Antes de capturar** (Codex, alta): `puede_cobrar_paypal(orden, marca)`
+   bajo FOR UPDATE de la orden: status cobrable y `_order_capacity_overflow`
+   ok (el gate de settle mide `sold`, no las reservas: es el mismo cálculo).
+   Si no hay cupo NO se captura (sin cargo) y se muestra "se agotaron".
+   **Captura que no emite** (quedó una ventana de segundos con otra venta
+   simultánea, o monto/moneda que no calzan): se DEVUELVE sola con
+   POST /v2/payments/captures/{id}/refund (PayPal-Request-Id
+   `devolver-<captura>`), la orden pasa a refunded con la captura anotada y
+   queda en events_log `paypal_auto_refund`; el comprador ve "te devolvimos el
+   pago". Si la devolución falla, events_log `paypal_refund_pendiente` (sale en
+   Salud) para hacerla a mano.
+   **Credenciales atadas a la orden** (Codex, alta): orders.paypal_client_id =
+   el client_id con que se creó la orden de PayPal. Se captura SOLO si la
+   marca sigue con ese mismo client_id; si cambió, no se captura (PayPal no
+   mueve plata sin captura) y el comprador vuelve a empezar.
 6. **settle_paypal_payment(orden, marca, capture_id, paid_cents, moneda)**: el
    mismo esqueleto que settle_mp_payment (FOR UPDATE de la orden de esa marca,
    idempotencia por tickets, solo pending_payment/failed/expired/paid-sin-
@@ -52,7 +67,12 @@ la marca; ParyGo sigue sin tocarla.
    gate de cupo → oversold_no_capacity; promo re-tomada y consumida; emisión;
    libera reservas). capture_id con índice único; un segundo capture_id de una
    orden ya emitida → events_log paypal_duplicate_capture, sin emitir.
-7. **Webhook /api/webhooks/paypal/[brandId]**: el cuerpo NO se cree. Se toma el
+7. **Webhook /api/webhooks/paypal/[brandId]**: el cuerpo NO se cree. PRIMERO
+   la base (Codex, media: sin esto un id inventado gastaba la API de la
+   marca): COMPLETED solo si `supplementary_data.related_ids.order_id` es el
+   paypal_order_id de una orden de ESA marca sin pagar; REFUNDED/REVERSED solo
+   si el id es el paypal_capture_id de una orden de esa marca. Lo que no está
+   en la base → 200 sin llamar a nadie. Recién ahí se toma el
    id de la captura del aviso y se RE-PIDE (GET /v2/payments/captures/{id}) con
    el token de la marca de la URL; custom_id tiene que ser una orden de ESA
    marca. COMPLETED → settle (respaldo de una vuelta que no llegó). REFUNDED
@@ -63,8 +83,15 @@ la marca; ParyGo sigue sin tocarla.
    (PayPal reintenta 25 veces en 3 días). Sin verificación de firma (el aviso
    solo dispara una relectura de un dato real; anotado para revisión).
 8. **Desconectar / cambiar credenciales**: bloqueado con un pago PayPal activo
-   (pending_payment con paypal_order_id de < 30 min), como MP. Desconectar borra
-   el webhook en PayPal (best effort) y las columnas.
+   (pending_payment con paypal_order_id de < 30 min), como MP (la carrera que
+   queda la cierra el client_id atado a la orden, decisión 5). Desconectar
+   borra el webhook en PayPal (best effort) y las columnas. Riesgo aceptado:
+   una devolución hecha en PayPal sobre un cobro de una app ANTERIOR ya no
+   llega (no quedan sus credenciales para releerla).
+   **Cuenta de quién** (Codex, media → mejora): un par válido no prueba que
+   la cuenta sea de la marca; es el mismo caso que escribir otro número de
+   Yape (riesgo aceptado en 0088). Se registra en events_log y en la
+   auditoría del super admin (client_id con los últimos 4), sin más pasos.
 9. **"Tiene método"** (publicar un evento que cobra): suma PayPal conectado en
    una moneda que PayPal acepta (lib/metodoPago.ts).
 10. **Comprador**: una opción más, "PayPal o tarjeta", junto al medio manual.
@@ -79,11 +106,14 @@ la marca; ParyGo sigue sin tocarla.
     paypal_webhook_id text, paypal_sandbox boolean not null default false
     (check: not paypal_sandbox or is_test), paypal_conectado_at timestamptz.
     SIN grant a anon/authenticated (nada de esto se lee desde el navegador).
-  - orders: paypal_order_id text, paypal_capture_id text (único parcial).
+  - orders: paypal_order_id text (único parcial), paypal_client_id text,
+    paypal_capture_id text (único parcial).
     orders_check: una orden paypal paid/refunded exige paypal_capture_id.
   - RPCs service-role-only (revoke LITERAL de public, anon, authenticated):
     set_brand_paypal, get_brand_paypal_credentials, clear_brand_paypal,
-    settle_paypal_payment, refund_paypal_order.
+    puede_cobrar_paypal, settle_paypal_payment, refund_paypal_order
+    (también para la devolución automática: acepta una orden no emitida con
+    la captura que se devolvió).
 
 ## Archivos
 - lib/paypalApi.ts (nuevo): fetch a PayPal con credenciales recibidas (token,
