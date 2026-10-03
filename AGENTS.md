@@ -113,7 +113,7 @@ las server actions con service role.
   ya hay órdenes) y "Cómo te pagan": medio manual según el país + cuenta +
   titular/red + QR, validado con lib/metodoManual.ts. Cabina igual.
   **Listo:** panel-en + capturas 390/1440.
-- [ ] 5. Comprador: página de pago con el nombre del medio, cuenta, titular/red,
+- [x] 5. Comprador: página de pago con el nombre del medio, cuenta, titular/red,
   QR y monto en su moneda; checkout rechaza medio incompatible con la moneda y
   no ofrece Tarjeta fuera de PEN. Panel/correos "Pagos por aprobar".
   **Listo:** `e2e/pais-compra.mjs` con una marca is_test TEMPORAL (demotest
