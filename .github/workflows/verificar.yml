@@ -36,6 +36,10 @@ jobs:
       - run: npx tsc --noEmit -p apps/web
       - name: login sin open redirect
         run: cd apps/web && npx -y tsx ../../e2e/login-next.test.mts
+      - name: OAuth de Mercado Pago (PKCE, canje, refresh)
+        run: cd apps/web && npx -y tsx ../../e2e/mp-oauth.test.mts
+      - name: refresco del token (un solo refresh, revocado vs transitorio)
+        run: cd apps/web && npx -y tsx ../../e2e/mp-refresh.test.mts
 
   base:
     name: permisos y dinero (demotest)
@@ -76,5 +80,8 @@ jobs:
       - if: env.HAY_SECRETOS == 'true'
         name: salud 0085 (revokes + Yape vencido)
         run: node e2e/salud-0085.mjs
+      - if: env.HAY_SECRETOS == 'true'
+        name: Conectar MP 0086 (RPCs, JWT real, concurrencia)
+        run: node e2e/mp-oauth-rpc.mjs
       - if: always() && env.HAY_SECRETOS == 'true'
         run: rm -f apps/web/.env.local
