@@ -45,7 +45,7 @@ jobs:
       HAY_SECRETOS: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
     steps:
       - if: env.HAY_SECRETOS != 'true'
-        run: echo "Sin secretos de Supabase en el repo: se salta (ver CLAUDE.md, CI)."
+        run: echo 'Sin secretos de Supabase en el repo, se salta (ver CLAUDE.md, CI).'
       - if: env.HAY_SECRETOS == 'true'
         uses: actions/checkout@v4
       - if: env.HAY_SECRETOS == 'true'
