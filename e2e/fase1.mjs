@@ -464,8 +464,13 @@ await step('B', 'Organizador: crear evento, entradas, promo, preventa, publicar,
   await go(p, `/admin/events/${S.eventId}/editar`);
   await p.fill('#ev-date', limaLocal(new Date(Date.parse(ev0.starts_at) + day)));
   await p.getByRole('button', { name: 'Guardar datos del evento' }).click();
-  await sleep(3500);
-  const ev1 = (await svc.from('events').select('starts_at, ends_at').eq('id', S.eventId).single()).data;
+  // Espera a que el guardado llegue a la base (un sleep fijo de 3,5 s a veces
+  // leía antes y el check siguiente fallaba en cascada).
+  let ev1 = ev0;
+  for (let i = 0; i < 30 && ev1.starts_at === ev0.starts_at; i++) {
+    await sleep(500);
+    ev1 = (await svc.from('events').select('starts_at, ends_at').eq('id', S.eventId).single()).data;
+  }
   const durOk = Date.parse(ev1.ends_at) - Date.parse(ev1.starts_at) === Date.parse(ev0.ends_at) - Date.parse(ev0.starts_at);
   check('B', 'bug4: editar la fecha (+1 día) corre el fin igual (misma duración)', Date.parse(ev1.starts_at) - Date.parse(ev0.starts_at) === day && durOk, `${ev0.starts_at}→${ev1.starts_at} · fin ${ev0.ends_at}→${ev1.ends_at}`);
   await go(p, `/admin/events/${S.eventId}/editar`);
