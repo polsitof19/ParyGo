@@ -31,7 +31,7 @@ async function loadEvent(brandSlug: string, eventSlug: string, acceso: string | 
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
-    .select('id, slug, name, theme_json, whatsapp_e164, yape_number, yape_holder, contact_email, moneda, zona_horaria')
+    .select('id, slug, name, theme_json, whatsapp_e164, yape_number, yape_holder, contact_email, moneda, zona_horaria, metodo_manual')
     .eq('slug', brandSlug)
     .is('archived_at', null) // marca archivada → evento no carga
     .maybeSingle();
@@ -134,7 +134,8 @@ async function loadEvent(brandSlug: string, eventSlug: string, acceso: string | 
   const admin = createAdminClient();
   const { data: mpStatus } = await admin.rpc('get_brand_mp_status', { p_brand_id: brand.id });
   const status = Array.isArray(mpStatus) ? mpStatus[0] : null;
-  const mpConfigured = Boolean(status?.has_access_token && status?.has_public_key)
+  const mpConfigured = monedaDe(brand.moneda) === 'PEN' // la tarjeta solo cobra en soles
+    && Boolean(status?.has_access_token && status?.has_public_key)
     && (await mpUsable(admin, brand.id, serverEnv.BRAND_CREDS_ENCRYPTION_KEY));
   let mpPublicKey: string | null = null;
   if (mpConfigured) {

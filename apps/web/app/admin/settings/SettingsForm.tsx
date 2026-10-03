@@ -7,6 +7,7 @@ import { useFormFeedback } from '@/components/useFormFeedback';
 import { updateBrandSettingsAction, type SettingsState } from './actions';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useTextos } from '@/components/IdiomaPanel';
+import { PAISES, NOMBRE_MEDIO, type Medio } from '@/lib/metodoManual';
 
 const initial: SettingsState = { ok: false, message: null };
 
@@ -21,6 +22,12 @@ type Props = {
   contactEmail: string;
   whatsapp: string;
   instagram: string;
+  /** País guardado (id de PAISES), moneda y medio manual de la marca. */
+  paisId: string;
+  moneda: string;
+  medio: Medio;
+  /** Con algún evento la moneda queda bloqueada. */
+  tieneEventos: boolean;
   yapeNumber: string;
   yapeHolder: string;
   primaryColor: string;
@@ -38,6 +45,21 @@ type Props = {
   tema?: React.ReactNode;
 };
 
+const REDES_USDT: [string, string][] = [['TRC20', 'TRC20 (Tron)'], ['ERC20', 'ERC20 (Ethereum)'], ['BEP20', 'BEP20 (BNB Chain)'], ['POLYGON', 'Polygon'], ['SOLANA', 'Solana']];
+
+// Etiqueta, ayuda y teclado de la cuenta según el medio. Yape: los textos de
+// siempre (el E2E los compara).
+function campoCuenta(medio: Medio, t: (es: string, en: string) => string): { label: string; placeholder: string; type: string; inputMode: 'numeric' | 'text' | 'email' } {
+  switch (medio) {
+    case 'yape': return { label: t('Número de Yape', 'Yape number'), placeholder: t('Celular de 9 dígitos', '9-digit mobile number'), type: 'tel', inputMode: 'numeric' };
+    case 'nequi': return { label: t('Celular de Nequi', 'Nequi mobile number'), placeholder: t('10 dígitos, empieza con 3', '10 digits, starting with 3'), type: 'tel', inputMode: 'numeric' };
+    case 'bizum': return { label: t('Móvil de Bizum', 'Bizum mobile number'), placeholder: t('9 dígitos, empieza con 6 o 7', '9 digits, starting with 6 or 7'), type: 'tel', inputMode: 'numeric' };
+    case 'zelle': return { label: t('Correo o teléfono de Zelle', 'Zelle email or phone'), placeholder: t('correo@ejemplo.com o 10 dígitos', 'name@example.com or 10 digits'), type: 'text', inputMode: 'email' };
+    case 'usdt': return { label: t('Dirección de tu billetera', 'Your wallet address'), placeholder: t('Cópiala de tu billetera', 'Copy it from your wallet'), type: 'text', inputMode: 'text' };
+    default: return { label: t('Banco y número de cuenta (CBU/CLABE/IBAN…)', 'Bank and account number (CBU/CLABE/IBAN…)'), placeholder: t('Banco, número de cuenta y tipo', 'Bank, account number and type'), type: 'text', inputMode: 'text' };
+  }
+}
+
 // 987654321 → 987 654 321
 const fmtYape = (n: string) => n.replace(/\D/g, '').replace(/(\d{3})(?=\d)/g, '$1 ');
 
@@ -45,7 +67,17 @@ export function SettingsForm(props: Props) {
   const [state, action] = useFormFeedback(updateBrandSettingsAction, initial);
   const [primary, setPrimary] = useState(props.primaryColor);
   const [secondary, setSecondary] = useState(props.secondaryColor);
-  const { t } = useTextos();
+  const { t, l: idioma } = useTextos();
+  const [paisId, setPaisId] = useState(props.paisId);
+  const [medio, setMedio] = useState<Medio>(props.medio);
+  const pais = PAISES.find((p) => p.id === paisId) ?? PAISES[0]!;
+  const cambiaMoneda = pais.moneda !== props.moneda;
+  // Los medios del país, más el que ya tiene la marca (misma moneda, otro país).
+  const medios = cambiaMoneda ? pais.medios : Array.from(new Set<Medio>([...pais.medios, props.medio]));
+  const nombreMedio = (m: Medio) => NOMBRE_MEDIO[m][idioma === 'en' ? 'en' : 'es'];
+  // Cuenta guardada solo si el medio es el mismo que ya tiene: otro medio, campo limpio.
+  const mismo = !cambiaMoneda && medio === props.medio;
+  const cuenta = campoCuenta(medio, t);
   const err = state.fieldErrors ?? {};
   const ro = Boolean(props.readOnly);
   const listo = Boolean(props.yapeNumber);
@@ -58,32 +90,81 @@ export function SettingsForm(props: Props) {
         <h2 id="cobro-title" className="s-h2">{t('Cómo te pagan', 'How you get paid')}</h2>
         <p className={`s-calm a-cobro__estado ${listo ? 's-calm--ok' : 'a-cobro__estado--falta'}`} role="status">
           {listo
-            ? <span>{t('Listo: tus compradores te pagan con Yape al', 'Ready: your buyers pay you with Yape at')} <span style={{ whiteSpace: 'nowrap' }}>{fmtYape(props.yapeNumber)}</span></span>
+            ? props.medio === 'yape'
+              ? <span>{t('Listo: tus compradores te pagan con Yape al', 'Ready: your buyers pay you with Yape at')} <span style={{ whiteSpace: 'nowrap' }}>{fmtYape(props.yapeNumber)}</span></span>
+              : t(`Listo: tus compradores te pagan con ${NOMBRE_MEDIO[props.medio].es}`, `Ready: your buyers pay you with ${NOMBRE_MEDIO[props.medio].en}`)
             : t('Falta: sin un método de pago nadie puede pagarte', 'Missing: without a payment method nobody can pay you')}
         </p>
 
-        <h3 className="a-cobro__op">{t('Yape (Perú)', 'Yape (Peru)')}</h3>
-        <div className="s-form-grid">
-          <Field label={t('Número de Yape', 'Yape number')} htmlFor="yape_number" error={err.yape_number}>
-            <input form={FORM} id="yape_number" name="yape_number" type="tel" inputMode="numeric" autoComplete="off" defaultValue={props.yapeNumber} placeholder={t('Celular de 9 dígitos', '9-digit mobile number')} className="s-input" disabled={ro} />
+        <div className="s-field">
+          <Field label="País · Country" htmlFor="pais" error={err.pais}>
+            <select form={FORM} id="pais" name="pais" className="s-input s-select" value={paisId} disabled={ro}
+              onChange={(e) => {
+                const p = PAISES.find((x) => x.id === e.target.value);
+                if (!p) return;
+                setPaisId(p.id);
+                if (p.moneda !== props.moneda) setMedio(p.medios[0]!);
+              }}>
+              {PAISES.map((p) => (
+                <option key={p.id} value={p.id} disabled={props.tieneEventos && p.moneda !== props.moneda}>
+                  {idioma === 'en' ? p.name : p.nombre} · {p.moneda}
+                </option>
+              ))}
+            </select>
           </Field>
-          <Field label={t('Titular', 'Holder')} htmlFor="yape_holder" error={err.yape_holder}>
-            <input form={FORM} id="yape_holder" name="yape_holder" defaultValue={props.yapeHolder} placeholder={t('Nombre que figura en tu Yape', 'Name shown on your Yape')} className="s-input" disabled={ro} />
+          <p className="s-hint">
+            {props.tieneEventos
+              ? t('Tu marca ya tiene eventos: la moneda no se puede cambiar. Solo puedes elegir países con la misma moneda.', 'Your brand already has events: the currency cannot be changed. You can only pick countries with the same currency.')
+              : cambiaMoneda
+                ? t('Cambiar de moneda borra tu cuenta de cobro: tendrás que ingresarla de nuevo.', 'Changing currency clears your payout account: you will need to enter it again.')
+                : t('Define la moneda de tus entradas y la hora de tus eventos.', 'Sets the currency of your tickets and the time of your events.')}
+          </p>
+        </div>
+
+        <h3 className="a-cobro__op">{props.medio === 'yape' ? t('Yape (Perú)', 'Yape (Peru)') : nombreMedio(props.medio)}</h3>
+        <div className="s-field">
+          <Field label={t('Medio de pago', 'Payment method')} htmlFor="metodo_manual" error={err.metodo_manual}>
+            <select form={FORM} id="metodo_manual" name="metodo_manual" className="s-input s-select" value={medio} disabled={ro || cambiaMoneda} onChange={(e) => setMedio(e.target.value as Medio)}>
+              {medios.map((m) => <option key={m} value={m}>{nombreMedio(m)}</option>)}
+            </select>
           </Field>
         </div>
+        <div className="s-form-grid">
+          <Field label={cuenta.label} htmlFor="yape_number" error={err.yape_number}>
+            {medio === 'transferencia' ? (
+              <textarea key={medio} form={FORM} id="yape_number" name="yape_number" rows={3} maxLength={200} defaultValue={mismo ? props.yapeNumber : ''} placeholder={cuenta.placeholder} className="s-input" disabled={ro} />
+            ) : (
+              <input key={medio} form={FORM} id="yape_number" name="yape_number" type={cuenta.type} inputMode={cuenta.inputMode} autoComplete="off" defaultValue={mismo ? props.yapeNumber : ''} placeholder={cuenta.placeholder} className="s-input" disabled={ro} />
+            )}
+          </Field>
+          {medio === 'usdt' ? (
+            <Field label={t('Red', 'Network')} htmlFor="yape_holder" error={err.yape_holder}>
+              <select key={medio} form={FORM} id="yape_holder" name="yape_holder" className="s-input s-select" defaultValue={mismo ? props.yapeHolder.toUpperCase() : ''} disabled={ro}>
+                <option value="">{t('Elige la red', 'Choose the network')}</option>
+                {REDES_USDT.map(([v, n]) => <option key={v} value={v}>{n}</option>)}
+              </select>
+            </Field>
+          ) : (
+            <Field label={t('Titular', 'Holder')} htmlFor="yape_holder" error={err.yape_holder}>
+              <input key={medio} form={FORM} id="yape_holder" name="yape_holder" defaultValue={mismo ? props.yapeHolder : ''} placeholder={medio === 'yape' ? t('Nombre que figura en tu Yape', 'Name shown on your Yape') : t('Nombre del titular', 'Account holder name')} className="s-input" disabled={ro} />
+            </Field>
+          )}
+        </div>
         <div className="s-field">
-          <Field label={t('QR de Yape (opcional)', 'Yape QR (optional)')} htmlFor="yape_qr" error={err.yape_qr}>
+          <Field label={medio === 'yape' ? t('QR de Yape (opcional)', 'Yape QR (optional)') : t(`QR de ${NOMBRE_MEDIO[medio].es} (opcional)`, `${NOMBRE_MEDIO[medio].en} QR (optional)`)} htmlFor="yape_qr" error={err.yape_qr}>
             <div className="s-file">
-              {props.yapeQrUrl ? (
+              {props.yapeQrUrl && !cambiaMoneda ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={props.yapeQrUrl} alt={t('QR de Yape actual', 'Current Yape QR')} className="a-cobro__qr" />
               ) : (
                 <span className="s-avatar" style={{ background: 'var(--paper-2)', color: 'var(--ink-3)', fontSize: 10, borderRadius: 10 }}>QR</span>
               )}
-              <ArchivoInput id="yape_qr" nombre="yape_qr" tieneActual={Boolean(props.yapeQrUrl)} deshabilitado={ro} />
+              <ArchivoInput id="yape_qr" nombre="yape_qr" tieneActual={Boolean(props.yapeQrUrl) && !cambiaMoneda} deshabilitado={ro} />
             </div>
-            <p className="s-hint">{t('El que descargas de tu app Yape. Tus compradores lo escanean en vez de tipear el número. PNG, JPG o WEBP · máx 2 MB.', 'The one you download from your Yape app. Buyers scan it instead of typing the number. PNG, JPG or WEBP · max 2 MB.')}</p>
-            {props.yapeQrUrl && !ro && (
+            <p className="s-hint">{medio === 'yape'
+              ? t('El que descargas de tu app Yape. Tus compradores lo escanean en vez de tipear el número. PNG, JPG o WEBP · máx 2 MB.', 'The one you download from your Yape app. Buyers scan it instead of typing the number. PNG, JPG or WEBP · max 2 MB.')
+              : t('El QR de tu app, si lo tiene. Tus compradores lo escanean en vez de tipear la cuenta. PNG, JPG o WEBP · máx 2 MB.', 'The QR from your app, if it has one. Buyers scan it instead of typing the account. PNG, JPG or WEBP · max 2 MB.')}</p>
+            {props.yapeQrUrl && !ro && !cambiaMoneda && (
               <label className="s-check" style={{ fontSize: 13, color: 'var(--ink-2)' }}>
                 <input form={FORM} type="checkbox" name="remove_yape_qr" value="1" /> {t('Quitar el QR actual', 'Remove current QR')}
               </label>

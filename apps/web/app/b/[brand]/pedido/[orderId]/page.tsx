@@ -6,6 +6,7 @@ import { formatEventDate } from '@/lib/utils';
 import { TicketPass } from '../../TicketPass';
 import { formatEnZona, zonaDe } from '@/lib/zona';
 import { LineaEntrada } from '../../Responsable';
+import { medioDe, medioFrase } from '@/lib/metodoManual';
 
 // QR generado server-side, sin dependencias Node-only → corre en edge.
 export const runtime = 'edge';
@@ -19,7 +20,7 @@ type OrderView = {
   status: string;
   payment_method: 'mercadopago' | 'yape_manual';
   event: { name: string; starts_at: string; venue_name: string | null; cover_url: string | null } | null;
-  brand: { slug: string; name: string; whatsapp_e164: string | null; contact_email: string | null; zona_horaria: string; theme_json: { logo_url?: string | null } | null } | null;
+  brand: { slug: string; name: string; whatsapp_e164: string | null; contact_email: string | null; zona_horaria: string; metodo_manual: string | null; theme_json: { logo_url?: string | null } | null } | null;
   tickets: {
     qr_code: string;
     ticket_type_name: string;
@@ -38,7 +39,7 @@ async function loadOrder(brandSlug: string, orderId: string): Promise<OrderView 
     .select(`
       id, status, payment_method,
       event:events ( name, starts_at, venue_name, cover_url ),
-      brand:brands ( slug, name, whatsapp_e164, contact_email, theme_json, zona_horaria ),
+      brand:brands ( slug, name, whatsapp_e164, contact_email, theme_json, zona_horaria, metodo_manual ),
       tickets ( qr_code, ticket_type_name, ticket_number, attendee_name, invalidated_at, validated_at )
     `)
     .eq('id', orderId)
@@ -81,7 +82,7 @@ export default async function OrderPage({ params }: { params: { brand: string; o
     return (
       <main className="c-state">
         <span className="c-eyebrow c-state__dot c-state__dot--warn">Comprobante en revisión</span>
-        <h1 className="c-h1">Estamos verificando tu Yape</h1>
+        <h1 className="c-h1">{order.brand?.metodo_manual && medioDe(order.brand.metodo_manual) !== 'yape' ? `Estamos verificando tu pago con ${medioFrase(medioDe(order.brand.metodo_manual))}` : 'Estamos verificando tu Yape'}</h1>
         <p className="c-muted">El organizador está revisando tu comprobante. Te avisamos por email apenas se apruebe y aquí vas a ver tus QR. Suele tomar de 5 a 15 minutos en horario de atención.</p>
         {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className="c-state__link">¿Pasó algo? Escríbenos por WhatsApp</a>}
       </main>

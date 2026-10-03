@@ -9,6 +9,8 @@ import { issueTicketsForOrder } from '@/lib/tickets';
 import { enqueueTicketEmail } from '@/lib/email/enqueueTicketEmail';
 import { checkPublicTicketType, eventOverAt } from '@/lib/publicTicketGuard';
 import { mismoToken, normalizarToken, tokensPrivados } from '@/lib/privateAccess';
+import { medioDe, medioFrase, medioSirve } from '@/lib/metodoManual';
+import { monedaDe } from '@/lib/moneda';
 
 export type CheckoutInput = {
   eventId: string;
@@ -295,7 +297,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // validaciones; lo único que cambia es que no se esperan una a la otra.
   const ticketTypeIds = parsed.data.items.map((i) => i.ticketTypeId);
   const [brandRes, ttRes, apRes] = await Promise.all([
-    admin.from('brands').select('archived_at, yape_number, moneda').eq('id', event.brand_id).maybeSingle(),
+    admin.from('brands').select('archived_at, yape_number, moneda, metodo_manual').eq('id', event.brand_id).maybeSingle(),
     admin
       .from('ticket_types')
       .select('id, name, price_cents, capacity, sold, is_active, is_unlimited, event_id, bulk_min_qty, bulk_discount_pct, is_courtesy')
@@ -474,8 +476,13 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   if (parsed.data.method === 'mercadopago' && brandRow.moneda !== 'PEN') {
     return { ok: false, message: 'Esta marca no cobra con tarjeta.' };
   }
-  if (parsed.data.method === 'yape_manual' && totalCents > 0 && !promoGratis && !brandRow.yape_number?.trim()) {
-    return { ok: false, message: 'Este organizador todavía no activó el pago con Yape. Escríbele para comprar tu entrada.' };
+  // Medio manual: el que eligió la marca (Yape, Nequi…); debe servir en su moneda.
+  const medio = medioDe(brandRow.metodo_manual);
+  if (
+    parsed.data.method === 'yape_manual' && totalCents > 0 && !promoGratis &&
+    (!brandRow.yape_number?.trim() || !medioSirve(medio, monedaDe(brandRow.moneda)))
+  ) {
+    return { ok: false, message: `Este organizador todavía no activó el pago con ${medio === 'yape' ? 'Yape' : medioFrase(medio)}. Escríbele para comprar tu entrada.` };
   }
 
   // 4. Insert order + order_items in a "transaction" (best-effort, no real BEGIN
@@ -732,7 +739,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
         brandId: event.brand_id,
         detalle,
       });
-      const message = 'No pudimos abrir el pago con tarjeta. Intenta de nuevo o paga con Yape.';
+      const message = `No pudimos abrir el pago con tarjeta. Intenta de nuevo o paga con ${medioFrase(medioDe(brandRow.metodo_manual))}.`;
       // Cancel the order and free the held stock so other buyers can take it.
       await admin.from('orders').update({ status: 'failed' }).eq('id', order.id);
       await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });

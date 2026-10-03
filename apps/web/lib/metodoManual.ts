@@ -40,6 +40,11 @@ export const NOMBRE_MEDIO: Record<Medio, { es: string; en: string }> = {
   transferencia: { es: 'Transferencia bancaria', en: 'Bank transfer' },
 };
 
+// El mismo nombre para usarlo EN MEDIO de una frase ("Pagas con transferencia
+// bancaria"): solo la transferencia pasa a minúscula. Yape queda "Yape".
+export const medioFrase = (medio: Medio, l: 'es' | 'en' = 'es') =>
+  medio === 'transferencia' ? NOMBRE_MEDIO[medio][l].toLowerCase() : NOMBRE_MEDIO[medio][l];
+
 type Ok = { ok: true; cuenta: string; titular: string };
 type Mal = { ok: false; es: string; en: string };
 const mal = (es: string, en: string): Mal => ({ ok: false, es, en });

@@ -1,3 +1,4 @@
+import { medioDe, medioFrase, NOMBRE_MEDIO } from '@/lib/metodoManual';
 import Link from 'next/link';
 import { ChevronDown, Printer } from 'lucide-react';
 import { enLotes, todas } from '@/lib/todas';
@@ -27,11 +28,14 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
   const admin = createAdminClient();
   const { data: event } = await admin
     .from('events')
-    .select('id, brand_id, slug, starts_at, ends_at, is_published, brand:brands ( slug, moneda, zona_horaria )')
+    .select('id, brand_id, slug, starts_at, ends_at, is_published, brand:brands ( slug, moneda, zona_horaria, metodo_manual )')
     .eq('id', params.id)
     .maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
   const moneda = monedaDe((Array.isArray(event.brand) ? event.brand[0] : event.brand)?.moneda);
+  const medio = medioDe((Array.isArray(event.brand) ? event.brand[0] : event.brand)?.metodo_manual);
+  const esYape = medio === 'yape';
+  const nm = NOMBRE_MEDIO[medio];
   const zona = zonaDe((Array.isArray(event.brand) ? event.brand[0] : event.brand)?.zona_horaria);
 
   type ProofRow = {
@@ -252,8 +256,8 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
             {pendingCount > 0
               ? t(`+ ${formatMoney(pendingCents, moneda)} por aprobar`, `+ ${formatMoney(pendingCents, moneda)} to approve`)
               : showMp
-                ? t(`Yape ${formatMoney(byMethod.yape.cents, moneda)} · tarjeta ${formatMoney(byMethod.mp.cents, moneda)}`, `Yape ${formatMoney(byMethod.yape.cents, moneda)} · card ${formatMoney(byMethod.mp.cents, moneda)}`)
-                : t('confirmado en tu Yape', 'confirmed in your Yape')}
+                ? t(`${nm.es} ${formatMoney(byMethod.yape.cents, moneda)} · tarjeta ${formatMoney(byMethod.mp.cents, moneda)}`, `${nm.en} ${formatMoney(byMethod.yape.cents, moneda)} · card ${formatMoney(byMethod.mp.cents, moneda)}`)
+                : esYape ? t('confirmado en tu Yape', 'confirmed in your Yape') : t(`confirmado en tu ${medioFrase(medio)}`, `confirmed in your ${medioFrase(medio, 'en')}`)}
           </span>
         </div>
         <div className="s-stat">
@@ -367,7 +371,7 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
         <details className="s-fold s-folds">
           <summary>
             <span className="s-fold__t">
-              {t(`Yapes rechazados (${rejectedRows.length})`, `Rejected Yapes (${rejectedRows.length})`)}
+              {esYape ? t(`Yapes rechazados (${rejectedRows.length})`, `Rejected Yapes (${rejectedRows.length})`) : t(`Pagos rechazados (${rejectedRows.length})`, `Rejected payments (${rejectedRows.length})`)}
               <span className="s-fold__hint">{t('Los comprobantes que no aprobaste, con el motivo.', 'The receipts you did not approve, with the reason.')}</span>
             </span>
             <ChevronDown aria-hidden="true" />

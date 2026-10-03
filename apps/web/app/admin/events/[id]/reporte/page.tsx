@@ -1,3 +1,4 @@
+import { medioDe, NOMBRE_MEDIO } from '@/lib/metodoManual';
 import { notFound } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { todas } from '@/lib/todas';
@@ -38,7 +39,7 @@ export default async function ReportePage({ params }: { params: { id: string } }
   if (!event || event.brand_id !== ctx.brandId) notFound();
 
   // Todo depende solo del event_id → en paralelo.
-  const [ttRes, statsRes, ordRes, oiRes, promoRes, redRes, moneda] = await Promise.all([
+  const [ttRes, statsRes, ordRes, oiRes, promoRes, redRes, moneda, medioRes] = await Promise.all([
     admin.from('ticket_types').select('id, name, sort_order').eq('event_id', event.id).order('sort_order'),
     admin.rpc('event_ticket_stats', { p_event_id: event.id }),
     todas((a, b) => admin.from('orders').select('id, total_cents, payment_method').eq('event_id', event.id).eq('status', 'paid').order('id').range(a, b)).then((data) => ({ data })),
@@ -46,6 +47,7 @@ export default async function ReportePage({ params }: { params: { id: string } }
     admin.from('promo_codes').select('id, code, label').eq('event_id', event.id),
     todas((a, b) => admin.from('promo_redemptions').select(`promo_code_id, orders!inner(total_cents, status, event_id, order_items(quantity))`).eq('event_id', event.id).eq('status', 'consumed').order('id').range(a, b)).then((data) => ({ data })),
     monedaDeMarca(admin, ctx.brandId),
+    admin.from('brands').select('metodo_manual').eq('id', ctx.brandId).maybeSingle(),
   ]);
 
   const types = ttRes.data ?? [];
@@ -86,7 +88,8 @@ export default async function ReportePage({ params }: { params: { id: string } }
     cur.n += 1; cur.cents += o.total_cents ?? 0;
     byMethod.set(k, cur);
   }
-  const methodLabel = (m: string) => (m === 'mercadopago' ? 'MercadoPago' : m === 'yape_manual' ? 'Yape' : m === 'courtesy' ? t('Cortesías', 'Complimentary') : m);
+  const medio = medioDe(medioRes.data?.metodo_manual);
+  const methodLabel = (m: string) => (m === 'mercadopago' ? 'MercadoPago' : m === 'yape_manual' ? NOMBRE_MEDIO[medio].es : m === 'courtesy' ? t('Cortesías', 'Complimentary') : m);
 
   // Ventas por promotor (reusa la lógica del panel de promotores).
   const promoCodes = (promoRes.data ?? []) as { id: string; code: string; label: string | null }[];

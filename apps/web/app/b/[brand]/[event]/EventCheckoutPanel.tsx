@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Loader2, Lock, ArrowRight, MapPin } from 'lucide-react';
 import { formatMoney, monedaDe } from '@/lib/moneda';
 import { zonaDe, type Zona } from '@/lib/zona';
+import { medioDe, medioFrase, NOMBRE_MEDIO } from '@/lib/metodoManual';
 import { optimizedImage } from '@/lib/imageUrl';
 import {
   type Brand, type Event, type TicketType,
@@ -52,6 +53,10 @@ export function EventCheckoutPanel({
   direccion?: Direccion;
 }) {
   const moneda = monedaDe(brand.moneda);
+  const medio = medioDe(brand.metodo_manual);
+  const nombreMedio = NOMBRE_MEDIO[medio].es;
+  const frMedio = medioFrase(medio);
+  const esYapeMedio = medio === 'yape';
   const fmt = (c: number) => formatMoney(c, moneda);
   const sorted = useMemo(
     // El orden lo decide el organizador en Entradas (Subir/Bajar).
@@ -295,7 +300,7 @@ export function EventCheckoutPanel({
         ? 'Obtener entrada gratis'
         : method === 'mercadopago'
           ? `Pagar ${fmt(finalTotal)}`
-          : 'Pagar con Yape';
+          : esYapeMedio ? 'Pagar con Yape' : `Pagar con ${frMedio}`;
   const isYape = method === 'yape_manual' && !esGratis;
 
   function submitCheckout(form: HTMLFormElement) {
@@ -355,13 +360,13 @@ export function EventCheckoutPanel({
   const payLabel = eventoGratis
     ? 'gratis'
     : brand.yape_number && mpConfigured
-    ? 'Pagas con Yape o tarjeta'
+    ? `Pagas con ${frMedio} o tarjeta`
     : brand.yape_number
-      ? 'Pagas con Yape'
+      ? `Pagas con ${frMedio}`
       : mpConfigured
         ? 'Pagas con tarjeta'
         : 'Pago seguro';
-  const ctaMetodo = method === 'mercadopago' ? 'Pagar con tarjeta' : brand.yape_number ? 'Pagar con Yape' : 'Pagar';
+  const ctaMetodo = method === 'mercadopago' ? 'Pagar con tarjeta' : brand.yape_number ? (esYapeMedio ? 'Pagar con Yape' : `Pagar con ${frMedio}`) : 'Pagar';
   // Un solo texto para el botón del paso 1, en la barra (teléfono) y en el
   // rail (escritorio): antes el rail decía "Continuar" y la barra otra cosa.
   // En cero el botón está apagado; dice QUÉ hacer, no el nombre del paso
@@ -378,9 +383,9 @@ function fraseConfianza(pago: string): string {
   // QR sale al instante y que no se cobra nada.
   // Evento gratis: sin frase (Paul, 2026-09-23: se lee como relleno).
   if (pago === 'gratis') return '';
-  if (/tarjeta/i.test(pago) && /Yape/i.test(pago)) return 'Pagas por Yape o tarjeta y tu entrada te llega al correo al toque.';
+  if (/tarjeta/i.test(pago) && brand.yape_number) return `Pagas por ${frMedio} o tarjeta y tu entrada te llega al correo al toque.`;
   if (/tarjeta/i.test(pago)) return 'Pagas con tarjeta y tu entrada te llega al correo al toque.';
-  return 'Pagas por Yape y tu entrada te llega al correo al toque.';
+  return `Pagas por ${frMedio} y tu entrada te llega al correo al toque.`;
 }
 
   return (
@@ -429,7 +434,7 @@ function fraseConfianza(pago: string): string {
             </section>
             {fraseConfianza(payLabel) && <p className="b-trust">{fraseConfianza(payLabel)}</p>}
 
-            <AsiDeSimple conYape={!!brand.yape_number} gratis={eventoGratis} />
+            <AsiDeSimple conYape={!!brand.yape_number} gratis={eventoGratis} medio={medio} />
 
             <MasInfo event={event} brand={brand} />
           </div>
@@ -554,11 +559,11 @@ function fraseConfianza(pago: string): string {
               <div className="b-panel">
                 <p className="b-panel__t">¿Cómo pagas?</p>
                 <div className="b-pays" role="radiogroup" aria-label="Forma de pago">
-                  <button type="button" role="radio" aria-checked={method === 'yape_manual'} className={`b-pay${method === 'yape_manual' ? ' b-pay--on' : ''}`} onClick={() => setMethod('yape_manual')}>Yape</button>
+                  <button type="button" role="radio" aria-checked={method === 'yape_manual'} className={`b-pay${method === 'yape_manual' ? ' b-pay--on' : ''}`} onClick={() => setMethod('yape_manual')}>{nombreMedio}</button>
                   <button type="button" role="radio" aria-checked={method === 'mercadopago'} className={`b-pay${method === 'mercadopago' ? ' b-pay--on' : ''}`} onClick={() => setMethod('mercadopago')}>Tarjeta</button>
                 </div>
                 <p className="c-help" style={{ marginTop: 10 }}>
-                  {isYape ? 'En la pantalla siguiente yapeas y subes tu comprobante.' : 'Pagas con tarjeta y tu QR llega al instante.'}
+                  {isYape ? (esYapeMedio ? 'En la pantalla siguiente yapeas y subes tu comprobante.' : `En la pantalla siguiente pagas con ${frMedio} y subes tu comprobante.`) : 'Pagas con tarjeta y tu QR llega al instante.'}
                 </p>
               </div>
             )}

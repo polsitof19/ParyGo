@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { monedaDe, type Moneda } from '@/lib/moneda';
 import { zonaDe, type Zona } from '@/lib/zona';
+import { medioDe, medioSirve } from '@/lib/metodoManual';
 
 // Moneda de las entradas de la marca, releída en el server (nunca del form).
 // Falla CERRADO: si no se puede leer, tira. Caer en PEN leería "50.000" de una
@@ -38,11 +39,14 @@ export async function eventoCobra(admin: SupabaseClient, eventId: string, brandI
   return (count ?? 0) > 0;
 }
 
-// Métodos con los que una marca COBRA entradas: su Yape (Perú) o su Mercado
-// Pago conectado (0086). `sinYape`: "¿le queda algún método si quita el Yape?".
+// Métodos con los que una marca COBRA entradas: su medio manual (cuenta cargada
+// y compatible con la moneda) o su Mercado Pago conectado (0086, solo en PEN).
+// `sinYape`: "¿le queda algún método si quita la cuenta del medio manual?".
 export async function marcaTieneMetodo(admin: SupabaseClient, brandId: string, o: { sinYape?: boolean } = {}): Promise<boolean> {
-  const { data: b } = await admin.from('brands').select('yape_number, mp_oauth_user_id').eq('id', brandId).maybeSingle();
-  return (!o.sinYape && !!b?.yape_number?.trim()) || !!b?.mp_oauth_user_id;
+  const { data: b } = await admin.from('brands').select('yape_number, mp_oauth_user_id, moneda, metodo_manual').eq('id', brandId).maybeSingle();
+  const moneda = monedaDe(b?.moneda);
+  const manual = !o.sinYape && !!b?.yape_number?.trim() && medioSirve(medioDe(b?.metodo_manual), moneda);
+  return manual || (!!b?.mp_oauth_user_id && moneda === 'PEN');
 }
 
 // Después de un cambio en un evento YA PUBLICADO (agregar o reactivar una

@@ -6,14 +6,19 @@ import { CopyButton } from './CopyButton';
 import { DownloadQrButton } from './DownloadQrButton';
 import { LineaPago } from '../../Responsable';
 import { publicEnv } from '@/lib/env';
+import { medioDe, medioFrase, NOMBRE_MEDIO } from '@/lib/metodoManual';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-export const metadata = {
-  title: 'Pago con Yape',
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata({ params }: { params: { brand: string } }) {
+  const { data } = await createAdminClient().from('brands').select('metodo_manual').eq('slug', params.brand).maybeSingle();
+  const medio = medioDe(data?.metodo_manual);
+  return {
+    title: medio === 'yape' ? 'Pago con Yape' : `Pago con ${medioFrase(medio)}`,
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function YapeUploadPage({
   params,
@@ -42,6 +47,7 @@ export default async function YapeUploadPage({
       theme_json: { yape_qr_url?: string | null } | null;
       yape_qr_url: string | null;
       moneda: string;
+      metodo_manual: string | null;
     } | null;
     event: { name: string; slug: string } | null;
   };
@@ -50,7 +56,7 @@ export default async function YapeUploadPage({
     .from('orders')
     .select(`
       id, status, total_cents, buyer_name, payment_method,
-      brand:brands ( slug, name, yape_number, yape_holder, whatsapp_e164, contact_email, theme_json, yape_qr_url, moneda ),
+      brand:brands ( slug, name, yape_number, yape_holder, whatsapp_e164, contact_email, theme_json, yape_qr_url, moneda, metodo_manual ),
       event:events ( name, slug )
     `)
     .eq('id', searchParams.order)
@@ -68,9 +74,12 @@ export default async function YapeUploadPage({
   if (order.status !== 'pending_yape_review' || order.payment_method !== 'yape_manual') {
     redirect(`/${params.event}/confirmacion?order=${order.id}`);
   }
+  const medio = medioDe(order.brand?.metodo_manual);
+  const esYape = medio === 'yape';
+  const frase = medioFrase(medio);
   if (!order.brand?.yape_number) {
     return (
-      <main className="c-state c-checkout-canvas"><p className="c-state__dot c-state__dot--alert">Este organizador no tiene Yape configurado.</p></main>
+      <main className="c-state c-checkout-canvas"><p className="c-state__dot c-state__dot--alert">{esYape ? 'Este organizador no tiene Yape configurado.' : `Este organizador no tiene configurado el pago con ${frase}.`}</p></main>
     );
   }
 
@@ -81,7 +90,7 @@ export default async function YapeUploadPage({
   return (
     <main className="b-buy b-yape c-checkout-canvas">
       <div className="b-head">
-        <h1 className="b-head__t">Yapea y sube tu captura</h1>
+        <h1 className="b-head__t">{esYape ? 'Yapea y sube tu captura' : `Paga con ${frase} y sube tu captura`}</h1>
         <p className="b-head__s">{order.event?.name}</p>
       </div>
 
@@ -89,22 +98,23 @@ export default async function YapeUploadPage({
           0054; theme_json como respaldo) y su número. Sin QR se yapea al
           número, que funciona igual: el QR es una comodidad. */}
       <div className="b-panel">
-        <p className="b-panel__t">Yapea a</p>
+        <p className="b-panel__t">{esYape ? 'Yapea a' : medio === 'transferencia' ? 'Transfiere a' : 'Paga a'}</p>
         <div className={`b-yapecard${qrUrl ? '' : ' b-yapecard--sinqr'}`}>
           {qrUrl && (
-            <a href={qrUrl} target="_blank" rel="noopener noreferrer" className="b-yapeqr" aria-label="Abrir el QR de Yape en grande">
+            <a href={qrUrl} target="_blank" rel="noopener noreferrer" className="b-yapeqr" aria-label={`Abrir el QR de ${NOMBRE_MEDIO[medio].es} en grande`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qrUrl} alt={`QR de Yape de ${order.brand.yape_holder ?? order.brand.name}`} />
+              <img src={qrUrl} alt={`QR de ${NOMBRE_MEDIO[medio].es} de ${order.brand.yape_holder ?? order.brand.name}`} />
             </a>
           )}
           <div>
             <p className="b-yapenum">{order.brand.yape_number}</p>
-            <p className="b-yapeheld">{order.brand.yape_holder ?? order.brand.name}</p>
+            <p className="b-yapeheld">{medio === 'usdt' ? `Red: ${order.brand.yape_holder ?? ''}` : (order.brand.yape_holder ?? order.brand.name)}</p>
             <div className="b-yapeacts">
-              <CopyButton value={order.brand.yape_number} label="número" />
-              {qrUrl && <DownloadQrButton url={qrUrl} nombre={`yape-${order.brand.slug}`} />}
+              <CopyButton value={order.brand.yape_number} label={medio === 'usdt' ? 'dirección' : ['yape', 'nequi', 'bizum'].includes(medio) ? 'número' : 'cuenta'} />
+              {qrUrl && <DownloadQrButton url={qrUrl} nombre={`${medio}-${order.brand.slug}`} />}
             </div>
-            {qrUrl && <p className="b-aviso">Guarda el QR y, al escanear en Yape, elígelo desde tu galería.</p>}
+            {qrUrl && <p className="b-aviso">{esYape ? 'Guarda el QR y, al escanear en Yape, elígelo desde tu galería.' : 'Guarda el QR y, al escanear en tu app, elígelo desde tu galería.'}</p>}
+            {medio === 'usdt' && <p className="b-aviso">Envía solo USDT por la red {order.brand.yape_holder}. Si usas otra red, el dinero se pierde y no se puede recuperar.</p>}
           </div>
         </div>
       </div>
@@ -116,7 +126,7 @@ export default async function YapeUploadPage({
           <span>{formatMoney(order.total_cents, monedaDe(order.brand?.moneda))}</span>
           <CopyButton value={sinDecimales(monedaDe(order.brand?.moneda)) ? String(order.total_cents / 100) : (order.total_cents / 100).toFixed(2)} label="monto" />
         </div>
-        <p className="b-aviso">Si yapeas de menos o de más, el organizador puede rechazar el comprobante.</p>
+        <p className="b-aviso">{esYape ? 'Si yapeas de menos o de más' : 'Si pagas de menos o de más'}, el organizador puede rechazar el comprobante.</p>
       </div>
 
       {/* 3 · El comprobante. */}
@@ -127,6 +137,7 @@ export default async function YapeUploadPage({
           brandId={order.brand.slug}
           expectedAmountCents={order.total_cents}
           moneda={monedaDe(order.brand?.moneda)}
+          medio={medio}
           buyerName={order.buyer_name}
           appUrl={publicEnv.NEXT_PUBLIC_APP_URL}
         />

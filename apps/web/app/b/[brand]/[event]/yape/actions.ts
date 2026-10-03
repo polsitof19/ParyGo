@@ -46,7 +46,7 @@ export async function submitYapeProof(formData: FormData): Promise<Result> {
     .from('orders')
     .select(`
       id, event_id, brand_id, total_cents, status, payment_method,
-      brand:brands ( slug, moneda )
+      brand:brands ( slug, moneda, metodo_manual )
     `)
     .eq('id', parsed.data.order_id)
     .single();
@@ -54,7 +54,8 @@ export async function submitYapeProof(formData: FormData): Promise<Result> {
     return { ok: false, message: 'Orden no encontrada.' };
   }
   if (order.payment_method !== 'yape_manual') {
-    return { ok: false, message: 'Esta orden no es Yape manual.' };
+    const b = Array.isArray(order.brand) ? order.brand[0] : order.brand;
+    return { ok: false, message: b?.metodo_manual && b.metodo_manual !== 'yape' ? 'Esta orden no es de pago manual.' : 'Esta orden no es Yape manual.' };
   }
   if (order.status !== 'pending_yape_review') {
     return { ok: false, message: 'Esta orden ya fue procesada.' };

@@ -6,6 +6,7 @@ import { Check, X, Loader2, ChevronRight, ExternalLink } from 'lucide-react';
 import { formatMoney, type Moneda } from '@/lib/moneda';
 import { formatEnZona, type Zona } from '@/lib/zona';
 import { useTextos } from '@/components/IdiomaPanel';
+import type { Medio } from '@/lib/metodoManual';
 import { approveYapeProof, rejectYapeProof } from './actions';
 
 type Props = {
@@ -30,6 +31,8 @@ type Props = {
   // 'approved' = ya se aprobó una orden con ese N° (reuso = fraude probable);
   // 'pending'  = otro pendiente con el mismo N° (revisar antes de aprobar ambos).
   duplicateWarning?: 'approved' | 'pending' | null;
+  /** Medio manual de la marca (0088); sin él, Yape. */
+  medio?: Medio;
 };
 
 // Fila compacta de revisión: lo que se compara de un vistazo contra la app de
@@ -55,7 +58,9 @@ export function YapeReviewRow({
   items = [],
   impersonating = false,
   duplicateWarning = null,
+  medio = 'yape',
 }: Props) {
+  const esYape = medio === 'yape';
   const [pending, start] = useTransition();
   const [open, setOpen] = useState(false);
   const [showReject, setShowReject] = useState(false);
@@ -149,7 +154,7 @@ export function YapeReviewRow({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={receiptUrl}
-                    alt={t('Comprobante Yape', 'Yape receipt')}
+                    alt={esYape ? t('Comprobante Yape', 'Yape receipt') : t('Comprobante de pago', 'Payment receipt')}
                     className="a-receipt"
                     onError={() => setReceiptBroken(true)}
                   />
@@ -182,8 +187,8 @@ export function YapeReviewRow({
                     <strong>{t('Ojo: N° de operación repetido.', 'Heads up: repeated operation number.')}</strong>{' '}
                     {duplicateWarning === 'approved'
                       ? t(
-                          'Este número de operación ya se usó en un comprobante APROBADO de tu marca. Podría ser un comprobante reutilizado — verifica en tu Yape antes de aprobar.',
-                          'This operation number was already used in an APPROVED receipt of your brand. It could be a reused receipt — check your Yape before approving.'
+                          `Este número de operación ya se usó en un comprobante APROBADO de tu marca. Podría ser un comprobante reutilizado — verifica en tu ${esYape ? 'Yape' : 'cuenta'} antes de aprobar.`,
+                          `This operation number was already used in an APPROVED receipt of your brand. It could be a reused receipt — check your ${esYape ? 'Yape' : 'account'} before approving.`
                         )
                       : t(
                           'Este número de operación aparece en otro comprobante pendiente. Revisa ambos antes de aprobar para no duplicar.',

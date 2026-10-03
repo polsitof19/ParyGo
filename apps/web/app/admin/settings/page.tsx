@@ -12,6 +12,8 @@ import { TemaCompraSelector } from './TemaCompraSelector';
 import { esTema } from '@/lib/temaCompra.mjs';
 import { esIdioma } from '@/lib/idioma';
 import { textosPanel } from '@/lib/idiomaServer';
+import { medioDe, paisDe } from '@/lib/metodoManual';
+import { monedaDe } from '@/lib/moneda';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -31,16 +33,18 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
   // con la sesión del organizador daba "permission denied for table brands",
   // brand quedaba null y "Mi marca" salía EN BLANCO. Se lee con service role,
   // acotada a la marca de la sesión (ctx.brandId), igual que en actions.ts.
-  const [{ data: brand }, mpEstado, { data: qrRow }, { count: puertaCount }] = await Promise.all([
+  const [{ data: brand }, mpEstado, { data: qrRow }, { count: puertaCount }, { count: eventosCount }] = await Promise.all([
     supabase
       .from('brands')
-      .select('id, name, contact_email, whatsapp_e164, instagram, yape_number, yape_holder, notify_yape_recovery, notify_yape_digest, theme_json, idioma, tema_compra')
+      .select('id, name, contact_email, whatsapp_e164, instagram, yape_number, yape_holder, notify_yape_recovery, notify_yape_digest, theme_json, idioma, tema_compra, moneda, zona_horaria, metodo_manual')
       .eq('id', ctx.brandId)
       .single(),
     estadoMp(admin, ctx.brandId),
     admin.from('brands').select('yape_qr_url').eq('id', ctx.brandId).maybeSingle(),
     // Cuántas personas tiene en puerta: el valor de la fila "Equipo de puerta".
     admin.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', ctx.brandId).eq('role', 'validator'),
+    // Con cualquier evento la moneda queda bloqueada (trigger guard_brand_moneda).
+    admin.from('events').select('id', { count: 'exact', head: true }).eq('brand_id', ctx.brandId),
   ]);
   if (!brand) return null;
 
@@ -68,6 +72,8 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
   };
   const avisoMp = searchParams.mp && Object.hasOwn(avisosMp, searchParams.mp) ? avisosMp[searchParams.mp] : null;
   const puerta = puertaCount ?? 0;
+  const moneda = monedaDe(brand.moneda);
+  const pais = paisDe(moneda, brand.zona_horaria);
   const fold = (titulo: string, valor: string, body: React.ReactNode, open?: boolean) => (
     <details className="s-fold" open={open}>
       <summary>
@@ -106,6 +112,10 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
         contactEmail={brand.contact_email ?? ''}
         whatsapp={brand.whatsapp_e164 ?? ''}
         instagram={brand.instagram ?? ''}
+        paisId={pais.id}
+        moneda={moneda}
+        medio={medioDe(brand.metodo_manual)}
+        tieneEventos={(eventosCount ?? 0) > 0}
         yapeNumber={brand.yape_number ?? ''}
         yapeHolder={brand.yape_holder ?? ''}
         primaryColor={theme.primary_color ?? '#FF1F8F'}
@@ -122,9 +132,11 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
             {avisoMp && <p className={avisoMp.ok ? 's-banner s-banner--ok' : 's-banner s-banner--err'} role="status">{avisoMp.texto}</p>}
             {fold(
               t('Mercado Pago (tarjeta y más)', 'Mercado Pago (card and more)'),
-              mpEstado.conectada ? t('Conectado', 'Connected') : t('Sin conectar', 'Not connected'),
-              <MpConexion conectada={mpEstado.conectada} cuenta={mpEstado.cuenta} disponible={mpOauthListo()} puede={!impersonating && duenaRealDe(user) === ctx.brandId} />,
-              mpEstado.conectada || !!avisoMp || undefined,
+              moneda !== 'PEN' ? t('No disponible', 'Not available') : mpEstado.conectada ? t('Conectado', 'Connected') : t('Sin conectar', 'Not connected'),
+              moneda === 'PEN'
+                ? <MpConexion conectada={mpEstado.conectada} cuenta={mpEstado.cuenta} disponible={mpOauthListo()} puede={!impersonating && duenaRealDe(user) === ctx.brandId} />
+                : <p className="s-card__desc">{t('Mercado Pago solo cobra en soles por ahora.', 'Mercado Pago only charges in soles for now.')}</p>,
+              (moneda === 'PEN' && mpEstado.conectada) || !!avisoMp || undefined,
             )}
           </div>
         }
