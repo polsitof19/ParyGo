@@ -1,3 +1,4 @@
+import { medioDe, NOMBRE_MEDIO } from '@/lib/metodoManual';
 import Link from 'next/link';
 import { ChevronDown, Plus } from 'lucide-react';
 import { requireSession } from '@/lib/auth';
@@ -41,7 +42,7 @@ export default async function AdminHomePage() {
   const supabase = createClient();
   const adminCli = createAdminClient();
   const [{ data: brand }, { data: events }, pendingProofs, stuckRows, { count: activeTypeCount }, pruebaLibre, { count: paidTypeCount }, { count: ticketCount }, { count: scannedCount }] = await Promise.all([
-    supabase.from('brands').select('id, slug, name, yape_number, event_balance, moneda, zona_horaria').eq('id', brandId).single(),
+    supabase.from('brands').select('id, slug, name, yape_number, event_balance, moneda, zona_horaria, metodo_manual').eq('id', brandId).single(),
     supabase
       .from('events')
       .select('id, slug, name, starts_at, is_published, cover_url, archived_at, venue_name, es_prueba')
@@ -111,6 +112,8 @@ export default async function AdminHomePage() {
   // más (Code y Hoesky), aunque hoy no tenga un evento publicado.
   const cobra = (paidTypeCount ?? 0) > 0;
   const cobroReady = Boolean(brand.yape_number);
+  const medio = medioDe(brand.metodo_manual);
+  const esYape = medio === 'yape';
   const hasTickets = (activeTypeCount ?? 0) > 0;
   const guideEvent = activeEvents.find((e) => !isPastEv(e, nowMs)) ?? activeEvents[0] ?? null;
   const evHref = guideEvent ? `/admin/events/${guideEvent.id}` : '/admin/events/new';
@@ -118,14 +121,14 @@ export default async function AdminHomePage() {
   const scanned = (scannedCount ?? 0) > 0;
   const enPrueba = pruebaLibre || activeEvents.some((e) => e.es_prueba && !isPastEv(e, nowMs));
   const compra = firstPendingEvent
-    ? { href: `/admin/events/${firstPendingEvent.id}/yape`, cta: t('Aprobar el Yape', 'Approve the Yape'), desc: t('Tu compra está esperando. Aprueba el comprobante y te llega la entrada.', 'Your purchase is waiting. Approve the receipt and the ticket arrives.'), external: false }
+    ? { href: `/admin/events/${firstPendingEvent.id}/yape`, cta: esYape ? t('Aprobar el Yape', 'Approve the Yape') : t('Aprobar el pago', 'Approve the payment'), desc: t('Tu compra está esperando. Aprueba el comprobante y te llega la entrada.', 'Your purchase is waiting. Approve the receipt and the ticket arrives.'), external: false }
     : (ticketCount ?? 0) > 0
       ? { href: '/scan', cta: t('Abrir escáner', 'Open scanner'), desc: t('Ya tienes una entrada. Escanéala para ver cómo funciona la puerta.', 'You already have a ticket. Scan it to see how the door works.'), external: false }
       : { href: publicHref, cta: t('Abrir mi página', 'Open my page'), desc: t('Compra una entrada como si fueras tu cliente. Así ves todo lo que ve.', 'Buy a ticket as if you were your customer. That way you see everything they see.'), external: Boolean(guideEvent) };
   const setupSteps: SetupStep[] = [
     { key: 'evento', title: t('Crea tu evento', 'Create your event'), desc: t('Nombre, fecha y lugar. Te toma un par de minutos.', 'Name, date and venue. It takes you a couple of minutes.'), done: (events?.length ?? 0) > 0, href: canCreate ? '/admin/events/new' : '/admin/comprar', cta: canCreate ? t('Crear evento', 'Create event') : t('Comprar eventos', 'Buy events'), detail: guideEvent ? `${guideEvent.name} · ${fmtDay(guideEvent.starts_at)}` : undefined },
     { key: 'entradas', title: t('Agrega tus entradas', 'Add your tickets'), desc: enPrueba ? t(`Precio y cuántas hay. En tu prueba, hasta ${PRUEBA_TOPE_ENTRADAS}.`, `Price and how many. In your trial, up to ${PRUEBA_TOPE_ENTRADAS}.`) : t('Precio y cuántas hay de cada una.', 'Price and how many of each.'), done: hasTickets, href: guideEvent ? `/admin/events/${guideEvent.id}/entradas` : '/admin/events/new', cta: t('Agregar entradas', 'Add tickets') },
-    ...(cobra ? [{ key: 'cobro', title: t('Elige cómo te pagan', 'Choose how you get paid'), desc: t('Tus compradores necesitan saber a dónde pagarte. La plata va directo a ti.', 'Your buyers need to know where to pay you. The money goes straight to you.'), done: cobroReady, href: '/admin/settings#cobro', cta: t('Elegir método de pago', 'Choose payment method'), detail: cobroReady ? `Yape · ${brand.yape_number}` : undefined }] : []),
+    ...(cobra ? [{ key: 'cobro', title: t('Elige cómo te pagan', 'Choose how you get paid'), desc: t('Tus compradores necesitan saber a dónde pagarte. La plata va directo a ti.', 'Your buyers need to know where to pay you. The money goes straight to you.'), done: cobroReady, href: '/admin/settings#cobro', cta: t('Elegir método de pago', 'Choose payment method'), detail: cobroReady ? `${NOMBRE_MEDIO[medio].es} · ${brand.yape_number}` : undefined }] : []),
     { key: 'publicar', title: t('Publícalo y comparte el link', 'Publish it and share the link'), desc: t('Publícalo y manda el link por WhatsApp o ponlo en tu Instagram.', 'Publish it and send the link on WhatsApp or put it on your Instagram.'), done: publishedCount > 0, href: evHref, cta: t('Ir a publicar', 'Go to publish') },
     { key: 'compra', title: t('Haz una compra de prueba', 'Make a test purchase'), desc: compra.desc, done: scanned, href: compra.href, cta: compra.cta, external: compra.external },
   ];
@@ -176,7 +179,7 @@ export default async function AdminHomePage() {
             ) : (
               <span>{(e.name.trim()[0] ?? '?').toUpperCase()}</span>
             )}
-            {pend > 0 && <span className="a-nav__count a-evcard__pend" aria-label={t(`${pend} Yape por aprobar`, `${pend} Yape to approve`)}>{pend}</span>}
+            {pend > 0 && <span className="a-nav__count a-evcard__pend" aria-label={esYape ? t(`${pend} Yape por aprobar`, `${pend} Yape to approve`) : t(`${pend} pago por aprobar`, `${pend} payment to approve`)}>{pend}</span>}
           </span>
           <span className="a-evcard__name">{e.name}</span>
           <span className="a-evcard__when">{fmtWhen(e.starts_at)}</span>
@@ -194,12 +197,12 @@ export default async function AdminHomePage() {
         <div className="s-due" role="status">
           <div className="s-due__txt">
             <span className="s-due__k">{t('Por revisar', 'To review')}</span>
-            <span className="s-due__n">{t(`${totalPending} Yape${totalPending === 1 ? '' : 's'} por aprobar`, `${totalPending} Yape${totalPending === 1 ? '' : 's'} to approve`)}</span>
+            <span className="s-due__n">{esYape ? t(`${totalPending} Yape${totalPending === 1 ? '' : 's'} por aprobar`, `${totalPending} Yape${totalPending === 1 ? '' : 's'} to approve`) : t(`${totalPending} pago${totalPending === 1 ? '' : 's'} por aprobar`, `${totalPending} payment${totalPending === 1 ? '' : 's'} to approve`)}</span>
             <span className="s-due__sub">
               {t('Hay gente esperando su QR', 'People are waiting for their QR')}{pendingEventCount > 1 && t(` · en ${pendingEventCount} eventos`, ` · in ${pendingEventCount} events`)}.
             </span>
           </div>
-          <Link href={`/admin/events/${firstPendingEvent!.id}/yape`} className="s-btn s-btn--primary s-btn--sm">{t('Revisar Yapes', 'Review Yapes')}</Link>
+          <Link href={`/admin/events/${firstPendingEvent!.id}/yape`} className="s-btn s-btn--primary s-btn--sm">{esYape ? t('Revisar Yapes', 'Review Yapes') : t('Revisar pagos', 'Review payments')}</Link>
         </div>
       )}
 

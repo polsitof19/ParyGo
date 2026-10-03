@@ -25,7 +25,7 @@ export type ClientRow = {
 };
 
 const docLabel = (tt: Textos['t'], d: string | null) => (d === 'ce' ? 'CE' : d === 'passport' ? tt('Pasaporte', 'Passport') : 'DNI');
-const methodLabel = (m: string) => (m === 'mercadopago' ? 'MercadoPago' : m === 'yape_manual' ? 'Yape' : m);
+const methodLabel = (m: string, manual = 'Yape') => (m === 'mercadopago' ? 'MercadoPago' : m === 'yape_manual' ? manual : m);
 const fmtDate = (iso: string, loc: string, zona: Zona) => formatEnZona(iso, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, zona, loc);
 
 // Escape CSV: comillas dobladas + envolver si hay coma/comilla/salto de línea.
@@ -34,7 +34,7 @@ function csvCell(v: string | number | null): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function ClientsTable({ rows, eventId, eventName, moneda, zona, impersonating = false, focusSearch = false, hint = null }: { rows: ClientRow[]; eventId: string; eventName: string; moneda: Moneda; zona: Zona; impersonating?: boolean; focusSearch?: boolean; hint?: string | null }) {
+export function ClientsTable({ rows, eventId, eventName, moneda, zona, impersonating = false, focusSearch = false, hint = null, medioNombre = 'Yape' }: { rows: ClientRow[]; eventId: string; eventName: string; moneda: Moneda; zona: Zona; impersonating?: boolean; focusSearch?: boolean; hint?: string | null; medioNombre?: string }) {
   const { t, loc } = useTextos();
   const [q, setQ] = useState('');
   const filtered = useMemo(() => {
@@ -56,7 +56,7 @@ export function ClientsTable({ rows, eventId, eventName, moneda, zona, impersona
         csvCell(r.name), csvCell(r.email), csvCell(r.phone),
         csvCell(`${docLabel(t, r.docType)} ${r.dni ?? ''}`.trim()),
         csvCell(tix), csvCell((r.totalCents / 100).toFixed(2)), csvCell((r.discountCents / 100).toFixed(2)),
-        csvCell(methodLabel(r.paymentMethod)), csvCell(fmtDate(r.createdAt, loc, zona)),
+        csvCell(methodLabel(r.paymentMethod, medioNombre)), csvCell(fmtDate(r.createdAt, loc, zona)),
       ].join(','));
     }
     // BOM para que Excel abra los acentos bien.
@@ -106,7 +106,7 @@ export function ClientsTable({ rows, eventId, eventName, moneda, zona, impersona
                 <div style={{ minWidth: 0 }}>
                   <p style={{ fontWeight: 700 }}>{r.name}</p>
                   <p className="s-muted" style={{ fontSize: 13, wordBreak: 'break-word' }}>{r.email} · {r.phone}</p>
-                  <p className="s-muted" style={{ fontSize: 13 }}>{docLabel(t, r.docType)} {r.dni ?? '—'} · {methodLabel(r.paymentMethod)} · {fmtDate(r.createdAt, loc, zona)}</p>
+                  <p className="s-muted" style={{ fontSize: 13 }}>{docLabel(t, r.docType)} {r.dni ?? '—'} · {methodLabel(r.paymentMethod, medioNombre)} · {fmtDate(r.createdAt, loc, zona)}</p>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <p style={{ fontWeight: 800, fontFamily: 'var(--display)' }}>{formatMoney(r.totalCents, moneda)}</p>

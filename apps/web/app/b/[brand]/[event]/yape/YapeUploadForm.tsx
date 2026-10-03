@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Loader2, Upload, ImagePlus } from 'lucide-react';
 import { formatMoney, simbolo, sinDecimales, type Moneda } from '@/lib/moneda';
+import { type Medio } from '@/lib/metodoManual';
 import { submitYapeProof } from './actions';
 
 type Props = {
@@ -11,11 +12,13 @@ type Props = {
   brandId: string;
   expectedAmountCents: number;
   moneda: Moneda;
+  medio?: Medio;
   buyerName: string;
   appUrl: string;
 };
 
-export function YapeUploadForm({ orderId, expectedAmountCents, moneda, buyerName }: Props) {
+export function YapeUploadForm({ orderId, expectedAmountCents, moneda, medio = 'yape', buyerName }: Props) {
+  const esYape = medio === 'yape';
   const [pending, start] = useTransition();
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -42,6 +45,8 @@ export function YapeUploadForm({ orderId, expectedAmountCents, moneda, buyerName
         const form = new FormData(e.currentTarget);
         form.set('order_id', orderId);
         form.set('receipt_file', file);
+        // Un comprobante de Nequi/transferencia puede no traer código: el server lo pide siempre.
+        if (!esYape && !String(form.get('security_code') ?? '').trim()) form.set('security_code', 'N/A');
         start(async () => {
           const res = await submitYapeProof(form);
           if (!res.ok) { toast.error(res.message ?? 'Error al subir'); return; }
@@ -51,7 +56,7 @@ export function YapeUploadForm({ orderId, expectedAmountCents, moneda, buyerName
       className="b-yapeform"
     >
       <div className="c-field">
-        <label htmlFor="amount" className="c-label">Monto que yapeaste ({simbolo(moneda)})</label>
+        <label htmlFor="amount" className="c-label">{esYape ? 'Monto que yapeaste' : 'Monto que pagaste'} ({simbolo(moneda)})</label>
         <input id="amount" name="amount_soles" type="number" step={sinDecimales(moneda) ? 1 : 0.01} required defaultValue={sinDecimales(moneda) ? String(expectedAmountCents / 100) : (expectedAmountCents / 100).toFixed(2)} className="c-input" inputMode="decimal" />
         <p className="c-help">Debe ser exactamente {formatMoney(expectedAmountCents, moneda)}</p>
       </div>
@@ -59,18 +64,18 @@ export function YapeUploadForm({ orderId, expectedAmountCents, moneda, buyerName
       <div className="c-field">
         <label htmlFor="operation_number" className="c-label">N° de operación</label>
         <input id="operation_number" name="operation_number" required placeholder="00012345" maxLength={20} className="c-input" inputMode="numeric" />
-        <p className="c-help">Aparece en tu app Yape como &quot;N° de operación&quot;.</p>
+        <p className="c-help">{esYape ? <>Aparece en tu app Yape como &quot;N° de operación&quot;.</> : <>Aparece en tu comprobante como &quot;N° de operación&quot; o referencia.</>}</p>
       </div>
 
       <div className="c-field">
-        <label htmlFor="payer_name" className="c-label">Tu nombre completo (como en Yape)</label>
+        <label htmlFor="payer_name" className="c-label">{esYape ? 'Tu nombre completo (como en Yape)' : 'Tu nombre completo (como en el comprobante)'}</label>
         <input id="payer_name" name="payer_name" required defaultValue={buyerName} placeholder="María López" className="c-input" />
         <p className="c-help">Debe coincidir con el nombre del comprobante.</p>
       </div>
 
       <div className="c-field">
-        <label htmlFor="security_code" className="c-label">Código de seguridad</label>
-        <input id="security_code" name="security_code" required placeholder="123 o ABC456" maxLength={20} className="c-input" />
+        <label htmlFor="security_code" className="c-label">{esYape ? 'Código de seguridad' : 'Código de seguridad (si tu comprobante lo trae)'}</label>
+        <input id="security_code" name="security_code" required={esYape} placeholder="123 o ABC456" maxLength={20} className="c-input" />
         <p className="c-help">El código de 3-4 caracteres que figura en el comprobante.</p>
       </div>
 
@@ -86,7 +91,7 @@ export function YapeUploadForm({ orderId, expectedAmountCents, moneda, buyerName
           {/* La zona es la <label>: tocar cualquier parte abre el selector. */}
           <label htmlFor="receipt" className="c-file__btn">
             <ImagePlus aria-hidden="true" />
-            {file ? 'Cambiar captura' : 'Sube la captura de tu Yape'}
+            {file ? 'Cambiar captura' : esYape ? 'Sube la captura de tu Yape' : 'Sube la captura de tu pago'}
             <span className="c-file__name">{file?.name ?? 'PNG o JPG, hasta 5 MB'}</span>
           </label>
         </div>
@@ -97,7 +102,7 @@ export function YapeUploadForm({ orderId, expectedAmountCents, moneda, buyerName
       </div>
 
       <button type="submit" className="b-btn b-btn--go" disabled={pending || !file}>
-        {pending ? <><Loader2 className="h-4 w-4 animate-spin" /> Subiendo…</> : <><Upload className="h-4 w-4" /> Listo, ya yapeé</>}
+        {pending ? <><Loader2 className="h-4 w-4 animate-spin" /> Subiendo…</> : <><Upload className="h-4 w-4" /> {esYape ? 'Listo, ya yapeé' : 'Listo, ya pagué'}</>}
       </button>
 
       <p className="c-muted-3">Te confirmamos por email en minutos.</p>

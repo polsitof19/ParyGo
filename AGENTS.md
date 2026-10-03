@@ -109,11 +109,11 @@ las server actions con service role.
   zona de la marca en las páginas de la marca. **Listo:** test unitario con
   Madrid en verano/invierno y Lima; fase1 verde.
 ### Bloque 3 — país y medio manual
-- [ ] 4. Mi marca: "País" (selector; cambia moneda+zona; bloqueado con aviso si
+- [x] 4. Mi marca: "País" (selector; cambia moneda+zona; bloqueado con aviso si
   ya hay órdenes) y "Cómo te pagan": medio manual según el país + cuenta +
   titular/red + QR, validado con lib/metodoManual.ts. Cabina igual.
   **Listo:** panel-en + capturas 390/1440.
-- [ ] 5. Comprador: página de pago con el nombre del medio, cuenta, titular/red,
+- [x] 5. Comprador: página de pago con el nombre del medio, cuenta, titular/red,
   QR y monto en su moneda; checkout rechaza medio incompatible con la moneda y
   no ofrece Tarjeta fuera de PEN. Panel/correos "Pagos por aprobar".
   **Listo:** `e2e/pais-compra.mjs` con una marca is_test TEMPORAL (demotest
@@ -121,7 +121,7 @@ las server actions con service role.
   entero, compra, comprobante, aprueba, entrada y correo en COP; Tarjeta
   rechazada aunque se llame a la acción; medio bloqueado con un pago por
   aprobar; se borra al final.
-- [ ] 6. security-reviewer + Codex review. **Listo:** bugs reales corregidos.
+- [x] 6. security-reviewer + Codex review. **Listo:** bugs reales corregidos.
 
 ## Fuera de alcance
 Conversión de monedas, varias monedas por marca, varios medios manuales a la

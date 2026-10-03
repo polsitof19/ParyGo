@@ -9,7 +9,7 @@ import { ReenviarMiEntrada } from './ReenviarMiEntrada';
 export type PassState =
   | { kind: 'ok' }
   | { kind: 'used'; at: string }
-  | { kind: 'wait' }
+  | { kind: 'wait'; medio?: string }
   | { kind: 'dead'; reason: string };
 
 // LA ENTRADA. Se usa en /t/[uuid], en /pedido (una por entrada) y como cierre
@@ -76,7 +76,7 @@ export function TicketPass({
             <span><b>Entrada usada.</b> Se escaneó el {state.at}. Un QR entra una sola vez.</span>
           )}
           {state.kind === 'wait' && (
-            <span><b>Tu Yape está en revisión.</b> Te avisamos por email apenas {brandName} lo apruebe.</span>
+            <span><b>{state.medio && state.medio !== 'yape' ? `Tu pago con ${state.medio} está en revisión.` : 'Tu Yape está en revisión.'}</b> Te avisamos por email apenas {brandName} lo apruebe.</span>
           )}
           {state.kind === 'dead' && <span><b>{state.reason}</b></span>}
         </p>

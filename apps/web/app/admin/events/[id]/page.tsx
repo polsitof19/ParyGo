@@ -1,3 +1,4 @@
+import { medioDe } from '@/lib/metodoManual';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { BarChart3, ChevronRight, DoorOpen, ExternalLink, Gift, PencilLine, ReceiptText, Ticket, Trophy, Users } from 'lucide-react';
@@ -31,7 +32,7 @@ export default async function AdminEventPage({ params }: { params: { id: string 
   const admin = createAdminClient();
   const { data: event } = await admin
     .from('events')
-    .select('id, brand_id, slug, name, starts_at, venue_name, cover_url, is_published, is_free, brand:brands ( slug, zona_horaria )')
+    .select('id, brand_id, slug, name, starts_at, venue_name, cover_url, is_published, is_free, brand:brands ( slug, zona_horaria, metodo_manual )')
     .eq('id', params.id)
     .maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
@@ -52,6 +53,7 @@ export default async function AdminEventPage({ params }: { params: { id: string 
     marcaTieneMetodo(admin, event.brand_id),
   ]);
   const faltaMetodo = cobra && !tieneMetodo;
+  const esYape = medioDe((Array.isArray(event.brand) ? event.brand[0] : event.brand)?.metodo_manual) === 'yape';
   const yapes = ((pend ?? []) as { order: { event_id: string } | null }[]).filter((p) => p.order?.event_id === event.id).length;
   const tipos = types ?? [];
 
@@ -64,7 +66,7 @@ export default async function AdminEventPage({ params }: { params: { id: string 
   const menu: { href: string; t: string; d: string; Icono: typeof BarChart3; badge?: number; solo?: boolean }[] = [
     { href: `${base}/estadisticas`, t: t('Estadísticas', 'Statistics'), d: t('Cuánto vendiste, por tipo de entrada, por día y quién entró', 'How much you sold, by ticket type, by day, and who checked in'), Icono: BarChart3 },
     { href: `${base}/entradas`, t: t('Entradas', 'Tickets'), d: tipos.length ? t(`${tipos.length} tipo${tipos.length === 1 ? '' : 's'} · ver, editar o crear`, `${tipos.length} type${tipos.length === 1 ? '' : 's'} · view, edit or create`) : t('Crea la primera para poder vender', 'Create the first one to start selling'), Icono: Ticket },
-    { href: `${base}/yape`, t: t('Yapes', 'Yapes'), d: yapes ? t('Comprobantes esperando tu aprobación', 'Receipts waiting for your approval') : t('Aprobar o rechazar comprobantes', 'Approve or reject receipts'), Icono: ReceiptText, badge: yapes },
+    { href: `${base}/yape`, t: esYape ? t('Yapes', 'Yapes') : t('Pagos', 'Payments'), d: yapes ? t('Comprobantes esperando tu aprobación', 'Receipts waiting for your approval') : t('Aprobar o rechazar comprobantes', 'Approve or reject receipts'), Icono: ReceiptText, badge: yapes },
     { href: `${base}/cortesias`, t: t('Cortesías y códigos', 'Complimentary tickets and codes'), d: t('Entradas de regalo y códigos para reclamar', 'Gift tickets and claim codes'), Icono: Gift, solo: true },
     { href: `${base}/clientes`, t: t('Compradores', 'Buyers'), d: t('Buscar, reenviar entradas y exportar la lista', 'Search, resend tickets and export the list'), Icono: Users },
     { href: `${base}/promotores`, t: t('Promotores', 'Promoters'), d: t('Ventas por código de RR.PP.', 'Sales by promoter code'), Icono: Trophy },
@@ -100,10 +102,10 @@ export default async function AdminEventPage({ params }: { params: { id: string 
         <div className="s-due" role="status">
           <div className="s-due__txt">
             <span className="s-due__k">{t('Por revisar', 'To review')}</span>
-            <span className="s-due__n">{t(`${yapes} Yape${yapes === 1 ? '' : 's'} por aprobar`, `${yapes} Yape${yapes === 1 ? '' : 's'} to approve`)}</span>
+            <span className="s-due__n">{esYape ? t(`${yapes} Yape${yapes === 1 ? '' : 's'} por aprobar`, `${yapes} Yape${yapes === 1 ? '' : 's'} to approve`) : t(`${yapes} pago${yapes === 1 ? '' : 's'} por aprobar`, `${yapes} payment${yapes === 1 ? '' : 's'} to approve`)}</span>
             <span className="s-due__sub">{t('Hay gente esperando su QR.', 'There are people waiting for their QR.')}</span>
           </div>
-          <Link href={`${base}/yape`} className="s-btn s-btn--primary s-btn--sm">{t('Revisar Yapes', 'Review Yapes')}</Link>
+          <Link href={`${base}/yape`} className="s-btn s-btn--primary s-btn--sm">{esYape ? t('Revisar Yapes', 'Review Yapes') : t('Revisar pagos', 'Review payments')}</Link>
         </div>
       )}
 

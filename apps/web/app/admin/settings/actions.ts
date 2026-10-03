@@ -1,7 +1,8 @@
 'use server';
 
 import { z } from 'zod';
-import { yapeNumberSchemaCon, YAPE_NUMERO_ES, YAPE_NUMERO_EN } from '@/lib/yapeNumber';
+import { MEDIOS, PAISES, type Medio, medioDe, medioSirve, validarCuenta, NOMBRE_MEDIO } from '@/lib/metodoManual';
+import { monedaDe } from '@/lib/moneda';
 import { revalidatePath } from 'next/cache';
 import { nanoid } from 'nanoid';
 import { requireSession } from '@/lib/auth';
@@ -31,7 +32,7 @@ const schema = (t: Textos['t']) => z.object({
     .regex(/^\+\d{8,15}$/, t('Formato +51999000111', 'Format +51999000111'))
     .optional()
     .or(z.literal('')),
-  yape_number: yapeNumberSchemaCon(t(YAPE_NUMERO_ES, YAPE_NUMERO_EN)),
+  yape_number: z.string().max(200).optional().or(z.literal('')),
   yape_holder: z.string().max(120).optional().or(z.literal('')),
   instagram: z.string().max(120).optional().or(z.literal('')),
   primary_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, t('Color inválido', 'Invalid color')),
@@ -83,7 +84,7 @@ export async function updateBrandSettingsAction(
   // Load the current brand (own its slug for the storage path + merge theme).
   const { data: brand, error: brandErr } = await admin
     .from('brands')
-    .select('id, slug, theme_json, yape_qr_url')
+    .select('id, slug, theme_json, yape_qr_url, yape_number, yape_holder, moneda, zona_horaria, metodo_manual')
     .eq('id', brandId)
     .single();
   if (brandErr || !brand) {
@@ -159,19 +160,75 @@ export async function updateBrandSettingsAction(
   const notifyYapeRecovery = formData.get('notify_yape_recovery') === 'on';
   const notifyYapeDigest = formData.get('notify_yape_digest') === 'on';
 
+  // País (moneda + zona) y medio manual. Todo se relee/valida en el server.
+  const pais = PAISES.find((p) => p.id === formData.get('pais'));
+  if (!pais) return { ok: false, message: t('Elige un país válido.', 'Choose a valid country.'), fieldErrors: { pais: t('País inválido', 'Invalid country') } };
+  const monedaActual = monedaDe(brand.moneda);
+  const cambiaMoneda = pais.moneda !== monedaActual;
+  // Moneda nueva = medio y cuenta nuevos. Seguro: la moneda solo cambia con cero
+  // eventos (trigger guard_brand_moneda), o sea cero ventas.
+  const medioForm = String(formData.get('metodo_manual') ?? '');
+  if (!cambiaMoneda && !(MEDIOS as readonly string[]).includes(medioForm)) {
+    return { ok: false, message: t('Elige un medio de pago válido.', 'Choose a valid payment method.') };
+  }
+  const medio = cambiaMoneda ? pais.medios[0]! : (medioForm as Medio);
+  if (!medioSirve(medio, pais.moneda)) {
+    return { ok: false, message: t(`${NOMBRE_MEDIO[medio].es} no sirve para ${pais.moneda}.`, `${NOMBRE_MEDIO[medio].en} does not work with ${pais.moneda}.`), fieldErrors: { metodo_manual: t('Medio incompatible', 'Incompatible method') } };
+  }
+  const cuenta = cambiaMoneda
+    ? { ok: true as const, cuenta: '', titular: '' }
+    : validarCuenta(medio, parsed.data.yape_number ?? '', parsed.data.yape_holder ?? '');
+  if (!cuenta.ok) {
+    return { ok: false, message: t(cuenta.es, cuenta.en), fieldErrors: { yape_number: t(cuenta.es, cuenta.en) } };
+  }
+  // Otro medio (o otra moneda) = el QR viejo es de OTRA cuenta: se borra salvo
+  // que en este mismo envío se haya subido uno nuevo (Codex P2).
+  const qrNuevo = yapeQrUrl !== null && yapeQrUrl !== (brand.yape_qr_url ?? (theme.yape_qr_url as string | undefined) ?? null);
+  if (cambiaMoneda || (medio !== medioDe(brand.metodo_manual) && !qrNuevo)) yapeQrUrl = null;
+
+  // El MEDIO no cambia con un comprador PAGANDO AHORA (pago manual SIN
+  // comprobante de < 30 min): la página de pago lee la marca en vivo y vería
+  // otro medio que el que eligió. Con comprobante ya pagó y no traba nada.
+  // Cambiar la cuenta DENTRO del mismo medio no se bloquea (riesgo aceptado,
+  // como siempre con Yape: bloquearlo trababa al organizador hasta 30 min por
+  // cualquier carrito abandonado; security review M2 queda como deuda).
+  // ponytail: count + update sin lock; ventana de milisegundos.
+  const cambiaMedio = medio !== medioDe(brand.metodo_manual);
+  const cambiaCuenta = cambiaMedio
+    || (cuenta.cuenta || null) !== (brand.yape_number || null)
+    || (cuenta.titular || null) !== (brand.yape_holder || null)
+    || yapeQrUrl !== (brand.yape_qr_url ?? null);
+  if (cambiaMedio) {
+    const hace30 = new Date(Date.now() - 30 * 60e3).toISOString();
+    const { count, error: pendErr } = await admin.from('orders').select('id', { count: 'exact', head: true })
+      .eq('brand_id', brandId).eq('status', 'pending_yape_review')
+      .is('yape_proof_id', null).gt('created_at', hace30);
+    if (pendErr || (count ?? 0) > 0) {
+      return { ok: false, message: t('Alguien está pagando ahora mismo con tu cuenta actual. Espera unos minutos y vuelve a guardar.', 'Someone is paying right now with your current account. Wait a few minutes and save again.'), fieldErrors: { metodo_manual: t('Hay un pago en curso', 'Payment in progress') } };
+    }
+  }
+
   // No se puede quitar el único método de pago con eventos a la venta que
   // cobran (quedarían publicados sin cómo pagar: security review 2026-10-01).
-  if (!parsed.data.yape_number && !(await marcaTieneMetodo(admin, brandId, { sinYape: true })) && (await marcaCobraEnVivo(admin, brandId))) {
+  if (!cuenta.cuenta && !(await marcaTieneMetodo(admin, brandId, { sinYape: true })) && (await marcaCobraEnVivo(admin, brandId))) {
     return { ok: false, message: t('Tienes eventos a la venta que cobran: no puedes quitar tu método de pago. Pásalos a borrador primero.', 'You have paid events on sale: you cannot remove your payment method. Move them to draft first.'), fieldErrors: { yape_number: t('Requerido mientras vendes', 'Required while selling') } };
   }
+
+  const cobroDiff = cambiaCuenta || cambiaMoneda
+    ? { cobro_cambiado: true, medio_antes: brand.metodo_manual, medio, moneda_antes: brand.moneda, moneda: pais.moneda,
+        cuenta_ultimos4: cuenta.cuenta ? cuenta.cuenta.slice(-4) : null, qr_cambiado: yapeQrUrl !== (brand.yape_qr_url ?? null) }
+    : {};
 
   const { error: updErr } = await admin
     .from('brands')
     .update({
       contact_email: parsed.data.contact_email || null,
       whatsapp_e164: parsed.data.whatsapp_e164 || null,
-      yape_number: parsed.data.yape_number || null,
-      yape_holder: parsed.data.yape_holder || null,
+      moneda: pais.moneda,
+      zona_horaria: pais.zona,
+      metodo_manual: medio,
+      yape_number: cuenta.cuenta || null,
+      yape_holder: cuenta.titular || null,
       instagram: parsed.data.instagram || null,
       notify_yape_recovery: notifyYapeRecovery,
       notify_yape_digest: notifyYapeDigest,
@@ -180,6 +237,9 @@ export async function updateBrandSettingsAction(
     })
     .eq('id', brandId); // scoped to the admin's own brand
   if (updErr) {
+    if (updErr.message.includes('MONEDA_CON_EVENTOS')) {
+      return { ok: false, message: t('Tu marca ya tiene eventos: la moneda no se puede cambiar. Puedes cambiar solo la hora si el país usa la misma moneda.', 'Your brand already has events: the currency cannot be changed. You can change only the time zone if the country uses the same currency.'), fieldErrors: { pais: t('Moneda bloqueada', 'Currency locked') } };
+    }
     return { ok: false, message: updErr.message };
   }
 
@@ -187,9 +247,11 @@ export async function updateBrandSettingsAction(
     brand_id: brandId,
     actor_user_id: user.id,
     type: 'brand_settings_updated',
-    payload: { logo_changed: Boolean(file instanceof File && file.size > 0) },
+    // El cambio de la cuenta de cobro queda en el registro (security review M4):
+    // es el desvío de plata más directo. Solo los últimos 4 de la cuenta.
+    payload: { logo_changed: Boolean(file instanceof File && file.size > 0), ...cobroDiff },
   });
-  await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId, accion: 'brand_settings_updated', diff: { logo_changed: Boolean(file instanceof File && file.size > 0) } });
+  await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId, accion: 'brand_settings_updated', diff: { logo_changed: Boolean(file instanceof File && file.size > 0), ...cobroDiff } });
 
   revalidatePath('/admin');
   revalidatePath('/admin/settings');

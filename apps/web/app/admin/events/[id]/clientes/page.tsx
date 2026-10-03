@@ -1,3 +1,4 @@
+import { medioDe, NOMBRE_MEDIO } from '@/lib/metodoManual';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
@@ -21,6 +22,7 @@ export default async function EventClientsPage({ params, searchParams }: { param
   const admin = createAdminClient();
   const monedaP = monedaDeMarca(admin, ctx.brandId); // en paralelo con el resto
   const zonaP = zonaDeMarca(admin, ctx.brandId);
+  const medioP = admin.from('brands').select('metodo_manual').eq('id', ctx.brandId).maybeSingle();
   // ENFORCEMENT: el evento debe ser de la marca activa (brand de la sesión o la
   // impersonada, nunca del form). Todo lo de abajo queda scopeado a este event_id.
   const { data: event } = await admin
@@ -90,6 +92,7 @@ export default async function EventClientsPage({ params, searchParams }: { param
         impersonating={ctx.soloLectura}
         moneda={await monedaP}
         zona={await zonaP}
+        medioNombre={NOMBRE_MEDIO[medioDe((await medioP).data?.metodo_manual)].es}
         focusSearch={Boolean(searchParams.buscar || searchParams.reenviar)}
         hint={searchParams.reenviar && !ctx.soloLectura ? t('Busca al comprador y toca «Reenviar QR»: le llega otra vez el email con su entrada.', 'Search for the buyer and tap "Resend QR": the ticket email arrives again.') : null}
       />

@@ -19,6 +19,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Minus, Plus, Lock, Ticket, User, Mail } from 'lucide-react';
 import { formatMoney, type Moneda } from '@/lib/moneda';
+import { medioFrase, type Medio } from '@/lib/metodoManual';
 import { fmtCuando, fmtHora, distrito } from '@/lib/eventoTexto';
 import { formatEnZona, type Zona } from '@/lib/zona';
 export { fmtCuando, fmtHora, distrito };
@@ -28,6 +29,8 @@ export type { Direccion } from '@/lib/concepto';
 export type Brand = {
   id: string; slug: string; name: string;
   yape_number: string | null; yape_holder: string | null;
+  // Medio de pago manual (brands.metodo_manual, 0088); sin él, Yape.
+  metodo_manual?: string | null;
   // Moneda de las entradas (brands.moneda, 0088); sin ella, PEN.
   moneda?: string | null;
   // Zona horaria (brands.zona_horaria, 0088); sin ella, Lima.
@@ -253,7 +256,7 @@ function Linea({ t, escalera, iVig, moneda }: { t: TicketType; escalera: Peldano
   );
 }
 
-export function AsiDeSimple({ conYape, gratis = false }: { conYape: boolean; gratis?: boolean }) {
+export function AsiDeSimple({ conYape, gratis = false, medio = 'yape' }: { conYape: boolean; gratis?: boolean; medio?: Medio }) {
   // En un evento gratis no hay paso de pago: el trámite del medio son TUS
   // DATOS, y el QR sale al instante (no "cuando aprueben el Yape").
   const pasos = gratis
@@ -264,7 +267,7 @@ export function AsiDeSimple({ conYape, gratis = false }: { conYape: boolean; gra
       ]
     : [
     { Icono: Ticket, t: 'Eliges', d: 'Sumas las entradas que quieres.' },
-    { Icono: User, t: conYape ? 'Yapeas' : 'Pagas', d: conYape ? 'Yapeas el monto exacto y subes la captura.' : 'Pagas con tu tarjeta.' },
+    { Icono: User, t: conYape && medio === 'yape' ? 'Yapeas' : 'Pagas', d: conYape ? (medio === 'yape' ? 'Yapeas el monto exacto y subes la captura.' : `Pagas el monto exacto con ${medioFrase(medio)} y subes la captura.`) : 'Pagas con tu tarjeta.' },
     { Icono: Mail, t: 'Tu QR al correo', d: 'Te llega tu entrada. La muestras en la puerta.' },
   ];
   return (

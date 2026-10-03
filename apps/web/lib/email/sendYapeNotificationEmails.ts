@@ -17,6 +17,7 @@
 import { serverEnv, publicEnv } from '@/lib/env';
 import { brandColor, brandInk, brandFillPair } from '@/lib/brandColors';
 import { whatsappLink } from '@/lib/utils';
+import { medioDe, medioFrase } from '@/lib/metodoManual';
 
 export type BrandForEmail = {
   name: string;
@@ -24,6 +25,8 @@ export type BrandForEmail = {
   whatsapp_e164: string | null;
   contact_email: string | null;
   theme_json: { primary_color?: string; logo_url?: string | null } | null;
+  /** Medio manual de la marca (0088); sin él, Yape. */
+  metodo_manual?: string | null;
 };
 
 export type SendResult = { ok: boolean; reason?: string; resendId?: string | null };
@@ -143,6 +146,7 @@ export async function sendYapeRecoveryEmail(args: {
   const onBrand = par.on;
   const brandBtn = par.fill;
   const ink = brandInk(theme.primary_color);
+  const frase = medioFrase(medioDe(args.brand.metodo_manual));
   const resumeUrl = `https://${args.brand.slug}.${appDomain()}/${args.eventSlug}/yape?order=${args.orderId}`;
   const waButton = args.brand.whatsapp_e164
     ? `<div style="margin-top:14px">${`<a href="${whatsappLink(args.brand.whatsapp_e164.replace(/[^\d]/g, ''), `Hola, una consulta sobre mi compra de ${args.eventName}`)}" style="display:inline-block;padding:11px 20px;background:#ffffff;border:1.5px solid ${CREAM3};border-radius:999px;color:${INK};text-decoration:none;font-family:${FONT};font-weight:600;font-size:13px">WhatsApp ${escapeHtml(args.brand.name)}</a>`}</div>`
@@ -150,7 +154,7 @@ export async function sendYapeRecoveryEmail(args: {
 
   const inner = `
     <p style="margin:0 0 16px;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}">Hola ${escapeHtml(args.buyerName || '')}, empezaste tu compra para <strong>${escapeHtml(args.eventName)}</strong> pero todavía no la completaste.</p>
-    <p style="margin:0 0 18px;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}">Para recibir tu entrada, sube tu comprobante de Yape. Te toma menos de un minuto:</p>
+    <p style="margin:0 0 18px;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}">Para recibir tu entrada, sube tu comprobante de ${frase}. Te toma menos de un minuto:</p>
     <div>${ctaButton(resumeUrl, 'Completar mi compra', brandBtn, onBrand)}</div>
     <p style="margin:16px 0 0;font-family:${FONT};font-size:12.5px;line-height:1.5;color:${INK3}">Si ya pagaste y subiste tu comprobante, ignora este mensaje.</p>`;
 
@@ -158,7 +162,7 @@ export async function sendYapeRecoveryEmail(args: {
   const text = [
     `COMPLETA TU ENTRADA — ${args.eventName}`, '',
     `Hola ${args.buyerName || ''}, empezaste tu compra para ${args.eventName} pero no la completaste.`,
-    `Sube tu comprobante de Yape aquí: ${resumeUrl}`, '',
+    `Sube tu comprobante de ${frase} aquí: ${resumeUrl}`, '',
     'Si ya pagaste y subiste tu comprobante, ignora este mensaje.',
     args.brand.whatsapp_e164 ? `\nWhatsApp ${args.brand.name}: ${args.brand.whatsapp_e164}` : '',
     `\nEnviado por ${args.brand.name} vía ParyGo.`,
@@ -200,17 +204,20 @@ export async function sendYapePendingDigestEmail(args: {
   // El panel vive en app.parygo.com: en <marca>.parygo.com/admin daba 404.
   const reviewUrl = `${publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')}/admin/events/${args.eventId}/yape`;
   const n = args.pendingCount;
+  const medio = medioDe(args.brand.metodo_manual);
+  const esYape = medio === 'yape';
+  const palabra = esYape ? 'Yape' : 'pago';
   if (args.lang === 'en') return enviarDigestEn(args, { fromEmail, primary, onBrand, ink, reviewUrl, n });
 
   const inner = `
-    <p style="margin:0 0 16px;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}">Tienes <strong>${n} comprobante${n === 1 ? '' : 's'} de Yape</strong> esperando tu aprobación en <strong>${escapeHtml(args.eventName)}</strong>.</p>
+    <p style="margin:0 0 16px;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}">Tienes <strong>${n} comprobante${n === 1 ? '' : 's'} de ${medioFrase(medio)}</strong> esperando tu aprobación en <strong>${escapeHtml(args.eventName)}</strong>.</p>
     <p style="margin:0 0 18px;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}">Cada comprobante aprobado emite la entrada y manda el QR al comprador.</p>
-    <div>${ctaButton(reviewUrl, `Revisar Yapes (${n})`, primary, onBrand)}</div>`;
+    <div>${ctaButton(reviewUrl, `Revisar ${palabra}s (${n})`, primary, onBrand)}</div>`;
 
-  const html = shell({ brand: args.brand, primary, ink, eyebrow: 'Pendientes de aprobar', title: `${n} Yape${n === 1 ? '' : 's'} por aprobar`, inner, footer: '' });
+  const html = shell({ brand: args.brand, primary, ink, eyebrow: 'Pendientes de aprobar', title: `${n} ${palabra}${n === 1 ? '' : 's'} por aprobar`, inner, footer: '' });
   const text = [
-    `YAPES POR APROBAR — ${args.eventName}`, '',
-    `Tienes ${n} comprobante${n === 1 ? '' : 's'} de Yape esperando tu aprobación.`,
+    `${palabra.toUpperCase()}S POR APROBAR — ${args.eventName}`, '',
+    `Tienes ${n} comprobante${n === 1 ? '' : 's'} de ${medioFrase(medio)} esperando tu aprobación.`,
     `Revísalos aquí: ${reviewUrl}`, '',
     'Cada comprobante aprobado emite la entrada y manda el QR al comprador.',
     `\nEnviado por ParyGo.`,
@@ -219,7 +226,7 @@ export async function sendYapePendingDigestEmail(args: {
   return sendViaResend({
     from: `ParyGo <${fromEmail}>`,
     to: args.to,
-    subject: `Tienes ${n} Yape${n === 1 ? '' : 's'} por aprobar en ${args.eventName}`,
+    subject: `Tienes ${n} ${palabra}${n === 1 ? '' : 's'} por aprobar en ${args.eventName}`,
     html, text, kind: 'yape_pending_digest', brandSlug: args.brand.slug,
     replyTo: null, idempotencyKey: args.idempotencyKey,
   });
@@ -232,14 +239,17 @@ function enviarDigestEn(
 ): Promise<SendResult> {
   const { n, reviewUrl, primary } = v;
   const s = n === 1 ? '' : 's';
+  const medio = medioDe(args.brand.metodo_manual);
+  const y = medio === 'yape' ? 'Yape ' : '';
+  const nm = medioFrase(medio, 'en');
   const inner = `
-    <p style="margin:0 0 16px;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}">You have <strong>${n} Yape receipt${s}</strong> awaiting your approval for <strong>${escapeHtml(args.eventName)}</strong>.</p>
+    <p style="margin:0 0 16px;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}">You have <strong>${n} ${nm} receipt${s}</strong> awaiting your approval for <strong>${escapeHtml(args.eventName)}</strong>.</p>
     <p style="margin:0 0 18px;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}">Each approved receipt issues the ticket and sends the QR code to the buyer.</p>
-    <div>${ctaButton(reviewUrl, `Review Yape payments (${n})`, primary, v.onBrand)}</div>`;
-  const html = shell({ brand: args.brand, primary, ink: v.ink, eyebrow: 'Awaiting approval', title: `${n} Yape payment${s} to approve`, inner, footer: '', lang: 'en' });
+    <div>${ctaButton(reviewUrl, `Review ${y}payments (${n})`, primary, v.onBrand)}</div>`;
+  const html = shell({ brand: args.brand, primary, ink: v.ink, eyebrow: 'Awaiting approval', title: `${n} ${y}payment${s} to approve`, inner, footer: '', lang: 'en' });
   const text = [
-    `YAPE PAYMENTS TO APPROVE — ${args.eventName}`, '',
-    `You have ${n} Yape receipt${s} awaiting your approval.`,
+    `${y.toUpperCase()}PAYMENTS TO APPROVE — ${args.eventName}`, '',
+    `You have ${n} ${nm} receipt${s} awaiting your approval.`,
     `Review them here: ${reviewUrl}`, '',
     'Each approved receipt issues the ticket and sends the QR code to the buyer.',
     '\nSent by ParyGo.',
@@ -247,7 +257,7 @@ function enviarDigestEn(
   return sendViaResend({
     from: `ParyGo <${v.fromEmail}>`,
     to: args.to,
-    subject: `You have ${n} Yape payment${s} to approve for ${args.eventName}`,
+    subject: `You have ${n} ${y}payment${s} to approve for ${args.eventName}`,
     html, text, kind: 'yape_pending_digest', brandSlug: args.brand.slug,
     replyTo: null, idempotencyKey: args.idempotencyKey,
   });

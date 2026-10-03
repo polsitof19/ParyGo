@@ -1,5 +1,6 @@
 'use server';
 
+import { medioDe } from '@/lib/metodoManual';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { textosPanel } from '@/lib/idiomaServer';
@@ -81,11 +82,13 @@ export async function approveYapeProof(proofId: string): Promise<ApproveResult> 
         .from('yape_proofs')
         .update({ status: 'pending_review', reviewed_by: null, reviewed_at: null })
         .eq('id', proofId);
+      const { data: bm } = await admin.from('brands').select('metodo_manual').eq('id', proof.brand_id).maybeSingle();
+      const esYape = medioDe(bm?.metodo_manual) === 'yape';
       return {
         ok: false,
         message: t(
-          'No hay cupo: el evento se agotó. No se emitieron entradas. Rechaza esta orden y reembolsa el Yape.',
-          'No capacity left: the event sold out. No tickets were issued. Reject this order and refund the Yape.'
+          `No hay cupo: el evento se agotó. No se emitieron entradas. Rechaza esta orden y reembolsa ${esYape ? 'el Yape' : 'el pago'}.`,
+          `No capacity left: the event sold out. No tickets were issued. Reject this order and refund ${esYape ? 'the Yape' : 'the payment'}.`
         ),
       };
     }

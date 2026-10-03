@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { paisDe, medioDe, NOMBRE_MEDIO } from '@/lib/metodoManual';
 import { notFound } from 'next/navigation';
 import { ChevronLeft, ExternalLink, Plus, ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
@@ -29,7 +30,7 @@ export default async function BrandDetailPage({
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
-    .select('id, slug, name, contact_email, whatsapp_e164, yape_number, yape_holder, theme_json, created_at, event_balance, archived_at, zona_horaria')
+    .select('id, slug, name, contact_email, whatsapp_e164, yape_number, yape_holder, theme_json, created_at, event_balance, archived_at, zona_horaria, moneda, metodo_manual')
     .eq('slug', params.slug)
     .maybeSingle();
 
@@ -157,7 +158,7 @@ export default async function BrandDetailPage({
         {/* Configuración / contacto — editable por super admin */}
         <div className="s-card">
           <h2 className="s-h2">Configuración</h2>
-          <p className="s-card__desc">Nombre, contacto y datos de cobro Yape. El slug ({brand.slug}) no se edita aquí. MercadoPago lo gestiona el dueño desde su panel.</p>
+          <p className="s-card__desc">Nombre, contacto y datos de cobro Yape. El slug ({brand.slug}) no se edita aquí. País: {paisDe(brand.moneda, brand.zona_horaria).nombre} ({brand.moneda}) · medio: {NOMBRE_MEDIO[medioDe(brand.metodo_manual)].es}. MercadoPago lo gestiona el dueño desde su panel.</p>
           <EditBrandBasicsForm
             brandId={brand.id}
             name={brand.name}

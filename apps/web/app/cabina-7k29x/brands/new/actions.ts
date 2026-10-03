@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { passwordOk, PASSWORD_REGLA } from '@/lib/password';
-import { yapeNumberSchema } from '@/lib/yapeNumber';
+import { validarCuenta } from '@/lib/metodoManual';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
@@ -32,7 +32,7 @@ const schema = z.object({
     .regex(/^\+\d{8,15}$/, 'Formato +51999000000')
     .optional()
     .or(z.literal('')),
-  yape_number: yapeNumberSchema,
+  yape_number: z.string().max(200).optional().or(z.literal('')),
   yape_holder: z.string().max(80).optional().or(z.literal('')),
   primary_color: z
     .string()
@@ -69,6 +69,10 @@ export async function createBrandAction(
     };
   }
 
+  // Marca nueva = Yape, PEN (los defaults de la base).
+  const cuenta = validarCuenta('yape', parsed.data.yape_number ?? '', parsed.data.yape_holder ?? '');
+  if (!cuenta.ok) return { ok: false, message: cuenta.es, fieldErrors: { yape_number: cuenta.es } };
+
   if (RESERVED.has(parsed.data.slug)) {
     return { ok: false, message: 'Ese slug está reservado.', fieldErrors: { slug: 'Reservado' } };
   }
@@ -93,8 +97,8 @@ export async function createBrandAction(
       name: parsed.data.name,
       contact_email: parsed.data.contact_email,
       whatsapp_e164: parsed.data.whatsapp_e164 || null,
-      yape_number: parsed.data.yape_number || null,
-      yape_holder: parsed.data.yape_holder || null,
+      yape_number: cuenta.cuenta || null,
+      yape_holder: cuenta.titular || null,
       theme_json: themeJson,
       notify_yape_digest: true, // el aviso de Yape por aprobar nace prendido
     })

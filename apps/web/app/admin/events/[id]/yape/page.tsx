@@ -4,6 +4,7 @@ import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatMoney } from '@/lib/moneda';
 import { monedaDeMarca, zonaDeMarca } from '@/lib/metodoPago';
+import { medioDe } from '@/lib/metodoManual';
 import { enLotes, todas } from '@/lib/todas';
 import { textosPanel } from '@/lib/idiomaServer';
 import { YapeReviewRow } from '../../../yape/YapeReviewRow';
@@ -27,11 +28,14 @@ export default async function EventYapePage({ params }: { params: { id: string }
   const admin = createAdminClient();
   const monedaP = monedaDeMarca(admin, ctx.brandId); // en paralelo con el resto
   const zonaP = zonaDeMarca(admin, ctx.brandId);
+  const medioP = admin.from('brands').select('metodo_manual').eq('id', ctx.brandId).maybeSingle();
   const { data: event } = await admin.from('events').select('id, brand_id').eq('id', params.id).maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
   const { t } = await textosPanel();
   const moneda = await monedaP;
   const zona = await zonaP;
+  const medio = medioDe((await medioP).data?.metodo_manual);
+  const esYape = medio === 'yape';
 
   const data = await todas((a, b) => admin
     .from('yape_proofs')
@@ -107,9 +111,12 @@ export default async function EventYapePage({ params }: { params: { id: string }
         <>
           {/* La instrucción va UNA vez arriba de la lista, no repetida en cada fila. */}
           <p className="s-card__desc" style={{ marginBottom: 12 }}>
-            {t(
+            {esYape ? t(
               'Abre tu Yape → Movimientos y busca cada transferencia. Si el monto, el N° de operación y el nombre coinciden, aprueba. Toca una fila para ver la captura y el detalle.',
               'Open your Yape → Transactions and look up each transfer. If the amount, operation number and name match, approve it. Tap a row to see the screenshot and details.'
+            ) : t(
+              'Abre tu app o tu banco y busca cada pago. Si el monto, el N° de operación y el nombre coinciden, aprueba. Toca una fila para ver la captura y el detalle.',
+              'Open your app or bank and look up each payment. If the amount, operation number and name match, approve it. Tap a row to see the screenshot and details.'
             )}
           </p>
           <div>
@@ -120,6 +127,7 @@ export default async function EventYapePage({ params }: { params: { id: string }
                 receiptUrl={p.signedReceiptUrl}
                 amountCents={p.amount_cents}
                 moneda={moneda}
+                medio={medio}
                 zona={zona}
                 expectedAmountCents={p.order?.total_cents ?? 0}
                 amountMatches={p.amount_cents === p.order?.total_cents}

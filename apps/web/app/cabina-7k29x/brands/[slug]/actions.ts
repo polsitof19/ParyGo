@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { passwordOk, PASSWORD_REGLA } from '@/lib/password';
-import { yapeNumberSchema } from '@/lib/yapeNumber';
+import { medioDe, validarCuenta } from '@/lib/metodoManual';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -212,7 +212,7 @@ const brandBasicsSchema = z.object({
   name: z.string().trim().min(2, 'Mínimo 2 caracteres').max(120),
   contact_email: z.string().email('Email inválido').optional().or(z.literal('')),
   whatsapp_e164: z.string().regex(/^\+\d{8,15}$/, 'Formato +51999000111').optional().or(z.literal('')),
-  yape_number: yapeNumberSchema,
+  yape_number: z.string().max(200).optional().or(z.literal('')),
   yape_holder: z.string().max(120).optional().or(z.literal('')),
 });
 
@@ -242,10 +242,14 @@ export async function updateBrandBasicsAction(
   const admin = createAdminClient();
   const { data: brand, error: brandErr } = await admin
     .from('brands')
-    .select('id, slug')
+    .select('id, slug, metodo_manual')
     .eq('id', parsed.data.brand_id)
     .single();
   if (brandErr || !brand) return { ok: false, message: 'No se encontró la marca.' };
+
+  // La cuenta se valida según el medio de la marca (Yape, Nequi, USDT…).
+  const cuenta = validarCuenta(medioDe(brand.metodo_manual), parsed.data.yape_number ?? '', parsed.data.yape_holder ?? '');
+  if (!cuenta.ok) return { ok: false, message: cuenta.es, fieldErrors: { yape_number: cuenta.es } };
 
   const { error: updErr } = await admin
     .from('brands')
@@ -253,8 +257,8 @@ export async function updateBrandBasicsAction(
       name: parsed.data.name,
       contact_email: parsed.data.contact_email || null,
       whatsapp_e164: parsed.data.whatsapp_e164 || null,
-      yape_number: parsed.data.yape_number || null,
-      yape_holder: parsed.data.yape_holder || null,
+      yape_number: cuenta.cuenta || null,
+      yape_holder: cuenta.titular || null,
     })
     .eq('id', brand.id);
   if (updErr) return { ok: false, message: updErr.message };

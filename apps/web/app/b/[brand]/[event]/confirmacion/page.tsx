@@ -12,6 +12,7 @@ import { AddToCalendar } from './AddToCalendar';
 import { TicketPass } from '../../TicketPass';
 import { zonaDe } from '@/lib/zona';
 import { LineaPago } from '../../Responsable';
+import { medioDe, medioFrase } from '@/lib/metodoManual';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -36,7 +37,7 @@ export default async function ConfirmationPage({
     total_cents: number;
     buyer_name: string;
     event: { name: string; starts_at: string; ends_at: string | null; venue_name: string | null; venue_address: string | null; venue_maps_url: string | null; venue_lat: number | null; venue_lng: number | null; require_dni: boolean } | null;
-    brand: { slug: string; name: string; whatsapp_e164: string | null; contact_email: string | null; moneda: string; zona_horaria: string; theme_json: { logo_url?: string | null } | null } | null;
+    brand: { slug: string; name: string; whatsapp_e164: string | null; contact_email: string | null; moneda: string; zona_horaria: string; metodo_manual: string | null; theme_json: { logo_url?: string | null } | null } | null;
     tickets: { id: string; qr_code: string; ticket_type_name: string }[];
   };
   const orderResult = await admin
@@ -45,7 +46,7 @@ export default async function ConfirmationPage({
       id, brand_id, status, payment_method, total_cents,
       buyer_name,
       event:events ( name, starts_at, ends_at, venue_name, venue_address, venue_maps_url, venue_lat, venue_lng, require_dni ),
-      brand:brands ( slug, name, whatsapp_e164, contact_email, theme_json, moneda, zona_horaria ),
+      brand:brands ( slug, name, whatsapp_e164, contact_email, theme_json, moneda, zona_horaria, metodo_manual ),
       tickets ( id, qr_code, ticket_type_name )
     `)
     .eq('id', searchParams.order)
@@ -59,6 +60,9 @@ export default async function ConfirmationPage({
 
   const event = order.event;
   const brand = order.brand;
+  const medio = medioDe(brand?.metodo_manual);
+  const esYape = medio === 'yape';
+  const frase = medioFrase(medio);
 
   // VUELTA DE MERCADO PAGO (respaldo del webhook): MP agrega ?payment_id= al
   // volver. Si la orden sigue sin cobrar, se re-pide ese pago a MP con el token
@@ -140,7 +144,7 @@ export default async function ConfirmationPage({
     return (
       <main className="c-state c-checkout-canvas">
         <span className="c-eyebrow c-state__dot c-state__dot--warn">Comprobante en revisión</span>
-        <h1 className="c-h1">Tu Yape está en revisión</h1>
+        <h1 className="c-h1">{esYape ? 'Tu Yape está en revisión' : `Tu pago con ${frase} está en revisión`}</h1>
         <p className="c-muted">
           Te avisamos por email apenas {brand?.name ?? 'el organizador'} lo apruebe. Suele tomar entre 5 y 15 minutos en horario de atención.
         </p>
@@ -159,11 +163,11 @@ export default async function ConfirmationPage({
         <span className="c-eyebrow c-state__dot c-state__dot--alert">Reserva vencida</span>
         <h1 className="c-h1">Tu reserva venció</h1>
         <p className="c-muted">
-          No recibimos tu comprobante de Yape a tiempo, así que no se emitió ninguna entrada. Si todavía hay entradas, puedes comprar de nuevo.
+          {`No recibimos tu comprobante de ${frase} a tiempo, así que no se emitió ninguna entrada. Si todavía hay entradas, puedes comprar de nuevo.`}
         </p>
         <a href={`/${params.event}`} className="c-btn c-btn--brand">Comprar de nuevo</a>
         {brand?.whatsapp_e164 && (
-          <p><a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" className="c-state__link">¿Ya yapeaste? Escribe al organizador</a></p>
+          <p><a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" className="c-state__link">{esYape ? '¿Ya yapeaste? Escribe al organizador' : '¿Ya pagaste? Escribe al organizador'}</a></p>
         )}
       </main>
     );
@@ -173,7 +177,7 @@ export default async function ConfirmationPage({
     return (
       <main className="c-state c-checkout-canvas">
         <span className="c-eyebrow c-state__dot c-state__dot--alert">Comprobante rechazado</span>
-        <h1 className="c-h1">No pudimos validar tu Yape</h1>
+        <h1 className="c-h1">{esYape ? 'No pudimos validar tu Yape' : `No pudimos validar tu pago con ${frase}`}</h1>
         <p className="c-muted">
           {brand?.name ?? 'El promotor'} no pudo confirmar tu comprobante, así que no se emitió ninguna entrada y no quedó ningún cargo de nuestra parte. Si crees que es un error, escribe al organizador con tu comprobante a mano.
         </p>

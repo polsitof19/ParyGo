@@ -429,7 +429,16 @@ solicitudes, packs) siguen en hora de Lima. Mercado Pago de entradas SOLO en
 PEN (startCheckout lo rechaza en otra moneda). Medio manual: reusa
 yape_number (cuenta), yape_holder (titular; en USDT la red) y yape_qr_url;
 payment_method 'yape_manual' = "pago manual con comprobante" para todos.
-lib/metodoManual.ts = países, medios y validación de cuenta. Tests:
+lib/metodoManual.ts = países, medios y validación de cuenta (la usan Mi marca
+y la cabina, los ÚNICOS escritores). Mi marca: "País" (cambia moneda+zona; con
+moneda nueva se limpian medio, cuenta y QR) y el medio del país. El MEDIO no
+cambia con un comprador PAGANDO AHORA (pending_yape_review SIN comprobante y
+de < 30 min); la cuenta dentro del mismo medio sí (como siempre con Yape:
+riesgo aceptado, bloquearla trababa al organizador por carritos abandonados); cambiar de medio borra el QR viejo; el cambio queda
+en events_log (cobro_cambiado, últimos 4). La cuenta es PÚBLICA por diseño
+(grant de columna, como el celular de Yape): ahora puede ser un IBAN, un
+Zelle o una wallet — aceptado, la ve cualquier comprador. Para Yape TODO texto
+es idéntico al de antes (fase1). Tests:
 e2e/pais-0088.mjs 18/18 (JWT, CHECKs, MONEDA_CAMBIO, carrera), moneda 20,
 zona 16, metodo-manual 20. Codex sandbox NO escribe en el repo: implementador.
 
