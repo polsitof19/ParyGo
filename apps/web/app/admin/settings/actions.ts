@@ -10,7 +10,10 @@ import { marcaTieneMetodo, marcaCobraEnVivo } from '@/lib/metodoPago';
 import { contextoEscritura } from '@/lib/impersonation';
 import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { serverEnv } from '@/lib/env';
-import { validateMercadoPagoToken } from '@/lib/mercadopago';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { alAzar, crearPkce, firmarCookie, urlAutorizacion } from '@/lib/mpOauth';
+import { COOKIE_MP_OAUTH, duenaRealDe, mpClient, mpOauthListo, pagosMpEnCurso, redirectUriMp } from '@/lib/mpConexion';
 import { esIdioma, type Textos } from '@/lib/idioma';
 import { TEMAS } from '@/lib/temaCompra.mjs';
 import { textosPanel, idiomaPanel } from '@/lib/idiomaServer';
@@ -158,7 +161,7 @@ export async function updateBrandSettingsAction(
 
   // No se puede quitar el único método de pago con eventos a la venta que
   // cobran (quedarían publicados sin cómo pagar: security review 2026-10-01).
-  if (!parsed.data.yape_number && (await marcaTieneMetodo(admin, brandId)) && (await marcaCobraEnVivo(admin, brandId))) {
+  if (!parsed.data.yape_number && !(await marcaTieneMetodo(admin, brandId, { sinYape: true })) && (await marcaCobraEnVivo(admin, brandId))) {
     return { ok: false, message: t('Tienes eventos a la venta que cobran: no puedes quitar tu método de pago. Pásalos a borrador primero.', 'You have paid events on sale: you cannot remove your payment method. Move them to draft first.'), fieldErrors: { yape_number: t('Requerido mientras vendes', 'Required while selling') } };
   }
 
@@ -194,107 +197,52 @@ export async function updateBrandSettingsAction(
 }
 
 // =============================================================
-// MercadoPago credentials (self-service del brand_admin)
+// Conectar Mercado Pago (OAuth, 0086; plan en AGENTS.md)
 // =============================================================
-// Los tokens NUNCA viajan al cliente: se reciben del form, se validan contra MP
-// y se guardan ENCRIPTADOS vía set_brand_mp_credentials (pgp_sym_encrypt,
-// service_role-only). El brand_id SIEMPRE sale de la sesión, nunca del form, así
-// que un brand_admin solo puede tocar SUS propias credenciales.
+// La organizadora entra a SU cuenta de MP y vuelve conectada: ningún token pasa
+// por un formulario. Solo la dueña REAL (duenaRealDe): ni staff ni el super
+// admin dentro de la marca. state + PKCE en una cookie httpOnly de 10 min, atada
+// a la marca; la vuelta (mercadopago/vuelta/route.ts) la verifica y la borra.
 
-// Las credenciales de MercadoPago siempre empiezan con APP_USR- (producción) o
-// TEST- (sandbox). El prefijo atrapa typos y campos cruzados antes de pegarle a
-// MP; el access_token además se valida CONTRA MP abajo (la verdad real).
-const MP_CRED_RE = /^(APP_USR-|TEST-)/;
-const mpSchema = (t: Textos['t']) => z.object({
-  mp_access_token: z
-    .string()
-    .trim()
-    .min(10, t('Access token demasiado corto', 'Access token too short'))
-    .max(400)
-    .regex(MP_CRED_RE, t('El access token debe empezar con APP_USR- o TEST-', 'The access token must start with APP_USR- or TEST-')),
-  mp_public_key: z
-    .string()
-    .trim()
-    .min(10, t('Public key demasiado corta', 'Public key too short'))
-    .max(400)
-    .regex(MP_CRED_RE, t('La public key debe empezar con APP_USR- o TEST-', 'The public key must start with APP_USR- or TEST-')),
-});
+export async function conectarMpAction(): Promise<void> {
+  const user = await requireSession();
+  const brandId = duenaRealDe(user);
+  if (!brandId || !mpOauthListo()) redirect('/admin/settings?mp=no_disponible#cobro');
+  const { verifier, challenge } = await crearPkce();
+  const state = alAzar(32);
+  const valor = await firmarCookie(serverEnv.BRAND_CREDS_ENCRYPTION_KEY, { s: state, v: verifier, b: brandId, u: user.id, e: Date.now() + 600_000 });
+  cookies().set(COOKIE_MP_OAUTH, valor, {
+    httpOnly: true, secure: true, sameSite: 'lax', maxAge: 600, path: '/admin/settings/mercadopago',
+  });
+  redirect(urlAutorizacion({ clientId: mpClient().clientId, redirectUri: redirectUriMp(), state, challenge }));
+}
 
-export async function updateMpCredentialsAction(
-  _prev: SettingsState,
-  formData: FormData
-): Promise<SettingsState> {
+export async function desconectarMpAction(): Promise<SettingsState> {
   const user = await requireSession();
   const { t } = await textosPanel();
-  // ENFORCEMENT: el brand sale de la sesión, NUNCA del form.
-  const ctxW = contextoEscritura(user);
-  if (!ctxW) {
-    return { ok: false, message: t('No tienes acceso de promotor.', "You don't have promoter access.") };
-  }
-  const brandId = ctxW.brandId;
+  const brandId = duenaRealDe(user);
+  if (!brandId) return { ok: false, message: t('Solo la cuenta dueña de la marca puede desconectar Mercado Pago.', 'Only the brand owner can disconnect Mercado Pago.') };
   const admin = createAdminClient();
-  const intent = String(formData.get('intent') ?? 'save');
-
-  // Quitar credenciales (volver a Yape-only).
-  if (intent === 'remove') {
-    const { error } = await admin.rpc('set_brand_mp_credentials', {
-      p_brand_id: brandId,
-      p_access_token: null as unknown as string,
-      p_public_key: null as unknown as string,
-      p_encryption_key: serverEnv.BRAND_CREDS_ENCRYPTION_KEY,
-    });
-    if (error) return { ok: false, message: error.message };
-    await admin.from('events_log').insert({
-      brand_id: brandId,
-      actor_user_id: user.id,
-      type: 'brand_mp_credentials_removed',
-      payload: {},
-    });
-    await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId, accion: 'brand_mp_credentials_removed' });
-    revalidatePath('/admin/settings');
-    return { ok: true, message: t('Credenciales de MercadoPago eliminadas. Tu checkout vuelve a solo Yape.', 'MercadoPago credentials removed. Your checkout is back to Yape only.') };
+  const [{ data: b }, cobra] = await Promise.all([
+    admin.from('brands').select('yape_number, mp_oauth_user_id').eq('id', brandId).maybeSingle(),
+    marcaCobraEnVivo(admin, brandId),
+  ]);
+  if (!b?.mp_oauth_user_id) return { ok: true, message: t('Mercado Pago ya estaba desconectado.', 'Mercado Pago was already disconnected.') };
+  // Mismo criterio que quitar el Yape: sin otro método no se deja a la venta un
+  // evento que cobra.
+  // Un pago con tarjeta en curso se liquida con ESTA cuenta (collector_id):
+  // desconectar ahora dejaría a ese comprador cobrado y sin entrada (review M1).
+  if (await pagosMpEnCurso(admin, brandId)) {
+    return { ok: false, message: t('Hay compradores pagando con tarjeta en este momento. Intenta desconectar en un rato.', 'Some buyers are paying by card right now. Try disconnecting in a while.') };
   }
-
-  // Guardar / actualizar.
-  const parsed = mpSchema(t).safeParse({
-    mp_access_token: formData.get('mp_access_token') ?? '',
-    mp_public_key: formData.get('mp_public_key') ?? '',
-  });
-  if (!parsed.success) {
-    const fieldErrors: Record<string, string> = {};
-    for (const e of parsed.error.errors) {
-      const p = e.path.join('.');
-      if (p) fieldErrors[p] = e.message;
-    }
-    return { ok: false, message: t('Revisa las credenciales.', 'Check your credentials.'), fieldErrors };
+  if (!b.yape_number?.trim() && cobra) {
+    return { ok: false, message: t('Tienes eventos a la venta que cobran y Mercado Pago es tu único método de pago. Agrega otro o pasa esos eventos a borrador primero.', 'You have paid events on sale and Mercado Pago is your only payment method. Add another one or move those events to draft first.') };
   }
-
-  // Validación REAL contra MercadoPago antes de persistir (evita guardar un
-  // token con typo / revocado que rompería el checkout más tarde).
-  const check = await validateMercadoPagoToken(parsed.data.mp_access_token, await idiomaPanel());
-  if (!check.ok) {
-    return { ok: false, message: check.error ?? t('El access token no es válido.', 'The access token is not valid.'), fieldErrors: { mp_access_token: t('Inválido', 'Invalid') } };
-  }
-
-  const { error } = await admin.rpc('set_brand_mp_credentials', {
-    p_brand_id: brandId,
-    p_access_token: parsed.data.mp_access_token,
-    p_public_key: parsed.data.mp_public_key,
-    p_encryption_key: serverEnv.BRAND_CREDS_ENCRYPTION_KEY,
-  });
-  if (error) return { ok: false, message: error.message };
-
-  await admin.from('events_log').insert({
-    brand_id: brandId,
-    actor_user_id: user.id,
-    type: 'brand_mp_credentials_updated',
-    payload: {}, // NUNCA logueamos el token
-  });
-  // Tampoco en la auditoría: solo que se cambiaron.
-  await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId, accion: 'brand_mp_credentials_updated' });
-
+  const { error } = await admin.rpc('clear_brand_mp_oauth', { p_brand_id: brandId });
+  if (error) return { ok: false, message: t('No se pudo desconectar. Intenta de nuevo.', 'Could not disconnect. Try again.') };
+  await admin.from('events_log').insert({ brand_id: brandId, actor_user_id: user.id, type: 'mp_desconectado', payload: { cuenta: b.mp_oauth_user_id } });
   revalidatePath('/admin/settings');
-  return { ok: true, message: t('Credenciales de MercadoPago validadas y guardadas. Ya puedes cobrar con tarjeta.', 'MercadoPago credentials validated and saved. You can now charge with card.') };
+  return { ok: true, message: t('Mercado Pago desconectado. Los pagos con tarjeta que estaban en curso ya no se podrán confirmar.', 'Mercado Pago disconnected. Card payments in progress can no longer be confirmed.') };
 }
 
 // Idioma del panel de la marca (0073). La marca sale de la sesión, nunca del

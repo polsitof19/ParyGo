@@ -411,6 +411,29 @@ supabase/verify-0053-0058.mjs (comprobaciones de estado esperado).
 OJO con `mgmt.mjs types`: PISA database.types.ts entero y regenerarlo completo
 rompe tipos afinados a mano — las columnas nuevas se agregan a mano.
 
+CONECTAR MERCADO PAGO (0086 + 0087, 2026-10-03; plan y decisiones en AGENTS.md).
+ÚNICO modo de cobrar con tarjeta: OAuth (se retiraron las credenciales
+manuales; 0 marcas las tenían). Mi marca → "Mercado Pago (tarjeta y más)" →
+"Conectar Mercado Pago" (conectarMpAction: state + PKCE S256 en cookie
+FIRMADA con HMAC y vencimiento 10 min) → MP → /admin/settings/mercadopago/
+vuelta (sesión de la dueña REAL —duenaRealDe: no staff, no super admin
+impersonando—, state en tiempo constante, canje con code_verifier, /users/me =
+user_id, una cuenta de MP = una marca, set_brand_mp_oauth). Token:
+lib/mpConexion.ts tokenVigenteMp renueva 7 días antes con candado
+`mp_refresh:<marca>`; SOLO 400 invalid_grant desconecta (otro 4xx = config, 5xx/
+429/red = transitorio: no se toca nada); el par nuevo se guarda verificado.
+La página del evento usa mpUsable (renueva antes de ofrecer Tarjeta).
+Webhook de entradas firmado con PARYGO_MP_WEBHOOK_SECRET (la app de ParyGo) +
+collector_id del pago = mp_oauth_user_id. Desconectar o cambiar de cuenta se
+bloquea con un pago con tarjeta activo (< 30 min). 0087: get_brand_mp_status
+exige OAuth. Variables (Cloudflare parygo-app, Secret): PARYGO_MP_CLIENT_ID y
+PARYGO_MP_CLIENT_SECRET (de la MISMA app de los packs) + URL de redirección
+https://app.parygo.com/admin/settings/mercadopago/vuelta en esa app. Sin ellas
+el botón dice "Muy pronto". Tests: mp-oauth.test.mts 23, mp-refresh.test.mts
+11, mp-oauth-rpc.mjs 20 (JWT real + concurrencia), fase1 K, publicar-metodo
+(g). Security review + Codex adversarial del plan + 2 rondas de Codex.
+PENDIENTE: prueba punta a punta con usuarios de prueba de MP.
+
 CI "verificar" (2026-10-03, .github/workflows/verificar.yml): en cada push a
 refactor/monorepo y en PRs. Job `tipos`: tsc de apps/web + e2e/login-next (sin
 secretos, siempre). Job `base`: permisos-escritura, packs-rpc, mp-liquidar y
@@ -460,8 +483,7 @@ PRIMEROS PASOS + MÉTODO DE PAGO (2026-10-01, panel nuevo parte 2). Textos
 genéricos "método de pago" / "cómo te pagan" (Yape es UNA opción, Perú). El
 método SOLO se exige si el evento COBRA (lib/metodoPago.ts eventoCobra: no
 is_free y una entrada activa, no cortesía, price_cents > 0; falla cerrado);
-hoy "tiene método" = brands.yape_number (MP por marca no cuenta hasta
-"Conectar Mercado Pago"). setEventPublishedAction (panel y cabina) rechaza
+"tiene método" = brands.yape_number O Mercado Pago conectado (0086). setEventPublishedAction (panel y cabina) rechaza
 code 'falta_metodo'; el evento muestra "Antes de publicar, elige cómo te
 pagan" con el único primario → /admin/settings#cobro. Un evento PUBLICADO que
 pasa a cobrar sin método (entrada con precio nueva/reactivada, quitar
@@ -698,7 +720,7 @@ cada consulta cruzaba el continente. Se prendió por la API de Cloudflare
 [placement] de apps/web/wrangler.toml NO lo aplicó la integración con Git.
 Verificar con el GET del proyecto de Pages; el PATCH conserva las variables.
 
-Incrementales, idempotentes, numeradas (vamos por 0085). Backwards-compatible
+Incrementales, idempotentes, numeradas (vamos por 0087). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
 para no romper la app vieja desplegada.
 

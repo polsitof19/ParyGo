@@ -1184,40 +1184,36 @@ if (!S.eventId) {
     await p.locator('#buyer_name').waitFor();
     const tarjeta0 = await p.getByRole('radio', { name: 'Tarjeta' }).count();
     await shot(p, 'K', 'sin-mp-solo-yape');
-    check('K', 'sin credenciales MP: no aparece "Tarjeta" (con un solo método no se pregunta)', tarjeta0 === 0 && (await p.getByRole('radio', { name: 'Yape' }).count()) === 0, `tarjeta=${tarjeta0}`);
+    check('K', 'sin MP conectado: no aparece "Tarjeta" (con un solo método no se pregunta)', tarjeta0 === 0 && (await p.getByRole('radio', { name: 'Yape' }).count()) === 0, `tarjeta=${tarjeta0}`);
 
-    // Validación de UI: token inválido se rechaza limpio sin guardar.
+    // Desde 0086 no hay credenciales manuales: Mi marca muestra "Mercado Pago
+    // (tarjeta y más)" con "Conectar Mercado Pago" (OAuth) y NINGÚN campo de token.
     await go(adm.page, '/admin/settings');
-    if (await adm.page.locator('#mp_access_token').count()) {
-      // Desde 2026-10-01 va plegado en "Tarjeta con Mercado Pago (próximamente)".
-      const mpFold = adm.page.locator('details:has(#mp_access_token)');
-      if (!(await mpFold.evaluate((d) => d.open))) await mpFold.locator('> summary').click();
-      await adm.page.fill('#mp_access_token', 'TEST-0000000000000000-000000-00000000000000000000000000000000-000000000');
-      await adm.page.fill('#mp_public_key', 'TEST-00000000-0000-0000-0000-000000000000');
-      await adm.page.getByRole('button', { name: /Validar y guardar/ }).click();
-      await sleep(6000);
-      const msg = (await adm.page.locator('.s-err, .s-banner--err, .s-banner').allInnerTexts()).join(' | ').replace(/\s+/g, ' ');
-      await shot(adm.page, 'K', 'settings-token-invalido');
-      const st = (await svc.rpc('get_brand_mp_status', { p_brand_id: BRAND_ID })).data?.[0];
-      check('K', 'settings: token falso rechazado por validación contra MP, nada guardado', !st?.has_access_token, `${msg.slice(0, 200)} · status=${JSON.stringify(st)}`);
-    }
+    const mpFold = adm.page.locator('details', { hasText: 'Mercado Pago (tarjeta y más)' });
+    const sinCampos = (await adm.page.locator('#mp_access_token, #mp_public_key').count()) === 0;
+    const dice = (await mpFold.locator('summary').innerText().catch(() => '')).replace(/\s+/g, ' ');
+    await shot(adm.page, 'K', 'settings-mp-sin-conectar');
+    check('K', 'Mi marca: Mercado Pago "Sin conectar" y sin campos de token', sinCampos && /Sin conectar/.test(dice), dice);
 
-    // Con credenciales (dummy, cargadas vía el mismo RPC que usa settings) → aparece Tarjeta.
+    // Conexión SIMULADA (tokens falsos o de prueba) por la misma RPC que usa la
+    // vuelta del OAuth → aparece Tarjeta.
     const conCredsReales = Boolean(MP_TEST_TOKEN && MP_TEST_PUBKEY);
-    const { error: setErr } = await svc.rpc('set_brand_mp_credentials', {
+    const { data: setData, error: setErr } = await svc.rpc('set_brand_mp_oauth', {
       p_brand_id: BRAND_ID,
       p_access_token: conCredsReales ? MP_TEST_TOKEN : 'TEST-e2e-dummy-token-no-valido',
       p_public_key: conCredsReales ? MP_TEST_PUBKEY : 'TEST-00000000-0000-0000-0000-000000000000',
+      p_refresh_token: 'TG-e2e-dummy', p_user_id: `e2e${STAMP}`,
+      p_expires_at: new Date(Date.now() + 180 * 864e5).toISOString(),
       p_encryption_key: env.BRAND_CREDS_ENCRYPTION_KEY,
     });
-    note('K', `set_brand_mp_credentials (solo demotest): ${setErr ? setErr.message : 'ok'} · ${conCredsReales ? 'credenciales de PRUEBA reales' : 'token dummy'}`);
+    note('K', `set_brand_mp_oauth (solo demotest): ${setErr ? setErr.message : JSON.stringify(setData)} · ${conCredsReales ? 'credenciales de PRUEBA reales' : 'token dummy'}`);
     try {
       const vHold0 = await typeBy('General');
       const email = `e2e-k-${STAMP}@test.local`;
       const r = await buy({ items: { General: 1 }, email, name: `MP Dummy ${STAMP}`, method: 'mp', tag: 'K' });
       await shot(p, 'K', 'con-mp-intento-pago');
       const tarjetaShown = await p.getByRole('radio', { name: 'Tarjeta' }).count();
-      check('K', 'con credenciales MP: aparece "Tarjeta"', tarjetaShown === 1 || r.res !== 'timeout', `tarjeta=${tarjetaShown}`);
+      check('K', 'con MP conectado: aparece "Tarjeta"', tarjetaShown === 1 || r.res !== 'timeout', `tarjeta=${tarjetaShown}`);
       const { data: ko } = await svc.from('orders').select('id,status,payment_method,mp_preference_id').eq('buyer_email', email).eq('event_id', S.eventId);
       const rawDb = /violates|constraint|relation "|duplicate key|syntax error/i.test(r.toasts.join(' '));
       // La orden SIEMPRE se tiene que poder crear: hasta la 0055, orders_check
@@ -1241,18 +1237,13 @@ if (!S.eventId) {
       const g1 = await typeBy('General');
       note('K', `General sold antes/después intento MP: ${vHold0.sold}/${g1.sold}`);
     } finally {
-      // Quitar credenciales por la UI (intent=remove) → vuelve a solo Yape.
+      // Desconectar (la RPC de "Desconectar Mercado Pago") → vuelve a solo Yape.
+      await svc.rpc('clear_brand_mp_oauth', { p_brand_id: BRAND_ID });
+      const st = (await svc.rpc('get_brand_mp_status', { p_brand_id: BRAND_ID })).data?.[0];
+      const { data: b } = await svc.from('brands').select('mp_oauth_user_id').eq('id', BRAND_ID).single();
       await go(adm.page, '/admin/settings');
-      const rm = adm.page.getByRole('button', { name: 'Quitar credenciales' });
-      if (await rm.count()) { await rm.first().click(); await sleep(4000); }
-      let st = (await svc.rpc('get_brand_mp_status', { p_brand_id: BRAND_ID })).data?.[0];
-      if (st?.has_access_token || st?.has_public_key) {
-        note('K', 'botón de quitar no encontrado/no funcionó — limpio vía RPC');
-        await svc.rpc('set_brand_mp_credentials', { p_brand_id: BRAND_ID, p_access_token: null, p_public_key: null, p_encryption_key: env.BRAND_CREDS_ENCRYPTION_KEY });
-        st = (await svc.rpc('get_brand_mp_status', { p_brand_id: BRAND_ID })).data?.[0];
-      }
-      await shot(adm.page, 'K', 'settings-mp-quitado');
-      check('K', 'credenciales MP removidas (demotest vuelve a solo Yape)', !st?.has_access_token && !st?.has_public_key, JSON.stringify(st));
+      await shot(adm.page, 'K', 'settings-mp-desconectado');
+      check('K', 'MP desconectado (demotest vuelve a solo Yape)', !st?.has_access_token && !st?.has_public_key && !b?.mp_oauth_user_id, JSON.stringify(st));
     }
     await go(p, `/${EVENT_SLUG}`);
     await vis(p.getByRole('button', { name: 'Sumar General' })).click();

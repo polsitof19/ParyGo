@@ -42,7 +42,13 @@ export async function POST(req: NextRequest) {
   let pago;
   try {
     pago = await mpPago(paymentId);
-  } catch {
+  } catch (e) {
+    // 403: el pago es de otra cuenta (p. ej. una marca conectada por OAuth):
+    // 200 para que MP no reintente en vano. El 404 sigue en 502: MP a veces no
+    // encuentra un pago recién creado y el reintento es lo que acredita el pack
+    // (security review M2).
+    const m = e instanceof Error ? e.message : '';
+    if (m.startsWith('mp_403')) return NextResponse.json({ ok: true, ignored: 'pago_ajeno' });
     return NextResponse.json({ error: 'mp_fetch_failed' }, { status: 502 });
   }
   const compraId = pago?.external_reference;

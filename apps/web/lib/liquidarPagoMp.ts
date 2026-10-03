@@ -41,6 +41,13 @@ export async function liquidarPagoMp(
   // Toda preferencia de entradas lleva metadata.brand_id: sin ella o con otra
   // marca, no es un pago nuestro (settle además filtra por brand_id).
   if (payment?.metadata?.brand_id !== brandId) return { ok: false, orderId, ignored: 'brand_mismatch' };
+  // El que cobró tiene que ser la cuenta de MP conectada a ESTA marca (0086):
+  // collector_id del pago re-pedido, no un dato del aviso.
+  const { data: conexion } = await admin.from('brands').select('mp_oauth_user_id').eq('id', brandId).maybeSingle();
+  if (!conexion?.mp_oauth_user_id || String(payment?.collector_id ?? '') !== conexion.mp_oauth_user_id) {
+    await admin.from('events_log').insert({ brand_id: brandId, order_id: orderId, type: 'mp_collector_mismatch', payload: { payment_id: paymentId, collector_id: String(payment?.collector_id ?? ''), cuenta: conexion?.mp_oauth_user_id ?? null } });
+    return { ok: false, orderId, ignored: 'collector_mismatch' };
+  }
 
   const log = (type: string, payload: Record<string, unknown>) =>
     admin.from('events_log').insert({ brand_id: brandId, order_id: orderId, type, payload });

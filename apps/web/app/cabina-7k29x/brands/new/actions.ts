@@ -34,8 +34,6 @@ const schema = z.object({
     .or(z.literal('')),
   yape_number: yapeNumberSchema,
   yape_holder: z.string().max(80).optional().or(z.literal('')),
-  mp_access_token: z.string().min(10).optional().or(z.literal('')),
-  mp_public_key: z.string().min(10).optional().or(z.literal('')),
   primary_color: z
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/)
@@ -120,22 +118,6 @@ export async function createBrandAction(
   if (wsErr) {
     await admin.from('brands').delete().eq('id', brand.id);
     return { ok: false, message: 'No se pudo guardar el secreto del webhook. Intenta de nuevo.' };
-  }
-
-  // Step 3: store MP credentials encrypted (if provided). Si falla → rollback.
-  if (parsed.data.mp_access_token || parsed.data.mp_public_key) {
-    // The generated types declare the RPC args as non-null strings, but the
-    // underlying plpgsql function treats null as "clear the credential".
-    const { error: rpcErr } = await admin.rpc('set_brand_mp_credentials', {
-      p_brand_id: brand.id,
-      p_access_token: parsed.data.mp_access_token || (null as unknown as string),
-      p_public_key: parsed.data.mp_public_key || (null as unknown as string),
-      p_encryption_key: serverEnv.BRAND_CREDS_ENCRYPTION_KEY,
-    });
-    if (rpcErr) {
-      await admin.from('brands').delete().eq('id', brand.id); // rollback all-or-nothing
-      return { ok: false, message: `No se pudieron guardar las credenciales MP: ${rpcErr.message}` };
-    }
   }
 
   // Step 3: log event

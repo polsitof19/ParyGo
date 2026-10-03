@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { mpUsable } from '@/lib/mpConexion';
 import { serverEnv, publicEnv } from '@/lib/env';
 import { formatPEN } from '@/lib/utils';
 import { isPubliclyOffered } from '@/lib/publicTicketGuard';
@@ -133,7 +134,8 @@ async function loadEvent(brandSlug: string, eventSlug: string, acceso: string | 
   const admin = createAdminClient();
   const { data: mpStatus } = await admin.rpc('get_brand_mp_status', { p_brand_id: brand.id });
   const status = Array.isArray(mpStatus) ? mpStatus[0] : null;
-  const mpConfigured = Boolean(status?.has_access_token && status?.has_public_key);
+  const mpConfigured = Boolean(status?.has_access_token && status?.has_public_key)
+    && (await mpUsable(admin, brand.id, serverEnv.BRAND_CREDS_ENCRYPTION_KEY));
   let mpPublicKey: string | null = null;
   if (mpConfigured) {
     const { data: pk, error: pkErr } = await admin.rpc('get_brand_mp_public_key', {
