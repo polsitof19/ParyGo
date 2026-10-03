@@ -411,6 +411,16 @@ supabase/verify-0053-0058.mjs (comprobaciones de estado esperado).
 OJO con `mgmt.mjs types`: PISA database.types.ts entero y regenerarlo completo
 rompe tipos afinados a mano — las columnas nuevas se agregan a mano.
 
+CI "verificar" (2026-10-03, .github/workflows/verificar.yml): en cada push a
+refactor/monorepo y en PRs. Job `tipos`: tsc de apps/web + e2e/login-next (sin
+secretos, siempre). Job `base`: permisos-escritura, packs-rpc, mp-liquidar y
+salud-0085 contra la base real (SOLO demotest, decenas de filas), con
+concurrency para no pisarse; SE SALTA si el repo no tiene los secretos
+SUPABASE_URL, SUPABASE_ANON_KEY y SUPABASE_SERVICE_ROLE_KEY. No frena el deploy
+(el push ya es deploy): avisa. Validar el YAML con
+`uvx --from actionlint-py actionlint .github/workflows/<archivo>` (un ":" dentro
+de un echo sin comillas simples rompió la primera corrida).
+
 SALUD DE LA BASE (0085, 2026-10-03, avisos de Supabase). anon ya NO ejecuta
 is_super_admin / user_brands / user_is_brand_member (solo las usan policies de
 authenticated, que conserva su grant) ni handle_new_user (trigger);
