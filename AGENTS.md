@@ -144,7 +144,7 @@ la marca; ParyGo sigue sin tocarla.
   metodoPago cuenta PayPal. **Listo**: tsc, capturas 390/1440, publicar-metodo.
 - [x] 4. Checkout + confirmación + webhook. **Listo**: tsc; fase1 sin cambios
   (Yape idéntico); prueba de la vuelta y del webhook con fetch interceptado.
-- [ ] 5. Security review + Codex; E2E punta a punta con PayPal SANDBOX en una
+- [x] 5. Security review + Codex (E2E sandbox PENDIENTE); E2E punta a punta con PayPal SANDBOX en una
   marca is_test (pendiente de las credenciales sandbox de Paul); deploy.
 
 ## Fuera de alcance

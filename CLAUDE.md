@@ -442,6 +442,31 @@ es idéntico al de antes (fase1). Tests:
 e2e/pais-0088.mjs 18/18 (JWT, CHECKs, MONEDA_CAMBIO, carrera), moneda 20,
 zona 16, metodo-manual 20. Codex sandbox NO escribe en el repo: implementador.
 
+PAYPAL PARA LAS ENTRADAS (0090 + 0091, 2026-10-03; plan en AGENTS.md). La
+marca pega el Client ID + Secret de SU app Live de PayPal en Mi marca (solo la
+dueña real, duenaRealDe); se verifica pidiendo un token y se registra el aviso
+(webhook) de esa app en /api/webhooks/paypal/<brandId>; sin aviso no se guarda.
+Solo USD/EUR/MXN (PayPal no opera PEN/COP/CLP/ARS): lib/paypalMarca.ts
+paypalSirve. client_id en claro con índice único (una app = una marca), secret
+pgp_sym; sandbox SOLO si is_test (CHECK). La PLATA se mueve recién al CAPTURAR
+y captura solo el server: confirmación ?token= → puede_cobrar_paypal (FOR
+UPDATE: cupo, misma orden de PayPal, MISMO client_id con que se creó) →
+capturar (Request-Id por orden) → settle_paypal_payment (monto = total
+congelado, moneda = brands.moneda). Si la base no emite (cupo, monto, moneda,
+captura duplicada) se DEVUELVE sola; si la devolución falla →
+events_log paypal_refund_pendiente → tarea grave en Salud. Webhook: el cuerpo
+no se cree; primero la base tiene que reconocer la orden/captura de ESA marca
+(un id inventado no llama a PayPal), candado por orden, relectura con el token
+de la marca; COMPLETED liquida (respaldo de la vuelta), REFUNDED total /
+REVERSED anulan entradas, parcial no; error → 503 para que PayPal reintente.
+Cambiar/desconectar se bloquea con un pago PayPal < 30 min. Un código del
+100% en el checkout guarda payment_method 'yape_manual' (con 'mercadopago' o
+'paypal' el flip a paid violaba orders_check). lib/paypalApi.ts la comparten
+packs y entradas (montos por TEXTO, sin floats). Tests: paypal-0091.mjs 36
+(JWT + concurrencia), paypal-api.test.mts 48, paypal-flujo.mts 17 (base real
++ PayPal falso). Security review + 2 rondas Codex. PENDIENTE: E2E con app
+SANDBOX de PayPal (credenciales de Paul).
+
 CONECTAR MERCADO PAGO (0086 + 0087, 2026-10-03; plan y decisiones en docs/conectar-mp.md).
 ÚNICO modo de cobrar con tarjeta: OAuth (se retiraron las credenciales
 manuales; 0 marcas las tenían). Mi marca → "Mercado Pago (tarjeta y más)" →
