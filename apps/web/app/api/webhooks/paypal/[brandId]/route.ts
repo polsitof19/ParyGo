@@ -20,12 +20,32 @@ export const dynamic = 'force-dynamic';
 // reintenta hasta 25 veces en 3 días).
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Lee el cuerpo cortando apenas pasa el tope (sin Content-Length o chunked,
+// req.text() lo cargaba entero antes de mirar el tamaño; Codex). null = grande.
+async function leerHasta(req: NextRequest, tope: number): Promise<string | null> {
+  if (!req.body) return '';
+  const lector = req.body.getReader();
+  const partes: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await lector.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > tope) { await lector.cancel(); return null; }
+    partes.push(value);
+  }
+  const todo = new Uint8Array(total);
+  let i = 0;
+  for (const p of partes) { todo.set(p, i); i += p.byteLength; }
+  return new TextDecoder().decode(todo);
+}
+
 export async function POST(req: NextRequest, { params }: { params: { brandId: string } }) {
   if (!UUID_RE.test(params.brandId)) return NextResponse.json({ ok: false }, { status: 200 });
   // El tamaño se mira ANTES de leer el cuerpo (security review B4).
   if (Number(req.headers.get('content-length') ?? '0') > 64_000) return NextResponse.json({ ok: false }, { status: 200 });
-  const texto = await req.text();
-  if (texto.length > 64_000) return NextResponse.json({ ok: false }, { status: 200 });
+  const texto = await leerHasta(req, 64_000);
+  if (texto === null) return NextResponse.json({ ok: false }, { status: 200 });
   let aviso: { event_type?: unknown; resource?: unknown };
   try { aviso = JSON.parse(texto); } catch { return NextResponse.json({ ok: false }, { status: 200 }); }
   const evento = typeof aviso.event_type === 'string' ? aviso.event_type : '';
