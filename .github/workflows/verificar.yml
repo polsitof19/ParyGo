@@ -66,8 +66,9 @@ jobs:
           URL: ${{ secrets.SUPABASE_URL }}
           ANON: ${{ secrets.SUPABASE_ANON_KEY }}
           SR: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          KEY: ${{ secrets.BRAND_CREDS_ENCRYPTION_KEY }}
         run: |
-          printf 'NEXT_PUBLIC_SUPABASE_URL=%s\nNEXT_PUBLIC_SUPABASE_ANON_KEY=%s\nSUPABASE_SERVICE_ROLE_KEY=%s\n' "$URL" "$ANON" "$SR" > apps/web/.env.local
+          printf 'NEXT_PUBLIC_SUPABASE_URL=%s\nNEXT_PUBLIC_SUPABASE_ANON_KEY=%s\nSUPABASE_SERVICE_ROLE_KEY=%s\nBRAND_CREDS_ENCRYPTION_KEY=%s\n' "$URL" "$ANON" "$SR" "$KEY" > apps/web/.env.local
       - if: env.HAY_SECRETOS == 'true'
         name: permisos de escritura (JWT real)
         run: node e2e/permisos-escritura.mjs
