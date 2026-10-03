@@ -6,7 +6,7 @@ import { CopyButton } from './CopyButton';
 import { DownloadQrButton } from './DownloadQrButton';
 import { LineaPago } from '../../Responsable';
 import { publicEnv } from '@/lib/env';
-import { medioDe, medioFrase, NOMBRE_MEDIO } from '@/lib/metodoManual';
+import { medioDe, medioFrase, NOMBRE_MEDIO, cuentaLegible, nombreRed } from '@/lib/metodoManual';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -77,6 +77,9 @@ export default async function YapeUploadPage({
   const medio = medioDe(order.brand?.metodo_manual);
   const esYape = medio === 'yape';
   const frase = medioFrase(medio);
+  const moneda = monedaDe(order.brand?.moneda);
+  // USDT: el comprador envía dólares-token, no "$": se lee "25.00 USDT".
+  const montoTxt = medio === 'usdt' ? `${(order.total_cents / 100).toFixed(2)} USDT` : formatMoney(order.total_cents, moneda);
   if (!order.brand?.yape_number) {
     return (
       <main className="c-state c-checkout-canvas"><p className="c-state__dot c-state__dot--alert">{esYape ? 'Este organizador no tiene Yape configurado.' : `Este organizador no tiene configurado el pago con ${frase}.`}</p></main>
@@ -107,14 +110,14 @@ export default async function YapeUploadPage({
             </a>
           )}
           <div>
-            <p className="b-yapenum">{order.brand.yape_number}</p>
-            <p className="b-yapeheld">{medio === 'usdt' ? `Red: ${order.brand.yape_holder ?? ''}` : (order.brand.yape_holder ?? order.brand.name)}</p>
+            {medio === 'usdt' && <p className="b-aviso b-aviso--red">Solo red {nombreRed(order.brand.yape_holder)}. Si envías desde un exchange, la comisión va aparte: tienen que llegar {montoTxt}.</p>}
+            <p className={`b-yapenum${medio === 'usdt' ? ' b-yapenum--dir' : ''}`}>{cuentaLegible(medio, order.brand.yape_number)}</p>
+            {medio !== 'usdt' && <p className="b-yapeheld">{order.brand.yape_holder ?? order.brand.name}</p>}
             <div className="b-yapeacts">
               <CopyButton value={order.brand.yape_number} label={medio === 'usdt' ? 'dirección' : ['yape', 'nequi', 'bizum'].includes(medio) ? 'número' : 'cuenta'} />
               {qrUrl && <DownloadQrButton url={qrUrl} nombre={`${medio}-${order.brand.slug}`} />}
             </div>
             {qrUrl && <p className="b-aviso">{esYape ? 'Guarda el QR y, al escanear en Yape, elígelo desde tu galería.' : 'Guarda el QR y, al escanear en tu app, elígelo desde tu galería.'}</p>}
-            {medio === 'usdt' && <p className="b-aviso">Envía solo USDT por la red {order.brand.yape_holder}. Si usas otra red, el dinero se pierde y no se puede recuperar.</p>}
           </div>
         </div>
       </div>
@@ -123,8 +126,8 @@ export default async function YapeUploadPage({
       <div className="b-panel">
         <p className="b-panel__t">El monto exacto</p>
         <div className="b-monto">
-          <span>{formatMoney(order.total_cents, monedaDe(order.brand?.moneda))}</span>
-          <CopyButton value={sinDecimales(monedaDe(order.brand?.moneda)) ? String(order.total_cents / 100) : (order.total_cents / 100).toFixed(2)} label="monto" />
+          <span>{montoTxt}</span>
+          <CopyButton value={sinDecimales(moneda) ? String(order.total_cents / 100) : (order.total_cents / 100).toFixed(2)} label="monto" />
         </div>
         <p className="b-aviso">{esYape ? 'Si yapeas de menos o de más' : 'Si pagas de menos o de más'}, el organizador puede rechazar el comprobante.</p>
       </div>

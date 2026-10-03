@@ -7,7 +7,7 @@ import { useFormFeedback } from '@/components/useFormFeedback';
 import { updateBrandSettingsAction, type SettingsState } from './actions';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useTextos } from '@/components/IdiomaPanel';
-import { PAISES, NOMBRE_MEDIO, type Medio } from '@/lib/metodoManual';
+import { PAISES, NOMBRE_MEDIO, medioFrase, cuentaLegible, type Medio } from '@/lib/metodoManual';
 
 const initial: SettingsState = { ok: false, message: null };
 
@@ -63,6 +63,12 @@ function campoCuenta(medio: Medio, t: (es: string, en: string) => string): { lab
 // 987654321 → 987 654 321
 const fmtYape = (n: string) => n.replace(/\D/g, '').replace(/(\d{3})(?=\d)/g, '$1 ');
 
+// Para el "Listo": el celular agrupado o, si es larga (billetera, banco), cómo termina.
+function resumenCuenta(medio: Medio, cuenta: string, en: boolean) {
+  if (medio === 'usdt' || medio === 'transferencia') return `${en ? 'ends in' : 'termina en'} ${cuenta.slice(-4)}`;
+  return cuentaLegible(medio, cuenta);
+}
+
 export function SettingsForm(props: Props) {
   const [state, action] = useFormFeedback(updateBrandSettingsAction, initial);
   const [primary, setPrimary] = useState(props.primaryColor);
@@ -92,18 +98,19 @@ export function SettingsForm(props: Props) {
           {listo
             ? props.medio === 'yape'
               ? <span>{t('Listo: tus compradores te pagan con Yape al', 'Ready: your buyers pay you with Yape at')} <span style={{ whiteSpace: 'nowrap' }}>{fmtYape(props.yapeNumber)}</span></span>
-              : t(`Listo: tus compradores te pagan con ${NOMBRE_MEDIO[props.medio].es}`, `Ready: your buyers pay you with ${NOMBRE_MEDIO[props.medio].en}`)
+              : t(`Listo: tus compradores te pagan con ${NOMBRE_MEDIO[props.medio].es} · ${resumenCuenta(props.medio, props.yapeNumber, false)}`, `Ready: your buyers pay you with ${NOMBRE_MEDIO[props.medio].en} · ${resumenCuenta(props.medio, props.yapeNumber, true)}`)
             : t('Falta: sin un método de pago nadie puede pagarte', 'Missing: without a payment method nobody can pay you')}
         </p>
 
         <div className="s-field">
-          <Field label="País · Country" htmlFor="pais" error={err.pais}>
+          <Field label={t('País', 'Country')} htmlFor="pais" error={err.pais}>
             <select form={FORM} id="pais" name="pais" className="s-input s-select" value={paisId} disabled={ro}
               onChange={(e) => {
                 const p = PAISES.find((x) => x.id === e.target.value);
                 if (!p) return;
                 setPaisId(p.id);
-                if (p.moneda !== props.moneda) setMedio(p.medios[0]!);
+                const lista = p.moneda === props.moneda ? Array.from(new Set<Medio>([...p.medios, props.medio])) : p.medios;
+                if (!lista.includes(medio)) setMedio(lista.includes(props.medio) ? props.medio : lista[0]!);
               }}>
               {PAISES.map((p) => (
                 <option key={p.id} value={p.id} disabled={props.tieneEventos && p.moneda !== props.moneda}>
@@ -116,48 +123,47 @@ export function SettingsForm(props: Props) {
             {props.tieneEventos
               ? t('Tu marca ya tiene eventos: la moneda no se puede cambiar. Solo puedes elegir países con la misma moneda.', 'Your brand already has events: the currency cannot be changed. You can only pick countries with the same currency.')
               : cambiaMoneda
-                ? t('Cambiar de moneda borra tu cuenta de cobro: tendrás que ingresarla de nuevo.', 'Changing currency clears your payout account: you will need to enter it again.')
+                ? t('Cambiar de moneda borra tu QR: elige el medio e ingresa tu cuenta abajo.', 'Changing currency clears your QR: choose the method and enter your account below.')
                 : t('Define la moneda de tus entradas y la hora de tus eventos.', 'Sets the currency of your tickets and the time of your events.')}
           </p>
         </div>
 
-        <h3 className="a-cobro__op">{props.medio === 'yape' ? t('Yape (Perú)', 'Yape (Peru)') : nombreMedio(props.medio)}</h3>
         <div className="s-field">
           <Field label={t('Medio de pago', 'Payment method')} htmlFor="metodo_manual" error={err.metodo_manual}>
-            <select form={FORM} id="metodo_manual" name="metodo_manual" className="s-input s-select" value={medio} disabled={ro || cambiaMoneda} onChange={(e) => setMedio(e.target.value as Medio)}>
+            <select form={FORM} id="metodo_manual" name="metodo_manual" className="s-input s-select" value={medio} disabled={ro} onChange={(e) => setMedio(e.target.value as Medio)}>
               {medios.map((m) => <option key={m} value={m}>{nombreMedio(m)}</option>)}
             </select>
           </Field>
         </div>
         <div className="s-form-grid">
           <Field label={cuenta.label} htmlFor="yape_number" error={err.yape_number}>
-            {medio === 'transferencia' ? (
-              <textarea key={medio} form={FORM} id="yape_number" name="yape_number" rows={3} maxLength={200} defaultValue={mismo ? props.yapeNumber : ''} placeholder={cuenta.placeholder} className="s-input" disabled={ro} />
+            {medio === 'transferencia' || medio === 'usdt' ? (
+              <textarea key={`${medio}-${cambiaMoneda}`} form={FORM} id="yape_number" name="yape_number" rows={medio === 'usdt' ? 2 : 3} maxLength={200} defaultValue={mismo ? props.yapeNumber : ''} placeholder={cuenta.placeholder} className={medio === 'usdt' ? 's-input a-cobro__dir' : 's-input'} disabled={ro} />
             ) : (
-              <input key={medio} form={FORM} id="yape_number" name="yape_number" type={cuenta.type} inputMode={cuenta.inputMode} autoComplete="off" defaultValue={mismo ? props.yapeNumber : ''} placeholder={cuenta.placeholder} className="s-input" disabled={ro} />
+              <input key={`${medio}-${cambiaMoneda}`} form={FORM} id="yape_number" name="yape_number" type={cuenta.type} inputMode={cuenta.inputMode} autoComplete="off" defaultValue={mismo ? props.yapeNumber : ''} placeholder={cuenta.placeholder} className="s-input" disabled={ro} />
             )}
           </Field>
           {medio === 'usdt' ? (
             <Field label={t('Red', 'Network')} htmlFor="yape_holder" error={err.yape_holder}>
-              <select key={medio} form={FORM} id="yape_holder" name="yape_holder" className="s-input s-select" defaultValue={mismo ? props.yapeHolder.toUpperCase() : ''} disabled={ro}>
+              <select key={`${medio}-${cambiaMoneda}`} form={FORM} id="yape_holder" name="yape_holder" className="s-input s-select" defaultValue={mismo ? props.yapeHolder.toUpperCase() : ''} disabled={ro}>
                 <option value="">{t('Elige la red', 'Choose the network')}</option>
                 {REDES_USDT.map(([v, n]) => <option key={v} value={v}>{n}</option>)}
               </select>
             </Field>
           ) : (
             <Field label={t('Titular', 'Holder')} htmlFor="yape_holder" error={err.yape_holder}>
-              <input key={medio} form={FORM} id="yape_holder" name="yape_holder" defaultValue={mismo ? props.yapeHolder : ''} placeholder={medio === 'yape' ? t('Nombre que figura en tu Yape', 'Name shown on your Yape') : t('Nombre del titular', 'Account holder name')} className="s-input" disabled={ro} />
+              <input key={`${medio}-${cambiaMoneda}`} form={FORM} id="yape_holder" name="yape_holder" defaultValue={mismo ? props.yapeHolder : ''} placeholder={medio === 'yape' ? t('Nombre que figura en tu Yape', 'Name shown on your Yape') : t('Nombre del titular', 'Account holder name')} className="s-input" disabled={ro} />
             </Field>
           )}
         </div>
         <div className="s-field">
-          <Field label={medio === 'yape' ? t('QR de Yape (opcional)', 'Yape QR (optional)') : t(`QR de ${NOMBRE_MEDIO[medio].es} (opcional)`, `${NOMBRE_MEDIO[medio].en} QR (optional)`)} htmlFor="yape_qr" error={err.yape_qr}>
+          <Field label={medio === 'yape' ? t('QR de Yape (opcional)', 'Yape QR (optional)') : t(`QR de ${medioFrase(medio)} (opcional)`, `${NOMBRE_MEDIO[medio].en} QR (optional)`)} htmlFor="yape_qr" error={err.yape_qr}>
             <div className="s-file">
               {props.yapeQrUrl && !cambiaMoneda ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={props.yapeQrUrl} alt={t('QR de Yape actual', 'Current Yape QR')} className="a-cobro__qr" />
+                <img src={props.yapeQrUrl} alt={props.medio === 'yape' ? t('QR de Yape actual', 'Current Yape QR') : t('QR actual', 'Current QR')} className="a-cobro__qr" />
               ) : (
-                <span className="s-avatar" style={{ background: 'var(--paper-2)', color: 'var(--ink-3)', fontSize: 10, borderRadius: 10 }}>QR</span>
+                <span className="s-avatar a-cobro__qrvacio">QR</span>
               )}
               <ArchivoInput id="yape_qr" nombre="yape_qr" tieneActual={Boolean(props.yapeQrUrl) && !cambiaMoneda} deshabilitado={ro} />
             </div>
@@ -165,7 +171,7 @@ export function SettingsForm(props: Props) {
               ? t('El que descargas de tu app Yape. Tus compradores lo escanean en vez de tipear el número. PNG, JPG o WEBP · máx 2 MB.', 'The one you download from your Yape app. Buyers scan it instead of typing the number. PNG, JPG or WEBP · max 2 MB.')
               : t('El QR de tu app, si lo tiene. Tus compradores lo escanean en vez de tipear la cuenta. PNG, JPG o WEBP · máx 2 MB.', 'The QR from your app, if it has one. Buyers scan it instead of typing the account. PNG, JPG or WEBP · max 2 MB.')}</p>
             {props.yapeQrUrl && !ro && !cambiaMoneda && (
-              <label className="s-check" style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+              <label className="s-check a-cobro__quitar">
                 <input form={FORM} type="checkbox" name="remove_yape_qr" value="1" /> {t('Quitar el QR actual', 'Remove current QR')}
               </label>
             )}
@@ -248,28 +254,28 @@ export function SettingsForm(props: Props) {
         <details className="s-fold">
           <summary>
             <span className="s-fold__t">
-              {t('Avisos por email de Yape', 'Yape email notifications')}
+              {props.medio === 'yape' ? t('Avisos por email de Yape', 'Yape email notifications') : t('Avisos por email de pagos por aprobar', 'Email notifications for payments to approve')}
               <span className="s-fold__hint">
                 {props.notifyYapeRecovery || props.notifyYapeDigest
-                  ? [props.notifyYapeDigest && t('Yapes por aprobar', 'Yapes to approve'), props.notifyYapeRecovery && t('recordatorio al comprador', 'buyer reminder')].filter(Boolean).join(' · ')
+                  ? [props.notifyYapeDigest && (props.medio === 'yape' ? t('Yapes por aprobar', 'Yapes to approve') : t('Pagos por aprobar', 'Payments to approve')), props.notifyYapeRecovery && t('recordatorio al comprador', 'buyer reminder')].filter(Boolean).join(' · ')
                   : t('Apagados', 'Off')}
               </span>
             </span>
             <ChevronDown aria-hidden="true" />
           </summary>
           <div className="s-fold__body">
-            <p className="s-card__desc" style={{ marginBottom: 14 }}>{t('Recordatorios automáticos por email. No cambian cómo apruebas los Yapes: solo avisan y recuerdan.', 'Automatic email reminders. They don’t change how you approve Yapes: they only notify and remind.')}</p>
+            <p className="s-card__desc" style={{ marginBottom: 14 }}>{props.medio === 'yape' ? t('Recordatorios automáticos por email. No cambian cómo apruebas los Yapes: solo avisan y recuerdan.', 'Automatic email reminders. They don’t change how you approve Yapes: they only notify and remind.') : t('Recordatorios automáticos por email. No cambian cómo apruebas los pagos: solo avisan y recuerdan.', 'Automatic email reminders. They don’t change how you approve payments: they only notify and remind.')}</p>
             <label className="s-check" style={{ display: 'flex', gap: 9, alignItems: 'flex-start', marginBottom: 12 }}>
               <input form={FORM} type="checkbox" name="notify_yape_recovery" defaultChecked={props.notifyYapeRecovery} disabled={ro} style={{ marginTop: 3 }} />
               <span>
-                <strong>{t('Recordar a los compradores con Yape a medias', 'Remind buyers with a half-finished Yape')}</strong>
+                <strong>{props.medio === 'yape' ? t('Recordar a los compradores con Yape a medias', 'Remind buyers with a half-finished Yape') : t('Recordar a los compradores con el pago a medias', 'Remind buyers with a half-finished payment')}</strong>
                 <span className="s-muted" style={{ display: 'block', fontSize: 13 }}>{t('Si alguien empezó la compra pero no subió su comprobante, le mandamos un recordatorio con el link para completarla.', 'If someone started the purchase but didn’t upload their receipt, we send them a reminder with the link to finish it.')}</span>
               </span>
             </label>
             <label className="s-check" style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
               <input form={FORM} type="checkbox" name="notify_yape_digest" defaultChecked={props.notifyYapeDigest} disabled={ro} style={{ marginTop: 3 }} />
               <span>
-                <strong>{t('Avisarme cuando tengo Yapes por aprobar', 'Notify me when I have Yapes to approve')}</strong>
+                <strong>{props.medio === 'yape' ? t('Avisarme cuando tengo Yapes por aprobar', 'Notify me when I have Yapes to approve') : t('Avisarme cuando tengo pagos por aprobar', 'Notify me when I have payments to approve')}</strong>
                 <span className="s-muted" style={{ display: 'block', fontSize: 13 }}>{t('Te llega un email a tu correo de contacto apenas un comprador sube su comprobante, con el botón para revisarlo.', 'You get an email at your contact address as soon as a buyer uploads their receipt, with a button to review it.')}</span>
               </span>
             </label>

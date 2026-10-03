@@ -165,26 +165,27 @@ export async function updateBrandSettingsAction(
   if (!pais) return { ok: false, message: t('Elige un país válido.', 'Choose a valid country.'), fieldErrors: { pais: t('País inválido', 'Invalid country') } };
   const monedaActual = monedaDe(brand.moneda);
   const cambiaMoneda = pais.moneda !== monedaActual;
-  // Moneda nueva = medio y cuenta nuevos. Seguro: la moneda solo cambia con cero
-  // eventos (trigger guard_brand_moneda), o sea cero ventas.
+  // Moneda nueva = el QR viejo se borra y el medio/cuenta vienen del mismo envío
+  // (el medio tiene que ser de ese país; si no, el primero). Seguro: la moneda
+  // solo cambia con cero eventos (trigger guard_brand_moneda), o sea cero ventas.
   const medioForm = String(formData.get('metodo_manual') ?? '');
   if (!cambiaMoneda && !(MEDIOS as readonly string[]).includes(medioForm)) {
     return { ok: false, message: t('Elige un medio de pago válido.', 'Choose a valid payment method.') };
   }
-  const medio = cambiaMoneda ? pais.medios[0]! : (medioForm as Medio);
+  const medio = cambiaMoneda
+    ? ((pais.medios as readonly string[]).includes(medioForm) && medioSirve(medioForm as Medio, pais.moneda) ? (medioForm as Medio) : pais.medios[0]!)
+    : (medioForm as Medio);
   if (!medioSirve(medio, pais.moneda)) {
     return { ok: false, message: t(`${NOMBRE_MEDIO[medio].es} no sirve para ${pais.moneda}.`, `${NOMBRE_MEDIO[medio].en} does not work with ${pais.moneda}.`), fieldErrors: { metodo_manual: t('Medio incompatible', 'Incompatible method') } };
   }
-  const cuenta = cambiaMoneda
-    ? { ok: true as const, cuenta: '', titular: '' }
-    : validarCuenta(medio, parsed.data.yape_number ?? '', parsed.data.yape_holder ?? '');
+  const cuenta = validarCuenta(medio, parsed.data.yape_number ?? '', parsed.data.yape_holder ?? '');
   if (!cuenta.ok) {
     return { ok: false, message: t(cuenta.es, cuenta.en), fieldErrors: { yape_number: t(cuenta.es, cuenta.en) } };
   }
   // Otro medio (o otra moneda) = el QR viejo es de OTRA cuenta: se borra salvo
   // que en este mismo envío se haya subido uno nuevo (Codex P2).
   const qrNuevo = yapeQrUrl !== null && yapeQrUrl !== (brand.yape_qr_url ?? (theme.yape_qr_url as string | undefined) ?? null);
-  if (cambiaMoneda || (medio !== medioDe(brand.metodo_manual) && !qrNuevo)) yapeQrUrl = null;
+  if ((cambiaMoneda || medio !== medioDe(brand.metodo_manual)) && !qrNuevo) yapeQrUrl = null;
 
   // El MEDIO no cambia con un comprador PAGANDO AHORA (pago manual SIN
   // comprobante de < 30 min): la página de pago lee la marca en vivo y vería
