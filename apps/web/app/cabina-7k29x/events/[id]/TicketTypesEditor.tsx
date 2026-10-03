@@ -140,7 +140,7 @@ function TicketTypeRow({
 
       <div className="md:col-span-3">
         <label htmlFor={`name-${type?.id ?? 'new'}`} className="s-label">Nombre</label>
-        <input id={`name-${type?.id ?? 'new'}`} name="name" className="s-input" defaultValue={type?.name ?? ''} placeholder="General" required />
+        <input id={`name-${type?.id ?? 'new'}`} name="name" className="s-input" defaultValue={type?.name ?? ''} required />
       </div>
       <div className="md:col-span-2">
         <label htmlFor={`price-${type?.id ?? 'new'}`} className="s-label">Precio ({simbolo(moneda)})</label>

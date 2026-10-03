@@ -13,6 +13,7 @@ export function EditBrandBasicsForm({
   whatsapp,
   yapeNumber,
   yapeHolder,
+  prefijo,
 }: {
   brandId: string;
   name: string;
@@ -20,6 +21,7 @@ export function EditBrandBasicsForm({
   whatsapp: string | null;
   yapeNumber: string | null;
   yapeHolder: string | null;
+  prefijo: string;
 }) {
   const [state, action] = useFormFeedback(updateBrandBasicsAction, initial);
 
@@ -41,7 +43,7 @@ export function EditBrandBasicsForm({
         </div>
         <div className="s-field">
           <label className="s-label" htmlFor="br-wa">WhatsApp</label>
-          <input id="br-wa" name="whatsapp_e164" defaultValue={whatsapp ?? ''} className="s-input" placeholder="+51999000111" />
+          <input id="br-wa" name="whatsapp_e164" defaultValue={whatsapp ?? ''} className="s-input" placeholder={`${prefijo}…`} />
           {state.fieldErrors?.whatsapp_e164 && <p className="s-err">{state.fieldErrors.whatsapp_e164}</p>}
         </div>
       </div>

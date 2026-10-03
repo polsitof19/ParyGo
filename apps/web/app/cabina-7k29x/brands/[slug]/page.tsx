@@ -166,6 +166,7 @@ export default async function BrandDetailPage({
             whatsapp={brand.whatsapp_e164}
             yapeNumber={brand.yape_number}
             yapeHolder={brand.yape_holder}
+            prefijo={paisDe(brand.moneda, brand.zona_horaria).prefijo}
           />
         </div>
       </div>

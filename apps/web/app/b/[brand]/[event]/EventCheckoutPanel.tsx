@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Loader2, Lock, ArrowRight, MapPin } from 'lucide-react';
 import { formatMoney, monedaDe } from '@/lib/moneda';
 import { zonaDe, type Zona } from '@/lib/zona';
-import { medioDe, medioFrase, NOMBRE_MEDIO } from '@/lib/metodoManual';
+import { medioDe, medioFrase, NOMBRE_MEDIO, paisDe } from '@/lib/metodoManual';
 import { optimizedImage } from '@/lib/imageUrl';
 import {
   type Brand, type Event, type TicketType,
@@ -485,7 +485,7 @@ function fraseConfianza(pago: string): string {
             <div className="b-panel">
               <div className="c-field">
                 <label htmlFor="buyer_name" className="c-label">Nombre y apellido</label>
-                <input id="buyer_name" name="buyer_name" autoComplete="name" required autoFocus placeholder="María López" className="c-input" />
+                <input id="buyer_name" name="buyer_name" autoComplete="name" required autoFocus className="c-input" />
               </div>
               <div className="c-field">
                 <label htmlFor="buyer_email" className="c-label">Email</label>
@@ -501,7 +501,7 @@ function fraseConfianza(pago: string): string {
                 <input
                   id="buyer_phone" name="buyer_phone" type="tel" autoComplete="tel" required
                   minLength={9} maxLength={20} inputMode="tel" pattern="^[+\d][\d\s\(\)\-]{7,19}$"
-                  placeholder="+51 999 999 999" className="c-input"
+                  placeholder={`${paisDe(brand.moneda ?? '', brand.zona_horaria ?? '').prefijo} …`} className="c-input"
                 />
               </div>
               {event.require_dni && (

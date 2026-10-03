@@ -8,6 +8,7 @@ import { useFormFeedback } from '@/components/useFormFeedback';
 import { formatMoney, simbolo, sinDecimales, type Moneda } from '@/lib/moneda';
 import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, setTicketTypePrivateAction, moveTicketTypeAction, marcarAgotadaAction, type EditState } from '../edit-actions';
 import { useTextos } from '@/components/IdiomaPanel';
+import { NombresEntrada } from '@/app/admin/NombresEntrada';
 import type { Textos } from '@/lib/idioma';
 
 export type TtRow = { id: string; name: string; description: string; priceCents: number; capacity: number; sold: number; isUnlimited: boolean; isActive: boolean; isCourtesy: boolean; bulkMinQty: number; bulkDiscountPct: number; colorHex: string | null };
@@ -79,7 +80,7 @@ export function EditEventForm(p: { eventId: string; name: string; description: s
         <input id="ev-vaddr" name="venue_address" defaultValue={p.venueAddress} className="s-input" disabled={ro} />
         <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>{t('Si la cargas, mostramos el mapa de Google en la página pública.', 'If you fill it in, we show the Google map on the public page.')}</p></div>
       <div className="s-field"><label className="s-label" htmlFor="ev-vmaps">{t('Enlace de Google Maps (opcional)', 'Google Maps link (optional)')}</label>
-        <input id="ev-vmaps" name="venue_maps_url" type="url" defaultValue={p.venueMapsUrl} placeholder="https://maps.app.goo.gl/..." className="s-input" disabled={ro} />
+        <input id="ev-vmaps" name="venue_maps_url" type="url" defaultValue={p.venueMapsUrl} placeholder={t('Pega el link de Google Maps', 'Paste the Google Maps link')} className="s-input" disabled={ro} />
         <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>{t('Para el botón "Cómo llegar". Pega el enlace de tu local (debe empezar con https://).', 'For the "Get directions" button. Paste your venue\'s link (must start with https://).')}</p></div>
       <details className="s-details">
         <summary>{t('Opciones del checkout y avisos (avanzado)', 'Checkout and notification options (advanced)')}</summary>
@@ -329,13 +330,15 @@ function NewTicketTypeFields({ eventId, eventIsFree, moneda, action }: { eventId
   const { t } = useTextos();
   const [free, setFree] = useState(false);
   const [privada, setPrivada] = useState(false);
+  const nombreRef = useRef<HTMLInputElement>(null);
   return (
     <form action={action} onSubmit={(e) => guardPrice(e, t, simbolo(moneda), free)}>
       <input type="hidden" name="event_id" value={eventId} />
       <input type="hidden" name="confirm_free" defaultValue="" />
       <div className="s-form-grid">
         <div className="s-field"><label className="s-label" htmlFor="tt-new-name">{t('Nombre', 'Name')}</label>
-          <input id="tt-new-name" name="name" placeholder="VIP" className="s-input" required /></div>
+          <input id="tt-new-name" ref={nombreRef} name="name" className="s-input" required />
+          <NombresEntrada onPick={(n) => { if (nombreRef.current) nombreRef.current.value = n; }} /></div>
         <PriceField id="tt-new-price" free={free} onFree={setFree} eventIsFree={eventIsFree} moneda={moneda} />
       </div>
       <div className="s-form-grid">

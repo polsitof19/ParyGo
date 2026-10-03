@@ -40,8 +40,7 @@ export function CreateBrandForm({ requestId, initialName = '', initialEmail = ''
           id="name"
           name="name"
           className="s-input"
-          placeholder="Code"
-          required
+                    required
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoComplete="off"
@@ -56,8 +55,7 @@ export function CreateBrandForm({ requestId, initialName = '', initialEmail = ''
             id="slug"
             name="slug"
             className="s-input"
-            placeholder="code"
-            pattern="^[a-z0-9][a-z0-9-]{0,30}[a-z0-9]$"
+                        pattern="^[a-z0-9][a-z0-9-]{0,30}[a-z0-9]$"
             required
             value={slug}
             onChange={(e) => {
@@ -82,7 +80,7 @@ export function CreateBrandForm({ requestId, initialName = '', initialEmail = ''
           name="owner_email"
           type="email"
           className="s-input"
-          placeholder="promotor@code.com.pe"
+          placeholder="correo@marca.com"
           required
           defaultValue={initialEmail}
           autoComplete="off"

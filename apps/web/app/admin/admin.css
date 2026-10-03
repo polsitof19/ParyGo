@@ -107,6 +107,7 @@
 .admin-shell .s-check + .cw-tt, .admin-shell .cw-hint-top + .cw-tt { margin-top: var(--s-s2); }
 .admin-shell .cw-tt__head { display: flex; align-items: flex-end; gap: var(--s-s1); }
 .admin-shell .cw-tt__name { flex: 1; min-width: 0; }
+.admin-shell .cw-sug { display: flex; flex-wrap: wrap; gap: var(--s-s1); margin-top: var(--s-s1); }
 .admin-shell .cw-quitar { width: 48px; height: 48px; flex: none; color: var(--ink-2); }
 .admin-shell .cw-quitar svg { width: 18px; height: 18px; }
 .admin-shell .cw-tt .cw-grid { margin-top: var(--s-s2); grid-template-columns: 1fr 1fr; gap: var(--s-s2); }

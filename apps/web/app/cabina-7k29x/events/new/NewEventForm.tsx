@@ -1,9 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { utcALocal, zonaDe } from '@/lib/zona';
 import { createEventAction, type FormState } from './actions';
+
+// El slug sale del nombre mientras no lo toquen (misma regla que el asistente del panel).
+const aSlug = (n: string): string => n
+  .normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+  .slice(0, 42).replace(/-+$/g, '');
 
 const initial: FormState = { ok: false, message: null, fieldErrors: {} };
 
@@ -21,6 +27,8 @@ export function NewEventForm({
   const preselected = brands.find((b) => b.slug === preselectedSlug);
   // El min del datetime-local es "ahora" en la hora de la marca elegida.
   const [brandId, setBrandId] = useState(preselected?.id ?? '');
+  const [slug, setSlug] = useState('');
+  const slugManual = useRef(false);
   const minDateTime = utcALocal(new Date(), zonaDe(brands.find((b) => b.id === brandId)?.zona_horaria));
 
   return (
@@ -47,16 +55,16 @@ export function NewEventForm({
       <section className="s-card">
         <p className="s-section-lead" style={{ marginBottom: 14 }}>Evento</p>
         <Field id="name" label="Nombre del evento" required error={state.fieldErrors?.name}>
-          <input id="name" name="name" className="s-input" placeholder="Density · Noche 04" required />
+          <input id="name" name="name" className="s-input" required onChange={(e) => { if (!slugManual.current) setSlug(aSlug(e.target.value)); }} />
         </Field>
         <div className="s-field">
-          <Field id="slug" label="Slug" hint="Ej: density-04 → code.parygo.com/density-04" required error={state.fieldErrors?.slug}>
-            <input id="slug" name="slug" className="s-input" placeholder="density-04" pattern="^[a-z0-9][a-z0-9-]{0,40}[a-z0-9]$" required />
+          <Field id="slug" label="Slug" hint="Es la dirección del evento: <marca>.parygo.com/<slug>. Se arma sola desde el nombre." required error={state.fieldErrors?.slug}>
+            <input id="slug" name="slug" className="s-input" value={slug} onChange={(e) => { slugManual.current = true; setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')); }} pattern="^[a-z0-9][a-z0-9-]{0,40}[a-z0-9]$" required />
           </Field>
         </div>
         <div className="s-field">
           <Field id="description" label="Descripción corta">
-            <textarea id="description" name="description" rows={3} className="s-input" placeholder="DJ Headliner · Club Foso · Lima" />
+            <textarea id="description" name="description" rows={3} className="s-input" />
           </Field>
         </div>
         <div className="s-form-grid s-field">
@@ -72,11 +80,11 @@ export function NewEventForm({
       <section className="s-card">
         <p className="s-section-lead" style={{ marginBottom: 14 }}>Venue</p>
         <Field id="venue_name" label="Nombre del local">
-          <input id="venue_name" name="venue_name" className="s-input" placeholder="Club Foso" />
+          <input id="venue_name" name="venue_name" className="s-input" />
         </Field>
         <div className="s-field">
           <Field id="venue_address" label="Dirección">
-            <input id="venue_address" name="venue_address" className="s-input" placeholder="Av. Foso 123, Miraflores" />
+            <input id="venue_address" name="venue_address" className="s-input" />
           </Field>
         </div>
         <div className="s-form-grid s-field">
