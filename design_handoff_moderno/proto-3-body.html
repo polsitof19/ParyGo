@@ -1,0 +1,71 @@
+</head>
+<body>
+
+<div id="stage" class="stage"></div>
+
+<nav class="proto-picker" data-position="top" aria-label="Prototype variants">
+  <span class="proto-picker-highlight" aria-hidden="true"></span>
+  <button class="proto-picker-item" data-active aria-current="true">Editorial</button>
+  <button class="proto-picker-item">Canvas</button>
+  <button class="proto-picker-item">Entrada 2.0</button>
+  <span class="proto-picker-divider" aria-hidden="true"></span>
+  <button class="proto-picker-item proto-picker-replay" aria-label="Replay animation (R)">&#8635;</button>
+</nav>
+
+<div class="proto-marca" id="marcas"></div>
+<p class="proto-nota" id="nota"></p>
+
+<script>
+/* ============================================================
+   COLOR — portado TAL CUAL de apps/web/lib/brandColors.ts.
+   No es decorado: es la regla dura del sistema. Si el prototipo
+   usara otra matematica, estaria comparando tres disenos con un
+   contraste que el producto no puede dar.
+   ============================================================ */
+var INK = [0x23,0x1c,0x17], PAPER = [0xfb,0xf7,0xf0], PAPER_3 = [0xef,0xe6,0xd6];
+var INK_HEX = '#231C17', PAPER_HEX = '#FBF7F0';
+function parseHex(h){ var m=/^#?([0-9a-f]{6})$/i.exec(String(h||'').trim()); if(!m) return null;
+  var n=parseInt(m[1],16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function relLum(c){ function l(v){ var s=v/255; return s<=0.03928? s/12.92 : Math.pow((s+0.055)/1.055,2.4); }
+  return 0.2126*l(c[0])+0.7152*l(c[1])+0.0722*l(c[2]); }
+function contrast(a,b){ var x=relLum(a), y=relLum(b); var hi=Math.max(x,y), lo=Math.min(x,y); return (hi+0.05)/(lo+0.05); }
+function toHex(c){ function h(n){ return Math.max(0,Math.min(255,Math.round(n))).toString(16).padStart(2,'0'); }
+  return '#'+h(c[0])+h(c[1])+h(c[2]); }
+function mix(rgb,t,m){ return [rgb[0]+(t[0]-rgb[0])*m, rgb[1]+(t[1]-rgb[1])*m, rgb[2]+(t[2]-rgb[2])*m]; }
+
+function brandFillPair(hex){
+  var rgb = hex ? parseHex(hex) : null;
+  if(!rgb) return { fill:'#FF6A3D', on:INK_HEX };
+  var onInk = contrast(rgb,INK), onPaper = contrast(rgb,PAPER);
+  if(onInk >= 4.5) return { fill:toHex(rgb), on:INK_HEX };
+  if(onPaper >= 4.5) return { fill:toHex(rgb), on:PAPER_HEX };
+  var hacia = onInk >= onPaper ? PAPER : INK;
+  var texto = onInk >= onPaper ? INK : PAPER;
+  var textoHex = onInk >= onPaper ? INK_HEX : PAPER_HEX;
+  for(var m=0.04; m<=1.001; m+=0.04){
+    var mez = mix(rgb,hacia,m);
+    if(contrast(mez,texto) >= 4.5) return { fill:toHex(mez), on:textoHex };
+  }
+  return { fill:toHex(hacia), on:textoHex };
+}
+function brandFillHover(hex){
+  var par = brandFillPair(hex), rgb = parseHex(par.fill);
+  var texto = par.on === INK_HEX ? INK : PAPER;
+  for(var m=0.12; m>=0.02; m-=0.02){
+    var c = toHex(mix(rgb,texto,m));
+    if(contrast(parseHex(c),texto) >= 4.5) return c;
+  }
+  var lejos = par.on === INK_HEX ? [255,255,255] : [0,0,0];
+  return toHex(mix(rgb,lejos,0.12));
+}
+function brandInk(hex){
+  var rgb = hex ? parseHex(hex) : null;
+  if(!rgb) return INK_HEX;
+  if(contrast(rgb,PAPER_3) >= 4.5) return toHex(rgb);
+  for(var f=0.995; f>=0; f-=0.005){
+    var c = toHex([rgb[0]*f, rgb[1]*f, rgb[2]*f]);
+    if(contrast(parseHex(c),PAPER_3) >= 4.5) return c;
+  }
+  return INK_HEX;
+}
+function withAlpha(hex,a){ var c=parseHex(hex); return c? 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')' : 'rgba(255,106,61,'+a+')'; }

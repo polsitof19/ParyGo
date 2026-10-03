@@ -1,0 +1,54 @@
+import { LoginForm } from './LoginForm';
+import './login.css';
+
+export const runtime = 'edge';
+
+export const metadata = {
+  title: 'Iniciar sesión · parygo',
+};
+
+// Misma identidad cálida que los paneles, scopeada bajo .auth-shell.
+
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: { error?: string; next?: string };
+}) {
+  const support = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP;
+
+  return (
+    <main className={`auth-shell`}>
+      <div className="auth-wrap">
+        <div className="auth-brand">
+          parygo<span className="dot">.</span>
+        </div>
+
+        <div className="auth-card">
+          <p className="auth-eyebrow">Acceso</p>
+          <h1 className="auth-h1">Inicia sesión</h1>
+          <p className="auth-sub">
+            {searchParams.next === '/scan'
+              ? 'Entra con tu email y contraseña para abrir el escáner de la puerta.'
+              : 'Organizadores y staff entran con su email y contraseña.'}
+          </p>
+
+          <LoginForm next={searchParams.next} />
+
+          {searchParams.error && (
+            <p className="auth-banner">{decodeURIComponent(searchParams.error)}</p>
+          )}
+        </div>
+
+        {support && (
+          <p className="auth-foot">
+            ¿Eres organizador y necesitas ayuda?{' '}
+            <a href={`https://wa.me/${support}`} target="_blank" rel="noopener noreferrer">
+              Soporte por WhatsApp
+            </a>
+          </p>
+        )}
+        <p className="auth-legal">Al continuar aceptas los <a href="/terminos">Términos</a> y la <a href="/privacidad">Política de Privacidad</a>.</p>
+      </div>
+    </main>
+  );
+}

@@ -1,0 +1,101 @@
+'use client';
+
+import { Check } from 'lucide-react';
+import { empezar } from '@/lib/cta';
+import type { Dict } from '@/lib/i18n';
+import { Resaltado } from '@/components/Resaltado';
+import { PACKS, precio, useMoneda } from '@/lib/precios';
+import { PACK_PRIVADO } from '@/lib/packs';
+
+// 06 — Precios (4 packs; todos incluyen todo, solo cambia la cantidad). La
+// moneda sale del país del visitante (lib/precios.ts): soles en Perú, dólares
+// en el resto. Los montos = apps/web/lib/packs.ts.
+
+export function Pricing({ t }: { t: Dict }) {
+  const c = t.precios;
+  const m = useMoneda(t.lang);
+  const unit = (p: (typeof PACKS)[number]) => (m === 'PEN' ? p.pen : p.usd);
+  const uno = unit(PACKS[0]);
+
+  return (
+    <section className="section pricing" id="precios" aria-labelledby="pricing-title">
+      <div className="container">
+        <div className="section__head center reveal">
+          <h2 className="h2" id="pricing-title"><Resaltado r={c.h2} /></h2>
+          <p className="lede">{c.lede}</p>
+        </div>
+
+        <div className="plans reveal-stagger">
+          {PACKS.map((p) => {
+            const rec = p.eventos === 3;
+            const total = unit(p);
+            const ahorro = uno * p.eventos - total;
+            return (
+              <article key={p.eventos} className={`plan${rec ? ' plan--rec' : ''}`}>
+                {rec && <span className="plan__badge">{c.badge}</span>}
+                <div className="plan__name">{p.eventos} {p.eventos === 1 ? c.evento : c.eventos}</div>
+                <div className="plan__qty">{c.qty[p.eventos]}</div>
+                <div className="plan__price">{precio(total, m)}</div>
+                {/* Dos renglones fijos: con el ahorro en el mismo renglón unas
+                    tarjetas partían en dos líneas y las listas quedaban desalineadas. */}
+                <span className="plan__percu">
+                  {precio(Math.round(total / p.eventos), m)} {c.porEvento}
+                  <span className="plan__ahorro">{ahorro > 0 ? `${c.ahorras} ${precio(ahorro, m)}` : c.pagoUnico}</span>
+                </span>
+                <ul className="plan__list">
+                  {(c.perks[p.eventos] ?? []).map((perk) => (
+                    <li key={perk}><Check className="plan__tick" aria-hidden="true" />{perk}</li>
+                  ))}
+                </ul>
+                <div className="plan__cta">
+                  <a href={empezar(t.lang, { pack: p.eventos, moneda: m })} className={`btn ${rec ? 'btn-primary' : 'btn-soft'}`}>{c.elegir}</a>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+
+        <p className="plans-note reveal">
+          {c.note}
+          {m === 'USD' && c.noteUsd}
+        </p>
+
+        {/* Prueba gratis (2026-10-01): 1 evento, hasta 10 entradas. */}
+        <p className="plans-privado reveal">
+          <strong>{c.prueba.t}</strong> {c.prueba.d}{' '}
+          <a href={empezar(t.lang, { tipo: 'marca', pack: 'prueba' })}>{c.prueba.cta} <span aria-hidden="true">→</span></a>
+        </p>
+
+        {/* Evento privado (0075): cumpleaños y reuniones, directo a su alta. */}
+        <p className="plans-privado reveal">
+          <strong>{c.privado.t}</strong> {c.privado.d} <strong>{precio(m === 'PEN' ? PACK_PRIVADO.pen : PACK_PRIVADO.usd, m)}</strong>.{' '}
+          <a href={empezar(t.lang, { tipo: 'privado', moneda: m })}>{c.privado.cta} <span aria-hidden="true">→</span></a>
+        </p>
+
+        {/* El detalle de TODO lo que incluye (Paul, 2026-09-28: el sistema hace
+            mucho y la página no lo contaba). Solo lo que existe hoy: lo que está
+            por construir no va acá. La MISMA lista vive en apps/web/app/empezar/
+            textos.ts (incluye), a la vista antes de pagar: si cambias una, la otra. */}
+        <div className="detalle reveal">
+          <h3 className="h3 detalle__h">{c.detalle.h3}</h3>
+          <p className="detalle__lede">{c.detalle.lede}</p>
+          <div className="detalle__grid">
+            {c.detalle.grupos.map((g) => (
+              <div key={g.t} className="detalle__grupo">
+                <h4 className="detalle__t">{g.t}</h4>
+                <ul className="detalle__list">
+                  {g.items.map((it) => (
+                    <li key={it}><Check className="plan__tick" aria-hidden="true" />{it}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div className="detalle__cta">
+            <a href={empezar(t.lang)} className="btn btn-primary btn-lg">{t.hero.cta} <span className="arrow" aria-hidden="true">→</span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}

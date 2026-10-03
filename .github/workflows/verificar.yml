@@ -1,0 +1,96 @@
+name: verificar
+
+# Red automática de cada push (2026-10-03). Un push a refactor/monorepo ES el
+# deploy a producción: esto no lo frena, pero avisa en minutos si algo se rompió
+# en lugar de depender de que alguien se acuerde de correr las pruebas.
+#
+# 1. tipos: tsc de apps/web + test del login (sin secretos).
+# 2. base: pruebas contra la base REAL, SOLO en la marca demotest y con decenas
+#    de filas (CLAUDE.md). Corre solo si el repo tiene los 3 secretos
+#    (SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY); si faltan,
+#    el paso se salta. Nunca pruebas de carga.
+on:
+  push:
+    branches: [refactor/monorepo]
+  pull_request:
+
+permissions:
+  contents: read
+
+# Dos corridas a la vez pisarían las mismas filas de demotest.
+concurrency:
+  group: verificar-demotest
+  cancel-in-progress: false
+
+jobs:
+  tipos:
+    name: tsc apps/web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx tsc --noEmit -p apps/web
+      - name: login sin open redirect
+        run: cd apps/web && npx -y tsx ../../e2e/login-next.test.mts
+      - name: OAuth de Mercado Pago (PKCE, canje, refresh)
+        run: cd apps/web && npx -y tsx ../../e2e/mp-oauth.test.mts
+      - name: refresco del token (un solo refresh, revocado vs transitorio)
+        run: cd apps/web && npx -y tsx ../../e2e/mp-refresh.test.mts
+      - name: moneda, hora y medio manual por país
+        run: cd apps/web && npx -y tsx ../../e2e/moneda.test.mts && npx -y tsx ../../e2e/zona.test.mts && npx -y tsx ../../e2e/metodo-manual.test.mts && npx -y tsx ../../e2e/paypal-api.test.mts
+
+  base:
+    name: permisos y dinero (demotest)
+    runs-on: ubuntu-latest
+    needs: tipos
+    env:
+      HAY_SECRETOS: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+    steps:
+      - if: env.HAY_SECRETOS != 'true'
+        run: echo 'Sin secretos de Supabase en el repo, se salta (ver CLAUDE.md, CI).'
+      - if: env.HAY_SECRETOS == 'true'
+        uses: actions/checkout@v4
+      - if: env.HAY_SECRETOS == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - if: env.HAY_SECRETOS == 'true'
+        run: npm ci --ignore-scripts
+      # e2e/lib.mjs lee apps/web/.env.local: se arma SOLO con lo necesario y
+      # vive lo que dura la corrida.
+      - if: env.HAY_SECRETOS == 'true'
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          ANON: ${{ secrets.SUPABASE_ANON_KEY }}
+          SR: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          KEY: ${{ secrets.BRAND_CREDS_ENCRYPTION_KEY }}
+        run: |
+          printf 'NEXT_PUBLIC_SUPABASE_URL=%s\nNEXT_PUBLIC_SUPABASE_ANON_KEY=%s\nSUPABASE_SERVICE_ROLE_KEY=%s\nBRAND_CREDS_ENCRYPTION_KEY=%s\n' "$URL" "$ANON" "$SR" "$KEY" > apps/web/.env.local
+      - if: env.HAY_SECRETOS == 'true'
+        name: permisos de escritura (JWT real)
+        run: node e2e/permisos-escritura.mjs
+      - if: env.HAY_SECRETOS == 'true'
+        name: packs (JWT real + concurrencia)
+        run: node e2e/packs-rpc.mjs
+      - if: env.HAY_SECRETOS == 'true'
+        name: tarjeta de marcas (liquidar, reembolso, concurrencia)
+        run: node e2e/mp-liquidar.mjs
+      - if: env.HAY_SECRETOS == 'true'
+        name: salud 0085 (revokes + Yape vencido)
+        run: node e2e/salud-0085.mjs
+      - if: env.HAY_SECRETOS == 'true'
+        name: Conectar MP 0086 (RPCs, JWT real, concurrencia)
+        run: node e2e/mp-oauth-rpc.mjs
+      - if: env.HAY_SECRETOS == 'true'
+        name: país 0088 (moneda, medio, carrera)
+        run: node e2e/pais-0088.mjs
+      - if: env.HAY_SECRETOS == 'true'
+        name: PayPal 0091 (credenciales, cobro, devolución, concurrencia)
+        run: node e2e/paypal-0091.mjs
+      - if: always() && env.HAY_SECRETOS == 'true'
+        run: rm -f apps/web/.env.local

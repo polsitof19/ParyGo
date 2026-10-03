@@ -1,0 +1,22 @@
+-- =============================================================
+-- 0058 — Borra el índice redundante tickets_qr_idx.
+-- =============================================================
+-- Verificado en producción:
+--
+--   tickets_qr_code_key  CREATE UNIQUE INDEX ... ON tickets USING btree (qr_code)
+--   tickets_qr_idx       CREATE INDEX        ... ON tickets USING btree (qr_code)
+--
+-- Misma tabla, misma columna, mismo método, mismo orden. El único que hace
+-- falta es el UNIQUE: sirve para todas las búsquedas que serviría el otro (la
+-- puerta busca por qr_code exacto) y además es el que impone la unicidad del
+-- QR, que es lo que impide emitir dos entradas con el mismo código.
+--
+-- El redundante cuesta en cada INSERT de ticket: una emisión de 10 cortesías
+-- mantiene dos árboles idénticos en vez de uno. En la puerta no aporta nada.
+--
+-- Se borra el NO-UNIQUE. Es reversible en una línea si hiciera falta
+-- (create index tickets_qr_idx on tickets (qr_code)), y no puede afectar la
+-- validación: el plan de /scan usa el unique.
+-- =============================================================
+
+drop index if exists public.tickets_qr_idx;

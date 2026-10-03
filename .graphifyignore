@@ -1,0 +1,16 @@
+# Graphify: además de .gitignore (que ya excluye .env*, tmp/, node_modules/).
+# Secretos, explícito por las dudas: nunca entran al grafo.
+.env
+.env.*
+**/.env*
+*.pem
+*.key
+# Salidas y artefactos que no son código de ParyGo
+tmp/
+graphify-out/
+.playwright/
+.playwright-cli/
+design_handoff_*/
+**/*.png
+**/*.jpg
+**/*.pdf

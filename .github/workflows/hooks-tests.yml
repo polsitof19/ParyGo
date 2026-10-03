@@ -1,0 +1,41 @@
+name: hooks
+
+# Corre la suite de .claude/hooks/ solo cuando esos archivos cambian.
+# El guard (guard-sacred-rules.js) es lo único que impide empujar a la rama
+# congelada, y sus dos modos de falla son caros y opuestos: dejar pasar un push
+# prohibido, o bloquear trabajo legítimo. Hasta acá dependía de que alguien se
+# acordara de correr la suite a mano.
+#
+# El filtro incluye además el propio workflow (para que un cambio acá se
+# autovalide en vez de pasar desapercibido) y package.json (que define el script
+# test:hooks: si se rompe ahí, la suite deja de correr sin que nadie se entere).
+on:
+  push:
+    paths:
+      - '.claude/hooks/**'
+      - '.github/workflows/hooks-tests.yml'
+      - 'package.json'
+  pull_request:
+    paths:
+      - '.claude/hooks/**'
+      - '.github/workflows/hooks-tests.yml'
+      - 'package.json'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: npm run test:hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      # Sin npm install a propósito: la suite usa solo builtins de Node
+      # (child_process, fs, os, path) y archivos del repo. Verificado en un
+      # clone limpio sin node_modules.
+      - run: npm run test:hooks

@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paneles modernos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Prototipo, no producción. Tokens copiados de apps/web/app/styles/parygo-tokens.css
+   y la rampa --s-* de parygo-panel.css. Lo nuevo que se prueba: --s-d1 (cifra
+   héroe 44→56, la jerarquía por TAMAÑO) y el orden pendiente → info → plegado. */
+:root{
+  --paper:#FBF7F0;--paper-2:#F4EDE1;--paper-3:#EFE6D6;--ink:#231C17;
+  --ink-2:rgba(35,28,23,.70);--ink-3:rgba(35,28,23,.66);--line:rgba(35,28,23,.13);--sel:rgba(35,28,23,.05);
+  --accent:#FF6A3D;--accent-deep:#E8552A;--ok:#2E9E6B;--warn:#C7791A;--alert:#D7472F;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;--body:"Hanken Grotesk",system-ui,sans-serif;
+  --r-ctl:9px;--r-btn:10px;--r-pill:999px;
+  --s-t1:28px;--s-t2:20px;--s-body:16px;--s-meta:13px;--s-lb:11px;--s-num:26px;--s-d1:44px;
+  --s-ui:14px;--s-ctl:15px;
+}
+*{box-sizing:border-box;margin:0}
+body{background:#E9E1D3;color:var(--ink);font-family:var(--body);padding:16px}
+.bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-bottom:16px;font-size:14px}
+.bar button{font:inherit;min-height:44px;padding:0 12px;border:1px solid var(--line);background:var(--paper);border-radius:var(--r-btn);cursor:pointer}
+.bar button[aria-pressed=true]{background:var(--ink);color:var(--paper)}
+.pair{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
+.col{flex:none}
+.col h3{font-family:var(--display);font-size:20px;margin-bottom:4px}
+.col p.why{font-size:13px;color:var(--ink-2);max-width:390px;margin-bottom:8px}
+.frame{width:390px;background:var(--paper);border-radius:14px;overflow:hidden;box-shadow:0 18px 40px -22px rgba(35,28,23,.4)}
+body.desk .frame{width:1120px}
+body.desk .pair{flex-direction:column}
+.scr{padding:24px 16px 48px;font-size:var(--s-body);line-height:1.45}
+body.desk .scr{padding:32px 48px 64px;--s-t1:34px;--s-t2:24px;--s-num:28px;--s-d1:56px}
+.top{display:flex;align-items:center;gap:16px;padding:14px 16px;border-bottom:1px solid var(--line);font-size:14px}
+.top b{font-family:var(--display);font-size:19px;margin-right:auto}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);display:flex;align-items:center;gap:8px}
+.eyebrow::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent)}
+h1{font-family:var(--display);font-weight:800;font-size:var(--s-t1);line-height:1.05;letter-spacing:-.03em;margin:6px 0 2px}
+h2{font-family:var(--display);font-weight:700;font-size:var(--s-t2);line-height:1.05;letter-spacing:-.02em}
+.meta{font-size:var(--s-meta);color:var(--ink-2)}
+.lb{font-size:var(--s-lb);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:var(--r-btn);border:0;font:600 var(--s-ctl)/1 var(--body);cursor:pointer;background:none;color:var(--ink)}
+.btn--p{background:var(--accent);color:var(--ink)}
+.btn--t{padding:0 2px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:24px 0;margin-bottom:24px}
+body.desk .stats{grid-template-columns:repeat(4,1fr)}
+.stat{display:flex;flex-direction:column;gap:2px;padding-left:16px;border-left:1px solid var(--line)}
+.stats .stat:nth-child(2n+1){padding-left:0;border-left:0}
+body.desk .stats .stat{padding-left:24px;border-left:1px solid var(--line)}
+body.desk .stats .stat:first-child{padding-left:0;border-left:0}
+.num{font-family:var(--display);font-weight:800;font-size:var(--s-num);line-height:1.05;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.hero{font-family:var(--display);font-weight:700;font-size:var(--s-d1);line-height:.9;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.sub{font-size:var(--s-meta);color:var(--ink-2)}
+.task{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:24px}
+.task .t{display:flex;gap:12px;align-items:flex-start}
+.task .t::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--accent);margin-top:8px;flex:none}
+.pend{padding:0 0 24px;margin-bottom:24px;border-bottom:1px solid var(--line)}
+.pend .row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.pend .k{display:flex;align-items:center;gap:8px}
+.pend .k::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--accent)}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;margin:8px 0 32px;border-top:1px solid var(--line)}
+body.desk .acts{grid-template-columns:repeat(4,1fr)}
+.act{display:flex;align-items:center;gap:10px;min-height:48px;border-bottom:1px solid var(--line);font-size:var(--s-ui);font-weight:600}
+.act i{width:16px;height:16px;border:1.5px solid var(--ink-3);border-radius:4px;flex:none}
+.inline{display:flex;flex-wrap:wrap;gap:8px 24px;margin-bottom:32px;font-size:var(--s-ui);font-weight:600}
+.inline span{min-height:44px;display:inline-flex;align-items:center}
+.rows{border-top:1px solid var(--line);margin-bottom:32px}
+.r{display:flex;align-items:center;gap:12px;min-height:64px;border-bottom:1px solid var(--line);padding:8px 0}
+.thumb{width:48px;height:48px;border-radius:var(--r-ctl);background:var(--paper-3);flex:none;display:grid;place-items:center;font-family:var(--display);font-weight:800;color:var(--ink-3)}
+.r .n{font-weight:600;flex:1;min-width:0}
+.r .n small{display:block;font-weight:400;font-size:var(--s-meta);color:var(--ink-2)}
+.r .v{font-family:var(--display);font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.dot{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink)}
+.dot::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.dot--ok::before{background:var(--ok)}.dot--off::before{background:none;box-shadow:inset 0 0 0 1.5px var(--ink-3)}
+.grid{display:grid;grid-template-columns:1fr;gap:24px;margin-bottom:32px}
+body.desk .grid{grid-template-columns:repeat(3,1fr)}
+.card{border-top:1px solid var(--line);padding-top:14px}
+.card .img{height:118px;background:var(--paper-2);border-radius:var(--r-ctl);margin-bottom:12px}
+.card b{font-family:var(--display);font-size:18px;display:block}
+details{border-top:1px solid var(--line);padding:16px 0}
+summary{font-family:var(--display);font-weight:700;font-size:17px;cursor:pointer;list-style:none;display:flex;justify-content:space-between}
+summary::after{content:"▾";color:var(--ink-3)}
+section{margin-bottom:32px}
+section h2{margin-bottom:12px}
+.yq{border-top:1px solid var(--line)}
+.yr{display:flex;align-items:center;gap:12px;min-height:56px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.yr b{flex:1}
+.yr .amt{font-family:var(--display);font-weight:700;font-variant-numeric:tabular-nums}
+.score{margin-top:8px;font-size:13px;border-top:1px solid var(--line);padding-top:8px;max-width:390px}
+.score td{padding:2px 8px 2px 0}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="bar">
+  <strong>Pantalla</strong>
+  <button data-s="home" aria-pressed="true">Home organizador</button>
+  <button data-s="evento" aria-pressed="false">Evento · Resumen + Yapes</button>
+  <button data-s="marcas" aria-pressed="false">Marcas (super)</button>
+  <strong style="margin-left:16px">Ancho</strong>
+  <button data-w="390" aria-pressed="true">390</button>
+  <button data-w="1120" aria-pressed="false">1120</button>
+</div>
+
+<!-- ======================= HOME ======================= -->
+<div class="pair" data-screen="home">
+  <div class="col">
+    <h3>A · Tablero</h3>
+    <p class="why">El orden de hoy con la tipografía nueva: cuatro números iguales, tarea, grilla de flyers.</p>
+    <div class="frame"><div class="top"><b>Demo Test</b>Inicio · Config · Equipo</div><div class="scr">
+      <div class="head"><div><span class="eyebrow">Demo Test · tu panel</span><h1>Tus eventos</h1><p class="meta">2 activos · 1 publicado</p></div><button class="btn btn--p">+ Crear evento</button></div>
+      <div class="stats">
+        <div class="stat"><span class="num">346</span><span class="lb">Vendidas</span></div>
+        <div class="stat"><span class="num">S/ 13,976</span><span class="lb">Recaudado</span></div>
+        <div class="stat"><span class="num" style="font-size:18px">Fiesta E2E</span><span class="lb">Próximo evento</span></div>
+        <div class="stat"><span class="num">7</span><span class="lb">Eventos disponibles</span></div>
+      </div>
+      <div class="task"><span class="t"><span><b>Tienes 5 Yapes por revisar</b><br><span class="sub">Plata esperando tu aprobación</span></span></span><span class="btn btn--t">Revisar ahora</span></div>
+      <div class="inline"><span>Ver página pública</span><span>Copiar link</span><span>Emitir cortesías</span><span>Abrir escáner</span></div>
+      <div class="grid"><div class="card"><div class="img"></div><b>Fiesta de Prueba E2E</b><span class="meta">dom 28 jun · S/ 1,120 vendido</span></div><div class="card"><div class="img"></div><b>Fiesta (copia)</b><span class="meta">sáb 10 oct · borrador</span></div></div>
+      <section><h2>Tu marca</h2><p class="meta">Email · WhatsApp · Yape · Colores (siempre abierto)</p></section>
+    </div></div>
+    <table class="score"><tr><td>5 s</td><td>4 números del mismo tamaño compiten; hay que leer las etiquetas.</td></tr><tr><td>Primario</td><td>“Crear evento”, aunque la plata esperando es lo urgente.</td></tr><tr><td>5 tareas</td><td>Buscar/reenviar/exportar/promotores: 3 clics (evento → nav → sección).</td></tr></table>
+  </div>
+  <div class="col">
+    <h3>B · Hoy primero ✓</h3>
+    <p class="why">Lo pendiente arriba y con el único primario; una cifra héroe; el próximo evento con sus acciones; el resto en filas; la marca plegada.</p>
+    <div class="frame"><div class="top"><b>Demo Test</b>Inicio · Config · Equipo</div><div class="scr">
+      <div class="head"><div><span class="eyebrow">Demo Test</span><h1>Tus eventos</h1></div><span class="btn btn--t">+ Crear evento</span></div>
+      <div class="pend"><div class="row"><div><span class="k lb">Por revisar</span><div class="hero">5 Yapes</div><p class="sub">S/ 1,000 esperando tu aprobación · hay gente esperando su QR</p></div><button class="btn btn--p">Revisar Yapes</button></div></div>
+      <div class="stats">
+        <div class="stat"><span class="num">S/ 13,976</span><span class="lb">Recaudado</span></div>
+        <div class="stat"><span class="num">346</span><span class="lb">Vendidas</span></div>
+        <div class="stat"><span class="num">7</span><span class="lb">Eventos disponibles</span></div>
+      </div>
+      <span class="lb">Próximo · en 11 días</span>
+      <h2 style="margin:4px 0 8px">Fiesta de Prueba E2E</h2>
+      <div class="acts"><span class="act"><i></i>Buscar comprador</span><span class="act"><i></i>Reenviar entrada</span><span class="act"><i></i>Exportar asistentes</span><span class="act"><i></i>Ventas por promotor</span><span class="act"><i></i>Copiar link</span><span class="act"><i></i>Abrir escáner</span></div>
+      <div class="rows">
+        <div class="r"><span class="thumb">F</span><span class="n">Fiesta de Prueba E2E<small>dom 28 jun · 21:00</small></span><span class="v">S/ 1,120<br><span class="dot">5 Yape</span></span></div>
+        <div class="r"><span class="thumb">F</span><span class="n">Fiesta (copia)<small>sáb 10 oct · borrador</small></span><span class="dot dot--off">Borrador</span></div>
+      </div>
+      <details><summary>Archivados (58)</summary></details>
+      <details><summary>Tu marca</summary></details>
+    </div></div>
+    <table class="score"><tr><td>5 s</td><td>“5 Yapes” a 44/56px es lo primero que se lee; la plata va segunda.</td></tr><tr><td>Primario</td><td>Uno: la tarea pendiente. Sin tarea, vuelve a ser “Crear evento”.</td></tr><tr><td>5 tareas</td><td>Las cuatro escondidas + escáner a 1 clic desde la home.</td></tr></table>
+  </div>
+</div>
+
+<!-- ======================= EVENTO ======================= -->
+<div class="pair hide" data-screen="evento">
+  <div class="col">
+    <h3>A · Resumen de hoy</h3>
+    <p class="why">Cuatro números, tarea que baja a la cola, acciones en una línea de texto, rechazados abiertos al final.</p>
+    <div class="frame"><div class="top"><b>Demo Test</b>Inicio · Config · Equipo</div><div class="scr">
+      <span class="eyebrow">Evento · Publicado</span><h1>E2E Septiembre</h1><p class="meta">sáb 03 oct · Local E2E</p>
+      <div class="task" style="margin-top:16px"><span class="t"><b>Publicado</b></span><span class="btn btn--t">Volver a borrador</span></div>
+      <div class="task"><span class="t"><span class="lb">Sección</span></span><span>Mi evento · Resumen ▾</span></div>
+      <div class="stats"><div class="stat"><span class="num">7</span><span class="lb">Vendidas</span></div><div class="stat"><span class="num">S/ 272</span><span class="lb">Recaudado</span></div><div class="stat"><span class="num" style="font-size:20px">En 11 días</span><span class="lb">Cuándo</span></div><div class="stat"><span class="num">2</span><span class="lb">Entraron</span></div></div>
+      <div class="task"><span class="t"><b>2 Yapes por revisar</b></span><span class="btn btn--t">Revisar ahora</span></div>
+      <div class="inline"><span>Ver página pública</span><span>Copiar link</span><span>Emitir cortesías</span><span>Abrir escáner</span></div>
+      <section><h2>Yapes para aprobar</h2><div class="yq"><div class="yr"><b>VIP Uno</b><span class="amt">S/ 50</span><span class="btn btn--t">Aprobar</span></div></div></section>
+      <section><h2>Tu dinero</h2><p class="meta">…</p></section>
+      <section><h2>Yapes rechazados</h2><p class="meta">abierto</p></section>
+    </div></div>
+    <table class="score"><tr><td>5 s</td><td>La cola de Yapes cae debajo del pliegue en 390 (≈ 900px).</td></tr><tr><td>Primario</td><td>Ninguno visible arriba; el de la fila abierta.</td></tr><tr><td>5 tareas</td><td>Buscar/reenviar/exportar/promotores: nav plegado → sección = 2 clics más.</td></tr></table>
+  </div>
+  <div class="col">
+    <h3>B · Cabina del evento ✓</h3>
+    <p class="why">La cola de Yapes arriba (es la acción), después cómo va con una cifra héroe, después ocho acciones visibles en rejilla, y lo raro plegado.</p>
+    <div class="frame"><div class="top"><b>Demo Test</b>Inicio · Config · Equipo</div><div class="scr">
+      <span class="eyebrow">Evento · Publicado</span><h1>E2E Septiembre</h1><p class="meta">sáb 03 oct · Local E2E</p>
+      <div class="task" style="margin-top:16px"><span class="t"><b>Publicado</b></span><span class="btn btn--t">Volver a borrador</span></div>
+      <div class="task"><span class="t"><span class="lb">Sección</span></span><span>Mi evento · Resumen ▾</span></div>
+      <section><div class="pend" style="padding-bottom:8px;border:0;margin:0"><span class="k lb">Por revisar</span><div class="hero">2 Yapes</div><p class="sub">S/ 100 esperando · toca una fila para ver la captura</p></div>
+        <div class="yq"><div class="yr"><b>VIP Uno</b><span class="amt">S/ 50</span><button class="btn btn--p">Aprobar</button></div><div class="yr"><b>General Dos</b><span class="amt">S/ 50</span><span class="btn btn--t">Aprobar</span></div></div></section>
+      <div class="stats"><div class="stat"><span class="num">S/ 272</span><span class="lb">Recaudado</span></div><div class="stat"><span class="num">7</span><span class="lb">Vendidas · 26%</span></div><div class="stat"><span class="num" style="font-size:20px">En 11 días</span><span class="lb">Cuándo</span></div><div class="stat"><span class="num">2</span><span class="lb">Entraron</span></div></div>
+      <span class="lb">Acciones</span>
+      <div class="acts"><span class="act"><i></i>Buscar comprador</span><span class="act"><i></i>Reenviar entrada</span><span class="act"><i></i>Exportar asistentes</span><span class="act"><i></i>Ventas por promotor</span><span class="act"><i></i>Emitir cortesías</span><span class="act"><i></i>Abrir escáner</span><span class="act"><i></i>Copiar link</span><span class="act"><i></i>Ver página pública</span></div>
+      <section><h2>Tu dinero</h2><p class="meta">…</p></section>
+      <section><h2>Entradas por tipo</h2><p class="meta">…</p></section>
+      <details><summary>Yapes rechazados (1)</summary></details>
+    </div></div>
+    <table class="score"><tr><td>5 s</td><td>“2 Yapes” y el botón Aprobar entran sin scroll bajo el nav.</td></tr><tr><td>Primario</td><td>Uno: Aprobar de la primera fila de la cola.</td></tr><tr><td>5 tareas</td><td>Las ocho acciones a 1 clic desde el evento → 2 desde /admin.</td></tr></table>
+  </div>
+</div>
+
+<!-- ======================= MARCAS ======================= -->
+<div class="pair hide" data-screen="marcas">
+  <div class="col">
+    <h3>A · Inventario</h3>
+    <p class="why">Cuatro KPIs iguales, tabla de marcas ordenada por alerta, archivadas abiertas.</p>
+    <div class="frame"><div class="top"><b>parygo.</b>Marcas · Eventos · Solicitudes · Salud</div><div class="scr">
+      <div class="head"><div><span class="eyebrow">Plataforma</span><h1>Marcas</h1><p class="meta">4 marcas · 2 de prueba · 2 sin saldo</p></div><button class="btn btn--p">+ Crear marca</button></div>
+      <div class="stats"><div class="stat"><span class="num">2</span><span class="lb">Marcas activas</span></div><div class="stat"><span class="num">0</span><span class="lb">Eventos vendiendo</span></div><div class="stat"><span class="num">0</span><span class="lb">Yape por revisar</span></div><div class="stat"><span class="num">2</span><span class="lb">Solicitudes</span></div></div>
+      <div class="rows"><div class="r"><span class="thumb">K</span><span class="n">Koko<small>Saldo 0 · Sin saldo</small></span></div><div class="r"><span class="thumb">H</span><span class="n">Hoesky<small>Saldo 0 · Sin saldo</small></span></div></div>
+      <section><h2>Archivadas</h2><p class="meta">abiertas</p></section>
+    </div></div>
+    <table class="score"><tr><td>5 s</td><td>Las 2 solicitudes son un número más entre cuatro.</td></tr><tr><td>Primario</td><td>“Crear marca” (lo raro) manda sobre lo pendiente.</td></tr><tr><td>5 tareas</td><td>Solicitudes, recargar, entrar a marca: 1–2 clics. Ya cumplía.</td></tr></table>
+  </div>
+  <div class="col">
+    <h3>B · Bandeja ✓</h3>
+    <p class="why">“Por resolver” arriba en líneas con su acción; el inventario como dos números chicos; filas de marca; archivadas plegadas.</p>
+    <div class="frame"><div class="top"><b>parygo.</b>Marcas · Eventos · Solicitudes · Salud</div><div class="scr">
+      <div class="head"><div><span class="eyebrow">Plataforma</span><h1>Marcas</h1><p class="meta">2 activas · 0 eventos vendiendo</p></div><span class="btn btn--t">+ Crear marca</span></div>
+      <div class="pend"><span class="k lb">Por resolver</span><div class="row"><div class="hero">2</div><button class="btn btn--p">Ver solicitudes</button></div><p class="sub">solicitudes de acceso esperando respuesta</p></div>
+      <div class="task" style="border-top:0"><span class="t"><span><b>2 marcas sin saldo</b><br><span class="sub">Koko, Hoesky</span></span></span><span class="btn btn--t">Recargar</span></div>
+      <div class="rows"><div class="r"><span class="thumb">K</span><span class="n">Koko<small>koko.parygo.com · próximo 29 oct</small></span><span class="v">0<br><span class="lb">saldo</span></span></div><div class="r"><span class="thumb">H</span><span class="n">Hoesky<small>última venta hace 3 meses</small></span><span class="v">0<br><span class="lb">saldo</span></span></div></div>
+      <details><summary>Archivadas (1)</summary></details>
+    </div></div>
+    <table class="score"><tr><td>5 s</td><td>“2” grande + “Ver solicitudes”: se sabe qué hacer sin leer.</td></tr><tr><td>Primario</td><td>Uno: la tarea más vieja. Sin pendientes, vuelve “Crear marca”.</td></tr><tr><td>5 tareas</td><td>Igual que A (1–2 clics); gana por orden, no por atajos.</td></tr></table>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-s]').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  document.querySelectorAll('[data-screen]').forEach(p=>p.classList.toggle('hide',p.dataset.screen!==b.dataset.s));
+});
+document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-w]').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  document.body.classList.toggle('desk',b.dataset.w==='1120');
+});
+</script>
+</body>
+</html>

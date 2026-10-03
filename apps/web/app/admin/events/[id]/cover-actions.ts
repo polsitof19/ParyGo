@@ -1,0 +1,75 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { requireSession } from '@/lib/auth';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { puedeEscribirComoSuper } from '@/lib/impersonation';
+import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
+import { uploadEventCover, coverDims } from '@/lib/brandAssets';
+import { textosPanel, idiomaPanel } from '@/lib/idiomaServer';
+
+export type CoverState = { ok: boolean; message: string | null };
+
+// Sube/cambia el flyer de un evento. Autoriza al DUEÑO (brand_admin de la marca
+// del evento) O al SUPER ADMIN (sobre cualquier marca). El brand_id y el slug del
+// path de storage salen del ROW del evento (DB, server-trusted), NUNCA del form,
+// y el UPDATE se scopea a ese mismo brand_id. Un brand_admin de otra marca queda
+// fuera (su membership no coincide con ev.brand_id). Solo escribe events.cover_url
+// y sus medidas (cover_w/cover_h, 0065).
+export async function setEventCoverAction(
+  _prev: CoverState,
+  formData: FormData
+): Promise<CoverState> {
+  const user = await requireSession();
+  const { t } = await textosPanel();
+
+  const eventId = String(formData.get('event_id') ?? '');
+  const file = formData.get('cover');
+  if (!(file instanceof File) || file.size === 0) return { ok: false, message: t('Elige una imagen.', 'Choose an image.') };
+
+  const admin = createAdminClient();
+  const { data: ev } = await admin
+    .from('events')
+    .select('id, brand_id, brand:brands ( slug )')
+    .eq('id', eventId)
+    .maybeSingle();
+  if (!ev || !ev.brand_id) return { ok: false, message: t('Evento no encontrado.', 'Event not found.') };
+
+  // SOLO-LECTURA en impersonación: el camino super-admin se deniega con la cookie.
+  // Quién escribe: el dueño por su membresía, o el super admin — desde la
+  // cabina, o DENTRO de la marca con el modo edición encendido. Viendo la
+  // marca sin ese modo, no pasa.
+  const modoSuper = puedeEscribirComoSuper(user, ev.brand_id as string);
+  const authorized =
+    modoSuper !== null ||
+    user.brandMemberships.some((m) => m.brandId === ev.brand_id && m.role === 'brand_admin');
+  if (!authorized) return { ok: false, message: t('No tienes permiso sobre este evento.', 'You do not have permission over this event.') };
+
+  const brand = Array.isArray(ev.brand) ? ev.brand[0] : ev.brand;
+  if (!brand?.slug) return { ok: false, message: t('Marca no encontrada.', 'Brand not found.') };
+
+  const up = await uploadEventCover(admin, brand.slug, file, await idiomaPanel());
+  if (!up.ok) return { ok: false, message: up.message };
+
+  const { error } = await admin
+    .from('events')
+    // Las medidas viajan con la URL: un flyer nuevo sin medir deja NULL, nunca
+    // las medidas del anterior (la página decidiría con una forma que ya no es).
+    .update({ cover_url: up.url, ...coverDims(up) })
+    .eq('id', eventId)
+    .eq('brand_id', ev.brand_id); // candado a la marca del row (server-trusted)
+  if (error) return { ok: false, message: error.message };
+
+  await admin.from('events_log').insert({
+    brand_id: ev.brand_id,
+    event_id: eventId,
+    actor_user_id: user.id,
+    type: 'event_cover_updated',
+    payload: { by: user.isSuperAdmin ? 'super_admin' : 'brand_admin' },
+  });
+  await auditarEscrituraSuper(admin, { user, modo: modoSuper, brandId: ev.brand_id as string, eventId: eventId, accion: 'event_cover_updated', diff: { archivo: file.name, bytes: file.size } });
+
+  revalidatePath(`/admin/events/${eventId}`);
+  revalidatePath(`/cabina-7k29x/events/${eventId}`);
+  return { ok: true, message: t('Flyer actualizado.', 'Flyer updated.') };
+}

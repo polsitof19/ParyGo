@@ -1,0 +1,341 @@
+import Link from 'next/link';
+import { notFound, redirect } from 'next/navigation';
+import { Check, ArrowRight, MapPin, Ticket as TicketIcon } from 'lucide-react';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { liquidarPagoMp } from '@/lib/liquidarPagoMp';
+import { enqueueTicketEmail } from '@/lib/email/enqueueTicketEmail';
+import { generateQrSvg } from '@/lib/qr';
+import { formatEventDate } from '@/lib/utils';
+import { formatMoney, monedaDe } from '@/lib/moneda';
+import { ConfirmationPoller } from './ConfirmationPoller';
+import { AddToCalendar } from './AddToCalendar';
+import { TicketPass } from '../../TicketPass';
+import { zonaDe } from '@/lib/zona';
+import { LineaPago } from '../../Responsable';
+import { medioDe, medioFrase } from '@/lib/metodoManual';
+import { cobrarVueltaPaypal } from '@/lib/paypalMarca';
+import { serverEnv } from '@/lib/env';
+
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export default async function ConfirmationPage({
+  params,
+  searchParams,
+}: {
+  params: { brand: string; event: string };
+  searchParams: { order?: string; pendiente?: string; c?: string; v?: string; payment_id?: string; collection_id?: string; token?: string };
+}) {
+  if (!searchParams.order || !UUID_RE.test(searchParams.order)) notFound();
+
+  const admin = createAdminClient();
+  type OrderWithJoins = {
+    id: string;
+    brand_id: string;
+    status: string;
+    payment_method: 'mercadopago' | 'yape_manual' | 'paypal';
+    total_cents: number;
+    buyer_name: string;
+    event: { name: string; starts_at: string; ends_at: string | null; venue_name: string | null; venue_address: string | null; venue_maps_url: string | null; venue_lat: number | null; venue_lng: number | null; require_dni: boolean } | null;
+    brand: { slug: string; name: string; whatsapp_e164: string | null; contact_email: string | null; moneda: string; zona_horaria: string; metodo_manual: string | null; theme_json: { logo_url?: string | null } | null } | null;
+    tickets: { id: string; qr_code: string; ticket_type_name: string }[];
+  };
+  const orderResult = await admin
+    .from('orders')
+    .select(`
+      id, brand_id, status, payment_method, total_cents,
+      buyer_name,
+      event:events ( name, starts_at, ends_at, venue_name, venue_address, venue_maps_url, venue_lat, venue_lng, require_dni ),
+      brand:brands ( slug, name, whatsapp_e164, contact_email, theme_json, moneda, zona_horaria, metodo_manual ),
+      tickets ( id, qr_code, ticket_type_name )
+    `)
+    .eq('id', searchParams.order)
+    .maybeSingle();
+  const order = orderResult.data as unknown as OrderWithJoins | null;
+
+  if (!order) notFound();
+  // Defensa: el subdominio debe coincidir con la marca de la orden (igual que
+  // /t/ y /pedido). Evita ver confirmaciones de otra marca aunque se adivine el id.
+  if (order.brand?.slug !== params.brand) notFound();
+
+  const event = order.event;
+  const brand = order.brand;
+  const medio = medioDe(brand?.metodo_manual);
+  const esYape = medio === 'yape';
+  const frase = medioFrase(medio);
+
+  // VUELTA DE MERCADO PAGO (respaldo del webhook): MP agrega ?payment_id= al
+  // volver. Si la orden sigue sin cobrar, se re-pide ese pago a MP con el token
+  // de la marca y se liquida por el mismo camino que el webhook
+  // (lib/liquidarPagoMp.ts: tiene que ser de ESTA orden, en soles y por el
+  // total congelado). Sin esto, un webhook que no llega = pagó y sin entrada.
+  const paymentId = searchParams.payment_id ?? searchParams.collection_id;
+  let mpRechazado = false;
+  if (
+    order.payment_method === 'mercadopago' &&
+    ['pending_payment', 'failed', 'expired'].includes(order.status) &&
+    paymentId && /^\d{1,20}$/.test(paymentId) &&
+    // Una consulta a MP cada 10 s por orden (la página es pública y el poller
+    // refresca solo: sin esto, un id de orden alcanzaba para machacar la API de
+    // MP de la marca; security review A1).
+    (await admin.rpc('tomar_candado', { p_clave: `mp_vuelta:${order.id}`, p_segundos: 10 })).data === true
+  ) {
+    const r = await liquidarPagoMp(admin, order.brand_id, paymentId, { origen: 'vuelta', orderEsperada: order.id });
+    if (r.ok && (r.action === 'issued' || r.action === 'already_issued')) {
+      const encolado = await enqueueTicketEmail(admin, order.id);
+      if (!encolado.ok) console.error('[confirmacion] no se pudo encolar el email', { orderId: order.id, reason: encolado.reason });
+      // Se vuelve a pintar ya pagada (sin payment_id: no se re-consulta a MP).
+      redirect(`/${params.event}/confirmacion?order=${order.id}`);
+    }
+    mpRechazado = r.ok && r.action === 'recorded' && ['rejected', 'cancelled'].includes(r.status);
+  }
+
+  // VUELTA DE PAYPAL (0091, plan en AGENTS.md): PayPal agrega ?token=<su
+  // orden>. La plata recién se mueve ACÁ: lib/paypalMarca.ts revisa cupo y
+  // credenciales, captura y liquida; si la base no emite, devuelve solo. Un
+  // intento cada 10 s por orden (la página es pública y el poller refresca).
+  let ppAviso: 'rechazado' | 'sin_cupo' | 'devuelto' | 'credenciales' | null = null;
+  const ppToken = searchParams.token ?? '';
+  if (
+    order.payment_method === 'paypal' &&
+    ['pending_payment', 'expired'].includes(order.status) &&
+    /^[A-Z0-9]{5,40}$/.test(ppToken) &&
+    (await admin.rpc('tomar_candado', { p_clave: `pp_vuelta:${order.id}`, p_segundos: 10 })).data === true
+  ) {
+    const r = await cobrarVueltaPaypal(admin, order.brand_id, order.id, ppToken, serverEnv.BRAND_CREDS_ENCRYPTION_KEY);
+    if (r.ok) {
+      const encolado = await enqueueTicketEmail(admin, order.id);
+      if (!encolado.ok) console.error('[confirmacion] no se pudo encolar el email', { orderId: order.id, reason: encolado.reason });
+      redirect(`/${params.event}/confirmacion?order=${order.id}`);
+    }
+    if (r.motivo === 'rechazado' || r.motivo === 'sin_cupo' || r.motivo === 'credenciales_cambiaron') {
+      // No se cobró nada: la orden se cierra y libera el cupo y el código.
+      await admin.from('orders').update({ status: 'failed' }).eq('id', order.id).in('status', ['pending_payment', 'expired']);
+      await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
+      await admin.rpc('release_promo_redemption_for_order', { p_order_id: order.id });
+      ppAviso = r.motivo === 'credenciales_cambiaron' ? 'credenciales' : r.motivo;
+    } else if (r.motivo === 'devuelto') {
+      ppAviso = 'devuelto';
+    } else if (r.motivo === 'error') {
+      console.error('[confirmacion] PayPal', { orderId: order.id, detalle: r.detalle });
+    }
+  }
+  if (order.payment_method === 'paypal' && order.status === 'refunded') ppAviso = 'devuelto';
+
+  if (ppAviso === 'devuelto') {
+    return (
+      <main className="c-state c-checkout-canvas">
+        <span className="c-eyebrow c-state__dot c-state__dot--alert">Pago devuelto</span>
+        <h1 className="c-h1">Te devolvimos el pago</h1>
+        <p className="c-muted">
+          No pudimos emitir tu entrada (por ejemplo, se agotaron mientras pagabas), así que PayPal te devuelve el pago completo. Puede tardar unos días en verse en tu cuenta o tarjeta.
+        </p>
+        <a href={`/${params.event}`} className="c-btn c-btn--brand">Volver al evento</a>
+      </main>
+    );
+  }
+
+  // Pago con tarjeta o PayPal que terminó RECHAZADO/cancelado: no es
+  // "pendiente" → mostramos error accionable en vez de un spinner eterno.
+  const esPasarela = order.payment_method === 'mercadopago' || order.payment_method === 'paypal';
+  const isFailed =
+    esPasarela &&
+    (mpRechazado || ppAviso !== null || ['failed', 'rejected', 'cancelled'].includes(order.status));
+  const isPending =
+    !isFailed &&
+    (searchParams.pendiente === '1' ||
+      (order.status !== 'paid' && esPasarela));
+  const isYapeReview =
+    order.status === 'pending_yape_review' && order.payment_method === 'yape_manual';
+  // Yape RECHAZADO: la orden quedó en failed/rejected/cancelled con método Yape.
+  // Antes caía en la vista "pagado" sin tickets (mostraba "en camino" por error).
+  const isYapeRejected =
+    order.payment_method === 'yape_manual' &&
+    ['failed', 'rejected', 'cancelled'].includes(order.status);
+
+  if (isFailed) {
+    return (
+      <main className="c-state c-checkout-canvas">
+        <span className="c-eyebrow c-state__dot c-state__dot--alert">Pago no aprobado</span>
+        <h1 className="c-h1">No pudimos confirmar tu pago</h1>
+        <p className="c-muted">
+          {ppAviso === 'sin_cupo'
+            ? 'Se agotaron las entradas mientras pagabas. No se te cobró nada.'
+            : order.payment_method === 'paypal'
+              ? 'PayPal no aprobó el pago y no se te cobró nada. Puedes intentar de nuevo con otra tarjeta o cuenta.'
+              : 'MercadoPago no aprobó el pago. No se generó ningún cargo definitivo. Puedes intentar de nuevo con otro método o tarjeta.'}
+        </p>
+        <a href="/" className="c-btn c-btn--brand">Volver a intentar</a>
+        {brand?.whatsapp_e164 && (
+          <p><a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" className="c-state__link">¿Necesitas ayuda? Escríbenos por WhatsApp</a></p>
+        )}
+      </main>
+    );
+  }
+
+  if (isPending) {
+    return (
+      <main className="c-state c-checkout-canvas">
+        <div className="c-state__spinner" />
+        <span className="c-eyebrow">Procesando pago</span>
+        <h1 className="c-h1">Estamos confirmando tu pago</h1>
+        <p className="c-muted">
+          Suele tardar menos de 1 minuto. Esta página se actualiza sola. Si pasan más de 5 minutos sin novedad, escríbenos por WhatsApp.
+        </p>
+        {brand?.whatsapp_e164 && (
+          <p><a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" className="c-state__link">Escríbenos por WhatsApp</a></p>
+        )}
+        <ConfirmationPoller />
+      </main>
+    );
+  }
+
+  if (isYapeReview) {
+    return (
+      <main className="c-state c-checkout-canvas">
+        <span className="c-eyebrow c-state__dot c-state__dot--warn">Comprobante en revisión</span>
+        <h1 className="c-h1">{esYape ? 'Tu Yape está en revisión' : `Tu pago con ${frase} está en revisión`}</h1>
+        <p className="c-muted">
+          Te avisamos por email apenas {brand?.name ?? 'el organizador'} lo apruebe. Suele tomar entre 5 y 15 minutos en horario de atención.
+        </p>
+        {brand?.whatsapp_e164 && (
+          <p><a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" className="c-state__link">¿Pasó algo? Escríbenos por WhatsApp</a></p>
+        )}
+      </main>
+    );
+  }
+
+  // Yape sin comprobante a las 48 h: la reserva venció (0085). Antes de esto
+  // la orden quedaba pendiente para siempre.
+  if (order.payment_method === 'yape_manual' && order.status === 'expired') {
+    return (
+      <main className="c-state c-checkout-canvas">
+        <span className="c-eyebrow c-state__dot c-state__dot--alert">Reserva vencida</span>
+        <h1 className="c-h1">Tu reserva venció</h1>
+        <p className="c-muted">
+          {`No recibimos tu comprobante de ${frase} a tiempo, así que no se emitió ninguna entrada. Si todavía hay entradas, puedes comprar de nuevo.`}
+        </p>
+        <a href={`/${params.event}`} className="c-btn c-btn--brand">Comprar de nuevo</a>
+        {brand?.whatsapp_e164 && (
+          <p><a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" className="c-state__link">{esYape ? '¿Ya yapeaste? Escribe al organizador' : '¿Ya pagaste? Escribe al organizador'}</a></p>
+        )}
+      </main>
+    );
+  }
+
+  if (isYapeRejected) {
+    return (
+      <main className="c-state c-checkout-canvas">
+        <span className="c-eyebrow c-state__dot c-state__dot--alert">Comprobante rechazado</span>
+        <h1 className="c-h1">{esYape ? 'No pudimos validar tu Yape' : `No pudimos validar tu pago con ${frase}`}</h1>
+        <p className="c-muted">
+          {brand?.name ?? 'El promotor'} no pudo confirmar tu comprobante, así que no se emitió ninguna entrada y no quedó ningún cargo de nuestra parte. Si crees que es un error, escribe al organizador con tu comprobante a mano.
+        </p>
+        {brand?.whatsapp_e164 && (
+          <p><a href={`https://wa.me/${brand.whatsapp_e164.replace(/[^\d]/g, '')}`} target="_blank" rel="noopener noreferrer" className="c-state__link">Escribir al organizador por WhatsApp</a></p>
+        )}
+      </main>
+    );
+  }
+
+  // Pagado + tickets emitidos → la entrada, arriba de todo.
+  const tickets = order.tickets ?? [];
+  const firstTicket = tickets[0];
+  // QR inline: el mismo generador que /t. Mismo control de acceso que arriba
+  // (brand.slug === params.brand). El payload va solo dentro del QR.
+  const qrSvg = firstTicket ? await generateQrSvg(firstTicket.qr_code) : null;
+  const isMulti = tickets.length > 1;
+  const brandLogoUrl = brand?.theme_json?.logo_url ?? null;
+
+  // "Cómo llegar": mismo criterio que la página del evento (maps_url > coords > dirección).
+  const mapsHref = event?.venue_maps_url?.startsWith('https://')
+    ? event.venue_maps_url
+    : event?.venue_lat && event?.venue_lng
+      ? `https://www.google.com/maps/search/?api=1&query=${event.venue_lat},${event.venue_lng}`
+      : event?.venue_address
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue_address)}`
+        : null;
+  const calDetails = `Tu entrada para ${event?.name ?? 'el evento'}. Lleva ${event?.require_dni ? 'tu documento de identidad y ' : ''}tu QR (te llegó por email). Entrada por ParyGo.`;
+
+  return (
+    <main className="c-narrow c-checkout-canvas" style={{ paddingBottom: 'var(--b-s5)' }}>
+      <div className="c-confirm">
+        <span className="c-eyebrow c-state__dot c-state__dot--ok">Compra confirmada</span>
+        <h1 className="c-h1">Tu entrada está lista</h1>
+        <p className="c-muted">{event?.name}{event?.starts_at ? ` · ${formatEventDate(event.starts_at, zonaDe(brand?.zona_horaria))}` : ''}</p>
+      </div>
+
+      {/* La ENTRADA, no un recibo: la misma pieza que vive en /t/[uuid]. */}
+      {firstTicket && qrSvg && (
+        <div style={{ marginTop: 'var(--b-s4)' }}>
+          {isMulti && <p className="c-eyebrow c-ticket__n">Entrada 1 de {tickets.length}</p>}
+          <TicketPass
+            qrSvg={qrSvg}
+            qrCode={firstTicket.qr_code}
+            ticketTypeName={firstTicket.ticket_type_name}
+            attendeeName={order.buyer_name}
+            eventName={event?.name ?? 'Tu entrada'}
+            startsAt={event?.starts_at ?? null}
+            venueName={event?.venue_name ?? null}
+            brandName={brand?.name ?? 'parygo'}
+            brandLogoUrl={brandLogoUrl}
+            brandWhatsapp={brand?.whatsapp_e164 ?? null}
+            showFooter={false}
+            n={isMulti ? 1 : undefined}
+            zona={zonaDe(brand?.zona_horaria)}
+          />
+          {isMulti && (
+            <p style={{ marginTop: 'var(--b-s2)' }}>
+              <Link href={`/pedido/${order.id}`} className="c-btn c-btn--soft c-btn--block">
+                Ver mis {tickets.length} entradas <ArrowRight aria-hidden="true" />
+              </Link>
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ----- Secundario, más quieto, debajo del QR ----- */}
+      <section className="c-bloque">
+        <p className="c-eyebrow">Antes de ir</p>
+        {event?.starts_at && (
+          <AddToCalendar
+            title={event.name}
+            startIso={event.starts_at}
+            endIso={event.ends_at}
+            location={[event.venue_name, event.venue_address].filter(Boolean).join(', ') || null}
+            details={calDetails}
+            uid={order.id}
+          />
+        )}
+        {mapsHref && (
+          <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="b-link">
+            Cómo llegar{event?.venue_name ? ` · ${event.venue_name}` : ''} →
+          </a>
+        )}
+        <ul className="c-lista">
+          <li><TicketIcon aria-hidden="true" /> También te mandamos tu entrada por email. Puede demorar unos minutos.</li>
+          {event?.require_dni && (
+            <li><Check aria-hidden="true" /> Lleva tu documento de identidad: te lo pueden pedir en la puerta.</li>
+          )}
+          {!mapsHref && event?.venue_name && <li><MapPin aria-hidden="true" /> {event.venue_name}</li>}
+        </ul>
+      </section>
+
+      <section className="c-bloque">
+        <p className="c-eyebrow">Resumen</p>
+        <p className="c-fila"><span>A nombre de</span><b>{order.buyer_name}</b></p>
+        <p className="c-fila"><span>{tickets.length === 1 ? '1 entrada' : `${tickets.length} entradas`}</span><b>{formatMoney(order.total_cents, monedaDe(brand?.moneda))}</b></p>
+      </section>
+
+      <p className="c-muted-3" style={{ marginTop: 'var(--b-s3)' }}>
+        El QR de arriba ya es tu entrada: guárdalo como imagen.{' '}
+        <Link href="/reenviar" className="c-inlink">Buscar mis entradas por email</Link>
+      </p>
+
+      {/* Quién cobró y quién responde por el evento. */}
+      {brand && <LineaPago marca={brand} evento={event?.name} className="b-legal" />}
+    </main>
+  );
+}
