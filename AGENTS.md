@@ -102,20 +102,20 @@ Paul nunca toca esa plata (no hay `marketplace_fee`).
    hay eventos que cobran a la venta, mismo bloqueo que con el Yape.
 
 ## Tareas
-- [ ] 1. 0086 (columnas, RPCs, índice único) + ensayo + prueba de permisos JWT
+- [x] 1. 0086 (columnas, RPCs, índice único) + ensayo + prueba de permisos JWT
   real (anon y brand_admin NO ejecutan las RPCs nuevas). **Listo:** dryrun OK,
   aplicada, `e2e/mp-oauth-rpc.mjs` verde.
-- [ ] 2. `lib/mpOauth.ts`: armar URL (state + PKCE S256 con Web Crypto),
+- [x] 2. `lib/mpOauth.ts`: armar URL (state + PKCE S256 con Web Crypto),
   canjear code, refrescar; fetch directo (SDK prohibido en el edge). Tests
   unitarios del PKCE y de la validación de respuesta. **Listo:** test verde.
-- [ ] 3. Botón + server action + ruta de vuelta + Desconectar en Mi marca
+- [x] 3. Botón + server action + ruta de vuelta + Desconectar en Mi marca
   ("Cómo te pagan": Yape (Perú) · Mercado Pago (tarjeta y más)). Textos con
   `t()`. **Listo:** fase1 + panel-en verdes; captura 390/1440.
-- [ ] 4. Refresco perezoso con candado + fail-closed + aviso. **Listo:** test
+- [x] 4. Refresco perezoso con candado + fail-closed + aviso. **Listo:** test
   con token vencido simulado (sin llamar a MP real).
-- [ ] 5. Webhook: secreto por tipo de conexión + `user_id`; packs ignoran otros
+- [x] 5. Webhook: secreto por tipo de conexión + `user_id`; packs ignoran otros
   `user_id`. **Listo:** mp-liquidar + caso nuevo verdes.
-- [ ] 6. `marcaTieneMetodo` cuenta MP conectado; checkout. Retirar
+- [x] 6. `marcaTieneMetodo` cuenta MP conectado; checkout. Retirar
   MpCredentialsForm y su acción; actualizar paso K de fase1. **Listo:**
   publicar-metodo con caso "solo MP" + fase1 verde.
 - [ ] 7. security-reviewer + Codex adversarial + un pago REAL chico (S/ 1) de
@@ -129,4 +129,5 @@ Comisión de ParyGo por venta (`marketplace_fee`), PayPal de entradas, pago manu
 por país, cripto, Stripe, reembolsos desde el panel.
 
 ## Bloqueos
+- Tarea 7 (pago real): Paul no tiene segunda cuenta de MP → se hará con usuarios de PRUEBA de MP (POST /users/test) apenas estén PARYGO_MP_CLIENT_ID/SECRET.
 - Tareas 3+ en vivo esperan `PARYGO_MP_CLIENT_ID/SECRET` y la URL de redirección.
