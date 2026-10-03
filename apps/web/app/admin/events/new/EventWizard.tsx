@@ -442,7 +442,7 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
               const p = paisDe(moneda, zona);
               return (
                 <p className="s-hint cw-hint-top">
-                  {t(`Vendes desde ${p.nombre}: tus precios van en ${NOMBRE_MONEDA[moneda].es}. ¿Es otro país? Cámbialo en `, `You sell from ${p.name}: your prices are in ${NOMBRE_MONEDA[moneda].en}. Another country? Change it in `)}
+                  {t(`Tu marca es de ${p.nombre}: tus precios van en ${NOMBRE_MONEDA[moneda].es}. ¿Es de otro país? Cámbialo en `, `Your brand is from ${p.name}: your prices are in ${NOMBRE_MONEDA[moneda].en}. Another country? Change it in `)}
                   <a href="/admin/settings#cobro">{t('Mi marca', 'My brand')}</a>
                   {t(' antes de crear tu primer evento: después ya no se puede.', ' before creating your first event: it cannot be changed afterwards.')}
                 </p>
