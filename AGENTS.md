@@ -130,7 +130,7 @@ la marca; ParyGo sigue sin tocarla.
 - database.types.ts a mano (no regenerar entero).
 
 ## Tareas
-- [ ] 1. 0090 + 0091: dryrun, aplicar, verificar. e2e/paypal-0091.mjs: JWT anon
+- [x] 1. 0090 + 0091: dryrun, aplicar, verificar. e2e/paypal-0091.mjs: JWT anon
   y dueño NO leen paypal_* ni ejecutan las RPCs; settle: monto distinto,
   moneda distinta, otra marca, idempotencia, 2 settles simultáneos → 1 emite,
   capture_id de otra orden rechazado, refund anula, parcial no; sandbox en

@@ -751,7 +751,7 @@ cada consulta cruzaba el continente. Se prendió por la API de Cloudflare
 [placement] de apps/web/wrangler.toml NO lo aplicó la integración con Git.
 Verificar con el GET del proyecto de Pages; el PATCH conserva las variables.
 
-Incrementales, idempotentes, numeradas (vamos por 0089). Backwards-compatible
+Incrementales, idempotentes, numeradas (vamos por 0091). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
 para no romper la app vieja desplegada.
 
