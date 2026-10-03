@@ -49,7 +49,7 @@ export function EditBrandBasicsForm({
       <div className="s-form-grid">
         <div className="s-field">
           <label className="s-label" htmlFor="br-yapenum">Yape número</label>
-          <input id="br-yapenum" name="yape_number" defaultValue={yapeNumber ?? ''} className="s-input" inputMode="numeric" maxLength={20} />
+          <input id="br-yapenum" name="yape_number" defaultValue={yapeNumber ?? ''} className="s-input" maxLength={200} />
         </div>
         <div className="s-field">
           <label className="s-label" htmlFor="br-yapeholder">Yape titular</label>

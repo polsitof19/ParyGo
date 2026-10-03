@@ -84,7 +84,7 @@ export async function updateBrandSettingsAction(
   // Load the current brand (own its slug for the storage path + merge theme).
   const { data: brand, error: brandErr } = await admin
     .from('brands')
-    .select('id, slug, theme_json, yape_qr_url, moneda, zona_horaria, metodo_manual')
+    .select('id, slug, theme_json, yape_qr_url, yape_number, yape_holder, moneda, zona_horaria, metodo_manual')
     .eq('id', brandId)
     .single();
   if (brandErr || !brand) {
@@ -186,10 +186,22 @@ export async function updateBrandSettingsAction(
   const qrNuevo = yapeQrUrl !== null && yapeQrUrl !== (brand.yape_qr_url ?? (theme.yape_qr_url as string | undefined) ?? null);
   if (cambiaMoneda || (medio !== medioDe(brand.metodo_manual) && !qrNuevo)) yapeQrUrl = null;
 
-  // El medio no cambia con pagos por aprobar: la página de pago lee la marca en
-  // vivo y el comprador vería otra cuenta que la de su pedido.
-  if (medio !== medioDe(brand.metodo_manual)) {
-    const { count, error: pendErr } = await admin.from('orders').select('id', { count: 'exact', head: true }).eq('brand_id', brandId).eq('status', 'pending_yape_review');
+  // Medio, cuenta, titular o QR no cambian con pagos EN CURSO: la página de
+  // pago lee la marca en vivo y el comprador pagaría a la cuenta vieja (o vería
+  // una que no es la que pagó). En curso = con comprobante subido, o creado hace
+  // menos de 2 h (alguien pagando ahora). Un carrito abandonado sin comprobante
+  // no bloquea 48 h (security review M1, M2). ponytail: count + update sin
+  // lock; la ventana es de milisegundos y el que paga en ella ve la cuenta nueva.
+  const cambiaMedio = medio !== medioDe(brand.metodo_manual);
+  const cambiaCuenta = cambiaMedio
+    || (cuenta.cuenta || null) !== (brand.yape_number || null)
+    || (cuenta.titular || null) !== (brand.yape_holder || null)
+    || yapeQrUrl !== (brand.yape_qr_url ?? null);
+  if (cambiaCuenta) {
+    const hace2h = new Date(Date.now() - 2 * 3600e3).toISOString();
+    const { count, error: pendErr } = await admin.from('orders').select('id', { count: 'exact', head: true })
+      .eq('brand_id', brandId).eq('status', 'pending_yape_review')
+      .or(`yape_proof_id.not.is.null,created_at.gt.${hace2h}`);
     if (pendErr || (count ?? 0) > 0) {
       return { ok: false, message: t('Tienes pagos por aprobar. Apruébalos o recházalos antes de cambiar el medio de pago.', 'You have payments to approve. Approve or reject them before changing the payment method.'), fieldErrors: { metodo_manual: t('Hay pagos por aprobar', 'Payments pending') } };
     }
@@ -200,6 +212,11 @@ export async function updateBrandSettingsAction(
   if (!cuenta.cuenta && !(await marcaTieneMetodo(admin, brandId, { sinYape: true })) && (await marcaCobraEnVivo(admin, brandId))) {
     return { ok: false, message: t('Tienes eventos a la venta que cobran: no puedes quitar tu método de pago. Pásalos a borrador primero.', 'You have paid events on sale: you cannot remove your payment method. Move them to draft first.'), fieldErrors: { yape_number: t('Requerido mientras vendes', 'Required while selling') } };
   }
+
+  const cobroDiff = cambiaCuenta || cambiaMoneda
+    ? { cobro_cambiado: true, medio_antes: brand.metodo_manual, medio, moneda_antes: brand.moneda, moneda: pais.moneda,
+        cuenta_ultimos4: cuenta.cuenta ? cuenta.cuenta.slice(-4) : null, qr_cambiado: yapeQrUrl !== (brand.yape_qr_url ?? null) }
+    : {};
 
   const { error: updErr } = await admin
     .from('brands')
@@ -229,9 +246,11 @@ export async function updateBrandSettingsAction(
     brand_id: brandId,
     actor_user_id: user.id,
     type: 'brand_settings_updated',
-    payload: { logo_changed: Boolean(file instanceof File && file.size > 0) },
+    // El cambio de la cuenta de cobro queda en el registro (security review M4):
+    // es el desvío de plata más directo. Solo los últimos 4 de la cuenta.
+    payload: { logo_changed: Boolean(file instanceof File && file.size > 0), ...cobroDiff },
   });
-  await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId, accion: 'brand_settings_updated', diff: { logo_changed: Boolean(file instanceof File && file.size > 0) } });
+  await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId, accion: 'brand_settings_updated', diff: { logo_changed: Boolean(file instanceof File && file.size > 0), ...cobroDiff } });
 
   revalidatePath('/admin');
   revalidatePath('/admin/settings');
