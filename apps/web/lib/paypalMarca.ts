@@ -87,7 +87,11 @@ async function devolverAuto(
   }
   // Una orden ya emitida (captura duplicada) NO se toca: refund_paypal_order
   // contesta capture_mismatch y deja la bitácora.
-  await admin.rpc('refund_paypal_order', { p_order_id: orderId, p_brand_id: brandId, p_capture_id: capId, p_motivo: `auto:${causa}` });
+  const { error } = await admin.rpc('refund_paypal_order', { p_order_id: orderId, p_brand_id: brandId, p_capture_id: capId, p_motivo: `auto:${causa}` });
+  // La plata ya volvió pero la orden no lo anotó: 'error' hace que el aviso
+  // responda 503 y PayPal reintente; el reintento devuelve "ya devuelta"
+  // (CAPTURE_FULLY_REFUNDED) y vuelve a intentar anotarlo (Codex).
+  if (error) return { ok: false, motivo: 'error', detalle: `devolucion_sin_anotar:${causa}` };
   return { ok: false, motivo: 'devuelto', detalle: causa };
 }
 

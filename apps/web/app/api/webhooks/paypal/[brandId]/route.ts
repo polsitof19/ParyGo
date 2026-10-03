@@ -33,7 +33,13 @@ export async function POST(req: NextRequest, { params }: { params: { brandId: st
 
   const admin = createAdminClient();
   const r = await procesarAvisoPaypal(admin, params.brandId, evento, recurso, serverEnv.BRAND_CREDS_ENCRYPTION_KEY);
-  if (!r.ok && r.motivo === 'reintentar') return NextResponse.json({ ok: false }, { status: 503 });
+  // 'error' = falló la base al liquidar o la devolución automática: 503 para
+  // que PayPal reintente (con 200 dejaba de avisar y el cobro quedaba sin
+  // entrada si el comprador no volvía; Codex).
+  if (!r.ok && (r.motivo === 'reintentar' || r.motivo === 'error')) {
+    if (r.motivo === 'error') console.error('[paypal-webhook]', { brandId: params.brandId, evento, detalle: r.detalle });
+    return NextResponse.json({ ok: false }, { status: 503 });
+  }
   if (r.ok && r.action === 'issued') {
     const orden = await admin.from('orders').select('id').eq('brand_id', params.brandId).eq('paypal_capture_id', recurso.id ?? '').maybeSingle();
     if (orden.data) {
@@ -41,6 +47,5 @@ export async function POST(req: NextRequest, { params }: { params: { brandId: st
       if (!e.ok) console.error('[paypal-webhook] no se pudo encolar el email', { orderId: orden.data.id, reason: e.reason });
     }
   }
-  if (!r.ok && r.motivo === 'error') console.error('[paypal-webhook]', { brandId: params.brandId, evento, detalle: r.detalle });
   return NextResponse.json({ ok: true });
 }
