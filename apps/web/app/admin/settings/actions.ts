@@ -181,7 +181,10 @@ export async function updateBrandSettingsAction(
   if (!cuenta.ok) {
     return { ok: false, message: t(cuenta.es, cuenta.en), fieldErrors: { yape_number: t(cuenta.es, cuenta.en) } };
   }
-  if (cambiaMoneda) yapeQrUrl = null;
+  // Otro medio (o otra moneda) = el QR viejo es de OTRA cuenta: se borra salvo
+  // que en este mismo envío se haya subido uno nuevo (Codex P2).
+  const qrNuevo = yapeQrUrl !== null && yapeQrUrl !== (brand.yape_qr_url ?? (theme.yape_qr_url as string | undefined) ?? null);
+  if (cambiaMoneda || (medio !== medioDe(brand.metodo_manual) && !qrNuevo)) yapeQrUrl = null;
 
   // El medio no cambia con pagos por aprobar: la página de pago lee la marca en
   // vivo y el comprador vería otra cuenta que la de su pedido.
