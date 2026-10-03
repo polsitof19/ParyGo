@@ -5,8 +5,9 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireSession, type SessionUser } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { eventoCobra, marcaTieneMetodo, bajarABorradorSiFaltaMetodo } from '@/lib/metodoPago';
-import { limaToIso, shiftEnd, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
+import { eventoCobra, marcaTieneMetodo, bajarABorradorSiFaltaMetodo, monedaDeMarca, zonaDeMarca } from '@/lib/metodoPago';
+import { aCentavos } from '@/lib/moneda';
+import { fechaAIso, fechaInvalida, shiftEnd, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
 import { eventOverAt, isPubliclyOffered } from '@/lib/publicTicketGuard';
 import { generarToken, tokensPrivados, parseMaxPorPersona } from '@/lib/privateAccess';
 import { puedeEscribirComoSuper, type ModoEscrituraSuper } from '@/lib/impersonation';
@@ -35,8 +36,8 @@ async function authEvent(eventId: string, user: SessionUser) {
   return modo ? { brandId, modo } : null;
 }
 
-// limaToIso (datetime-local en hora de Lima → UTC ISO) vive en lib/eventValidation,
-// compartido con la creación de eventos.
+// fechaAIso (datetime-local en la hora de la marca → UTC ISO) vive en
+// lib/eventValidation, compartido con la creación de eventos.
 
 const eventSchema = z.object({
   name: z.string().min(2).max(120),
@@ -73,10 +74,10 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   const sendReminder = formData.get('send_reminder') === 'on';
   const collectAttendeeNames = formData.get('collect_attendee_names') === 'on';
   const allowTransfer = formData.get('allow_transfer') === 'on';
-  const startsIso = limaToIso(parsed.data.starts_at);
-  if (!startsIso) return { ok: false, message: t('Fecha/hora inválida.', 'Invalid date/time.') };
-
   const admin = createAdminClient();
+  const zona = await zonaDeMarca(admin, brandId);
+  const startsIso = fechaAIso(parsed.data.starts_at, zona);
+  if (!startsIso) return { ok: false, message: fechaInvalida(await idiomaPanel()) };
 
   // ===== GUARDA DE FECHA (server-side, no confiar en la UI) =====
   // Borrador: libre. Publicado sin ventas: libre (la UI avisa antes de guardar).
@@ -250,7 +251,7 @@ export async function setEventPublishedAction(
 // destinatario (uno por comprador; nunca se expone la lista).
 export async function postponeEventAction(
   eventId: string,
-  newStartsAtLima: string
+  newStartsAtLocal: string
 ): Promise<{ ok: boolean; message?: string; queued?: number }> {
   const user = await requireSession();
   const { t } = await textosPanel();
@@ -258,10 +259,10 @@ export async function postponeEventAction(
   const brandId = auth?.brandId ?? null;
   if (!brandId) return { ok: false, message: t('No tienes permiso sobre este evento.', 'You do not have permission over this event.') };
 
-  const startsIso = limaToIso(newStartsAtLima);
-  if (!startsIso) return { ok: false, message: t('Fecha/hora inválida.', 'Invalid date/time.') };
-
   const admin = createAdminClient();
+  const zona = await zonaDeMarca(admin, brandId);
+  const startsIso = fechaAIso(newStartsAtLocal, zona);
+  if (!startsIso) return { ok: false, message: fechaInvalida(await idiomaPanel()) };
   const { data: ev } = await admin
     .from('events')
     .select('id, name, starts_at, ends_at, venue_name')
@@ -306,8 +307,8 @@ export async function postponeEventAction(
     p_event_id: eventId,
     p_brand_id: brandId,
     p_event_name: ev.name as string,
-    p_old_label: formatEventDate(oldStartsAt),
-    p_new_label: formatEventDate(startsIso),
+    p_old_label: formatEventDate(oldStartsAt, zona),
+    p_new_label: formatEventDate(startsIso, zona),
     p_venue: (ev.venue_name as string | null) ?? '',
     p_new_iso: startsIso,
   });
@@ -641,7 +642,13 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   const name = String(formData.get('name') ?? '').trim().slice(0, 80) || tt.name;
   const isActive = formData.get('is_active') === 'on';
   const isUnlimited = formData.get('is_unlimited') === 'on';
-  const newPriceCents = Math.round(parseFloat(String(formData.get('price_soles') ?? '')) * 100);
+  // El precio se lee en la moneda de la marca, releída acá (nunca del form).
+  const moneda = await monedaDeMarca(admin, brandId);
+  const precioRaw = String(formData.get('price_soles') ?? '').trim();
+  let newPriceCents = NaN;
+  if (precioRaw !== '') {
+    try { newPriceCents = aCentavos(precioRaw, moneda); } catch { return { ok: false, message: t('Precio inválido.', 'Invalid price.') }; }
+  }
   const { data: evCfg } = await admin.from('events').select('is_published, is_free').eq('id', eventId).maybeSingle();
   const eventoEsGratis = evCfg?.is_free === true;
   const precioFinal = Number.isFinite(newPriceCents) ? newPriceCents : tt.price_cents;
@@ -728,7 +735,8 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   const pricingErr = validateTicketTypePricing(
     [{ name, isUnlimited: (update.is_unlimited as boolean | undefined) ?? tt.is_unlimited, pricesCents: resultingPrices }],
     { freeConfirmed: !becomingFree || formData.get('confirm_free') === '1' },
-    await idiomaPanel()
+    await idiomaPanel(),
+    moneda
   );
   if (pricingErr) return { ok: false, message: pricingErr };
 
@@ -767,14 +775,17 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
   const isUnlimited = formData.get('is_unlimited') === 'on';
   const colorHex = parseColorHex(formData);
   if (colorHex === false) return { ok: false, message: t('Color inválido.', 'Invalid color.') };
-  const priceCents =Math.round(parseFloat(String(formData.get('price_soles') ?? '')) * 100);
-  if (!Number.isFinite(priceCents) || priceCents < 0) return { ok: false, message: t('Precio inválido.', 'Invalid price.') };
+  const moneda = await monedaDeMarca(createAdminClient(), brandId);
+  let priceCents: number;
+  try { priceCents = aCentavos(String(formData.get('price_soles') ?? ''), moneda); } catch { return { ok: false, message: t('Precio inválido.', 'Invalid price.') }; }
+  if (String(formData.get('price_soles') ?? '').trim() === '') return { ok: false, message: t('Precio inválido.', 'Invalid price.') };
   const capacity = isUnlimited ? 0 : parseInt(String(formData.get('capacity') ?? ''), 10);
   if (!isUnlimited && (!Number.isFinite(capacity) || capacity < 1)) return { ok: false, message: t('Revisa "Cuántas hay": tiene que ser 1 o más.', 'Check "How many": it must be 1 or more.') };
   const pricingErr = validateTicketTypePricing(
     [{ name, isUnlimited, pricesCents: [priceCents] }],
     { freeConfirmed: formData.get('confirm_free') === '1' },
-    await idiomaPanel()
+    await idiomaPanel(),
+    moneda
   );
   if (pricingErr) return { ok: false, message: pricingErr };
   const bulkMinQtyRaw = Math.max(0, Math.min(10, parseInt(String(formData.get('bulk_min_qty') ?? '0'), 10) || 0));

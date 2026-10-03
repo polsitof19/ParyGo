@@ -5,6 +5,7 @@ import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ClientsTable, type ClientRow } from './ClientsTable';
 import { textosPanel } from '@/lib/idiomaServer';
+import { monedaDeMarca, zonaDeMarca } from '@/lib/metodoPago';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -18,6 +19,8 @@ export default async function EventClientsPage({ params, searchParams }: { param
   const { t } = await textosPanel();
 
   const admin = createAdminClient();
+  const monedaP = monedaDeMarca(admin, ctx.brandId); // en paralelo con el resto
+  const zonaP = zonaDeMarca(admin, ctx.brandId);
   // ENFORCEMENT: el evento debe ser de la marca activa (brand de la sesión o la
   // impersonada, nunca del form). Todo lo de abajo queda scopeado a este event_id.
   const { data: event } = await admin
@@ -85,6 +88,8 @@ export default async function EventClientsPage({ params, searchParams }: { param
         eventId={event.id}
         eventName={event.name}
         impersonating={ctx.soloLectura}
+        moneda={await monedaP}
+        zona={await zonaP}
         focusSearch={Boolean(searchParams.buscar || searchParams.reenviar)}
         hint={searchParams.reenviar && !ctx.soloLectura ? t('Busca al comprador y toca «Reenviar QR»: le llega otra vez el email con su entrada.', 'Search for the buyer and tap "Resend QR": the ticket email arrives again.') : null}
       />

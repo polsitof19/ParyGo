@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney } from '@/lib/moneda';
+import { monedaDeMarca, zonaDeMarca } from '@/lib/metodoPago';
 import { enLotes, todas } from '@/lib/todas';
 import { textosPanel } from '@/lib/idiomaServer';
 import { YapeReviewRow } from '../../../yape/YapeReviewRow';
@@ -24,9 +25,13 @@ export default async function EventYapePage({ params }: { params: { id: string }
   const impersonating = ctx.soloLectura;
 
   const admin = createAdminClient();
+  const monedaP = monedaDeMarca(admin, ctx.brandId); // en paralelo con el resto
+  const zonaP = zonaDeMarca(admin, ctx.brandId);
   const { data: event } = await admin.from('events').select('id, brand_id').eq('id', params.id).maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
   const { t } = await textosPanel();
+  const moneda = await monedaP;
+  const zona = await zonaP;
 
   const data = await todas((a, b) => admin
     .from('yape_proofs')
@@ -114,6 +119,8 @@ export default async function EventYapePage({ params }: { params: { id: string }
                 proofId={p.id}
                 receiptUrl={p.signedReceiptUrl}
                 amountCents={p.amount_cents}
+                moneda={moneda}
+                zona={zona}
                 expectedAmountCents={p.order?.total_cents ?? 0}
                 amountMatches={p.amount_cents === p.order?.total_cents}
                 operationNumber={p.operation_number}
@@ -123,7 +130,7 @@ export default async function EventYapePage({ params }: { params: { id: string }
                 buyerEmail={p.order?.buyer_email ?? ''}
                 buyerPhone={p.order?.buyer_phone ?? ''}
                 createdAt={p.created_at}
-                total={formatPEN(p.order?.total_cents ?? 0)}
+                total={formatMoney(p.order?.total_cents ?? 0, moneda)}
                 items={p.items}
                 impersonating={impersonating}
                 duplicateWarning={dupWarningByProof.get(p.id) ?? null}

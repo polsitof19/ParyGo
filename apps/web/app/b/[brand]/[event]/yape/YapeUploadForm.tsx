@@ -3,18 +3,19 @@
 import { useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Loader2, Upload, ImagePlus } from 'lucide-react';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney, simbolo, sinDecimales, type Moneda } from '@/lib/moneda';
 import { submitYapeProof } from './actions';
 
 type Props = {
   orderId: string;
   brandId: string;
   expectedAmountCents: number;
+  moneda: Moneda;
   buyerName: string;
   appUrl: string;
 };
 
-export function YapeUploadForm({ orderId, expectedAmountCents, buyerName }: Props) {
+export function YapeUploadForm({ orderId, expectedAmountCents, moneda, buyerName }: Props) {
   const [pending, start] = useTransition();
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -50,9 +51,9 @@ export function YapeUploadForm({ orderId, expectedAmountCents, buyerName }: Prop
       className="b-yapeform"
     >
       <div className="c-field">
-        <label htmlFor="amount" className="c-label">Monto que yapeaste (S/)</label>
-        <input id="amount" name="amount_soles" type="number" step="0.01" required defaultValue={(expectedAmountCents / 100).toFixed(2)} className="c-input" inputMode="decimal" />
-        <p className="c-help">Debe ser exactamente {formatPEN(expectedAmountCents)}</p>
+        <label htmlFor="amount" className="c-label">Monto que yapeaste ({simbolo(moneda)})</label>
+        <input id="amount" name="amount_soles" type="number" step={sinDecimales(moneda) ? 1 : 0.01} required defaultValue={sinDecimales(moneda) ? String(expectedAmountCents / 100) : (expectedAmountCents / 100).toFixed(2)} className="c-input" inputMode="decimal" />
+        <p className="c-help">Debe ser exactamente {formatMoney(expectedAmountCents, moneda)}</p>
       </div>
 
       <div className="c-field">

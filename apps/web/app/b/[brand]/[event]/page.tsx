@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { mpUsable } from '@/lib/mpConexion';
 import { serverEnv, publicEnv } from '@/lib/env';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney, monedaDe } from '@/lib/moneda';
 import { isPubliclyOffered } from '@/lib/publicTicketGuard';
 import { mismoToken, normalizarToken, tokensPrivados, limitesPrivados } from '@/lib/privateAccess';
 import { decidirDireccion, claseDireccion } from '@/lib/concepto';
@@ -31,7 +31,7 @@ async function loadEvent(brandSlug: string, eventSlug: string, acceso: string | 
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
-    .select('id, slug, name, theme_json, whatsapp_e164, yape_number, yape_holder, contact_email')
+    .select('id, slug, name, theme_json, whatsapp_e164, yape_number, yape_holder, contact_email, moneda, zona_horaria')
     .eq('slug', brandSlug)
     .is('archived_at', null) // marca archivada → evento no carga
     .maybeSingle();
@@ -329,7 +329,7 @@ export default async function EventPage({ params, searchParams }: Props) {
           {(() => {
             // Mismo criterio que la barra: el "desde" es la paga más barata; sin pagas, es gratis.
             const pagas = ticketTypes.map((t) => t.active_price_cents).filter((c) => c > 0);
-            return pagas.length ? `Entradas desde ${formatPEN(Math.min(...pagas))}.` : 'Entrada gratis.';
+            return pagas.length ? `Entradas desde ${formatMoney(Math.min(...pagas), monedaDe(brand.moneda))}.` : 'Entrada gratis.';
           })()}
         </p>
       </article>

@@ -1,18 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
+import { utcALocal, zonaDe } from '@/lib/zona';
 import { createEventAction, type FormState } from './actions';
 
 const initial: FormState = { ok: false, message: null, fieldErrors: {} };
 
-type Brand = { id: string; slug: string; name: string };
+type Brand = { id: string; slug: string; name: string; zona_horaria: string };
 
-// "YYYY-MM-DDTHH:mm" for use as a datetime-local min value.
-function nowLocalInput(): string {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 export function NewEventForm({
   brands,
@@ -23,7 +19,9 @@ export function NewEventForm({
 }) {
   const [state, action] = useFormState(createEventAction, initial);
   const preselected = brands.find((b) => b.slug === preselectedSlug);
-  const minDateTime = nowLocalInput();
+  // El min del datetime-local es "ahora" en la hora de la marca elegida.
+  const [brandId, setBrandId] = useState(preselected?.id ?? '');
+  const minDateTime = utcALocal(new Date(), zonaDe(brands.find((b) => b.id === brandId)?.zona_horaria));
 
   return (
     <form action={action} className="s-stack" style={{ gap: 16 }}>
@@ -35,6 +33,7 @@ export function NewEventForm({
             name="brand_id"
             required
             defaultValue={preselected?.id ?? ''}
+            onChange={(e) => setBrandId(e.target.value)}
             className="s-input s-select"
           >
             <option value="" disabled>Elige marca</option>

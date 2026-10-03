@@ -11,6 +11,7 @@ import { textosPanel } from '@/lib/idiomaServer';
 import { EventButtons } from './QuickActions';
 import { PublishControl } from './PublishControl';
 import { eventoCobra, marcaTieneMetodo } from '@/lib/metodoPago';
+import { formatEnZona, zonaDe } from '@/lib/zona';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -30,7 +31,7 @@ export default async function AdminEventPage({ params }: { params: { id: string 
   const admin = createAdminClient();
   const { data: event } = await admin
     .from('events')
-    .select('id, brand_id, slug, name, starts_at, venue_name, cover_url, is_published, is_free, brand:brands ( slug )')
+    .select('id, brand_id, slug, name, starts_at, venue_name, cover_url, is_published, is_free, brand:brands ( slug, zona_horaria )')
     .eq('id', params.id)
     .maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
@@ -57,7 +58,8 @@ export default async function AdminEventPage({ params }: { params: { id: string 
   const brandSlug = (Array.isArray(event.brand) ? event.brand[0] : event.brand)?.slug ?? null;
   const publicUrl = brandSlug ? `https://${brandSlug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${event.slug}` : null;
   const base = `/admin/events/${event.id}`;
-  const cuando = new Date(event.starts_at).toLocaleString(loc, { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' });
+  const zona = zonaDe((Array.isArray(event.brand) ? event.brand[0] : event.brand)?.zona_horaria);
+  const cuando = formatEnZona(event.starts_at, { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, zona, loc);
 
   const menu: { href: string; t: string; d: string; Icono: typeof BarChart3; badge?: number; solo?: boolean }[] = [
     { href: `${base}/estadisticas`, t: t('Estadísticas', 'Statistics'), d: t('Cuánto vendiste, por tipo de entrada, por día y quién entró', 'How much you sold, by ticket type, by day, and who checked in'), Icono: BarChart3 },

@@ -18,8 +18,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Minus, Plus, Lock, Ticket, User, Mail } from 'lucide-react';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney, type Moneda } from '@/lib/moneda';
 import { fmtCuando, fmtHora, distrito } from '@/lib/eventoTexto';
+import { formatEnZona, type Zona } from '@/lib/zona';
 export { fmtCuando, fmtHora, distrito };
 
 export type { Direccion } from '@/lib/concepto';
@@ -27,6 +28,10 @@ export type { Direccion } from '@/lib/concepto';
 export type Brand = {
   id: string; slug: string; name: string;
   yape_number: string | null; yape_holder: string | null;
+  // Moneda de las entradas (brands.moneda, 0088); sin ella, PEN.
+  moneda?: string | null;
+  // Zona horaria (brands.zona_horaria, 0088); sin ella, Lima.
+  zona_horaria?: string | null;
   // Contacto del organizador: es quien responde por el evento, así que la
   // página de compra tiene que poder linkearlo (ver lib/organizador.ts).
   whatsapp_e164?: string | null; contact_email?: string | null;
@@ -62,22 +67,21 @@ export type TicketType = {
 };
 
 // ---------------------------------------------------------------- fechas ---
-export function fmtCortoMayus(iso: string): string {
-  const d = new Date(iso);
-  const dia = new Intl.DateTimeFormat('es-PE', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'America/Lima' })
-    .format(d).replace(/[.,]/g, '').trim();
-  return `${dia} · ${fmtHora(iso)}`.toUpperCase();
+export function fmtCortoMayus(iso: string, zona: Zona = 'America/Lima'): string {
+  const dia = formatEnZona(iso, { weekday: 'short', day: 'numeric', month: 'short' }, zona)
+    .replace(/[.,]/g, '').trim();
+  return `${dia} · ${fmtHora(iso, zona)}`.toUpperCase();
 }
 
-export function fmtDiaLargo(iso: string): string {
-  return new Intl.DateTimeFormat('es-PE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Lima' })
-    .format(new Date(iso)).replace(/,/g, '').toUpperCase();
+export function fmtDiaLargo(iso: string, zona: Zona = 'America/Lima'): string {
+  return formatEnZona(iso, { weekday: 'long', day: 'numeric', month: 'long' }, zona)
+    .replace(/,/g, '').toUpperCase();
 }
 
 /** "27 set" — para el corte de una fase. */
-export function fmtDia(iso: string): string {
-  return new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', timeZone: 'America/Lima' })
-    .format(new Date(iso)).replace(/[-.]/g, ' ').trim();
+export function fmtDia(iso: string, zona: Zona = 'America/Lima'): string {
+  return formatEnZona(iso, { day: '2-digit', month: 'short' }, zona)
+    .replace(/[-.]/g, ' ').trim();
 }
 
 
@@ -107,7 +111,7 @@ export type Peldano = {
  *  después de la última), la PRÓXIMA y, si no hay próxima, la última que
  *  terminó. Lo que se muestra es lo que cobra startCheckout. Los tres
  *  conceptos parten de esta misma lista. */
-export function armarEscalera(t: TicketType): Peldano[] {
+export function armarEscalera(t: TicketType, zona: Zona = 'America/Lima'): Peldano[] {
   const ahora = Date.now();
   if (t.phases.length === 0) {
     return [{ titulo: t.name, sub: null, precio: t.active_price_cents, estado: 'vigente' }];
@@ -133,7 +137,7 @@ export function armarEscalera(t: TicketType): Peldano[] {
     const ultima = i === ordenadas.length - 1;
     const nombre = f.name?.trim() || (ultima && ordenadas.length > 1 ? 'Regular' : `Preventa ${i + 1}`);
     if (estado === 'vigente') {
-      const sub = f.ends_at ? `${nombre} · hasta el ${fmtDia(f.ends_at)}` : nombre;
+      const sub = f.ends_at ? `${nombre} · hasta el ${fmtDia(f.ends_at, zona)}` : nombre;
       return { titulo: t.name, sub, precio: f.price_cents, estado };
     }
     // Una preventa que ya pasó se lee como "Agotada" (así lo anuncia el
@@ -141,8 +145,8 @@ export function armarEscalera(t: TicketType): Peldano[] {
     let sub: string | null = estado === 'pasada' ? 'Agotada' : null;
     if (estado === 'futura' && f.starts_at) {
       const previa = ordenadas[i - 1]?.ends_at;
-      const mismoDia = previa ? fmtDia(previa) === fmtDia(f.starts_at) : false;
-      if (!mismoDia) sub = `desde el ${fmtDia(f.starts_at)}`;
+      const mismoDia = previa ? fmtDia(previa, zona) === fmtDia(f.starts_at, zona) : false;
+      if (!mismoDia) sub = `desde el ${fmtDia(f.starts_at, zona)}`;
     }
     return { titulo: nombre, sub, precio: f.price_cents, estado };
   });
@@ -185,6 +189,7 @@ export function Accion({
 }
 
 type FilaProps = {
+  moneda: Moneda;
   t: TicketType; escalera: Peldano[]; cur: number; incluye: string | null;
   onInc: () => void; onDec: () => void;
 };
@@ -198,7 +203,7 @@ type FilaProps = {
 // estamos y hacia dónde va—. Lo que cambia entre canvas y editorial es el
 // CSS, no el markup: dos árboles distintos para la misma información serían
 // dos cosas que mantener y dos formas de que se desincronicen.
-export function FilaEntrada({ t, escalera: todas, cur, incluye, onInc, onDec }: FilaProps) {
+export function FilaEntrada({ moneda, t, escalera: todas, cur, incluye, onInc, onDec }: FilaProps) {
   // Las preventas que YA PASARON no se muestran (2026-09-26): dos "Agotada"
   // tachadas por tipo hacían creer que no quedaban entradas. Queda la fase de
   // hoy y, si hay, las que vienen (cuánto va a costar después).
@@ -218,13 +223,13 @@ export function FilaEntrada({ t, escalera: todas, cur, incluye, onInc, onDec }: 
         </div>
         {/* Un tipo a 0 que llega al público es de un evento GRATIS (las cortesías
             no se ofrecen): dice "Gratis", nunca "S/ 0". */}
-        <span className="b-ph__pr b1-ty__pr">{vigente.precio === 0 ? 'Gratis' : formatPEN(vigente.precio)}</span>
+        <span className="b-ph__pr b1-ty__pr">{vigente.precio === 0 ? 'Gratis' : formatMoney(vigente.precio, moneda)}</span>
         <span className="b-ph__act b1-ty__act">
           <Accion t={t} cur={cur} estado="vigente" onInc={onInc} onDec={onDec} />
         </span>
       </div>
 
-      {escalera.length > 1 && <Linea t={t} escalera={escalera} iVig={iVig} />}
+      {escalera.length > 1 && <Linea t={t} escalera={escalera} iVig={iVig} moneda={moneda} />}
     </div>
   );
 }
@@ -232,14 +237,14 @@ export function FilaEntrada({ t, escalera: todas, cur, incluye, onInc, onDec }: 
 /** La línea de tiempo de fases. La comparten CARTEL y ENTRADA: el riel es un
  *  hairline, cada etapa un punto, y la vigente lleva el color de la marca en
  *  el punto y en el tramo —nunca en el texto, que sigue en tinta. */
-function Linea({ t, escalera, iVig }: { t: TicketType; escalera: Peldano[]; iVig: number }) {
+function Linea({ t, escalera, iVig, moneda }: { t: TicketType; escalera: Peldano[]; iVig: number; moneda: Moneda }) {
   return (
         <ol className="b1-line" aria-label={`Precios de ${t.name} por etapa`}>
           {escalera.map((f, i) => (
             <li key={i} className={`b1-line__n${i === iVig ? ' b1-line__n--on' : ''}${i < iVig ? ' b1-line__n--past' : ''}`}>
               <span className="b1-line__dot" aria-hidden="true" />
               <span className="b1-line__lb">{nombreFase(t, f, i, escalera.length)}</span>
-              <span className="b1-line__pr">{f.precio === 0 ? 'Gratis' : formatPEN(f.precio)}</span>
+              <span className="b1-line__pr">{f.precio === 0 ? 'Gratis' : formatMoney(f.precio, moneda)}</span>
               {f.sub && i !== iVig && <span className="b1-line__sub">{f.sub}</span>}
               {i === iVig && f.sub && <span className="b1-line__sub">{f.sub.replace(/^.*·\s*/, '')}</span>}
             </li>

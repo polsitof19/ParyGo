@@ -1,3 +1,4 @@
+import { formatEnZona, zonaDe, type Zona } from '@/lib/zona';
 import { type NextRequest } from 'next/server';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
@@ -17,8 +18,8 @@ export const dynamic = 'force-dynamic';
 const BATCH = 1000;
 const docLabel = (t: string | null) => (t === 'ce' ? 'CE' : t === 'passport' ? 'Pasaporte' : 'DNI');
 const methodLabel = (m: string) => (m === 'mercadopago' ? 'MercadoPago' : m === 'yape_manual' ? 'Yape' : m);
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' });
+const fmtDate = (iso: string, zona: Zona) =>
+  formatEnZona(iso, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, zona, 'es-PE');
 
 // Escape CSV: comillas dobladas + envolver si hay coma/comilla/salto de línea.
 function csvCell(v: string | number | null): string {
@@ -54,12 +55,14 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   // del parámetro libre. Mismo guard que /clientes.
   const { data: event } = await admin
     .from('events')
-    .select('id, brand_id, name')
+    .select('id, brand_id, name, brand:brands ( zona_horaria )')
     .eq('id', params.id)
     .maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) {
     return new Response('No encontrado', { status: 404 });
   }
+
+  const zona = zonaDe((Array.isArray(event.brand) ? event.brand[0] : event.brand)?.zona_horaria);
 
   // Traemos TODAS las órdenes pagadas en lotes (sin tope de página).
   const headers = ['Nombre', 'Email', 'WhatsApp', 'Documento', 'Entradas', 'Total', 'Descuento', 'Método', 'Fecha'];
@@ -84,7 +87,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         csvCell(o.buyer_name), csvCell(o.buyer_email), csvCell(o.buyer_phone),
         csvCell(`${docLabel(o.buyer_doc_type)} ${o.buyer_dni ?? ''}`.trim()),
         csvCell(tix), csvCell(((o.total_cents ?? 0) / 100).toFixed(2)), csvCell(((o.discount_cents ?? 0) / 100).toFixed(2)),
-        csvCell(methodLabel(o.payment_method)), csvCell(fmtDate(o.created_at)),
+        csvCell(methodLabel(o.payment_method)), csvCell(fmtDate(o.created_at, zona)),
       ].join(','));
     }
     if (batch.length < BATCH) break;

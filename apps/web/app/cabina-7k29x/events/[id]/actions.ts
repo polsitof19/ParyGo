@@ -4,8 +4,8 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { eventoCobra, marcaTieneMetodo } from '@/lib/metodoPago';
-import { solesToCents } from '@/lib/utils';
+import { eventoCobra, marcaTieneMetodo, monedaDeMarca } from '@/lib/metodoPago';
+import { aCentavos } from '@/lib/moneda';
 import { validateTicketTypePricing } from '@/lib/eventValidation';
 import { eventOverAt } from '@/lib/publicTicketGuard';
 
@@ -50,7 +50,6 @@ export async function upsertTicketTypeAction(formData: FormData): Promise<Upsert
     return { ok: false, message: first ? `${first.path.join('.')}: ${first.message}` : 'Datos inválidos' };
   }
 
-  const priceCents = solesToCents(parsed.data.price_soles);
   const capacity = parseInt(parsed.data.capacity, 10);
   if (!Number.isFinite(capacity) || capacity < 0) {
     return { ok: false, message: 'Capacidad inválida' };
@@ -58,6 +57,13 @@ export async function upsertTicketTypeAction(formData: FormData): Promise<Upsert
   const sortOrder = parsed.data.sort_order ? parseInt(parsed.data.sort_order, 10) : 0;
 
   const admin = createAdminClient();
+
+  // Precio en la moneda de la marca del evento, releída acá (nunca del form).
+  const { data: evMarca } = await admin.from('events').select('brand_id').eq('id', parsed.data.event_id).maybeSingle();
+  if (!evMarca?.brand_id) return { ok: false, message: 'Evento no encontrado' };
+  const moneda = await monedaDeMarca(admin, evMarca.brand_id);
+  let priceCents: number;
+  try { priceCents = aCentavos(parsed.data.price_soles, moneda); } catch { return { ok: false, message: 'Precio inválido' }; }
 
   // S/0: solo con confirmación explícita, y solo si el precio PASA a 0 (alta o
   // edición que lo cambia). Los tipos de la cabina no son ilimitados.
@@ -69,7 +75,9 @@ export async function upsertTicketTypeAction(formData: FormData): Promise<Upsert
   const becomingFree = priceCents === 0 && previousPrice !== 0;
   const pricingErr = validateTicketTypePricing(
     [{ name: parsed.data.name, isUnlimited: false, pricesCents: [priceCents] }],
-    { freeConfirmed: !becomingFree || formData.get('confirm_free') === '1' }
+    { freeConfirmed: !becomingFree || formData.get('confirm_free') === '1' },
+    'es',
+    moneda
   );
   if (pricingErr) return { ok: false, message: pricingErr };
 

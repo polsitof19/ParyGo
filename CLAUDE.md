@@ -411,6 +411,28 @@ supabase/verify-0053-0058.mjs (comprobaciones de estado esperado).
 OJO con `mgmt.mjs types`: PISA database.types.ts entero y regenerarlo completo
 rompe tipos afinados a mano — las columnas nuevas se agregan a mano.
 
+VENDER FUERA DE PERÚ (0088 + 0089, 2026-10-03; plan en AGENTS.md). brands.moneda
+(PEN|USD|COP|MXN|CLP|ARS|EUR, default PEN), zona_horaria (8 zonas, default
+America/Lima) y metodo_manual (yape|nequi|bizum|zelle|usdt|transferencia,
+default yape; CHECK de compatibilidad con la moneda). Los precios siguen
+siendo enteros ×100 de la moneda de la marca (también CLP/COP). La moneda NO
+cambia si la marca tiene un EVENTO (trigger guard_brand_moneda; FOR SHARE en
+events; create_brand_event compara p_event.moneda bajo el lock → MONEDA_CAMBIO).
+Mostrar: lib/moneda.ts formatMoney(cents, moneda) (PEN idéntico a formatPEN,
+que queda SOLO para packs). Leer: aCentavos(input, moneda) — en CLP/COP el
+punto es separador de MILES ("50.000" = cincuenta mil) y no hay decimales; la
+moneda SIEMPRE se relee en el server con monedaDeMarca (falla cerrado: nunca
+cae en PEN). Fechas de la marca: lib/zona.ts (formatEnZona, localAUtc que
+rechaza la hora inexistente del horario de verano, utcALocal, hoyEn) con
+zonaDeMarca en el server; los agregados globales de la cabina (ventas, salud,
+solicitudes, packs) siguen en hora de Lima. Mercado Pago de entradas SOLO en
+PEN (startCheckout lo rechaza en otra moneda). Medio manual: reusa
+yape_number (cuenta), yape_holder (titular; en USDT la red) y yape_qr_url;
+payment_method 'yape_manual' = "pago manual con comprobante" para todos.
+lib/metodoManual.ts = países, medios y validación de cuenta. Tests:
+e2e/pais-0088.mjs 18/18 (JWT, CHECKs, MONEDA_CAMBIO, carrera), moneda 20,
+zona 16, metodo-manual 20. Codex sandbox NO escribe en el repo: implementador.
+
 CONECTAR MERCADO PAGO (0086 + 0087, 2026-10-03; plan y decisiones en docs/conectar-mp.md).
 ÚNICO modo de cobrar con tarjeta: OAuth (se retiraron las credenciales
 manuales; 0 marcas las tenían). Mi marca → "Mercado Pago (tarjeta y más)" →
@@ -720,7 +742,7 @@ cada consulta cruzaba el continente. Se prendió por la API de Cloudflare
 [placement] de apps/web/wrangler.toml NO lo aplicó la integración con Git.
 Verificar con el GET del proyecto de Pages; el PATCH conserva las variables.
 
-Incrementales, idempotentes, numeradas (vamos por 0087). Backwards-compatible
+Incrementales, idempotentes, numeradas (vamos por 0089). Backwards-compatible
 cuando haya venta en curso: patrón two-phase (schema → deploy → canary → flip)
 para no romper la app vieja desplegada.
 

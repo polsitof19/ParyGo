@@ -1,6 +1,7 @@
 import { Calendar, MapPin } from 'lucide-react';
 import { optimizedImage } from '@/lib/imageUrl';
 import { formatEventDate } from '@/lib/utils';
+import type { Zona } from '@/lib/zona';
 import { SaveTicketImage, CompartirEntrada, type DatosEntrada } from './SaveTicketImage';
 import { LineaEntrada } from './Responsable';
 import { ReenviarMiEntrada } from './ReenviarMiEntrada';
@@ -37,6 +38,7 @@ export function TicketPass({
   showFooter = true,
   reenviar = true,
   n,
+  zona = 'America/Lima',
 }: {
   qrSvg: string;
   /** Payload del QR: viaja al componer la imagen y al reenvío, nunca se pinta. */
@@ -57,8 +59,10 @@ export function TicketPass({
   reenviar?: boolean;
   /** Número de la entrada dentro del pedido, para el nombre del archivo. */
   n?: number;
+  /** Zona horaria de la marca (brands.zona_horaria); sin ella, Lima. */
+  zona?: Zona;
 }) {
-  const cuando = startsAt ? formatEventDate(startsAt) : null;
+  const cuando = startsAt ? formatEventDate(startsAt, zona) : null;
   const datos: DatosEntrada = {
     qrCode, eventName, ticketTypeName, attendeeName, whenText: cuando, venueName, brandName,
   };

@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { formatEnZona, type Zona } from '@/lib/zona';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -41,16 +42,16 @@ export function formatLima(d: Date | string, opts: Intl.DateTimeFormatOptions): 
   return new Intl.DateTimeFormat('es-PE', { ...opts, timeZone: LIMA_TZ }).format(date);
 }
 
-// Format a Date as "Sáb 24 may · 22:00" en hora de Lima.
-export function formatEventDate(d: Date | string): string {
-  return formatLima(d, {
+// Format a Date as "Sáb 24 may · 22:00" en la hora de la marca (Lima si no se pasa).
+export function formatEventDate(d: Date | string, zona: Zona = 'America/Lima'): string {
+  return formatEnZona(d, {
     weekday: 'short',
     day: '2-digit',
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-  }).replace(',', ' ·');
+  }, zona).replace(',', ' ·');
 }
 
 // Build a wa.me deep link with prefilled text.

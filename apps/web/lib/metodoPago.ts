@@ -1,4 +1,23 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { monedaDe, type Moneda } from '@/lib/moneda';
+import { zonaDe, type Zona } from '@/lib/zona';
+
+// Moneda de las entradas de la marca, releída en el server (nunca del form).
+// Falla CERRADO: si no se puede leer, tira. Caer en PEN leería "50.000" de una
+// marca en COP como 50 soles.
+export async function monedaDeMarca(admin: SupabaseClient, brandId: string): Promise<Moneda> {
+  const { data, error } = await admin.from('brands').select('moneda').eq('id', brandId).maybeSingle();
+  if (error || !data) throw new Error('No se pudo leer la moneda de la marca');
+  return monedaDe(data.moneda);
+}
+
+// Zona horaria de la marca, releída en el server (nunca del form). Falla CERRADO:
+// caer en Lima correría el evento de una marca de Madrid.
+export async function zonaDeMarca(admin: SupabaseClient, brandId: string): Promise<Zona> {
+  const { data, error } = await admin.from('brands').select('zona_horaria').eq('id', brandId).maybeSingle();
+  if (error || !data) throw new Error('No se pudo leer la zona horaria de la marca');
+  return zonaDe(data.zona_horaria);
+}
 
 // ¿Hace falta un método de pago para publicar este evento? (Paul, 2026-10-01:
 // "algunos eventos tal vez sean gratis y no es necesario el método de pago").

@@ -6,7 +6,10 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { puedeEscribirComoSuper, type ModoEscrituraSuper } from '@/lib/impersonation';
 import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { sendPromoCodeEmail } from '@/lib/email/sendPromoCodeEmail';
-import { textosPanel } from '@/lib/idiomaServer';
+import { textosPanel, idiomaPanel } from '@/lib/idiomaServer';
+import { monedaDeMarca, zonaDeMarca } from '@/lib/metodoPago';
+import { fechaAIso, fechaInvalida } from '@/lib/eventValidation';
+import { aCentavos } from '@/lib/moneda';
 
 type CreateResult = { ok: true; id: string } | { ok: false; message: string };
 type RevokeResult = { ok: boolean; message?: string };
@@ -60,8 +63,9 @@ export type CreatePromoInput = {
   code: string;
   label: string;
   discountType: 'percent' | 'fixed' | 'free';
-  // For percent: 1..100. For fixed: amount in SOLES (we convert to cents). Ignored for free.
-  discountValue: number;
+  // For percent: 1..100. For fixed: amount in the brand's currency, as typed
+  // (aCentavos converts it). Ignored for free.
+  discountValue: number | string;
   // null = unlimited
   maxUses: number | null;
   perEmailLimit: number;
@@ -110,13 +114,16 @@ export async function createPromoCode(input: CreatePromoInput): Promise<CreateRe
 
   let discountValue = 0;
   if (input.discountType === 'percent') {
-    discountValue = Math.round(input.discountValue);
+    discountValue = Math.round(Number(input.discountValue));
+    if (!Number.isFinite(discountValue)) discountValue = 0;
     if (discountValue < 1 || discountValue > 100) {
       return { ok: false, message: t('El porcentaje debe estar entre 1 y 100.', 'The percentage must be between 1 and 100.') };
     }
   } else if (input.discountType === 'fixed') {
-    // UI sends soles; store cents.
-    discountValue = Math.round(input.discountValue * 100);
+    // UI sends the amount in the brand's currency (re-read here); store cents.
+    try { discountValue = aCentavos(input.discountValue, await monedaDeMarca(admin, brandId)); } catch {
+      return { ok: false, message: t('Monto inválido.', 'Invalid amount.') };
+    }
     if (discountValue < 1) {
       return { ok: false, message: t('El monto fijo debe ser mayor a cero.', 'The fixed amount must be greater than zero.') };
     }
@@ -134,11 +141,11 @@ export async function createPromoCode(input: CreatePromoInput): Promise<CreateRe
 
   let expiresAt: string | null = null;
   if (input.expiresAt && input.expiresAt.trim()) {
-    const d = new Date(input.expiresAt);
-    if (Number.isNaN(d.getTime())) {
-      return { ok: false, message: t('Fecha de expiración inválida.', 'Invalid expiration date.') };
+    // datetime-local en la hora de la MARCA (releída aquí), no la del server.
+    expiresAt = fechaAIso(input.expiresAt.trim(), await zonaDeMarca(admin, brandId));
+    if (!expiresAt) {
+      return { ok: false, message: fechaInvalida(await idiomaPanel()) };
     }
-    expiresAt = d.toISOString();
   }
 
   const appliesToAll = input.appliesToAll;

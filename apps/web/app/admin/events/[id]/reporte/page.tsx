@@ -3,7 +3,8 @@ import { requireSession } from '@/lib/auth';
 import { todas } from '@/lib/todas';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney } from '@/lib/moneda';
+import { monedaDeMarca } from '@/lib/metodoPago';
 import { PrintReportButton } from './PrintReportButton';
 import { textosPanel } from '@/lib/idiomaServer';
 
@@ -37,13 +38,14 @@ export default async function ReportePage({ params }: { params: { id: string } }
   if (!event || event.brand_id !== ctx.brandId) notFound();
 
   // Todo depende solo del event_id → en paralelo.
-  const [ttRes, statsRes, ordRes, oiRes, promoRes, redRes] = await Promise.all([
+  const [ttRes, statsRes, ordRes, oiRes, promoRes, redRes, moneda] = await Promise.all([
     admin.from('ticket_types').select('id, name, sort_order').eq('event_id', event.id).order('sort_order'),
     admin.rpc('event_ticket_stats', { p_event_id: event.id }),
     todas((a, b) => admin.from('orders').select('id, total_cents, payment_method').eq('event_id', event.id).eq('status', 'paid').order('id').range(a, b)).then((data) => ({ data })),
     todas((a, b) => admin.from('order_items').select('id, ticket_type_id, subtotal_cents, orders!inner(event_id, status)').eq('orders.event_id', event.id).eq('orders.status', 'paid').order('id').range(a, b)).then((data) => ({ data })),
     admin.from('promo_codes').select('id, code, label').eq('event_id', event.id),
     todas((a, b) => admin.from('promo_redemptions').select(`promo_code_id, orders!inner(total_cents, status, event_id, order_items(quantity))`).eq('event_id', event.id).eq('status', 'consumed').order('id').range(a, b)).then((data) => ({ data })),
+    monedaDeMarca(admin, ctx.brandId),
   ]);
 
   const types = ttRes.data ?? [];
@@ -118,7 +120,7 @@ export default async function ReportePage({ params }: { params: { id: string } }
       {/* KPIs */}
       <div className="s-form-grid" style={{ gap: 12, marginBottom: 14 }}>
         <Kpi label={t('Entradas vendidas', 'Tickets sold')} value={String(totalVendidas)} />
-        <Kpi label={t('Recaudado', 'Collected')} value={formatPEN(totalRecaudado)} />
+        <Kpi label={t('Recaudado', 'Collected')} value={formatMoney(totalRecaudado, moneda)} />
         <Kpi label={t('Asistencia', 'Attendance')} value={`${asistenciaPct}%`} sub={t(`${totalEscaneadas} de ${totalVendidas} ingresaron`, `${totalEscaneadas} of ${totalVendidas} entered`)} />
         <Kpi label={t('No-shows', 'No-shows')} value={String(noShows)} sub={t('vendidas que no ingresaron', 'sold but did not enter')} />
       </div>
@@ -129,7 +131,7 @@ export default async function ReportePage({ params }: { params: { id: string } }
         {byMethod.size === 0 ? <p className="s-empty">{t('Sin ventas pagadas todavía.', 'No paid sales yet.')}</p> : (
           <div className="s-stack" style={{ gap: 6, marginTop: 6 }}>
             {[...byMethod.entries()].map(([m, v]) => (
-              <Line key={m} left={t(`${methodLabel(m)} · ${v.n} orden${v.n === 1 ? '' : 'es'}`, `${methodLabel(m)} · ${v.n} order${v.n === 1 ? '' : 's'}`)} right={formatPEN(v.cents)} />
+              <Line key={m} left={t(`${methodLabel(m)} · ${v.n} orden${v.n === 1 ? '' : 'es'}`, `${methodLabel(m)} · ${v.n} order${v.n === 1 ? '' : 's'}`)} right={formatMoney(v.cents, moneda)} />
             ))}
           </div>
         )}
@@ -144,7 +146,7 @@ export default async function ReportePage({ params }: { params: { id: string } }
               <div key={r.id} style={{ borderTop: '1px solid var(--line)', paddingTop: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                   <strong>{r.name}</strong>
-                  <span>{formatPEN(r.recaudadoCents)}</span>
+                  <span>{formatMoney(r.recaudadoCents, moneda)}</span>
                 </div>
                 <p className="s-muted" style={{ fontSize: 13, marginTop: 2 }}>
                   {t(
@@ -165,7 +167,7 @@ export default async function ReportePage({ params }: { params: { id: string } }
         {promoRows.length === 0 ? <p className="s-empty">{t('No hubo ventas con código de promotor.', 'There were no sales with a promoter code.')}</p> : (
           <div className="s-stack" style={{ gap: 6, marginTop: 6 }}>
             {promoRows.map((r) => (
-              <Line key={r.code} left={t(`${r.label || r.code} · ${r.entradas} entrada${r.entradas === 1 ? '' : 's'}`, `${r.label || r.code} · ${r.entradas} ticket${r.entradas === 1 ? '' : 's'}`)} right={formatPEN(r.recaudadoCents)} />
+              <Line key={r.code} left={t(`${r.label || r.code} · ${r.entradas} entrada${r.entradas === 1 ? '' : 's'}`, `${r.label || r.code} · ${r.entradas} ticket${r.entradas === 1 ? '' : 's'}`)} right={formatMoney(r.recaudadoCents, moneda)} />
             ))}
           </div>
         )}

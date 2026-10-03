@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney, monedaDe, sinDecimales } from '@/lib/moneda';
 import { YapeUploadForm } from './YapeUploadForm';
 import { CopyButton } from './CopyButton';
 import { DownloadQrButton } from './DownloadQrButton';
@@ -41,6 +41,7 @@ export default async function YapeUploadPage({
       contact_email: string | null;
       theme_json: { yape_qr_url?: string | null } | null;
       yape_qr_url: string | null;
+      moneda: string;
     } | null;
     event: { name: string; slug: string } | null;
   };
@@ -49,7 +50,7 @@ export default async function YapeUploadPage({
     .from('orders')
     .select(`
       id, status, total_cents, buyer_name, payment_method,
-      brand:brands ( slug, name, yape_number, yape_holder, whatsapp_e164, contact_email, theme_json, yape_qr_url ),
+      brand:brands ( slug, name, yape_number, yape_holder, whatsapp_e164, contact_email, theme_json, yape_qr_url, moneda ),
       event:events ( name, slug )
     `)
     .eq('id', searchParams.order)
@@ -112,8 +113,8 @@ export default async function YapeUploadPage({
       <div className="b-panel">
         <p className="b-panel__t">El monto exacto</p>
         <div className="b-monto">
-          <span>{formatPEN(order.total_cents)}</span>
-          <CopyButton value={(order.total_cents / 100).toFixed(2)} label="monto" />
+          <span>{formatMoney(order.total_cents, monedaDe(order.brand?.moneda))}</span>
+          <CopyButton value={sinDecimales(monedaDe(order.brand?.moneda)) ? String(order.total_cents / 100) : (order.total_cents / 100).toFixed(2)} label="monto" />
         </div>
         <p className="b-aviso">Si yapeas de menos o de más, el organizador puede rechazar el comprobante.</p>
       </div>
@@ -125,6 +126,7 @@ export default async function YapeUploadPage({
           orderId={order.id}
           brandId={order.brand.slug}
           expectedAmountCents={order.total_cents}
+          moneda={monedaDe(order.brand?.moneda)}
           buyerName={order.buyer_name}
           appUrl={publicEnv.NEXT_PUBLIC_APP_URL}
         />

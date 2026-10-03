@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation';
 import { todas } from '@/lib/todas';
 import { ChevronLeft, ExternalLink } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney, monedaDe } from '@/lib/moneda';
+import { formatEnZona, utcALocal, zonaDe } from '@/lib/zona';
 import { brandColor } from '@/lib/brandColors';
 import { BrandLogo } from '@/components/BrandLogo';
 import { publicEnv } from '@/lib/env';
@@ -19,11 +20,6 @@ import { onColor } from '../../on-color';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-// UTC → "YYYY-MM-DDTHH:mm" en hora de Lima (UTC-5) para el input datetime-local.
-function toLimaLocal(iso: string): string {
-  return new Date(new Date(iso).getTime() - 5 * 3600 * 1000).toISOString().slice(0, 16);
-}
-
 export default async function EventDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
   const { data: event } = await supabase
@@ -32,7 +28,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
       id, slug, name, description, starts_at, ends_at,
       venue_name, venue_address, venue_maps_url, require_age_confirmation, require_dni, send_reminder, collect_attendee_names, allow_transfer, min_age, max_per_person, is_published, refund_policy, cover_url, is_free,
       archived_at, brand_id,
-      brand:brands ( slug, name, theme_json )
+      brand:brands ( slug, name, theme_json, moneda, zona_horaria )
     `)
     .eq('id', params.id)
     .maybeSingle();
@@ -40,11 +36,13 @@ export default async function EventDetailPage({ params }: { params: { id: string
   if (!event) notFound();
 
   const brand = (Array.isArray(event.brand) ? event.brand[0] : event.brand) as
-    | { slug: string; name: string; theme_json?: { primary_color?: string; logo_url?: string | null } | null }
+    | { slug: string; name: string; moneda?: string; zona_horaria?: string; theme_json?: { primary_color?: string; logo_url?: string | null } | null }
     | null;
   const brandTheme = (brand?.theme_json ?? {}) as { primary_color?: string; logo_url?: string | null };
   const brandPrimary = brandColor(brandTheme.primary_color);
   const brandLogo = brandTheme.logo_url ?? null;
+  const moneda = monedaDe(brand?.moneda);
+  const zona = zonaDe(brand?.zona_horaria);
   const brandInitial = (brand?.name?.trim()[0] ?? '?').toUpperCase();
 
   const [{ data: ticketTypes }, { data: orders, count: orderCount }, { count: ticketCount }] = await Promise.all([
@@ -105,9 +103,9 @@ export default async function EventDetailPage({ params }: { params: { id: string
           </span>
           <h1 className="s-h1" style={{ marginTop: 6 }}>{event.name}</h1>
           <p className="s-card__desc">
-            {new Date(event.starts_at).toLocaleString('es-PE', {
-              weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima',
-            })}
+            {formatEnZona(event.starts_at, {
+              weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+            }, zona, 'es-PE')}
             {event.venue_name && <> · {event.venue_name}</>}
           </p>
           <a href={eventUrl} target="_blank" rel="noopener noreferrer" className="s-brandhead__url" style={{ marginTop: 6 }}>
@@ -122,7 +120,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
       <div className="s-stats">
         <div className="s-stat">
           <span className="s-stat__label">Ventas pagadas</span>
-          <span className="s-stat__value s-stat__value--money">{formatPEN(grossCents)}</span>
+          <span className="s-stat__value s-stat__value--money">{formatMoney(grossCents, moneda)}</span>
         </div>
         <div className="s-stat">
           <span className="s-stat__label">Órdenes pagadas</span>
@@ -136,7 +134,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
 
       <div style={{ marginTop: 22 }}>
         <h2 className="s-h2" style={{ marginBottom: 12 }}>Tipos de entrada</h2>
-        <TicketTypesEditor eventId={event.id} initial={ticketTypes ?? []} />
+        <TicketTypesEditor eventId={event.id} initial={ticketTypes ?? []} moneda={moneda} />
       </div>
 
       <div className="s-card" style={{ marginTop: 22 }}>
@@ -148,7 +146,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
           description={event.description ?? ''}
           isFree={event.is_free ?? false}
           maxPerPerson={event.max_per_person ?? null}
-          startsLocal={toLimaLocal(event.starts_at)}
+          startsLocal={utcALocal(event.starts_at, zona)}
           venueName={event.venue_name ?? ''}
           venueAddress={event.venue_address ?? ''}
           venueMapsUrl={event.venue_maps_url ?? ''}
@@ -160,6 +158,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
           minAge={event.min_age ?? 18}
           isPublished={event.is_published}
           hasSales={hasSales}
+          moneda={moneda}
         />
       </div>
 

@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { todas } from '@/lib/todas';
 import { textosPanel } from '@/lib/idiomaServer';
 import type { Textos } from '@/lib/idioma';
+import { formatEnZona, zonaDe } from '@/lib/zona';
 import { LiveRefresh } from '../LiveRefresh';
 
 export const runtime = 'edge';
@@ -25,16 +26,17 @@ export default async function EventAccessPage({ params }: { params: { id: string
   const ctx = ownerBrandContext(user);
   if (!ctx) notFound();
   const { t, loc } = await textosPanel();
-  const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' });
   const REJECT_LABELS = rejectLabels(t);
 
   const admin = createAdminClient();
   const { data: event } = await admin
     .from('events')
-    .select('id, brand_id, name')
+    .select('id, brand_id, name, brand:brands ( zona_horaria )')
     .eq('id', params.id)
     .maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
+  const zona = zonaDe((Array.isArray(event.brand) ? event.brand[0] : event.brand)?.zona_horaria);
+  const fmtTime = (iso: string) => formatEnZona(iso, { hour: '2-digit', minute: '2-digit' }, zona, loc);
 
   // ticket_scans no está en los tipos generados (creada en migr 0015) → cast.
   type RejectScan = { id: string; result: string; scanned_at: string; validator_user_id: string | null; ticket: { ticket_number: string; ticket_type_name: string } | { ticket_number: string; ticket_type_name: string }[] | null };

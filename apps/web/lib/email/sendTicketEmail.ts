@@ -12,7 +12,9 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { serverEnv, publicEnv } from '@/lib/env';
-import { formatPEN, formatEventDate } from '@/lib/utils';
+import { formatEventDate } from '@/lib/utils';
+import { zonaDe } from '@/lib/zona';
+import { formatMoney, monedaDe } from '@/lib/moneda';
 // La línea de responsabilidad del organizador es la MISMA que la del sitio:
 // el texto vive en un solo lugar para que no se desincronicen.
 import { renderTicketEmail, adjuntosEntradas } from './ticketEmail';
@@ -37,6 +39,8 @@ type OrderWithJoins = {
     slug: string;
     whatsapp_e164: string | null;
     contact_email: string | null;
+    moneda: string;
+    zona_horaria: string;
     theme_json: { primary_color?: string; logo_url?: string | null } | null;
   } | null;
   event: {
@@ -63,7 +67,7 @@ export async function armarEmailDePedido(orderId: string, admin = createAdminCli
     .from('orders')
     .select(`
       id, brand_id, buyer_name, buyer_email, total_cents, email_sent_at,
-      brand:brands ( name, slug, whatsapp_e164, contact_email, theme_json ),
+      brand:brands ( name, slug, whatsapp_e164, contact_email, theme_json, moneda, zona_horaria ),
       event:events ( name, starts_at, venue_name ),
       tickets ( qr_code, ticket_number, ticket_type_name, attendee_name, invalidated_at )
     `)
@@ -90,7 +94,7 @@ export async function armarEmailDePedido(orderId: string, admin = createAdminCli
     motivo: 'compra',
     buyerName: order.buyer_name,
     eventName: event?.name ?? 'tu evento',
-    eventDate: event?.starts_at ? formatEventDate(event.starts_at) : '',
+    eventDate: event?.starts_at ? formatEventDate(event.starts_at, zonaDe(brand?.zona_horaria)) : '',
     venue: event?.venue_name ?? '',
     brandName: brand?.name ?? 'el organizador',
     brandPrimary: theme.primary_color,
@@ -98,7 +102,7 @@ export async function armarEmailDePedido(orderId: string, admin = createAdminCli
     brandWhatsapp: brand?.whatsapp_e164 ?? null,
     brandEmail: brand?.contact_email ?? null,
     supportWhatsapp,
-    total: formatPEN(order.total_cents),
+    total: formatMoney(order.total_cents, monedaDe(brand?.moneda)),
     verUrl,
     entradas: tickets.map((t) => ({ ticketTypeName: t.ticket_type_name, attendeeName: t.attendee_name })),
   });

@@ -20,6 +20,8 @@ export type BrandForEmail = {
   whatsapp_e164: string | null;
   contact_email: string | null;
   theme_json: { primary_color?: string; logo_url?: string | null } | null;
+  // Zona horaria de la marca (brands.zona_horaria); sin ella, Lima.
+  zona_horaria?: string | null;
 };
 
 export type SendPostponedResult = { ok: boolean; reason?: string; resendId?: string | null };
@@ -30,7 +32,7 @@ export async function sendEventPostponedEmail(args: {
   to: string;
   buyerName: string;
   eventName: string;
-  newDateLabel: string; // ya formateada en hora de Lima
+  newDateLabel: string; // ya formateada en la hora de la marca
   oldDateLabel: string;
   venue: string | null;
   brand: BrandForEmail;

@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { optimizedImage } from '@/lib/imageUrl';
 import { TicketRecovery } from './TicketRecovery';
+import { monedaDe } from '@/lib/moneda';
+import { formatEnZona, hoyEn, utcALocal, zonaDe } from '@/lib/zona';
 import { SetupChecklist, type SetupStep } from './SetupChecklist';
 import { LowBalanceNotice } from './LowBalanceNotice';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
@@ -39,7 +41,7 @@ export default async function AdminHomePage() {
   const supabase = createClient();
   const adminCli = createAdminClient();
   const [{ data: brand }, { data: events }, pendingProofs, stuckRows, { count: activeTypeCount }, pruebaLibre, { count: paidTypeCount }, { count: ticketCount }, { count: scannedCount }] = await Promise.all([
-    supabase.from('brands').select('id, slug, name, yape_number, event_balance').eq('id', brandId).single(),
+    supabase.from('brands').select('id, slug, name, yape_number, event_balance, moneda, zona_horaria').eq('id', brandId).single(),
     supabase
       .from('events')
       .select('id, slug, name, starts_at, is_published, cover_url, archived_at, venue_name, es_prueba')
@@ -90,9 +92,10 @@ export default async function AdminHomePage() {
     pendingEventCount += 1;
   }
 
+  const zona = zonaDe(brand?.zona_horaria);
   const eventNameById = new Map((events ?? []).map((e) => [e.id, e.name] as const));
   const nowMs = Date.now();
-  const fmtDay = (iso: string) => new Date(iso).toLocaleDateString(loc, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'America/Lima' });
+  const fmtDay = (iso: string) => formatEnZona(iso, { weekday: 'short', day: 'numeric', month: 'short' }, zona, loc);
   const firstPendingEvent = activeEvents.find((e) => (pendingByEvent.get(e.id) ?? 0) > 0) ?? null;
   const stuckOrders = ((stuckRows ?? []) as { id: string; buyer_name: string | null; total_cents: number | null; created_at: string; event_id: string }[])
     .map((o) => ({ id: o.id, buyerName: o.buyer_name, totalCents: o.total_cents ?? 0, createdAt: o.created_at, eventName: eventNameById.get(o.event_id) ?? t('Evento', 'Event') }));
@@ -140,7 +143,7 @@ export default async function AdminHomePage() {
   const isPast = (e: { starts_at: string }) => isPastEv(e, nowMs);
   const upcoming = activeEvents.filter((e) => !isPast(e)).sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at));
   const pastEvents = activeEvents.filter(isPast);
-  const fmtWhen = (iso: string) => new Date(iso).toLocaleString(loc, { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' });
+  const fmtWhen = (iso: string) => formatEnZona(iso, { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, zona, loc);
 
   const createBtn = impersonating ? null : canCreate ? (
     <Link href="/admin/events/new" className="s-btn s-btn--soft s-btn--sm">
@@ -158,7 +161,7 @@ export default async function AdminHomePage() {
   const eventCard = (e: (typeof activeEvents)[number]) => {
     const pend = pendingByEvent.get(e.id) ?? 0;
     const past = isPast(e);
-    const hoy = !past && new Date(e.starts_at).toLocaleDateString(loc, { timeZone: 'America/Lima' }) === new Date().toLocaleDateString(loc, { timeZone: 'America/Lima' });
+    const hoy = !past && utcALocal(e.starts_at, zona).slice(0, 10) === hoyEn(zona);
     const status = !e.is_published ? { cls: 's-badge--draft', label: t('Borrador', 'Draft') }
       : past ? { cls: 's-badge--draft', label: t('Pasado', 'Past') }
       : hoy ? { cls: 's-badge--todo', label: t('Hoy', 'Today') }
@@ -209,7 +212,7 @@ export default async function AdminHomePage() {
 
       {/* Recuperación de tickets — solo aparece si hay órdenes pagadas sin tickets.
           Re-emitir es escritura → oculto en solo lectura. */}
-      {stuckOrders.length > 0 && !impersonating && <TicketRecovery orders={stuckOrders} />}
+      {stuckOrders.length > 0 && !impersonating && <TicketRecovery orders={stuckOrders} moneda={monedaDe(brand?.moneda)} zona={zona} />}
 
       {/* Primeros pasos: solo el dueño y solo hasta el primer escaneo. Con
           Yapes por aprobar el primario es "Revisar Yapes" y el paso va soft. */}
@@ -270,7 +273,7 @@ export default async function AdminHomePage() {
                     <Link href={`/admin/events/${e.id}`} className="s-event-row__main">
                       <span className="s-event-row__name">{e.name}</span>
                       <span className="s-event-row__date">
-                        {new Date(e.starts_at).toLocaleString(loc, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Lima' })}
+                        {formatEnZona(e.starts_at, { day: '2-digit', month: 'short', year: 'numeric' }, zona, loc)}
                       </span>
                     </Link>
                     <span className="s-badge s-badge--draft">{t('Archivado', 'Archived')}</span>

@@ -295,7 +295,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // validaciones; lo único que cambia es que no se esperan una a la otra.
   const ticketTypeIds = parsed.data.items.map((i) => i.ticketTypeId);
   const [brandRes, ttRes, apRes] = await Promise.all([
-    admin.from('brands').select('archived_at, yape_number').eq('id', event.brand_id).maybeSingle(),
+    admin.from('brands').select('archived_at, yape_number, moneda').eq('id', event.brand_id).maybeSingle(),
     admin
       .from('ticket_types')
       .select('id, name, price_cents, capacity, sold, is_active, is_unlimited, event_id, bulk_min_qty, bulk_discount_pct, is_courtesy')
@@ -468,6 +468,12 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // Yape sin número cargado: antes se creaba la orden y el comprador caía en
   // "Este organizador no tiene Yape configurado" DESPUÉS de dejar sus datos.
   // Se corta acá, sin orden ni cupo retenido. (Lo gratis no pasa por Yape.)
+  // Mercado Pago cobra en soles (currency_id PEN y la liquidación exige PEN):
+  // una marca en otra moneda no puede abrir el pago con tarjeta, aunque se
+  // llame a la acción directo.
+  if (parsed.data.method === 'mercadopago' && brandRow.moneda !== 'PEN') {
+    return { ok: false, message: 'Esta marca no cobra con tarjeta.' };
+  }
   if (parsed.data.method === 'yape_manual' && totalCents > 0 && !promoGratis && !brandRow.yape_number?.trim()) {
     return { ok: false, message: 'Este organizador todavía no activó el pago con Yape. Escríbele para comprar tu entrada.' };
   }

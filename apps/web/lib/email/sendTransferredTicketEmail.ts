@@ -12,6 +12,7 @@
 
 import { serverEnv, publicEnv } from '@/lib/env';
 import { formatEventDate } from '@/lib/utils';
+import { zonaDe } from '@/lib/zona';
 import { renderTicketEmail, adjuntosEntradas } from './ticketEmail';
 import type { BrandForEmail } from './sendEventPostponedEmail';
 
@@ -41,7 +42,7 @@ export async function sendTransferredTicketEmail(args: {
     motivo: 'transferencia',
     buyerName: args.newName,
     eventName: args.eventName,
-    eventDate: args.startsAtIso ? formatEventDate(args.startsAtIso) : '',
+    eventDate: args.startsAtIso ? formatEventDate(args.startsAtIso, zonaDe(args.brand.zona_horaria)) : '',
     venue: args.venue ?? '',
     brandName: args.brand.name,
     brandPrimary: theme.primary_color,

@@ -5,18 +5,19 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { renderWarmEmail, escapeHtml } from './render';
 import { sendViaResend, FROM_EMAIL } from './send';
 import type { SendResult } from './send';
+import { monedaDe, simbolo, sinDecimales, type Moneda } from '@/lib/moneda';
 
-function discountText(t: string, v: number): string {
+function discountText(t: string, v: number, moneda: Moneda): string {
   if (t === 'free') return 'entrada gratis';
   if (t === 'percent') return `${v}% de descuento`;
-  return `S/ ${(v / 100).toFixed(2)} de descuento`;
+  return `${simbolo(moneda)} ${sinDecimales(moneda) ? v / 100 : (v / 100).toFixed(2)} de descuento`;
 }
 
 export async function sendPromoCodeEmail(codeId: string, toEmail: string): Promise<SendResult> {
   const admin = createAdminClient();
   const { data: code } = await admin
     .from('promo_codes')
-    .select('id, code, label, discount_type, discount_value, max_uses, use_count, event:events ( name, slug, brand:brands ( name, slug, contact_email, theme_json ) )')
+    .select('id, code, label, discount_type, discount_value, max_uses, use_count, event:events ( name, slug, brand:brands ( name, slug, contact_email, theme_json, moneda ) )')
     .eq('id', codeId)
     .maybeSingle();
   if (!code) return { ok: false, status: 'error', reason: 'code_not_found' };
@@ -27,6 +28,7 @@ export async function sendPromoCodeEmail(codeId: string, toEmail: string): Promi
   const brandName = brand?.name ?? 'el promotor';
   const eventName = event?.name ?? 'el evento';
   const eventUrl = brand?.slug && event?.slug ? `https://${brand.slug}.parygo.com/${event.slug}` : 'https://parygo.com';
+  const moneda = monedaDe(brand?.moneda);
   const usesLeft = code.max_uses == null ? 'usos ilimitados' : `${Math.max(0, code.max_uses - (code.use_count ?? 0))} usos disponibles`;
 
   const { html } = renderWarmEmail({
@@ -36,7 +38,7 @@ export async function sendPromoCodeEmail(codeId: string, toEmail: string): Promi
     eyebrow: 'Código de promotor',
     title: eventName,
     paragraphs: [
-      `Eres promotor de <strong>${escapeHtml(brandName)}</strong>. Este es tu código para vender entradas de <strong>${escapeHtml(eventName)}</strong>: lo comparten tus contactos al comprar y aplica <strong>${escapeHtml(discountText(code.discount_type, code.discount_value))}</strong>.`,
+      `Eres promotor de <strong>${escapeHtml(brandName)}</strong>. Este es tu código para vender entradas de <strong>${escapeHtml(eventName)}</strong>: lo comparten tus contactos al comprar y aplica <strong>${escapeHtml(discountText(code.discount_type, code.discount_value, moneda))}</strong>.`,
       `Tienes ${escapeHtml(usesLeft)}.`,
     ],
     highlight: { label: 'Tu código', value: code.code },
@@ -46,7 +48,7 @@ export async function sendPromoCodeEmail(codeId: string, toEmail: string): Promi
 
   const text = [
     `Tu código de promotor para ${eventName}: ${code.code}`,
-    discountText(code.discount_type, code.discount_value),
+    discountText(code.discount_type, code.discount_value, moneda),
     usesLeft,
     '',
     `Evento: ${eventUrl}`,

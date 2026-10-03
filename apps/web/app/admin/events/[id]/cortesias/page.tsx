@@ -6,6 +6,7 @@ import { todas } from '@/lib/todas';
 import { publicEnv } from '@/lib/env';
 import { ticketPublicUrl } from '@/lib/qr';
 import { formatEventDate } from '@/lib/utils';
+import { zonaDe } from '@/lib/zona';
 import { CourtesyForm } from '../editar/CourtesyForm';
 import { CopyButton, FreeCodeForm } from './CortesiasClient';
 import { textosPanel } from '@/lib/idiomaServer';
@@ -36,7 +37,7 @@ export default async function CourtesiesPage({ params }: { params: { id: string 
   if (!event || event.brand_id !== ctx.brandId) notFound();
 
   const [{ data: brand }, { data: types }, { data: tickets }, { data: codes }] = await Promise.all([
-    admin.from('brands').select('slug').eq('id', ctx.brandId).maybeSingle(),
+    admin.from('brands').select('slug, zona_horaria').eq('id', ctx.brandId).maybeSingle(),
     admin.from('ticket_types').select('id, name').eq('event_id', event.id).eq('is_active', true).order('sort_order'),
     // Cada entrada de cortesía de ESTE evento y ESTA marca (doble filtro).
     todas((a, b) => admin
@@ -59,7 +60,7 @@ export default async function CourtesiesPage({ params }: { params: { id: string 
       .order('created_at', { ascending: false }),
   ]);
 
-  const when = event.starts_at ? formatEventDate(event.starts_at) : '';
+  const when = event.starts_at ? formatEventDate(event.starts_at, zonaDe(brand?.zona_horaria)) : '';
   const eventUrl = brand?.slug ? `https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${event.slug}` : null;
 
   type T = {

@@ -8,8 +8,10 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { contextoEscritura } from '@/lib/impersonation';
 import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { uploadEventCover, coverDims } from '@/lib/brandAssets';
-import { limaToIso, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
+import { fechaAIso, fechaInvalida, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
 import { mensajePrueba } from '@/lib/prueba';
+import { monedaDeMarca, zonaDeMarca } from '@/lib/metodoPago';
+import { centavosValidos } from '@/lib/moneda';
 import { textosPanel, idiomaPanel } from '@/lib/idiomaServer';
 import type { Textos } from '@/lib/idioma';
 
@@ -105,15 +107,25 @@ export async function createBrandEventAction(
     return { ok: false, message: parsedTT.error.errors[0]?.message ?? t('Revisa los tipos de entrada.', 'Check the ticket types.') };
   }
 
-  // Fechas en hora de Lima (explícito: en Cloudflare el server corre en UTC).
-  // Todo se valida ANTES de subir el flyer y de consumir saldo.
-  const startsIso = limaToIso(parsedEvent.data.starts_at);
-  if (!startsIso) {
-    return { ok: false, message: t('Fecha de inicio inválida.', 'Invalid start date.'), fieldErrors: { starts_at: t('Inválida', 'Invalid') } };
+  // Los precios llegan en centavos de la moneda de la marca (releída aquí).
+  const moneda = await monedaDeMarca(createAdminClient(), brandId);
+  for (const tt of parsedTT.data) {
+    if (![tt.price_cents, ...tt.phases.map((p) => p.price_cents)].every((c) => centavosValidos(c, moneda))) {
+      return { ok: false, message: t('Precio inválido.', 'Invalid price.') };
+    }
   }
-  const endsIso = parsedEvent.data.ends_at ? limaToIso(parsedEvent.data.ends_at) : null;
+
+  // Fechas en la hora de la MARCA, releída aquí (explícito: en Cloudflare el
+  // server corre en UTC).
+  // Todo se valida ANTES de subir el flyer y de consumir saldo.
+  const zona = await zonaDeMarca(createAdminClient(), brandId);
+  const startsIso = fechaAIso(parsedEvent.data.starts_at, zona);
+  if (!startsIso) {
+    return { ok: false, message: fechaInvalida(await idiomaPanel()), fieldErrors: { starts_at: t('Inválida', 'Invalid') } };
+  }
+  const endsIso = parsedEvent.data.ends_at ? fechaAIso(parsedEvent.data.ends_at, zona) : null;
   if (parsedEvent.data.ends_at && !endsIso) {
-    return { ok: false, message: t('Fecha de fin inválida.', 'Invalid end date.'), fieldErrors: { ends_at: t('Inválida', 'Invalid') } };
+    return { ok: false, message: fechaInvalida(await idiomaPanel()), fieldErrors: { ends_at: t('Inválida', 'Invalid') } };
   }
   const windowErr = validateEventWindow({ startsIso, endsIso, requireFutureStart: true }, await idiomaPanel());
   if (windowErr) {
@@ -126,7 +138,8 @@ export async function createBrandEventAction(
       pricesCents: [t.price_cents, ...t.phases.map((p) => p.price_cents)],
     })),
     { freeConfirmed: formData.get('confirm_free') === '1' },
-    await idiomaPanel()
+    await idiomaPanel(),
+    moneda
   );
   if (pricingErr) return { ok: false, message: pricingErr };
 
@@ -164,6 +177,9 @@ export async function createBrandEventAction(
       cover_url: coverUrl,
       min_age: parsedEvent.data.min_age ? parseInt(parsedEvent.data.min_age, 10) : 18,
       refund_policy: parsedEvent.data.refund_policy || null,
+      // 0089: la RPC la compara bajo el lock de la marca (los precios se
+      // leyeron en esta moneda).
+      moneda,
     },
     p_ticket_types: parsedTT.data,
   });
@@ -197,6 +213,9 @@ export async function createBrandEventAction(
     const msg = error?.message ?? '';
     const tope = mensajePrueba(msg, await idiomaPanel());
     if (tope) return { ok: false, message: tope };
+    if (msg.includes('MONEDA_CAMBIO')) {
+      return { ok: false, message: t('La moneda de tu marca cambió mientras creabas el evento. Revisa los precios y vuelve a intentarlo.', "Your brand's currency changed while you were creating the event. Check the prices and try again.") };
+    }
     if (msg.includes('INSUFFICIENT_BALANCE') || msg.includes('NO_TRIAL')) {
       return { ok: false, message: t('Tu marca no tiene saldo de eventos. Compra un paquete en Comprar eventos.', 'Your brand has no event balance. Buy a pack in Buy events.') };
     }

@@ -18,8 +18,8 @@ ParyGo sigue sin tocar la plata de las entradas.
   (MXN, America/Mexico_City), Chile (CLP, America/Santiago), Argentina (ARS,
   America/Argentina/Buenos_Aires), Ecuador (USD, America/Guayaquil), España
   (EUR, Europe/Madrid), EE. UU. (USD, America/New_York; v1 una sola zona).
-- **La moneda NO cambia con órdenes.** Un trigger (`guard_brand_moneda`) rechaza
-  cambiar `moneda` si la marca tiene CUALQUIER orden. Los precios guardados son
+- **La moneda NO cambia con eventos.** Un trigger (`guard_brand_moneda`) rechaza
+  cambiar `moneda` si la marca tiene CUALQUIER evento (ver Decisiones). Los precios guardados son
   centavos de la moneda de la marca (×100 siempre, también CLP/COP: así no cambia
   ningún cálculo, solo cómo se muestra). La zona sí se puede cambiar (las fechas
   son timestamptz; solo cambia cómo se leen y se escriben).
@@ -43,13 +43,48 @@ ParyGo sigue sin tocar la plata de las entradas.
   dice "Pagos por aprobar" (y "Yapes por aprobar" solo si el medio es Yape).
   La URL /yape del comprador queda igual (interna).
 
+## Decisiones tras la revisión adversarial de Codex (2026-10-03)
+- La moneda se BLOQUEA apenas la marca tiene un EVENTO (no una orden): los
+  precios, fases y cupones fijos de un evento ya están escritos en la moneda de
+  entonces (Codex 1, 2). Las marcas nuevas eligen país antes de crear su primer
+  evento; Code y Hoesky quedan en PEN. Carrera: un trigger BEFORE INSERT en
+  events toma `FOR SHARE` sobre la fila de la marca, así un cambio de moneda y
+  un evento nuevo se serializan; test de concurrencia (Codex 9).
+- CLP y COP solo enteros: `aCentavos` rechaza fracciones en esas monedas en
+  TODOS los escritores de precio (tipos, fases, cupón fijo) y los inputs usan
+  step 1 (Codex 3).
+- `startCheckout` relee `moneda` y `metodo_manual` de la marca en el server:
+  manual solo si el medio es compatible; MP solo si la moneda es PEN, aunque
+  alguien llame a la acción directo; la liquidación sigue rechazando no-PEN
+  (Codex 4, 5).
+- Escritores de la cuenta (Mi marca, cabina crear/editar) validan con
+  lib/metodoManual.ts según el medio; `marcaTieneMetodo` sigue contando
+  `yape_number` (ahora "cuenta del medio manual") y MP solo en PEN (Codex 6).
+- El medio NO cambia mientras haya pagos manuales por aprobar (la página de
+  pago lee la marca en vivo) (Codex 8). Cambiar la cuenta sigue como hoy con Yape.
+- Hora: incluye el editor del evento (hoy resta 5 h a mano), el asistente, las
+  fases de precio, `formatEventDate` de los correos, conceptos.tsx y el "hoy"
+  del panel. Una hora que no existe por el cambio de horario se RECHAZA
+  ("esa hora no existe ese día") (Codex 10, 11). El día de los clics de RR. PP.
+  (0049, SQL) sigue en hora de Lima: es una estadística, se anota.
+- Textos: el formulario del comprador ("Monto que yapeaste (S/)" →
+  "Monto que pagaste" en su moneda), los correos de Yapes por aprobar y
+  recuperación, y los errores dejan de decir Yape cuando el medio es otro
+  (Codex 12, 13).
+- Descartado: matriz país→medio (Codex 7). Zelle y USDT quedan para toda marca
+  en USD; el organizador elige lo que usa. La exposición de la cuenta en la
+  página de pago ya era la de Yape (Codex 15). Los defaults (PEN, Lima, yape)
+  dejan válidas todas las filas actuales: el deploy viejo sigue funcionando
+  con la 0088 aplicada (Codex 16).
+
 ## Modelo de datos (0088)
 ```
 brands.moneda         text not null default 'PEN'   check in (PEN,USD,COP,MXN,CLP,ARS,EUR)
 brands.zona_horaria   text not null default 'America/Lima'  check in (las 8 de arriba)
 brands.metodo_manual  text not null default 'yape'  check in (yape,nequi,bizum,zelle,usdt,transferencia)
 check (metodo_manual/moneda compatibles, tabla de arriba)
-trigger guard_brand_moneda: moneda no cambia si existe una orden de la marca
+trigger guard_brand_moneda: moneda no cambia si la marca tiene un evento
+trigger en events (before insert): select 1 from brands where id = new.brand_id for share
 grant select (moneda, zona_horaria, metodo_manual) to anon, authenticated
 ```
 Sin escritura para anon/authenticated (0081 ya la quitó en brands): escriben
@@ -57,10 +92,10 @@ las server actions con service role.
 
 ## Tareas (por bloques; commit después de cada uno)
 ### Bloque 1 — base y dinero mostrado
-- [ ] 1. 0088 + dryrun + aplicar + `e2e/pais-0088.mjs` (JWT real: anon lee las 3
-  columnas y no escribe; trigger rechaza cambiar moneda con una orden; CHECK
+- [x] 1. 0088 + dryrun + aplicar + `e2e/pais-0088.mjs` (JWT real: anon lee las 3
+  columnas y no escribe; trigger rechaza cambiar moneda con un evento (y la carrera evento+cambio se serializa); CHECK
   rechaza yape+COP). **Listo:** test verde, demotest queda en PEN/yape.
-- [ ] 2. `lib/moneda.ts`: `formatMoney(cents, moneda)` (Intl, sin decimales en
+- [x] 2. `lib/moneda.ts`: `formatMoney(cents, moneda)` (Intl, sin decimales en
   CLP/COP o si son .00) y `aCentavos(input, moneda)`; `formatPEN` queda como
   `formatMoney(c,'PEN')` para no romper nada. Pasar la moneda de la marca en
   TODO lo que muestra plata de entradas (comprador, correos al comprador, panel,
@@ -68,7 +103,7 @@ las server actions con service role.
   **Listo:** tsc, test unitario de formatMoney, grep sin "S/" suelto fuera de
   packs/landing, fase1 verde (PEN idéntico byte a byte).
 ### Bloque 2 — hora de la marca
-- [ ] 3. `lib/zona.ts`: `formatEnZona(d, opts, tz)` y `localAUtc(local, tz)` (offset
+- [x] 3. `lib/zona.ts`: `formatEnZona(d, opts, tz)` y `localAUtc(local, tz)` (offset
   con Intl, sirve con horario de verano). eventValidation y el asistente usan la
   zona de la marca en vez de `-05:00`; formatLima pasa a formatEnZona con la
   zona de la marca en las páginas de la marca. **Listo:** test unitario con
@@ -81,10 +116,11 @@ las server actions con service role.
 - [ ] 5. Comprador: página de pago con el nombre del medio, cuenta, titular/red,
   QR y monto en su moneda; checkout rechaza medio incompatible con la moneda y
   no ofrece Tarjeta fuera de PEN. Panel/correos "Pagos por aprobar".
-  **Listo:** `e2e/pais-compra.mjs` en demotest: pasa a COP+Nequi, compra,
-  sube comprobante, aprueba, entrada con COP; vuelve a PEN+Yape (sin órdenes
-  nuevas pendientes: usa una marca is_test temporal, no demotest, porque el
-  trigger no deja volver demotest a PEN con órdenes).
+  **Listo:** `e2e/pais-compra.mjs` con una marca is_test TEMPORAL (demotest
+  tiene eventos y su moneda ya no cambia): COP+Nequi, evento con precio
+  entero, compra, comprobante, aprueba, entrada y correo en COP; Tarjeta
+  rechazada aunque se llame a la acción; medio bloqueado con un pago por
+  aprobar; se borra al final.
 - [ ] 6. security-reviewer + Codex review. **Listo:** bugs reales corregidos.
 
 ## Fuera de alcance

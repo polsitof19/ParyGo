@@ -3,11 +3,14 @@
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Check, X, Loader2, ChevronRight, ExternalLink } from 'lucide-react';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney, type Moneda } from '@/lib/moneda';
+import { formatEnZona, type Zona } from '@/lib/zona';
 import { useTextos } from '@/components/IdiomaPanel';
 import { approveYapeProof, rejectYapeProof } from './actions';
 
 type Props = {
+  moneda: Moneda;
+  zona: Zona;
   proofId: string;
   receiptUrl: string | null;
   amountCents: number;
@@ -34,6 +37,8 @@ type Props = {
 // y el detalle se despliegan — ver la captura ES la verificación, pero con 8
 // pendientes no entra nada en pantalla si cada uno abre una imagen de 280px.
 export function YapeReviewRow({
+  moneda,
+  zona,
   proofId,
   receiptUrl,
   amountCents,
@@ -76,9 +81,9 @@ export function YapeReviewRow({
 
   const bodyId = `yape-detalle-${proofId}`;
   const expanded = open || showReject;
-  const hora = new Date(createdAt).toLocaleString(loc, {
-    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima',
-  });
+  const hora = formatEnZona(createdAt, {
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+  }, zona, loc);
 
   return (
     <div className={`a-yrow${expanded ? ' a-yrow--open' : ''}`}>
@@ -94,11 +99,11 @@ export function YapeReviewRow({
         >
           <ChevronRight className="a-yrow__chev" aria-hidden="true" />
           <span className="a-yrow__payer">{payerName || buyerName || '—'}</span>
-          <span className={`a-yrow__amt${amountMatches ? '' : ' a-yrow__amt--bad'}`}>{formatPEN(amountCents)}</span>
+          <span className={`a-yrow__amt${amountMatches ? '' : ' a-yrow__amt--bad'}`}>{formatMoney(amountCents, moneda)}</span>
           <span className="a-yrow__op">{t(`Op. ${operationNumber}`, `Op. ${operationNumber}`)}</span>
           <span className="a-yrow__time">{hora}</span>
           {duplicateWarning && <span className="a-chip a-chip--deny">{t('N° repetido', 'Repeated number')}</span>}
-          {!amountMatches && <span className="a-chip a-chip--warn">{t(`Esperado ${formatPEN(expectedAmountCents)}`, `Expected ${formatPEN(expectedAmountCents)}`)}</span>}
+          {!amountMatches && <span className="a-chip a-chip--warn">{t(`Esperado ${formatMoney(expectedAmountCents, moneda)}`, `Expected ${formatMoney(expectedAmountCents, moneda)}`)}</span>}
         </button>
 
         {!impersonating && !showReject && (
@@ -189,7 +194,7 @@ export function YapeReviewRow({
               )}
 
               <div className="a-verify-box">
-                <Verify label={t('Monto', 'Amount')} value={formatPEN(amountCents)} expected={formatPEN(expectedAmountCents)} ok={amountMatches} expectedLabel={t('esperado', 'expected')} />
+                <Verify label={t('Monto', 'Amount')} value={formatMoney(amountCents, moneda)} expected={formatMoney(expectedAmountCents, moneda)} ok={amountMatches} expectedLabel={t('esperado', 'expected')} />
                 <Verify label={t('N° operación', 'Operation number')} value={operationNumber} />
                 <Verify label={t('Nombre pagador', 'Payer name')} value={payerName} />
                 <Verify label={t('Código seguridad', 'Security code')} value={securityCode} />

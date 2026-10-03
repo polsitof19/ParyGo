@@ -2,9 +2,10 @@
 // page. Helps Google show rich results (dates, location, price from).
 
 import { publicEnv } from '@/lib/env';
+import { monedaDe } from '@/lib/moneda';
 
 type Props = {
-  brand: { slug: string; name: string };
+  brand: { slug: string; name: string; moneda?: string | null };
   event: {
     name: string;
     description: string | null;
@@ -40,7 +41,7 @@ export function EventStructuredData({ brand, event, ticketTypes }: Props) {
       '@type': 'Offer',
       name: t.name,
       price: (t.active_price_cents / 100).toFixed(2),
-      priceCurrency: 'PEN',
+      priceCurrency: monedaDe(brand.moneda),
       availability,
       url,
       // Don't emit a fresh validFrom on every render — Google's crawl will

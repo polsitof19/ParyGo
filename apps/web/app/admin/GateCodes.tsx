@@ -4,6 +4,7 @@ import { useFormStatus } from 'react-dom';
 import { useFormFeedback } from '@/components/useFormFeedback';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { formatEnZona, type Zona } from '@/lib/zona';
 import { useTextos } from '@/components/IdiomaPanel';
 import { generateGateCodeAction, revokeGateCodeAction, type GateCodeState } from './actions';
 
@@ -18,7 +19,7 @@ type ActiveCode = {
   max_uses: number;
 };
 
-export function GateCodes({ codes }: { codes: ActiveCode[] }) {
+export function GateCodes({ codes, zona }: { codes: ActiveCode[]; zona: Zona }) {
   const [state, action] = useFormFeedback(generateGateCodeAction, initial);
   const { t, loc } = useTextos();
 
@@ -57,7 +58,7 @@ export function GateCodes({ codes }: { codes: ActiveCode[] }) {
                   <span className="font-mono text-lg tracking-[0.2em]">{c.code}</span>
                   <span className="ml-3 text-muted-foreground">{c.device_label ?? t('Puesto', 'Station')}</span>
                   <span className="ml-3 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {t('expira', 'expires')} {new Date(c.expires_at).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} · {t(`${c.use_count} usos`, `${c.use_count} uses`)}
+                    {t('expira', 'expires')} {formatEnZona(c.expires_at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, zona, loc)} · {t(`${c.use_count} usos`, `${c.use_count} uses`)}
                   </span>
                 </div>
                 <RevokeButton id={c.id} />

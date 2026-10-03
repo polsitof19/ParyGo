@@ -129,6 +129,8 @@ export type Database = {
           yape_holder: string | null
           yape_number: string | null
           yape_qr_url: string | null
+          moneda: string
+          zona_horaria: string
         }
         Insert: {
           archived_at?: string | null
@@ -158,6 +160,8 @@ export type Database = {
           yape_holder?: string | null
           yape_number?: string | null
           yape_qr_url?: string | null
+          moneda?: string
+          zona_horaria?: string
         }
         Update: {
           archived_at?: string | null
@@ -187,6 +191,8 @@ export type Database = {
           yape_holder?: string | null
           yape_number?: string | null
           yape_qr_url?: string | null
+          moneda?: string
+          zona_horaria?: string
         }
         Relationships: []
       }

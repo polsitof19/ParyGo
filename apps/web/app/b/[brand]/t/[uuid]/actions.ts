@@ -54,7 +54,7 @@ export async function transferTicketAction(_prev: TransferState, formData: FormD
   // Enviar el nuevo QR al nuevo dueño (best-effort; la transferencia ya se hizo).
   try {
     const [{ data: brand }, { data: event }] = await Promise.all([
-      admin.from('brands').select('name, slug, whatsapp_e164, contact_email, theme_json').eq('id', r.brand_id!).maybeSingle(),
+      admin.from('brands').select('name, slug, whatsapp_e164, contact_email, theme_json, zona_horaria').eq('id', r.brand_id!).maybeSingle(),
       admin.from('events').select('name, starts_at, venue_name').eq('id', r.event_id!).maybeSingle(),
     ]);
     // El tipo de la entrada NUEVA (la transferencia la re-emite con otro qr).
@@ -74,6 +74,7 @@ export async function transferTicketAction(_prev: TransferState, formData: FormD
           name: brand.name, slug: brand.slug, whatsapp_e164: brand.whatsapp_e164,
           contact_email: brand.contact_email,
           theme_json: brand.theme_json as { primary_color?: string; logo_url?: string | null } | null,
+          zona_horaria: brand.zona_horaria,
         },
       });
     }

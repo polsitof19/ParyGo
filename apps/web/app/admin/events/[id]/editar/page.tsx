@@ -5,6 +5,8 @@ import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { EventCoverUploader } from '../EventCoverUploader';
 import { EditEventForm } from './EditEventForms';
+import { monedaDe } from '@/lib/moneda';
+import { utcALocal, zonaDe } from '@/lib/zona';
 import { PostponeEvent } from './PostponeEvent';
 import { CancelEvent } from './CancelEvent';
 import { CloneEventButton } from './CloneEventButton';
@@ -15,11 +17,6 @@ import { textosPanel } from '@/lib/idiomaServer';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
-
-// UTC → "YYYY-MM-DDTHH:mm" en hora de Lima (UTC-5) para el input datetime-local.
-function toLimaLocal(iso: string): string {
-  return new Date(new Date(iso).getTime() - 5 * 3600 * 1000).toISOString().slice(0, 16);
-}
 
 export default async function EditEventPage({ params }: { params: { id: string } }) {
   const user = await requireSession();
@@ -39,13 +36,16 @@ export default async function EditEventPage({ params }: { params: { id: string }
   // ¿Hay alguna venta? (define si la fecha queda bloqueada)
   // Además contamos órdenes y tickets para saber si el evento se puede ELIMINAR
   // (solo eventos vacíos: 0 órdenes y 0 tickets).
-  const [{ count: soldCount }, { count: orderCount }, { count: ticketCount }] = await Promise.all([
+  const [{ count: soldCount }, { count: orderCount }, { count: ticketCount }, { data: marca }] = await Promise.all([
     admin.from('ticket_types').select('id', { count: 'exact', head: true }).eq('event_id', event.id).gt('sold', 0),
     admin.from('orders').select('id', { count: 'exact', head: true }).eq('event_id', event.id),
     admin.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', event.id),
+    admin.from('brands').select('moneda, zona_horaria').eq('id', event.brand_id).maybeSingle(),
   ]);
   const hasSales = (soldCount ?? 0) > 0;
   const canDelete = (orderCount ?? 0) === 0 && (ticketCount ?? 0) === 0;
+  // UTC → "YYYY-MM-DDTHH:mm" en la hora de la marca, para el datetime-local.
+  const startsLocal = utcALocal(event.starts_at, zonaDe(marca?.zona_horaria));
 
 
   return (
@@ -71,7 +71,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
           eventId={event.id}
           name={event.name}
           description={event.description ?? ''}
-          startsLocal={toLimaLocal(event.starts_at)}
+          startsLocal={startsLocal}
           venueName={event.venue_name ?? ''}
           venueAddress={event.venue_address ?? ''}
           venueMapsUrl={event.venue_maps_url ?? ''}
@@ -79,6 +79,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
           requireDni={event.require_dni ?? true}
           isFree={event.is_free ?? false}
           maxPerPerson={event.max_per_person ?? null}
+          moneda={monedaDe(marca?.moneda)}
           sendReminder={event.send_reminder ?? false}
           collectAttendeeNames={event.collect_attendee_names ?? false}
           allowTransfer={event.allow_transfer ?? false}
@@ -107,7 +108,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
             {/* Postergar: solo cuando hay ventas (la fecha de arriba queda bloqueada). */}
             {event.is_published && hasSales && (
               <div style={{ marginTop: 16 }}>
-                <PostponeEvent eventId={event.id} startsLocal={toLimaLocal(event.starts_at)} />
+                <PostponeEvent eventId={event.id} startsLocal={startsLocal} />
               </div>
             )}
             <div style={{ marginTop: 16 }}>
