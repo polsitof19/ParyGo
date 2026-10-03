@@ -5,7 +5,8 @@ import { useFormState, useFormStatus } from 'react-dom';
 import { BatteryFull, CheckCircle2, ChevronLeft, Lock, Plus, Signal, Trash2, Wifi, XCircle } from 'lucide-react';
 import { pareceCaptura, medirImagen } from '@/lib/flyer';
 import { useTextos } from '@/components/IdiomaPanel';
-import { aCentavos, formatMoney, simbolo, sinDecimales, type Moneda } from '@/lib/moneda';
+import { aCentavos, formatMoney, simbolo, sinDecimales, NOMBRE_MONEDA, type Moneda } from '@/lib/moneda';
+import { paisDe } from '@/lib/metodoManual';
 import { localAUtc, utcALocal, ciudadDe, type Zona } from '@/lib/zona';
 import { createBrandEventAction, eventoSlugLibre, type FormState } from './actions';
 
@@ -80,7 +81,7 @@ const PASO_DE: Record<string, Paso> = {
 };
 const FOCO: Partial<Record<Paso, string>> = { 1: 'name', 2: 'starts_at', 3: 'venue_name', 4: 'tt-0-name' };
 
-export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista, moneda, zona, children }: {
+export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista, moneda, zona, primerEvento = false, children }: {
   marcaSlug: string;
   marcaNombre: string;
   saldo: number;
@@ -94,6 +95,8 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
   moneda: Moneda;
   // Zona horaria de la marca (brands.zona_horaria).
   zona: Zona;
+  // Primer evento de la marca: se le recuerda la moneda (después no cambia).
+  primerEvento?: boolean;
   children?: React.ReactNode;
 }) {
   const { t, l, loc } = useTextos();
@@ -435,6 +438,16 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
             {pregunta(4, t('Tus entradas', 'Your tickets'), tope
               ? t(`Precio y cuántas hay. Hasta ${tope} en total. Puedes saltarlo y agregarlas después.`, `Price and how many. Up to ${tope} in total. You can skip this and add them later.`)
               : t('Precio y cuántas hay. Puedes saltarlo y agregarlas después.', 'Price and how many. You can skip this and add them later.'))}
+            {primerEvento && (() => {
+              const p = paisDe(moneda, zona);
+              return (
+                <p className="s-hint cw-hint-top">
+                  {t(`Vendes desde ${p.nombre}: tus precios van en ${NOMBRE_MONEDA[moneda].es}. ¿Es otro país? Cámbialo en `, `You sell from ${p.name}: your prices are in ${NOMBRE_MONEDA[moneda].en}. Another country? Change it in `)}
+                  <a href="/admin/settings#cobro">{t('Mi marca', 'My brand')}</a>
+                  {t(' antes de crear tu primer evento: después ya no se puede.', ' before creating your first event: it cannot be changed afterwards.')}
+                </p>
+              );
+            })()}
             <label className="s-check">
               <input type="checkbox" name="is_free" checked={isFree} onChange={(e) => setIsFree(e.target.checked)} />
               {t('Evento gratis (entrada libre con registro)', 'Free event (open entry with registration)')}

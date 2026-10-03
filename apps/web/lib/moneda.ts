@@ -55,3 +55,14 @@ export function aCentavos(input: string | number, moneda: Moneda): number {
 // negativo y, en CLP/COP, múltiplo de 100 (sin fracción de peso).
 export const centavosValidos = (c: unknown, moneda: Moneda): boolean =>
   typeof c === 'number' && Number.isInteger(c) && c >= 0 && (!sinDecimales(moneda) || c % 100 === 0);
+
+// Nombre de la moneda en una frase ("Tus entradas se venden en soles (S/)").
+export const NOMBRE_MONEDA: Record<Moneda, { es: string; en: string }> = {
+  PEN: { es: 'soles (S/)', en: 'Peruvian soles (S/)' },
+  USD: { es: 'dólares (US$)', en: 'US dollars (US$)' },
+  COP: { es: 'pesos colombianos', en: 'Colombian pesos' },
+  MXN: { es: 'pesos mexicanos', en: 'Mexican pesos' },
+  CLP: { es: 'pesos chilenos', en: 'Chilean pesos' },
+  ARS: { es: 'pesos argentinos', en: 'Argentine pesos' },
+  EUR: { es: 'euros (€)', en: 'euros (€)' },
+};
