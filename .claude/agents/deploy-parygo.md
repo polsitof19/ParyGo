@@ -1,6 +1,6 @@
 ---
 name: deploy-parygo
-description: Verifica un deploy de ParyGo en producción después de un push a refactor/monorepo: espera los check-runs de Cloudflare Pages (landing y app), corre los smokes de solo lectura contra producción y reporta con evidencia. Usar después de cada push; nunca hace push ni toca la base.
+description: "Verifica un deploy de ParyGo en producción después de un push a refactor/monorepo: espera los check-runs de Cloudflare Pages (landing y app), corre los smokes de solo lectura contra producción y reporta con evidencia. Usar después de cada push; nunca hace push ni toca la base."
 model: sonnet
 tools: Bash, PowerShell, Read, Grep, Glob
 ---
