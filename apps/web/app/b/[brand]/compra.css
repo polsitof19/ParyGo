@@ -16,7 +16,8 @@
    Teléfono (390): una columna, gutter 20, barra de pagar fija de 86.
    Escritorio (≥1024): grilla 360 / fluido / 320 en 1120 — el flyer a
    360×450 con su ficha a la izquierda, título + entradas + pasos + legal
-   al centro, "Tu compra" en tarjeta de 320 a la derecha.
+   al centro, "Tu compra" en tarjeta de 320 a la derecha. SIN flyer
+   (.b-stage--solo): fluido / 320, sin la columna del flyer.
    ============================================================ */
 
 .client-shell .b-buy {
@@ -331,6 +332,19 @@
   /* El dónde ya está en la ficha bajo el flyer. */
   .client-shell .b-info__donde { display: none; }
   .client-shell .b-info { margin-top: var(--b-s4); }
+
+  /* SIN FLYER: la columna de 360 quedaba vacía (solo la ficha del lugar) y
+     el contenido se apretaba en una columna de teléfono. Se saca: entradas
+     al centro (1120 − 40 − 320) y "Tu compra" a la derecha. El dónde vuelve
+     a su bloque con mapa, porque ya no hay ficha bajo el flyer. */
+  .client-shell .b-stage--solo {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-areas:
+      "titulo resumen"
+      "lista  resumen";
+  }
+  .client-shell .b-stage--solo .b-hero { display: none; }
+  .client-shell .b-stage--solo .b-info__donde { display: block; }
 
   .client-shell .b-sum {
     grid-area: resumen; display: block; position: sticky; top: calc(var(--b-header) + var(--b-s3));

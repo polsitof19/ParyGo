@@ -410,7 +410,9 @@ function fraseConfianza(pago: string): string {
       ) : shownStep === 1 ? (
         /* ---------- PANTALLA 1: el flyer y las entradas ---------- */
         <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}${atras ? ' c-stepwrap--back' : ''}`} key="step1">
-        <div className="b-stage">
+        {/* Sin flyer, en escritorio la columna del flyer sobra: b-stage--solo
+            la saca y quedan dos columnas (compra.css). */}
+        <div className={`b-stage${event.cover_url ? '' : ' b-stage--solo'}`}>
           <Hero event={event} zona={zonaDe(brand.zona_horaria)} direccion={direccion} linea={lineaHero} />
 
           <div className="b-list">
