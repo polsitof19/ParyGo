@@ -186,19 +186,19 @@ export async function updateBrandSettingsAction(
   const qrNuevo = yapeQrUrl !== null && yapeQrUrl !== (brand.yape_qr_url ?? (theme.yape_qr_url as string | undefined) ?? null);
   if (cambiaMoneda || (medio !== medioDe(brand.metodo_manual) && !qrNuevo)) yapeQrUrl = null;
 
-  // Medio, cuenta, titular o QR no cambian con un comprador PAGANDO AHORA: la
-  // página de pago lee la marca en vivo y pagaría a la cuenta vieja (security
-  // review M2). Pagando = pago manual SIN comprobante creado hace < 30 min. Con
-  // comprobante ya pagó (cambiar la cuenta no lo afecta) y un carrito viejo
-  // abandonado no bloquea (M1): si no, un comprobante sin resolver dejaba a la
-  // marca sin poder cambiar su Yape para siempre. ponytail: count + update sin
-  // lock; la ventana es de milisegundos y el que paga en ella ve la cuenta nueva.
+  // El MEDIO no cambia con un comprador PAGANDO AHORA (pago manual SIN
+  // comprobante de < 30 min): la página de pago lee la marca en vivo y vería
+  // otro medio que el que eligió. Con comprobante ya pagó y no traba nada.
+  // Cambiar la cuenta DENTRO del mismo medio no se bloquea (riesgo aceptado,
+  // como siempre con Yape: bloquearlo trababa al organizador hasta 30 min por
+  // cualquier carrito abandonado; security review M2 queda como deuda).
+  // ponytail: count + update sin lock; ventana de milisegundos.
   const cambiaMedio = medio !== medioDe(brand.metodo_manual);
   const cambiaCuenta = cambiaMedio
     || (cuenta.cuenta || null) !== (brand.yape_number || null)
     || (cuenta.titular || null) !== (brand.yape_holder || null)
     || yapeQrUrl !== (brand.yape_qr_url ?? null);
-  if (cambiaCuenta) {
+  if (cambiaMedio) {
     const hace30 = new Date(Date.now() - 30 * 60e3).toISOString();
     const { count, error: pendErr } = await admin.from('orders').select('id', { count: 'exact', head: true })
       .eq('brand_id', brandId).eq('status', 'pending_yape_review')
