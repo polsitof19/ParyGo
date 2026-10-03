@@ -186,11 +186,12 @@ export async function updateBrandSettingsAction(
   const qrNuevo = yapeQrUrl !== null && yapeQrUrl !== (brand.yape_qr_url ?? (theme.yape_qr_url as string | undefined) ?? null);
   if (cambiaMoneda || (medio !== medioDe(brand.metodo_manual) && !qrNuevo)) yapeQrUrl = null;
 
-  // Medio, cuenta, titular o QR no cambian con pagos EN CURSO: la página de
-  // pago lee la marca en vivo y el comprador pagaría a la cuenta vieja (o vería
-  // una que no es la que pagó). En curso = con comprobante subido, o creado hace
-  // menos de 2 h (alguien pagando ahora). Un carrito abandonado sin comprobante
-  // no bloquea 48 h (security review M1, M2). ponytail: count + update sin
+  // Medio, cuenta, titular o QR no cambian con un comprador PAGANDO AHORA: la
+  // página de pago lee la marca en vivo y pagaría a la cuenta vieja (security
+  // review M2). Pagando = pago manual SIN comprobante creado hace < 30 min. Con
+  // comprobante ya pagó (cambiar la cuenta no lo afecta) y un carrito viejo
+  // abandonado no bloquea (M1): si no, un comprobante sin resolver dejaba a la
+  // marca sin poder cambiar su Yape para siempre. ponytail: count + update sin
   // lock; la ventana es de milisegundos y el que paga en ella ve la cuenta nueva.
   const cambiaMedio = medio !== medioDe(brand.metodo_manual);
   const cambiaCuenta = cambiaMedio
@@ -198,12 +199,12 @@ export async function updateBrandSettingsAction(
     || (cuenta.titular || null) !== (brand.yape_holder || null)
     || yapeQrUrl !== (brand.yape_qr_url ?? null);
   if (cambiaCuenta) {
-    const hace2h = new Date(Date.now() - 2 * 3600e3).toISOString();
+    const hace30 = new Date(Date.now() - 30 * 60e3).toISOString();
     const { count, error: pendErr } = await admin.from('orders').select('id', { count: 'exact', head: true })
       .eq('brand_id', brandId).eq('status', 'pending_yape_review')
-      .or(`yape_proof_id.not.is.null,created_at.gt.${hace2h}`);
+      .is('yape_proof_id', null).gt('created_at', hace30);
     if (pendErr || (count ?? 0) > 0) {
-      return { ok: false, message: t('Tienes pagos por aprobar. Apruébalos o recházalos antes de cambiar el medio de pago.', 'You have payments to approve. Approve or reject them before changing the payment method.'), fieldErrors: { metodo_manual: t('Hay pagos por aprobar', 'Payments pending') } };
+      return { ok: false, message: t('Alguien está pagando ahora mismo con tu cuenta actual. Espera unos minutos y vuelve a guardar.', 'Someone is paying right now with your current account. Wait a few minutes and save again.'), fieldErrors: { metodo_manual: t('Hay un pago en curso', 'Payment in progress') } };
     }
   }
 

@@ -91,6 +91,28 @@ try {
   check('/yape: Nequi, cuenta 3001234567 y monto "$ 50.000"', /Nequi/.test(txt) && txt.includes(CUENTA) && /\$\s?50\.000/.test(txt), txt.slice(0, 260));
   check('/yape: sin "yape(a)", ni "S/"', !/yape/i.test(txt.replace(/\/yape/g, '')) && !/S\//.test(txt), txt.match(/.{20}(yape|S\/).{20}/i)?.[0]);
 
+  // ---------- panel del dueño (sesión real) ----------
+  const octx = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+  await octx.addCookies(sessionCookies(await otpSession(OWNER)));
+  const a = await octx.newPage();
+  const dialogos = [];
+  a.on('dialog', (d) => { dialogos.push(d.message()); d.accept().catch(() => {}); }); // confirm() de "Aprobar"
+
+  // Medio bloqueado mientras el comprador está PAGANDO (orden sin comprobante,
+  // recién creada): pagaría a la cuenta vieja.
+  const cambiarMedio = async () => {
+    await a.goto(`${BASE}/admin/settings`, { waitUntil: 'load', timeout: 90000 });
+    await a.locator('#metodo_manual').selectOption('transferencia');
+    await a.fill('#yape_number', 'Bancolombia ahorros 123456789');
+    await a.fill('#yape_holder', 'Prueba E2E');
+    await a.getByRole('button', { name: /Guardar configuración/ }).click();
+    return a.getByText(/pagando ahora mismo/i).first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+  };
+  const bloq = await cambiarMedio();
+  const { data: br } = await svc.from('brands').select('metodo_manual, yape_number').eq('id', brandId).single();
+  check('cambiar el medio con un comprador pagando: rechazado y la marca sigue en Nequi', bloq && br?.metodo_manual === 'nequi' && br?.yape_number === CUENTA, JSON.stringify(br));
+
+
   // ---------- comprobante con "50.000" ----------
   await p.fill('#amount', '50.000');
   await p.fill('#operation_number', `${Date.now()}`.slice(-9));
@@ -118,22 +140,12 @@ try {
     check('Tarjeta forjada en COP: rechazada y 0 órdenes de mercadopago (solo queda la de Nequi)', (mp ?? []).length === 0 && (todas ?? []).length === 1, `${resp.status()} · ${body.slice(-140)}`);
   } else log('⏭  Tarjeta forjada: no se capturó el request del checkout, se salta');
 
-  // ---------- panel del dueño (sesión real) ----------
-  const octx = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
-  await octx.addCookies(sessionCookies(await otpSession(OWNER)));
-  const a = await octx.newPage();
-  const dialogos = [];
-  a.on('dialog', (d) => { dialogos.push(d.message()); d.accept().catch(() => {}); }); // confirm() de "Aprobar"
-
-  // Medio bloqueado con un pago por aprobar.
-  await a.goto(`${BASE}/admin/settings`, { waitUntil: 'load', timeout: 90000 });
-  await a.locator('#metodo_manual').selectOption('transferencia');
-  await a.fill('#yape_number', 'Bancolombia ahorros 123456789');
-  await a.fill('#yape_holder', 'Prueba E2E');
-  await a.getByRole('button', { name: /Guardar configuración/ }).click();
-  const bloq = await a.getByText(/pagos por aprobar/i).first().waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
-  const { data: br } = await svc.from('brands').select('metodo_manual, yape_number').eq('id', brandId).single();
-  check('cambiar el medio con un pago por aprobar: rechazado y la marca sigue en Nequi', bloq && br?.metodo_manual === 'nequi' && br?.yape_number === CUENTA, JSON.stringify(br));
+  // Con el comprobante subido el comprador YA pagó: cambiar la cuenta no lo
+  // afecta y no bloquea (un comprobante sin resolver no deja a la marca trabada).
+  const bloq2 = await cambiarMedio();
+  await sleep(1500);
+  const { data: br2 } = await svc.from('brands').select('metodo_manual').eq('id', brandId).single();
+  check('con el comprobante ya subido: el cambio de medio pasa', !bloq2 && br2?.metodo_manual === 'transferencia', JSON.stringify(br2));
 
   // Aprobación por la UI del panel.
   await a.goto(`${BASE}/admin/events/${eventId}/yape`, { waitUntil: 'load', timeout: 90000 });
