@@ -411,7 +411,7 @@ supabase/verify-0053-0058.mjs (comprobaciones de estado esperado).
 OJO con `mgmt.mjs types`: PISA database.types.ts entero y regenerarlo completo
 rompe tipos afinados a mano — las columnas nuevas se agregan a mano.
 
-VENDER FUERA DE PERÚ (0088 + 0089, 2026-10-03; plan en AGENTS.md). brands.moneda
+VENDER FUERA DE PERÚ (0088 + 0089, 2026-10-03; plan en docs/vender-fuera-de-peru.md). brands.moneda
 (PEN|USD|COP|MXN|CLP|ARS|EUR, default PEN), zona_horaria (8 zonas, default
 America/Lima) y metodo_manual (yape|nequi|bizum|zelle|usdt|transferencia,
 default yape; CHECK de compatibilidad con la moneda). Los precios siguen
