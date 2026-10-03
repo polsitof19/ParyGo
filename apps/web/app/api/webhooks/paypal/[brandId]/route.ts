@@ -22,6 +22,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 export async function POST(req: NextRequest, { params }: { params: { brandId: string } }) {
   if (!UUID_RE.test(params.brandId)) return NextResponse.json({ ok: false }, { status: 200 });
+  // El tamaño se mira ANTES de leer el cuerpo (security review B4).
+  if (Number(req.headers.get('content-length') ?? '0') > 64_000) return NextResponse.json({ ok: false }, { status: 200 });
   const texto = await req.text();
   if (texto.length > 64_000) return NextResponse.json({ ok: false }, { status: 200 });
   let aviso: { event_type?: unknown; resource?: unknown };

@@ -80,7 +80,9 @@ async function devolverAuto(
   try { devuelta = await paypalDevolver(c, capId); } catch { devuelta = false; }
   if (!devuelta) {
     // Queda en Salud para devolverla a mano: nunca se pierde de vista.
-    await admin.from('events_log').insert({ brand_id: brandId, order_id: orderId, type: 'paypal_refund_pendiente', payload: { capture_id: capId, causa } });
+    const { count } = await admin.from('events_log').select('id', { count: 'exact', head: true })
+      .eq('order_id', orderId).eq('type', 'paypal_refund_pendiente').eq('payload->>capture_id', capId);
+    if (!count) await admin.from('events_log').insert({ brand_id: brandId, order_id: orderId, type: 'paypal_refund_pendiente', payload: { capture_id: capId, causa } });
     return { ok: false, motivo: 'error', detalle: `devolucion_fallida:${causa}` };
   }
   // Una orden ya emitida (captura duplicada) NO se toca: refund_paypal_order
@@ -94,7 +96,10 @@ async function devolverAuto(
 export async function cobrarVueltaPaypal(
   admin: SupabaseClient, brandId: string, orderId: string, paypalOrderId: string, key: string,
 ): Promise<ResultadoPaypal> {
-  const c = await credencialesPaypal(admin, brandId, key).catch(() => null);
+  // Un error al LEER (la base parpadeó) no es "cambiaron las credenciales": la
+  // orden sigue viva y el comprador puede recargar (security review M2).
+  let c: CredMarca | null;
+  try { c = await credencialesPaypal(admin, brandId, key); } catch { return { ok: false, motivo: 'error', detalle: 'credenciales_ilegibles' }; }
   if (!c) return { ok: false, motivo: 'credenciales_cambiaron' };
   const { data: p, error } = await admin.rpc('puede_cobrar_paypal', {
     p_order_id: orderId, p_brand_id: brandId, p_paypal_order_id: paypalOrderId, p_client_id: c.clientId,
@@ -148,7 +153,10 @@ export async function procesarAvisoPaypal(
     return { ok: false, motivo: 'ignorado', detalle: 'evento' };
   }
 
-  const { data: candado } = await admin.rpc('tomar_candado', { p_clave: `pp_aviso:${evento}:${capId}`, p_segundos: 10 });
+  // Por ORDEN (resuelta desde la base), no por el id del aviso: con un id
+  // nuevo en cada POST, el candado por captura no frenaba a quien conoce una
+  // orden propia pendiente (security review M1).
+  const { data: candado } = await admin.rpc('tomar_candado', { p_clave: `pp_aviso:${evento}:${orderId}`, p_segundos: 10 });
   if (candado !== true) return { ok: false, motivo: 'reintentar' };
 
   let c: CredMarca | null;

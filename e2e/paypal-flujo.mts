@@ -30,10 +30,18 @@ globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
   if (m) {
     if (pp.capturaError) return json({ details: [{ issue: pp.capturaError }] }, 422);
     const ppOrder = m[1]!;
+    // Como PayPal: una orden se captura UNA vez; después, ORDER_ALREADY_CAPTURED.
+    if ([...capturas.values()].some((c) => c.ppOrder === ppOrder)) return json({ details: [{ issue: 'ORDER_ALREADY_CAPTURED' }] }, 422);
     const custom = ordenDePaypal.get(ppOrder) ?? 'desconocida';
     const cap: Cap = { id: `CAP${++nCap}X${Date.now() % 1e6}`, status: pp.capturaStatus, value: pp.capturaValor, custom, ppOrder };
     capturas.set(cap.id, cap);
     return json({ id: ppOrder, status: 'COMPLETED', purchase_units: [{ custom_id: custom, payments: { captures: [{ id: cap.id, status: cap.status, custom_id: custom, amount: { currency_code: 'USD', value: cap.value } }] } }] }, 201);
+  }
+  m = /\/v2\/checkout\/orders\/([A-Z0-9]+)$/.exec(u);
+  if (m) {
+    const c = [...capturas.values()].find((x) => x.ppOrder === m![1]);
+    if (!c) return json({}, 404);
+    return json({ id: c.ppOrder, status: 'COMPLETED', purchase_units: [{ custom_id: c.custom, payments: { captures: [{ id: c.id, status: c.status, custom_id: c.custom, amount: { currency_code: 'USD', value: c.value } }] } }] });
   }
   m = /\/v2\/payments\/captures\/([A-Z0-9]+)\/refund$/.exec(u);
   if (m) { const c = capturas.get(m[1]!); if (c) c.status = 'REFUNDED'; return json({ id: 'R1', status: 'COMPLETED' }, 201); }
@@ -177,6 +185,21 @@ try {
   capturas.set('CAPAJENA1', { ...c12, id: 'CAPAJENA1', status: 'COMPLETED', custom: o1.id, ppOrder: o12.ppOrder });
   const a12 = await aviso('PAYMENT.CAPTURE.COMPLETED', { id: 'CAPAJENA1', supplementary_data: { related_ids: { order_id: o12.ppOrder } } });
   check('captura con custom_id de otra orden: ignorada', !a12.ok && a12.motivo === 'ignorado' && (await entradas(o12.id)).length === 0, JSON.stringify(a12));
+
+  // 11. vuelta y aviso COMPLETED A LA VEZ (security review B5): exactamente
+  // una emisión y ninguna devolución.
+  const o13 = await orden();
+  const cr = await fetch(`https://api-m.sandbox.paypal.com/v2/checkout/orders/${o13.ppOrder}/capture`, { method: 'POST' });
+  const cap13 = ((await cr.json()) as { purchase_units: { payments: { captures: { id: string }[] } }[] }).purchase_units[0]!.payments.captures[0]!.id;
+  llamadasPaypal = [];
+  await admin.from('candados_alta').delete().like('clave', 'pp_aviso:%');
+  const [v13, w13] = await Promise.all([
+    cobrarVueltaPaypal(admin, B, o13.id, o13.ppOrder, KEY),
+    procesarAvisoPaypal(admin, B, 'PAYMENT.CAPTURE.COMPLETED', { id: cap13, supplementary_data: { related_ids: { order_id: o13.ppOrder } } }, KEY),
+  ]);
+  check('vuelta + aviso a la vez: 2 entradas, paid, sin devolución',
+    (await entradas(o13.id)).length === 2 && (await estado(o13.id)).status === 'paid' && !llamadasPaypal.some((l) => l.endsWith('/refund')),
+    `${JSON.stringify(v13)} ${JSON.stringify(w13)}`);
 } finally {
   const { data: ords } = await admin.from('orders').select('id').eq('brand_id', B);
   for (const { id } of ords ?? []) {
