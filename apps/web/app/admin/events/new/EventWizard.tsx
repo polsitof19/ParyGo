@@ -464,7 +464,7 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
                     <label htmlFor={`tt-${i}-name`} className="s-label">{t('Nombre de la entrada', 'Ticket name')}</label>
                     <input id={`tt-${i}-name`} className="s-input" maxLength={80} value={tt.name} {...inv(`tt-${i}-name`)}
                       onChange={(e) => { patchTT(i, { name: e.target.value }); limpiar(`tt-${i}-name`); }} />
-                    <NombresEntrada onPick={(n) => { patchTT(i, { name: n }); limpiar(`tt-${i}-name`); }} />
+                    <NombresEntrada inputId={`tt-${i}-name`} onPick={(n) => { patchTT(i, { name: n }); limpiar(`tt-${i}-name`); }} />
                   </div>
                   <button type="button" className="s-btn s-btn--ghost cw-quitar" onClick={() => { setTts((s) => s.filter((_, k) => k !== i)); setErrs({}); }} aria-label={t(`Quitar ${tt.name || 'esta entrada'}`, `Remove ${tt.name || 'this ticket'}`)}>
                     <Trash2 aria-hidden="true" />

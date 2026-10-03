@@ -338,7 +338,7 @@ function NewTicketTypeFields({ eventId, eventIsFree, moneda, action }: { eventId
       <div className="s-form-grid">
         <div className="s-field"><label className="s-label" htmlFor="tt-new-name">{t('Nombre', 'Name')}</label>
           <input id="tt-new-name" ref={nombreRef} name="name" className="s-input" required />
-          <NombresEntrada onPick={(n) => { if (nombreRef.current) nombreRef.current.value = n; }} /></div>
+          <NombresEntrada inputId="tt-new-name" onPick={(n) => { if (nombreRef.current) nombreRef.current.value = n; }} /></div>
         <PriceField id="tt-new-price" free={free} onFree={setFree} eventIsFree={eventIsFree} moneda={moneda} />
       </div>
       <div className="s-form-grid">
