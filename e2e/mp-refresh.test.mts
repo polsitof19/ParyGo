@@ -8,7 +8,7 @@ let ok = 0, mal = 0;
 const check = (n: string, c: boolean, d = '') => { c ? ok++ : mal++; console.log(`${c ? '✔' : '✘'} ${n}${d ? ' · ' + d : ''}`); };
 
 // Base simulada: el candado es atómico (como tomar_candado) y se registra todo.
-function base(venceEnMs: number, fallaGuardado = 0) {
+function base(venceEnMs: number, fallaGuardado = 0, cambioCuenta = false) {
   const st = { candado: false, refrescos: 0, intentosGuardado: 0, limpiada: false, log: [] as string[], token: 'viejo' };
   const admin = {
     rpc: async (fn: string, a: Record<string, unknown>) => {
@@ -16,6 +16,7 @@ function base(venceEnMs: number, fallaGuardado = 0) {
       if (fn === 'tomar_candado') { const gana = !st.candado; st.candado = true; return { data: gana, error: null }; }
       if (fn === 'refresh_brand_mp_oauth') {
         st.intentosGuardado++;
+        if (cambioCuenta) return { data: false, error: null };
         if (st.intentosGuardado <= fallaGuardado) return { data: null, error: { message: 'timeout' } };
         st.refrescos++; st.token = String(a.p_access_token); return { data: true, error: null };
       }
@@ -69,6 +70,12 @@ const DIA = 864e5;
 { const { st, admin } = base(3 * DIA, 9); mp(200, nuevo);
   await tokenVigenteMp(admin, 'b', 'k');
   check('guardado falla siempre → bitácora mp_refresh_no_guardado', st.log.includes('mp_refresh_no_guardado') && st.intentosGuardado === 3); }
+
+// 3e. La marca cambió de cuenta mientras se renovaba → error, NO se usa el token (Codex P2).
+{ const { admin } = base(3 * DIA, 0, true); mp(200, nuevo);
+  let err = '';
+  try { await tokenVigenteMp(admin, 'b', 'k'); } catch (e) { err = (e as Error).message; }
+  check('cuenta cambiada durante el refresh → error, no cobra', /cambió/.test(err), err); }
 
 // 4. Transitorio (503) con token aún válido → sigue cobrando, nada se borra.
 { const { st, admin } = base(3 * DIA); mp(503, {});

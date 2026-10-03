@@ -45,6 +45,21 @@ export async function estadoMp(admin: SupabaseClient, brandId: string): Promise<
 
 const SIETE_DIAS = 7 * 864e5;
 
+// ¿Se puede ofrecer "Tarjeta" AHORA? Si el token vence en menos de 7 días (o ya
+// venció) se renueva antes de mostrarlo; si no se puede, no se ofrece (falla
+// cerrado: antes el comprador dejaba sus datos y recién ahí fallaba; Codex P2).
+export async function mpUsable(admin: SupabaseClient, brandId: string, key: string): Promise<boolean> {
+  const { data } = await admin.from('brands').select('mp_oauth_user_id, mp_oauth_expires_at').eq('id', brandId).maybeSingle();
+  if (!data?.mp_oauth_user_id || !data.mp_oauth_expires_at) return false;
+  if (new Date(data.mp_oauth_expires_at).getTime() - Date.now() > SIETE_DIAS) return true;
+  try {
+    await tokenVigenteMp(admin, brandId, key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Token vigente de la marca para cobrar o re-pedir un pago. Refresca 7 días
 // antes del vencimiento (el token actual sigue valiendo mientras tanto):
 //  - un solo refresco a la vez (tomar_candado); el que pierde usa el vigente;
@@ -82,7 +97,9 @@ export async function tokenVigenteMp(admin: SupabaseClient, brandId: string, key
         p_refresh_token: r.tokens.refreshToken, p_expires_at: r.tokens.expiresAt.toISOString(), p_encryption_key: key,
       });
       if (!eG && guardado === true) return r.tokens.accessToken;
-      if (!eG && guardado === false) break; // la marca se desconectó o cambió de cuenta mientras tanto
+      // La marca se desconectó o cambió de cuenta mientras tanto: NO se cobra
+      // con el token de la cuenta anterior (Codex P2).
+      if (!eG && guardado === false) throw new Error('La conexión de Mercado Pago cambió mientras se renovaba. Intenta de nuevo.');
       await new Promise((ok) => setTimeout(ok, 300 * (intento + 1)));
     }
     await admin.from('events_log').insert({ brand_id: brandId, type: 'mp_refresh_no_guardado', payload: { cuenta: fila.user_id } });

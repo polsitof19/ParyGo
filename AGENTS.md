@@ -42,10 +42,11 @@ Paul nunca toca esa plata (no hay `marketplace_fee`).
   Test: dos refrescos simultáneos → un solo POST a /oauth/token (fetch simulado).
 - Webhook de entradas: secreto = `PARYGO_MP_WEBHOOK_SECRET` (firma la app de
   ParyGo; doc oficial: el secreto es de la aplicación, no del vendedor).
-- Webhook de packs: el `user_id` del cuerpo NO va firmado → solo filtro
-  operativo (≠ Paul → 200 sin re-pedir). Un pago que MP devuelve 404 con el token
-  de Paul → 200 `ignored` (no 502). Acreditar sigue dependiendo del re-pedido +
-  `settle_pack_purchase`.
+- Webhook de packs: un pago que MP devuelve 403 con el token de Paul (de otra
+  cuenta) → 200 `ignored`. El 404 SIGUE en 502 (security review M2: MP a veces
+  no encuentra un pago recién creado y el reintento es lo que acredita el pack;
+  un aviso ajeno que reintente no hace daño). Acreditar sigue dependiendo del
+  re-pedido + `settle_pack_purchase`.
 - Desconectar: mismo criterio que quitar el Yape (`marcaCobraEnVivo` con el
   único método) → bloqueado. Órdenes MP pendientes: se dejan; la vuelta y el
   webhook ya no pueden re-pedir el pago sin token → quedan en `pending_payment`
@@ -91,9 +92,8 @@ Paul nunca toca esa plata (no hay `marketplace_fee`).
    Validar además `collector_id` del pago re-pedido == `mp_oauth_user_id`. La
    vuelta del comprador (0083/0084) sigue de respaldo.
    VERIFICAR con un pago real chico antes de dar por cerrado.
-5. `/api/webhooks/parygo-mp` (packs): ignorar (200) avisos cuyo `user_id` no sea
-   el de Paul (filtro operativo, no autenticación) y tratar un 404 al re-pedir
-   como 200 `ignored`.
+5. `/api/webhooks/parygo-mp` (packs): 403 al re-pedir → 200 `ignored`; 404 → 502
+   (reintento), ver Decisiones.
 6. "Tiene método de pago" (`lib/metodoPago.ts marcaTieneMetodo`) = Yape O MP
    conectado. Checkout: "Tarjeta" aparece solo con MP conectado y vigente.
 7. "Desconectar": borra tokens (`clear_brand_mp_oauth`); si era el único método y
