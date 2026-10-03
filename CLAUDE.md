@@ -411,7 +411,7 @@ supabase/verify-0053-0058.mjs (comprobaciones de estado esperado).
 OJO con `mgmt.mjs types`: PISA database.types.ts entero y regenerarlo completo
 rompe tipos afinados a mano — las columnas nuevas se agregan a mano.
 
-CONECTAR MERCADO PAGO (0086 + 0087, 2026-10-03; plan y decisiones en AGENTS.md).
+CONECTAR MERCADO PAGO (0086 + 0087, 2026-10-03; plan y decisiones en docs/conectar-mp.md).
 ÚNICO modo de cobrar con tarjeta: OAuth (se retiraron las credenciales
 manuales; 0 marcas las tenían). Mi marca → "Mercado Pago (tarjeta y más)" →
 "Conectar Mercado Pago" (conectarMpAction: state + PKCE S256 en cookie
