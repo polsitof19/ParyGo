@@ -432,8 +432,8 @@ payment_method 'yape_manual' = "pago manual con comprobante" para todos.
 lib/metodoManual.ts = países, medios y validación de cuenta (la usan Mi marca
 y la cabina, los ÚNICOS escritores). Mi marca: "País" (cambia moneda+zona; con
 moneda nueva se limpian medio, cuenta y QR) y el medio del país. Medio, cuenta,
-titular y QR NO cambian con un pago manual EN CURSO (pending_yape_review con
-comprobante o de < 2 h); cambiar de medio borra el QR viejo; el cambio queda
+titular y QR NO cambian con un comprador PAGANDO AHORA (pending_yape_review SIN
+comprobante y de < 30 min; con comprobante ya pagó y no traba nada); cambiar de medio borra el QR viejo; el cambio queda
 en events_log (cobro_cambiado, últimos 4). La cuenta es PÚBLICA por diseño
 (grant de columna, como el celular de Yape): ahora puede ser un IBAN, un
 Zelle o una wallet — aceptado, la ve cualquier comprador. Para Yape TODO texto
