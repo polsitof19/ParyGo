@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { generateQrSvg } from '@/lib/qr';
 import { formatEventDate } from '@/lib/utils';
 import { TicketPass } from '../../TicketPass';
+import { formatEnZona, zonaDe } from '@/lib/zona';
 import { LineaEntrada } from '../../Responsable';
 
 // QR generado server-side, sin dependencias Node-only → corre en edge.
@@ -18,7 +19,7 @@ type OrderView = {
   status: string;
   payment_method: 'mercadopago' | 'yape_manual';
   event: { name: string; starts_at: string; venue_name: string | null; cover_url: string | null } | null;
-  brand: { slug: string; name: string; whatsapp_e164: string | null; contact_email: string | null; theme_json: { logo_url?: string | null } | null } | null;
+  brand: { slug: string; name: string; whatsapp_e164: string | null; contact_email: string | null; zona_horaria: string; theme_json: { logo_url?: string | null } | null } | null;
   tickets: {
     qr_code: string;
     ticket_type_name: string;
@@ -37,7 +38,7 @@ async function loadOrder(brandSlug: string, orderId: string): Promise<OrderView 
     .select(`
       id, status, payment_method,
       event:events ( name, starts_at, venue_name, cover_url ),
-      brand:brands ( slug, name, whatsapp_e164, contact_email, theme_json ),
+      brand:brands ( slug, name, whatsapp_e164, contact_email, theme_json, zona_horaria ),
       tickets ( qr_code, ticket_type_name, ticket_number, attendee_name, invalidated_at, validated_at )
     `)
     .eq('id', orderId)
@@ -99,7 +100,7 @@ export default async function OrderPage({ params }: { params: { brand: string; o
       <span className="c-eyebrow">Tus entradas</span>
       <h1 className="c-h1" style={{ marginTop: 'var(--b-s1)' }}>{event?.name}</h1>
       <p className="c-muted-3" style={{ marginTop: 'var(--b-s1)' }}>
-        {rendered.length === 1 ? '1 entrada' : `${rendered.length} entradas`}{event?.starts_at ? ` · ${formatEventDate(event.starts_at)}` : ''}. Un QR por persona en la puerta.
+        {rendered.length === 1 ? '1 entrada' : `${rendered.length} entradas`}{event?.starts_at ? ` · ${formatEventDate(event.starts_at, zonaDe(brand?.zona_horaria))}` : ''}. Un QR por persona en la puerta.
       </p>
 
       <div className="c-ticket__list">
@@ -123,11 +124,12 @@ export default async function OrderPage({ params }: { params: { brand: string; o
                 state={voided
                   ? { kind: 'dead', reason: 'Esta entrada fue anulada y no vale en la puerta.' }
                   : used
-                    ? { kind: 'used', at: new Date(t.validated_at!).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' }) }
+                    ? { kind: 'used', at: formatEnZona(t.validated_at!, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, zonaDe(brand?.zona_horaria)) }
                     : { kind: 'ok' }}
                 showFooter={false}
                 reenviar={false}
                 n={rendered.length > 1 ? i + 1 : undefined}
+                zona={zonaDe(brand?.zona_horaria)}
               />
             </div>
           );

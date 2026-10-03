@@ -1,5 +1,5 @@
 // lib/zona.ts (sin red).   cd apps/web && npx tsx ../../e2e/zona.test.mts
-const { localAUtc, utcALocal, hoyEn, formatEnZona } = await import('@/lib/zona');
+const { localAUtc, utcALocal, hoyEn, formatEnZona, ciudadDe } = await import('@/lib/zona');
 const { formatLima } = await import('@/lib/utils');
 
 let ok = 0, mal = 0;
@@ -24,6 +24,7 @@ check('hoy en Lima = 05/12 a las 22:00', hoyEn('America/Lima', t) === '2026-12-0
 check('hoy en Madrid = 06/12', hoyEn('Europe/Madrid', t) === '2026-12-06');
 const o: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' };
 check('formatEnZona Lima idéntico a formatLima', formatEnZona(t, o, 'America/Lima') === formatLima(t, o), formatLima(t, o));
+check('ciudadDe', ciudadDe('America/Argentina/Buenos_Aires') === 'Buenos Aires' && ciudadDe('Europe/Madrid') === 'Madrid' && ciudadDe('America/Lima') === 'Lima');
 
 console.log(mal ? `✘ ${mal} fallas, ${ok} OK` : `✔ ${ok}/${ok}`);
 process.exit(mal ? 1 : 0);

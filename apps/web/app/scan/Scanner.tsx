@@ -7,6 +7,7 @@ import { validateScanAction, previewScanAction, preloadEventAction, type ScanRes
 import {
   cacheTickets, getCachedTicket, bumpLocalScan, enqueueScan, pendingScans, markScanSynced, getDeviceId,
 } from '@/lib/offline-scan';
+import { formatEnZona, type Zona } from '@/lib/zona';
 import { useTextos } from '@/components/IdiomaPanel';
 
 type EventOpt = { id: string; name: string; starts_at: string };
@@ -38,7 +39,7 @@ const docLabel = (docType: string | null | undefined, t: Tr) =>
 // y confirma; se encola igual). Los estados "deny" no ofrecen PASAR.
 const canPassStatus = (s: string) => s === 'OK' || s === 'OFFLINE_UNKNOWN';
 
-export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: string }) {
+export function Scanner({ events, brandName, zona }: { events: EventOpt[]; brandName: string; zona: Zona }) {
   const { t, loc } = useTextos();
   const STATUS = getStatus(t);
   const [eventId, setEventId] = useState(events[0]?.id ?? '');
@@ -267,7 +268,7 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
             {pv.status === 'OK' && pv.max_scans != null && pv.max_scans > 1 && (pv.scan_count ?? 0) > 0 && (
               <p className="k-result__sub">{t(`reingreso ${(pv.scan_count ?? 0) + 1}/${pv.max_scans}`, `re-entry ${(pv.scan_count ?? 0) + 1}/${pv.max_scans}`)}</p>
             )}
-            {pv.status === 'ALREADY_USED' && pv.first_validated_at && <p className="k-result__sub">{t(`primer ingreso ${new Date(pv.first_validated_at).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}`, `first check-in ${new Date(pv.first_validated_at).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}`)}</p>}
+            {pv.status === 'ALREADY_USED' && pv.first_validated_at && <p className="k-result__sub">{t(`primer ingreso ${formatEnZona(pv.first_validated_at, { hour: '2-digit', minute: '2-digit' }, zona, loc)}`, `first check-in ${formatEnZona(pv.first_validated_at, { hour: '2-digit', minute: '2-digit' }, zona, loc)}`)}</p>}
             {pv.status === 'OFFLINE_UNKNOWN' && <p className="k-result__sub">{t('No está en la lista precargada. Revisa el documento a mano.', 'Not in the preloaded list. Check the document manually.')}</p>}
             {pv.status === 'OK' && <p className="k-result__sub">{t('Revisa el documento y confirma el ingreso.', 'Check the document and confirm entry.')}</p>}
             {pv.offline && <p className="k-result__off">{t('offline · se sincronizará', 'offline · will sync')}</p>}
@@ -300,7 +301,7 @@ export function Scanner({ events, brandName }: { events: EventOpt[]; brandName: 
             {result.buyer_dni && <p className="k-result__doc">{docLabel(result.buyer_doc_type, t)} {result.buyer_dni}</p>}
             {result.ticket_type_name && <p className="k-result__type">{result.ticket_type_name}</p>}
             {result.status === 'REENTRY' && result.max_scans != null && <p className="k-result__sub">{t(`re-entrada ${result.scan_count}/${result.max_scans}`, `re-entry ${result.scan_count}/${result.max_scans}`)}</p>}
-            {result.status === 'ALREADY_USED' && result.first_validated_at && <p className="k-result__sub">{t(`primer ingreso ${new Date(result.first_validated_at).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}`, `first check-in ${new Date(result.first_validated_at).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}`)}</p>}
+            {result.status === 'ALREADY_USED' && result.first_validated_at && <p className="k-result__sub">{t(`primer ingreso ${formatEnZona(result.first_validated_at, { hour: '2-digit', minute: '2-digit' }, zona, loc)}`, `first check-in ${formatEnZona(result.first_validated_at, { hour: '2-digit', minute: '2-digit' }, zona, loc)}`)}</p>}
             {result.offline && <p className="k-result__off">{t('offline · se sincronizará', 'offline · will sync')}</p>}
           </div>
           <button type="button" className="k-btn k-btn--brand k-btn--block" onClick={reset}>{t('Escanear otro', 'Scan another')}</button>

@@ -103,7 +103,7 @@ las server actions con service role.
   **Listo:** tsc, test unitario de formatMoney, grep sin "S/" suelto fuera de
   packs/landing, fase1 verde (PEN idéntico byte a byte).
 ### Bloque 2 — hora de la marca
-- [ ] 3. `lib/zona.ts`: `formatEnZona(d, opts, tz)` y `localAUtc(local, tz)` (offset
+- [x] 3. `lib/zona.ts`: `formatEnZona(d, opts, tz)` y `localAUtc(local, tz)` (offset
   con Intl, sirve con horario de verano). eventValidation y el asistente usan la
   zona de la marca en vez de `-05:00`; formatLima pasa a formatEnZona con la
   zona de la marca en las páginas de la marca. **Listo:** test unitario con

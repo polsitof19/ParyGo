@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateQrSvg } from '@/lib/qr';
 import { TicketPass, type PassState } from '../../TicketPass';
+import { formatEnZona, zonaDe } from '@/lib/zona';
 import { TransferTicket } from './TransferTicket';
 
 // SVG QR generation has no Node-only dependencies (no pngjs/Buffer), so this
@@ -34,6 +35,7 @@ type TicketView = {
     whatsapp_e164: string | null;
     contact_email: string | null;
     theme_json: BrandTheme;
+    zona_horaria: string;
   } | null;
 };
 
@@ -48,7 +50,7 @@ async function loadTicket(brandSlug: string, qrCode: string): Promise<TicketView
     .select(`
       id, qr_code, ticket_type_name, attendee_name, validated_at, invalidated_at,
       event:events ( name, starts_at, venue_name, cancelled_at, allow_transfer ),
-      brand:brands ( slug, name, whatsapp_e164, contact_email, theme_json )
+      brand:brands ( slug, name, whatsapp_e164, contact_email, theme_json, zona_horaria )
     `)
     .eq('qr_code', qrCode)
     .maybeSingle();
@@ -93,7 +95,7 @@ export default async function TicketPage({ params, searchParams }: Props) {
   const state: PassState = event?.cancelled_at
     ? { kind: 'dead', reason: 'Este evento fue cancelado. Coordina la devolución con el organizador.' }
     : t.validated_at
-      ? { kind: 'used', at: new Date(t.validated_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' }) }
+      ? { kind: 'used', at: formatEnZona(t.validated_at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, zonaDe(brand?.zona_horaria)) }
       : { kind: 'ok' };
 
   return (
@@ -111,6 +113,7 @@ export default async function TicketPage({ params, searchParams }: Props) {
         brandWhatsapp={brand?.whatsapp_e164 ?? null}
         brandEmail={brand?.contact_email ?? null}
         state={state}
+        zona={zonaDe(brand?.zona_horaria)}
       />
       {/* El contacto del organizador ya va en el pie de la entrada
           (LineaEntrada), así que acá no se repite. */}

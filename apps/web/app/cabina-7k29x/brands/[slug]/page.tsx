@@ -9,6 +9,7 @@ import { EnterBrandButton } from './EnterBrandButton';
 import { LoadPackForm } from './LoadPackForm';
 import { EditBrandingForm } from './EditBrandingForm';
 import { EditBrandBasicsForm } from './EditBrandBasicsForm';
+import { formatEnZona, zonaDe } from '@/lib/zona';
 import { brandColor } from '@/lib/brandColors';
 import { BrandLogo } from '@/components/BrandLogo';
 import { publicEnv } from '@/lib/env';
@@ -28,11 +29,12 @@ export default async function BrandDetailPage({
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
-    .select('id, slug, name, contact_email, whatsapp_e164, yape_number, yape_holder, theme_json, created_at, event_balance, archived_at')
+    .select('id, slug, name, contact_email, whatsapp_e164, yape_number, yape_holder, theme_json, created_at, event_balance, archived_at, zona_horaria')
     .eq('slug', params.slug)
     .maybeSingle();
 
   if (!brand) notFound();
+  const zona = zonaDe(brand.zona_horaria);
 
   const [{ data: events }, { data: members }, { count: orderCount }, { count: ticketCount }] = await Promise.all([
     supabase
@@ -211,7 +213,7 @@ export default async function BrandDetailPage({
               <li key={e.id} className="s-event-row">
                 <Link href={`/cabina-7k29x/events/${e.id}`} className="s-event-row__main">
                   <span className="s-event-row__name">{e.name}</span>
-                  <span className="s-event-row__date">{new Date(e.starts_at).toLocaleString('es-PE', { timeZone: 'America/Lima' })}</span>
+                  <span className="s-event-row__date">{formatEnZona(e.starts_at, { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' }, zona, 'es-PE')}</span>
                 </Link>
                 {e.archived_at ? (
                   <span className="s-badge s-badge--draft">Archivado</span>
@@ -248,7 +250,7 @@ export default async function BrandDetailPage({
                     {m.display_name ?? 'Brand admin'}
                     {m.created_at && (
                       <span className="s-muted" style={{ display: 'block', fontSize: 12 }}>
-                        desde {new Date(m.created_at).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Lima' })}
+                        desde {formatEnZona(m.created_at, { day: '2-digit', month: 'short', year: 'numeric' }, zona, 'es-PE')}
                       </span>
                     )}
                   </span>

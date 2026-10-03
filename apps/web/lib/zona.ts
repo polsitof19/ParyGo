@@ -54,3 +54,6 @@ export function utcALocal(d: Date | string, zona: Zona): string {
 
 // "2026-12-05": el día de hoy en la zona.
 export const hoyEn = (zona: Zona, ahora = new Date()) => utcALocal(ahora, zona).slice(0, 10);
+
+// "America/Argentina/Buenos_Aires" → "Buenos Aires" (para textos tipo "Hora de Madrid").
+export const ciudadDe = (zona: Zona) => (zona.split('/').pop() ?? zona).replace(/_/g, ' ');

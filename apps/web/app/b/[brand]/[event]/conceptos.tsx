@@ -20,6 +20,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Minus, Plus, Lock, Ticket, User, Mail } from 'lucide-react';
 import { formatMoney, type Moneda } from '@/lib/moneda';
 import { fmtCuando, fmtHora, distrito } from '@/lib/eventoTexto';
+import { formatEnZona, type Zona } from '@/lib/zona';
 export { fmtCuando, fmtHora, distrito };
 
 export type { Direccion } from '@/lib/concepto';
@@ -29,6 +30,8 @@ export type Brand = {
   yape_number: string | null; yape_holder: string | null;
   // Moneda de las entradas (brands.moneda, 0088); sin ella, PEN.
   moneda?: string | null;
+  // Zona horaria (brands.zona_horaria, 0088); sin ella, Lima.
+  zona_horaria?: string | null;
   // Contacto del organizador: es quien responde por el evento, así que la
   // página de compra tiene que poder linkearlo (ver lib/organizador.ts).
   whatsapp_e164?: string | null; contact_email?: string | null;
@@ -64,22 +67,21 @@ export type TicketType = {
 };
 
 // ---------------------------------------------------------------- fechas ---
-export function fmtCortoMayus(iso: string): string {
-  const d = new Date(iso);
-  const dia = new Intl.DateTimeFormat('es-PE', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'America/Lima' })
-    .format(d).replace(/[.,]/g, '').trim();
-  return `${dia} · ${fmtHora(iso)}`.toUpperCase();
+export function fmtCortoMayus(iso: string, zona: Zona = 'America/Lima'): string {
+  const dia = formatEnZona(iso, { weekday: 'short', day: 'numeric', month: 'short' }, zona)
+    .replace(/[.,]/g, '').trim();
+  return `${dia} · ${fmtHora(iso, zona)}`.toUpperCase();
 }
 
-export function fmtDiaLargo(iso: string): string {
-  return new Intl.DateTimeFormat('es-PE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Lima' })
-    .format(new Date(iso)).replace(/,/g, '').toUpperCase();
+export function fmtDiaLargo(iso: string, zona: Zona = 'America/Lima'): string {
+  return formatEnZona(iso, { weekday: 'long', day: 'numeric', month: 'long' }, zona)
+    .replace(/,/g, '').toUpperCase();
 }
 
 /** "27 set" — para el corte de una fase. */
-export function fmtDia(iso: string): string {
-  return new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', timeZone: 'America/Lima' })
-    .format(new Date(iso)).replace(/[-.]/g, ' ').trim();
+export function fmtDia(iso: string, zona: Zona = 'America/Lima'): string {
+  return formatEnZona(iso, { day: '2-digit', month: 'short' }, zona)
+    .replace(/[-.]/g, ' ').trim();
 }
 
 
@@ -109,7 +111,7 @@ export type Peldano = {
  *  después de la última), la PRÓXIMA y, si no hay próxima, la última que
  *  terminó. Lo que se muestra es lo que cobra startCheckout. Los tres
  *  conceptos parten de esta misma lista. */
-export function armarEscalera(t: TicketType): Peldano[] {
+export function armarEscalera(t: TicketType, zona: Zona = 'America/Lima'): Peldano[] {
   const ahora = Date.now();
   if (t.phases.length === 0) {
     return [{ titulo: t.name, sub: null, precio: t.active_price_cents, estado: 'vigente' }];
@@ -135,7 +137,7 @@ export function armarEscalera(t: TicketType): Peldano[] {
     const ultima = i === ordenadas.length - 1;
     const nombre = f.name?.trim() || (ultima && ordenadas.length > 1 ? 'Regular' : `Preventa ${i + 1}`);
     if (estado === 'vigente') {
-      const sub = f.ends_at ? `${nombre} · hasta el ${fmtDia(f.ends_at)}` : nombre;
+      const sub = f.ends_at ? `${nombre} · hasta el ${fmtDia(f.ends_at, zona)}` : nombre;
       return { titulo: t.name, sub, precio: f.price_cents, estado };
     }
     // Una preventa que ya pasó se lee como "Agotada" (así lo anuncia el
@@ -143,8 +145,8 @@ export function armarEscalera(t: TicketType): Peldano[] {
     let sub: string | null = estado === 'pasada' ? 'Agotada' : null;
     if (estado === 'futura' && f.starts_at) {
       const previa = ordenadas[i - 1]?.ends_at;
-      const mismoDia = previa ? fmtDia(previa) === fmtDia(f.starts_at) : false;
-      if (!mismoDia) sub = `desde el ${fmtDia(f.starts_at)}`;
+      const mismoDia = previa ? fmtDia(previa, zona) === fmtDia(f.starts_at, zona) : false;
+      if (!mismoDia) sub = `desde el ${fmtDia(f.starts_at, zona)}`;
     }
     return { titulo: nombre, sub, precio: f.price_cents, estado };
   });

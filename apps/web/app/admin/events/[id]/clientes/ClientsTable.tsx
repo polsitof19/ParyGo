@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Search, Download, Send, Ban } from 'lucide-react';
 import { voidTicketAction, type VoidTicketState } from '../../../actions';
 import { formatMoney, type Moneda } from '@/lib/moneda';
+import { formatEnZona, type Zona } from '@/lib/zona';
 import { useTextos } from '@/components/IdiomaPanel';
 import type { Textos } from '@/lib/idioma';
 
@@ -25,7 +26,7 @@ export type ClientRow = {
 
 const docLabel = (tt: Textos['t'], d: string | null) => (d === 'ce' ? 'CE' : d === 'passport' ? tt('Pasaporte', 'Passport') : 'DNI');
 const methodLabel = (m: string) => (m === 'mercadopago' ? 'MercadoPago' : m === 'yape_manual' ? 'Yape' : m);
-const fmtDate = (iso: string, loc: string) => new Date(iso).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' });
+const fmtDate = (iso: string, loc: string, zona: Zona) => formatEnZona(iso, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, zona, loc);
 
 // Escape CSV: comillas dobladas + envolver si hay coma/comilla/salto de línea.
 function csvCell(v: string | number | null): string {
@@ -33,7 +34,7 @@ function csvCell(v: string | number | null): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function ClientsTable({ rows, eventId, eventName, moneda, impersonating = false, focusSearch = false, hint = null }: { rows: ClientRow[]; eventId: string; eventName: string; moneda: Moneda; impersonating?: boolean; focusSearch?: boolean; hint?: string | null }) {
+export function ClientsTable({ rows, eventId, eventName, moneda, zona, impersonating = false, focusSearch = false, hint = null }: { rows: ClientRow[]; eventId: string; eventName: string; moneda: Moneda; zona: Zona; impersonating?: boolean; focusSearch?: boolean; hint?: string | null }) {
   const { t, loc } = useTextos();
   const [q, setQ] = useState('');
   const filtered = useMemo(() => {
@@ -55,7 +56,7 @@ export function ClientsTable({ rows, eventId, eventName, moneda, impersonating =
         csvCell(r.name), csvCell(r.email), csvCell(r.phone),
         csvCell(`${docLabel(t, r.docType)} ${r.dni ?? ''}`.trim()),
         csvCell(tix), csvCell((r.totalCents / 100).toFixed(2)), csvCell((r.discountCents / 100).toFixed(2)),
-        csvCell(methodLabel(r.paymentMethod)), csvCell(fmtDate(r.createdAt, loc)),
+        csvCell(methodLabel(r.paymentMethod)), csvCell(fmtDate(r.createdAt, loc, zona)),
       ].join(','));
     }
     // BOM para que Excel abra los acentos bien.
@@ -105,7 +106,7 @@ export function ClientsTable({ rows, eventId, eventName, moneda, impersonating =
                 <div style={{ minWidth: 0 }}>
                   <p style={{ fontWeight: 700 }}>{r.name}</p>
                   <p className="s-muted" style={{ fontSize: 13, wordBreak: 'break-word' }}>{r.email} · {r.phone}</p>
-                  <p className="s-muted" style={{ fontSize: 13 }}>{docLabel(t, r.docType)} {r.dni ?? '—'} · {methodLabel(r.paymentMethod)} · {fmtDate(r.createdAt, loc)}</p>
+                  <p className="s-muted" style={{ fontSize: 13 }}>{docLabel(t, r.docType)} {r.dni ?? '—'} · {methodLabel(r.paymentMethod)} · {fmtDate(r.createdAt, loc, zona)}</p>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <p style={{ fontWeight: 800, fontFamily: 'var(--display)' }}>{formatMoney(r.totalCents, moneda)}</p>
@@ -118,7 +119,7 @@ export function ClientsTable({ rows, eventId, eventName, moneda, impersonating =
                     <span style={{ fontSize: 13.5 }}>
                       <strong>{tk.number}</strong> · {tk.typeName}
                       {tk.voided && <span className="s-badge s-badge--alert" style={{ marginLeft: 8 }}>{t('Anulada', 'Voided')}</span>}
-                      {!tk.voided && tk.enteredAt && <span className="s-badge s-badge--ok" style={{ marginLeft: 8 }}>{t('Ingresó', 'Entered')} {new Date(tk.enteredAt).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}</span>}
+                      {!tk.voided && tk.enteredAt && <span className="s-badge s-badge--ok" style={{ marginLeft: 8 }}>{t('Ingresó', 'Entered')} {formatEnZona(tk.enteredAt, { hour: '2-digit', minute: '2-digit' }, zona, loc)}</span>}
                     </span>
                     {!tk.voided && !impersonating && <VoidButton ticketId={tk.id} number={tk.number} />}
                   </li>

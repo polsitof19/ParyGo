@@ -6,6 +6,7 @@ import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatMoney, monedaDe } from '@/lib/moneda';
+import { formatEnZona, zonaDe } from '@/lib/zona';
 import { publicEnv } from '@/lib/env';
 import { textosPanel } from '@/lib/idiomaServer';
 
@@ -26,11 +27,12 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
   const admin = createAdminClient();
   const { data: event } = await admin
     .from('events')
-    .select('id, brand_id, slug, starts_at, ends_at, is_published, brand:brands ( slug, moneda )')
+    .select('id, brand_id, slug, starts_at, ends_at, is_published, brand:brands ( slug, moneda, zona_horaria )')
     .eq('id', params.id)
     .maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
   const moneda = monedaDe((Array.isArray(event.brand) ? event.brand[0] : event.brand)?.moneda);
+  const zona = zonaDe((Array.isArray(event.brand) ? event.brand[0] : event.brand)?.zona_horaria);
 
   type ProofRow = {
     id: string; amount_cents: number; operation_number: string; payer_name: string;
@@ -92,7 +94,7 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
   }
   const dayMap = new Map<string, number>();
   for (const o of paidRows) {
-    const day = new Date(o.created_at).toLocaleDateString(loc, { timeZone: 'America/Lima', day: '2-digit', month: 'short' });
+    const day = formatEnZona(o.created_at, { day: '2-digit', month: 'short' }, zona, loc);
     dayMap.set(day, (dayMap.get(day) ?? 0) + (o.total_cents ?? 0));
   }
   const byDay = [...dayMap.entries()].slice(-14);
@@ -193,7 +195,7 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
     const nx = nextByType.get(tp.id);
     if (nx) {
       const hrs = (new Date(nx.at).getTime() - Date.now()) / 3600000;
-      if (hrs > 0 && hrs <= 72) alerts.push({ tone: 'info', text: t(`${tp.name} sube a ${formatMoney(nx.cents, moneda)} el ${new Date(nx.at).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}`, `${tp.name} goes up to ${formatMoney(nx.cents, moneda)} on ${new Date(nx.at).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}`) });
+      if (hrs > 0 && hrs <= 72) alerts.push({ tone: 'info', text: t(`${tp.name} sube a ${formatMoney(nx.cents, moneda)} el ${formatEnZona(nx.at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, zona, loc)}`, `${tp.name} goes up to ${formatMoney(nx.cents, moneda)} on ${formatEnZona(nx.at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, zona, loc)}`) });
     }
   }
   const confirmedCents = byMethod.yape.cents + byMethod.mp.cents;
@@ -228,7 +230,7 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
     : days <= 0 ? t('Hoy', 'Today')
     : days === 1 ? t('Mañana', 'Tomorrow')
     : t(`En ${days} días`, `In ${days} days`);
-  const whenSub = new Date(event.starts_at).toLocaleString(loc, { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' });
+  const whenSub = formatEnZona(event.starts_at, { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, zona, loc);
   const brandSlug = (Array.isArray(event.brand) ? event.brand[0] : event.brand)?.slug ?? null;
   const publicUrl = brandSlug ? `https://${brandSlug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${event.slug}` : null;
   const noSalesYet = event.is_published && soldTickets === 0 && Date.now() < endsMs;
@@ -380,7 +382,7 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
                   </span>
                   <span className="s-muted s-small" style={{ textAlign: 'right', flexShrink: 0 }}>
                     {formatMoney(r.amount_cents, moneda)}<br />
-                    {r.reviewed_at && new Date(r.reviewed_at).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
+                    {r.reviewed_at && formatEnZona(r.reviewed_at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, zona, loc)}
                   </span>
                 </li>
               ))}

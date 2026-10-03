@@ -1,23 +1,28 @@
 // Validaciones de evento y tipos de entrada, compartidas por TODOS los caminos
 import { textos, type Idioma } from '@/lib/idioma';
 import { simbolo, type Moneda } from '@/lib/moneda';
+import { localAUtc, type Zona } from '@/lib/zona';
 // server que crean o editan (panel del promotor y cabina). Puras: sin I/O.
 // Se corren ANTES de cualquier RPC que consuma saldo.
 
-// Convierte un valor <input type="datetime-local"> (hora de Lima) a UTC ISO.
-// Lima = UTC-5 fijo (sin horario de verano). Explícito a propósito: `new Date(v)`
-// sin zona interpreta la hora local del SERVIDOR, que en Cloudflare es UTC y
-// correría el evento 5 horas. Acepta también ISO con zona explícita (Z o ±HH:mm).
-// Cualquier otro formato → null (nunca un parseo "a ciegas" en la zona del server).
-export function limaToIso(v: string | null | undefined): string | null {
+// Convierte un valor <input type="datetime-local"> (hora de la MARCA) a UTC ISO.
+// Explícito a propósito: `new Date(v)` sin zona interpreta la hora local del
+// SERVIDOR, que en Cloudflare es UTC. Acepta también ISO con zona explícita
+// (Z o ±HH:mm). Cualquier otro formato, o una hora que no existe por el cambio
+// de horario → null (nunca un parseo "a ciegas" en la zona del server).
+export function fechaAIso(v: string | null | undefined, zona: Zona): string | null {
   if (!v) return null;
-  let raw: string;
-  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(v)) raw = `${v.length === 16 ? `${v}:00` : v}-05:00`;
-  else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(v)) raw = v;
-  else return null;
-  const d = new Date(raw);
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(v)) return localAUtc(v, zona)?.toISOString() ?? null;
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(v)) return null;
+  const d = new Date(v);
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
+
+// Mensaje cuando fechaAIso devuelve null con un valor escrito.
+export const fechaInvalida = (l: Idioma = 'es') => textos(l).t(
+  'Esa fecha u hora no es válida (o no existe ese día por el cambio de horario).',
+  'That date or time is not valid (or does not exist that day because of daylight saving time).',
+);
 
 // Tolerancia para "fecha no pasada": el formulario se llena en minutos; un
 // inicio de hace 10 min se acepta (evento que arranca ya), uno de ayer no.

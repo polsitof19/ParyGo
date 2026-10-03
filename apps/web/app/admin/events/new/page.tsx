@@ -6,6 +6,7 @@ import { ownerBrandContext } from '@/lib/impersonation';
 import { createClient } from '@/lib/supabase/server';
 import { EventWizard } from './EventWizard';
 import { monedaDe } from '@/lib/moneda';
+import { zonaDe } from '@/lib/zona';
 import { pruebaDisponible, PRIVADO_TOPE_ENTRADAS, PRUEBA_TOPE_ENTRADAS } from '@/lib/prueba';
 import { textosPanel } from '@/lib/idiomaServer';
 import { paletaCompra } from '@/lib/temaCompra.mjs';
@@ -28,7 +29,7 @@ export default async function NewBrandEventPage() {
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
-    .select('id, name, slug, event_balance, tipo, theme_json, tema_compra, moneda')
+    .select('id, name, slug, event_balance, tipo, theme_json, tema_compra, moneda, zona_horaria')
     .eq('id', ctx.brandId)
     .single();
   if (!brand) redirect('/admin');
@@ -52,7 +53,7 @@ export default async function NewBrandEventPage() {
   };
 
   return (
-    <EventWizard marcaSlug={brand.slug} marcaNombre={brand.name} saldo={saldo} prueba={prueba} tope={tope} vista={vista} moneda={monedaDe(brand.moneda)}>
+    <EventWizard marcaSlug={brand.slug} marcaNombre={brand.name} saldo={saldo} prueba={prueba} tope={tope} vista={vista} moneda={monedaDe(brand.moneda)} zona={zonaDe(brand.zona_horaria)}>
       <Link href="/admin" className="s-back">
         <ChevronLeft className="h-3.5 w-3.5" /> {t('Tus eventos', 'Your events')}
       </Link>

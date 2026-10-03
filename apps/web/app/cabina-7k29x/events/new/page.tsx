@@ -16,7 +16,7 @@ export default async function NewEventPage({
   const supabase = createClient();
   const { data: brands } = await supabase
     .from('brands')
-    .select('id, slug, name')
+    .select('id, slug, name, zona_horaria')
     .order('name');
 
   if (!brands || brands.length === 0) {

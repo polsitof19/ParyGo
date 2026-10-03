@@ -5,6 +5,7 @@ import { useFormFeedback } from '@/components/useFormFeedback';
 import { AlertTriangle } from 'lucide-react';
 import { reissueTicketsAction, type ReissueState } from './actions';
 import { formatMoney, type Moneda } from '@/lib/moneda';
+import { formatEnZona, type Zona } from '@/lib/zona';
 import { useTextos } from '@/components/IdiomaPanel';
 
 type StuckOrder = {
@@ -20,7 +21,7 @@ const initial: ReissueState = { ok: false, message: null };
 // Panel de recuperación: lista órdenes PAGADAS que quedaron sin tickets (caso
 // raro del flujo Yape no atómico) y deja re-emitirlas con un clic. La acción es
 // idempotente y solo opera sobre órdenes ya pagadas de la propia marca.
-export function TicketRecovery({ orders, moneda }: { orders: StuckOrder[]; moneda: Moneda }) {
+export function TicketRecovery({ orders, moneda, zona }: { orders: StuckOrder[]; moneda: Moneda; zona: Zona }) {
   const { t } = useTextos();
   return (
     <div className="s-card s-card--confirm-danger" style={{ marginBottom: 22 }}>
@@ -36,14 +37,14 @@ export function TicketRecovery({ orders, moneda }: { orders: StuckOrder[]; moned
       </div>
       <ul className="s-stack" style={{ gap: 10, listStyle: 'none', margin: '14px 0 0', padding: 0 }}>
         {orders.map((o) => (
-          <RecoveryRow key={o.id} order={o} moneda={moneda} />
+          <RecoveryRow key={o.id} order={o} moneda={moneda} zona={zona} />
         ))}
       </ul>
     </div>
   );
 }
 
-function RecoveryRow({ order, moneda }: { order: StuckOrder; moneda: Moneda }) {
+function RecoveryRow({ order, moneda, zona }: { order: StuckOrder; moneda: Moneda; zona: Zona }) {
   const [state, action] = useFormFeedback(reissueTicketsAction, initial);
   const { t, loc } = useTextos();
   return (
@@ -51,7 +52,7 @@ function RecoveryRow({ order, moneda }: { order: StuckOrder; moneda: Moneda }) {
       <div style={{ minWidth: 0 }}>
         <p style={{ fontWeight: 700 }}>{order.buyerName ?? t('Comprador', 'Buyer')}</p>
         <p className="s-muted" style={{ fontSize: 13 }}>
-          {order.eventName} · {formatMoney(order.totalCents, moneda)} · {new Date(order.createdAt).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
+          {order.eventName} · {formatMoney(order.totalCents, moneda)} · {formatEnZona(order.createdAt, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, zona, loc)}
         </p>
         {state.message && (
           <p className={state.ok ? 's-banner s-banner--ok' : 's-banner s-banner--err'} style={{ marginTop: 8 }}>{state.message}</p>

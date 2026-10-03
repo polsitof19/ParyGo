@@ -4,6 +4,7 @@ import { getSessionUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { textosPanel } from '@/lib/idiomaServer';
 import { Scanner } from './Scanner';
+import { zonaDe } from '@/lib/zona';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -20,7 +21,7 @@ export default async function ScanPage() {
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
-    .select('id, name')
+    .select('id, name, zona_horaria')
     .eq('id', membership.brandId)
     .single();
   if (!brand) redirect('/login');
@@ -53,7 +54,7 @@ export default async function ScanPage() {
           <div className="k-empty">{t('No hay eventos cargados para validar. Pídele al organizador que publique el evento.', 'No events loaded to validate. Ask the organizer to publish the event.')}</div>
         )
       ) : (
-        <Scanner events={events} brandName={brand.name} />
+        <Scanner events={events} brandName={brand.name} zona={zonaDe(brand.zona_horaria)} />
       )}
     </div>
   );

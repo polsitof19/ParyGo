@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
   const brandIds = [...new Set(rows.map((r) => r.brand_id).filter((x): x is string => !!x))];
   const { data: brandsData } = await admin
     .from('brands')
-    .select('id, name, slug, whatsapp_e164, contact_email, theme_json, idioma, is_test')
+    .select('id, name, slug, whatsapp_e164, contact_email, theme_json, idioma, is_test, zona_horaria')
     .in('id', brandIds);
   const brandById = new Map((brandsData ?? []).map((b) => [b.id, b]));
 
@@ -102,6 +102,7 @@ export async function POST(req: NextRequest) {
         name: brand.name, slug: brand.slug, whatsapp_e164: brand.whatsapp_e164,
         contact_email: brand.contact_email,
         theme_json: brand.theme_json as { primary_color?: string; logo_url?: string | null } | null,
+        zona_horaria: brand.zona_horaria,
       };
       let res: { ok: boolean; reason?: string; resendId?: string | null };
       if (r.kind === 'yape_recovery') {

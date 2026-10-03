@@ -5,7 +5,8 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { limaToIso, validateEventWindow } from '@/lib/eventValidation';
+import { zonaDeMarca } from '@/lib/metodoPago';
+import { fechaAIso, fechaInvalida, validateEventWindow } from '@/lib/eventValidation';
 
 export type FormState = {
   ok: boolean;
@@ -57,15 +58,17 @@ export async function createEventAction(
 
   const admin = createAdminClient();
 
-  // Fechas en hora de Lima (explícito: en Cloudflare el server corre en UTC).
+  // Fechas en la hora de la MARCA elegida, releída aquí (en Cloudflare el
+  // server corre en UTC).
   // Se valida ANTES de consumir saldo.
-  const startsIso = limaToIso(parsed.data.starts_at);
+  const zona = await zonaDeMarca(admin, parsed.data.brand_id);
+  const startsIso = fechaAIso(parsed.data.starts_at, zona);
   if (!startsIso) {
-    return { ok: false, message: 'Fecha de inicio inválida.', fieldErrors: { starts_at: 'Inválida' } };
+    return { ok: false, message: fechaInvalida(), fieldErrors: { starts_at: 'Inválida' } };
   }
-  const endsIso = parsed.data.ends_at ? limaToIso(parsed.data.ends_at) : null;
+  const endsIso = parsed.data.ends_at ? fechaAIso(parsed.data.ends_at, zona) : null;
   if (parsed.data.ends_at && !endsIso) {
-    return { ok: false, message: 'Fecha de fin inválida.', fieldErrors: { ends_at: 'Inválida' } };
+    return { ok: false, message: fechaInvalida(), fieldErrors: { ends_at: 'Inválida' } };
   }
   const windowErr = validateEventWindow({ startsIso, endsIso, requireFutureStart: true });
   if (windowErr) {

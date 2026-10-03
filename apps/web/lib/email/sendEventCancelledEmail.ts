@@ -12,6 +12,7 @@
 import { serverEnv, publicEnv } from '@/lib/env';
 import { brandColor, brandInk, brandFillPair } from '@/lib/brandColors';
 import { formatEventDate, whatsappLink } from '@/lib/utils';
+import { zonaDe } from '@/lib/zona';
 import type { BrandForEmail } from './sendEventPostponedEmail';
 
 export type SendCancelledResult = { ok: boolean; reason?: string; resendId?: string | null };
@@ -45,7 +46,7 @@ export async function sendEventCancelledEmail(args: {
   const logoUrl = theme.logo_url ?? null;
   // Sin el WhatsApp de soporte de ParyGo (Paul, 2026-09-23); el de la marca se queda.
   const supportWhatsapp = '';
-  const dateLabel = args.startsAtIso ? formatEventDate(args.startsAtIso) : '';
+  const dateLabel = args.startsAtIso ? formatEventDate(args.startsAtIso, zonaDe(args.brand.zona_horaria)) : '';
 
   const html = renderHtml({ ...args, dateLabel, primary, onBrand, brandBtn, ink, logoUrl, supportWhatsapp });
   const text = renderText({ ...args, dateLabel });

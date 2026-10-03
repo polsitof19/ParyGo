@@ -3,7 +3,7 @@ import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatMoney } from '@/lib/moneda';
-import { monedaDeMarca } from '@/lib/metodoPago';
+import { monedaDeMarca, zonaDeMarca } from '@/lib/metodoPago';
 import { enLotes, todas } from '@/lib/todas';
 import { textosPanel } from '@/lib/idiomaServer';
 import { YapeReviewRow } from '../../../yape/YapeReviewRow';
@@ -26,10 +26,12 @@ export default async function EventYapePage({ params }: { params: { id: string }
 
   const admin = createAdminClient();
   const monedaP = monedaDeMarca(admin, ctx.brandId); // en paralelo con el resto
+  const zonaP = zonaDeMarca(admin, ctx.brandId);
   const { data: event } = await admin.from('events').select('id, brand_id').eq('id', params.id).maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
   const { t } = await textosPanel();
   const moneda = await monedaP;
+  const zona = await zonaP;
 
   const data = await todas((a, b) => admin
     .from('yape_proofs')
@@ -118,6 +120,7 @@ export default async function EventYapePage({ params }: { params: { id: string }
                 receiptUrl={p.signedReceiptUrl}
                 amountCents={p.amount_cents}
                 moneda={moneda}
+                zona={zona}
                 expectedAmountCents={p.order?.total_cents ?? 0}
                 amountMatches={p.amount_cents === p.order?.total_cents}
                 operationNumber={p.operation_number}

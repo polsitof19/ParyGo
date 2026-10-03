@@ -5,9 +5,9 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireSession, type SessionUser } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { eventoCobra, marcaTieneMetodo, bajarABorradorSiFaltaMetodo, monedaDeMarca } from '@/lib/metodoPago';
+import { eventoCobra, marcaTieneMetodo, bajarABorradorSiFaltaMetodo, monedaDeMarca, zonaDeMarca } from '@/lib/metodoPago';
 import { aCentavos } from '@/lib/moneda';
-import { limaToIso, shiftEnd, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
+import { fechaAIso, fechaInvalida, shiftEnd, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
 import { eventOverAt, isPubliclyOffered } from '@/lib/publicTicketGuard';
 import { generarToken, tokensPrivados, parseMaxPorPersona } from '@/lib/privateAccess';
 import { puedeEscribirComoSuper, type ModoEscrituraSuper } from '@/lib/impersonation';
@@ -36,8 +36,8 @@ async function authEvent(eventId: string, user: SessionUser) {
   return modo ? { brandId, modo } : null;
 }
 
-// limaToIso (datetime-local en hora de Lima → UTC ISO) vive en lib/eventValidation,
-// compartido con la creación de eventos.
+// fechaAIso (datetime-local en la hora de la marca → UTC ISO) vive en
+// lib/eventValidation, compartido con la creación de eventos.
 
 const eventSchema = z.object({
   name: z.string().min(2).max(120),
@@ -74,10 +74,10 @@ export async function updateEventAction(_prev: EditState, formData: FormData): P
   const sendReminder = formData.get('send_reminder') === 'on';
   const collectAttendeeNames = formData.get('collect_attendee_names') === 'on';
   const allowTransfer = formData.get('allow_transfer') === 'on';
-  const startsIso = limaToIso(parsed.data.starts_at);
-  if (!startsIso) return { ok: false, message: t('Fecha/hora inválida.', 'Invalid date/time.') };
-
   const admin = createAdminClient();
+  const zona = await zonaDeMarca(admin, brandId);
+  const startsIso = fechaAIso(parsed.data.starts_at, zona);
+  if (!startsIso) return { ok: false, message: fechaInvalida(await idiomaPanel()) };
 
   // ===== GUARDA DE FECHA (server-side, no confiar en la UI) =====
   // Borrador: libre. Publicado sin ventas: libre (la UI avisa antes de guardar).
@@ -251,7 +251,7 @@ export async function setEventPublishedAction(
 // destinatario (uno por comprador; nunca se expone la lista).
 export async function postponeEventAction(
   eventId: string,
-  newStartsAtLima: string
+  newStartsAtLocal: string
 ): Promise<{ ok: boolean; message?: string; queued?: number }> {
   const user = await requireSession();
   const { t } = await textosPanel();
@@ -259,10 +259,10 @@ export async function postponeEventAction(
   const brandId = auth?.brandId ?? null;
   if (!brandId) return { ok: false, message: t('No tienes permiso sobre este evento.', 'You do not have permission over this event.') };
 
-  const startsIso = limaToIso(newStartsAtLima);
-  if (!startsIso) return { ok: false, message: t('Fecha/hora inválida.', 'Invalid date/time.') };
-
   const admin = createAdminClient();
+  const zona = await zonaDeMarca(admin, brandId);
+  const startsIso = fechaAIso(newStartsAtLocal, zona);
+  if (!startsIso) return { ok: false, message: fechaInvalida(await idiomaPanel()) };
   const { data: ev } = await admin
     .from('events')
     .select('id, name, starts_at, ends_at, venue_name')
@@ -307,8 +307,8 @@ export async function postponeEventAction(
     p_event_id: eventId,
     p_brand_id: brandId,
     p_event_name: ev.name as string,
-    p_old_label: formatEventDate(oldStartsAt),
-    p_new_label: formatEventDate(startsIso),
+    p_old_label: formatEventDate(oldStartsAt, zona),
+    p_new_label: formatEventDate(startsIso, zona),
     p_venue: (ev.venue_name as string | null) ?? '',
     p_new_iso: startsIso,
   });

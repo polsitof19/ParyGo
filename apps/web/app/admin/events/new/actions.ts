@@ -8,9 +8,9 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { contextoEscritura } from '@/lib/impersonation';
 import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { uploadEventCover, coverDims } from '@/lib/brandAssets';
-import { limaToIso, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
+import { fechaAIso, fechaInvalida, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
 import { mensajePrueba } from '@/lib/prueba';
-import { monedaDeMarca } from '@/lib/metodoPago';
+import { monedaDeMarca, zonaDeMarca } from '@/lib/metodoPago';
 import { centavosValidos } from '@/lib/moneda';
 import { textosPanel, idiomaPanel } from '@/lib/idiomaServer';
 import type { Textos } from '@/lib/idioma';
@@ -115,15 +115,17 @@ export async function createBrandEventAction(
     }
   }
 
-  // Fechas en hora de Lima (explícito: en Cloudflare el server corre en UTC).
+  // Fechas en la hora de la MARCA, releída aquí (explícito: en Cloudflare el
+  // server corre en UTC).
   // Todo se valida ANTES de subir el flyer y de consumir saldo.
-  const startsIso = limaToIso(parsedEvent.data.starts_at);
+  const zona = await zonaDeMarca(createAdminClient(), brandId);
+  const startsIso = fechaAIso(parsedEvent.data.starts_at, zona);
   if (!startsIso) {
-    return { ok: false, message: t('Fecha de inicio inválida.', 'Invalid start date.'), fieldErrors: { starts_at: t('Inválida', 'Invalid') } };
+    return { ok: false, message: fechaInvalida(await idiomaPanel()), fieldErrors: { starts_at: t('Inválida', 'Invalid') } };
   }
-  const endsIso = parsedEvent.data.ends_at ? limaToIso(parsedEvent.data.ends_at) : null;
+  const endsIso = parsedEvent.data.ends_at ? fechaAIso(parsedEvent.data.ends_at, zona) : null;
   if (parsedEvent.data.ends_at && !endsIso) {
-    return { ok: false, message: t('Fecha de fin inválida.', 'Invalid end date.'), fieldErrors: { ends_at: t('Inválida', 'Invalid') } };
+    return { ok: false, message: fechaInvalida(await idiomaPanel()), fieldErrors: { ends_at: t('Inválida', 'Invalid') } };
   }
   const windowErr = validateEventWindow({ startsIso, endsIso, requireFutureStart: true }, await idiomaPanel());
   if (windowErr) {

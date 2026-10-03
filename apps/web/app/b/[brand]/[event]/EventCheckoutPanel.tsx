@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition, useCallback } from
 import { toast } from 'sonner';
 import { Loader2, Lock, ArrowRight, MapPin } from 'lucide-react';
 import { formatMoney, monedaDe } from '@/lib/moneda';
+import { zonaDe, type Zona } from '@/lib/zona';
 import { optimizedImage } from '@/lib/imageUrl';
 import {
   type Brand, type Event, type TicketType,
@@ -398,7 +399,7 @@ function fraseConfianza(pago: string): string {
         /* ---------- PANTALLA 1: el flyer y las entradas ---------- */
         <div className={`c-stepwrap${leaving ? ' c-stepwrap--out' : ''}${atras ? ' c-stepwrap--back' : ''}`} key="step1">
         <div className="b-stage">
-          <Hero event={event} direccion={direccion} linea={lineaHero} />
+          <Hero event={event} zona={zonaDe(brand.zona_horaria)} direccion={direccion} linea={lineaHero} />
 
           <div className="b-list">
             {/* En EDITORIAL la lista es una sección con nombre propio; en
@@ -417,7 +418,7 @@ function fraseConfianza(pago: string): string {
               {sorted.map((t) => {
                 const props = {
                   t,
-                  escalera: armarEscalera(t),
+                  escalera: armarEscalera(t, zonaDe(brand.zona_horaria)),
                   cur: qty[t.id] ?? 0,
                   incluye: resumirIncluye(t.description),
                   onInc: () => inc(t),
@@ -657,7 +658,7 @@ function fraseConfianza(pago: string): string {
 // lugar debajo. Canvas y Editorial comparten este markup; Editorial (un flyer
 // que no sirve: una captura, o ninguno) cambia el orden y el alto en el CSS.
 // Tocar el flyer lo abre entero.
-function Hero({ event, linea }: { event: Event; direccion: Direccion; linea: string }) {
+function Hero({ event, linea, zona }: { event: Event; direccion: Direccion; linea: string; zona: Zona }) {
   const mapsHref = hrefMapa(event);
   const [zoom, setZoom] = useState(false);
   // `cerrando` existe para que el visor tenga SALIDA: antes se desmontaba de
@@ -683,7 +684,7 @@ function Hero({ event, linea }: { event: Event; direccion: Direccion; linea: str
   }, [zoom, cerrarZoom]);
 
   const lugar = [event.venue_name, distrito(event.venue_address)].filter(Boolean).join(', ');
-  const eyebrow = [fmtCortoMayus(event.starts_at), lugar.toUpperCase()].filter(Boolean).join(' · ');
+  const eyebrow = [fmtCortoMayus(event.starts_at, zona), lugar.toUpperCase()].filter(Boolean).join(' · ');
 
   return (
     <>

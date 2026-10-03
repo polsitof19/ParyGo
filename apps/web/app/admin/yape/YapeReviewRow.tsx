@@ -4,11 +4,13 @@ import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Check, X, Loader2, ChevronRight, ExternalLink } from 'lucide-react';
 import { formatMoney, type Moneda } from '@/lib/moneda';
+import { formatEnZona, type Zona } from '@/lib/zona';
 import { useTextos } from '@/components/IdiomaPanel';
 import { approveYapeProof, rejectYapeProof } from './actions';
 
 type Props = {
   moneda: Moneda;
+  zona: Zona;
   proofId: string;
   receiptUrl: string | null;
   amountCents: number;
@@ -36,6 +38,7 @@ type Props = {
 // pendientes no entra nada en pantalla si cada uno abre una imagen de 280px.
 export function YapeReviewRow({
   moneda,
+  zona,
   proofId,
   receiptUrl,
   amountCents,
@@ -78,9 +81,9 @@ export function YapeReviewRow({
 
   const bodyId = `yape-detalle-${proofId}`;
   const expanded = open || showReject;
-  const hora = new Date(createdAt).toLocaleString(loc, {
-    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima',
-  });
+  const hora = formatEnZona(createdAt, {
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+  }, zona, loc);
 
   return (
     <div className={`a-yrow${expanded ? ' a-yrow--open' : ''}`}>

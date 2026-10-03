@@ -6,6 +6,7 @@ import { BatteryFull, CheckCircle2, ChevronLeft, Lock, Plus, Signal, Trash2, Wif
 import { pareceCaptura, medirImagen } from '@/lib/flyer';
 import { useTextos } from '@/components/IdiomaPanel';
 import { aCentavos, formatMoney, simbolo, sinDecimales, type Moneda } from '@/lib/moneda';
+import { localAUtc, utcALocal, ciudadDe, type Zona } from '@/lib/zona';
 import { createBrandEventAction, eventoSlugLibre, type FormState } from './actions';
 
 // Crear evento como ASISTENTE (2026-10-01, Paul: "que haga preguntas"): una
@@ -22,34 +23,28 @@ type Paso = 1 | 2 | 3 | 4 | 5 | 6;
 type Phase = { priceSoles: string; until: string };
 type TT = { name: string; gratis: boolean; unlimited: boolean; capacity: string; phases: Phase[] };
 
-// "Ahora" en hora de Lima (UTC-5 fijo) para el min de los datetime-local, igual
-// que el server (no la zona horaria de la compu del promotor).
-function nowLocalInput(): string {
-  return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 16);
-}
-// datetime-local → ISO en hora de Lima (UTC-5 fijo), igual que el server con
+// datetime-local → ISO en la hora de la marca, igual que el server con
 // starts_at/ends_at. No depende de la zona horaria de la compu del promotor.
-const toISO = (local: string): string | null => {
+// Una hora que no existe por el cambio de horario da null (el server la rechaza).
+const toISO = (local: string, zona: Zona): string | null => {
   if (!local) return null;
-  const d = new Date(`${local.length === 16 ? `${local}:00` : local}-05:00`);
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  return localAUtc(local, zona)?.toISOString() ?? null;
 };
 // Texto del campo de precio → centavos de la moneda de la marca (vacío o raro = 0).
 const centsDe = (s: string, m: Moneda): number => { try { return s.trim() ? aCentavos(s, m) : 0; } catch { return 0; } };
 const precioOk = (s: string, m: Moneda): boolean => { try { aCentavos(s, m); return s.trim() !== ''; } catch { return false; } };
-// datetime-local + N horas, sin pasar por la zona de la compu. El ISO está en
-// UTC: "+ (h - 5)" suma las N horas y resta 5 para volver a la hora de Lima
-// (22:00 + 6 h → 04:00; verificado, no es un error: Codex P2 2026-10-01).
-const masHoras = (local: string, h: number): string => {
-  const iso = toISO(local);
-  return iso ? new Date(Date.parse(iso) + (h - 5) * 3600 * 1000).toISOString().slice(0, 16) : '';
+// datetime-local + N horas reales, sin pasar por la zona de la compu: se suma
+// sobre el instante UTC y se vuelve a la hora de la marca (22:00 + 6 h → 04:00).
+const masHoras = (local: string, h: number, zona: Zona): string => {
+  const iso = toISO(local, zona);
+  return iso ? utcALocal(new Date(Date.parse(iso) + h * 3600 * 1000), zona) : '';
 };
 
 // Una fase de preventa termina AL FINAL del día que el promotor elige, no a la
 // medianoche del día anterior ni a la hora que quedó en el input. Si pone
 // "sube el 24 de setiembre" quiere decir que el 24 todavía se vende al precio
 // viejo. Solo se completa lo que está en 00:00 (o vacío): una hora puesta a
-// propósito se respeta. Todo en hora de Lima.
+// propósito se respeta. Todo en la hora de la marca.
 const FIN_DEL_DIA = '23:59';
 const alFinDelDia = (local: string): string => {
   if (!local) return local;
@@ -66,7 +61,7 @@ const aSlug = (n: string): string => n
   .slice(0, 42).replace(/-+$/g, '');
 const SLUG_OK = /^[a-z0-9][a-z0-9-]{0,40}[a-z0-9]$/;
 
-// "sáb 17 oct · 22:00" desde el datetime-local, leído como hora de Lima.
+// "sáb 17 oct · 22:00" desde el datetime-local (la hora de la marca, sin convertir).
 function cuando(local: string, loc: string): string {
   if (!local) return '';
   const [f, h] = local.split('T');
@@ -85,7 +80,7 @@ const PASO_DE: Record<string, Paso> = {
 };
 const FOCO: Partial<Record<Paso, string>> = { 1: 'name', 2: 'starts_at', 3: 'venue_name', 4: 'tt-0-name' };
 
-export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista, moneda, children }: {
+export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista, moneda, zona, children }: {
   marcaSlug: string;
   marcaNombre: string;
   saldo: number;
@@ -97,6 +92,8 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
   vista: Record<string, string>;
   // Moneda de las entradas de la marca (brands.moneda).
   moneda: Moneda;
+  // Zona horaria de la marca (brands.zona_horaria).
+  zona: Zona;
   children?: React.ReactNode;
 }) {
   const { t, l, loc } = useTextos();
@@ -132,7 +129,9 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
   const confirmFreeRef = useRef<HTMLInputElement>(null);
   const pantallaRef = useRef<HTMLDivElement>(null);
   const tksRef = useRef<HTMLDivElement>(null);
-  const min = nowLocalInput();
+  // "Ahora" en la hora de la marca para el min de los datetime-local, igual que
+  // el server (no la zona horaria de la compu del promotor).
+  const min = utcALocal(new Date(), zona);
 
   // ✓/✕ del link en vivo, contra los eventos de ESTA marca (debounce 450 ms).
   useEffect(() => {
@@ -195,7 +194,7 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
       else if (libre === false) e.slug = t('Ya tienes un evento con ese link. Cámbialo.', 'You already have an event with that link. Change it.');
     }
     if (p === 2) {
-      const s = toISO(startsAt), f = toISO(endsAt);
+      const s = toISO(startsAt, zona), f = toISO(endsAt, zona);
       if (!s) e.starts_at = t('Elige el día y la hora en que empieza.', 'Pick the day and time it starts.');
       else if (Date.parse(s) <= Date.now()) e.starts_at = t('Tiene que ser una fecha que todavía no pasó.', 'It has to be a date that has not passed yet.');
       if (!f) e.ends_at = t('Elige cuándo termina.', 'Pick when it ends.');
@@ -293,8 +292,8 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
     // escribe la fecha y sigue sin salir del campo, el onBlur no corre.
     const phases = fases.map((ph, j) => ({
       price_cents: toCents(ph.priceSoles),
-      starts_at: j === 0 ? null : toISO(alFinDelDia(fases[j - 1]?.until ?? '')),
-      ends_at: j === last ? null : toISO(alFinDelDia(ph.until)),
+      starts_at: j === 0 ? null : toISO(alFinDelDia(fases[j - 1]?.until ?? ''), zona),
+      ends_at: j === last ? null : toISO(alFinDelDia(ph.until), zona),
       sort_order: j + 1,
     }));
     return {
@@ -386,13 +385,13 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
 
           {/* 2 · Cuándo */}
           <div className="cw-paso" hidden={paso !== 2}>
-            {pregunta(2, t('¿Cuándo es?', 'When is it?'), t('Hora de Lima.', 'Lima time.'))}
+            {pregunta(2, t('¿Cuándo es?', 'When is it?'), zona === 'America/Lima' ? t('Hora de Lima.', 'Lima time.') : t(`Hora de ${ciudadDe(zona)}.`, `${ciudadDe(zona)} time.`))}
             <div className="s-form-grid cw-grid">
               <div className="s-field">
                 <label htmlFor="starts_at" className="s-label">{t('Empieza', 'Starts')}</label>
                 <input
                   id="starts_at" name="starts_at" type="datetime-local" min={min} className="s-input" value={startsAt} {...inv('starts_at')}
-                  onChange={(e) => { setStartsAt(e.target.value); limpiar('starts_at'); if (!endsManual.current) { setEndsAt(masHoras(e.target.value, 6)); limpiar('ends_at'); } }}
+                  onChange={(e) => { setStartsAt(e.target.value); limpiar('starts_at'); if (!endsManual.current) { setEndsAt(masHoras(e.target.value, 6, zona)); limpiar('ends_at'); } }}
                 />
                 {err('starts_at')}
               </div>

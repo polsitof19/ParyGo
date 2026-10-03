@@ -6,8 +6,9 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { puedeEscribirComoSuper, type ModoEscrituraSuper } from '@/lib/impersonation';
 import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { sendPromoCodeEmail } from '@/lib/email/sendPromoCodeEmail';
-import { textosPanel } from '@/lib/idiomaServer';
-import { monedaDeMarca } from '@/lib/metodoPago';
+import { textosPanel, idiomaPanel } from '@/lib/idiomaServer';
+import { monedaDeMarca, zonaDeMarca } from '@/lib/metodoPago';
+import { fechaAIso, fechaInvalida } from '@/lib/eventValidation';
 import { aCentavos } from '@/lib/moneda';
 
 type CreateResult = { ok: true; id: string } | { ok: false; message: string };
@@ -138,11 +139,11 @@ export async function createPromoCode(input: CreatePromoInput): Promise<CreateRe
 
   let expiresAt: string | null = null;
   if (input.expiresAt && input.expiresAt.trim()) {
-    const d = new Date(input.expiresAt);
-    if (Number.isNaN(d.getTime())) {
-      return { ok: false, message: t('Fecha de expiración inválida.', 'Invalid expiration date.') };
+    // datetime-local en la hora de la MARCA (releída aquí), no la del server.
+    expiresAt = fechaAIso(input.expiresAt.trim(), await zonaDeMarca(admin, brandId));
+    if (!expiresAt) {
+      return { ok: false, message: fechaInvalida(await idiomaPanel()) };
     }
-    expiresAt = d.toISOString();
   }
 
   const appliesToAll = input.appliesToAll;

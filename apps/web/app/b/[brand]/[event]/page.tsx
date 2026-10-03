@@ -31,7 +31,7 @@ async function loadEvent(brandSlug: string, eventSlug: string, acceso: string | 
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
-    .select('id, slug, name, theme_json, whatsapp_e164, yape_number, yape_holder, contact_email, moneda')
+    .select('id, slug, name, theme_json, whatsapp_e164, yape_number, yape_holder, contact_email, moneda, zona_horaria')
     .eq('slug', brandSlug)
     .is('archived_at', null) // marca archivada → evento no carga
     .maybeSingle();
