@@ -41,7 +41,7 @@ jobs:
       - name: refresco del token (un solo refresh, revocado vs transitorio)
         run: cd apps/web && npx -y tsx ../../e2e/mp-refresh.test.mts
       - name: moneda, hora y medio manual por país
-        run: cd apps/web && npx -y tsx ../../e2e/moneda.test.mts && npx -y tsx ../../e2e/zona.test.mts && npx -y tsx ../../e2e/metodo-manual.test.mts
+        run: cd apps/web && npx -y tsx ../../e2e/moneda.test.mts && npx -y tsx ../../e2e/zona.test.mts && npx -y tsx ../../e2e/metodo-manual.test.mts && npx -y tsx ../../e2e/paypal-api.test.mts
 
   base:
     name: permisos y dinero (demotest)
@@ -89,5 +89,8 @@ jobs:
       - if: env.HAY_SECRETOS == 'true'
         name: país 0088 (moneda, medio, carrera)
         run: node e2e/pais-0088.mjs
+      - if: env.HAY_SECRETOS == 'true'
+        name: PayPal 0091 (credenciales, cobro, devolución, concurrencia)
+        run: node e2e/paypal-0091.mjs
       - if: always() && env.HAY_SECRETOS == 'true'
         run: rm -f apps/web/.env.local

@@ -89,9 +89,10 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
   // ---- Métricas ----
   // Cortesías (payment_method='courtesy', S/0) van a su PROPIO bucket — no se
   // cuentan como Yape (no inflan el conteo de órdenes pagadas ni el dinero).
-  const byMethod = { yape: { count: 0, cents: 0 }, mp: { count: 0, cents: 0 }, courtesy: { count: 0, cents: 0 } };
+  const byMethod = { yape: { count: 0, cents: 0 }, mp: { count: 0, cents: 0 }, pp: { count: 0, cents: 0 }, courtesy: { count: 0, cents: 0 } };
   for (const o of paidRows) {
     const b = o.payment_method === 'mercadopago' ? byMethod.mp
+      : o.payment_method === 'paypal' ? byMethod.pp
       : o.payment_method === 'courtesy' ? byMethod.courtesy
         : byMethod.yape;
     b.count += 1; b.cents += o.total_cents ?? 0;
@@ -202,7 +203,7 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
       if (hrs > 0 && hrs <= 72) alerts.push({ tone: 'info', text: t(`${tp.name} sube a ${formatMoney(nx.cents, moneda)} el ${formatEnZona(nx.at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, zona, loc)}`, `${tp.name} goes up to ${formatMoney(nx.cents, moneda)} on ${formatEnZona(nx.at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, zona, loc)}`) });
     }
   }
-  const confirmedCents = byMethod.yape.cents + byMethod.mp.cents;
+  const confirmedCents = byMethod.yape.cents + byMethod.mp.cents + byMethod.pp.cents;
   // MercadoPago solo se muestra si la marca lo tiene configurado (o si ya cobró
   // algo por ahí en este evento — histórico que no se puede ocultar).
   const showMp = mpConfigured || byMethod.mp.count > 0;
@@ -255,8 +256,12 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
           <span className="s-stat__sub">
             {pendingCount > 0
               ? t(`+ ${formatMoney(pendingCents, moneda)} por aprobar`, `+ ${formatMoney(pendingCents, moneda)} to approve`)
-              : showMp
-                ? t(`${nm.es} ${formatMoney(byMethod.yape.cents, moneda)} · tarjeta ${formatMoney(byMethod.mp.cents, moneda)}`, `${nm.en} ${formatMoney(byMethod.yape.cents, moneda)} · card ${formatMoney(byMethod.mp.cents, moneda)}`)
+              : showMp || byMethod.pp.count > 0
+                ? [
+                    `${t(nm.es, nm.en)} ${formatMoney(byMethod.yape.cents, moneda)}`,
+                    ...(showMp ? [`${t('tarjeta', 'card')} ${formatMoney(byMethod.mp.cents, moneda)}`] : []),
+                    ...(byMethod.pp.count > 0 ? [`PayPal ${formatMoney(byMethod.pp.cents, moneda)}`] : []),
+                  ].join(' · ')
                 : esYape ? t('confirmado en tu Yape', 'confirmed in your Yape') : t(`confirmado en tu ${medioFrase(medio)}`, `confirmed in your ${medioFrase(medio, 'en')}`)}
           </span>
         </div>

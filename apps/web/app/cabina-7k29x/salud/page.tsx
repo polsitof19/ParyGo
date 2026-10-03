@@ -71,7 +71,7 @@ export default async function SaludPage() {
   const HEAD = { count: 'exact' as const, head: true };
   const prueba = await idsMarcasDePrueba(admin);
 
-  const [correos, yapes, comprasHoy, entradasHoy, cupos, acciones, marcasRes, duenosRes, pagadasRes] = await Promise.all([
+  const [correos, yapes, comprasHoy, entradasHoy, cupos, acciones, marcasRes, duenosRes, pagadasRes, ppPendRes] = await Promise.all([
     todas((a, b) => admin.from('notification_jobs').select('status, kind, attempts, last_error, created_at').gte('created_at', since14d).order('created_at', { ascending: false }).order('id').range(a, b))
       .then((data) => ({ data: data as NjRow[], error: null as null | Error }), (error: Error) => ({ data: [] as NjRow[], error })),
     soloConComprobante(sinMarcasDePrueba(admin.from('orders').select('id', HEAD).eq('status', 'pending_yape_review'), prueba)),
@@ -91,6 +91,10 @@ export default async function SaludPage() {
     admin.from('brand_members').select('brand_id').eq('role', 'brand_admin'),
     // Altas que pagaron su paquete: si la marca sigue sin dueño, pagó y no terminó.
     admin.from('pack_purchases').select('brand_id').eq('status', 'paid').is('created_by', null),
+    // PayPal cobró y la devolución automática falló (0091): plata de un
+    // comprador sin entrada. Deja de figurar cuando la orden queda devuelta.
+    admin.from('events_log').select('order_id, brand:brands ( name, slug ), order:orders ( status )')
+      .eq('type', 'paypal_refund_pendiente').order('created_at', { ascending: false }).range(0, 49),
   ]);
 
   // Un número que no se pudo leer es "—", no 0: un cero falso dice "todo bien".
@@ -117,6 +121,9 @@ export default async function SaludPage() {
 
   type Tarea = { titulo: string; sub: string; href: string; cta: string; grave?: boolean };
   const tareas: Tarea[] = [];
+  type PpPend = { order_id: string; brand: { name: string; slug: string } | null; order: { status: string } | null };
+  const ppPend = ((ppPendRes.data ?? []) as unknown as PpPend[]).filter((r) => r.order?.status !== 'refunded');
+  if (ppPend.length > 0) tareas.push({ grave: true, titulo: `${pl(ppPend.length, 'pago de PayPal quedó', 'pagos de PayPal quedaron')} cobrado sin entrada`, sub: `${[...new Set(ppPend.map((r) => r.brand?.name ?? '—'))].join(', ')} · la devolución automática falló. Que la marca lo devuelva desde su PayPal.`, href: ppPend[0]!.brand ? `/cabina-7k29x/brands/${ppPend[0]!.brand.slug}` : '#sal-ctrl-sec', cta: 'Ver marca' });
   if (vendidasDeMas) tareas.push({ grave: true, titulo: `${pl(vendidasDeMas, 'tipo de entrada vendió', 'tipos de entrada vendieron')} más de su cupo`, sub: 'No debería pasar nunca. Avisa para revisarlo.', href: '#sal-ctrl-sec', cta: 'Ver controles' });
   if (pagoSinTerminar.length > 0) tareas.push({ titulo: `${pl(pagoSinTerminar.length, 'marca pagó', 'marcas pagaron')} y no terminó su registro`, sub: `${nombres(pagoSinTerminar)} · ya se le envió el link para terminar; si no entra, escríbele.`, href: `/cabina-7k29x/brands/${pagoSinTerminar[0]!.slug}`, cta: 'Ver marca' });
   if (fallidos.length > 0) tareas.push({ titulo: pl(fallidos.length, 'correo no salió', 'correos no salieron'), sub: 'En los últimos 14 días. Puede ser una entrada que no le llegó a alguien.', href: '#sal-correos-sec', cta: 'Ver cuáles' });
@@ -124,7 +131,7 @@ export default async function SaludPage() {
   if (yapesSinRevisar) tareas.push({ titulo: `${pl(yapesSinRevisar, 'Yape espera', 'Yapes esperan')} que su marca lo revise`, sub: 'Comprobantes subidos que el organizador todavía no aprobó.', href: '#sal-ctrl-sec', cta: 'Ver controles' });
   if (sinSaldo.length > 0) tareas.push({ titulo: `${pl(sinSaldo.length, 'marca se quedó', 'marcas se quedaron')} sin eventos en su pack`, sub: `${nombres(sinSaldo)} · no pueden crear otro evento hasta comprar.`, href: `/cabina-7k29x/brands/${sinSaldo[0]!.slug}#saldo`, cta: 'Ver marca' });
   const [primera, ...resto] = tareas;
-  const sinLeer = [correos.error, yapes.error, comprasHoy.error, entradasHoy.error, cupos.error, marcasRes.error, duenosRes.error].some(Boolean);
+  const sinLeer = [correos.error, yapes.error, comprasHoy.error, entradasHoy.error, cupos.error, marcasRes.error, duenosRes.error, ppPendRes.error].some(Boolean);
 
   const hora = (iso: string) => new Date(iso).toLocaleString('es-PE', { timeZone: 'America/Lima', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 

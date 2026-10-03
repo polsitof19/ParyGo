@@ -11,6 +11,8 @@ import { checkPublicTicketType, eventOverAt } from '@/lib/publicTicketGuard';
 import { mismoToken, normalizarToken, tokensPrivados } from '@/lib/privateAccess';
 import { medioDe, medioFrase, medioSirve } from '@/lib/metodoManual';
 import { monedaDe } from '@/lib/moneda';
+import { paypalCrearOrden, montoPaypal } from '@/lib/paypalApi';
+import { credencialesPaypal, paypalSirve } from '@/lib/paypalMarca';
 
 export type CheckoutInput = {
   eventId: string;
@@ -22,7 +24,7 @@ export type CheckoutInput = {
   buyerDni: string;
   ageOk: boolean;
   marketingOptIn: boolean;
-  method: 'yape_manual' | 'mercadopago';
+  method: 'yape_manual' | 'mercadopago' | 'paypal';
   // attendeeNames: nombre por entrada (índice = unidad). Solo se persiste si el
   // evento pide nombres (collect_attendee_names); el server nunca confía en esto
   // para nada sensible — es solo una etiqueta del ticket.
@@ -74,7 +76,7 @@ const schema = z.object({
   buyerDni: z.string().trim().max(20),
   ageOk: z.boolean(), // se exige solo si el evento pide confirmación (chequeo abajo)
   marketingOptIn: z.boolean(),
-  method: z.enum(['yape_manual', 'mercadopago']),
+  method: z.enum(['yape_manual', 'mercadopago', 'paypal']),
   items: z
     .array(
       z.object({
@@ -297,7 +299,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // validaciones; lo único que cambia es que no se esperan una a la otra.
   const ticketTypeIds = parsed.data.items.map((i) => i.ticketTypeId);
   const [brandRes, ttRes, apRes] = await Promise.all([
-    admin.from('brands').select('archived_at, yape_number, moneda, metodo_manual').eq('id', event.brand_id).maybeSingle(),
+    admin.from('brands').select('name, archived_at, yape_number, moneda, metodo_manual, paypal_client_id').eq('id', event.brand_id).maybeSingle(),
     admin
       .from('ticket_types')
       .select('id, name, price_cents, capacity, sold, is_active, is_unlimited, event_id, bulk_min_qty, bulk_discount_pct, is_courtesy')
@@ -476,6 +478,10 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   if (parsed.data.method === 'mercadopago' && brandRow.moneda !== 'PEN') {
     return { ok: false, message: 'Esta marca no cobra con tarjeta.' };
   }
+  // PayPal (0091): conectado y en una moneda que PayPal acepta (USD/EUR/MXN).
+  if (parsed.data.method === 'paypal' && (!brandRow.paypal_client_id || !paypalSirve(brandRow.moneda))) {
+    return { ok: false, message: 'Esta marca no cobra con PayPal.' };
+  }
   // Medio manual: el que eligió la marca (Yape, Nequi…); debe servir en su moneda.
   const medio = medioDe(brandRow.metodo_manual);
   if (
@@ -488,7 +494,7 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // 4. Insert order + order_items in a "transaction" (best-effort, no real BEGIN
   //    available in supabase-js; safe enough because of the unique constraints).
   const status =
-    parsed.data.method === 'mercadopago' ? 'pending_payment' : 'pending_yape_review';
+    parsed.data.method === 'yape_manual' ? 'pending_yape_review' : 'pending_payment';
 
   const { data: order, error: orderErr } = await admin
     .from('orders')
@@ -629,6 +635,13 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
   // paid + consumo de promo + emisión + release, TODO atómico (migr 0034). Si el
   // cupo se agotó NO deja la orden paid-sin-QR. Solo resta el email.
   if (isFree) {
+    // Sin pago no hay método: se guarda 'yape_manual' (la regla de 0064). Con
+    // 'mercadopago' o 'paypal' el flip a paid violaba orders_check (pagada sin
+    // preferencia / sin captura) y un código del 100% con Tarjeta elegida no
+    // emitía nada.
+    if (parsed.data.method !== 'yape_manual') {
+      await admin.from('orders').update({ payment_method: 'yape_manual' }).eq('id', order.id);
+    }
     // Un evento gratis no pasó por Yape: se etiqueta como tal. Un promo del
     // 100% sobre un evento pago sí nació de un camino de pago, así que
     // conserva su motivo.
@@ -745,6 +758,45 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
       await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
       await admin.rpc('release_promo_redemption_for_order', { p_order_id: order.id });
       return { ok: false, message };
+    }
+  }
+
+  if (parsed.data.method === 'paypal') {
+    // Plan en AGENTS.md (0091). La orden de PayPal se crea con el token de la
+    // marca, por el total CONGELADO de la orden y en la moneda de la marca; la
+    // plata recién se mueve cuando la confirmación captura (lib/paypalMarca.ts).
+    try {
+      const [{ data: congelada }, cred] = await Promise.all([
+        admin.from('orders').select('total_cents').eq('id', order.id).single(),
+        credencialesPaypal(admin, event.brand_id, serverEnv.BRAND_CREDS_ENCRYPTION_KEY),
+      ]);
+      if (typeof congelada?.total_cents !== 'number' || congelada.total_cents <= 0) throw new Error('total congelado ilegible');
+      if (!cred || cred.moneda !== brandRow.moneda || !paypalSirve(cred.moneda)) throw new Error('paypal sin credenciales o moneda');
+      const n = resolved.reduce((a, r) => a + r.quantity, 0);
+      const pp = await paypalCrearOrden(cred, {
+        ref: order.id,
+        invoiceId: order.id,
+        descripcion: `${event.name} · ${n} ${n === 1 ? 'entrada' : 'entradas'}`,
+        moneda: cred.moneda,
+        valor: montoPaypal(congelada.total_cents),
+        marca: brandRow.name ?? 'ParyGo',
+        volver: `${baseUrl}${eventBase}/confirmacion?order=${order.id}`,
+        cancelar: `${baseUrl}${eventBase}?pago=cancelado`,
+      });
+      const { error: guardar } = await admin.from('orders')
+        .update({ paypal_order_id: pp.id, paypal_client_id: cred.clientId })
+        .eq('id', order.id);
+      if (guardar) throw new Error('no se guardó la orden de PayPal');
+      return { ok: true, redirectUrl: pp.aprobar };
+    } catch (err) {
+      console.error('[startCheckout] PayPal falló', {
+        orderId: order.id, brandId: event.brand_id, detalle: err instanceof Error ? err.message : String(err),
+      });
+      await admin.from('orders').update({ status: 'failed' }).eq('id', order.id);
+      await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
+      await admin.rpc('release_promo_redemption_for_order', { p_order_id: order.id });
+      const medioOtro = brandRow.yape_number?.trim() ? ` o paga con ${medioFrase(medioDe(brandRow.metodo_manual))}` : '';
+      return { ok: false, message: `No pudimos abrir el pago con PayPal. Intenta de nuevo${medioOtro}.` };
     }
   }
 

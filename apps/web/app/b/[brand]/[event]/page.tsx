@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { paypalUsable } from '@/lib/paypalMarca';
 import { headers } from 'next/headers';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
@@ -24,7 +25,7 @@ async function sha256Hex(s: string): Promise<string> {
 
 type Props = {
   params: { brand: string; event: string };
-  searchParams?: { ref?: string | string[]; v?: string | string[]; c?: string | string[]; flyer?: string | string[]; acceso?: string | string[] };
+  searchParams?: { ref?: string | string[]; v?: string | string[]; c?: string | string[]; flyer?: string | string[]; acceso?: string | string[]; pago?: string | string[] };
 };
 
 async function loadEvent(brandSlug: string, eventSlug: string, acceso: string | null = null) {
@@ -149,6 +150,8 @@ async function loadEvent(brandSlug: string, eventSlug: string, acceso: string | 
     mpPublicKey = typeof pk === 'string' && pk.length > 0 ? pk : null;
   }
 
+  const paypalConfigured = await paypalUsable(admin, brand.id);
+
   return {
     brand,
     event,
@@ -157,6 +160,7 @@ async function loadEvent(brandSlug: string, eventSlug: string, acceso: string | 
     // MP is only really usable if BOTH the creds and the decrypted public_key are present.
     mpConfigured: mpConfigured && Boolean(mpPublicKey),
     mpPublicKey,
+    paypalConfigured,
   };
 }
 
@@ -197,7 +201,7 @@ export default async function EventPage({ params, searchParams }: Props) {
   // sin await: mientras corre, la página sigue resolviendo el resto. Se recoge
   // al final, donde se usa.
   const midiendoFlyer = decidirDireccion(data.event.cover_url, { w: data.event.cover_w, h: data.event.cover_h });
-  const { brand, event, ticketTypes, mpConfigured, mpPublicKey } = data;
+  const { brand, event, ticketTypes, mpConfigured, mpPublicKey, paypalConfigured } = data;
 
   // Guarda de evento pasado: un link viejo de un evento ya terminado NO debe
   // dejar comprar. Si hay ends_at usamos eso; si no, 18h tras el inicio.
@@ -288,6 +292,8 @@ export default async function EventPage({ params, searchParams }: Props) {
   // solo el booleano soldOut. EventStructuredData (server-side) sí los usa.
   const panelTypes = ticketTypes.map(({ capacity: _cap, sold: _sold, ...rest }) => rest);
 
+  const pagoRaw = Array.isArray(searchParams?.pago) ? searchParams?.pago[0] : searchParams?.pago;
+  const pagoCancelado = pagoRaw === 'cancelado';
   const shareUrl = `https://${brand.slug}.${publicEnv.NEXT_PUBLIC_APP_DOMAIN}/${event.slug}`;
 
   return (
@@ -297,6 +303,8 @@ export default async function EventPage({ params, searchParams }: Props) {
       {/* Prueba gratis (Paul, 2026-10-01): que nadie lo tome por un evento real. */}
       {event.es_prueba && <p className="c-prueba" role="note">Evento de prueba</p>}
 
+      {pagoCancelado && <p className="c-help" role="status">Cancelaste el pago con PayPal. No se te cobró nada.</p>}
+
       <article className={`c-checkout-canvas ${claseDireccion(direccion)}`}>
         {/* CHECKOUT (hero, entradas, datos/pago, resumen y "dónde" viven en el panel) */}
         <EventCheckoutPanel
@@ -304,6 +312,7 @@ export default async function EventPage({ params, searchParams }: Props) {
           event={eventoParaPintar}
           ticketTypes={panelTypes}
           mpConfigured={mpConfigured}
+          paypalConfigured={paypalConfigured}
           mpPublicKey={mpPublicKey}
           refCode={refCode}
           accessToken={normalizarToken(accesoRaw) ?? undefined}

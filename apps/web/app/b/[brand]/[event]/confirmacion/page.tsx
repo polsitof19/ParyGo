@@ -13,6 +13,8 @@ import { TicketPass } from '../../TicketPass';
 import { zonaDe } from '@/lib/zona';
 import { LineaPago } from '../../Responsable';
 import { medioDe, medioFrase } from '@/lib/metodoManual';
+import { cobrarVueltaPaypal } from '@/lib/paypalMarca';
+import { serverEnv } from '@/lib/env';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -24,7 +26,7 @@ export default async function ConfirmationPage({
   searchParams,
 }: {
   params: { brand: string; event: string };
-  searchParams: { order?: string; pendiente?: string; c?: string; v?: string; payment_id?: string; collection_id?: string };
+  searchParams: { order?: string; pendiente?: string; c?: string; v?: string; payment_id?: string; collection_id?: string; token?: string };
 }) {
   if (!searchParams.order || !UUID_RE.test(searchParams.order)) notFound();
 
@@ -33,7 +35,7 @@ export default async function ConfirmationPage({
     id: string;
     brand_id: string;
     status: string;
-    payment_method: 'mercadopago' | 'yape_manual';
+    payment_method: 'mercadopago' | 'yape_manual' | 'paypal';
     total_cents: number;
     buyer_name: string;
     event: { name: string; starts_at: string; ends_at: string | null; venue_name: string | null; venue_address: string | null; venue_maps_url: string | null; venue_lat: number | null; venue_lng: number | null; require_dni: boolean } | null;
@@ -90,15 +92,61 @@ export default async function ConfirmationPage({
     mpRechazado = r.ok && r.action === 'recorded' && ['rejected', 'cancelled'].includes(r.status);
   }
 
-  // Pago MP que terminó RECHAZADO/cancelado: no es "pendiente" → mostramos error
-  // accionable en vez de un spinner eterno.
+  // VUELTA DE PAYPAL (0091, plan en AGENTS.md): PayPal agrega ?token=<su
+  // orden>. La plata recién se mueve ACÁ: lib/paypalMarca.ts revisa cupo y
+  // credenciales, captura y liquida; si la base no emite, devuelve solo. Un
+  // intento cada 10 s por orden (la página es pública y el poller refresca).
+  let ppAviso: 'rechazado' | 'sin_cupo' | 'devuelto' | 'credenciales' | null = null;
+  const ppToken = searchParams.token ?? '';
+  if (
+    order.payment_method === 'paypal' &&
+    ['pending_payment', 'expired'].includes(order.status) &&
+    /^[A-Z0-9]{5,40}$/.test(ppToken) &&
+    (await admin.rpc('tomar_candado', { p_clave: `pp_vuelta:${order.id}`, p_segundos: 10 })).data === true
+  ) {
+    const r = await cobrarVueltaPaypal(admin, order.brand_id, order.id, ppToken, serverEnv.BRAND_CREDS_ENCRYPTION_KEY);
+    if (r.ok) {
+      const encolado = await enqueueTicketEmail(admin, order.id);
+      if (!encolado.ok) console.error('[confirmacion] no se pudo encolar el email', { orderId: order.id, reason: encolado.reason });
+      redirect(`/${params.event}/confirmacion?order=${order.id}`);
+    }
+    if (r.motivo === 'rechazado' || r.motivo === 'sin_cupo' || r.motivo === 'credenciales_cambiaron') {
+      // No se cobró nada: la orden se cierra y libera el cupo y el código.
+      await admin.from('orders').update({ status: 'failed' }).eq('id', order.id).in('status', ['pending_payment', 'expired']);
+      await admin.rpc('release_stock_reservations_for_order', { p_order_id: order.id });
+      await admin.rpc('release_promo_redemption_for_order', { p_order_id: order.id });
+      ppAviso = r.motivo === 'credenciales_cambiaron' ? 'credenciales' : r.motivo;
+    } else if (r.motivo === 'devuelto') {
+      ppAviso = 'devuelto';
+    } else if (r.motivo === 'error') {
+      console.error('[confirmacion] PayPal', { orderId: order.id, detalle: r.detalle });
+    }
+  }
+  if (order.payment_method === 'paypal' && order.status === 'refunded') ppAviso = 'devuelto';
+
+  if (ppAviso === 'devuelto') {
+    return (
+      <main className="c-state c-checkout-canvas">
+        <span className="c-eyebrow c-state__dot c-state__dot--alert">Pago devuelto</span>
+        <h1 className="c-h1">Te devolvimos el pago</h1>
+        <p className="c-muted">
+          No pudimos emitir tu entrada (por ejemplo, se agotaron mientras pagabas), así que PayPal te devuelve el pago completo. Puede tardar unos días en verse en tu cuenta o tarjeta.
+        </p>
+        <a href={`/${params.event}`} className="c-btn c-btn--brand">Volver al evento</a>
+      </main>
+    );
+  }
+
+  // Pago con tarjeta o PayPal que terminó RECHAZADO/cancelado: no es
+  // "pendiente" → mostramos error accionable en vez de un spinner eterno.
+  const esPasarela = order.payment_method === 'mercadopago' || order.payment_method === 'paypal';
   const isFailed =
-    order.payment_method === 'mercadopago' &&
-    (mpRechazado || ['failed', 'rejected', 'cancelled'].includes(order.status));
+    esPasarela &&
+    (mpRechazado || ppAviso !== null || ['failed', 'rejected', 'cancelled'].includes(order.status));
   const isPending =
     !isFailed &&
     (searchParams.pendiente === '1' ||
-      (order.status !== 'paid' && order.payment_method === 'mercadopago'));
+      (order.status !== 'paid' && esPasarela));
   const isYapeReview =
     order.status === 'pending_yape_review' && order.payment_method === 'yape_manual';
   // Yape RECHAZADO: la orden quedó en failed/rejected/cancelled con método Yape.
@@ -113,7 +161,11 @@ export default async function ConfirmationPage({
         <span className="c-eyebrow c-state__dot c-state__dot--alert">Pago no aprobado</span>
         <h1 className="c-h1">No pudimos confirmar tu pago</h1>
         <p className="c-muted">
-          MercadoPago no aprobó el pago. No se generó ningún cargo definitivo. Puedes intentar de nuevo con otro método o tarjeta.
+          {ppAviso === 'sin_cupo'
+            ? 'Se agotaron las entradas mientras pagabas. No se te cobró nada.'
+            : order.payment_method === 'paypal'
+              ? 'PayPal no aprobó el pago y no se te cobró nada. Puedes intentar de nuevo con otra tarjeta o cuenta.'
+              : 'MercadoPago no aprobó el pago. No se generó ningún cargo definitivo. Puedes intentar de nuevo con otro método o tarjeta.'}
         </p>
         <a href="/" className="c-btn c-btn--brand">Volver a intentar</a>
         {brand?.whatsapp_e164 && (

@@ -10,7 +10,9 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { marcaTieneMetodo, marcaCobraEnVivo } from '@/lib/metodoPago';
 import { contextoEscritura } from '@/lib/impersonation';
 import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
-import { serverEnv } from '@/lib/env';
+import { publicEnv, serverEnv } from '@/lib/env';
+import { paypalToken, paypalCrearWebhook, paypalBorrarWebhook } from '@/lib/paypalApi';
+import { credencialesPaypal, pagosPaypalEnCurso, paypalSirve } from '@/lib/paypalMarca';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { alAzar, crearPkce, firmarCookie, urlAutorizacion } from '@/lib/mpOauth';
@@ -338,4 +340,94 @@ export async function cambiarTemaCompraAction(tema: string): Promise<{ ok: boole
   await auditarEscrituraSuper(admin, { user, modo: ctxW.modo, brandId: ctxW.brandId, accion: 'brand_tema_compra_updated', diff: { tema_compra: tema } });
   revalidatePath('/admin/settings');
   return { ok: true };
+}
+
+// =============================================================
+// PayPal de la marca (0091; plan en AGENTS.md)
+// =============================================================
+// La dueña REAL pega el Client ID + Secret de SU app Live de PayPal. Antes de
+// guardar: PayPal tiene que aceptar el par (pide un token) y se registra el
+// aviso (webhook) de esa app; sin aviso, una devolución hecha en PayPal no
+// anularía las entradas, así que sin aviso no se guarda.
+const CRED_RE = /^[A-Za-z0-9_-]{20,128}$/;
+
+export async function conectarPaypalAction(_prev: SettingsState, formData: FormData): Promise<SettingsState> {
+  const user = await requireSession();
+  const { t } = await textosPanel();
+  const brandId = duenaRealDe(user);
+  if (!brandId) return { ok: false, message: t('Solo la cuenta dueña de la marca puede conectar PayPal.', 'Only the brand owner can connect PayPal.') };
+  const clientId = String(formData.get('paypal_client_id') ?? '').trim();
+  const secret = String(formData.get('paypal_secret') ?? '').trim();
+  if (!CRED_RE.test(clientId) || !CRED_RE.test(secret)) {
+    return { ok: false, message: t('Pega el Client ID y el Secret tal como aparecen en tu app de PayPal.', 'Paste the Client ID and Secret exactly as they appear in your PayPal app.') };
+  }
+  const admin = createAdminClient();
+  const { data: b } = await admin.from('brands').select('moneda, is_test, paypal_client_id').eq('id', brandId).maybeSingle();
+  if (!b) return { ok: false, message: t('No se pudo leer tu marca. Intenta de nuevo.', 'Could not read your brand. Try again.') };
+  if (!paypalSirve(b.moneda)) {
+    return { ok: false, message: t('PayPal solo funciona para marcas que venden en dólares, euros o pesos mexicanos.', 'PayPal only works for brands selling in US dollars, euros or Mexican pesos.') };
+  }
+  // Sandbox SOLO en marcas de prueba (el E2E); la base lo exige igual (CHECK).
+  const sandbox = b.is_test === true && formData.get('paypal_sandbox') === '1';
+  const pagando = t('Hay compradores pagando con PayPal en este momento. Intenta cambiar la cuenta en un rato.', 'Some buyers are paying with PayPal right now. Try changing the account in a while.');
+  if (b.paypal_client_id && b.paypal_client_id !== clientId && (await pagosPaypalEnCurso(admin, brandId))) {
+    return { ok: false, message: pagando };
+  }
+  const cred = { clientId, secret, sandbox };
+  try {
+    await paypalToken(cred);
+  } catch {
+    return { ok: false, message: t('PayPal no aceptó ese Client ID y Secret. Revisa que sean de una app en modo Live (no Sandbox).', 'PayPal did not accept that Client ID and Secret. Check they belong to an app in Live mode (not Sandbox).') };
+  }
+  let webhookId: string;
+  try {
+    webhookId = await paypalCrearWebhook(cred, `${publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')}/api/webhooks/paypal/${brandId}`);
+  } catch {
+    return { ok: false, message: t('PayPal aceptó tus datos, pero no pudimos registrar los avisos de pago. Intenta de nuevo en un rato.', 'PayPal accepted your details, but we could not register payment notifications. Try again in a while.') };
+  }
+  // Las credenciales anteriores (si cambia de app), para borrar su aviso después.
+  const anterior = b.paypal_client_id && b.paypal_client_id !== clientId
+    ? await credencialesPaypal(admin, brandId, serverEnv.BRAND_CREDS_ENCRYPTION_KEY).catch(() => null)
+    : null;
+  const { data: r, error } = await admin.rpc('set_brand_paypal', {
+    p_brand_id: brandId, p_client_id: clientId, p_secret: secret, p_webhook_id: webhookId,
+    p_sandbox: sandbox, p_encryption_key: serverEnv.BRAND_CREDS_ENCRYPTION_KEY,
+  });
+  const action = (r as { action?: string } | null)?.action;
+  if (error || action !== 'conectada') {
+    const msg: Record<string, string> = {
+      cuenta_en_otra_marca: t('Esa app de PayPal ya está conectada a otra marca. Crea una app nueva para esta marca.', 'That PayPal app is already connected to another brand. Create a new app for this brand.'),
+      pago_activo: pagando,
+    };
+    return { ok: false, message: msg[action ?? ''] ?? t('No se pudo guardar. Intenta de nuevo.', 'Could not save. Try again.') };
+  }
+  if (anterior?.webhookId) await paypalBorrarWebhook(anterior, anterior.webhookId);
+  await admin.from('events_log').insert({ brand_id: brandId, actor_user_id: user.id, type: 'paypal_conectado', payload: { client_id_ultimos4: clientId.slice(-4), sandbox, cambio_de_app: !!anterior } });
+  revalidatePath('/admin/settings');
+  return { ok: true, message: t('PayPal conectado. Tus compradores ya pueden pagar con PayPal o con tarjeta.', 'PayPal connected. Your buyers can now pay with PayPal or by card.') };
+}
+
+export async function desconectarPaypalAction(): Promise<SettingsState> {
+  const user = await requireSession();
+  const { t } = await textosPanel();
+  const brandId = duenaRealDe(user);
+  if (!brandId) return { ok: false, message: t('Solo la cuenta dueña de la marca puede desconectar PayPal.', 'Only the brand owner can disconnect PayPal.') };
+  const admin = createAdminClient();
+  const { data: b } = await admin.from('brands').select('paypal_client_id').eq('id', brandId).maybeSingle();
+  if (!b?.paypal_client_id) return { ok: true, message: t('PayPal ya estaba desconectado.', 'PayPal was already disconnected.') };
+  if (await pagosPaypalEnCurso(admin, brandId)) {
+    return { ok: false, message: t('Hay compradores pagando con PayPal en este momento. Intenta desconectar en un rato.', 'Some buyers are paying with PayPal right now. Try disconnecting in a while.') };
+  }
+  if (!(await marcaTieneMetodo(admin, brandId, { sinPaypal: true })) && (await marcaCobraEnVivo(admin, brandId))) {
+    return { ok: false, message: t('Tienes eventos a la venta que cobran y PayPal es tu único método de pago. Agrega otro o pasa esos eventos a borrador primero.', 'You have paid events on sale and PayPal is your only payment method. Add another one or move those events to draft first.') };
+  }
+  const cred = await credencialesPaypal(admin, brandId, serverEnv.BRAND_CREDS_ENCRYPTION_KEY).catch(() => null);
+  const { data: r, error } = await admin.rpc('clear_brand_paypal', { p_brand_id: brandId });
+  if (error || (r as { action?: string } | null)?.action !== 'desconectada') {
+    return { ok: false, message: t('No se pudo desconectar. Intenta de nuevo en un rato.', 'Could not disconnect. Try again in a while.') };
+  }
+  if (cred?.webhookId) await paypalBorrarWebhook(cred, cred.webhookId);
+  await admin.from('events_log').insert({ brand_id: brandId, actor_user_id: user.id, type: 'paypal_desconectado', payload: { client_id_ultimos4: b.paypal_client_id.slice(-4) } });
+  revalidatePath('/admin/settings');
+  return { ok: true, message: t('PayPal desconectado.', 'PayPal disconnected.') };
 }

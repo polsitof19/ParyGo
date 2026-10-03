@@ -1,3 +1,4 @@
+import { paypalSirve } from '@/lib/paypalMarca';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { monedaDe, type Moneda } from '@/lib/moneda';
 import { zonaDe, type Zona } from '@/lib/zona';
@@ -40,13 +41,15 @@ export async function eventoCobra(admin: SupabaseClient, eventId: string, brandI
 }
 
 // Métodos con los que una marca COBRA entradas: su medio manual (cuenta cargada
-// y compatible con la moneda) o su Mercado Pago conectado (0086, solo en PEN).
-// `sinYape`: "¿le queda algún método si quita la cuenta del medio manual?".
-export async function marcaTieneMetodo(admin: SupabaseClient, brandId: string, o: { sinYape?: boolean } = {}): Promise<boolean> {
-  const { data: b } = await admin.from('brands').select('yape_number, mp_oauth_user_id, moneda, metodo_manual').eq('id', brandId).maybeSingle();
+// y compatible con la moneda), su Mercado Pago conectado (0086, solo en PEN) o
+// su PayPal conectado (0091, solo en USD/EUR/MXN).
+// `sinYape` / `sinPaypal`: "¿le queda algún método si quita ese?".
+export async function marcaTieneMetodo(admin: SupabaseClient, brandId: string, o: { sinYape?: boolean; sinPaypal?: boolean } = {}): Promise<boolean> {
+  const { data: b } = await admin.from('brands').select('yape_number, mp_oauth_user_id, paypal_client_id, moneda, metodo_manual').eq('id', brandId).maybeSingle();
   const moneda = monedaDe(b?.moneda);
   const manual = !o.sinYape && !!b?.yape_number?.trim() && medioSirve(medioDe(b?.metodo_manual), moneda);
-  return manual || (!!b?.mp_oauth_user_id && moneda === 'PEN');
+  const paypal = !o.sinPaypal && !!b?.paypal_client_id && paypalSirve(moneda);
+  return manual || paypal || (!!b?.mp_oauth_user_id && moneda === 'PEN');
 }
 
 // Después de un cambio en un evento YA PUBLICADO (agregar o reactivar una
