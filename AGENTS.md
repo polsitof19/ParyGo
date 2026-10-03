@@ -20,6 +20,42 @@ Paul nunca toca esa plata (no hay `marketplace_fee`).
   `PARYGO_MP_CLIENT_SECRET` (los de esa misma app; el `PARYGO_MP_ACCESS_TOKEN` y
   `PARYGO_MP_WEBHOOK_SECRET` de los packs ya están).
 
+## Decisiones tras la revisión adversarial de Codex (2026-10-03)
+- UN SOLO MODO: OAuth. Verificado: 0 marcas tienen credenciales manuales
+  (`mp_access_token_enc` nulo en todas). Se retira el formulario manual
+  (MpCredentialsForm) y su acción; el paso K de fase1 pasa a probar "sin
+  conexión no aparece Tarjeta" + conexión simulada vía RPC. Así no hay
+  transiciones manual↔OAuth ni dos secretos de webhook.
+- Vendedor del pago = `collector_id` de `GET /v1/payments/{id}` (NO `user_id`):
+  tiene que ser igual a `mp_oauth_user_id` o no se liquida (tipado en mpApi.ts).
+- Al conectar: `GET /users/me` con el token recién canjeado; su `id` tiene que
+  ser el `user_id` del canje. Si no, o si falta algo, no se guarda nada.
+- Quién: membresía `brand_admin` REAL de esa marca (no staff, no super admin
+  por impersonación aunque esté en modo edición). La marca sale de la sesión y
+  del `state`, nunca del form. Vale para conectar, la vuelta y desconectar.
+- Refresh: empieza 7 días antes del vencimiento, así el token actual sigue
+  válido mientras tanto. El que pierde el candado usa el token vigente (no
+  refresca). Solo si el token YA venció y no hay candado → falla cerrado esa
+  operación. `invalid_grant` (refresh rechazado) = revocación confirmada →
+  desconecta + aviso; timeout/5xx/429 = transitorio → conserva todo, reintenta
+  la próxima vez. El par nuevo (access, refresh, expires) se guarda en UNA RPC.
+  Test: dos refrescos simultáneos → un solo POST a /oauth/token (fetch simulado).
+- Webhook de entradas: secreto = `PARYGO_MP_WEBHOOK_SECRET` (firma la app de
+  ParyGo; doc oficial: el secreto es de la aplicación, no del vendedor).
+- Webhook de packs: el `user_id` del cuerpo NO va firmado → solo filtro
+  operativo (≠ Paul → 200 sin re-pedir). Un pago que MP devuelve 404 con el token
+  de Paul → 200 `ignored` (no 502). Acreditar sigue dependiendo del re-pedido +
+  `settle_pack_purchase`.
+- Desconectar: mismo criterio que quitar el Yape (`marcaCobraEnVivo` con el
+  único método) → bloqueado. Órdenes MP pendientes: se dejan; la vuelta y el
+  webhook ya no pueden re-pedir el pago sin token → quedan en `pending_payment`
+  y el hold vence solo (documentado en el aviso de desconectar).
+- Bitácora `events_log` con actor: `mp_conectado`, `mp_desconectado`,
+  `mp_refresh_revocado`, `mp_conectar_fallido` (motivo, sin tokens).
+- CSRF/PKCE: `state` 32 bytes + `code_verifier` en cookie httpOnly/secure/
+  SameSite=Lax de 10 min atada a la marca; comparación en tiempo constante; un
+  solo uso (se borra al volver, éxito o error).
+
 ## Modelo de datos (0086)
 - `brands`: `mp_oauth_user_id text`, `mp_oauth_refresh_enc bytea` (pgp_sym, igual
   que 0034), `mp_oauth_expires_at timestamptz`, `mp_conectado_at timestamptz`.
@@ -31,6 +67,7 @@ Paul nunca toca esa plata (no hay `marketplace_fee`).
 - Una cuenta de MP conectada a UNA marca (índice único parcial en
   `mp_oauth_user_id`): si no, una marca podría "conectar" la cuenta de otra y
   liquidar pagos ajenos con su token.
+- `set_brand_mp_oauth` limpia `mp_webhook_secret_enc` (ya no se usa).
 
 ## Flujo
 1. `/admin/settings` → "Conectar Mercado Pago" (server action): exige dueña de la
@@ -50,13 +87,13 @@ Paul nunca toca esa plata (no hay `marketplace_fee`).
    tarjeta (fail-closed), con aviso en el panel.
 4. Webhook de pagos de una marca conectada: la preferencia sigue con
    `notification_url` → `/api/webhooks/mp/[brandId]`; la firma la hace la app de
-   Paul (las credenciales salen de ella) → secreto = `PARYGO_MP_WEBHOOK_SECRET`
-   cuando la marca está conectada por OAuth; `mp_webhook_secret` de la marca para
-   las de credenciales manuales. Validar además `user_id` del pago re-pedido ==
-   `mp_oauth_user_id`. La vuelta del comprador (0083/0084) sigue de respaldo.
+   Paul (las credenciales salen de ella) → secreto = `PARYGO_MP_WEBHOOK_SECRET`.
+   Validar además `collector_id` del pago re-pedido == `mp_oauth_user_id`. La
+   vuelta del comprador (0083/0084) sigue de respaldo.
    VERIFICAR con un pago real chico antes de dar por cerrado.
 5. `/api/webhooks/parygo-mp` (packs): ignorar (200) avisos cuyo `user_id` no sea
-   el de Paul, sin re-pedir el pago (si no, 404 → 502 → MP reintenta en vano).
+   el de Paul (filtro operativo, no autenticación) y tratar un 404 al re-pedir
+   como 200 `ignored`.
 6. "Tiene método de pago" (`lib/metodoPago.ts marcaTieneMetodo`) = Yape O MP
    conectado. Checkout: "Tarjeta" aparece solo con MP conectado y vigente.
 7. "Desconectar": borra tokens (`clear_brand_mp_oauth`); si era el único método y
@@ -76,10 +113,14 @@ Paul nunca toca esa plata (no hay `marketplace_fee`).
   con token vencido simulado (sin llamar a MP real).
 - [ ] 5. Webhook: secreto por tipo de conexión + `user_id`; packs ignoran otros
   `user_id`. **Listo:** mp-liquidar + caso nuevo verdes.
-- [ ] 6. `marcaTieneMetodo` cuenta MP conectado; checkout. **Listo:**
-  publicar-metodo con caso "solo MP".
+- [ ] 6. `marcaTieneMetodo` cuenta MP conectado; checkout. Retirar
+  MpCredentialsForm y su acción; actualizar paso K de fase1. **Listo:**
+  publicar-metodo con caso "solo MP" + fase1 verde.
 - [ ] 7. security-reviewer + Codex adversarial + un pago REAL chico (S/ 1) de
   Paul con una marca de prueba conectada a una cuenta de MP suya distinta.
+  **Listo:** aviso firmado llega a `/api/webhooks/mp/<marca>` y pasa la firma,
+  `collector_id` = la cuenta conectada, la orden se liquida UNA vez, y un pack
+  de Paul se sigue acreditando por su camino de siempre.
 
 ## Fuera de alcance
 Comisión de ParyGo por venta (`marketplace_fee`), PayPal de entradas, pago manual
