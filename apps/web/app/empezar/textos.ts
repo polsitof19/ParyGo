@@ -43,6 +43,9 @@ const es = {
     paso: (n: number, total: number) => `Paso ${n} de ${total}`,
     continuar: 'Continuar', atras: '‹ Atrás',
     nombre: '¿Cómo se llama tu marca?', nombreHint: 'Es el nombre que verá tu público en tu página y en sus entradas.',
+    pais: '¿De qué país es tu marca?',
+    paisHint: (moneda: string) => `Tus entradas se venden en ${moneda}. Elígelo bien: no se puede cambiar después de crear tu primer evento.`,
+    rPais: 'País',
     enlace: '¿Cómo quieres tu enlace?', enlaceHint: 'Es la dirección de tu página: la que compartirás con tu público.',
     contacto: '¿Cuál es tu correo?',
     // Para qué sirve el correo (Paul, 2026-09-28): entrar al panel y los avisos.
@@ -234,6 +237,9 @@ const en: T = {
     paso: (n, total) => `Step ${n} of ${total}`,
     continuar: 'Continue', atras: '‹ Back',
     nombre: "What's your brand called?", nombreHint: 'This is the name your audience will see on your page and on their tickets.',
+    pais: 'Which country is your brand from?',
+    paisHint: (moneda: string) => `Your tickets are sold in ${moneda}. Choose carefully: it can't be changed after you create your first event.`,
+    rPais: 'Country',
     enlace: 'How do you want your link?', enlaceHint: 'This is your page address: the one you will share with your audience.',
     contacto: "What's your email?",
     correoUsos: [

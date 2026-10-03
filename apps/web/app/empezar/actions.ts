@@ -10,6 +10,7 @@ import { esTipoMarca, packDe } from '@/lib/packs';
 import { mpListo, paypalListo } from '@/lib/cobroParygo';
 import { iniciarCompraPack } from '@/lib/compraPack';
 import { crearMarcaParaUsuario, SLUGS_RESERVADOS, SLUG_RE } from '@/lib/altaMarca';
+import { PAISES } from '@/lib/metodoManual';
 import { passwordOk, passwordAlAzar } from '@/lib/password';
 import { sendCodigoAlta } from '@/lib/email/sendCodigoAlta';
 import { sendYaTienesCuenta } from '@/lib/email/sendAltaEmails';
@@ -236,6 +237,8 @@ export async function finalizarAlta(_prev: AltaState, fd: FormData): Promise<Alt
 
   const { tipo, p } = leerDatos(fd, m);
   const datos = p.success ? p.data : null;
+  // País de la marca (moneda + hora de sus entradas). Uno de la lista o Perú.
+  const pais = PAISES.find((x) => x.id === String(fd.get('pais') ?? '')) ?? PAISES[0]!;
   if (!datos) return { ok: false, paso: 'datos', message: m.revisa, fieldErrors: errores(p.error!) };
   if (datos.plan === 'prueba' && tipo !== 'marca') return { ok: false, paso: 'datos', message: m.revisa };
 
@@ -285,6 +288,9 @@ export async function finalizarAlta(_prev: AltaState, fd: FormData): Promise<Alt
     if (misma) {
       if ((misma.tipo ?? 'marca') !== tipo) return tomado(m);
       brandId = misma.id;
+      // Volvió a intentar (quizá con otro país): una marca pendiente no tiene
+      // eventos, así que la moneda todavía se puede cambiar.
+      await admin.from('brands').update({ moneda: pais.moneda, zona_horaria: pais.zona, metodo_manual: pais.medios[0] }).eq('id', misma.id);
     } else if (!(await slugLibre(datos.slug))) {
       return tomado(m);
     }
@@ -303,7 +309,7 @@ export async function finalizarAlta(_prev: AltaState, fd: FormData): Promise<Alt
   if (datos.plan === 'prueba') {
     const alta = await crearMarcaParaUsuario({
       userId: user.id, email, nombre: datos.nombre, slug: datos.slug,
-      whatsappE164: datos.whatsapp, prueba: true, idioma: lang, tipo: 'marca',
+      whatsappE164: datos.whatsapp, prueba: true, idioma: lang, tipo: 'marca', pais,
     });
     if (!alta.ok) {
       // Dos envíos a la vez: el otro ya creó su marca (una por dueño, 0071).
@@ -317,7 +323,7 @@ export async function finalizarAlta(_prev: AltaState, fd: FormData): Promise<Alt
   if (!brandId) {
     const alta = await crearMarcaParaUsuario({
       userId: null, altaUsuario: user.id, email, nombre: datos.nombre, slug: datos.slug,
-      whatsappE164: datos.whatsapp || null, prueba: false, idioma: lang, tipo,
+      whatsappE164: datos.whatsapp || null, prueba: false, idioma: lang, tipo, pais,
     });
     if (!alta.ok) return alta.motivo === 'slug_en_uso' ? tomado(m) : { ok: false, paso: 'clave', message: m.noPago };
     brandId = alta.brandId;

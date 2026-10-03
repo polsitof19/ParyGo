@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { Idioma } from '@/lib/idioma';
 import { serverEnv } from '@/lib/env';
+import type { Pais } from '@/lib/metodoManual';
 
 // Alta de una marca del autoservicio de /empezar. Con userId, para un usuario
 // que YA existe (prueba gratis, tras el código). Con userId null, SIN dueña:
@@ -38,6 +39,10 @@ export async function crearMarcaParaUsuario(a: {
   // Quién verificó el correo de un alta con paquete (0080): la marca nace sin
   // dueña y solo ESA persona la reclama al volver del pago.
   altaUsuario?: string;
+  // País del alta: fija moneda, hora y el primer medio del país (0088). La
+  // moneda ya no cambia cuando la marca crea su primer evento: por eso se
+  // pregunta al crearla. Sin él, Perú (los defaults de la base).
+  pais?: Pais;
 }): Promise<AltaMarca> {
   const admin = createAdminClient();
   const { data: brand, error } = await admin
@@ -52,6 +57,7 @@ export async function crearMarcaParaUsuario(a: {
       prueba_disponible: a.prueba,
       idioma: a.idioma ?? 'es',
       tipo: a.tipo ?? 'marca',
+      ...(a.pais ? { moneda: a.pais.moneda, zona_horaria: a.pais.zona, metodo_manual: a.pais.medios[0] } : {}),
       ...(a.altaUsuario ? { alta_usuario: a.altaUsuario } : {}),
       // Sin dueña = alta con pack sin pagar: ARCHIVADA (no se ve en
       // <slug>.parygo.com) hasta que la dueña la reclama con el pago aprobado.

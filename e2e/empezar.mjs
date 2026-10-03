@@ -44,11 +44,14 @@ const continuar = (p) => p.getByRole('button', { name: /^(Continuar|Continue)/ }
 const linkResuelto = (p) => p.locator('#e-slug').filter({ hasText: /Disponible|ya pertenece|Solo minúsculas/ }).waitFor({ timeout: 10000 }).catch(() => {});
 // Llena hasta el paso del correo y manda el código (queda en la pantalla del
 // código si el servidor lo aceptó, o en el paso del correo con su error).
-async function llenar(p, { plan, nombre, slug, email, wa = WA }) {
+async function llenar(p, { plan, nombre, slug, email, wa = WA, pais }) {
   await p.goto(`${BASE}/empezar?tipo=marca`, { waitUntil: 'networkidle' });
   await p.locator(`.ez-plan:has(input[value="${plan}"])`).click();
   await continuar(p);
   await p.fill('#ez-nombre', nombre);
+  // País (moneda + hora de la marca). Sin elegir queda el del dispositivo.
+  if (pais) await p.selectOption('#ez-pais', pais);
+  else paisPorDefecto = await p.locator('#ez-pais').inputValue();
   await continuar(p);
   if (slug) await p.fill('#ez-slug', slug);
   await linkResuelto(p);
@@ -59,6 +62,7 @@ async function llenar(p, { plan, nombre, slug, email, wa = WA }) {
 }
 // Código válido para ese correo: un link nuevo con service role (invalida el
 // que mandó la app, como lo haría la persona con el suyo).
+let paisPorDefecto = null;
 async function codigoPara(email) {
   const { data, error } = await svc.auth.admin.generateLink({ type: 'magiclink', email });
   if (error) throw new Error('generateLink ' + error.message);
@@ -267,7 +271,7 @@ try {
     const p = await ctx.newPage();
     const email = `delivered+alta-f${STAMP}@resend.dev`;
     const slug = `e2e-alta-f${STAMP}`;
-    await llenar(p, { plan: 'prueba', nombre: `E2E Prueba ${STAMP}`, slug, email });
+    await llenar(p, { plan: 'prueba', nombre: `E2E Prueba ${STAMP}`, slug, email, pais: 'CO' });
     await p.locator('#ez-codigo').waitFor({ timeout: 15000 });
     const tc = await texto(p);
     check('F', 'pasa a la pantalla del código y dice a qué correo llegó', /Te mandamos un código/.test(tc) && tc.includes(email));
@@ -302,8 +306,9 @@ try {
     await pagarBtn(p).click();
     await p.waitForURL(/\/admin/, { timeout: 40000 });
     check('F', '"Crear mi prueba" entra a /admin', /\/admin/.test(p.url()), p.url());
-    const { data: m } = await svc.from('brands').select('id, archived_at, prueba_disponible, alta_usuario, whatsapp_e164, tipo').eq('slug', slug).single();
+    const { data: m } = await svc.from('brands').select('id, archived_at, prueba_disponible, alta_usuario, whatsapp_e164, tipo, moneda, zona_horaria, metodo_manual').eq('slug', slug).single();
     if (m) { marcas.push({ id: m.id, borrar: true }); await svc.from('brands').update({ is_test: true }).eq('id', m.id); }
+    check('F', 'eligió Colombia: la marca nace en COP, hora de Bogotá y Nequi', m.moneda === 'COP' && m.zona_horaria === 'America/Bogota' && m.metodo_manual === 'nequi', JSON.stringify({ moneda: m.moneda, zona: m.zona_horaria, medio: m.metodo_manual }));
     const { data: mem } = await svc.from('brand_members').select('user_id, role').eq('brand_id', m.id);
     const uid = await rastrear(email);
     check('F', 'marca publicada, con prueba disponible y dueña = quien verificó', m.archived_at === null && m.prueba_disponible === true && mem?.length === 1 && mem[0].role === 'brand_admin' && mem[0].user_id === uid, JSON.stringify({ arch: m.archived_at, prueba: m.prueba_disponible, mem }));
@@ -351,8 +356,9 @@ try {
       p.waitForURL(/mercadopago\.com/, { timeout: 40000, waitUntil: 'commit' }),
       p.locator('.ez-banner[role=alert]').waitFor({ timeout: 40000 }),
     ]).catch(() => {});
-    const { data: m } = await svc.from('brands').select('id, archived_at, alta_usuario').eq('slug', slug).single();
+    const { data: m } = await svc.from('brands').select('id, archived_at, alta_usuario, moneda, zona_horaria').eq('slug', slug).single();
     marcas.push({ id: m.id, borrar: false });
+    check('D', `sin elegir país: el del dispositivo (${paisPorDefecto}) → marca en PEN y hora de Lima`, paisPorDefecto === 'PE' && m.moneda === 'PEN' && m.zona_horaria === 'America/Lima', JSON.stringify({ paisPorDefecto, moneda: m.moneda, zona: m.zona_horaria }));
     await svc.from('brands').update({ is_test: true }).eq('id', m.id);
     const { count: miembros } = await svc.from('brand_members').select('user_id', { count: 'exact', head: true }).eq('brand_id', m.id);
     const { data: c } = await svc.from('pack_purchases').select('id, pack, currency, amount_cents, status').eq('brand_id', m.id);
@@ -362,7 +368,7 @@ try {
   const btnPanel = (p) => p.getByRole('button', { name: /Ingresar a mi panel/ });
 
   await bloque('D', async () => {
-    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'America/Lima' });
     const a = await altaPack(ctx, 'd');
     if (!a) {
       log('D · el server no tiene PARYGO_MP_*: se saltea');

@@ -8,6 +8,21 @@ import { passwordOk } from '@/lib/password';
 import { TEXTOS, formatoPrecio, type Lang, type Moneda } from './textos';
 import type { TipoMarca } from '@/lib/packs';
 import { VistaPrevia } from './VistaPrevia';
+import { PAISES } from '@/lib/metodoManual';
+import { NOMBRE_MONEDA } from '@/lib/moneda';
+
+// País inicial = el de la hora del dispositivo (Bogotá → Colombia, Madrid →
+// España, cualquier hora de EE. UU. → EE. UU.); si no calza, Perú.
+function paisDelDispositivo(): string {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const p = PAISES.find((x) => x.zona === tz);
+    if (p) return p.id;
+    if (/^America\/(Chicago|Denver|Los_Angeles|Phoenix|Anchorage)$|^Pacific\/Honolulu$/.test(tz)) return 'US';
+    if (/^America\/Argentina\//.test(tz)) return 'AR';
+  } catch { /* sin Intl: Perú */ }
+  return 'PE';
+}
 
 export type Plan = {
   id: '1' | '3' | '5' | '10';
@@ -84,6 +99,10 @@ export function EmpezarFlow({ lang, tipo = 'marca', planes, inicial: planInicial
   const [password, setPassword] = useState('');
   const [ver, setVer] = useState(false);
   const [whatsapp, setWhatsapp] = useState('');
+  const [paisId, setPaisId] = useState('PE');
+  const paisTocado = useRef(false);
+  useEffect(() => { if (!paisTocado.current) setPaisId(paisDelDispositivo()); }, []);
+  const pais = PAISES.find((x) => x.id === paisId) ?? PAISES[0]!;
   const [codigo, setCodigo] = useState('');
   const [reenv, setReenv] = useState<string | null>(null);
   const [ultimo, setUltimo] = useState<AltaState>(inicial);
@@ -221,6 +240,7 @@ export function EmpezarFlow({ lang, tipo = 'marca', planes, inicial: planInicial
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="email" value={email} />
       <input type="hidden" name="whatsapp" value={whatsapp} />
+      <input type="hidden" name="pais" value={pais.id} />
       {paso === 4 && <input type="hidden" name="codigo" value={codigo} />}
       {paso === 5 && <input type="hidden" name="password" value={password} />}
     </>
@@ -321,6 +341,15 @@ export function EmpezarFlow({ lang, tipo = 'marca', planes, inicial: planInicial
                 {/* El enlace que se arma solo ya es de otra marca: se avisa acá, antes del paso del enlace. */}
                 {!err.nombre && libre === false && <p className="ez-hint" aria-live="polite">{t.w.ocupadoPaso}</p>}
               </div>
+              {/* País = moneda y hora de sus entradas: después del primer evento no cambia. */}
+              <div className="ez-field ez-field--q">
+                <label htmlFor="ez-pais" className="ez-label">{t.w.pais}</label>
+                <select id="ez-pais" className="ez-input" value={pais.id} aria-describedby="e-pais"
+                  onChange={(e) => { paisTocado.current = true; setPaisId(e.target.value); }}>
+                  {PAISES.map((x) => <option key={x.id} value={x.id}>{lang === 'en' ? x.name : x.nombre}</option>)}
+                </select>
+                <p id="e-pais" className="ez-hint">{t.w.paisHint(NOMBRE_MONEDA[pais.moneda][lang === 'en' ? 'en' : 'es'])}</p>
+              </div>
             </div>
           )}
 
@@ -414,6 +443,7 @@ export function EmpezarFlow({ lang, tipo = 'marca', planes, inicial: planInicial
               <dl className="ez-revisa">
                 <div><dt>{t.tuPlan}</dt><dd>{planTxt} · {esPrueba ? t.c.pruebaPrecio : precio(elegido)}</dd><button type="button" className="ez-link" onClick={() => ir(0)}>{t.w.editar}</button></div>
                 <div><dt>{t.w.rMarca}</dt><dd>{nombre.trim()}</dd><button type="button" className="ez-link" onClick={() => ir(1)}>{t.w.editar}</button></div>
+                <div><dt>{t.w.rPais}</dt><dd>{lang === 'en' ? pais.name : pais.nombre} · {NOMBRE_MONEDA[pais.moneda][lang === 'en' ? 'en' : 'es']}</dd><button type="button" className="ez-link" onClick={() => ir(1)}>{t.w.editar}</button></div>
                 <div><dt>{t.w.rEnlace}</dt><dd>{slug}.parygo.com</dd><button type="button" className="ez-link" onClick={() => ir(2)}>{t.w.editar}</button></div>
                 <div><dt>{t.w.rCorreo}</dt><dd>{email}</dd><button type="button" className="ez-link" onClick={() => ir(3)}>{t.w.editar}</button></div>
               </dl>

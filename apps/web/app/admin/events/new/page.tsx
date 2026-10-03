@@ -36,7 +36,12 @@ export default async function NewBrandEventPage() {
 
   // Hard gate (UX): sin saldo ni prueba → no llega al form. El RPC es el guard real.
   const saldo = brand.event_balance ?? 0;
-  const prueba = saldo <= 0 && (await pruebaDisponible(ctx.brandId));
+  // ¿Es su PRIMER evento? Entonces el asistente le recuerda la moneda: después
+  // de crearlo ya no cambia (0088).
+  const [prueba, { count: eventos }] = await Promise.all([
+    saldo <= 0 ? pruebaDisponible(ctx.brandId) : Promise.resolve(false),
+    supabase.from('events').select('id', { count: 'exact', head: true }).eq('brand_id', ctx.brandId),
+  ]);
   if (saldo <= 0 && !prueba) redirect('/admin');
   const tope = prueba ? PRUEBA_TOPE_ENTRADAS : brand.tipo === 'privado' ? PRIVADO_TOPE_ENTRADAS : null;
 
@@ -53,7 +58,7 @@ export default async function NewBrandEventPage() {
   };
 
   return (
-    <EventWizard marcaSlug={brand.slug} marcaNombre={brand.name} saldo={saldo} prueba={prueba} tope={tope} vista={vista} moneda={monedaDe(brand.moneda)} zona={zonaDe(brand.zona_horaria)}>
+    <EventWizard marcaSlug={brand.slug} marcaNombre={brand.name} saldo={saldo} prueba={prueba} tope={tope} vista={vista} moneda={monedaDe(brand.moneda)} zona={zonaDe(brand.zona_horaria)} primerEvento={eventos === 0}>
       <Link href="/admin" className="s-back">
         <ChevronLeft className="h-3.5 w-3.5" /> {t('Tus eventos', 'Your events')}
       </Link>
