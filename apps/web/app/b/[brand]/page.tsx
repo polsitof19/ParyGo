@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney, monedaDe, type Moneda } from '@/lib/moneda';
 import { isPubliclyOffered } from '@/lib/publicTicketGuard';
 import { tokensPrivados } from '@/lib/privateAccess';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -44,7 +44,7 @@ function formaFlyer(e: EvRow): { ratio: string; cls: string } {
   return { ratio: `${e.cover_w} / ${e.cover_h}`, cls: r > 1 ? ' bh-ev__art--apaisado' : '' };
 }
 
-function Evento({ e, desde, primero }: { e: EvRow; desde: number | null; primero: boolean }) {
+function Evento({ e, desde, primero, moneda }: { e: EvRow; desde: number | null; primero: boolean; moneda: Moneda }) {
   const donde = [e.venue_name, distrito(e.venue_address)].filter(Boolean).join(', ');
   // `desde` es el mínimo PAGO: un evento gratis que además vende entradas
   // pagas (Standly: cortesía libre + VIP/GENERAL) se compra, no se "reclama".
@@ -62,7 +62,7 @@ function Evento({ e, desde, primero }: { e: EvRow; desde: number | null; primero
         <span className="bh-ev__txt">
           <span className="bh-ev__cuando"><span className="b-dot" aria-hidden="true" />{[fmtCuando(e.starts_at), donde].filter(Boolean).join(' · ')}</span>
           <span className="bh-ev__nm">{e.name}</span>
-          {!gratis && desde != null && <span className="bh-ev__desde">Desde {formatPEN(desde)}</span>}
+          {!gratis && desde != null && <span className="bh-ev__desde">Desde {formatMoney(desde, moneda)}</span>}
           <span className={`bh-ev__go${primero ? ' bh-ev__go--pri' : ''}`}>
             {gratis ? 'Reclama tu entrada gratis' : 'Comprar entradas'} <ArrowRight aria-hidden="true" />
           </span>
@@ -76,7 +76,7 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
   const supabase = createClient();
   const { data: brand } = await supabase
     .from('brands')
-    .select('id, name, theme_json, whatsapp_e164, contact_email')
+    .select('id, name, theme_json, whatsapp_e164, contact_email, moneda')
     .eq('slug', params.brand)
     .is('archived_at', null)
     .maybeSingle();
@@ -151,7 +151,7 @@ export default async function BrandHomePage({ params }: { params: { brand: strin
         <section aria-labelledby="bh-eventos">
           <h2 className="bh-sec" id="bh-eventos">{eventos.length === 1 ? 'Próximo evento' : 'Próximos eventos'}</h2>
           <ol className="bh-lista">
-            {eventos.map((e, i) => <Evento key={e.id} e={e} desde={desdePorEvento.get(e.id) ?? null} primero={i === 0} />)}
+            {eventos.map((e, i) => <Evento key={e.id} e={e} desde={desdePorEvento.get(e.id) ?? null} primero={i === 0} moneda={monedaDe(brand.moneda)} />)}
           </ol>
         </section>
       )}

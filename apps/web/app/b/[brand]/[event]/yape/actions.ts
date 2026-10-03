@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { headers } from 'next/headers';
 import { nanoid } from 'nanoid';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { solesToCents } from '@/lib/utils';
+import { aCentavos, monedaDe } from '@/lib/moneda';
 
 type Result =
   | { ok: true; redirectUrl: string }
@@ -46,7 +46,7 @@ export async function submitYapeProof(formData: FormData): Promise<Result> {
     .from('orders')
     .select(`
       id, event_id, brand_id, total_cents, status, payment_method,
-      brand:brands ( slug )
+      brand:brands ( slug, moneda )
     `)
     .eq('id', parsed.data.order_id)
     .single();
@@ -68,7 +68,9 @@ export async function submitYapeProof(formData: FormData): Promise<Result> {
   }
 
   // 2. Compute amount and warn if mismatched (but still accept; promoter can reject).
-  const amountCents = solesToCents(parsed.data.amount_soles);
+  // El monto se lee en la moneda de la marca de la orden (releída acá, no del form).
+  let amountCents: number;
+  try { amountCents = aCentavos(parsed.data.amount_soles, monedaDe(orderBrand?.moneda)); } catch { return { ok: false, message: 'Monto inválido.' }; }
 
   // 3. Upload image to Storage (private bucket).
   const ext =

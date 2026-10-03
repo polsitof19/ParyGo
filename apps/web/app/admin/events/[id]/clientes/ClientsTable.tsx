@@ -5,7 +5,7 @@ import { useFormState, useFormStatus } from 'react-dom';
 import { toast } from 'sonner';
 import { Search, Download, Send, Ban } from 'lucide-react';
 import { voidTicketAction, type VoidTicketState } from '../../../actions';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney, type Moneda } from '@/lib/moneda';
 import { useTextos } from '@/components/IdiomaPanel';
 import type { Textos } from '@/lib/idioma';
 
@@ -33,7 +33,7 @@ function csvCell(v: string | number | null): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function ClientsTable({ rows, eventId, eventName, impersonating = false, focusSearch = false, hint = null }: { rows: ClientRow[]; eventId: string; eventName: string; impersonating?: boolean; focusSearch?: boolean; hint?: string | null }) {
+export function ClientsTable({ rows, eventId, eventName, moneda, impersonating = false, focusSearch = false, hint = null }: { rows: ClientRow[]; eventId: string; eventName: string; moneda: Moneda; impersonating?: boolean; focusSearch?: boolean; hint?: string | null }) {
   const { t, loc } = useTextos();
   const [q, setQ] = useState('');
   const filtered = useMemo(() => {
@@ -108,7 +108,7 @@ export function ClientsTable({ rows, eventId, eventName, impersonating = false, 
                   <p className="s-muted" style={{ fontSize: 13 }}>{docLabel(t, r.docType)} {r.dni ?? '—'} · {methodLabel(r.paymentMethod)} · {fmtDate(r.createdAt, loc)}</p>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <p style={{ fontWeight: 800, fontFamily: 'var(--display)' }}>{formatPEN(r.totalCents)}</p>
+                  <p style={{ fontWeight: 800, fontFamily: 'var(--display)' }}>{formatMoney(r.totalCents, moneda)}</p>
                   {!impersonating && <ResendButton orderId={r.orderId} />}
                 </div>
               </div>

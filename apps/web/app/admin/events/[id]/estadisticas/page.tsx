@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney, monedaDe } from '@/lib/moneda';
 import { publicEnv } from '@/lib/env';
 import { textosPanel } from '@/lib/idiomaServer';
 
@@ -26,10 +26,11 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
   const admin = createAdminClient();
   const { data: event } = await admin
     .from('events')
-    .select('id, brand_id, slug, starts_at, ends_at, is_published, brand:brands ( slug )')
+    .select('id, brand_id, slug, starts_at, ends_at, is_published, brand:brands ( slug, moneda )')
     .eq('id', params.id)
     .maybeSingle();
   if (!event || event.brand_id !== ctx.brandId) notFound();
+  const moneda = monedaDe((Array.isArray(event.brand) ? event.brand[0] : event.brand)?.moneda);
 
   type ProofRow = {
     id: string; amount_cents: number; operation_number: string; payer_name: string;
@@ -192,7 +193,7 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
     const nx = nextByType.get(tp.id);
     if (nx) {
       const hrs = (new Date(nx.at).getTime() - Date.now()) / 3600000;
-      if (hrs > 0 && hrs <= 72) alerts.push({ tone: 'info', text: t(`${tp.name} sube a ${formatPEN(nx.cents)} el ${new Date(nx.at).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}`, `${tp.name} goes up to ${formatPEN(nx.cents)} on ${new Date(nx.at).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}`) });
+      if (hrs > 0 && hrs <= 72) alerts.push({ tone: 'info', text: t(`${tp.name} sube a ${formatMoney(nx.cents, moneda)} el ${new Date(nx.at).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}`, `${tp.name} goes up to ${formatMoney(nx.cents, moneda)} on ${new Date(nx.at).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}`) });
     }
   }
   const confirmedCents = byMethod.yape.cents + byMethod.mp.cents;
@@ -244,12 +245,12 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
       <div className="a-pulse">
         <div className="s-stat">
           <span className="s-stat__label">{t('Recaudado', 'Collected')}</span>
-          <span className="s-stat__value">{formatPEN(confirmedCents)}</span>
+          <span className="s-stat__value">{formatMoney(confirmedCents, moneda)}</span>
           <span className="s-stat__sub">
             {pendingCount > 0
-              ? t(`+ ${formatPEN(pendingCents)} por aprobar`, `+ ${formatPEN(pendingCents)} to approve`)
+              ? t(`+ ${formatMoney(pendingCents, moneda)} por aprobar`, `+ ${formatMoney(pendingCents, moneda)} to approve`)
               : showMp
-                ? t(`Yape ${formatPEN(byMethod.yape.cents)} · tarjeta ${formatPEN(byMethod.mp.cents)}`, `Yape ${formatPEN(byMethod.yape.cents)} · card ${formatPEN(byMethod.mp.cents)}`)
+                ? t(`Yape ${formatMoney(byMethod.yape.cents, moneda)} · tarjeta ${formatMoney(byMethod.mp.cents, moneda)}`, `Yape ${formatMoney(byMethod.yape.cents, moneda)} · card ${formatMoney(byMethod.mp.cents, moneda)}`)
                 : t('confirmado en tu Yape', 'confirmed in your Yape')}
           </span>
         </div>
@@ -310,7 +311,7 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
                       <td className="num" data-l={t('Emitidas', 'Issued')}>{sold}</td>
                       <td className="num" data-l={t('Libres', 'Available')}>{tp.is_unlimited ? '—' : libres}</td>
                       <td className="num" data-l={t('Escaneados', 'Scanned')}>{scanned}</td>
-                      <td className="num" data-l={t('Recaudado', 'Collected')}>{formatPEN(rec)}</td>
+                      <td className="num" data-l={t('Recaudado', 'Collected')}>{formatMoney(rec, moneda)}</td>
                     </tr>
                   );
                 })}
@@ -322,7 +323,7 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
                   <td className="num" data-l={t('Emitidas', 'Issued')}>{totalSold}</td>
                   <td className="num" data-l={t('Libres', 'Available')}>{capTotal > 0 ? Math.max(0, capTotal - soldCapped) : '—'}</td>
                   <td className="num" data-l={t('Escaneados', 'Scanned')}>{totalScanned}</td>
-                  <td className="num" data-l={t('Recaudado', 'Collected')}>{formatPEN(recTotal)}</td>
+                  <td className="num" data-l={t('Recaudado', 'Collected')}>{formatMoney(recTotal, moneda)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -339,15 +340,15 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
           <div className="s-card">
             <ol className="a-chart" aria-label={t('Ventas por día', 'Sales per day')}>
               {byDay.map(([day, cents], i) => (
-                <li key={day} className={`a-chart__col${i === byDay.length - 1 ? ' a-chart__col--last' : ''}`} title={`${day}: ${formatPEN(cents)}`}>
+                <li key={day} className={`a-chart__col${i === byDay.length - 1 ? ' a-chart__col--last' : ''}`} title={`${day}: ${formatMoney(cents, moneda)}`}>
                   <span className="a-chart__bar" style={{ height: `${Math.max(4, Math.round((cents / maxDay) * 100))}%` }} />
-                  <span className="a-chart__sr">{day}: {formatPEN(cents)}</span>
+                  <span className="a-chart__sr">{day}: {formatMoney(cents, moneda)}</span>
                 </li>
               ))}
             </ol>
             <div className="a-chart__axis">
               <span>{byDay[0]![0]}</span>
-              <span>{byDay[byDay.length - 1]![0]} · {formatPEN(byDay[byDay.length - 1]![1])}</span>
+              <span>{byDay[byDay.length - 1]![0]} · {formatMoney(byDay[byDay.length - 1]![1], moneda)}</span>
             </div>
           </div>
         </section>
@@ -378,7 +379,7 @@ export default async function AdminEventEstadisticasPage({ params }: { params: {
                     {r.reject_reason && <span className="s-muted s-small" style={{ display: 'block' }}>{t('Motivo:', 'Reason:')} {r.reject_reason}</span>}
                   </span>
                   <span className="s-muted s-small" style={{ textAlign: 'right', flexShrink: 0 }}>
-                    {formatPEN(r.amount_cents)}<br />
+                    {formatMoney(r.amount_cents, moneda)}<br />
                     {r.reviewed_at && new Date(r.reviewed_at).toLocaleString(loc, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
                   </span>
                 </li>

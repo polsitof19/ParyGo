@@ -1,5 +1,5 @@
 // lib/moneda.ts (sin red).   cd apps/web && npx tsx ../../e2e/moneda.test.mts
-const { formatMoney, aCentavos, simbolo, monedaDe } = await import('@/lib/moneda');
+const { formatMoney, aCentavos, simbolo, monedaDe, centavosValidos } = await import('@/lib/moneda');
 const { formatPEN } = await import('@/lib/utils');
 
 let ok = 0, mal = 0;
@@ -22,6 +22,7 @@ check('COP "50.5" tira', tira(() => aCentavos('50.5', 'COP')));
 check('COP 0.5 (número) tira', tira(() => aCentavos(0.5, 'COP')));
 check('CLP "1.500" → 150000', aCentavos('1.500', 'CLP') === 150_000);
 check('negativo / vacío tiran', tira(() => aCentavos('-1', 'PEN')) && tira(() => aCentavos('abc', 'USD')));
+check('centavosValidos: entero; COP/CLP múltiplo de 100', centavosValidos(4050, 'PEN') && centavosValidos(5_000_000, 'COP') && !centavosValidos(5_000_050, 'COP') && !centavosValidos(10.5, 'USD') && !centavosValidos(-100, 'PEN') && !centavosValidos('100', 'PEN'));
 
 console.log(mal ? `✘ ${mal} fallas, ${ok} OK` : `✔ ${ok}/${ok}`);
 process.exit(mal ? 1 : 0);

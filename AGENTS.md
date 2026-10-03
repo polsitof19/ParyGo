@@ -95,7 +95,7 @@ las server actions con service role.
 - [x] 1. 0088 + dryrun + aplicar + `e2e/pais-0088.mjs` (JWT real: anon lee las 3
   columnas y no escribe; trigger rechaza cambiar moneda con un evento (y la carrera evento+cambio se serializa); CHECK
   rechaza yape+COP). **Listo:** test verde, demotest queda en PEN/yape.
-- [ ] 2. `lib/moneda.ts`: `formatMoney(cents, moneda)` (Intl, sin decimales en
+- [x] 2. `lib/moneda.ts`: `formatMoney(cents, moneda)` (Intl, sin decimales en
   CLP/COP o si son .00) y `aCentavos(input, moneda)`; `formatPEN` queda como
   `formatMoney(c,'PEN')` para no romper nada. Pasar la moneda de la marca en
   TODO lo que muestra plata de entradas (comprador, correos al comprador, panel,

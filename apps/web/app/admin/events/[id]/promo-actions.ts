@@ -7,6 +7,8 @@ import { puedeEscribirComoSuper, type ModoEscrituraSuper } from '@/lib/impersona
 import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { sendPromoCodeEmail } from '@/lib/email/sendPromoCodeEmail';
 import { textosPanel } from '@/lib/idiomaServer';
+import { monedaDeMarca } from '@/lib/metodoPago';
+import { aCentavos } from '@/lib/moneda';
 
 type CreateResult = { ok: true; id: string } | { ok: false; message: string };
 type RevokeResult = { ok: boolean; message?: string };
@@ -115,8 +117,10 @@ export async function createPromoCode(input: CreatePromoInput): Promise<CreateRe
       return { ok: false, message: t('El porcentaje debe estar entre 1 y 100.', 'The percentage must be between 1 and 100.') };
     }
   } else if (input.discountType === 'fixed') {
-    // UI sends soles; store cents.
-    discountValue = Math.round(input.discountValue * 100);
+    // UI sends the amount in the brand's currency (re-read here); store cents.
+    try { discountValue = aCentavos(input.discountValue, await monedaDeMarca(admin, brandId)); } catch {
+      return { ok: false, message: t('Monto inválido.', 'Invalid amount.') };
+    }
     if (discountValue < 1) {
       return { ok: false, message: t('El monto fijo debe ser mayor a cero.', 'The fixed amount must be greater than zero.') };
     }

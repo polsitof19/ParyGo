@@ -5,6 +5,7 @@ import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { EventCoverUploader } from '../EventCoverUploader';
 import { EditEventForm } from './EditEventForms';
+import { monedaDe } from '@/lib/moneda';
 import { PostponeEvent } from './PostponeEvent';
 import { CancelEvent } from './CancelEvent';
 import { CloneEventButton } from './CloneEventButton';
@@ -39,10 +40,11 @@ export default async function EditEventPage({ params }: { params: { id: string }
   // ¿Hay alguna venta? (define si la fecha queda bloqueada)
   // Además contamos órdenes y tickets para saber si el evento se puede ELIMINAR
   // (solo eventos vacíos: 0 órdenes y 0 tickets).
-  const [{ count: soldCount }, { count: orderCount }, { count: ticketCount }] = await Promise.all([
+  const [{ count: soldCount }, { count: orderCount }, { count: ticketCount }, { data: marca }] = await Promise.all([
     admin.from('ticket_types').select('id', { count: 'exact', head: true }).eq('event_id', event.id).gt('sold', 0),
     admin.from('orders').select('id', { count: 'exact', head: true }).eq('event_id', event.id),
     admin.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', event.id),
+    admin.from('brands').select('moneda').eq('id', event.brand_id).maybeSingle(),
   ]);
   const hasSales = (soldCount ?? 0) > 0;
   const canDelete = (orderCount ?? 0) === 0 && (ticketCount ?? 0) === 0;
@@ -79,6 +81,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
           requireDni={event.require_dni ?? true}
           isFree={event.is_free ?? false}
           maxPerPerson={event.max_per_person ?? null}
+          moneda={monedaDe(marca?.moneda)}
           sendReminder={event.send_reminder ?? false}
           collectAttendeeNames={event.collect_attendee_names ?? false}
           allowTransfer={event.allow_transfer ?? false}

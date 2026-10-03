@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { optimizedImage } from '@/lib/imageUrl';
 import { TicketRecovery } from './TicketRecovery';
+import { monedaDe } from '@/lib/moneda';
 import { SetupChecklist, type SetupStep } from './SetupChecklist';
 import { LowBalanceNotice } from './LowBalanceNotice';
 import { ArchiveToggle } from '@/components/manage/ArchiveToggle';
@@ -39,7 +40,7 @@ export default async function AdminHomePage() {
   const supabase = createClient();
   const adminCli = createAdminClient();
   const [{ data: brand }, { data: events }, pendingProofs, stuckRows, { count: activeTypeCount }, pruebaLibre, { count: paidTypeCount }, { count: ticketCount }, { count: scannedCount }] = await Promise.all([
-    supabase.from('brands').select('id, slug, name, yape_number, event_balance').eq('id', brandId).single(),
+    supabase.from('brands').select('id, slug, name, yape_number, event_balance, moneda').eq('id', brandId).single(),
     supabase
       .from('events')
       .select('id, slug, name, starts_at, is_published, cover_url, archived_at, venue_name, es_prueba')
@@ -209,7 +210,7 @@ export default async function AdminHomePage() {
 
       {/* Recuperación de tickets — solo aparece si hay órdenes pagadas sin tickets.
           Re-emitir es escritura → oculto en solo lectura. */}
-      {stuckOrders.length > 0 && !impersonating && <TicketRecovery orders={stuckOrders} />}
+      {stuckOrders.length > 0 && !impersonating && <TicketRecovery orders={stuckOrders} moneda={monedaDe(brand?.moneda)} />}
 
       {/* Primeros pasos: solo el dueño y solo hasta el primer escaneo. Con
           Yapes por aprobar el primario es "Revisar Yapes" y el paso va soft. */}

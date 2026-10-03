@@ -3,7 +3,8 @@ import { requireSession } from '@/lib/auth';
 import { ownerBrandContext } from '@/lib/impersonation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { todas } from '@/lib/todas';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney } from '@/lib/moneda';
+import { monedaDeMarca } from '@/lib/metodoPago';
 import { PromoCodeManager, type PromoCodeRow, type PromoSales } from '../PromoCodeManager';
 import { textosPanel } from '@/lib/idiomaServer';
 
@@ -39,13 +40,14 @@ export default async function PromotersPage({ params }: { params: { id: string }
 
   // Todos los códigos del evento (así mostramos también los que aún no vendieron).
   // Columnas completas: las usa también el gestor de códigos (crear/revocar/enviar).
-  const [{ data: codes }, { data: types }] = await Promise.all([
+  const [{ data: codes }, { data: types }, moneda] = await Promise.all([
     admin
       .from('promo_codes')
       .select('id, code, label, discount_type, discount_value, max_uses, use_count, per_email_limit, applies_to_all, expires_at, is_active, created_at')
       .eq('event_id', event.id)
       .order('created_at', { ascending: false }),
     admin.from('ticket_types').select('id, name').eq('event_id', event.id).order('sort_order'),
+    monedaDeMarca(admin, ctx.brandId),
   ]);
 
   // Canjes CONSUMIDOS (= órdenes pagadas que usaron un código). Traemos el monto
@@ -112,6 +114,7 @@ export default async function PromotersPage({ params }: { params: { id: string }
         codes={(codes ?? []) as PromoCodeRow[]}
         sales={sales}
         impersonating={ctx.soloLectura}
+        moneda={moneda}
       />
 
       {/* 2) Ranking */}
@@ -119,8 +122,8 @@ export default async function PromotersPage({ params }: { params: { id: string }
         <h3 className="s-h3" style={{ marginBottom: 4 }}>{t('Ranking', 'Ranking')}</h3>
         <p className="s-card__desc" style={{ marginBottom: 12 }}>
           {t(
-            `${rows.length} código${rows.length === 1 ? '' : 's'} · ${totalClicks} clic${totalClicks === 1 ? '' : 's'} · ${totalEntradas} entrada${totalEntradas === 1 ? '' : 's'} colocadas · ${formatPEN(totalRecaudado)} recaudado`,
-            `${rows.length} code${rows.length === 1 ? '' : 's'} · ${totalClicks} click${totalClicks === 1 ? '' : 's'} · ${totalEntradas} ticket${totalEntradas === 1 ? '' : 's'} placed · ${formatPEN(totalRecaudado)} collected`,
+            `${rows.length} código${rows.length === 1 ? '' : 's'} · ${totalClicks} clic${totalClicks === 1 ? '' : 's'} · ${totalEntradas} entrada${totalEntradas === 1 ? '' : 's'} colocadas · ${formatMoney(totalRecaudado, moneda)} recaudado`,
+            `${rows.length} code${rows.length === 1 ? '' : 's'} · ${totalClicks} click${totalClicks === 1 ? '' : 's'} · ${totalEntradas} ticket${totalEntradas === 1 ? '' : 's'} placed · ${formatMoney(totalRecaudado, moneda)} collected`,
           )}
         </p>
         {rows.length === 0 ? (
@@ -137,11 +140,11 @@ export default async function PromotersPage({ params }: { params: { id: string }
                       {t('Código', 'Code')} <strong>{r.code}</strong>
                       {' · '}{t(`${r.clicks} clic${r.clicks === 1 ? '' : 's'}`, `${r.clicks} click${r.clicks === 1 ? '' : 's'}`)}
                       {r.clicks > 0 && <> · {t(`${Math.round((r.entradas / r.clicks) * 100)}% conversión`, `${Math.round((r.entradas / r.clicks) * 100)}% conversion`)}</>}
-                      {r.descuentoCents > 0 && <> · {t(`${formatPEN(r.descuentoCents)} en descuentos`, `${formatPEN(r.descuentoCents)} in discounts`)}</>}
+                      {r.descuentoCents > 0 && <> · {t(`${formatMoney(r.descuentoCents, moneda)} en descuentos`, `${formatMoney(r.descuentoCents, moneda)} in discounts`)}</>}
                     </p>
                   </div>
                   <div className="a-rank__num">
-                    <p className="a-rank__money">{formatPEN(r.recaudadoCents)}</p>
+                    <p className="a-rank__money">{formatMoney(r.recaudadoCents, moneda)}</p>
                     <p className="s-muted s-small">{t(`${r.entradas} entrada${r.entradas === 1 ? '' : 's'}`, `${r.entradas} ticket${r.entradas === 1 ? '' : 's'}`)}</p>
                   </div>
                 </li>

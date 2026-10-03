@@ -7,6 +7,7 @@ import { tokensPrivados, limitesPrivados } from '@/lib/privateAccess';
 import { PRUEBA_TOPE_ENTRADAS } from '@/lib/prueba';
 import { TicketTypeEditor, NewTicketTypeForm, type TtRow } from '../editar/EditEventForms';
 import { textosPanel } from '@/lib/idiomaServer';
+import { monedaDe } from '@/lib/moneda';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -41,7 +42,7 @@ export default async function EventTicketsPage({ params }: { params: { id: strin
   const [privados, limites, { data: brand }] = await Promise.all([
     tokensPrivados(admin, rows.map((r) => r.id)),
     limitesPrivados(admin, rows.map((r) => r.id)),
-    admin.from('brands').select('slug').eq('id', ctx.brandId).maybeSingle(),
+    admin.from('brands').select('slug, moneda').eq('id', ctx.brandId).maybeSingle(),
   ]);
   const linkDe = (id: string) => {
     const tk = privados.get(id);
@@ -77,8 +78,8 @@ export default async function EventTicketsPage({ params }: { params: { id: strin
       )}
       <div className="s-folds">
         {rows.length === 0 && <p className="s-empty">{t('Este evento no tiene entradas todavía. Agrega la primera aquí abajo: nombre, precio y cuántas hay.', 'This event has no ticket types yet. Add the first one below: name, price and how many.')}</p>}
-        {rows.map((t, i) => <TicketTypeEditor key={t.id} isFirst={i === 0} isLast={i === rows.length - 1} eventId={event.id} eventIsFree={eventIsFree} tt={t} readOnly={impersonating} linkPrivado={impersonating ? null : linkDe(t.id)} limitePrivado={limites.get(t.id) ?? null} eventName={event.name} />)}
-        {!impersonating && <NewTicketTypeForm eventId={event.id} eventIsFree={eventIsFree} abierto={rows.length === 0} />}
+        {rows.map((t, i) => <TicketTypeEditor key={t.id} isFirst={i === 0} isLast={i === rows.length - 1} eventId={event.id} eventIsFree={eventIsFree} moneda={monedaDe(brand?.moneda)} tt={t} readOnly={impersonating} linkPrivado={impersonating ? null : linkDe(t.id)} limitePrivado={limites.get(t.id) ?? null} eventName={event.name} />)}
+        {!impersonating && <NewTicketTypeForm eventId={event.id} eventIsFree={eventIsFree} moneda={monedaDe(brand?.moneda)} abierto={rows.length === 0} />}
       </div>
     </section>
   );

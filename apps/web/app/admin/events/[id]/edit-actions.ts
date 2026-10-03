@@ -5,7 +5,8 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireSession, type SessionUser } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { eventoCobra, marcaTieneMetodo, bajarABorradorSiFaltaMetodo } from '@/lib/metodoPago';
+import { eventoCobra, marcaTieneMetodo, bajarABorradorSiFaltaMetodo, monedaDeMarca } from '@/lib/metodoPago';
+import { aCentavos } from '@/lib/moneda';
 import { limaToIso, shiftEnd, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
 import { eventOverAt, isPubliclyOffered } from '@/lib/publicTicketGuard';
 import { generarToken, tokensPrivados, parseMaxPorPersona } from '@/lib/privateAccess';
@@ -641,7 +642,13 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   const name = String(formData.get('name') ?? '').trim().slice(0, 80) || tt.name;
   const isActive = formData.get('is_active') === 'on';
   const isUnlimited = formData.get('is_unlimited') === 'on';
-  const newPriceCents = Math.round(parseFloat(String(formData.get('price_soles') ?? '')) * 100);
+  // El precio se lee en la moneda de la marca, releída acá (nunca del form).
+  const moneda = await monedaDeMarca(admin, brandId);
+  const precioRaw = String(formData.get('price_soles') ?? '').trim();
+  let newPriceCents = NaN;
+  if (precioRaw !== '') {
+    try { newPriceCents = aCentavos(precioRaw, moneda); } catch { return { ok: false, message: t('Precio inválido.', 'Invalid price.') }; }
+  }
   const { data: evCfg } = await admin.from('events').select('is_published, is_free').eq('id', eventId).maybeSingle();
   const eventoEsGratis = evCfg?.is_free === true;
   const precioFinal = Number.isFinite(newPriceCents) ? newPriceCents : tt.price_cents;
@@ -728,7 +735,8 @@ export async function updateTicketTypeAction(_prev: EditState, formData: FormDat
   const pricingErr = validateTicketTypePricing(
     [{ name, isUnlimited: (update.is_unlimited as boolean | undefined) ?? tt.is_unlimited, pricesCents: resultingPrices }],
     { freeConfirmed: !becomingFree || formData.get('confirm_free') === '1' },
-    await idiomaPanel()
+    await idiomaPanel(),
+    moneda
   );
   if (pricingErr) return { ok: false, message: pricingErr };
 
@@ -767,14 +775,17 @@ export async function createTicketTypeAction(_prev: EditState, formData: FormDat
   const isUnlimited = formData.get('is_unlimited') === 'on';
   const colorHex = parseColorHex(formData);
   if (colorHex === false) return { ok: false, message: t('Color inválido.', 'Invalid color.') };
-  const priceCents =Math.round(parseFloat(String(formData.get('price_soles') ?? '')) * 100);
-  if (!Number.isFinite(priceCents) || priceCents < 0) return { ok: false, message: t('Precio inválido.', 'Invalid price.') };
+  const moneda = await monedaDeMarca(createAdminClient(), brandId);
+  let priceCents: number;
+  try { priceCents = aCentavos(String(formData.get('price_soles') ?? ''), moneda); } catch { return { ok: false, message: t('Precio inválido.', 'Invalid price.') }; }
+  if (String(formData.get('price_soles') ?? '').trim() === '') return { ok: false, message: t('Precio inválido.', 'Invalid price.') };
   const capacity = isUnlimited ? 0 : parseInt(String(formData.get('capacity') ?? ''), 10);
   if (!isUnlimited && (!Number.isFinite(capacity) || capacity < 1)) return { ok: false, message: t('Revisa "Cuántas hay": tiene que ser 1 o más.', 'Check "How many": it must be 1 or more.') };
   const pricingErr = validateTicketTypePricing(
     [{ name, isUnlimited, pricesCents: [priceCents] }],
     { freeConfirmed: formData.get('confirm_free') === '1' },
-    await idiomaPanel()
+    await idiomaPanel(),
+    moneda
   );
   if (pricingErr) return { ok: false, message: pricingErr };
   const bulkMinQtyRaw = Math.max(0, Math.min(10, parseInt(String(formData.get('bulk_min_qty') ?? '0'), 10) || 0));

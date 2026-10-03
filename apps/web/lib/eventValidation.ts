@@ -1,5 +1,6 @@
 // Validaciones de evento y tipos de entrada, compartidas por TODOS los caminos
 import { textos, type Idioma } from '@/lib/idioma';
+import { simbolo, type Moneda } from '@/lib/moneda';
 // server que crean o editan (panel del promotor y cabina). Puras: sin I/O.
 // Se corren ANTES de cualquier RPC que consuma saldo.
 
@@ -69,9 +70,11 @@ export type TicketTypeRule = {
 export function validateTicketTypePricing(
   types: TicketTypeRule[],
   opts: { freeConfirmed: boolean },
-  l: Idioma = 'es'
+  l: Idioma = 'es',
+  moneda: Moneda = 'PEN'
 ): string | null {
   const tx = textos(l).t;
+  const sim = simbolo(moneda);
   for (const t of types) {
     const label = t.name?.trim() || tx('Un tipo de entrada', 'A ticket type');
     if (t.pricesCents.some((p) => !Number.isFinite(p) || p < 0)) return tx(`"${label}": precio inválido.`, `"${label}": invalid price.`);
@@ -80,7 +83,7 @@ export function validateTicketTypePricing(
       return tx(`"${label}" no puede ser gratis e ilimitado a la vez. Pon un aforo (cupo) o un precio.`, `"${label}" cannot be both free and unlimited. Set a capacity or a price.`);
     }
     if (hasFree && !opts.freeConfirmed) {
-      return tx(`"${label}" tiene precio S/ 0. Confirma que es gratis: no se ofrece en tu página salvo que todo el evento sea gratis, y se emite desde "Cortesías".`, `"${label}" is priced at S/ 0. Confirm it is free: it is not offered on your page unless the whole event is free, and it is issued from "Complimentary tickets".`);
+      return tx(`"${label}" tiene precio ${sim} 0. Confirma que es gratis: no se ofrece en tu página salvo que todo el evento sea gratis, y se emite desde "Cortesías".`, `"${label}" is priced at ${sim} 0. Confirm it is free: it is not offered on your page unless the whole event is free, and it is issued from "Complimentary tickets".`);
     }
   }
   return null;

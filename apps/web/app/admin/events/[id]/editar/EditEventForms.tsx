@@ -5,7 +5,7 @@ import { useFormStatus } from 'react-dom';
 import { ChevronDown, ChevronUp, Plus, Link2, Lock, MessageCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFormFeedback } from '@/components/useFormFeedback';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney, simbolo, sinDecimales, type Moneda } from '@/lib/moneda';
 import { updateEventAction, updateTicketTypeAction, createTicketTypeAction, setTicketTypePrivateAction, moveTicketTypeAction, marcarAgotadaAction, type EditState } from '../edit-actions';
 import { useTextos } from '@/components/IdiomaPanel';
 import type { Textos } from '@/lib/idioma';
@@ -41,7 +41,7 @@ function Submit({ label }: { label: string }) {
   return <button type="submit" className="s-btn s-btn--primary s-btn--sm" disabled={pending}>{pending ? t('Guardando…', 'Saving…') : label}</button>;
 }
 
-export function EditEventForm(p: { eventId: string; name: string; description: string; startsLocal: string; venueName: string; venueAddress: string; venueMapsUrl: string; requireAgeConfirmation: boolean; requireDni: boolean; isFree: boolean; sendReminder: boolean; collectAttendeeNames: boolean; allowTransfer: boolean; minAge: number; maxPerPerson: number | null; isPublished?: boolean; hasSales?: boolean; readOnly?: boolean }) {
+export function EditEventForm(p: { eventId: string; name: string; description: string; startsLocal: string; venueName: string; venueAddress: string; venueMapsUrl: string; requireAgeConfirmation: boolean; requireDni: boolean; isFree: boolean; sendReminder: boolean; collectAttendeeNames: boolean; allowTransfer: boolean; minAge: number; maxPerPerson: number | null; moneda: Moneda; isPublished?: boolean; hasSales?: boolean; readOnly?: boolean }) {
   const { t } = useTextos();
   const [state, action] = useFormFeedback(updateEventAction, initial);
   const dateRef = useRef<HTMLInputElement>(null);
@@ -103,7 +103,7 @@ export function EditEventForm(p: { eventId: string; name: string; description: s
             <span>{t('Evento gratis (entrada libre con registro)', 'Free event (open entry with registration)')}</span>
           </label>
           <p className="s-muted" style={{ fontSize: 12.5, marginTop: 4 }}>
-            {t('Por defecto desactivado. Actívalo solo si la entrada no se cobra: tus tipos en S/0 pasan a ofrecerse al público y la entrada se emite al instante, sin pago. Los tipos marcados como cortesía siguen sin aparecer — esos se siguen emitiendo desde tu panel.', 'Off by default. Turn it on only if entry is not charged: your S/0 types start being offered to the public and the ticket is issued instantly, with no payment. Types marked as complimentary still do not appear — those are still issued from your dashboard.')}
+            {t(`Por defecto desactivado. Actívalo solo si la entrada no se cobra: tus tipos en ${simbolo(p.moneda)}0 pasan a ofrecerse al público y la entrada se emite al instante, sin pago. Los tipos marcados como cortesía siguen sin aparecer — esos se siguen emitiendo desde tu panel.`, `Off by default. Turn it on only if entry is not charged: your ${simbolo(p.moneda)}0 types start being offered to the public and the ticket is issued instantly, with no payment. Types marked as complimentary still do not appear — those are still issued from your dashboard.`)}
             {p.hasSales && ' ' + t('No se puede cambiar: este evento ya tiene ventas pagas, y marcarlo gratis diría "Gratis" en un evento que cobró.', 'This cannot be changed: this event already has paid sales, and marking it free would say "Free" on an event that charged.')}
           </p>
         </div>
@@ -145,7 +145,7 @@ export function EditEventForm(p: { eventId: string; name: string; description: s
 // Precio S/0 en un tipo: ilimitado → bloqueado; con aforo → confirmación explícita
 // (confirm_free=1). El server exige lo mismo y revalida; esto es solo UX.
 // `previousPriceCents` = precio actual del tipo (no se reconfirma si ya era 0).
-function guardFreePrice(e: React.FormEvent<HTMLFormElement>, t: Textos['t'], previousPriceCents?: number) {
+function guardFreePrice(e: React.FormEvent<HTMLFormElement>, t: Textos['t'], sim: string, previousPriceCents?: number) {
   const form = e.currentTarget;
   const priceEl = form.elements.namedItem('price_soles') as HTMLInputElement | null;
   const hidden = form.elements.namedItem('confirm_free') as HTMLInputElement | null;
@@ -159,7 +159,7 @@ function guardFreePrice(e: React.FormEvent<HTMLFormElement>, t: Textos['t'], pre
     return;
   }
   if (previousPriceCents === 0) return;
-  if (!window.confirm(t('Este tipo cuesta S/ 0. Los tipos gratis NO se venden en tu página: se emiten desde "Cortesías" y descuentan del aforo. ¿Confirmas?', 'This type costs S/ 0. Free types are NOT sold on your page: they are issued from "Complimentary tickets" and count against capacity. Confirm?'))) {
+  if (!window.confirm(t(`Este tipo cuesta ${sim} 0. Los tipos gratis NO se venden en tu página: se emiten desde "Cortesías" y descuentan del aforo. ¿Confirmas?`, `This type costs ${sim} 0. Free types are NOT sold on your page: they are issued from "Complimentary tickets" and count against capacity. Confirm?`))) {
     e.preventDefault();
     return;
   }
@@ -169,8 +169,8 @@ function guardFreePrice(e: React.FormEvent<HTMLFormElement>, t: Textos['t'], pre
 // Con la casilla "Gratis" marcada, esa casilla ES la confirmación del S/0
 // (confirm_free=1): no hace falta el confirm(). Sin marcarla, un precio 0
 // escrito a mano pasa por guardFreePrice como antes. El server revalida igual.
-function guardPrice(e: React.FormEvent<HTMLFormElement>, t: Textos['t'], free: boolean, previousPriceCents?: number) {
-  if (!free) return guardFreePrice(e, t, previousPriceCents);
+function guardPrice(e: React.FormEvent<HTMLFormElement>, t: Textos['t'], sim: string, free: boolean, previousPriceCents?: number) {
+  if (!free) return guardFreePrice(e, t, sim, previousPriceCents);
   const form = e.currentTarget;
   const hidden = form.elements.namedItem('confirm_free') as HTMLInputElement | null;
   const priceEl = form.elements.namedItem('price_soles') as HTMLInputElement | null;
@@ -206,14 +206,14 @@ function ColorField({ id, initial, disabled }: { id: string; initial: string | n
   );
 }
 
-function PriceField({ id, defaultSoles, free, onFree, locked, eventIsFree }: { id: string; defaultSoles?: string; free: boolean; onFree: (v: boolean) => void; locked?: boolean; eventIsFree: boolean }) {
+function PriceField({ id, defaultSoles, free, onFree, locked, eventIsFree, moneda }: { id: string; moneda: Moneda; defaultSoles?: string; free: boolean; onFree: (v: boolean) => void; locked?: boolean; eventIsFree: boolean }) {
   const { t } = useTextos();
   return (
     <div className="s-field">
-      <label className="s-label" htmlFor={id}>{t('Precio (S/)', 'Price (S/)')}{locked && <span className="s-muted" style={{ fontWeight: 500 }}> · {t('congelado, hay ventas', 'frozen, there are sales')}</span>}</label>
+      <label className="s-label" htmlFor={id}>{t(`Precio (${simbolo(moneda)})`, `Price (${simbolo(moneda)})`)}{locked && <span className="s-muted" style={{ fontWeight: 500 }}> · {t('congelado, hay ventas', 'frozen, there are sales')}</span>}</label>
       {free
         ? <input type="hidden" name="price_soles" value="0" disabled={locked} />
-        : <input id={id} name="price_soles" type="number" step="0.5" min={0} defaultValue={defaultSoles} placeholder="50" className="s-input" required={!locked} disabled={locked} title={locked ? t('No editable: ya tiene ventas', 'Not editable: it already has sales') : undefined} />}
+        : <input id={id} name="price_soles" type="number" step={sinDecimales(moneda) ? 1 : 0.5} min={0} defaultValue={defaultSoles} placeholder="50" className="s-input" required={!locked} disabled={locked} title={locked ? t('No editable: ya tiene ventas', 'Not editable: it already has sales') : undefined} />}
       <label className="s-check"><input type="checkbox" checked={free} onChange={(e) => onFree(e.target.checked)} disabled={locked} /> {t('Gratis', 'Free')}</label>
       {free && !eventIsFree && (
         <p className="s-hint">{t('En un evento con precio, una entrada gratis es de cortesía: no se vende al público; la repartes desde Cortesías o con un código.', 'In an event with a price, a free ticket is complimentary: it is not sold to the public; you hand it out from Complimentary tickets or with a code.')}</p>
@@ -224,13 +224,13 @@ function PriceField({ id, defaultSoles, free, onFree, locked, eventIsFree }: { i
 
 // Una fila por tipo de entrada: plegada muestra lo que importa (color, nombre,
 // precio, vendidas); abierta se edita y tiene SU botón de guardar.
-export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false, linkPrivado = null, limitePrivado = null, eventName = '', isFirst = false, isLast = false }: { eventId: string; eventIsFree: boolean; tt: TtRow; readOnly?: boolean; linkPrivado?: string | null; limitePrivado?: number | null; eventName?: string; isFirst?: boolean; isLast?: boolean }) {
+export function TicketTypeEditor({ eventId, eventIsFree, moneda, tt, readOnly = false, linkPrivado = null, limitePrivado = null, eventName = '', isFirst = false, isLast = false }: { eventId: string; eventIsFree: boolean; moneda: Moneda; tt: TtRow; readOnly?: boolean; linkPrivado?: string | null; limitePrivado?: number | null; eventName?: string; isFirst?: boolean; isLast?: boolean }) {
   const { t } = useTextos();
   const [state, action] = useFormFeedback(updateTicketTypeAction, initial);
   const [free, setFree] = useState(tt.priceCents === 0);
   const hasSales = tt.sold > 0;
   const ro = readOnly;
-  const price = tt.isCourtesy ? t('Cortesía', 'Complimentary') : tt.priceCents === 0 ? t('Gratis', 'Free') : formatPEN(tt.priceCents);
+  const price = tt.isCourtesy ? t('Cortesía', 'Complimentary') : tt.priceCents === 0 ? t('Gratis', 'Free') : formatMoney(tt.priceCents, moneda);
   const stock = tt.isUnlimited ? t(`${tt.sold} vendidas · sin límite`, `${tt.sold} sold · unlimited`) : t(`${tt.sold} de ${tt.capacity} vendidas`, `${tt.sold} of ${tt.capacity} sold`);
   return (
     <details className="s-fold">
@@ -245,14 +245,14 @@ export function TicketTypeEditor({ eventId, eventIsFree, tt, readOnly = false, l
       <div className="s-fold__body">
         {/* Primero: al fondo, debajo del link privado, nadie lo encontraba. */}
         {!ro && <MarcarAgotada eventId={eventId} tt={tt} />}
-        <form action={action} onSubmit={(e) => guardPrice(e, t, free, tt.priceCents)}>
+        <form action={action} onSubmit={(e) => guardPrice(e, t, simbolo(moneda), free, tt.priceCents)}>
           <input type="hidden" name="event_id" value={eventId} />
           <input type="hidden" name="ticket_type_id" value={tt.id} />
           <input type="hidden" name="confirm_free" defaultValue="" />
           <div className="s-form-grid">
             <div className="s-field"><label className="s-label" htmlFor={`tt-name-${tt.id}`}>{t('Nombre', 'Name')}</label>
               <input id={`tt-name-${tt.id}`} name="name" defaultValue={tt.name} className="s-input" disabled={ro} /></div>
-            <PriceField id={`tt-price-${tt.id}`} defaultSoles={(tt.priceCents / 100).toFixed(2)} free={free} onFree={setFree} locked={hasSales || ro} eventIsFree={eventIsFree} />
+            <PriceField id={`tt-price-${tt.id}`} defaultSoles={sinDecimales(moneda) ? String(tt.priceCents / 100) : (tt.priceCents / 100).toFixed(2)} free={free} onFree={setFree} locked={hasSales || ro} eventIsFree={eventIsFree} moneda={moneda} />
           </div>
           <div className="s-form-grid">
             <div className="s-field">
@@ -302,7 +302,7 @@ function MoveTicketType({ eventId, ttId, isFirst, isLast }: { eventId: string; t
 }
 
 // abierto: con 0 tipos el formulario ya viene desplegado (no hay nada más que hacer acá).
-export function NewTicketTypeForm({ eventId, eventIsFree, abierto = false }: { eventId: string; eventIsFree: boolean; abierto?: boolean }) {
+export function NewTicketTypeForm({ eventId, eventIsFree, moneda, abierto = false }: { eventId: string; eventIsFree: boolean; moneda: Moneda; abierto?: boolean }) {
   const { t } = useTextos();
   const [state, action] = useFormFeedback(createTicketTypeAction, initial);
   // Tras crear, el formulario se vacía (remonta con una key nueva).
@@ -318,25 +318,25 @@ export function NewTicketTypeForm({ eventId, eventIsFree, abierto = false }: { e
         <ChevronDown aria-hidden="true" />
       </summary>
       <div className="s-fold__body">
-        <NewTicketTypeFields key={round} eventId={eventId} eventIsFree={eventIsFree} action={action} />
+        <NewTicketTypeFields key={round} eventId={eventId} eventIsFree={eventIsFree} moneda={moneda} action={action} />
         <Banner state={state} />
       </div>
     </details>
   );
 }
 
-function NewTicketTypeFields({ eventId, eventIsFree, action }: { eventId: string; eventIsFree: boolean; action: (fd: FormData) => void }) {
+function NewTicketTypeFields({ eventId, eventIsFree, moneda, action }: { eventId: string; eventIsFree: boolean; moneda: Moneda; action: (fd: FormData) => void }) {
   const { t } = useTextos();
   const [free, setFree] = useState(false);
   const [privada, setPrivada] = useState(false);
   return (
-    <form action={action} onSubmit={(e) => guardPrice(e, t, free)}>
+    <form action={action} onSubmit={(e) => guardPrice(e, t, simbolo(moneda), free)}>
       <input type="hidden" name="event_id" value={eventId} />
       <input type="hidden" name="confirm_free" defaultValue="" />
       <div className="s-form-grid">
         <div className="s-field"><label className="s-label" htmlFor="tt-new-name">{t('Nombre', 'Name')}</label>
           <input id="tt-new-name" name="name" placeholder="VIP" className="s-input" required /></div>
-        <PriceField id="tt-new-price" free={free} onFree={setFree} eventIsFree={eventIsFree} />
+        <PriceField id="tt-new-price" free={free} onFree={setFree} eventIsFree={eventIsFree} moneda={moneda} />
       </div>
       <div className="s-form-grid">
         <div className="s-field">

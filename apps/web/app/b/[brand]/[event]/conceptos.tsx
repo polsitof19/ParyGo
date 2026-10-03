@@ -18,7 +18,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Minus, Plus, Lock, Ticket, User, Mail } from 'lucide-react';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney, type Moneda } from '@/lib/moneda';
 import { fmtCuando, fmtHora, distrito } from '@/lib/eventoTexto';
 export { fmtCuando, fmtHora, distrito };
 
@@ -27,6 +27,8 @@ export type { Direccion } from '@/lib/concepto';
 export type Brand = {
   id: string; slug: string; name: string;
   yape_number: string | null; yape_holder: string | null;
+  // Moneda de las entradas (brands.moneda, 0088); sin ella, PEN.
+  moneda?: string | null;
   // Contacto del organizador: es quien responde por el evento, así que la
   // página de compra tiene que poder linkearlo (ver lib/organizador.ts).
   whatsapp_e164?: string | null; contact_email?: string | null;
@@ -185,6 +187,7 @@ export function Accion({
 }
 
 type FilaProps = {
+  moneda: Moneda;
   t: TicketType; escalera: Peldano[]; cur: number; incluye: string | null;
   onInc: () => void; onDec: () => void;
 };
@@ -198,7 +201,7 @@ type FilaProps = {
 // estamos y hacia dónde va—. Lo que cambia entre canvas y editorial es el
 // CSS, no el markup: dos árboles distintos para la misma información serían
 // dos cosas que mantener y dos formas de que se desincronicen.
-export function FilaEntrada({ t, escalera: todas, cur, incluye, onInc, onDec }: FilaProps) {
+export function FilaEntrada({ moneda, t, escalera: todas, cur, incluye, onInc, onDec }: FilaProps) {
   // Las preventas que YA PASARON no se muestran (2026-09-26): dos "Agotada"
   // tachadas por tipo hacían creer que no quedaban entradas. Queda la fase de
   // hoy y, si hay, las que vienen (cuánto va a costar después).
@@ -218,13 +221,13 @@ export function FilaEntrada({ t, escalera: todas, cur, incluye, onInc, onDec }: 
         </div>
         {/* Un tipo a 0 que llega al público es de un evento GRATIS (las cortesías
             no se ofrecen): dice "Gratis", nunca "S/ 0". */}
-        <span className="b-ph__pr b1-ty__pr">{vigente.precio === 0 ? 'Gratis' : formatPEN(vigente.precio)}</span>
+        <span className="b-ph__pr b1-ty__pr">{vigente.precio === 0 ? 'Gratis' : formatMoney(vigente.precio, moneda)}</span>
         <span className="b-ph__act b1-ty__act">
           <Accion t={t} cur={cur} estado="vigente" onInc={onInc} onDec={onDec} />
         </span>
       </div>
 
-      {escalera.length > 1 && <Linea t={t} escalera={escalera} iVig={iVig} />}
+      {escalera.length > 1 && <Linea t={t} escalera={escalera} iVig={iVig} moneda={moneda} />}
     </div>
   );
 }
@@ -232,14 +235,14 @@ export function FilaEntrada({ t, escalera: todas, cur, incluye, onInc, onDec }: 
 /** La línea de tiempo de fases. La comparten CARTEL y ENTRADA: el riel es un
  *  hairline, cada etapa un punto, y la vigente lleva el color de la marca en
  *  el punto y en el tramo —nunca en el texto, que sigue en tinta. */
-function Linea({ t, escalera, iVig }: { t: TicketType; escalera: Peldano[]; iVig: number }) {
+function Linea({ t, escalera, iVig, moneda }: { t: TicketType; escalera: Peldano[]; iVig: number; moneda: Moneda }) {
   return (
         <ol className="b1-line" aria-label={`Precios de ${t.name} por etapa`}>
           {escalera.map((f, i) => (
             <li key={i} className={`b1-line__n${i === iVig ? ' b1-line__n--on' : ''}${i < iVig ? ' b1-line__n--past' : ''}`}>
               <span className="b1-line__dot" aria-hidden="true" />
               <span className="b1-line__lb">{nombreFase(t, f, i, escalera.length)}</span>
-              <span className="b1-line__pr">{f.precio === 0 ? 'Gratis' : formatPEN(f.precio)}</span>
+              <span className="b1-line__pr">{f.precio === 0 ? 'Gratis' : formatMoney(f.precio, moneda)}</span>
               {f.sub && i !== iVig && <span className="b1-line__sub">{f.sub}</span>}
               {i === iVig && f.sub && <span className="b1-line__sub">{f.sub.replace(/^.*·\s*/, '')}</span>}
             </li>

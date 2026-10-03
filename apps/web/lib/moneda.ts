@@ -50,3 +50,8 @@ export function aCentavos(input: string | number, moneda: Moneda): number {
   if (sinDecimales(moneda) && !Number.isInteger(n)) throw new Error(`En ${moneda} el monto va sin decimales: ${input}`);
   return Math.round(n * 100);
 }
+
+// Importe ya en centavos (el asistente de eventos manda JSON): entero, no
+// negativo y, en CLP/COP, múltiplo de 100 (sin fracción de peso).
+export const centavosValidos = (c: unknown, moneda: Moneda): boolean =>
+  typeof c === 'number' && Number.isInteger(c) && c >= 0 && (!sinDecimales(moneda) || c % 100 === 0);

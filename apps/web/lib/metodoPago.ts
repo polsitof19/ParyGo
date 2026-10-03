@@ -1,4 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { monedaDe, type Moneda } from '@/lib/moneda';
+
+// Moneda de las entradas de la marca, releída en el server (nunca del form).
+export async function monedaDeMarca(admin: SupabaseClient, brandId: string): Promise<Moneda> {
+  const { data } = await admin.from('brands').select('moneda').eq('id', brandId).maybeSingle();
+  return monedaDe(data?.moneda);
+}
 
 // ¿Hace falta un método de pago para publicar este evento? (Paul, 2026-10-01:
 // "algunos eventos tal vez sean gratis y no es necesario el método de pago").

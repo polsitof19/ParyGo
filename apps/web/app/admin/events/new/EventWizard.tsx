@@ -5,6 +5,7 @@ import { useFormState, useFormStatus } from 'react-dom';
 import { BatteryFull, CheckCircle2, ChevronLeft, Lock, Plus, Signal, Trash2, Wifi, XCircle } from 'lucide-react';
 import { pareceCaptura, medirImagen } from '@/lib/flyer';
 import { useTextos } from '@/components/IdiomaPanel';
+import { aCentavos, formatMoney, simbolo, sinDecimales, type Moneda } from '@/lib/moneda';
 import { createBrandEventAction, eventoSlugLibre, type FormState } from './actions';
 
 // Crear evento como ASISTENTE (2026-10-01, Paul: "que haga preguntas"): una
@@ -33,7 +34,9 @@ const toISO = (local: string): string | null => {
   const d = new Date(`${local.length === 16 ? `${local}:00` : local}-05:00`);
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 };
-const toCents = (s: string): number => Math.round(parseFloat(s || '0') * 100) || 0;
+// Texto del campo de precio → centavos de la moneda de la marca (vacío o raro = 0).
+const centsDe = (s: string, m: Moneda): number => { try { return s.trim() ? aCentavos(s, m) : 0; } catch { return 0; } };
+const precioOk = (s: string, m: Moneda): boolean => { try { aCentavos(s, m); return s.trim() !== ''; } catch { return false; } };
 // datetime-local + N horas, sin pasar por la zona de la compu. El ISO está en
 // UTC: "+ (h - 5)" suma las N horas y resta 5 para volver a la hora de Lima
 // (22:00 + 6 h → 04:00; verificado, no es un error: Codex P2 2026-10-01).
@@ -73,7 +76,6 @@ function cuando(local: string, loc: string): string {
     .format(new Date(Date.UTC(y, m - 1, d))).replace(/[.,]/g, '');
   return `${dia} · ${(h ?? '').slice(0, 5)}`;
 }
-const soles = (cents: number) => `S/ ${cents % 100 ? (cents / 100).toFixed(2) : cents / 100}`;
 const mapsOk = (v: string) => { try { return new URL(v).protocol === 'https:'; } catch { return false; } };
 
 // Campo de error del server → paso donde vive (como PASO_DE de /empezar).
@@ -83,7 +85,7 @@ const PASO_DE: Record<string, Paso> = {
 };
 const FOCO: Partial<Record<Paso, string>> = { 1: 'name', 2: 'starts_at', 3: 'venue_name', 4: 'tt-0-name' };
 
-export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista, children }: {
+export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista, moneda, children }: {
   marcaSlug: string;
   marcaNombre: string;
   saldo: number;
@@ -93,9 +95,15 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
   tope: number | null;
   // Variables CSS de la página de compra de la marca (su tema y su color).
   vista: Record<string, string>;
+  // Moneda de las entradas de la marca (brands.moneda).
+  moneda: Moneda;
   children?: React.ReactNode;
 }) {
   const { t, l, loc } = useTextos();
+  const toCents = (s: string) => centsDe(s, moneda);
+  const soles = (cents: number) => formatMoney(cents, moneda);
+  const sim = simbolo(moneda);
+  const stepPrecio = sinDecimales(moneda) ? '1' : '0.5';
   const [state, action] = useFormState(createBrandEventAction, initial);
   const [paso, setPaso] = useState<Paso>(1);
   const [animar, setAnimar] = useState(false);
@@ -200,7 +208,7 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
     if (p === 4) {
       tts.forEach((tt, i) => {
         if (!tt.name.trim()) e[`tt-${i}-name`] = t('Ponle un nombre (General, VIP…).', 'Give it a name (General, VIP…).');
-        if (!tt.gratis && !(parseFloat(tt.phases[0]?.priceSoles ?? '') >= 0)) e[`tt-${i}-price`] = t('Pon el precio o marca "Gratis".', 'Set the price or check "Free".');
+        if (!tt.gratis && !precioOk(tt.phases[0]?.priceSoles ?? '', moneda)) e[`tt-${i}-price`] = t('Pon el precio o marca "Gratis".', 'Set the price or check "Free".');
         if (!tt.unlimited && !((parseInt(tt.capacity || '0', 10) || 0) > 0)) e[`tt-${i}-cap`] = t('¿Cuántas hay? Pon un número.', 'How many are there? Type a number.');
         if (tt.unlimited && (tt.gratis || toCents(tt.phases[0]?.priceSoles ?? '') === 0)) e[`tt-${i}-cap`] = t('Una entrada gratis no puede ser sin límite. Pon cuántas hay.', 'A free ticket cannot be unlimited. Set how many there are.');
         if (!tt.gratis && tt.phases.length > 1) {
@@ -247,8 +255,8 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
       if (!isFree) {
         const names = free.map((tt) => `"${tt.name || t('sin nombre', 'unnamed')}"`).join(', ');
         const ok = window.confirm(t(
-          `${names} cuesta S/ 0. Los tipos gratis NO se venden en tu página: se emiten desde "Cortesías" y descuentan del aforo. ¿Confirmas?`,
-          `${names} costs S/ 0. Free ticket types are NOT sold on your page: they are issued from "Complimentary tickets" and count against capacity. Confirm?`
+          `${names} cuesta ${sim} 0. Los tipos gratis NO se venden en tu página: se emiten desde "Cortesías" y descuentan del aforo. ¿Confirmas?`,
+          `${names} costs ${sim} 0. Free ticket types are NOT sold on your page: they are issued from "Complimentary tickets" and count against capacity. Confirm?`
         ));
         if (!ok) { ev.preventDefault(); return; }
       }
@@ -449,8 +457,8 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
                 {err(`tt-${i}-name`)}
                 <div className="s-form-grid cw-grid">
                   <div className="s-field">
-                    <label htmlFor={`tt-${i}-price`} className="s-label">{t('Precio (S/)', 'Price (S/)')}</label>
-                    <input id={`tt-${i}-price`} type="number" inputMode="decimal" min={0} step="0.5" className="s-input" placeholder="30"
+                    <label htmlFor={`tt-${i}-price`} className="s-label">{t(`Precio (${sim})`, `Price (${sim})`)}</label>
+                    <input id={`tt-${i}-price`} type="number" inputMode="decimal" min={0} step={stepPrecio} className="s-input" placeholder="30"
                       value={tt.gratis ? '' : tt.phases[0]?.priceSoles ?? ''} disabled={tt.gratis} {...inv(`tt-${i}-price`)}
                       onChange={(e) => { patchPhase(i, 0, { priceSoles: e.target.value }); limpiar(`tt-${i}-price`); }} />
                     <label className="s-check">
@@ -486,8 +494,8 @@ export function EventWizard({ marcaSlug, marcaNombre, saldo, prueba, tope, vista
                             <p className="cw-fase__t">{t(`${soles(toCents(ph.priceSoles))} hasta el`, `${soles(toCents(ph.priceSoles))} until`)}</p>
                           ) : (
                             <div className="cw-fase__precio">
-                              <label htmlFor={`tt-${i}-ph-${j}`} className="s-label">{t('Después sube a (S/)', 'Then goes up to (S/)')}</label>
-                              <input id={`tt-${i}-ph-${j}`} type="number" inputMode="decimal" min={0} step="0.5" className="s-input" placeholder="40" value={ph.priceSoles}
+                              <label htmlFor={`tt-${i}-ph-${j}`} className="s-label">{t(`Después sube a (${sim})`, `Then goes up to (${sim})`)}</label>
+                              <input id={`tt-${i}-ph-${j}`} type="number" inputMode="decimal" min={0} step={stepPrecio} className="s-input" placeholder="40" value={ph.priceSoles}
                                 onChange={(e) => { patchPhase(i, j, { priceSoles: e.target.value }); limpiar(`tt-${i}-ph`); }} />
                             </div>
                           )}

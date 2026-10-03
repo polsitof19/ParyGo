@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { todas } from '@/lib/todas';
 import { ChevronLeft, ExternalLink } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney, monedaDe } from '@/lib/moneda';
 import { brandColor } from '@/lib/brandColors';
 import { BrandLogo } from '@/components/BrandLogo';
 import { publicEnv } from '@/lib/env';
@@ -32,7 +32,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
       id, slug, name, description, starts_at, ends_at,
       venue_name, venue_address, venue_maps_url, require_age_confirmation, require_dni, send_reminder, collect_attendee_names, allow_transfer, min_age, max_per_person, is_published, refund_policy, cover_url, is_free,
       archived_at, brand_id,
-      brand:brands ( slug, name, theme_json )
+      brand:brands ( slug, name, theme_json, moneda )
     `)
     .eq('id', params.id)
     .maybeSingle();
@@ -40,11 +40,12 @@ export default async function EventDetailPage({ params }: { params: { id: string
   if (!event) notFound();
 
   const brand = (Array.isArray(event.brand) ? event.brand[0] : event.brand) as
-    | { slug: string; name: string; theme_json?: { primary_color?: string; logo_url?: string | null } | null }
+    | { slug: string; name: string; moneda?: string; theme_json?: { primary_color?: string; logo_url?: string | null } | null }
     | null;
   const brandTheme = (brand?.theme_json ?? {}) as { primary_color?: string; logo_url?: string | null };
   const brandPrimary = brandColor(brandTheme.primary_color);
   const brandLogo = brandTheme.logo_url ?? null;
+  const moneda = monedaDe(brand?.moneda);
   const brandInitial = (brand?.name?.trim()[0] ?? '?').toUpperCase();
 
   const [{ data: ticketTypes }, { data: orders, count: orderCount }, { count: ticketCount }] = await Promise.all([
@@ -122,7 +123,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
       <div className="s-stats">
         <div className="s-stat">
           <span className="s-stat__label">Ventas pagadas</span>
-          <span className="s-stat__value s-stat__value--money">{formatPEN(grossCents)}</span>
+          <span className="s-stat__value s-stat__value--money">{formatMoney(grossCents, moneda)}</span>
         </div>
         <div className="s-stat">
           <span className="s-stat__label">Órdenes pagadas</span>
@@ -136,7 +137,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
 
       <div style={{ marginTop: 22 }}>
         <h2 className="s-h2" style={{ marginBottom: 12 }}>Tipos de entrada</h2>
-        <TicketTypesEditor eventId={event.id} initial={ticketTypes ?? []} />
+        <TicketTypesEditor eventId={event.id} initial={ticketTypes ?? []} moneda={moneda} />
       </div>
 
       <div className="s-card" style={{ marginTop: 22 }}>
@@ -160,6 +161,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
           minAge={event.min_age ?? 18}
           isPublished={event.is_published}
           hasSales={hasSales}
+          moneda={moneda}
         />
       </div>
 

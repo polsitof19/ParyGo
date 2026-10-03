@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Loader2, Lock, ArrowRight, MapPin } from 'lucide-react';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney, monedaDe } from '@/lib/moneda';
 import { optimizedImage } from '@/lib/imageUrl';
 import {
   type Brand, type Event, type TicketType,
@@ -50,6 +50,8 @@ export function EventCheckoutPanel({
   // presentación: no cambia precio, stock, pago ni emisión.
   direccion?: Direccion;
 }) {
+  const moneda = monedaDe(brand.moneda);
+  const fmt = (c: number) => formatMoney(c, moneda);
   const sorted = useMemo(
     // El orden lo decide el organizador en Entradas (Subir/Bajar).
     () => [...ticketTypes].sort((a, b) => a.sort_order - b.sort_order),
@@ -245,7 +247,7 @@ export function EventCheckoutPanel({
         return;
       }
       setApplied({ code, finalCents: res.totalFinalCents, discountCents: res.totalDiscountCents, isFree: res.isFree });
-      toast.success(res.isFree ? 'Entrada gratis con el código' : `Código aplicado: -${formatPEN(res.totalDiscountCents)}`);
+      toast.success(res.isFree ? 'Entrada gratis con el código' : `Código aplicado: -${fmt(res.totalDiscountCents)}`);
     } catch {
       toast.error('No se pudo verificar el código (red). Intenta de nuevo.');
     } finally {
@@ -255,7 +257,7 @@ export function EventCheckoutPanel({
 
   const finalTotal = applied ? applied.finalCents : totalCents;
   // En un evento gratis el monto 0 se lee "Gratis", nunca "S/ 0".
-  const plata = (c: number) => (event.is_free && c === 0 ? 'Gratis' : formatPEN(c));
+  const plata = (c: number) => (event.is_free && c === 0 ? 'Gratis' : fmt(c));
   // "Desde" de la barra vacía: la entrada más barata que todavía se vende.
   const aLaVenta = sorted.filter((t) => !t.soldOut);
   // Un evento marcado gratis puede además VENDER entradas (Standly: cortesía
@@ -267,7 +269,7 @@ export function EventCheckoutPanel({
   // La línea bajo el título: el precio de entrada (o "libre" si es gratis) y
   // la edad mínima. Es lo que la gente pregunta antes de mirar las entradas.
   const lineaHero = [
-    soloGratis ? 'Entrada libre con registro' : pagas.length ? `Entradas desde ${formatPEN(desdeCents)}` : 'Entradas agotadas',
+    soloGratis ? 'Entrada libre con registro' : pagas.length ? `Entradas desde ${fmt(desdeCents)}` : 'Entradas agotadas',
   ].filter(Boolean).join(' · ');
   // Ahorro por cantidad (bulk) — solo si NO hay código (son excluyentes).
   const bulkSavings = applied ? 0 : sorted.reduce((s, t) => { const q = qty[t.id] ?? 0; return s + q * (t.active_price_cents - bulkUnitPrice(t, q)); }, 0);
@@ -291,7 +293,7 @@ export function EventCheckoutPanel({
       : applied?.isFree
         ? 'Obtener entrada gratis'
         : method === 'mercadopago'
-          ? `Pagar ${formatPEN(finalTotal)}`
+          ? `Pagar ${fmt(finalTotal)}`
           : 'Pagar con Yape';
   const isYape = method === 'yape_manual' && !esGratis;
 
@@ -421,7 +423,7 @@ function fraseConfianza(pago: string): string {
                   onInc: () => inc(t),
                   onDec: () => dec(t),
                 };
-                return <FilaEntrada key={t.id} {...props} />;
+                return <FilaEntrada key={t.id} moneda={moneda} {...props} />;
               })}
             </section>
             {fraseConfianza(payLabel) && <p className="b-trust">{fraseConfianza(payLabel)}</p>}
@@ -569,13 +571,13 @@ function fraseConfianza(pago: string): string {
                 </div>
               ))}
               {bulkSavings > 0 && (
-                <div className="b-resumen"><span>Descuento por cantidad</span><span className="b-desc">−{formatPEN(bulkSavings)}</span></div>
+                <div className="b-resumen"><span>Descuento por cantidad</span><span className="b-desc">−{fmt(bulkSavings)}</span></div>
               )}
               {applied && (
                 <div className="b-resumen">
                   <span>Código {applied.code}</span>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-                    <span className="b-desc">{applied.isFree ? 'Gratis' : `−${formatPEN(applied.discountCents)}`}</span>
+                    <span className="b-desc">{applied.isFree ? 'Gratis' : `−${fmt(applied.discountCents)}`}</span>
                     <button type="button" className="b-back" style={{ margin: 0 }} onClick={() => { setApplied(null); setPromoInput(''); }}>Quitar</button>
                   </span>
                 </div>
@@ -621,7 +623,7 @@ function fraseConfianza(pago: string): string {
               // aprobada de Canvas): el precio más bajo a la venta.
               <>
                 <span className="n">Desde</span>
-                <span className="v">{formatPEN(desdeCents)}</span>
+                <span className="v">{fmt(desdeCents)}</span>
               </>
             ) : (
               <>

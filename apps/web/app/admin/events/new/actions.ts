@@ -10,6 +10,8 @@ import { auditarEscrituraSuper } from '@/lib/auditoriaSuper';
 import { uploadEventCover, coverDims } from '@/lib/brandAssets';
 import { limaToIso, validateEventWindow, validateTicketTypePricing } from '@/lib/eventValidation';
 import { mensajePrueba } from '@/lib/prueba';
+import { monedaDeMarca } from '@/lib/metodoPago';
+import { centavosValidos } from '@/lib/moneda';
 import { textosPanel, idiomaPanel } from '@/lib/idiomaServer';
 import type { Textos } from '@/lib/idioma';
 
@@ -105,6 +107,14 @@ export async function createBrandEventAction(
     return { ok: false, message: parsedTT.error.errors[0]?.message ?? t('Revisa los tipos de entrada.', 'Check the ticket types.') };
   }
 
+  // Los precios llegan en centavos de la moneda de la marca (releída aquí).
+  const moneda = await monedaDeMarca(createAdminClient(), brandId);
+  for (const tt of parsedTT.data) {
+    if (![tt.price_cents, ...tt.phases.map((p) => p.price_cents)].every((c) => centavosValidos(c, moneda))) {
+      return { ok: false, message: t('Precio inválido.', 'Invalid price.') };
+    }
+  }
+
   // Fechas en hora de Lima (explícito: en Cloudflare el server corre en UTC).
   // Todo se valida ANTES de subir el flyer y de consumir saldo.
   const startsIso = limaToIso(parsedEvent.data.starts_at);
@@ -126,7 +136,8 @@ export async function createBrandEventAction(
       pricesCents: [t.price_cents, ...t.phases.map((p) => p.price_cents)],
     })),
     { freeConfirmed: formData.get('confirm_free') === '1' },
-    await idiomaPanel()
+    await idiomaPanel(),
+    moneda
   );
   if (pricingErr) return { ok: false, message: pricingErr };
 

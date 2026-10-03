@@ -5,7 +5,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { liquidarPagoMp } from '@/lib/liquidarPagoMp';
 import { enqueueTicketEmail } from '@/lib/email/enqueueTicketEmail';
 import { generateQrSvg } from '@/lib/qr';
-import { formatPEN, formatEventDate } from '@/lib/utils';
+import { formatEventDate } from '@/lib/utils';
+import { formatMoney, monedaDe } from '@/lib/moneda';
 import { ConfirmationPoller } from './ConfirmationPoller';
 import { AddToCalendar } from './AddToCalendar';
 import { TicketPass } from '../../TicketPass';
@@ -34,7 +35,7 @@ export default async function ConfirmationPage({
     total_cents: number;
     buyer_name: string;
     event: { name: string; starts_at: string; ends_at: string | null; venue_name: string | null; venue_address: string | null; venue_maps_url: string | null; venue_lat: number | null; venue_lng: number | null; require_dni: boolean } | null;
-    brand: { slug: string; name: string; whatsapp_e164: string | null; contact_email: string | null; theme_json: { logo_url?: string | null } | null } | null;
+    brand: { slug: string; name: string; whatsapp_e164: string | null; contact_email: string | null; moneda: string; theme_json: { logo_url?: string | null } | null } | null;
     tickets: { id: string; qr_code: string; ticket_type_name: string }[];
   };
   const orderResult = await admin
@@ -43,7 +44,7 @@ export default async function ConfirmationPage({
       id, brand_id, status, payment_method, total_cents,
       buyer_name,
       event:events ( name, starts_at, ends_at, venue_name, venue_address, venue_maps_url, venue_lat, venue_lng, require_dni ),
-      brand:brands ( slug, name, whatsapp_e164, contact_email, theme_json ),
+      brand:brands ( slug, name, whatsapp_e164, contact_email, theme_json, moneda ),
       tickets ( id, qr_code, ticket_type_name )
     `)
     .eq('id', searchParams.order)
@@ -267,7 +268,7 @@ export default async function ConfirmationPage({
       <section className="c-bloque">
         <p className="c-eyebrow">Resumen</p>
         <p className="c-fila"><span>A nombre de</span><b>{order.buyer_name}</b></p>
-        <p className="c-fila"><span>{tickets.length === 1 ? '1 entrada' : `${tickets.length} entradas`}</span><b>{formatPEN(order.total_cents)}</b></p>
+        <p className="c-fila"><span>{tickets.length === 1 ? '1 entrada' : `${tickets.length} entradas`}</span><b>{formatMoney(order.total_cents, monedaDe(brand?.moneda))}</b></p>
       </section>
 
       <p className="c-muted-3" style={{ marginTop: 'var(--b-s3)' }}>

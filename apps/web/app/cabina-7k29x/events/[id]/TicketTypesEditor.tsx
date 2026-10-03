@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Plus, Trash2 } from 'lucide-react';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney, simbolo, sinDecimales, type Moneda } from '@/lib/moneda';
 import {
   upsertTicketTypeAction,
   deleteTicketTypeAction,
@@ -24,9 +24,11 @@ type TicketType = {
 export function TicketTypesEditor({
   eventId,
   initial,
+  moneda,
 }: {
   eventId: string;
   initial: TicketType[];
+  moneda: Moneda;
 }) {
   const [types, setTypes] = useState<TicketType[]>(initial);
   const [isPending, startTransition] = useTransition();
@@ -38,7 +40,7 @@ export function TicketTypesEditor({
     const editedId = String(formData.get('id') ?? '');
     const wasFree = editedId !== '' && types.find((t) => t.id === editedId)?.price_cents === 0;
     if (Number(formData.get('price_soles') ?? '') === 0 && !wasFree) {
-      const ok = window.confirm('Este tipo cuesta S/ 0. Los tipos gratis NO se venden en la página pública: se emiten como cortesías y descuentan del aforo. ¿Confirmas?');
+      const ok = window.confirm(`Este tipo cuesta ${simbolo(moneda)} 0. Los tipos gratis NO se venden en la página pública: se emiten como cortesías y descuentan del aforo. ¿Confirmas?`);
       if (!ok) return;
       formData.set('confirm_free', '1');
     }
@@ -85,6 +87,7 @@ export function TicketTypesEditor({
         <TicketTypeRow
           key={t.id}
           eventId={eventId}
+          moneda={moneda}
           type={t}
           onSave={handleSave}
           onDelete={handleDelete}
@@ -95,6 +98,7 @@ export function TicketTypesEditor({
       {creating ? (
         <TicketTypeRow
           eventId={eventId}
+          moneda={moneda}
           onSave={handleSave}
           onCancel={() => setCreating(false)}
           isPending={isPending}
@@ -119,8 +123,10 @@ function TicketTypeRow({
   onDelete,
   onCancel,
   isPending,
+  moneda,
 }: {
   eventId: string;
+  moneda: Moneda;
   type?: TicketType;
   onSave: (form: FormData) => void;
   onDelete?: (id: string) => void;
@@ -137,8 +143,8 @@ function TicketTypeRow({
         <input id={`name-${type?.id ?? 'new'}`} name="name" className="s-input" defaultValue={type?.name ?? ''} placeholder="General" required />
       </div>
       <div className="md:col-span-2">
-        <label htmlFor={`price-${type?.id ?? 'new'}`} className="s-label">Precio (S/)</label>
-        <input id={`price-${type?.id ?? 'new'}`} name="price_soles" type="number" min={0} step="0.5" className="s-input" defaultValue={type ? type.price_cents / 100 : ''} required />
+        <label htmlFor={`price-${type?.id ?? 'new'}`} className="s-label">Precio ({simbolo(moneda)})</label>
+        <input id={`price-${type?.id ?? 'new'}`} name="price_soles" type="number" min={0} step={sinDecimales(moneda) ? 1 : 0.5} className="s-input" defaultValue={type ? type.price_cents / 100 : ''} required />
       </div>
       <div className="md:col-span-2">
         <label htmlFor={`capacity-${type?.id ?? 'new'}`} className="s-label">Capacidad</label>
@@ -165,7 +171,7 @@ function TicketTypeRow({
       {type && (
         <div className="md:col-span-5 flex items-center gap-4 s-hint" style={{ marginTop: 0 }}>
           <span>Vendidas: {type.sold} / {type.capacity}</span>
-          <span>Ingreso pot.: {formatPEN(type.price_cents * type.capacity)}</span>
+          <span>Ingreso pot.: {formatMoney(type.price_cents * type.capacity, moneda)}</span>
         </div>
       )}
       <div className="md:col-span-12 flex justify-end gap-2">

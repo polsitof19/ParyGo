@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Loader2, Trash2, Send } from 'lucide-react';
-import { formatPEN } from '@/lib/utils';
+import { formatMoney, simbolo, sinDecimales, type Moneda } from '@/lib/moneda';
 import { useTextos } from '@/components/IdiomaPanel';
 import { createPromoCode, revokePromoCode, sendPromoCodeByEmailAction } from './promo-actions';
 
@@ -27,10 +27,10 @@ export type PromoSales = {
 
 type TicketTypeLite = { id: string; name: string };
 
-function describeDiscount(c: PromoCodeRow, t: (es: string, en: string) => string): string {
+function describeDiscount(c: PromoCodeRow, t: (es: string, en: string) => string, moneda: Moneda): string {
   if (c.discount_type === 'free') return t('100% (gratis)', '100% (free)');
   if (c.discount_type === 'percent') return `${c.discount_value}%`;
-  return `−${formatPEN(c.discount_value)}`;
+  return `−${formatMoney(c.discount_value, moneda)}`;
 }
 
 export function PromoCodeManager({
@@ -39,14 +39,18 @@ export function PromoCodeManager({
   codes,
   sales,
   impersonating = false,
+  moneda,
 }: {
   eventId: string;
   ticketTypes: TicketTypeLite[];
   codes: PromoCodeRow[];
   sales: PromoSales;
   impersonating?: boolean;
+  moneda: Moneda;
 }) {
   const { t } = useTextos();
+  const sim = simbolo(moneda);
+  const minFijo = sinDecimales(moneda) ? 1 : 0.5;
   const [pending, startTransition] = useTransition();
   const [discountType, setDiscountType] = useState<'percent' | 'fixed' | 'free'>('percent');
   const [limitMode, setLimitMode] = useState<'unlimited' | 'capped'>('unlimited');
@@ -143,14 +147,14 @@ export function PromoCodeManager({
             <label htmlFor="promo_discount_type" className="s-label">{t('Tipo de descuento', 'Discount type')}</label>
             <select id="promo_discount_type" value={discountType} onChange={(e) => setDiscountType(e.target.value as 'percent' | 'fixed' | 'free')} className="s-input s-select">
               <option value="percent">{t('Porcentaje (%)', 'Percentage (%)')}</option>
-              <option value="fixed">{t('Monto fijo (S/)', 'Fixed amount (S/)')}</option>
+              <option value="fixed">{t(`Monto fijo (${sim})`, `Fixed amount (${sim})`)}</option>
               <option value="free">{t('Gratis (100%)', 'Free (100%)')}</option>
             </select>
           </div>
           {discountType !== 'free' && (
             <div>
               <label htmlFor="promo_value" className="s-label">{discountType === 'percent' ? t('Porcentaje (1–100)', 'Percentage (1-100)') : t('Monto en soles', 'Amount in soles')}</label>
-              <input id="promo_value" type="number" inputMode="decimal" min={discountType === 'percent' ? 1 : 0.5} max={discountType === 'percent' ? 100 : undefined} step={discountType === 'percent' ? 1 : 0.5} value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} placeholder={discountType === 'percent' ? '20' : '10'} className="s-input" />
+              <input id="promo_value" type="number" inputMode="decimal" min={discountType === 'percent' ? 1 : minFijo} max={discountType === 'percent' ? 100 : undefined} step={discountType === 'percent' ? 1 : minFijo} value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} placeholder={discountType === 'percent' ? '20' : '10'} className="s-input" />
             </div>
           )}
         </div>
@@ -229,7 +233,7 @@ export function PromoCodeManager({
                   <th>{t('Descuento', 'Discount')}</th>
                   <th className="num">{t('Usos', 'Uses')}</th>
                   <th className="num">{t('Entradas', 'Tickets')}</th>
-                  <th className="num">{t('S/ movidos', 'S/ moved')}</th>
+                  <th className="num">{t(`${sim} movidos`, `${sim} moved`)}</th>
                   <th>{t('Estado', 'Status')}</th>
                   <th />
                 </tr>
@@ -241,10 +245,10 @@ export function PromoCodeManager({
                     <tr key={c.id}>
                       <td><span className="s-saldo-num" style={{ fontSize: 15, letterSpacing: '0.04em' }}>{c.code}</span></td>
                       <td data-l={t('RRPP', 'Promoter')}><span className="s-muted">{c.label ?? '—'}</span></td>
-                      <td data-l={t('Descuento', 'Discount')}>{describeDiscount(c, t)}</td>
+                      <td data-l={t('Descuento', 'Discount')}>{describeDiscount(c, t, moneda)}</td>
                       <td className="num" data-l={t('Usos', 'Uses')}>{c.use_count}{c.max_uses !== null ? ` / ${c.max_uses}` : ''}</td>
                       <td className="num" data-l={t('Entradas', 'Tickets')}>{s.entries}</td>
-                      <td className="num" data-l={t('S/ movidos', 'S/ moved')}>{formatPEN(s.soldCents)}</td>
+                      <td className="num" data-l={t(`${sim} movidos`, `${sim} moved`)}>{formatMoney(s.soldCents, moneda)}</td>
                       <td>{c.is_active ? <span className="s-badge s-badge--ok">{t('Activo', 'Active')}</span> : <span className="s-badge s-badge--draft">{t('Inactivo', 'Inactive')}</span>}</td>
                       <td className="num" data-acts="">
                         {impersonating ? (
